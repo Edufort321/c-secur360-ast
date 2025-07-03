@@ -1,22 +1,93 @@
-{
-  "name": "AST MDL - Analyse Sécuritaire de Tâches",
-  "short_name": "AST MDL",
-  "description": "Application d'analyse sécuritaire de tâches pour MDL",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#3498db",
-  "orientation": "portrait",
-  "icons": [
-    {
-      "src": "/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id          String   @id @default(cuid())
+  subdomain   String   @unique
+  companyName String
+  plan        String   @default("basic")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  users       User[]
+  astForms    ASTForm[]
+  nearMiss    NearMissEvent[]
+  
+  @@map("tenants")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      String   @default("user")
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  astForms  ASTForm[]
+  nearMiss  NearMissEvent[]
+  
+  @@map("users")
+}
+
+model ASTForm {
+  id                String   @id @default(cuid())
+  tenantId          String
+  userId            String
+  projectNumber     String
+  clientName        String
+  workLocation      String
+  clientRep         String?
+  emergencyNumber   String?
+  astMdlNumber      String
+  astClientNumber   String?
+  workDescription   String
+  status            String   @default("draft")
+  
+  generalInfo       Json?
+  teamDiscussion    Json?
+  isolation         Json?
+  hazards           Json?
+  controlMeasures   Json?
+  workers           Json?
+  photos            Json?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id])
+  
+  @@map("ast_forms")
+}
+
+model NearMissEvent {
+  id              String   @id @default(cuid())
+  tenantId        String
+  userId          String
+  eventDate       DateTime
+  description     String
+  personnelInvolved String?
+  correctiveSolution String?
+  photos          Json?
+  severity        String   @default("low")
+  status          String   @default("reported")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id])
+  
+  @@map("near_miss_events")
 }
