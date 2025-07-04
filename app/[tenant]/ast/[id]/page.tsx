@@ -8,7 +8,7 @@ interface ASTDetailPageProps {
 }
 
 export default async function ASTDetailPage({ params }: ASTDetailPageProps) {
-  const ast = await prisma.astForm.findFirst({
+  const ast = await prisma.aSTForm.findFirst({
     where: {
       id: params.id,
       tenant: { subdomain: params.tenant }
