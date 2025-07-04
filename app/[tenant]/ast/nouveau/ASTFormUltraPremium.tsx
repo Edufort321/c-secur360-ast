@@ -1306,1185 +1306,1092 @@ const sendByEmail = async (formData: ASTFormData, tenant: Tenant, language: 'fr'
     return false;
   }
 };
-// =================== AST SECTION 3/5 FINALE - STYLES CSS & FONCTIONS ===================
-// Section 3: Styles CSS Premium et Fonctions Supabase complètes
+// =================== AST SECTION 2/5 FINALE - DONNÉES & TRADUCTIONS ===================
+// Section 2: Données complètes avec tous les dangers potentiels + PDF professionnel
 
-// =================== STYLES CSS PREMIUM AVEC NOUVELLES FONCTIONNALITÉS ===================
-const premiumStyles = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-  
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-  
-  .form-container {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%);
-    min-height: 100vh;
-    position: relative;
-    overflow-x: hidden;
-  }
-  
-  .form-container::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: 
-      radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.1) 0%, transparent 50%),
-      radial-gradient(circle at 40% 40%, rgba(168, 85, 247, 0.1) 0%, transparent 50%);
-    pointer-events: none;
-  }
-  
-  .glass-effect {
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 24px;
-    box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    position: relative;
-    z-index: 1;
-    margin: 20px;
-    padding: 32px;
-  }
-  
-  /* HEADER AVEC COMPTEURS DE PERSONNES */
-  .header-counters {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(30, 41, 59, 0.8);
-    border: 1px solid rgba(100, 116, 139, 0.3);
-    border-radius: 16px;
-    padding: 16px 24px;
-    margin-bottom: 24px;
-  }
-  
-  .company-info {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  
-  .company-logo {
-    width: 48px;
-    height: 48px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #3b82f6 0%, #22c55e 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 20px;
-  }
-  
-  .counters-grid {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-  }
-  
-  .counter-item {
-    text-align: center;
-    padding: 8px 16px;
-    background: rgba(51, 65, 85, 0.3);
-    border-radius: 8px;
-    border: 1px solid rgba(100, 116, 139, 0.2);
-  }
-  
-  .counter-number {
-    font-size: 20px;
-    font-weight: 700;
-    color: #3b82f6;
-    display: block;
-  }
-  
-  .counter-label {
-    font-size: 11px;
-    color: #94a3b8;
-    text-transform: uppercase;
-    font-weight: 500;
-    margin-top: 2px;
-  }
-  
-  .counter-item.approval-rate {
-    background: rgba(34, 197, 94, 0.1);
-    border-color: rgba(34, 197, 94, 0.3);
-  }
-  
-  .counter-item.approval-rate .counter-number {
-    color: #22c55e;
-  }
-  
-  .step-indicator {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 32px;
-    padding: 24px;
-    background: rgba(30, 41, 59, 0.6);
-    border-radius: 16px;
-    border: 1px solid rgba(100, 116, 139, 0.2);
-    flex-wrap: wrap;
-  }
-  
-  .step-item {
-    display: flex;
-    align-items: center;
-    padding: 12px 16px;
-    border-radius: 12px;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    background: rgba(51, 65, 85, 0.3);
-    border: 1px solid rgba(100, 116, 139, 0.2);
-    min-width: 160px;
-    justify-content: center;
-  }
-  
-  .step-item.active {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    border-color: #3b82f6;
-    transform: scale(1.05);
-  }
-  
-  .step-item.completed {
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-    border-color: #22c55e;
-  }
-  
-  .input-premium {
-    background: rgba(30, 41, 59, 0.8);
-    border: 1px solid rgba(100, 116, 139, 0.3);
-    border-radius: 12px;
-    padding: 14px 18px;
-    color: white;
-    font-size: 14px;
-    transition: all 0.3s ease;
-    width: 100%;
-  }
-  
-  .input-premium:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: rgba(30, 41, 59, 0.9);
-  }
-  
-  .input-premium::placeholder {
-    color: #64748b;
-  }
-  
-  .btn-premium {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    border: none;
-    border-radius: 12px;
-    padding: 12px 24px;
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-size: 14px;
-  }
-  
-  .btn-premium:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
-  }
-  
-  .btn-premium:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-  
-  .btn-secondary {
-    background: rgba(100, 116, 139, 0.2);
-    border: 1px solid rgba(100, 116, 139, 0.3);
-    color: #e2e8f0;
-  }
-  
-  .btn-secondary:hover {
-    background: rgba(100, 116, 139, 0.3);
-    transform: translateY(-2px);
-  }
-  
-  .btn-danger {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  }
-  
-  .btn-success {
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  }
-  
-  /* STYLES POUR TABLEAU D'APPROBATION */
-  .approval-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: rgba(30, 41, 59, 0.8);
-    border-radius: 12px;
-    overflow: hidden;
-    margin: 16px 0;
-  }
-  
-  .approval-table th {
-    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-    color: white;
-    padding: 12px 8px;
-    text-align: center;
-    font-weight: 600;
-    font-size: 11px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  
-  .approval-table td {
-    padding: 12px 8px;
-    text-align: center;
-    border-bottom: 1px solid rgba(100, 116, 139, 0.2);
-    color: #e2e8f0;
-    font-size: 12px;
-  }
-  
-  .approval-table tr:hover {
-    background: rgba(51, 65, 85, 0.3);
-  }
-  
-  .worker-name-cell {
-    text-align: left !important;
-    font-weight: 600;
-    color: white;
-  }
-  
-  .status-pending {
-    color: #f59e0b;
-    font-weight: 600;
-  }
-  
-  .status-approved {
-    color: #22c55e;
-    font-weight: 600;
-  }
-  
-  .status-rejected {
-    color: #ef4444;
-    font-weight: 600;
-  }
-  
-  /* STYLES POUR CHECKLIST ISOLATION */
-  .isolation-checklist {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
-    margin: 16px 0;
-    padding: 16px;
-    background: rgba(30, 41, 59, 0.6);
-    border-radius: 12px;
-    border: 1px solid rgba(100, 116, 139, 0.3);
-  }
-  
-  .checklist-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    background: rgba(51, 65, 85, 0.2);
-    border: 1px solid rgba(100, 116, 139, 0.2);
-  }
-  
-  .checklist-item:hover {
-    background: rgba(51, 65, 85, 0.4);
-    border-color: rgba(100, 116, 139, 0.4);
-  }
-  
-  .checklist-item.completed {
-    background: rgba(34, 197, 94, 0.1);
-    border: 1px solid rgba(34, 197, 94, 0.3);
-  }
-  
-  .checkbox-premium {
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(100, 116, 139, 0.5);
-    border-radius: 6px;
-    background: rgba(30, 41, 59, 0.8);
-    position: relative;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    flex-shrink: 0;
-  }
-  
-  .checkbox-premium.checked {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    border-color: #3b82f6;
-  }
-  
-  .checkbox-premium.checked::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 12px;
-    font-weight: bold;
-  }
-  
-  /* STYLES POUR CADENAS */
-  .lock-icon {
-    transition: all 0.3s ease;
-  }
-  
-  .lock-icon.locked {
-    color: #22c55e;
-  }
-  
-  .lock-icon.unlocked {
-    color: #94a3b8;
-  }
-  
-  .lock-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-  }
-  
-  .lock-button:hover {
-    background: rgba(100, 116, 139, 0.2);
-  }
-  
-  .equipment-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-  
-  .equipment-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px;
-    background: rgba(30, 41, 59, 0.6);
-    border: 1px solid rgba(100, 116, 139, 0.3);
-    border-radius: 12px;
-    transition: all 0.3s ease;
-  }
-  
-  .equipment-item:hover {
-    background: rgba(30, 41, 59, 0.8);
-    border-color: rgba(100, 116, 139, 0.5);
-  }
-  
-  .equipment-item.required {
-    border-left: 4px solid #f59e0b;
-  }
-  
-  .equipment-item.verified {
-    border-left: 4px solid #22c55e;
-  }
-  
-  /* STYLES POUR DANGERS AVEC COULEURS DYNAMIQUES */
-  .hazard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-  
-  .hazard-item {
-    padding: 20px;
-    background: rgba(30, 41, 59, 0.6);
-    border: 1px solid rgba(100, 116, 139, 0.3);
-    border-radius: 12px;
-    transition: all 0.3s ease;
-    cursor: pointer;
-  }
-  
-  .hazard-item:hover {
-    background: rgba(30, 41, 59, 0.8);
-    transform: translateY(-2px);
-  }
-  
-  .hazard-item.selected.no-controls {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: #ef4444;
-    border-width: 2px;
-  }
-  
-  .hazard-item.selected.has-controls {
-    background: rgba(34, 197, 94, 0.1);
-    border-color: #22c55e;
-    border-width: 2px;
-  }
-  
-  .hazard-controls-required {
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid #ef4444;
-    color: #ef4444;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    text-align: center;
-    margin-top: 12px;
-  }
-  
-  .hazard-controls-vigilance {
-    background: rgba(34, 197, 94, 0.1);
-    border: 1px solid #22c55e;
-    color: #22c55e;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    text-align: center;
-    margin-top: 12px;
-  }
-  
-  .hazard-item.critical {
-    border-left: 4px solid #dc2626;
-  }
-  
-  .hazard-item.high {
-    border-left: 4px solid #f59e0b;
-  }
-  
-  .hazard-item.medium {
-    border-left: 4px solid #eab308;
-  }
-  
-  .hazard-item.low {
-    border-left: 4px solid #22c55e;
-  }
-  
-  .control-measures-section {
-    margin-top: 16px;
-    padding: 16px;
-    background: rgba(51, 65, 85, 0.3);
-    border-radius: 8px;
-    border: 1px solid rgba(100, 116, 139, 0.2);
-  }
-  
-  .control-measure-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px;
-    margin: 8px 0;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-  }
-  
-  .control-measure-item:hover {
-    background: rgba(100, 116, 139, 0.1);
-  }
-  
-  /* DISCUSSIONS AVEC COULEUR GRIS MÉTALLIQUE UNIFORME */
-  .discussion-item {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 16px;
-    background: rgba(30, 41, 59, 0.6);
-    border: 1px solid rgba(100, 116, 139, 0.3);
-    border-radius: 12px;
-    margin-bottom: 12px;
-    transition: all 0.3s ease;
-    border-left: 4px solid #64748b; /* Gris métallique uniforme */
-  }
-  
-  .discussion-item.completed {
-    background: rgba(34, 197, 94, 0.1);
-    border-color: #22c55e;
-    border-left-color: #22c55e;
-  }
-  
-  .discussion-item:hover {
-    background: rgba(30, 41, 59, 0.8);
-    border-color: rgba(100, 116, 139, 0.5);
-  }
-  
-  .save-indicator {
-    position: fixed;
-    top: 24px;
-    right: 24px;
-    z-index: 1000;
-    padding: 12px 20px;
-    border-radius: 12px;
-    color: white;
-    font-weight: 600;
-    font-size: 14px;
-    transition: all 0.3s ease;
-  }
-  
-  .save-indicator.saving {
-    background: rgba(251, 191, 36, 0.9);
-    color: #92400e;
-  }
-  
-  .save-indicator.saved {
-    background: rgba(34, 197, 94, 0.9);
-    color: white;
-  }
-  
-  .save-indicator.error {
-    background: rgba(239, 68, 68, 0.9);
-    color: white;
-  }
-  
-  .progress-bar {
-    width: 100%;
-    height: 8px;
-    background: rgba(51, 65, 85, 0.5);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 24px;
-  }
-  
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #3b82f6 0%, #22c55e 100%);
-    transition: width 0.5s ease;
-    border-radius: 8px;
-  }
-  
-  /* ANIMATIONS AMÉLIORÉES */
-  @keyframes slideInUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-  
-  @keyframes checkmark {
-    0% { transform: scale(0) rotate(45deg); }
-    50% { transform: scale(1.2) rotate(45deg); }
-    100% { transform: scale(1) rotate(45deg); }
-  }
-  
-  @keyframes lockSpin {
-    0% { transform: rotate(0deg); }
-    25% { transform: rotate(10deg); }
-    75% { transform: rotate(-10deg); }
-    100% { transform: rotate(0deg); }
-  }
-  
-  .slide-in {
-    animation: slideInUp 0.5s ease-out;
-  }
-  
-  .pulse {
-    animation: pulse 2s infinite;
-  }
-  
-  .checkbox-premium.checked::after {
-    animation: checkmark 0.3s ease-out;
-  }
-  
-  .lock-icon.locked {
-    animation: lockSpin 0.5s ease-out;
-  }
-  
-  /* STYLES RESPONSIVE */
-  @media (max-width: 768px) {
-    .glass-effect {
-      margin: 10px;
-      padding: 20px;
-    }
-    
-    .header-counters {
-      flex-direction: column;
-      gap: 16px;
-      text-align: center;
-    }
-    
-    .counters-grid {
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    
-    .step-indicator {
-      gap: 4px;
-      padding: 16px;
-    }
-    
-    .step-item {
-      padding: 8px 12px;
-      font-size: 12px;
-      min-width: 120px;
-    }
-    
-    .equipment-grid {
-      grid-template-columns: 1fr;
-    }
-    
-    .hazard-grid {
-      grid-template-columns: 1fr;
-    }
-    
-    .approval-table {
-      font-size: 11px;
-    }
-    
-    .approval-table th,
-    .approval-table td {
-      padding: 8px 4px;
-    }
-    
-    .isolation-checklist {
-      grid-template-columns: 1fr;
-    }
-  }
-  
-  /* STYLES POUR IMPRESSION */
-  @media print {
-    .form-container {
-      background: white;
-    }
-    
-    .glass-effect {
-      background: white;
-      box-shadow: none;
-      border: 1px solid #ccc;
-    }
-    
-    .btn-premium,
-    .btn-secondary,
-    .save-indicator {
-      display: none;
-    }
-    
-    .step-indicator {
-      display: none;
-    }
-    
-    .header-counters {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-    }
-  }
+// =================== LOGO CLIENT POTENTIEL SVG ===================
+const CLIENT_POTENTIEL_LOGO = `
+<svg width="120" height="60" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="50%" style="stop-color:#1d4ed8"/>
+      <stop offset="100%" style="stop-color:#1e40af"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="120" height="60" fill="url(#logoGradient)" rx="8"/>
+  <text x="60" y="25" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-weight="bold" font-size="12">CLIENT</text>
+  <text x="60" y="40" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-weight="bold" font-size="12">POTENTIEL</text>
+  <circle cx="20" cy="30" r="8" fill="white" opacity="0.2"/>
+  <circle cx="100" cy="30" r="8" fill="white" opacity="0.2"/>
+</svg>
 `;
 
-// =================== FONCTIONS SUPABASE MISES À JOUR ===================
-const saveToSupabase = async (formData: ASTFormData) => {
-  try {
-    console.log('💾 Sauvegarde Supabase en cours...', formData.astNumber);
+// =================== MOYENS DE CONTRÔLE PRÉDÉFINIS ===================
+const predefinedControlMeasures: Record<string, ControlMeasure[]> = {
+  // Moyens de contrôle pour Électrocution
+  'ELEC-001': [
+    { id: 'ctrl-elec-001-1', name: 'Consignation/Verrouillage', description: 'Appliquer la procédure LOTO complète', category: 'engineering', isSelected: false, photos: [], notes: '' },
+    { id: 'ctrl-elec-001-2', name: 'Vérification absence de tension', description: 'Utiliser un VAT certifié et testé', category: 'engineering', isSelected: false, photos: [], notes: '' },
+    { id: 'ctrl-elec-001-3', name: 'Mise à la terre temporaire', description: 'Installer des mises à la terre de sécurité', category: 'engineering', isSelected: false, photos: [], notes: '' },
+    { id: 'ctrl-elec-001-4', name: 'EPI électrique', description: 'Porter gants isolants, casque classe E, chaussures isolantes', category: 'ppe', isSelected: false, photos: [], notes: '' },
+    { id: 'ctrl-elec-001-5', name: 'Formation électrique', description: 'Personnel qualifié selon CSA Z462', category: 'administrative', isSelected: false, photos: [], notes: '' }
+  ],
+  
+  // Moyens de contrôle pour Arc électrique
+  'ELEC-002': [
+    { id: 'ctrl-elec-002-1', name: 'Analyse arc flash', description: 'Effectuer calcul d\'énergie incidente', category: 'engineering', isSelected: false, photos: [], notes: '' },
+    { id: 'ctrl-elec-002-2', name: 'EPI arc flash', description: 'Vêtements résistants à l\'arc selon catégorie', category: 'ppe', isSelected: false, photos: [], notes: '' },
+    { id: 'ctrl-elec-002-3', name: 'Équipement télécommandé', description: 'Utiliser perches isolantes et outils télécommandés', category: 'engineering', isSelected: false, photos: [], notes: '' },
+    { id: 'ctrl-elec-002-4', name: 'Distance de sécurité', description: 'Respecter les limites d\'approche', category: 'administrative', isSelected: false, photos: [], notes: '' }
+  ],
+
+  // Moyens de contrôle génériques pour autres dangers
+  'default': [
+    { id: 'ctrl-def-001', name: 'Formation du personnel', description: 'Formation sur les risques et procédures', category: 'administrative', isSelected: false, photos: [], notes: '' },
+    { id: 'ctrl-def-002', name: 'Supervision directe', description: 'Surveillance constante par personne qualifiée', category: 'administrative', isSelected: false, photos: [], notes: '' },
+    { id: 'ctrl-def-003', name: 'EPI approprié', description: 'Équipement de protection selon le risque', category: 'ppe', isSelected: false, photos: [], notes: '' },
+    { id: 'ctrl-def-004', name: 'Procédures écrites', description: 'Mode opératoire normalisé documenté', category: 'administrative', isSelected: false, photos: [], notes: '' }
+  ]
+};
+
+// =================== TOUS LES DANGERS POTENTIELS SELON VOTRE LISTE ===================
+const predefinedElectricalHazards: ElectricalHazard[] = [
+  {
+    id: 'ELEC-001', code: 'ELEC-001', title: 'Électrocution', description: 'Contact direct ou indirect avec des pièces sous tension',
+    riskLevel: 'critical', isSelected: false, controlMeasures: predefinedControlMeasures['ELEC-001'], showControls: false
+  },
+  {
+    id: 'ELEC-002', code: 'ELEC-002', title: 'Arc électrique', description: 'Formation d\'arc électrique causant brûlures et explosion',
+    riskLevel: 'critical', isSelected: false, controlMeasures: predefinedControlMeasures['ELEC-002'], showControls: false
+  },
+  {
+    id: 'FALL-001', code: 'FALL-001', title: 'Chute de hauteur', description: 'Chute depuis une surface élevée',
+    riskLevel: 'high', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'FALL-002', code: 'FALL-002', title: 'Chute de plain-pied', description: 'Glissade, trébuchement sur surface de niveau',
+    riskLevel: 'medium', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'FALL-003', code: 'FALL-003', title: 'Chute d\'objets', description: 'Objets tombant d\'une hauteur',
+    riskLevel: 'high', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'MECH-001', code: 'MECH-001', title: 'Happement', description: 'Entraînement par pièces en mouvement',
+    riskLevel: 'critical', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'MECH-002', code: 'MECH-002', title: 'Coupure', description: 'Blessure par objets tranchants',
+    riskLevel: 'medium', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'MECH-003', code: 'MECH-003', title: 'Écrasement', description: 'Compression par objets lourds',
+    riskLevel: 'high', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'FIRE-001', code: 'FIRE-001', title: 'Incendie', description: 'Combustion non contrôlée',
+    riskLevel: 'critical', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'FIRE-002', code: 'FIRE-002', title: 'Explosion', description: 'Expansion rapide de gaz avec onde de choc',
+    riskLevel: 'critical', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'CHEM-001', code: 'CHEM-001', title: 'Exposition chimique', description: 'Contact avec substances dangereuses',
+    riskLevel: 'high', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'CHEM-002', code: 'CHEM-002', title: 'Inhalation de vapeurs', description: 'Respiration de substances toxiques',
+    riskLevel: 'high', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'NOISE-001', code: 'NOISE-001', title: 'Exposition au bruit', description: 'Niveau sonore élevé causant perte auditive',
+    riskLevel: 'medium', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'TEMP-001', code: 'TEMP-001', title: 'Exposition à la chaleur', description: 'Température élevée causant stress thermique',
+    riskLevel: 'medium', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'TEMP-002', code: 'TEMP-002', title: 'Exposition au froid', description: 'Température basse causant hypothermie',
+    riskLevel: 'medium', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'VIB-001', code: 'VIB-001', title: 'Vibrations', description: 'Exposition aux vibrations mécaniques',
+    riskLevel: 'low', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'RAD-001', code: 'RAD-001', title: 'Radiations', description: 'Exposition aux rayonnements ionisants',
+    riskLevel: 'high', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'BIO-001', code: 'BIO-001', title: 'Agents biologiques', description: 'Exposition à microorganismes pathogènes',
+    riskLevel: 'medium', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'ERGO-001', code: 'ERGO-001', title: 'Troubles musculo-squelettiques', description: 'Lésions par efforts répétitifs',
+    riskLevel: 'medium', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'SPACE-001', code: 'SPACE-001', title: 'Espace clos', description: 'Travail en espace confiné',
+    riskLevel: 'critical', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'VEHICLE-001', code: 'VEHICLE-001', title: 'Circulation de véhicules', description: 'Collision avec véhicules mobiles',
+    riskLevel: 'high', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'LIFT-001', code: 'LIFT-001', title: 'Manutention manuelle', description: 'Soulèvement et transport manuel',
+    riskLevel: 'medium', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'EQUIP-001', code: 'EQUIP-001', title: 'Défaillance d\'équipement', description: 'Panne ou bris d\'équipement critique',
+    riskLevel: 'high', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'ENV-001', code: 'ENV-001', title: 'Conditions météo défavorables', description: 'Intempéries affectant la sécurité',
+    riskLevel: 'medium', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'STRESS-001', code: 'STRESS-001', title: 'Stress et fatigue', description: 'Épuisement physique et mental',
+    riskLevel: 'low', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  },
+  {
+    id: 'OTHER-001', code: 'OTHER-001', title: 'Autres dangers spécifiques', description: 'Dangers particuliers au site de travail',
+    riskLevel: 'medium', isSelected: false, controlMeasures: predefinedControlMeasures['default'], showControls: false
+  }
+];
+
+// =================== ÉQUIPEMENTS DE SÉCURITÉ SELON VOTRE IMAGE ===================
+const requiredSafetyEquipment: SafetyEquipment[] = [
+  // Protection de la tête
+  { id: 'head-001', name: 'Casque de sécurité classe E', required: false, available: false, verified: false, notes: '', category: 'head' },
+  { id: 'head-002', name: 'Casque d\'escalade', required: false, available: false, verified: false, notes: '', category: 'head' },
+  
+  // Protection des yeux
+  { id: 'eye-001', name: 'Lunettes de sécurité', required: false, available: false, verified: false, notes: '', category: 'eye' },
+  { id: 'eye-002', name: 'Écran facial', required: false, available: false, verified: false, notes: '', category: 'eye' },
+  { id: 'eye-003', name: 'Lunettes de soudage', required: false, available: false, verified: false, notes: '', category: 'eye' },
+  
+  // Protection respiratoire
+  { id: 'resp-001', name: 'Masque anti-poussière N95', required: false, available: false, verified: false, notes: '', category: 'respiratory' },
+  { id: 'resp-002', name: 'Appareil respiratoire autonome', required: false, available: false, verified: false, notes: '', category: 'respiratory' },
+  { id: 'resp-003', name: 'Demi-masque avec cartouches', required: false, available: false, verified: false, notes: '', category: 'respiratory' },
+  
+  // Protection des mains
+  { id: 'hand-001', name: 'Gants isolants électriques', required: false, available: false, verified: false, notes: '', category: 'hand' },
+  { id: 'hand-002', name: 'Gants de travail mécaniques', required: false, available: false, verified: false, notes: '', category: 'hand' },
+  { id: 'hand-003', name: 'Gants résistants aux coupures', required: false, available: false, verified: false, notes: '', category: 'hand' },
+  { id: 'hand-004', name: 'Gants chimiques', required: false, available: false, verified: false, notes: '', category: 'hand' },
+  
+  // Protection des pieds
+  { id: 'foot-001', name: 'Chaussures de sécurité isolantes', required: false, available: false, verified: false, notes: '', category: 'foot' },
+  { id: 'foot-002', name: 'Bottes de sécurité CSA', required: false, available: false, verified: false, notes: '', category: 'foot' },
+  { id: 'foot-003', name: 'Couvre-chaussures isolants', required: false, available: false, verified: false, notes: '', category: 'foot' },
+  
+  // Protection du corps
+  { id: 'body-001', name: 'Vêtements arc flash', required: false, available: false, verified: false, notes: '', category: 'body' },
+  { id: 'body-002', name: 'Veste haute visibilité', required: false, available: false, verified: false, notes: '', category: 'body' },
+  { id: 'body-003', name: 'Combinaison Tyvek', required: false, available: false, verified: false, notes: '', category: 'body' },
+  
+  // Protection contre les chutes
+  { id: 'fall-001', name: 'Harnais de sécurité', required: false, available: false, verified: false, notes: '', category: 'fall' },
+  { id: 'fall-002', name: 'Longe avec absorbeur', required: false, available: false, verified: false, notes: '', category: 'fall' },
+  { id: 'fall-003', name: 'Corde d\'assurance', required: false, available: false, verified: false, notes: '', category: 'fall' },
+  
+  // Protection électrique
+  { id: 'elec-001', name: 'Tapis isolant', required: false, available: false, verified: false, notes: '', category: 'electrical' },
+  { id: 'elec-002', name: 'Perche isolante', required: false, available: false, verified: false, notes: '', category: 'electrical' },
+  { id: 'elec-003', name: 'Vérificateur d\'absence de tension', required: false, available: false, verified: false, notes: '', category: 'electrical' },
+  
+  // Détection
+  { id: 'detect-001', name: 'Détecteur de gaz H2S', required: false, available: false, verified: false, notes: '', category: 'detection' },
+  { id: 'detect-002', name: 'Détecteur d\'oxygène', required: false, available: false, verified: false, notes: '', category: 'detection' },
+  { id: 'detect-003', name: 'Détecteur multigaz', required: false, available: false, verified: false, notes: '', category: 'detection' },
+  
+  // Autres équipements
+  { id: 'other-001', name: 'Trousse de premiers soins', required: false, available: false, verified: false, notes: '', category: 'other' },
+  { id: 'other-002', name: 'Éclairage d\'urgence', required: false, available: false, verified: false, notes: '', category: 'other' },
+  { id: 'other-003', name: 'Équipement de communication', required: false, available: false, verified: false, notes: '', category: 'other' }
+];
+
+// =================== DISCUSSIONS D'ÉQUIPE PRÉDÉFINIES (GRIS MÉTALLIQUE) ===================
+const predefinedDiscussions: TeamDiscussion[] = [
+  {
+    id: 'disc-001', topic: 'Points de coupure électrique', notes: '', completed: false, discussedBy: '', priority: 'medium'
+  },
+  {
+    id: 'disc-002', topic: 'Explication des dangers électriques', notes: '', completed: false, discussedBy: '', priority: 'medium'
+  },
+  {
+    id: 'disc-003', topic: 'EPI spécifiques requis', notes: '', completed: false, discussedBy: '', priority: 'medium'
+  },
+  {
+    id: 'disc-004', topic: 'Conditions particulières de travail', notes: '', completed: false, discussedBy: '', priority: 'medium'
+  },
+  {
+    id: 'disc-005', topic: 'Procédures d\'urgence', notes: '', completed: false, discussedBy: '', priority: 'medium'
+  },
+  {
+    id: 'disc-006', topic: 'Communications et signalisation', notes: '', completed: false, discussedBy: '', priority: 'medium'
+  },
+  {
+    id: 'disc-007', topic: 'Analyse des risques spécifiques', notes: '', completed: false, discussedBy: '', priority: 'medium'
+  },
+  {
+    id: 'disc-008', topic: 'Plan d\'évacuation d\'urgence', notes: '', completed: false, discussedBy: '', priority: 'medium'
+  }
+];
+
+// =================== PROCÉDURES D'URGENCE ===================
+const emergencyProcedures: EmergencyProcedure[] = [
+  {
+    id: 'emerg-001', type: 'medical', procedure: 'Appeler le 911, premiers soins, évacuation médicale',
+    responsiblePerson: 'Superviseur de chantier', contactInfo: '911 / Contact urgence', isVerified: false
+  },
+  {
+    id: 'emerg-002', type: 'fire', procedure: 'Alarme incendie, évacuation, point de rassemblement',
+    responsiblePerson: 'Chef d\'équipe', contactInfo: 'Service incendie 911', isVerified: false
+  },
+  {
+    id: 'emerg-003', type: 'electrical', procedure: 'Coupure d\'urgence, consignation, vérification',
+    responsiblePerson: 'Électricien qualifié', contactInfo: 'Responsable électrique', isVerified: false
+  },
+  {
+    id: 'emerg-004', type: 'evacuation', procedure: 'Signal d\'évacuation, routes d\'évacuation, décompte',
+    responsiblePerson: 'Responsable sécurité', contactInfo: 'Poste de commandement', isVerified: false
+  }
+];
+
+// =================== TRADUCTIONS MISES À JOUR ===================
+const translations = {
+  fr: {
+    title: "Nouvelle Analyse Sécuritaire de Tâches",
+    subtitle: "Formulaire adaptatif conforme aux normes SST",
+    saving: "Sauvegarde en cours...",
+    saved: "✅ Sauvegardé avec succès",
     
-    // Structure de données pour Supabase
-    const supabaseData = {
-      id: formData.id,
-      ast_number: formData.astNumber,
-      created_at: formData.created,
-      updated_at: new Date().toISOString(),
-      status: formData.status,
-      language: formData.language,
-      industry: formData.industry,
-      
-      // Informations projet avec nouveaux champs
-      project_info: {
-        ...formData.projectInfo,
-        // S'assurer que les nouveaux champs sont présents
-        clientPhone: formData.projectInfo.clientPhone || '',
-        clientRepresentativePhone: formData.projectInfo.clientRepresentativePhone || ''
+    // Compteurs de personnes
+    counters: {
+      onJob: "Sur la job",
+      approved: "Approuvé AST", 
+      approvalRate: "Taux d'approbation"
+    },
+    
+    steps: {
+      general: "Informations Générales",
+      discussion: "Discussion Équipe", 
+      equipment: "Équipements Sécurité",
+      hazards: "Dangers & Risques",
+      isolation: "Points d'Isolement",
+      team: "Équipe de Travail",
+      documentation: "Photos & Documentation", 
+      validation: "Validation & Signatures"
+    },
+    
+    projectInfo: {
+      title: "Informations du Projet",
+      industry: "Type d'Industrie",
+      astNumber: "# AST",
+      astClientNumber: "# AST du Client", 
+      date: "Date",
+      client: "Client",
+      clientPhone: "# Téléphone Client",
+      projectNumber: "Numéro de Projet",
+      workDescription: "Description des Travaux",
+      workLocation: "Lieu des Travaux",
+      clientRepresentative: "Nom du Responsable",
+      clientRepresentativePhone: "# Téléphone Responsable",
+      workerCount: "Nombre de personnes sur la job",
+      estimatedDuration: "Durée Estimée",
+      emergencyContact: "Contact d'Urgence",
+      emergencyPhone: "# Urgence",
+      astInfo: "Numéro généré automatiquement - usage unique",
+      astClientInfo: "Numéro fourni par le client (optionnel)"
+    },
+    
+    teamDiscussion: {
+      title: "Discussion avec l'Équipe",
+      subtitle: "Information à discuter avec l'équipe",
+      completed: "Complété",
+      pending: "En attente", 
+      discussedBy: "Discuté par",
+      notes: "Notes",
+      priority: "Priorité"
+    },
+    
+    safetyEquipment: {
+      title: "Équipement de Protection Individuel et Collectif",
+      required: "Requis",
+      available: "Disponible",
+      verified: "Vérifié", 
+      notes: "Notes",
+      categories: {
+        head: "Protection Tête",
+        eye: "Protection Yeux",
+        respiratory: "Protection Respiratoire",
+        hand: "Protection Mains", 
+        foot: "Protection Pieds",
+        body: "Protection Corps",
+        fall: "Protection Chute",
+        electrical: "Protection Électrique",
+        detection: "Détection",
+        other: "Autre"
+      }
+    },
+    
+    hazards: {
+      title: "Dangers Potentiels",
+      selected: "Sélectionné",
+      riskLevel: "Niveau de Risque",
+      notes: "Notes supplémentaires",
+      controlMeasures: "Moyens de Contrôle",
+      controlsRequired: "⚠️ Moyens de contrôle requis",
+      controlsInPlace: "VIGILANCE - Moyens de contrôle en place",
+      addCustomHazard: "Ajouter un danger personnalisé",
+      levels: {
+        low: "Faible",
+        medium: "Moyen",
+        high: "Élevé", 
+        critical: "Critique"
       },
-      
-      // Discussions équipe
-      team_discussion: formData.teamDiscussion,
-      
-      // Équipements de sécurité
-      safety_equipment: formData.safetyEquipment,
-      
-      // Dangers avec moyens de contrôle
-      electrical_hazards: formData.electricalHazards,
-      
-      // Équipe avec approbations
-      team: {
-        ...formData.team,
-        members: formData.team.members.map(member => ({
-          ...member,
-          // S'assurer que les nouveaux champs sont présents
-          consultationAst: member.consultationAst || false,
-          cadenasAppose: member.cadenasAppose || false,
-          cadenasReleve: member.cadenasReleve || false
-        }))
+      categories: {
+        elimination: "Élimination",
+        substitution: "Substitution",
+        engineering: "Ingénierie",
+        administrative: "Administrative",
+        ppe: "EPI"
+      }
+    },
+    
+    industries: {
+      electrical: "Électrique",
+      construction: "Construction",
+      industrial: "Industriel",
+      office: "Bureau/Administratif",
+      manufacturing: "Manufacturier",
+      other: "Autre"
+    },
+    
+    team: {
+      title: "Équipe de Travail",
+      supervisor: "Superviseur",
+      addMember: "Ajouter Membre d'Équipe",
+      memberName: "Nom du Membre",
+      employeeId: "ID Employé",
+      department: "Département", 
+      qualification: "Qualification",
+      validation: "Validation Équipe",
+      consultationAst: "Consultation AST",
+      cadenasAppose: "Cadenas Apposé",
+      cadenasReleve: "Cadenas Relevé",
+      status: "Statut",
+      actions: "Actions",
+      pending: "En attente",
+      approved: "Approuvé",
+      rejected: "Rejeté"
+    },
+    
+    isolation: {
+      title: "Points d'Isolement",
+      addPoint: "Ajouter Point d'Isolement",
+      pointName: "Nom du Point d'Isolement",
+      isolationType: "Type d'Isolement",
+      selectType: "Sélectionner le type...",
+      noPoints: "Aucun point d'isolement configuré",
+      checklist: {
+        cadenasAppose: "Cadenas Apposé",
+        absenceTension: "Absence de Tension", 
+        miseALaTerre: "Mise à la Terre"
+      }
+    },
+    
+    actions: {
+      sendByEmail: "Envoyer par Courriel",
+      archive: "Archiver",
+      generatePDF: "Générer PDF",
+      print: "Imprimer",
+      finalApproval: "Soumission Finale"
+    },
+    
+    buttons: {
+      previous: "Précédent",
+      next: "Suivant", 
+      save: "Sauvegarder",
+      approve: "Approuver",
+      reject: "Rejeter",
+      add: "Ajouter",
+      edit: "Modifier",
+      delete: "Supprimer"
+    },
+
+    email: {
+      subject: "AST - Analyse Sécuritaire de Tâches",
+      body: "Veuillez trouver ci-joint l'Analyse Sécuritaire de Tâches pour votre révision."
+    }
+  },
+  
+  en: {
+    title: "New Job Safety Analysis",
+    subtitle: "Adaptive form compliant with OHS standards", 
+    saving: "Saving...",
+    saved: "✅ Successfully saved",
+    
+    // Compteurs de personnes
+    counters: {
+      onJob: "On Job",
+      approved: "JSA Approved",
+      approvalRate: "Approval Rate"
+    },
+    
+    steps: {
+      general: "General Information",
+      discussion: "Team Discussion", 
+      equipment: "Safety Equipment",
+      hazards: "Hazards & Risks",
+      isolation: "Isolation Points",
+      team: "Work Team",
+      documentation: "Photos & Documentation",
+      validation: "Validation & Signatures"
+    },
+    
+    projectInfo: {
+      title: "Project Information",
+      industry: "Industry Type",
+      astNumber: "# JSA",
+      astClientNumber: "# Client JSA",
+      date: "Date",
+      client: "Client", 
+      clientPhone: "Client Phone #",
+      projectNumber: "Project Number",
+      workDescription: "Work Description",
+      workLocation: "Work Location",
+      clientRepresentative: "Representative Name",
+      clientRepresentativePhone: "Representative Phone #",
+      workerCount: "Number of people on job",
+      estimatedDuration: "Estimated Duration",
+      emergencyContact: "Emergency Contact",
+      emergencyPhone: "Emergency Phone #",
+      astInfo: "Auto-generated unique number",
+      astClientInfo: "Client-provided number (optional)"
+    },
+    
+    teamDiscussion: {
+      title: "Team Discussion",
+      subtitle: "Information to discuss with team",
+      completed: "Completed",
+      pending: "Pending",
+      discussedBy: "Discussed by", 
+      notes: "Notes",
+      priority: "Priority"
+    },
+    
+    safetyEquipment: {
+      title: "Individual and Collective Protection Equipment",
+      required: "Required",
+      available: "Available",
+      verified: "Verified",
+      notes: "Notes",
+      categories: {
+        head: "Head Protection",
+        eye: "Eye Protection", 
+        respiratory: "Respiratory Protection",
+        hand: "Hand Protection",
+        foot: "Foot Protection",
+        body: "Body Protection", 
+        fall: "Fall Protection",
+        electrical: "Electrical Protection",
+        detection: "Detection",
+        other: "Other"
+      }
+    },
+    
+    hazards: {
+      title: "Potential Hazards",
+      selected: "Selected",
+      riskLevel: "Risk Level", 
+      notes: "Additional notes",
+      controlMeasures: "Control Measures",
+      controlsRequired: "⚠️ Control measures required",
+      controlsInPlace: "VIGILANCE - Control measures in place",
+      addCustomHazard: "Add custom hazard",
+      levels: {
+        low: "Low",
+        medium: "Medium",
+        high: "High",
+        critical: "Critical"
       },
-      
-      // Points d'isolement avec checklist simplifiée
-      isolation_points: formData.isolationPoints.map(point => ({
-        ...point,
-        // S'assurer que la checklist est présente (sans cadenasReleve affiché)
-        checklist: {
-          cadenasAppose: point.checklist?.cadenasAppose || false,
-          absenceTension: point.checklist?.absenceTension || false,
-          miseALaTerre: point.checklist?.miseALaTerre || false,
-          cadenasReleve: point.checklist?.cadenasReleve || false // Gardé pour compatibilité
-        }
-      })),
-      
-      // Documentation
-      documentation: formData.documentation,
-      
-      // Validation
-      validation: formData.validation,
-      
-      // Métadonnées pour recherche et tri
-      client_name: formData.projectInfo.client,
-      project_number: formData.projectInfo.projectNumber,
-      work_location: formData.projectInfo.workLocation,
-      worker_count: formData.projectInfo.workerCount,
-      hazards_count: formData.electricalHazards.filter(h => h.isSelected).length,
-      team_size: formData.team.members.length,
-      approved_members: formData.team.members.filter(m => m.validationStatus === 'approved').length,
-      approval_rate: formData.team.members.length > 0 ? 
-        Math.round((formData.team.members.filter(m => m.validationStatus === 'approved').length / formData.team.members.length) * 100) : 0,
-      photos_count: formData.documentation.photos.length,
-      isolation_points_count: formData.isolationPoints.length,
-      completion_percentage: calculateOverallCompletion(formData)
+      categories: {
+        elimination: "Elimination",
+        substitution: "Substitution", 
+        engineering: "Engineering",
+        administrative: "Administrative",
+        ppe: "PPE"
+      }
+    },
+    
+    industries: {
+      electrical: "Electrical",
+      construction: "Construction",
+      industrial: "Industrial",
+      office: "Office/Administrative",
+      manufacturing: "Manufacturing",
+      other: "Other"
+    },
+    
+    team: {
+      title: "Work Team",
+      supervisor: "Supervisor",
+      addMember: "Add Team Member",
+      memberName: "Member Name",
+      employeeId: "Employee ID",
+      department: "Department",
+      qualification: "Qualification",
+      validation: "Team Validation",
+      consultationAst: "JSA Consultation", 
+      cadenasAppose: "Lock Applied",
+      cadenasReleve: "Lock Removed",
+      status: "Status",
+      actions: "Actions",
+      pending: "Pending",
+      approved: "Approved",
+      rejected: "Rejected"
+    },
+    
+    isolation: {
+      title: "Isolation Points",
+      addPoint: "Add Isolation Point",
+      pointName: "Isolation Point Name",
+      isolationType: "Isolation Type",
+      selectType: "Select type...",
+      noPoints: "No isolation points configured",
+      checklist: {
+        cadenasAppose: "Lock Applied",
+        absenceTension: "Absence of Voltage",
+        miseALaTerre: "Grounded"
+      }
+    },
+    
+    actions: {
+      sendByEmail: "Send by Email",
+      archive: "Archive", 
+      generatePDF: "Generate PDF",
+      print: "Print",
+      finalApproval: "Final Submission"
+    },
+    
+    buttons: {
+      previous: "Previous",
+      next: "Next",
+      save: "Save",
+      approve: "Approve",
+      reject: "Reject",
+      add: "Add",
+      edit: "Edit",
+      delete: "Delete"
+    },
+
+    email: {
+      subject: "JSA - Job Safety Analysis",
+      body: "Please find attached the Job Safety Analysis for your review."
+    }
+  }
+};
+
+// =================== DONNÉES INITIALES MISES À JOUR ===================
+const initialFormData: ASTFormData = {
+  id: `AST-${Date.now()}`,
+  astNumber: generateASTNumber(),
+  created: new Date().toISOString(),
+  lastModified: new Date().toISOString(),
+  language: 'fr',
+  status: 'draft',
+  industry: 'electrical',
+  
+  projectInfo: {
+    date: new Date().toISOString().split('T')[0],
+    time: new Date().toTimeString().substring(0, 5),
+    client: '',
+    clientPhone: '',
+    projectNumber: '',
+    astClientNumber: '',
+    workLocation: '',
+    workDescription: '',
+    estimatedDuration: '',
+    workerCount: 1,
+    clientRepresentative: '',
+    clientRepresentativePhone: '',
+    emergencyContact: '',
+    emergencyPhone: '',
+    workPermitRequired: false,
+    workPermitNumber: '',
+    weatherConditions: '',
+    specialConditions: ''
+  },
+  
+  teamDiscussion: {
+    electricalCutoffPoints: '',
+    electricalHazardExplanation: '',
+    epiSpecificNotes: '',
+    specialWorkConditions: '',
+    emergencyProcedures: '',
+    discussions: [...predefinedDiscussions],
+    briefingCompleted: false,
+    briefingDate: '',
+    briefingTime: '',
+    emergencyProceduresList: [...emergencyProcedures]
+  },
+  
+  safetyEquipment: [...requiredSafetyEquipment],
+  electricalHazards: [...predefinedElectricalHazards],
+  riskAssessments: [],
+  
+  team: {
+    supervisor: '',
+    supervisorCertification: '',
+    members: [],
+    briefingCompleted: false,
+    briefingDate: '',
+    briefingTime: '',
+    totalMembers: 0,
+    acknowledgedMembers: 0,
+    validations: [],
+    allApproved: false
+  },
+  
+  isolationPoints: [],
+  
+  documentation: {
+    photos: [],
+    additionalDocuments: [],
+    inspectionNotes: '',
+    correctiveActions: ''
+  },
+  
+  validation: {
+    completedBy: '',
+    completedDate: '',
+    reviewedBy: '',
+    reviewedDate: '',
+    approvedBy: '',
+    approvedDate: '',
+    clientApproval: false,
+    finalApproval: false,
+    revisionNumber: 1,
+    comments: '',
+    emailSent: false
+  }
+};
+
+// =================== FONCTIONS PDF PROFESSIONNELLES ===================
+const generateProfessionalPDF = async (formData: ASTFormData, tenant: Tenant): Promise<boolean> => {
+  try {
+    console.log('📄 Génération PDF professionnel en cours...');
+    
+    // Import dynamique pour éviter les erreurs SSR
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF('p', 'mm', 'a4');
+    
+    // Configuration des polices et couleurs
+    const primaryColor = '#1e40af';
+    const secondaryColor = '#3b82f6';
+    const textColor = '#1f2937';
+    
+    let currentY = 20;
+    const pageHeight = 297;
+    const margin = 20;
+    const lineHeight = 7;
+    
+    // Fonction pour vérifier et ajouter une nouvelle page
+    const checkNewPage = (requiredSpace: number = 30) => {
+      if (currentY + requiredSpace > pageHeight - margin) {
+        doc.addPage();
+        currentY = 20;
+        return true;
+      }
+      return false;
     };
     
-    // En production, remplacez par votre client Supabase
-    /*
-    const { data, error } = await supabase
-      .from('ast_forms')
-      .upsert(supabaseData, {
-        onConflict: 'id',
-        returning: 'minimal'
+    // EN-TÊTE AVEC LOGO
+    try {
+      // Convertir le SVG en image pour le PDF (simplifié)
+      doc.setFillColor(59, 130, 246); // Bleu
+      doc.rect(margin, currentY, 40, 20, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CLIENT', margin + 20, currentY + 8, { align: 'center' });
+      doc.text('POTENTIEL', margin + 20, currentY + 14, { align: 'center' });
+    } catch (error) {
+      console.warn('Erreur logo PDF:', error);
+    }
+    
+    // TITRE PRINCIPAL
+    doc.setTextColor(30, 64, 175);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ANALYSE SÉCURITAIRE DE TÂCHES', margin + 50, currentY + 12);
+    
+    doc.setTextColor(59, 130, 246);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`# ${formData.astNumber}`, margin + 50, currentY + 20);
+    
+    currentY += 35;
+    
+    // INFORMATIONS GÉNÉRALES
+    checkNewPage(50);
+    doc.setTextColor(textColor);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('1. INFORMATIONS GÉNÉRALES', margin, currentY);
+    currentY += 10;
+    
+    const generalInfo = [
+      ['Client:', formData.projectInfo.client],
+      ['Téléphone Client:', formData.projectInfo.clientPhone],
+      ['Projet:', formData.projectInfo.projectNumber],
+      ['Responsable:', formData.projectInfo.clientRepresentative],
+      ['Tél. Responsable:', formData.projectInfo.clientRepresentativePhone],
+      ['Lieu:', formData.projectInfo.workLocation],
+      ['Date:', formData.projectInfo.date],
+      ['Personnes sur la job:', formData.projectInfo.workerCount.toString()],
+      ['Description:', formData.projectInfo.workDescription]
+    ];
+    
+    doc.setFontSize(10);
+    generalInfo.forEach(([label, value]) => {
+      if (checkNewPage()) doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(label, margin, currentY);
+      doc.setFont('helvetica', 'normal');
+      const textValue = value || 'Non spécifié';
+      if (label === 'Description:') {
+        const splitText = doc.splitTextToSize(textValue, 140);
+        doc.text(splitText, margin + 40, currentY);
+        currentY += splitText.length * lineHeight;
+      } else {
+        doc.text(textValue, margin + 40, currentY);
+        currentY += lineHeight;
+      }
+    });
+    
+    // DANGERS IDENTIFIÉS
+    currentY += 10;
+    checkNewPage(30);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('2. DANGERS IDENTIFIÉS', margin, currentY);
+    currentY += 10;
+    
+    const selectedHazards = formData.electricalHazards.filter(h => h.isSelected);
+    if (selectedHazards.length > 0) {
+      selectedHazards.forEach((hazard, index) => {
+        checkNewPage(25);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${index + 1}. ${hazard.title}`, margin, currentY);
+        currentY += lineHeight;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        const description = doc.splitTextToSize(hazard.description, 150);
+        doc.text(description, margin + 5, currentY);
+        currentY += description.length * lineHeight;
+        
+        // Moyens de contrôle sélectionnés
+        const selectedControls = hazard.controlMeasures.filter(c => c.isSelected);
+        if (selectedControls.length > 0) {
+          doc.setFont('helvetica', 'bold');
+          doc.text('Moyens de contrôle:', margin + 5, currentY);
+          currentY += lineHeight;
+          
+          doc.setFont('helvetica', 'normal');
+          selectedControls.forEach(control => {
+            if (checkNewPage()) doc.setFontSize(9);
+            doc.text(`• ${control.name}`, margin + 10, currentY);
+            currentY += lineHeight;
+          });
+        }
+        currentY += 3;
       });
-    
-    if (error) {
-      console.error('Erreur Supabase:', error);
-      throw error;
+    } else {
+      doc.setFontSize(10);
+      doc.text('Aucun danger identifié', margin, currentY);
+      currentY += lineHeight;
     }
     
-    // Sauvegarde des photos séparément si nécessaire
-    if (formData.documentation.photos.length > 0) {
-      const photoUpserts = formData.documentation.photos.map(photo => ({
-        id: photo.id,
-        ast_id: formData.id,
-        name: photo.name,
-        data: photo.data,
-        description: photo.description,
-        timestamp: photo.timestamp,
-        category: photo.category,
-        file_size: photo.data.length,
-        mime_type: photo.data.substring(photo.data.indexOf(':') + 1, photo.data.indexOf(';'))
-      }));
+    // ÉQUIPE DE TRAVAIL
+    currentY += 10;
+    checkNewPage(40);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('3. ÉQUIPE DE TRAVAIL', margin, currentY);
+    currentY += 10;
+    
+    if (formData.team.members.length > 0) {
+      // En-têtes du tableau
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Nom', margin, currentY);
+      doc.text('Département', margin + 50, currentY);
+      doc.text('Consultation AST', margin + 90, currentY);
+      doc.text('Cadenas Apposé', margin + 130, currentY);
+      doc.text('Statut', margin + 170, currentY);
+      currentY += lineHeight;
       
-      const { data: photoData, error: photoError } = await supabase
-        .from('ast_photos')
-        .upsert(photoUpserts, {
-          onConflict: 'id',
-          returning: 'minimal'
-        });
+      // Ligne de séparation
+      doc.line(margin, currentY - 2, 190, currentY - 2);
+      currentY += 2;
       
-      if (photoError) {
-        console.error('Erreur sauvegarde photos:', photoError);
-      }
+      formData.team.members.forEach(member => {
+        if (checkNewPage()) {
+          // Répéter les en-têtes sur nouvelle page
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Nom', margin, currentY);
+          doc.text('Département', margin + 50, currentY);
+          doc.text('Consultation AST', margin + 90, currentY);
+          doc.text('Cadenas Apposé', margin + 130, currentY);
+          doc.text('Statut', margin + 170, currentY);
+          currentY += lineHeight + 2;
+        }
+        
+        doc.setFont('helvetica', 'normal');
+        doc.text(member.name, margin, currentY);
+        doc.text(member.department, margin + 50, currentY);
+        doc.text(member.consultationAst ? '✓' : '✗', margin + 105, currentY);
+        doc.text(member.cadenasAppose ? '✓' : '✗', margin + 145, currentY);
+        
+        // Couleur selon statut
+        if (member.validationStatus === 'approved') {
+          doc.setTextColor(34, 197, 94);
+          doc.text('Approuvé', margin + 170, currentY);
+        } else if (member.validationStatus === 'rejected') {
+          doc.setTextColor(239, 68, 68);
+          doc.text('Rejeté', margin + 170, currentY);
+        } else {
+          doc.setTextColor(251, 191, 36);
+          doc.text('En attente', margin + 170, currentY);
+        }
+        doc.setTextColor(textColor);
+        
+        currentY += lineHeight;
+      });
+    } else {
+      doc.setFontSize(10);
+      doc.text('Aucun membre d\'équipe ajouté', margin, currentY);
+      currentY += lineHeight;
     }
     
-    // Sauvegarde des points d'isolement avec photos
+    // POINTS D'ISOLEMENT
     if (formData.isolationPoints.length > 0) {
-      const isolationUpserts = formData.isolationPoints.map(point => ({
-        id: point.id,
-        ast_id: formData.id,
-        name: point.name,
-        type: point.type,
-        is_active: point.isActive,
-        created_at: point.createdAt,
-        checklist: point.checklist,
-        photos_count: point.photos.length
-      }));
+      currentY += 10;
+      checkNewPage(30);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('4. POINTS D\'ISOLEMENT', margin, currentY);
+      currentY += 10;
       
-      const { error: isolationError } = await supabase
-        .from('ast_isolation_points')
-        .upsert(isolationUpserts, {
-          onConflict: 'id',
-          returning: 'minimal'
-        });
-      
-      if (isolationError) {
-        console.error('Erreur sauvegarde points isolation:', isolationError);
-      }
+      formData.isolationPoints.forEach((point, index) => {
+        checkNewPage(20);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${index + 1}. ${point.name} (${point.type})`, margin, currentY);
+        currentY += lineHeight;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Cadenas Apposé: ${point.checklist.cadenasAppose ? '✓' : '✗'}`, margin + 5, currentY);
+        doc.text(`Absence Tension: ${point.checklist.absenceTension ? '✓' : '✗'}`, margin + 60, currentY);
+        doc.text(`Mise à la Terre: ${point.checklist.miseALaTerre ? '✓' : '✗'}`, margin + 120, currentY);
+        currentY += lineHeight + 3;
+      });
     }
     
-    console.log('✅ Sauvegarde Supabase réussie:', data);
-    */
+    // SIGNATURES
+    currentY += 15;
+    checkNewPage(40);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('5. SIGNATURES ET VALIDATION', margin, currentY);
+    currentY += 15;
     
-    // Simulation temporaire avec localStorage pour test
-    localStorage.setItem(`ast_${formData.id}`, JSON.stringify(supabaseData));
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
     
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('✅ Sauvegarde Supabase simulée réussie');
+    // Signature superviseur
+    doc.text('Superviseur:', margin, currentY);
+    doc.line(margin + 30, currentY, margin + 100, currentY);
+    doc.text('Date:', margin + 110, currentY);
+    doc.line(margin + 125, currentY, margin + 170, currentY);
+    currentY += 15;
+    
+    // Signature client
+    doc.text('Client:', margin, currentY);
+    doc.line(margin + 30, currentY, margin + 100, currentY);
+    doc.text('Date:', margin + 110, currentY);
+    doc.line(margin + 125, currentY, margin + 170, currentY);
+    currentY += 15;
+    
+    // Statut final
+    if (formData.validation.finalApproval) {
+      doc.setTextColor(34, 197, 94);
+      doc.setFont('helvetica', 'bold');
+      doc.text('✓ AST APPROUVÉE ET VALIDÉE', margin, currentY);
+    }
+    
+    // Pied de page sur toutes les pages
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Page ${i} sur ${pageCount}`, 105, 290, { align: 'center' });
+      doc.text(`Généré le ${new Date().toLocaleDateString('fr-CA')} par ${tenant.companyName}`, margin, 290);
+    }
+    
+    // Sauvegarde
+    const fileName = `AST_${formData.astNumber}_${formData.projectInfo.client || 'Client'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+    
+    console.log('✅ PDF généré avec succès:', fileName);
     return true;
     
   } catch (error) {
-    console.error('❌ Erreur sauvegarde Supabase:', error);
+    console.error('❌ Erreur génération PDF:', error);
     return false;
   }
 };
 
-const archiveToSupabase = async (formData: ASTFormData, tenant: Tenant) => {
+// =================== FONCTION EMAIL PROFESSIONNELLE ===================
+const sendByEmail = async (formData: ASTFormData, tenant: Tenant, language: 'fr' | 'en'): Promise<boolean> => {
   try {
-    console.log('📦 Archivage Supabase en cours...', formData.astNumber);
+    console.log('📧 Envoi email en cours...');
     
-    const archivedData: ASTFormData = {
-      ...formData,
-      status: 'archived',
-      validation: {
-        ...formData.validation,
-        archivedDate: new Date().toISOString()
-      }
-    };
+    const t = translations[language];
+    const subject = `${t.email.subject} - ${formData.astNumber}`;
     
-    // Archivage avec métadonnées détaillées
-    const archiveData = {
-      ...archivedData,
-      archived_at: new Date().toISOString(),
-      archived_by: tenant.companyName,
-      final_status: archivedData.status,
-      completion_percentage: calculateOverallCompletion(archivedData),
-      approval_rate: archivedData.team.members.length > 0 ? 
-        Math.round((archivedData.team.members.filter(m => m.validationStatus === 'approved').length / archivedData.team.members.length) * 100) : 0,
-      summary: {
-        client: archivedData.projectInfo.client,
-        project: archivedData.projectInfo.projectNumber,
-        worker_count: archivedData.projectInfo.workerCount,
-        dangers_identified: archivedData.electricalHazards.filter(h => h.isSelected).length,
-        team_added: archivedData.team.members.length,
-        team_approved: archivedData.team.members.filter(m => m.validationStatus === 'approved').length,
-        isolation_points: archivedData.isolationPoints.length,
-        photos_attached: archivedData.documentation.photos.length,
-        final_approval: archivedData.validation.finalApproval,
-        email_sent: archivedData.validation.emailSent
-      }
-    };
+    // Génération du contenu HTML professionnel
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>${subject}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8fafc; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 30px; text-align: center; }
+            .logo { width: 60px; height: 30px; background: rgba(255,255,255,0.2); border-radius: 6px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px; }
+            .content { padding: 30px; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
+            .info-item { background: #f1f5f9; padding: 12px; border-radius: 8px; }
+            .info-label { font-weight: bold; color: #475569; font-size: 12px; }
+            .info-value { color: #1e293b; margin-top: 4px; }
+            .stats { background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center; }
+            .stat-item { background: white; padding: 15px; border-radius: 8px; }
+            .stat-number { font-size: 24px; font-weight: bold; color: #1e40af; }
+            .stat-label { font-size: 12px; color: #64748b; margin-top: 5px; }
+            .footer { background: #f8fafc; padding: 20px; text-align: center; color: #64748b; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">CLIENT POTENTIEL</div>
+              <h1>Analyse Sécuritaire de Tâches</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;"># ${formData.astNumber}</p>
+            </div>
+            
+            <div class="content">
+              <p>Bonjour,</p>
+              <p>Veuillez trouver ci-dessous les détails de l'Analyse Sécuritaire de Tâches qui vient d'être complétée :</p>
+              
+              <div class="info-grid">
+                <div class="info-item">
+                  <div class="info-label">CLIENT</div>
+                  <div class="info-value">${formData.projectInfo.client || 'Non spécifié'}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">PROJET</div>
+                  <div class="info-value">${formData.projectInfo.projectNumber || 'Non spécifié'}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">LIEU</div>
+                  <div class="info-value">${formData.projectInfo.workLocation || 'Non spécifié'}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">DATE</div>
+                  <div class="info-value">${formData.projectInfo.date || 'Non spécifié'}</div>
+                </div>
+              </div>
+              
+              <div class="stats">
+                <h3 style="margin: 0 0 15px 0; color: #1e293b;">Résumé de l'AST</h3>
+                <div class="stat-grid">
+                  <div class="stat-item">
+                    <div class="stat-number">${formData.electricalHazards.filter(h => h.isSelected).length}</div>
+                    <div class="stat-label">Dangers Identifiés</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-number">${formData.team.members.length}</div>
+                    <div class="stat-label">Membres d'Équipe</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-number">${formData.team.members.filter(m => m.validationStatus === 'approved').length}</div>
+                    <div class="stat-label">Approbations</div>
+                  </div>
+                </div>
+              </div>
+              
+              <p><strong>Description des travaux :</strong></p>
+              <p style="background: #f8fafc; padding: 15px; border-radius: 8px; font-style: italic;">
+                ${formData.projectInfo.workDescription || 'Aucune description fournie'}
+              </p>
+              
+              <p>Le PDF complet de l'AST est disponible pour téléchargement.</p>
+              <p>Pour toute question, n'hésitez pas à nous contacter.</p>
+              
+              <p>Cordialement,<br><strong>${tenant.companyName}</strong></p>
+            </div>
+            
+            <div class="footer">
+              <p>Cet email a été généré automatiquement par le système AST de ${tenant.companyName}</p>
+              <p>Généré le ${new Date().toLocaleDateString('fr-CA')} à ${new Date().toLocaleTimeString('fr-CA')}</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
     
-    // En production:
-    /*
-    const { data, error } = await supabase
-      .from('ast_archives')
-      .insert(archiveData);
+    // Construction de l'URL mailto avec contenu HTML
+    const emailBody = encodeURIComponent(t.email.body + '\n\nDétails de l\'AST:\n' +
+      `Client: ${formData.projectInfo.client}\n` +
+      `Projet: ${formData.projectInfo.projectNumber}\n` +
+      `Lieu: ${formData.projectInfo.workLocation}\n` +
+      `Date: ${formData.projectInfo.date}\n` +
+      `Dangers identifiés: ${formData.electricalHazards.filter(h => h.isSelected).length}\n` +
+      `Équipe: ${formData.team.members.length} membres\n\n` +
+      `Veuillez générer le PDF pour obtenir le document complet.`
+    );
     
-    if (error) throw error;
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${emailBody}`;
     
-    // Optionnel: déplacer vers table d'archive et supprimer de la table active
-    const { error: deleteError } = await supabase
-      .from('ast_forms')
-      .delete()
-      .eq('id', formData.id);
+    // Ouverture du client email par défaut
+    window.open(mailtoUrl);
     
-    if (deleteError) {
-      console.error('Erreur suppression après archivage:', deleteError);
-    }
-    
-    // Nettoyer les photos et documents associés si nécessaire
-    const { error: photoCleanupError } = await supabase
-      .from('ast_photos')
-      .delete()
-      .eq('ast_id', formData.id);
-    
-    if (photoCleanupError) {
-      console.error('Erreur nettoyage photos:', photoCleanupError);
-    }
-    */
-    
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    localStorage.setItem(`ast_archive_${formData.id}`, JSON.stringify(archiveData));
-    
-    console.log('✅ Archivage Supabase réussi');
-    return archivedData;
+    console.log('✅ Email ouvert avec succès');
+    return true;
     
   } catch (error) {
-    console.error('❌ Erreur archivage Supabase:', error);
-    throw error;
+    console.error('❌ Erreur envoi email:', error);
+    return false;
   }
 };
-
-// =================== FONCTION DE CALCUL DE COMPLETION AMÉLIORÉE ===================
-const calculateOverallCompletion = (formData: ASTFormData): number => {
-  let totalFields = 0;
-  let completedFields = 0;
-  
-  // Informations de base (25%)
-  const basicFields = [
-    formData.projectInfo.client,
-    formData.projectInfo.projectNumber,
-    formData.projectInfo.workLocation,
-    formData.projectInfo.workDescription
-  ];
-  totalFields += basicFields.length;
-  completedFields += basicFields.filter(field => field?.trim()).length;
-  
-  // Discussions d'équipe (15%)
-  const discussions = formData.teamDiscussion.discussions;
-  totalFields += discussions.length;
-  completedFields += discussions.filter(d => d.completed).length;
-  
-  // Équipements requis (15%)
-  const requiredEquipment = formData.safetyEquipment.filter(eq => eq.required);
-  totalFields += requiredEquipment.length;
-  completedFields += requiredEquipment.filter(eq => eq.verified).length;
-  
-  // Dangers identifiés (20%)
-  const selectedHazards = formData.electricalHazards.filter(h => h.isSelected);
-  if (selectedHazards.length > 0) {
-    totalFields += 1;
-    completedFields += 1;
-  }
-  
-  // Équipe validée (15%)
-  const teamMembers = formData.team.members;
-  totalFields += teamMembers.length;
-  completedFields += teamMembers.filter(m => m.validationStatus === 'approved').length;
-  
-  // Documentation (10%)
-  if (formData.documentation.photos.length > 0) {
-    totalFields += 1;
-    completedFields += 1;
-  }
-  
-  return totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0;
-};
-
-// =================== COMPOSANT CARROUSEL PHOTOS AMÉLIORÉ ===================
-const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto, onUpdateDescription }: {
-  photos: Photo[];
-  onAddPhoto: (file: File) => void;
-  onRemovePhoto: (photoId: string) => void;
-  onUpdateDescription: (photoId: string, description: string) => void;
-}) => {
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setIsUploading(true);
-      
-      // Validation du fichier
-      if (file.size > 10 * 1024 * 1024) { // 10MB max
-        alert('La taille du fichier ne peut pas dépasser 10MB');
-        setIsUploading(false);
-        return;
-      }
-      
-      if (!file.type.startsWith('image/')) {
-        alert('Seules les images sont acceptées');
-        setIsUploading(false);
-        return;
-      }
-      
-      try {
-        await onAddPhoto(file);
-      } catch (error) {
-        console.error('Erreur upload photo:', error);
-        alert('Erreur lors de l\'ajout de la photo');
-      } finally {
-        setIsUploading(false);
-      }
-    }
-  };
-
-  const nextPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
-  };
-
-  const prevPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
-  };
-
-  return (
-    <div style={{
-      position: 'relative',
-      background: 'rgba(30, 41, 59, 0.8)',
-      borderRadius: '12px',
-      padding: '16px',
-      margin: '16px 0',
-      border: '1px solid rgba(100, 116, 139, 0.3)'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-        <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>
-          📸 Photos ({photos.length})
-        </h4>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="btn-premium"
-          style={{ padding: '8px 16px', fontSize: '12px' }}
-          disabled={isUploading}
-        >
-          {isUploading ? (
-            <>
-              <div className="pulse" style={{ width: '14px', height: '14px', marginRight: '8px' }}>⏳</div>
-              Upload...
-            </>
-          ) : (
-            <>
-              <Plus style={{ width: '14px', height: '14px' }} />
-              Ajouter Photo
-            </>
-          )}
-        </button>
-      </div>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileUpload}
-        style={{ display: 'none' }}
-      />
-
-      {photos.length > 0 ? (
-        <div style={{ position: 'relative' }}>
-          <img
-            src={photos[currentPhotoIndex].data}
-            alt={photos[currentPhotoIndex].name}
-            style={{ 
-              width: '100%', 
-              height: '200px', 
-              objectFit: 'cover', 
-              borderRadius: '8px',
-              border: '1px solid rgba(100, 116, 139, 0.3)'
-            }}
-          />
-          
-          {photos.length > 1 && (
-            <>
-              <button
-                onClick={prevPhoto}
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '16px',
-                  transform: 'translateY(-50%)',
-                  background: 'rgba(0, 0, 0, 0.8)',
-                  border: 'none',
-                  color: 'white',
-                  padding: '12px',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.8)'}
-              >
-                <ArrowLeft style={{ width: '16px', height: '16px' }} />
-              </button>
-              <button
-                onClick={nextPhoto}
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  right: '16px',
-                  transform: 'translateY(-50%)',
-                  background: 'rgba(0, 0, 0, 0.8)',
-                  border: 'none',
-                  color: 'white',
-                  padding: '12px',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.8)'}
-              >
-                <ArrowRight style={{ width: '16px', height: '16px' }} />
-              </button>
-            </>
-          )}
-
-          <div style={{
-            position: 'absolute',
-            bottom: '16px',
-            left: '16px',
-            background: 'rgba(0, 0, 0, 0.8)',
-            color: 'white',
-            padding: '8px 12px',
-            borderRadius: '8px',
-            fontSize: '12px',
-            fontWeight: '600'
-          }}>
-            {currentPhotoIndex + 1} / {photos.length}
-          </div>
-
-          <button
-            onClick={() => onRemovePhoto(photos[currentPhotoIndex].id)}
-            style={{
-              position: 'absolute',
-              top: '16px',
-              right: '16px',
-              background: 'rgba(239, 68, 68, 0.9)',
-              border: 'none',
-              color: 'white',
-              padding: '8px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 1)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.9)'}
-          >
-            <Trash2 style={{ width: '14px', height: '14px' }} />
-          </button>
-
-          <div style={{ marginTop: '12px' }}>
-            <input
-              type="text"
-              className="input-premium"
-              placeholder="Description de la photo..."
-              value={photos[currentPhotoIndex].description}
-              onChange={(e) => onUpdateDescription(photos[currentPhotoIndex].id, e.target.value)}
-              style={{ fontSize: '12px' }}
-            />
-          </div>
-        </div>
-      ) : (
-        <div style={{
-          textAlign: 'center',
-          padding: '40px',
-          border: '2px dashed rgba(100, 116, 139, 0.3)',
-          borderRadius: '8px',
-          color: '#64748b'
-        }}>
-          📷 Aucune photo ajoutée<br/>
-          <small>Formats acceptés: JPG, PNG, GIF (max 10MB)</small>
-        </div>
-      )}
-    </div>
-  );
-};
-// =================== AST SECTION 4/5 FINALE - COMPOSANT PRINCIPAL & LOGIQUE ===================
+// =================== AST SECTION 4/5 CORRIGÉE - COMPOSANT PRINCIPAL & LOGIQUE ===================
 // Section 4: Composant principal avec toutes les fonctions et logique métier
 
 // =================== COMPOSANT PRINCIPAL ===================
@@ -3179,10 +3086,9 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   const approvalRate = formData.team.members.length > 0 ? 
     Math.round((approvedMembersCount / formData.team.members.length) * 100) : 0;
 
-  // Début du JSX sera dans la section 5...
+  // Le JSX return sera dans la section 5...
   return (
-    <div className="form-container">,
-      // =================== AST SECTION 5/5 FINALE - JSX RENDER COMPLET ===================
+    // =================== AST SECTION 5/5 FINALE - JSX RENDER COMPLET ===================
 // Section 5: Interface utilisateur complète avec toutes les fonctionnalités
 
 // Continuation du return du composant principal...
