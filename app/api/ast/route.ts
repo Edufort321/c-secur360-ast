@@ -6,10 +6,10 @@ export async function POST(request: NextRequest) {
     const { tenantId, formData } = await request.json()
     
     // Générer un numéro AST automatique
-    const astCount = await prisma.astForm.count({ where: { tenantId } })
+    const astCount = await prisma.aSTForm.count({ where: { tenantId } })
     const astNumber = `AST-${new Date().getFullYear()}-${String(astCount + 1).padStart(3, '0')}`
     
-    const astForm = await prisma.astForm.create({
+    const astForm = await prisma.aSTForm.create({
       data: {
         tenantId,
         userId: 'temp-user', // À remplacer par l'authentification
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'tenantId required' }, { status: 400 })
     }
     
-    const astForms = await prisma.astForm.findMany({
+    const astForms = await prisma.aSTForm.findMany({
       where: { tenantId },
       orderBy: { createdAt: 'desc' }
     })
