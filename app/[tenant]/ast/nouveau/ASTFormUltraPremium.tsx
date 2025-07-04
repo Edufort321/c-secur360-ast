@@ -199,19 +199,259 @@ const generateASTNumber = (): string => {
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
 // =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 2/5 ===================
-// Section 2: Données prédéfinies et traductions complètes
+// Section 2: Données prédéfinies et traductions complètes - MISE À JOUR AVEC CONTRÔLES
+
+// =================== NOUVELLES INTERFACES POUR CONTRÔLES ===================
+interface ControlMeasure {
+  id: string;
+  name: string;
+  description: string;
+  category: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
+  isSelected: boolean;
+  photos: Photo[];
+  notes: string;
+}
+
+interface HazardWithControls extends ElectricalHazard {
+  controlMeasures: ControlMeasure[];
+  showControls: boolean;
+}
+
+// =================== MOYENS DE CONTRÔLE PRÉDÉFINIS ===================
+const getControlMeasuresForHazard = (hazardId: string): ControlMeasure[] => {
+  const commonControls: ControlMeasure[] = [
+    {
+      id: 'ctrl-elim-1',
+      name: 'Élimination à la source',
+      description: 'Retirer complètement le danger',
+      category: 'elimination',
+      isSelected: false,
+      photos: [],
+      notes: ''
+    },
+    {
+      id: 'ctrl-sub-1', 
+      name: 'Substitution par alternative plus sûre',
+      description: 'Remplacer par une méthode moins dangereuse',
+      category: 'substitution',
+      isSelected: false,
+      photos: [],
+      notes: ''
+    },
+    {
+      id: 'ctrl-eng-1',
+      name: 'Isolation/Verrouillage',
+      description: 'Mesures d\'ingénierie pour isoler le danger',
+      category: 'engineering',
+      isSelected: false,
+      photos: [],
+      notes: ''
+    },
+    {
+      id: 'ctrl-admin-1',
+      name: 'Formation et procédures',
+      description: 'Formation du personnel et procédures de sécurité',
+      category: 'administrative',
+      isSelected: false,
+      photos: [],
+      notes: ''
+    },
+    {
+      id: 'ctrl-ppe-1',
+      name: 'Équipement de protection individuelle',
+      description: 'Port d\'EPI approprié',
+      category: 'ppe',
+      isSelected: false,
+      photos: [],
+      notes: ''
+    }
+  ];
+
+  // Moyens de contrôle spécifiques selon le danger
+  const specificControls: Record<string, ControlMeasure[]> = {
+    'h0': [ // Risque électrique
+      {
+        id: 'ctrl-h0-1',
+        name: 'Coupure électrique et verrouillage',
+        description: 'Couper l\'alimentation et verrouiller les disjoncteurs',
+        category: 'engineering',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      },
+      {
+        id: 'ctrl-h0-2',
+        name: 'Vérification absence de tension',
+        description: 'Utiliser un détecteur de tension certifié',
+        category: 'administrative',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      },
+      {
+        id: 'ctrl-h0-3',
+        name: 'EPI arc électrique approprié',
+        description: 'Combinaison ignifuge selon énergie incidente',
+        category: 'ppe',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      }
+    ],
+    'h1': [ // Appareillage sous-tension
+      {
+        id: 'ctrl-h1-1',
+        name: 'Périmètre de sécurité délimité',
+        description: 'Délimiter la zone d\'approche restreinte',
+        category: 'engineering',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      },
+      {
+        id: 'ctrl-h1-2',
+        name: 'Surveillant sécurité électrique',
+        description: 'Personne qualifiée pour surveiller les travaux',
+        category: 'administrative',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      }
+    ],
+    'h9': [ // Risque de chute
+      {
+        id: 'ctrl-h9-1',
+        name: 'Garde-corps temporaires',
+        description: 'Installation de garde-corps sécuritaires',
+        category: 'engineering',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      },
+      {
+        id: 'ctrl-h9-2',
+        name: 'Système d\'arrêt de chute',
+        description: 'Harnais + longe + point d\'ancrage certifié',
+        category: 'ppe',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      },
+      {
+        id: 'ctrl-h9-3',
+        name: 'Plateforme de travail sécuritaire',
+        description: 'Utiliser échafaudage ou nacelle',
+        category: 'engineering',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      }
+    ],
+    'h12': [ // Incendie/Explosion
+      {
+        id: 'ctrl-h12-1',
+        name: 'Permis de travail à chaud',
+        description: 'Obtenir et respecter le permis feu',
+        category: 'administrative',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      },
+      {
+        id: 'ctrl-h12-2',
+        name: 'Surveillance incendie',
+        description: 'Surveillant avec extincteur pendant et après travaux',
+        category: 'administrative',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      },
+      {
+        id: 'ctrl-h12-3',
+        name: 'Retrait matières combustibles',
+        description: 'Éliminer ou protéger les matières inflammables',
+        category: 'elimination',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      }
+    ],
+    'h15': [ // Espaces clos
+      {
+        id: 'ctrl-h15-1',
+        name: 'Test atmosphérique continu',
+        description: 'Surveillance continue de l\'atmosphère',
+        category: 'administrative',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      },
+      {
+        id: 'ctrl-h15-2',
+        name: 'Ventilation forcée',
+        description: 'Système de ventilation mécanique',
+        category: 'engineering',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      },
+      {
+        id: 'ctrl-h15-3',
+        name: 'Surveillant d\'espace clos',
+        description: 'Personne qualifiée en surveillance continue',
+        category: 'administrative',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      }
+    ],
+    'h18': [ // Substances dangereuses
+      {
+        id: 'ctrl-h18-1',
+        name: 'Fiche de données de sécurité',
+        description: 'Consultation des FDS avant manipulation',
+        category: 'administrative',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      },
+      {
+        id: 'ctrl-h18-2',
+        name: 'Ventilation locale',
+        description: 'Système d\'aspiration à la source',
+        category: 'engineering',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      },
+      {
+        id: 'ctrl-h18-3',
+        name: 'EPI spécialisé',
+        description: 'Protection respiratoire et cutanée adaptée',
+        category: 'ppe',
+        isSelected: false,
+        photos: [],
+        notes: ''
+      }
+    ]
+  };
+
+  return [...commonControls, ...(specificControls[hazardId] || [])];
+};
 
 // =================== DONNÉES PRÉDÉFINIES COMPLÈTES ===================
 
-// Dangers électriques prédéfinis
-const predefinedElectricalHazards: ElectricalHazard[] = [
+// Dangers électriques avec moyens de contrôle
+const predefinedElectricalHazards: HazardWithControls[] = [
   {
     id: 'h0',
     code: '0',
     title: 'RISQUE ÉLECTRIQUE',
     description: 'Exposition aux tensions électriques dangereuses',
     riskLevel: 'critical',
-    isSelected: false
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h0'),
+    showControls: false
   },
   {
     id: 'h1',
@@ -219,7 +459,9 @@ const predefinedElectricalHazards: ElectricalHazard[] = [
     title: 'APPAREILLAGE SOUS-TENSION',
     description: 'Travail à proximité d\'équipement électrique énergisé',
     riskLevel: 'critical',
-    isSelected: false
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h1'),
+    showControls: false
   },
   {
     id: 'h9',
@@ -227,7 +469,9 @@ const predefinedElectricalHazards: ElectricalHazard[] = [
     title: 'RISQUE DE CHUTE',
     description: 'Travail en hauteur ou sur surfaces glissantes',
     riskLevel: 'high',
-    isSelected: false
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h9'),
+    showControls: false
   },
   {
     id: 'h12',
@@ -235,7 +479,9 @@ const predefinedElectricalHazards: ElectricalHazard[] = [
     title: 'INCENDIE / EXPLOSION',
     description: 'Risque d\'incendie ou d\'explosion sur le site',
     riskLevel: 'critical',
-    isSelected: false
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h12'),
+    showControls: false
   },
   {
     id: 'h15',
@@ -243,7 +489,9 @@ const predefinedElectricalHazards: ElectricalHazard[] = [
     title: 'ESPACES CLOS',
     description: 'Travail dans des espaces confinés',
     riskLevel: 'high',
-    isSelected: false
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h15'),
+    showControls: false
   },
   {
     id: 'h18',
@@ -251,7 +499,9 @@ const predefinedElectricalHazards: ElectricalHazard[] = [
     title: 'SUBSTANCES DANGEREUSES',
     description: 'Exposition à des produits chimiques ou toxiques',
     riskLevel: 'high',
-    isSelected: false
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h18'),
+    showControls: false
   }
 ];
 
@@ -462,11 +712,20 @@ const translations = {
       selected: "Sélectionné",
       riskLevel: "Niveau de Risque",
       notes: "Notes supplémentaires",
+      controlMeasures: "Moyens de Contrôle",
+      addCustomHazard: "Ajouter un danger personnalisé",
       levels: {
         low: "Faible",
         medium: "Moyen",
         high: "Élevé",
         critical: "Critique"
+      },
+      categories: {
+        elimination: "Élimination",
+        substitution: "Substitution",
+        engineering: "Ingénierie",
+        administrative: "Administrative",
+        ppe: "EPI"
       }
     },
     
@@ -590,11 +849,20 @@ const translations = {
       selected: "Selected",
       riskLevel: "Risk Level",
       notes: "Additional notes",
+      controlMeasures: "Control Measures",
+      addCustomHazard: "Add custom hazard",
       levels: {
         low: "Low",
         medium: "Medium",
         high: "High",
         critical: "Critical"
+      },
+      categories: {
+        elimination: "Elimination",
+        substitution: "Substitution",
+        engineering: "Engineering",
+        administrative: "Administrative",
+        ppe: "PPE"
       }
     },
     
@@ -1812,8 +2080,8 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   };
 
   const overallProgress = steps.reduce((acc, _, index) => acc + calculateStepCompletion(index), 0) / steps.length;
-  // =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 5/5 ===================
-// Section 5: Rendu JSX final avec toutes les fonctionnalités
+  // =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 5A/5 ===================
+// Section 5A: Rendu JSX début - Étapes 1 à 4
 
   return (
     <>
@@ -2328,75 +2596,229 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                 </div>
               )}
 
-              {/* ÉTAPE 4: Dangers Potentiels */}
+              {/* ÉTAPE 4: Dangers Potentiels avec Contrôles Avancés */}
               {currentStep === 3 && (
                 <div className="slide-in">
                   <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                     <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
                       ⚠️ {t.hazards.title}
                     </h2>
+                    <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>
+                      Sélectionnez les dangers et définissez les moyens de contrôle
+                    </p>
                   </div>
 
+                  {/* Ajouter danger personnalisé */}
+                  <div style={{ 
+                    background: 'rgba(30, 41, 59, 0.6)', 
+                    padding: '20px', 
+                    borderRadius: '12px', 
+                    marginBottom: '24px' 
+                  }}>
+                    <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
+                      ➕ Ajouter un danger personnalisé
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '12px', alignItems: 'end' }}>
+                      <input
+                        type="text"
+                        className="input-premium"
+                        placeholder="Titre du danger"
+                        style={{ fontSize: '12px', padding: '8px 12px' }}
+                      />
+                      <input
+                        type="text"
+                        className="input-premium"
+                        placeholder="Description"
+                        style={{ fontSize: '12px', padding: '8px 12px' }}
+                      />
+                      <select
+                        className="input-premium"
+                        style={{ fontSize: '12px', padding: '8px 12px' }}
+                      >
+                        <option value="low">Faible</option>
+                        <option value="medium">Moyen</option>
+                        <option value="high">Élevé</option>
+                        <option value="critical">Critique</option>
+                      </select>
+                      <button
+                        className="btn-premium"
+                        style={{ padding: '8px 12px' }}
+                      >
+                        <Plus style={{ width: '14px', height: '14px' }} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Liste des dangers avec moyens de contrôle */}
                   <div className="hazard-grid">
                     {formData.electricalHazards.map((hazard) => (
-                      <div
-                        key={hazard.id}
-                        className={`hazard-item ${hazard.isSelected ? 'selected' : ''} ${hazard.riskLevel}`}
-                        onClick={() => toggleHazard(hazard.id)}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                          <CustomCheckbox
-                            checked={hazard.isSelected}
-                            onChange={() => toggleHazard(hazard.id)}
-                            label=""
-                          />
-                          <div style={{
-                            background: hazard.riskLevel === 'critical' ? '#dc2626' : 
-                                       hazard.riskLevel === 'high' ? '#f59e0b' :
-                                       hazard.riskLevel === 'medium' ? '#eab308' : '#22c55e',
-                            color: 'white',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            fontSize: '10px',
-                            fontWeight: '600'
-                          }}>
-                            {hazard.code}
+                      <div key={hazard.id} style={{ gridColumn: '1 / -1' }}>
+                        {/* Carte principale du danger */}
+                        <div
+                          className={`hazard-item ${hazard.isSelected ? 'selected' : ''} ${hazard.riskLevel}`}
+                          onClick={() => toggleHazard(hazard.id)}
+                          style={{ cursor: 'pointer', marginBottom: hazard.isSelected ? '0' : '16px' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                            <CustomCheckbox
+                              checked={hazard.isSelected}
+                              onChange={() => toggleHazard(hazard.id)}
+                              label=""
+                            />
+                            <div style={{
+                              background: hazard.riskLevel === 'critical' ? '#dc2626' : 
+                                         hazard.riskLevel === 'high' ? '#f59e0b' :
+                                         hazard.riskLevel === 'medium' ? '#eab308' : '#22c55e',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontWeight: '600'
+                            }}>
+                              {hazard.code}
+                            </div>
+                            <span style={{
+                              color: hazard.riskLevel === 'critical' ? '#dc2626' : 
+                                     hazard.riskLevel === 'high' ? '#f59e0b' :
+                                     hazard.riskLevel === 'medium' ? '#eab308' : '#22c55e',
+                              fontSize: '12px',
+                              fontWeight: '600'
+                            }}>
+                              {t.hazards.levels[hazard.riskLevel]}
+                            </span>
                           </div>
-                          <span style={{
-                            color: hazard.riskLevel === 'critical' ? '#dc2626' : 
-                                   hazard.riskLevel === 'high' ? '#f59e0b' :
-                                   hazard.riskLevel === 'medium' ? '#eab308' : '#22c55e',
-                            fontSize: '12px',
-                            fontWeight: '600'
-                          }}>
-                            {t.hazards.levels[hazard.riskLevel]}
-                          </span>
+                          
+                          <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0' }}>
+                            {hazard.title}
+                          </h4>
+                          
+                          <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 12px 0' }}>
+                            {hazard.description}
+                          </p>
+
+                          {hazard.isSelected && (
+                            <div style={{ marginTop: '12px' }}>
+                              <span style={{ 
+                                color: '#22c55e', 
+                                fontSize: '12px', 
+                                fontWeight: '600',
+                                background: 'rgba(34, 197, 94, 0.1)',
+                                padding: '4px 8px',
+                                borderRadius: '4px'
+                              }}>
+                                ✅ Danger sélectionné - Moyens de contrôle ci-dessous
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        
-                        <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0' }}>
-                          {hazard.title}
-                        </h4>
-                        
-                        <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 12px 0' }}>
-                          {hazard.description}
-                        </p>
-                        
-                        {hazard.isSelected && (
-                          <input
-                            type="text"
-                            className="input-premium"
-                            placeholder={t.hazards.notes}
-                            value={hazard.additionalNotes || ''}
-                            onChange={(e) => updateHazardNotes(hazard.id, e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            style={{ fontSize: '12px', padding: '8px 12px' }}
-                          />
+
+                        {/* Moyens de contrôle (affichés quand danger sélectionné) */}
+                        {hazard.isSelected && hazard.controlMeasures && (
+                          <div style={{
+                            background: 'rgba(20, 30, 48, 0.9)',
+                            border: '1px solid rgba(34, 197, 94, 0.3)',
+                            borderRadius: '12px',
+                            padding: '20px',
+                            marginBottom: '16px'
+                          }}>
+                            <h5 style={{ 
+                              color: '#22c55e', 
+                              fontSize: '16px', 
+                              fontWeight: '600', 
+                              margin: '0 0 16px 0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}>
+                              🛡️ Moyens de contrôle pour: {hazard.title}
+                            </h5>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                              {hazard.controlMeasures.map((control) => (
+                                <div
+                                  key={control.id}
+                                  style={{
+                                    background: control.isSelected ? 'rgba(34, 197, 94, 0.1)' : 'rgba(51, 65, 85, 0.3)',
+                                    border: `1px solid ${control.isSelected ? '#22c55e' : 'rgba(100, 116, 139, 0.3)'}`,
+                                    borderRadius: '8px',
+                                    padding: '16px',
+                                    transition: 'all 0.3s ease'
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                                    <CustomCheckbox
+                                      checked={control.isSelected}
+                                      onChange={() => {}}
+                                      label=""
+                                    />
+                                    <div style={{
+                                      background: control.category === 'elimination' ? '#dc2626' :
+                                                 control.category === 'substitution' ? '#f59e0b' :
+                                                 control.category === 'engineering' ? '#3b82f6' :
+                                                 control.category === 'administrative' ? '#8b5cf6' : '#22c55e',
+                                      color: 'white',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      fontSize: '10px',
+                                      fontWeight: '600'
+                                    }}>
+                                      {control.category.toUpperCase()}
+                                    </div>
+                                  </div>
+
+                                  <h6 style={{ color: 'white', fontSize: '14px', fontWeight: '600', margin: '0 0 6px 0' }}>
+                                    {control.name}
+                                  </h6>
+                                  
+                                  <p style={{ color: '#94a3b8', fontSize: '12px', margin: '0 0 12px 0' }}>
+                                    {control.description}
+                                  </p>
+
+                                  {control.isSelected && (
+                                    <>
+                                      <input
+                                        type="text"
+                                        className="input-premium"
+                                        placeholder="Notes spécifiques pour ce contrôle..."
+                                        value={control.notes}
+                                        style={{ fontSize: '12px', padding: '8px 12px', marginBottom: '8px' }}
+                                      />
+
+                                      <div style={{
+                                        background: 'rgba(51, 65, 85, 0.3)',
+                                        borderRadius: '8px',
+                                        padding: '12px',
+                                        margin: '8px 0'
+                                      }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                          <span style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: '600' }}>
+                                            📸 Photos ({control.photos.length})
+                                          </span>
+                                          <button
+                                            className="btn-premium"
+                                            style={{ padding: '4px 8px', fontSize: '10px' }}
+                                          >
+                                            <Plus style={{ width: '12px', height: '12px' }} />
+                                          </button>
+                                        </div>
+                                        {control.photos.length === 0 && (
+                                          <div style={{ textAlign: 'center', padding: '20px', color: '#64748b', fontSize: '12px' }}>
+                                            📷 Aucune photo ajoutée
+                                          </div>
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         )}
                       </div>
                     ))}
                   </div>
 
-                  {/* Résumé des dangers */}
+                  {/* Résumé avancé */}
                   <div style={{
                     marginTop: '32px',
                     padding: '20px',
@@ -2405,9 +2827,15 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     borderRadius: '12px'
                   }}>
                     <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                      📊 Résumé des Dangers
+                      📊 Résumé Dangers & Contrôles
                     </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.electricalHazards.filter(h => h.isSelected).length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Dangers identifiés</div>
+                      </div>
                       <div style={{ textAlign: 'center' }}>
                         <div style={{ color: '#dc2626', fontSize: '24px', fontWeight: '700' }}>
                           {formData.electricalHazards.filter(h => h.isSelected && h.riskLevel === 'critical').length}
@@ -2415,27 +2843,105 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         <div style={{ color: '#94a3b8', fontSize: '12px' }}>Critiques</div>
                       </div>
                       <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#f59e0b', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.electricalHazards.filter(h => h.isSelected && h.riskLevel === 'high').length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Élevés</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#eab308', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.electricalHazards.filter(h => h.isSelected && h.riskLevel === 'medium').length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Moyens</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
                         <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.electricalHazards.filter(h => h.isSelected).length}
+                          {formData.electricalHazards
+                            .filter(h => h.isSelected && h.controlMeasures)
+                            .reduce((acc, h) => acc + (h.controlMeasures?.filter(c => c.isSelected).length || 0), 0)}
                         </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Total sélectionnés</div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Contrôles actifs</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#3b82f6', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.electricalHazards
+                            .filter(h => h.isSelected && h.controlMeasures)
+                            .reduce((acc, h) => acc + (h.controlMeasures?.reduce((acc2, c) => acc2 + c.photos.length, 0) || 0), 0)}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Photos contrôles</div>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
+
+              {/* Suite dans Section 5B... */}
+            </div>
+
+            {/* Navigation */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              marginTop: '48px', 
+              paddingTop: '24px', 
+              borderTop: '1px solid rgba(100, 116, 139, 0.2)' 
+            }}>
+              <button 
+                className="btn-secondary" 
+                onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                disabled={currentStep === 0}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  opacity: currentStep === 0 ? 0.5 : 1,
+                  cursor: currentStep === 0 ? 'not-allowed' : 'pointer'
+                }}
+              >
+                <ChevronLeft style={{ width: '16px', height: '16px' }} /> 
+                {t.buttons.previous}
+              </button>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ 
+                  color: '#94a3b8', 
+                  fontSize: '14px',
+                  background: 'rgba(30, 41, 59, 0.8)',
+                  padding: '8px 16px',
+                  borderRadius: '8px'
+                }}>
+                  📊 Progression: {Math.round(overallProgress)}%
+                </div>
+                
+                <button 
+                  onClick={() => handleSave(true)} 
+                  className="btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <Save style={{ width: '16px', height: '16px' }} /> 
+                  {t.buttons.save}
+                </button>
+                
+                {currentStep === steps.length - 1 ? (
+                  <button 
+                    onClick={handleFinalSubmission} 
+                    className="btn-success"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    disabled={!formData.team.allApproved}
+                  >
+                    <Send style={{ width: '16px', height: '16px' }} />
+                    {t.actions.finalApproval}
+                  </button>
+                ) : (
+                  <button 
+                    className="btn-premium" 
+                    onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    {t.buttons.next} 
+                    <ChevronRight style={{ width: '16px', height: '16px' }} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 5B/5 ===================
+// Section 5B: Rendu JSX fin - Étapes 5 à 8 + Navigation finale
+// IMPORTANT: Cette section continue après la Section 5A
 
               {/* ÉTAPE 5: Points d'Isolement avec Photos */}
               {currentStep === 4 && (
@@ -2852,7 +3358,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
               )}
             </div>
 
-            {/* Navigation */}
+            {/* Navigation finale */}
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
