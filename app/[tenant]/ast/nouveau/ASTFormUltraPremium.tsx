@@ -1,6 +1,5 @@
-// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 1/5 V2 ===================
-// Client Potentiel - Version avec Approbations et Checklists
-// Section 1: Imports et Interfaces mises à jour
+// =================== AST SECTION 1 V3 - INTERFACES MISES À JOUR ===================
+// Section 1: Interfaces avec nouveaux champs client et responsable
 
 "use client";
 
@@ -13,117 +12,7 @@ import {
   Lock, Unlock
 } from 'lucide-react';
 
-// =================== INTERFACES & TYPES COMPLETS ===================
-interface Tenant {
-  id: string;
-  subdomain: string;
-  companyName: string;
-}
-
-interface TeamMember {
-  id: string;
-  name: string;
-  employeeId: string;
-  department: string;
-  qualification: string;
-  hasAcknowledged: boolean;
-  acknowledgmentTime?: string;
-  signature?: string;
-  joinedAt: string;
-  validationStatus: 'pending' | 'approved' | 'rejected';
-  validationComments?: string;
-  // Nouveaux champs pour approbation avec cadenas selon votre image
-  consultationAst: boolean;
-  cadenasAppose: boolean;
-  cadenasReleve: boolean;
-}
-
-interface Photo {
-  id: string;
-  name: string;
-  data: string;
-  description: string;
-  timestamp: string;
-  category: 'site' | 'equipment' | 'hazard' | 'team' | 'isolation' | 'other';
-}
-
-interface IsolationPoint {
-  id: string;
-  name: string;
-  type: 'electrical' | 'mechanical' | 'pneumatic' | 'hydraulic' | 'chemical' | 'thermal';
-  isActive: boolean;
-  createdAt: string;
-  photos: Photo[];
-  // Nouvelle checklist pour points d'isolement selon votre image
-  checklist: {
-    cadenasAppose: boolean;
-    absenceTension: boolean;
-    miseALaTerre: boolean;
-    cadenasReleve: boolean;
-  };
-}
-
-interface ControlMeasure {
-  id: string;
-  name: string;
-  description: string;
-  category: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
-  isSelected: boolean;
-  photos: Photo[];
-  notes: string;
-}
-
-interface ElectricalHazard {
-  id: string;
-  code: string;
-  title: string;
-  description: string;
-  riskLevel: 'low' | 'medium' | 'high' | 'critical';
-  isSelected: boolean;
-  additionalNotes?: string;
-  controlMeasures: ControlMeasure[];
-  showControls: boolean;
-}
-
-interface SafetyEquipment {
-  id: string;
-  name: string;
-  required: boolean;
-  available: boolean;
-  notes: string;
-  verified: boolean;
-  category: 'head' | 'eye' | 'respiratory' | 'hand' | 'foot' | 'body' | 'fall' | 'electrical' | 'detection' | 'other';
-}
-
-interface TeamDiscussion {
-  id: string;
-  topic: string;
-  notes: string;
-  completed: boolean;
-  discussedBy: string;
-  discussedAt?: string;
-  priority: 'low' | 'medium' | 'high';
-}
-
-interface EmergencyProcedure {
-  id: string;
-  type: 'medical' | 'fire' | 'evacuation' | 'spill' | 'electrical' | 'other';
-  procedure: string;
-  responsiblePerson: string;
-  contactInfo: string;
-  isVerified: boolean;
-}
-
-interface RiskAssessment {
-  id: string;
-  hazardType: string;
-  riskLevel: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
-  controlMeasures: string[];
-  residualRisk: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
-  isAcceptable: boolean;
-  notes: string;
-}
-
+// =================== INTERFACES MISES À JOUR ===================
 interface ASTFormData {
   id: string;
   astNumber: string;
@@ -137,6 +26,7 @@ interface ASTFormData {
     date: string;
     time: string;
     client: string;
+    clientPhone: string; // NOUVEAU
     projectNumber: string;
     astClientNumber: string;
     workLocation: string;
@@ -144,6 +34,7 @@ interface ASTFormData {
     estimatedDuration: string;
     workerCount: number;
     clientRepresentative: string;
+    clientRepresentativePhone: string; // NOUVEAU
     emergencyContact: string;
     emergencyPhone: string;
     workPermitRequired: boolean;
@@ -209,6 +100,200 @@ interface ASTFormData {
   };
 }
 
+// =================== DONNÉES INITIALES MISES À JOUR ===================
+const initialFormData: ASTFormData = {
+  id: `AST-${Date.now()}`,
+  astNumber: generateASTNumber(),
+  created: new Date().toISOString(),
+  lastModified: new Date().toISOString(),
+  language: 'fr',
+  status: 'draft',
+  industry: 'electrical',
+  
+  projectInfo: {
+    date: new Date().toISOString().split('T')[0],
+    time: new Date().toTimeString().substring(0, 5),
+    client: '',
+    clientPhone: '', // NOUVEAU
+    projectNumber: '',
+    astClientNumber: '',
+    workLocation: '',
+    workDescription: '',
+    estimatedDuration: '',
+    workerCount: 1,
+    clientRepresentative: '',
+    clientRepresentativePhone: '', // NOUVEAU
+    emergencyContact: '',
+    emergencyPhone: '',
+    workPermitRequired: false,
+    workPermitNumber: '',
+    weatherConditions: '',
+    specialConditions: ''
+  },
+  
+  teamDiscussion: {
+    electricalCutoffPoints: '',
+    electricalHazardExplanation: '',
+    epiSpecificNotes: '',
+    specialWorkConditions: '',
+    emergencyProcedures: '',
+    discussions: [...predefinedDiscussions],
+    briefingCompleted: false,
+    briefingDate: '',
+    briefingTime: '',
+    emergencyProceduresList: [...emergencyProcedures]
+  },
+  
+  safetyEquipment: [...requiredSafetyEquipment],
+  electricalHazards: [...predefinedElectricalHazards],
+  riskAssessments: [],
+  
+  team: {
+    supervisor: '',
+    supervisorCertification: '',
+    members: [],
+    briefingCompleted: false,
+    briefingDate: '',
+    briefingTime: '',
+    totalMembers: 0,
+    acknowledgedMembers: 0,
+    validations: [],
+    allApproved: false
+  },
+  
+  isolationPoints: [],
+  
+  documentation: {
+    photos: [],
+    additionalDocuments: [],
+    inspectionNotes: '',
+    correctiveActions: ''
+  },
+  
+  validation: {
+    completedBy: '',
+    completedDate: '',
+    reviewedBy: '',
+    reviewedDate: '',
+    approvedBy: '',
+    approvedDate: '',
+    clientApproval: false,
+    finalApproval: false,
+    revisionNumber: 1,
+    comments: '',
+    emailSent: false
+  }
+};
+
+// Reste des interfaces inchangées...
+interface Tenant {
+  id: string;
+  subdomain: string;
+  companyName: string;
+}
+
+interface TeamMember {
+  id: string;
+  name: string;
+  employeeId: string;
+  department: string;
+  qualification: string;
+  hasAcknowledged: boolean;
+  acknowledgmentTime?: string;
+  signature?: string;
+  joinedAt: string;
+  validationStatus: 'pending' | 'approved' | 'rejected';
+  validationComments?: string;
+  consultationAst: boolean;
+  cadenasAppose: boolean;
+  cadenasReleve: boolean;
+}
+
+interface Photo {
+  id: string;
+  name: string;
+  data: string;
+  description: string;
+  timestamp: string;
+  category: 'site' | 'equipment' | 'hazard' | 'team' | 'isolation' | 'other';
+}
+
+interface IsolationPoint {
+  id: string;
+  name: string;
+  type: 'electrical' | 'mechanical' | 'pneumatic' | 'hydraulic' | 'chemical' | 'thermal';
+  isActive: boolean;
+  createdAt: string;
+  photos: Photo[];
+  checklist: {
+    cadenasAppose: boolean;
+    absenceTension: boolean;
+    miseALaTerre: boolean;
+    cadenasReleve: boolean; // Gardé pour compatibilité mais pas affiché
+  };
+}
+
+interface ControlMeasure {
+  id: string;
+  name: string;
+  description: string;
+  category: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
+  isSelected: boolean;
+  photos: Photo[];
+  notes: string;
+}
+
+interface ElectricalHazard {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  isSelected: boolean;
+  additionalNotes?: string;
+  controlMeasures: ControlMeasure[];
+  showControls: boolean;
+}
+
+interface SafetyEquipment {
+  id: string;
+  name: string;
+  required: boolean;
+  available: boolean;
+  notes: string;
+  verified: boolean;
+  category: 'head' | 'eye' | 'respiratory' | 'hand' | 'foot' | 'body' | 'fall' | 'electrical' | 'detection' | 'other';
+}
+
+interface TeamDiscussion {
+  id: string;
+  topic: string;
+  notes: string;
+  completed: boolean;
+  discussedBy: string;
+  discussedAt?: string;
+  priority: 'low' | 'medium' | 'high';
+}
+
+interface EmergencyProcedure {
+  id: string;
+  type: 'medical' | 'fire' | 'evacuation' | 'spill' | 'electrical' | 'other';
+  procedure: string;
+  responsiblePerson: string;
+  contactInfo: string;
+  isVerified: boolean;
+}
+
+interface RiskAssessment {
+  id: string;
+  hazardType: string;
+  riskLevel: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
+  controlMeasures: string[];
+  residualRisk: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
+  isAcceptable: boolean;
+  notes: string;
+}
+
 interface ASTFormProps {
   tenant: Tenant;
 }
@@ -222,964 +307,8 @@ const generateASTNumber = (): string => {
   const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
-// =================== AST SECTION 2/5 V2 - DONNÉES COMPLÈTES ===================
-// Section 2: Données avec TOUS les dangers + PDF professionnel
+// =================== TRADUCTIONS MISES À JOUR V3 ===================
 
-// =================== MOYENS DE CONTRÔLE PRÉDÉFINIS ===================
-const getControlMeasuresForHazard = (hazardId: string): ControlMeasure[] => {
-  const commonControls: ControlMeasure[] = [
-    {
-      id: `ctrl-${hazardId}-elim-1`,
-      name: 'Élimination à la source',
-      description: 'Retirer complètement le danger',
-      category: 'elimination',
-      isSelected: false,
-      photos: [],
-      notes: ''
-    },
-    {
-      id: `ctrl-${hazardId}-sub-1`, 
-      name: 'Substitution par alternative plus sûre',
-      description: 'Remplacer par une méthode moins dangereuse',
-      category: 'substitution',
-      isSelected: false,
-      photos: [],
-      notes: ''
-    },
-    {
-      id: `ctrl-${hazardId}-eng-1`,
-      name: 'Mesures d\'ingénierie',
-      description: 'Contrôles techniques et d\'ingénierie',
-      category: 'engineering',
-      isSelected: false,
-      photos: [],
-      notes: ''
-    },
-    {
-      id: `ctrl-${hazardId}-admin-1`,
-      name: 'Contrôles administratifs',
-      description: 'Formation, procédures et signalisation',
-      category: 'administrative',
-      isSelected: false,
-      photos: [],
-      notes: ''
-    },
-    {
-      id: `ctrl-${hazardId}-ppe-1`,
-      name: 'Équipement de protection individuelle',
-      description: 'Port d\'EPI approprié',
-      category: 'ppe',
-      isSelected: false,
-      photos: [],
-      notes: ''
-    }
-  ];
-
-  // Moyens de contrôle spécifiques selon le danger
-  const specificControls: Record<string, ControlMeasure[]> = {
-    'h0': [ // Risque électrique
-      {
-        id: 'ctrl-h0-spec-1',
-        name: 'Coupure électrique et verrouillage',
-        description: 'Couper l\'alimentation et verrouiller les disjoncteurs',
-        category: 'engineering',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      },
-      {
-        id: 'ctrl-h0-spec-2',
-        name: 'Vérification absence de tension',
-        description: 'Utiliser un détecteur de tension certifié',
-        category: 'administrative',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      }
-    ],
-    'h9': [ // Risque de chute
-      {
-        id: 'ctrl-h9-spec-1',
-        name: 'Garde-corps temporaires',
-        description: 'Installation de garde-corps sécuritaires',
-        category: 'engineering',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      },
-      {
-        id: 'ctrl-h9-spec-2',
-        name: 'Harnais anti-chute',
-        description: 'Système complet d\'arrêt de chute',
-        category: 'ppe',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      }
-    ]
-  };
-
-  return [...commonControls, ...(specificControls[hazardId] || [])];
-};
-
-// =================== LISTE COMPLÈTE DES DANGERS POTENTIELS ===================
-const predefinedElectricalHazards: ElectricalHazard[] = [
-  {
-    id: 'h0',
-    code: '0',
-    title: 'RISQUE ÉLECTRIQUE',
-    description: 'Exposition aux tensions électriques dangereuses',
-    riskLevel: 'critical',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h0'),
-    showControls: false
-  },
-  {
-    id: 'h1',
-    code: '1',
-    title: 'APPAREILLAGE SOUS-TENSION',
-    description: 'Travail à proximité d\'équipement électrique énergisé',
-    riskLevel: 'critical',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h1'),
-    showControls: false
-  },
-  {
-    id: 'h2',
-    code: '2',
-    title: 'MACHINE - OUTIL ROTATIF',
-    description: 'Risques liés aux outils et machines rotatives',
-    riskLevel: 'high',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h2'),
-    showControls: false
-  },
-  {
-    id: 'h3',
-    code: '3',
-    title: 'CIRCUIT SOUS CHARGE CAPACITIVE',
-    description: 'Circuits avec charge capacitive résiduelle',
-    riskLevel: 'high',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h3'),
-    showControls: false
-  },
-  {
-    id: 'h4',
-    code: '4',
-    title: 'GÉNÉRATRICE (RÉSEAU D\'URGENCE)',
-    description: 'Risques liés aux génératrices et réseaux d\'urgence',
-    riskLevel: 'high',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h4'),
-    showControls: false
-  },
-  {
-    id: 'h5',
-    code: '5',
-    title: 'CIRCUIT ADJACENT / AUXILIAIRE',
-    description: 'Circuits adjacents ou auxiliaires sous tension',
-    riskLevel: 'medium',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h5'),
-    showControls: false
-  },
-  {
-    id: 'h6',
-    code: '6',
-    title: 'ZONE DE TRAVAIL SUPERPOSÉE',
-    description: 'Zones de travail superposées avec d\'autres équipes',
-    riskLevel: 'medium',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h6'),
-    showControls: false
-  },
-  {
-    id: 'h7',
-    code: '7',
-    title: 'TRAVAIL ISOLÉ ET SEUL',
-    description: 'Travail effectué en isolement sans supervision',
-    riskLevel: 'medium',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h7'),
-    showControls: false
-  },
-  {
-    id: 'h8',
-    code: '8',
-    title: 'TRAVAUX DE LEVAGE',
-    description: 'Opérations de levage et manutention',
-    riskLevel: 'high',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h8'),
-    showControls: false
-  },
-  {
-    id: 'h9',
-    code: '9',
-    title: 'RISQUE DE CHUTE',
-    description: 'Travail en hauteur ou sur surfaces glissantes',
-    riskLevel: 'high',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h9'),
-    showControls: false
-  },
-  {
-    id: 'h10',
-    code: '10',
-    title: 'ÉCHELLE / ESCABEAU (3 POINTS D\'APPUI)',
-    description: 'Utilisation d\'échelles et escabeaux',
-    riskLevel: 'medium',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h10'),
-    showControls: false
-  },
-  {
-    id: 'h11',
-    code: '11',
-    title: 'RÉALIMENTATION PARTIELLE DURANT TRAVAUX',
-    description: 'Réalimentation partielle pendant les travaux',
-    riskLevel: 'critical',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h11'),
-    showControls: false
-  },
-  {
-    id: 'h12',
-    code: '12',
-    title: 'PRODUITS CHIMIQUES',
-    description: 'Exposition à des substances chimiques dangereuses',
-    riskLevel: 'high',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h12'),
-    showControls: false
-  },
-  {
-    id: 'h13',
-    code: '13',
-    title: 'ZONE DE TRAVAIL PARTAGÉE (CO-ACTIVITÉ)',
-    description: 'Zones de travail partagées avec d\'autres activités',
-    riskLevel: 'medium',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h13'),
-    showControls: false
-  },
-  {
-    id: 'h14',
-    code: '14',
-    title: 'ÉTAT DES LIEUX',
-    description: 'Évaluation de l\'état et des conditions du lieu de travail',
-    riskLevel: 'low',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h14'),
-    showControls: false
-  },
-  {
-    id: 'h15',
-    code: '15',
-    title: 'ERGONOMIE',
-    description: 'Risques ergonomiques et postures de travail',
-    riskLevel: 'medium',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h15'),
-    showControls: false
-  },
-  {
-    id: 'h16',
-    code: '16',
-    title: 'ÉCLAIRAGE',
-    description: 'Éclairage insuffisant ou inadéquat',
-    riskLevel: 'low',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h16'),
-    showControls: false
-  },
-  {
-    id: 'h17',
-    code: '17',
-    title: 'LIGNE DE TIR',
-    description: 'Risques liés aux lignes de tir et projections',
-    riskLevel: 'high',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h17'),
-    showControls: false
-  },
-  {
-    id: 'h18',
-    code: '18',
-    title: 'DÉVERSEMENT',
-    description: 'Risques de déversement de liquides dangereux',
-    riskLevel: 'medium',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h18'),
-    showControls: false
-  },
-  {
-    id: 'h19',
-    code: '19',
-    title: 'TRAVAUX EN ESPACE CLOS (REMPLIR LE FORMULAIRE)',
-    description: 'Travail dans des espaces confinés',
-    riskLevel: 'critical',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h19'),
-    showControls: false
-  },
-  {
-    id: 'h20',
-    code: '20',
-    title: 'TRAVAIL À CHAUD',
-    description: 'Travaux à chaud avec risque d\'incendie',
-    riskLevel: 'high',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h20'),
-    showControls: false
-  },
-  {
-    id: 'h21',
-    code: '21',
-    title: 'LIGNE ÉLECTRIQUE À PROXIMITÉ',
-    description: 'Travail à proximité de lignes électriques',
-    riskLevel: 'critical',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h21'),
-    showControls: false
-  },
-  {
-    id: 'h22',
-    code: '22',
-    title: 'CLIMAT (VENT, PLUIE, BRUME, GLACE ET NEIGE)',
-    description: 'Conditions climatiques défavorables',
-    riskLevel: 'medium',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h22'),
-    showControls: false
-  },
-  {
-    id: 'h23',
-    code: '23',
-    title: 'CONTRAINTE THERMIQUE',
-    description: 'Exposition à des températures extrêmes',
-    riskLevel: 'medium',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h23'),
-    showControls: false
-  },
-  {
-    id: 'h24',
-    code: '24',
-    title: 'CO-ACTIVITÉ AVEC ENGIN MOTORISÉ (CHARIOT ÉLÉVATEUR, ETC.)',
-    description: 'Travail avec des engins motorisés',
-    riskLevel: 'high',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h24'),
-    showControls: false
-  },
-  {
-    id: 'h25',
-    code: '25',
-    title: 'AUTRE',
-    description: 'Autres dangers non listés ci-dessus',
-    riskLevel: 'medium',
-    isSelected: false,
-    controlMeasures: getControlMeasuresForHazard('h25'),
-    showControls: false
-  }
-];
-
-// =================== ÉQUIPEMENTS DE SÉCURITÉ ===================
-const requiredSafetyEquipment: SafetyEquipment[] = [
-  { id: 'eq1', name: 'Casque de sécurité', required: true, available: false, notes: '', verified: false, category: 'head' },
-  { id: 'eq2', name: 'Bottes de sécurité', required: true, available: false, notes: '', verified: false, category: 'foot' },
-  { id: 'eq3', name: 'Lunettes de protection', required: true, available: false, notes: '', verified: false, category: 'eye' },
-  { id: 'eq4', name: 'Lunettes monocoque', required: false, available: false, notes: '', verified: false, category: 'eye' },
-  { id: 'eq5', name: 'Visière', required: false, available: false, notes: '', verified: false, category: 'eye' },
-  { id: 'eq6', name: 'Gants', required: true, available: false, notes: '', verified: false, category: 'hand' },
-  { id: 'eq7', name: 'Gants anti-coupures', required: false, available: false, notes: '', verified: false, category: 'hand' },
-  { id: 'eq8', name: 'Détecteur de tension', required: true, available: false, notes: '', verified: false, category: 'electrical' },
-  { id: 'eq9', name: 'Mise à la terre (MALT)', required: false, available: false, notes: '', verified: false, category: 'electrical' },
-  { id: 'eq10', name: 'Cadenas individuels / collectifs (boîte)', required: true, available: false, notes: '', verified: false, category: 'electrical' },
-  { id: 'eq11', name: 'Affiches et rubans (périmètre de sécurité)', required: true, available: false, notes: '', verified: false, category: 'electrical' },
-  { id: 'eq12', name: 'EPI énergie incidente de moins de 1.2 cal/cm²', required: false, available: false, notes: '', verified: false, category: 'electrical' },
-  { id: 'eq13', name: 'EPI énergie incidente de 1.2 cal/cm² à 12 cal/cm²', required: false, available: false, notes: '', verified: false, category: 'electrical' },
-  { id: 'eq14', name: 'EPI énergie incidente plus grand que 12 cal/cm²', required: false, available: false, notes: '', verified: false, category: 'electrical' },
-  { id: 'eq15', name: 'Dossard', required: false, available: false, notes: '', verified: false, category: 'body' },
-  { id: 'eq16', name: 'Protection auditive', required: false, available: false, notes: '', verified: false, category: 'respiratory' },
-  { id: 'eq17', name: 'Protection respiratoire (rasage de près)', required: false, available: false, notes: '', verified: false, category: 'respiratory' },
-  { id: 'eq18', name: 'Harnais anti-chutes', required: false, available: false, notes: '', verified: false, category: 'fall' },
-  { id: 'eq19', name: 'Détecteur quatre (4) gaz', required: false, available: false, notes: '', verified: false, category: 'detection' },
-  { id: 'eq20', name: 'Prise avec protection GFI', required: false, available: false, notes: '', verified: false, category: 'electrical' }
-];
-
-// =================== DISCUSSIONS D'ÉQUIPE ===================
-const predefinedDiscussions: TeamDiscussion[] = [
-  { id: 'td1', topic: 'Trousse de premiers soins', notes: '', completed: false, discussedBy: '', priority: 'high' },
-  { id: 'td2', topic: 'Matériel de contrôle de déversement', notes: '', completed: false, discussedBy: '', priority: 'medium' },
-  { id: 'td3', topic: 'Évacuation, point de rassemblement', notes: '', completed: false, discussedBy: '', priority: 'high' },
-  { id: 'td4', topic: 'Extincteur portatif', notes: '', completed: false, discussedBy: '', priority: 'high' },
-  { id: 'td5', topic: 'Douche d\'urgence / Bain oculaire', notes: '', completed: false, discussedBy: '', priority: 'medium' },
-  { id: 'td6', topic: 'Sécurité désigné / Infirmerie au site', notes: '', completed: false, discussedBy: '', priority: 'medium' },
-  { id: 'td7', topic: 'Plan d\'intervention d\'urgence', notes: '', completed: false, discussedBy: '', priority: 'high' },
-  { id: 'td8', topic: 'EPI', notes: '', completed: false, discussedBy: '', priority: 'high' },
-  { id: 'td9', topic: 'Emplacement des pauses', notes: '', completed: false, discussedBy: '', priority: 'low' }
-];
-
-// =================== PROCÉDURES D'URGENCE ===================
-const emergencyProcedures: EmergencyProcedure[] = [
-  { id: 'ep1', type: 'medical', procedure: 'Premiers secours et évacuation médicale', responsiblePerson: '', contactInfo: '911', isVerified: false },
-  { id: 'ep2', type: 'fire', procedure: 'Extinction et évacuation incendie', responsiblePerson: '', contactInfo: '911', isVerified: false },
-  { id: 'ep3', type: 'electrical', procedure: 'Coupure d\'urgence électrique', responsiblePerson: '', contactInfo: '', isVerified: false }
-];
-
-// =================== LOGO CLIENT POTENTIEL EN SVG ===================
-const ClientPotentielLogo = () => (
-  <svg width="120" height="80" viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
-    {/* Bouclier principal */}
-    <path
-      d="M60 5 L85 15 L85 35 Q85 50 60 65 Q35 50 35 35 L35 15 Z"
-      fill="url(#shieldGradient)"
-      stroke="#ffffff"
-      strokeWidth="2"
-    />
-    
-    {/* Lettre C */}
-    <path
-      d="M50 25 Q45 20 40 25 Q40 30 40 35 Q40 40 45 45 Q50 50 55 45"
-      fill="none"
-      stroke="#ffffff"
-      strokeWidth="3"
-      strokeLinecap="round"
-    />
-    
-    {/* Éléments décoratifs */}
-    <circle cx="70" cy="30" r="3" fill="#ffaa00"/>
-    <circle cx="68" cy="38" r="2" fill="#ffaa00"/>
-    <circle cx="72" cy="42" r="2" fill="#ffaa00"/>
-    
-    {/* Définition du gradient */}
-    <defs>
-      <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#1e40af"/>
-        <stop offset="50%" stopColor="#3b82f6"/>
-        <stop offset="100%" stopColor="#1e293b"/>
-      </linearGradient>
-    </defs>
-    
-    {/* Texte Client Potentiel */}
-    <text x="60" y="75" textAnchor="middle" fill="#1e40af" fontSize="10" fontWeight="bold">
-      CLIENT POTENTIEL
-    </text>
-  </svg>
-);
-
-// =================== GÉNÉRATION PDF PROFESSIONNELLE ===================
-const generateProfessionalPDF = async (formData: ASTFormData, tenant: Tenant) => {
-  console.log('🔄 Génération PDF professionnel avec logo Client Potentiel...');
-  
-  try {
-    // Template HTML professionnel pour PDF
-    const pdfTemplate = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>AST ${formData.astNumber} - ${formData.projectInfo.client}</title>
-        <style>
-          @page { 
-            size: letter; 
-            margin: 0.75in; 
-            @top-left { content: "AST ${formData.astNumber}"; }
-            @bottom-center { content: "Page " counter(page) " de " counter(pages); }
-          }
-          
-          body { 
-            font-family: 'Arial', sans-serif; 
-            font-size: 11px; 
-            line-height: 1.3; 
-            color: #333;
-          }
-          
-          .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 3px solid #1e40af;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-          }
-          
-          .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-          }
-          
-          .company-info h1 {
-            color: #1e40af;
-            font-size: 24px;
-            margin: 0;
-            font-weight: bold;
-          }
-          
-          .company-info p {
-            margin: 2px 0;
-            color: #666;
-            font-size: 12px;
-          }
-          
-          .ast-info {
-            text-align: right;
-            background: #f8fafc;
-            padding: 10px;
-            border-radius: 8px;
-            border-left: 4px solid #1e40af;
-          }
-          
-          .ast-number {
-            font-size: 18px;
-            font-weight: bold;
-            color: #1e40af;
-            font-family: monospace;
-          }
-          
-          .section {
-            margin: 20px 0;
-            page-break-inside: avoid;
-          }
-          
-          .section-title {
-            background: linear-gradient(90deg, #1e40af, #3b82f6);
-            color: white;
-            padding: 8px 15px;
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-          }
-          
-          .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin: 10px 0;
-          }
-          
-          .field {
-            margin: 8px 0;
-          }
-          
-          .field-label {
-            font-weight: bold;
-            color: #1e40af;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          
-          .field-value {
-            margin-top: 2px;
-            padding: 4px;
-            background: #f8fafc;
-            border-radius: 3px;
-            min-height: 20px;
-          }
-          
-          .hazard-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 10px;
-          }
-          
-          .hazard-item {
-            border: 1px solid #e2e8f0;
-            padding: 10px;
-            border-radius: 6px;
-            background: white;
-          }
-          
-          .hazard-selected {
-            border-left: 4px solid #ef4444;
-            background: #fef2f2;
-          }
-          
-          .hazard-code {
-            background: #ef4444;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 10px;
-            font-weight: bold;
-            display: inline-block;
-            margin-bottom: 5px;
-          }
-          
-          .equipment-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-          }
-          
-          .equipment-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px;
-            border: 1px solid #e2e8f0;
-            border-radius: 4px;
-            font-size: 10px;
-          }
-          
-          .check-box {
-            width: 12px;
-            height: 12px;
-            border: 1px solid #666;
-            display: inline-block;
-            position: relative;
-          }
-          
-          .checked::after {
-            content: '✓';
-            position: absolute;
-            left: 1px;
-            top: -2px;
-            color: #22c55e;
-            font-weight: bold;
-            font-size: 10px;
-          }
-          
-          .team-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 10px 0;
-          }
-          
-          .team-table th,
-          .team-table td {
-            border: 1px solid #e2e8f0;
-            padding: 8px;
-            text-align: left;
-            font-size: 10px;
-          }
-          
-          .team-table th {
-            background: #1e40af;
-            color: white;
-            font-weight: bold;
-          }
-          
-          .status-approved { background: #dcfce7; color: #166534; }
-          .status-pending { background: #fef3c7; color: #92400e; }
-          .status-rejected { background: #fee2e2; color: #991b1b; }
-          
-          .footer {
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 1px solid #e2e8f0;
-            text-align: center;
-            color: #666;
-            font-size: 10px;
-          }
-          
-          .signature-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
-            margin: 20px 0;
-          }
-          
-          .signature-box {
-            border: 1px solid #e2e8f0;
-            padding: 15px;
-            min-height: 80px;
-            text-align: center;
-            background: #f8fafc;
-          }
-        </style>
-      </head>
-      <body>
-        <!-- HEADER AVEC LOGO -->
-        <div class="header">
-          <div class="logo-section">
-            ${ClientPotentielLogo().props.dangerouslySetInnerHTML ? ClientPotentielLogo().props.dangerouslySetInnerHTML.__html : ''}
-            <div class="company-info">
-              <h1>ANALYSE SÉCURITAIRE DE TÂCHES</h1>
-              <p><strong>Client:</strong> ${tenant.companyName}</p>
-              <p><strong>Projet:</strong> ${formData.projectInfo.projectNumber}</p>
-              <p><strong>Date:</strong> ${new Date(formData.projectInfo.date).toLocaleDateString('fr-CA')}</p>
-            </div>
-          </div>
-          <div class="ast-info">
-            <div class="ast-number">${formData.astNumber}</div>
-            <p>Statut: ${formData.status.toUpperCase()}</p>
-            <p>Révision: ${formData.validation.revisionNumber}</p>
-          </div>
-        </div>
-
-        <!-- INFORMATIONS GÉNÉRALES -->
-        <div class="section">
-          <div class="section-title">📋 INFORMATIONS GÉNÉRALES</div>
-          <div class="grid">
-            <div class="field">
-              <div class="field-label">Client</div>
-              <div class="field-value">${formData.projectInfo.client || 'Non spécifié'}</div>
-            </div>
-            <div class="field">
-              <div class="field-label">Numéro de Projet</div>
-              <div class="field-value">${formData.projectInfo.projectNumber || 'Non spécifié'}</div>
-            </div>
-            <div class="field">
-              <div class="field-label">Lieu des Travaux</div>
-              <div class="field-value">${formData.projectInfo.workLocation || 'Non spécifié'}</div>
-            </div>
-            <div class="field">
-              <div class="field-label">Durée Estimée</div>
-              <div class="field-value">${formData.projectInfo.estimatedDuration || 'Non spécifié'}</div>
-            </div>
-          </div>
-          <div class="field">
-            <div class="field-label">Description des Travaux</div>
-            <div class="field-value">${formData.projectInfo.workDescription || 'Non spécifiée'}</div>
-          </div>
-        </div>
-
-        <!-- DANGERS IDENTIFIÉS -->
-        <div class="section">
-          <div class="section-title">⚠️ DANGERS POTENTIELS IDENTIFIÉS</div>
-          <div class="hazard-list">
-            ${formData.electricalHazards.filter(h => h.isSelected).map(hazard => `
-              <div class="hazard-item hazard-selected">
-                <div class="hazard-code">${hazard.code}</div>
-                <strong>${hazard.title}</strong>
-                <p>${hazard.description}</p>
-                ${hazard.additionalNotes ? `<p><em>Notes: ${hazard.additionalNotes}</em></p>` : ''}
-              </div>
-            `).join('')}
-          </div>
-          ${formData.electricalHazards.filter(h => h.isSelected).length === 0 ? '<p>Aucun danger identifié.</p>' : ''}
-        </div>
-
-        <!-- ÉQUIPEMENTS DE SÉCURITÉ -->
-        <div class="section">
-          <div class="section-title">🛡️ ÉQUIPEMENTS DE SÉCURITÉ REQUIS</div>
-          <div class="equipment-grid">
-            ${formData.safetyEquipment.filter(eq => eq.required).map(equipment => `
-              <div class="equipment-item">
-                <span class="check-box ${equipment.verified ? 'checked' : ''}"></span>
-                ${equipment.name}
-              </div>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- ÉQUIPE DE TRAVAIL -->
-        <div class="section">
-          <div class="section-title">👥 ÉQUIPE DE TRAVAIL</div>
-          <table class="team-table">
-            <thead>
-              <tr>
-                <th>Nom du Travailleur</th>
-                <th>Département</th>
-                <th>Consultation AST</th>
-                <th>Cadenas Apposé</th>
-                <th>Cadenas Relevé</th>
-                <th>Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${formData.team.members.map(member => `
-                <tr>
-                  <td>${member.name}</td>
-                  <td>${member.department}</td>
-                  <td><span class="check-box ${member.consultationAst ? 'checked' : ''}"></span></td>
-                  <td><span class="check-box ${member.cadenasAppose ? 'checked' : ''}"></span></td>
-                  <td><span class="check-box ${member.cadenasReleve ? 'checked' : ''}"></span></td>
-                  <td class="status-${member.validationStatus}">
-                    ${member.validationStatus === 'approved' ? 'Approuvé' : 
-                      member.validationStatus === 'rejected' ? 'Rejeté' : 'En attente'}
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-
-        <!-- POINTS D'ISOLEMENT -->
-        ${formData.isolationPoints.length > 0 ? `
-        <div class="section">
-          <div class="section-title">⚙️ POINTS D'ISOLEMENT</div>
-          ${formData.isolationPoints.map(point => `
-            <div style="margin: 10px 0; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px;">
-              <strong>${point.name} (${point.type})</strong>
-              <div style="margin-top: 8px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
-                <div>
-                  <span class="check-box ${point.checklist.cadenasAppose ? 'checked' : ''}"></span>
-                  Cadenas Apposé
-                </div>
-                <div>
-                  <span class="check-box ${point.checklist.absenceTension ? 'checked' : ''}"></span>
-                  Absence de Tension
-                </div>
-                <div>
-                  <span class="check-box ${point.checklist.miseALaTerre ? 'checked' : ''}"></span>
-                  Mise à la Terre
-                </div>
-                <div>
-                  <span class="check-box ${point.checklist.cadenasReleve ? 'checked' : ''}"></span>
-                  Cadenas Relevé
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-        ` : ''}
-
-        <!-- SIGNATURES -->
-        <div class="section">
-          <div class="section-title">✅ VALIDATION ET SIGNATURES</div>
-          <div class="signature-section">
-            <div class="signature-box">
-              <strong>Superviseur</strong><br>
-              ${formData.team.supervisor || '_________________'}<br><br>
-              Signature: ________________<br>
-              Date: ${formData.validation.completedDate || '________________'}
-            </div>
-            <div class="signature-box">
-              <strong>Révisé par</strong><br>
-              ${formData.validation.reviewedBy || '_________________'}<br><br>
-              Signature: ________________<br>
-              Date: ${formData.validation.reviewedDate || '________________'}
-            </div>
-            <div class="signature-box">
-              <strong>Approuvé par</strong><br>
-              ${formData.validation.approvedBy || '_________________'}<br><br>
-              Signature: ________________<br>
-              Date: ${formData.validation.approvedDate || '________________'}
-            </div>
-          </div>
-        </div>
-
-        <!-- FOOTER -->
-        <div class="footer">
-          <p><strong>Client Potentiel</strong> - Analyse Sécuritaire de Tâches</p>
-          <p>Document généré le ${new Date().toLocaleString('fr-CA')} | AST ${formData.astNumber}</p>
-          <p>Ce document est confidentiel et propriétaire.</p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    // Simulation de génération PDF (en production, utilisez une librairie comme jsPDF + html2canvas ou puppeteer)
-    console.log('📄 Template PDF généré:', pdfTemplate.length, 'caractères');
-    
-    // Ici vous pourriez utiliser:
-    // - html2pdf.js pour conversion côté client
-    // - API backend avec Puppeteer pour PDF serveur
-    // - Service PDF tiers comme PDFShift
-    
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Simulation de téléchargement
-    const blob = new Blob([pdfTemplate], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `AST-${formData.astNumber}-${new Date().toISOString().split('T')[0]}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    console.log('✅ PDF professionnel généré avec succès!');
-    return true;
-    
-  } catch (error) {
-    console.error('❌ Erreur génération PDF:', error);
-    return false;
-  }
-};
-
-// =================== FONCTIONS EMAIL PROFESSIONNELLES ===================
-const sendByEmail = async (formData: ASTFormData, tenant: Tenant, language: string) => {
-  const t = translations[language as keyof typeof translations];
-  
-  try {
-    console.log('📧 Envoi email professionnel...');
-    
-    const emailData = {
-      to: formData.projectInfo.clientRepresentative || 'client@example.com',
-      subject: `AST ${formData.astNumber} - ${formData.projectInfo.client}`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .header { background: #1e40af; color: white; padding: 20px; text-align: center; }
-            .content { padding: 20px; }
-            .footer { background: #f8fafc; padding: 15px; text-align: center; font-size: 12px; color: #666; }
-            .highlight { background: #fef3c7; padding: 8px; border-radius: 4px; margin: 10px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Client Potentiel</h1>
-            <p>Analyse Sécuritaire de Tâches</p>
-          </div>
-          
-          <div class="content">
-            <h2>AST ${formData.astNumber} - ${formData.projectInfo.client}</h2>
-            
-            <div class="highlight">
-              <strong>Projet:</strong> ${formData.projectInfo.projectNumber}<br>
-              <strong>Date:</strong> ${new Date(formData.projectInfo.date).toLocaleDateString('fr-CA')}<br>
-              <strong>Statut:</strong> ${formData.status.toUpperCase()}
-            </div>
-            
-            <p>Bonjour,</p>
-            
-            <p>Veuillez trouver ci-joint l'Analyse Sécuritaire de Tâches pour le projet <strong>${formData.projectInfo.projectNumber}</strong>.</p>
-            
-            <h3>Résumé:</h3>
-            <ul>
-              <li><strong>Dangers identifiés:</strong> ${formData.electricalHazards.filter(h => h.isSelected).length}</li>
-              <li><strong>Équipe validée:</strong> ${formData.team.members.filter(m => m.validationStatus === 'approved').length}/${formData.team.members.length} membres</li>
-              <li><strong>Points d'isolement:</strong> ${formData.isolationPoints.length}</li>
-              <li><strong>Documentation:</strong> ${formData.documentation.photos.length} photos</li>
-            </ul>
-            
-            <p>Cette AST a été ${formData.validation.finalApproval ? 'approuvée' : 'préparée'} et est prête pour révision.</p>
-            
-            <p>Cordialement,<br>
-            <strong>Équipe Client Potentiel</strong></p>
-          </div>
-          
-          <div class="footer">
-            <p>Client Potentiel - Solutions de sécurité industrielle</p>
-            <p>Ce message est confidentiel et destiné uniquement au destinataire.</p>
-          </div>
-        </body>
-        </html>
-      `,
-      attachments: [
-        {
-          filename: `AST-${formData.astNumber}.pdf`,
-          content: 'PDF_CONTENT_PLACEHOLDER' // En production, attachez le vrai PDF
-        }
-      ]
-    };
-    
-    // Simulation d'envoi email (en production, utilisez un service comme SendGrid, Nodemailer, etc.)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    console.log('✅ Email envoyé:', emailData.to);
-    
-    return true;
-  } catch (error) {
-    console.error('❌ Erreur envoi email:', error);
-    return false;
-  }
-};
-
-// =================== TRADUCTIONS COMPLÈTES ===================
 const translations = {
   fr: {
     title: "Nouvelle Analyse Sécuritaire de Tâches",
@@ -1205,9 +334,15 @@ const translations = {
       astClientNumber: "# AST du Client",
       date: "Date",
       client: "Client",
+      clientPhone: "# Téléphone Client", // NOUVEAU
       projectNumber: "Numéro de Projet",
       workDescription: "Description des Travaux",
       workLocation: "Lieu des Travaux",
+      clientRepresentative: "Nom du Responsable", // NOUVEAU
+      clientRepresentativePhone: "# Téléphone Responsable", // NOUVEAU
+      estimatedDuration: "Durée Estimée",
+      emergencyContact: "Contact d'Urgence",
+      emergencyPhone: "# Urgence",
       astInfo: "Numéro généré automatiquement - usage unique",
       astClientInfo: "Numéro fourni par le client (optionnel)"
     },
@@ -1351,9 +486,15 @@ const translations = {
       astClientNumber: "# Client JSA",
       date: "Date",
       client: "Client",
+      clientPhone: "Client Phone #", // NOUVEAU
       projectNumber: "Project Number",
       workDescription: "Work Description",
       workLocation: "Work Location",
+      clientRepresentative: "Representative Name", // NOUVEAU
+      clientRepresentativePhone: "Representative Phone #", // NOUVEAU
+      estimatedDuration: "Estimated Duration",
+      emergencyContact: "Emergency Contact",
+      emergencyPhone: "Emergency Phone #",
       astInfo: "Auto-generated unique number",
       astClientInfo: "Client-provided number (optional)"
     },
@@ -1471,89 +612,6 @@ const translations = {
       subject: "JSA - Job Safety Analysis",
       body: "Please find attached the Job Safety Analysis for your review."
     }
-  }
-};
-
-// =================== DONNÉES INITIALES MISES À JOUR ===================
-const initialFormData: ASTFormData = {
-  id: `AST-${Date.now()}`,
-  astNumber: generateASTNumber(),
-  created: new Date().toISOString(),
-  lastModified: new Date().toISOString(),
-  language: 'fr',
-  status: 'draft',
-  industry: 'electrical',
-  
-  projectInfo: {
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().substring(0, 5),
-    client: '',
-    projectNumber: '',
-    astClientNumber: '',
-    workLocation: '',
-    workDescription: '',
-    estimatedDuration: '',
-    workerCount: 1,
-    clientRepresentative: '',
-    emergencyContact: '',
-    emergencyPhone: '',
-    workPermitRequired: false,
-    workPermitNumber: '',
-    weatherConditions: '',
-    specialConditions: ''
-  },
-  
-  teamDiscussion: {
-    electricalCutoffPoints: '',
-    electricalHazardExplanation: '',
-    epiSpecificNotes: '',
-    specialWorkConditions: '',
-    emergencyProcedures: '',
-    discussions: [...predefinedDiscussions],
-    briefingCompleted: false,
-    briefingDate: '',
-    briefingTime: '',
-    emergencyProceduresList: [...emergencyProcedures]
-  },
-  
-  safetyEquipment: [...requiredSafetyEquipment],
-  electricalHazards: [...predefinedElectricalHazards],
-  riskAssessments: [],
-  
-  team: {
-    supervisor: '',
-    supervisorCertification: '',
-    members: [],
-    briefingCompleted: false,
-    briefingDate: '',
-    briefingTime: '',
-    totalMembers: 0,
-    acknowledgedMembers: 0,
-    validations: [],
-    allApproved: false
-  },
-  
-  isolationPoints: [],
-  
-  documentation: {
-    photos: [],
-    additionalDocuments: [],
-    inspectionNotes: '',
-    correctiveActions: ''
-  },
-  
-  validation: {
-    completedBy: '',
-    completedDate: '',
-    reviewedBy: '',
-    reviewedDate: '',
-    approvedBy: '',
-    approvedDate: '',
-    clientApproval: false,
-    finalApproval: false,
-    revisionNumber: 1,
-    comments: '',
-    emailSent: false
   }
 };
 // =================== AST SECTION 3/5 V2 - STYLES & FONCTIONS ===================
@@ -3181,1005 +2239,261 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   };
 
   const overallProgress = steps.reduce((acc, _, index) => acc + calculateStepCompletion(index), 0) / steps.length;
-  // =================== AST SECTION 5/5 V2 FINALE - JSX RENDER COMPLET ===================
-// Section 5: Rendu JSX final avec compteurs de personnes et approbations
+  // =================== SECTION 5 V3 - ÉTAPE 1 MISE À JOUR ===================
+// Étape 1: Informations Générales avec nouveaux champs
 
-  return (
-    <>
-      {/* CSS PREMIUM INTÉGRÉ */}
-      <style dangerouslySetInnerHTML={{ __html: premiumStyles }} />
+{/* ÉTAPE 1: Informations Générales */}
+{currentStep === 0 && (
+  <div className="slide-in">
+    <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+      <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
+        📋 {t.projectInfo.title}
+      </h2>
+    </div>
 
-      <div className="form-container">
-        {/* Indicateur de sauvegarde */}
-        {saveStatus !== 'idle' && (
-          <div className={`save-indicator ${saveStatus}`}>
-            {saveStatus === 'saving' && (
-              <>
-                <div className="pulse" style={{ display: 'inline-block', marginRight: '8px' }}>💾</div>
-                {t.saving}
-              </>
-            )}
-            {saveStatus === 'saved' && (
-              <>
-                <Check style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-                {t.saved}
-                {lastSaveTime && ` • ${lastSaveTime}`}
-              </>
-            )}
-            {saveStatus === 'error' && (
-              <>
-                <X style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-                Erreur de sauvegarde
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Header avec logo Client Potentiel */}
-        <header style={{
-          background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 100%)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+      
+      {/* Numéro AST */}
+      <div>
+        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+          🔢 # AST
+        </label>
+        <div style={{
+          background: 'rgba(34, 197, 94, 0.1)',
+          border: '1px solid #22c55e',
+          borderRadius: '12px',
+          padding: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
         }}>
-          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                <div className="company-logo">CP</div>
-                <div>
-                  <h1 style={{ color: 'white', fontSize: '24px', fontWeight: '700', margin: 0 }}>
-                    {t.title}
-                  </h1>
-                  <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
-                    {tenant.companyName} • {formData.astNumber} • {t.industries[formData.industry]}
-                  </p>
-                </div>
-              </div>
-              
-              {/* NOUVEAU: Compteur de personnes dans le header */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '20px',
-                background: 'rgba(30, 41, 59, 0.8)',
-                padding: '12px 20px',
-                borderRadius: '12px',
-                border: '1px solid rgba(100, 116, 139, 0.3)'
-              }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ color: '#3b82f6', fontSize: '20px', fontWeight: '700' }}>
-                    {formData.projectInfo.workerCount || formData.team.members.length}
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '11px' }}>Personnes sur la job</div>
-                </div>
-                <div style={{ width: '1px', height: '40px', background: 'rgba(100, 116, 139, 0.3)' }}></div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ color: '#22c55e', fontSize: '20px', fontWeight: '700' }}>
-                    {formData.team.members.filter(m => m.validationStatus === 'approved').length}
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '11px' }}>Approuvé AST</div>
-                </div>
-                <div style={{ width: '1px', height: '40px', background: 'rgba(100, 116, 139, 0.3)' }}></div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ 
-                    color: formData.team.members.length > 0 && formData.team.members.filter(m => m.validationStatus === 'approved').length === formData.team.members.length 
-                      ? '#22c55e' : '#f59e0b', 
-                    fontSize: '20px', 
-                    fontWeight: '700' 
-                  }}>
-                    {formData.team.members.length > 0 
-                      ? Math.round((formData.team.members.filter(m => m.validationStatus === 'approved').length / formData.team.members.length) * 100)
-                      : 0}%
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '11px' }}>Taux d'approbation</div>
-                </div>
-              </div>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <select 
-                  value={language} 
-                  onChange={(e) => setLanguage(e.target.value as 'fr' | 'en')}
-                  className="input-premium"
-                  style={{ padding: '8px 12px', minWidth: '120px' }}
-                >
-                  <option value="fr">🇨🇦 Français</option>
-                  <option value="en">🇨🇦 English</option>
-                </select>
-                
-                <button 
-                  onClick={handleGeneratePDF}
-                  className="btn-secondary"
-                  style={{ padding: '8px 16px' }}
-                  title={t.actions.generatePDF}
-                >
-                  <Download style={{ width: '16px', height: '16px' }} />
-                </button>
-                
-                <button 
-                  onClick={handleSendByEmail}
-                  className="btn-secondary"
-                  style={{ padding: '8px 16px' }}
-                  title={t.actions.sendByEmail}
-                >
-                  <Mail style={{ width: '16px', height: '16px' }} />
-                </button>
-
-                <button 
-                  onClick={handleArchive}
-                  className="btn-secondary"
-                  style={{ padding: '8px 16px' }}
-                  title={t.actions.archive}
-                >
-                  <Archive style={{ width: '16px', height: '16px' }} />
-                </button>
-              </div>
+          <div>
+            <div style={{
+              fontFamily: 'Monaco, Menlo, Courier New, monospace',
+              fontSize: '16px',
+              fontWeight: '700',
+              color: '#22c55e',
+              letterSpacing: '0.5px'
+            }}>
+              {formData.astNumber}
             </div>
           </div>
-        </header>
+          <button 
+            onClick={regenerateASTNumber}
+            style={{
+              background: 'none',
+              border: '1px solid #22c55e',
+              color: '#22c55e',
+              padding: '8px',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            <Copy style={{ width: '16px', height: '16px' }} />
+          </button>
+        </div>
+      </div>
 
-        {/* Contenu principal */}
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 20px' }}>
-          <div className="glass-effect slide-in" style={{ padding: '32px' }}>
-            
-            {/* Barre de progression */}
-            <div className="progress-bar">
-              <div 
-                className="progress-fill"
-                style={{ width: `${overallProgress}%` }}
-              />
-            </div>
+      {/* Client */}
+      <div>
+        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+          🏢 Client *
+        </label>
+        <input 
+          type="text"
+          className="input-premium"
+          placeholder="Nom du client"
+          value={formData.projectInfo.client}
+          onChange={(e) => setFormData(prev => ({
+            ...prev,
+            projectInfo: { ...prev.projectInfo, client: e.target.value }
+          }))}
+        />
+      </div>
 
-            {/* Indicateur d'étapes */}
-            <div className="step-indicator">
-              {steps.map((step, index) => {
-                const completion = calculateStepCompletion(index);
-                return (
-                  <div
-                    key={step.key}
-                    className={`step-item ${index === currentStep ? 'active' : completion === 100 ? 'completed' : ''}`}
-                    onClick={() => setCurrentStep(index)}
-                  >
-                    <step.icon style={{ width: '18px', height: '18px', marginRight: '8px' }} />
-                    <span style={{ fontSize: '13px', fontWeight: '600' }}>
-                      {t.steps[step.key]}
-                    </span>
-                    {completion > 0 && completion < 100 && (
-                      <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.7 }}>
-                        ({Math.round(completion)}%)
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+      {/* NOUVEAU: Téléphone Client */}
+      <div>
+        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+          📞 # Téléphone Client
+        </label>
+        <input 
+          type="tel"
+          className="input-premium"
+          placeholder="Ex: (514) 555-0123"
+          value={formData.projectInfo.clientPhone}
+          onChange={(e) => setFormData(prev => ({
+            ...prev,
+            projectInfo: { ...prev.projectInfo, clientPhone: e.target.value }
+          }))}
+        />
+      </div>
 
-            {/* Contenu des étapes */}
-            <div style={{ minHeight: '600px' }}>
-              
-              {/* ÉTAPE 1: Informations Générales */}
-              {currentStep === 0 && (
-                <div className="slide-in">
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      📋 {t.projectInfo.title}
-                    </h2>
-                  </div>
+      {/* Numéro de Projet */}
+      <div>
+        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+          🔢 Numéro de Projet *
+        </label>
+        <input 
+          type="text"
+          className="input-premium"
+          placeholder="Ex: PRJ-2025-001"
+          value={formData.projectInfo.projectNumber}
+          onChange={(e) => setFormData(prev => ({
+            ...prev,
+            projectInfo: { ...prev.projectInfo, projectNumber: e.target.value }
+          }))}
+        />
+      </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-                    <div>
-                      <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                        🔢 {t.projectInfo.astNumber}
-                      </label>
-                      <div style={{
-                        background: 'rgba(34, 197, 94, 0.1)',
-                        border: '1px solid #22c55e',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                      }}>
-                        <div>
-                          <div style={{
-                            fontFamily: 'Monaco, Menlo, Courier New, monospace',
-                            fontSize: '16px',
-                            fontWeight: '700',
-                            color: '#22c55e',
-                            letterSpacing: '0.5px'
-                          }}>
-                            {formData.astNumber}
-                          </div>
-                        </div>
-                        <button 
-                          onClick={regenerateASTNumber}
-                          style={{
-                            background: 'none',
-                            border: '1px solid #22c55e',
-                            color: '#22c55e',
-                            padding: '8px',
-                            borderRadius: '8px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <Copy style={{ width: '16px', height: '16px' }} />
-                        </button>
-                      </div>
-                    </div>
+      {/* NOUVEAU: Nom du Responsable */}
+      <div>
+        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+          👤 Nom du Responsable
+        </label>
+        <input 
+          type="text"
+          className="input-premium"
+          placeholder="Nom du responsable projet"
+          value={formData.projectInfo.clientRepresentative}
+          onChange={(e) => setFormData(prev => ({
+            ...prev,
+            projectInfo: { ...prev.projectInfo, clientRepresentative: e.target.value }
+          }))}
+        />
+      </div>
 
-                    <div>
-                      <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                        🏢 {t.projectInfo.client} *
-                      </label>
-                      <input 
-                        type="text"
-                        className="input-premium"
-                        placeholder="Nom du client"
-                        value={formData.projectInfo.client}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          projectInfo: { ...prev.projectInfo, client: e.target.value }
-                        }))}
-                      />
-                    </div>
+      {/* NOUVEAU: Téléphone Responsable */}
+      <div>
+        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+          📞 # Téléphone Responsable
+        </label>
+        <input 
+          type="tel"
+          className="input-premium"
+          placeholder="Ex: (514) 555-0456"
+          value={formData.projectInfo.clientRepresentativePhone}
+          onChange={(e) => setFormData(prev => ({
+            ...prev,
+            projectInfo: { ...prev.projectInfo, clientRepresentativePhone: e.target.value }
+          }))}
+        />
+      </div>
 
-                    <div>
-                      <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                        🔢 {t.projectInfo.projectNumber} *
-                      </label>
-                      <input 
-                        type="text"
-                        className="input-premium"
-                        placeholder="Ex: PRJ-2025-001"
-                        value={formData.projectInfo.projectNumber}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          projectInfo: { ...prev.projectInfo, projectNumber: e.target.value }
-                        }))}
-                      />
-                    </div>
+      {/* Nombre de personnes sur la job */}
+      <div>
+        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+          👥 Nombre de personnes sur la job *
+        </label>
+        <input 
+          type="number"
+          min="1"
+          max="100"
+          className="input-premium"
+          placeholder="Ex: 5"
+          value={formData.projectInfo.workerCount}
+          onChange={(e) => setFormData(prev => ({
+            ...prev,
+            projectInfo: { ...prev.projectInfo, workerCount: parseInt(e.target.value) || 1 }
+          }))}
+        />
+        <small style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+          Ce nombre sera comparé aux approbations d'équipe
+        </small>
+      </div>
 
-                    {/* NOUVEAU: Champ nombre de personnes */}
-                    <div>
-                      <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                        👥 Nombre de personnes sur la job *
-                      </label>
-                      <input 
-                        type="number"
-                        min="1"
-                        max="100"
-                        className="input-premium"
-                        placeholder="Ex: 5"
-                        value={formData.projectInfo.workerCount}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          projectInfo: { ...prev.projectInfo, workerCount: parseInt(e.target.value) || 1 }
-                        }))}
-                      />
-                      <small style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                        Ce nombre sera comparé aux approbations d'équipe
-                      </small>
-                    </div>
+      {/* Lieu des travaux */}
+      <div>
+        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+          📍 Lieu des Travaux
+        </label>
+        <input 
+          type="text"
+          className="input-premium"
+          placeholder="Adresse ou description du lieu"
+          value={formData.projectInfo.workLocation}
+          onChange={(e) => setFormData(prev => ({
+            ...prev,
+            projectInfo: { ...prev.projectInfo, workLocation: e.target.value }
+          }))}
+        />
+      </div>
 
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                        📝 {t.projectInfo.workDescription} *
-                      </label>
-                      <textarea 
-                        className="input-premium"
-                        style={{ minHeight: '120px', resize: 'vertical' }}
-                        placeholder="Description détaillée des travaux à effectuer..."
-                        value={formData.projectInfo.workDescription}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          projectInfo: { ...prev.projectInfo, workDescription: e.target.value }
-                        }))}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+      {/* Description des travaux - Span sur toute la largeur */}
+      <div style={{ gridColumn: '1 / -1' }}>
+        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+          📝 Description des Travaux *
+        </label>
+        <textarea 
+          className="input-premium"
+          style={{ minHeight: '120px', resize: 'vertical' }}
+          placeholder="Description détaillée des travaux à effectuer..."
+          value={formData.projectInfo.workDescription}
+          onChange={(e) => setFormData(prev => ({
+            ...prev,
+            projectInfo: { ...prev.projectInfo, workDescription: e.target.value }
+          }))}
+        />
+      </div>
 
-              {/* ÉTAPE 2: Discussion avec l'Équipe */}
-              {currentStep === 1 && (
-                <div className="slide-in">
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      💬 {t.teamDiscussion.title}
-                    </h2>
-                  </div>
+      {/* Section supplémentaire - Informations complémentaires */}
+      <div style={{ gridColumn: '1 / -1', marginTop: '24px' }}>
+        <h3 style={{ color: '#3b82f6', fontSize: '18px', fontWeight: '600', marginBottom: '16px', borderBottom: '1px solid rgba(59, 130, 246, 0.3)', paddingBottom: '8px' }}>
+          📋 Informations Complémentaires
+        </h3>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+          {/* Durée estimée */}
+          <div>
+            <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+              ⏱️ Durée Estimée
+            </label>
+            <input 
+              type="text"
+              className="input-premium"
+              placeholder="Ex: 4 heures, 2 jours"
+              value={formData.projectInfo.estimatedDuration}
+              onChange={(e) => setFormData(prev => ({
+                ...prev,
+                projectInfo: { ...prev.projectInfo, estimatedDuration: e.target.value }
+              }))}
+            />
+          </div>
 
-                  {formData.teamDiscussion.discussions.map((discussion) => (
-                    <div
-                      key={discussion.id}
-                      className={`discussion-item ${discussion.completed ? 'completed' : ''} ${discussion.priority}-priority`}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <CustomCheckbox
-                          checked={discussion.completed}
-                          onChange={() => toggleDiscussion(discussion.id)}
-                          label=""
-                        />
-                        <div style={{ flex: 1 }}>
-                          <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0' }}>
-                            {discussion.topic}
-                          </h4>
-                          <input
-                            type="text"
-                            className="input-premium"
-                            placeholder="Notes..."
-                            value={discussion.notes}
-                            onChange={(e) => updateDiscussionNotes(discussion.id, e.target.value)}
-                            style={{ fontSize: '12px', padding: '8px 12px' }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {/* Contact d'urgence */}
+          <div>
+            <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+              🚨 Contact d'Urgence
+            </label>
+            <input 
+              type="text"
+              className="input-premium"
+              placeholder="Nom du contact d'urgence"
+              value={formData.projectInfo.emergencyContact}
+              onChange={(e) => setFormData(prev => ({
+                ...prev,
+                projectInfo: { ...prev.projectInfo, emergencyContact: e.target.value }
+              }))}
+            />
+          </div>
 
-              {/* ÉTAPE 3: Équipements de Sécurité */}
-              {currentStep === 2 && (
-                <div className="slide-in">
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      🛡️ {t.safetyEquipment.title}
-                    </h2>
-                  </div>
-
-                  <div className="equipment-grid">
-                    {formData.safetyEquipment.map((item) => (
-                      <div
-                        key={item.id}
-                        className={`equipment-item ${item.required ? 'required' : ''} ${item.verified ? 'verified' : ''}`}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                          <CustomCheckbox
-                            checked={item.required}
-                            onChange={() => toggleEquipmentRequired(item.id)}
-                            label=""
-                          />
-                          <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: '600' }}>Requis</span>
-                          
-                          <CustomCheckbox
-                            checked={item.available}
-                            onChange={() => toggleEquipmentAvailable(item.id)}
-                            label=""
-                          />
-                          <span style={{ fontSize: '12px', color: '#3b82f6', fontWeight: '600' }}>Disponible</span>
-                          
-                          <CustomCheckbox
-                            checked={item.verified}
-                            onChange={() => toggleEquipmentVerified(item.id)}
-                            label=""
-                          />
-                          <span style={{ fontSize: '12px', color: '#22c55e', fontWeight: '600' }}>Vérifié</span>
-                        </div>
-                        
-                        <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0' }}>
-                          {item.name}
-                        </h4>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ÉTAPE 4: Dangers Potentiels */}
-              {currentStep === 3 && (
-                <div className="slide-in">
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      ⚠️ {t.hazards.title}
-                    </h2>
-                  </div>
-
-                  <div className="hazard-grid">
-                    {formData.electricalHazards.map((hazard) => (
-                      <div key={hazard.id} style={{ gridColumn: '1 / -1' }}>
-                        <div
-                          className={`hazard-item ${hazard.isSelected ? 'selected' : ''} ${hazard.riskLevel}`}
-                          onClick={() => toggleHazard(hazard.id)}
-                          style={{ cursor: 'pointer', marginBottom: hazard.isSelected ? '0' : '16px' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                            <CustomCheckbox
-                              checked={hazard.isSelected}
-                              onChange={() => toggleHazard(hazard.id)}
-                              label=""
-                            />
-                            <div style={{
-                              background: hazard.riskLevel === 'critical' ? '#dc2626' : '#f59e0b',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '10px',
-                              fontWeight: '600'
-                            }}>
-                              {hazard.code}
-                            </div>
-                          </div>
-                          
-                          <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0' }}>
-                            {hazard.title}
-                          </h4>
-                          
-                          <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
-                            {hazard.description}
-                          </p>
-
-                          {hazard.isSelected && (
-                            <div style={{ marginTop: '12px' }}>
-                              <span style={{ 
-                                color: '#22c55e', 
-                                fontSize: '12px', 
-                                fontWeight: '600',
-                                background: 'rgba(34, 197, 94, 0.1)',
-                                padding: '4px 8px',
-                                borderRadius: '4px'
-                              }}>
-                                ✅ Danger sélectionné
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {hazard.isSelected && hazard.showControls && hazard.controlMeasures && (
-                          <div style={{
-                            background: 'rgba(20, 30, 48, 0.9)',
-                            border: '1px solid rgba(34, 197, 94, 0.3)',
-                            borderRadius: '12px',
-                            padding: '20px',
-                            marginBottom: '16px'
-                          }}>
-                            <h5 style={{ color: '#22c55e', fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-                              🛡️ Moyens de contrôle pour: {hazard.title}
-                            </h5>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-                              {hazard.controlMeasures.map((control) => (
-                                <div
-                                  key={control.id}
-                                  style={{
-                                    background: 'rgba(51, 65, 85, 0.3)',
-                                    border: '1px solid rgba(100, 116, 139, 0.3)',
-                                    borderRadius: '8px',
-                                    padding: '16px'
-                                  }}
-                                >
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                                    <CustomCheckbox
-                                      checked={control.isSelected}
-                                      onChange={() => toggleControlMeasure(hazard.id, control.id)}
-                                      label=""
-                                    />
-                                    <div style={{
-                                      background: '#3b82f6',
-                                      color: 'white',
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      fontSize: '10px',
-                                      fontWeight: '600'
-                                    }}>
-                                      {control.category.toUpperCase()}
-                                    </div>
-                                  </div>
-
-                                  <h6 style={{ color: 'white', fontSize: '14px', fontWeight: '600', margin: '0 0 6px 0' }}>
-                                    {control.name}
-                                  </h6>
-                                  
-                                  <p style={{ color: '#94a3b8', fontSize: '12px', margin: '0 0 8px 0' }}>
-                                    {control.description}
-                                  </p>
-
-                                  {control.isSelected && (
-                                    <input
-                                      type="text"
-                                      className="input-premium"
-                                      placeholder="Notes spécifiques..."
-                                      value={control.notes}
-                                      onChange={(e) => updateControlNotes(hazard.id, control.id, e.target.value)}
-                                      style={{ fontSize: '12px', padding: '8px' }}
-                                    />
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ÉTAPE 5: Points d'Isolement */}
-              {currentStep === 4 && (
-                <div className="slide-in">
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      ⚙️ {t.isolation.title}
-                    </h2>
-                  </div>
-
-                  <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '24px', borderRadius: '16px', marginBottom: '24px' }}>
-                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                      ➕ {t.isolation.addPoint}
-                    </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '16px', alignItems: 'end' }}>
-                      <input
-                        type="text"
-                        className="input-premium"
-                        placeholder={t.isolation.pointName}
-                        value={newIsolationPoint.name || ''}
-                        onChange={(e) => setNewIsolationPoint(prev => ({ ...prev, name: e.target.value }))}
-                      />
-                      <select
-                        className="input-premium"
-                        value={newIsolationPoint.type || ''}
-                        onChange={(e) => setNewIsolationPoint(prev => ({ ...prev, type: e.target.value as any }))}
-                      >
-                        <option value="">Sélectionner le type...</option>
-                        <option value="electrical">⚡ Électrique</option>
-                        <option value="mechanical">⚙️ Mécanique</option>
-                        <option value="pneumatic">🌪️ Pneumatique</option>
-                        <option value="hydraulic">💧 Hydraulique</option>
-                        <option value="chemical">🧪 Chimique</option>
-                        <option value="thermal">🔥 Thermique</option>
-                      </select>
-                      <button
-                        onClick={addIsolationPoint}
-                        className="btn-premium"
-                        style={{ padding: '14px 20px' }}
-                      >
-                        <Plus style={{ width: '16px', height: '16px' }} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {formData.isolationPoints.map((point) => (
-                    <div key={point.id} style={{ 
-                      background: 'rgba(30, 41, 59, 0.8)', 
-                      border: '1px solid rgba(100, 116, 139, 0.3)', 
-                      borderRadius: '16px', 
-                      padding: '24px', 
-                      marginBottom: '16px' 
-                    }}>
-                      <h4 style={{ color: 'white', fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0' }}>
-                        {point.type === 'electrical' ? '⚡' : 
-                         point.type === 'mechanical' ? '⚙️' :
-                         point.type === 'pneumatic' ? '🌪️' :
-                         point.type === 'hydraulic' ? '💧' :
-                         point.type === 'chemical' ? '🧪' : '🔥'} {point.name}
-                      </h4>
-
-                      {/* NOUVELLE CHECKLIST SELON VOTRE IMAGE */}
-                      <div style={{ marginBottom: '16px' }}>
-                        <h5 style={{ color: '#3b82f6', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
-                          📋 Points d'Isolement - Checklist
-                        </h5>
-                        <div className="isolation-checklist">
-                          <div 
-                            className={`checklist-item ${point.checklist.cadenasAppose ? 'completed' : ''}`}
-                            onClick={() => updateIsolationChecklist(point.id, 'cadenasAppose')}
-                          >
-                            <div className={`checkbox-premium ${point.checklist.cadenasAppose ? 'checked' : ''}`} />
-                            <span style={{ color: '#e2e8f0', fontSize: '14px' }}>Cadenas Apposé</span>
-                          </div>
-                          
-                          <div 
-                            className={`checklist-item ${point.checklist.absenceTension ? 'completed' : ''}`}
-                            onClick={() => updateIsolationChecklist(point.id, 'absenceTension')}
-                          >
-                            <div className={`checkbox-premium ${point.checklist.absenceTension ? 'checked' : ''}`} />
-                            <span style={{ color: '#e2e8f0', fontSize: '14px' }}>Absence de Tension</span>
-                          </div>
-                          
-                          <div 
-                            className={`checklist-item ${point.checklist.miseALaTerre ? 'completed' : ''}`}
-                            onClick={() => updateIsolationChecklist(point.id, 'miseALaTerre')}
-                          >
-                            <div className={`checkbox-premium ${point.checklist.miseALaTerre ? 'checked' : ''}`} />
-                            <span style={{ color: '#e2e8f0', fontSize: '14px' }}>Mise à la Terre</span>
-                          </div>
-                          
-                          <div 
-                            className={`checklist-item ${point.checklist.cadenasReleve ? 'completed' : ''}`}
-                            onClick={() => updateIsolationChecklist(point.id, 'cadenasReleve')}
-                          >
-                            <div className={`checkbox-premium ${point.checklist.cadenasReleve ? 'checked' : ''}`} />
-                            <span style={{ color: '#e2e8f0', fontSize: '14px' }}>Cadenas Relevé</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <PhotoCarousel
-                        photos={point.photos}
-                        onAddPhoto={(file) => addPhotoToIsolationPoint(point.id, file)}
-                        onRemovePhoto={(photoId) => removePhotoFromIsolationPoint(point.id, photoId)}
-                        onUpdateDescription={(photoId, description) => updateIsolationPhotoDescription(point.id, photoId, description)}
-                      />
-                    </div>
-                  ))}
-
-                  {formData.isolationPoints.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
-                      <Settings style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p style={{ fontSize: '16px', margin: 0 }}>Aucun point d'isolement configuré</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ÉTAPE 6: Validation Équipe avec Tableau d'Approbation */}
-              {currentStep === 5 && (
-                <div className="slide-in">
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      👥 {t.team.validation}
-                    </h2>
-                    
-                    {/* NOUVEAU: Indicateur de progression d'équipe */}
-                    <div style={{ 
-                      background: 'rgba(30, 41, 59, 0.6)', 
-                      padding: '16px', 
-                      borderRadius: '12px', 
-                      margin: '16px 0',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      gap: '32px',
-                      flexWrap: 'wrap'
-                    }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#3b82f6', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.projectInfo.workerCount || formData.team.members.length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Personnes attendues</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#f59e0b', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.team.members.length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Ajoutées à l'équipe</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.team.members.filter(m => m.validationStatus === 'approved').length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Ont approuvé l'AST</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ 
-                          color: formData.team.members.length > 0 && 
-                                 formData.team.members.filter(m => m.validationStatus === 'approved').length >= (formData.projectInfo.workerCount || formData.team.members.length)
-                            ? '#22c55e' : '#ef4444', 
-                          fontSize: '24px', 
-                          fontWeight: '700' 
-                        }}>
-                          {formData.team.members.length > 0 && (formData.projectInfo.workerCount || formData.team.members.length) > 0
-                            ? Math.round((formData.team.members.filter(m => m.validationStatus === 'approved').length / (formData.projectInfo.workerCount || formData.team.members.length)) * 100)
-                            : 0}%
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Couverture d'approbation</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '24px', borderRadius: '16px', marginBottom: '24px' }}>
-                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                      ➕ {t.team.addMember}
-                    </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '16px', alignItems: 'end' }}>
-                      <input
-                        type="text"
-                        className="input-premium"
-                        placeholder={t.team.memberName}
-                        value={newTeamMember.name || ''}
-                        onChange={(e) => setNewTeamMember(prev => ({ ...prev, name: e.target.value }))}
-                      />
-                      <input
-                        type="text"
-                        className="input-premium"
-                        placeholder={t.team.department}
-                        value={newTeamMember.department || ''}
-                        onChange={(e) => setNewTeamMember(prev => ({ ...prev, department: e.target.value }))}
-                      />
-                      <button
-                        onClick={addTeamMember}
-                        className="btn-premium"
-                        style={{ padding: '14px 20px' }}
-                      >
-                        <Plus style={{ width: '16px', height: '16px' }} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* NOUVEAU: Tableau d'approbation selon votre image */}
-                  {formData.team.members.length > 0 && (
-                    <table className="approval-table">
-                      <thead>
-                        <tr>
-                          <th style={{ textAlign: 'left' }}>NOM DU TRAVAILLEUR</th>
-                          <th>CONSULTATION AST</th>
-                          <th>CADENAS APPOSÉ</th>
-                          <th>CADENAS RELEVÉ</th>
-                          <th>STATUT</th>
-                          <th>ACTIONS</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {formData.team.members.map((member) => (
-                          <tr key={member.id}>
-                            <td className="worker-name-cell">
-                              <div>
-                                <div style={{ fontWeight: '600' }}>{member.name}</div>
-                                <div style={{ fontSize: '11px', opacity: 0.8 }}>{member.department}</div>
-                              </div>
-                            </td>
-                            <td>
-                              <LockButton
-                                locked={member.consultationAst}
-                                onToggle={() => toggleConsultationAst(member.id)}
-                                memberId={member.id}
-                              />
-                            </td>
-                            <td>
-                              <LockButton
-                                locked={member.cadenasAppose}
-                                onToggle={() => toggleCadenasAppose(member.id)}
-                                memberId={member.id}
-                              />
-                            </td>
-                            <td>
-                              <LockButton
-                                locked={member.cadenasReleve}
-                                onToggle={() => toggleCadenasReleve(member.id)}
-                                memberId={member.id}
-                              />
-                            </td>
-                            <td>
-                              <div style={{ 
-                                color: member.validationStatus === 'approved' ? '#22c55e' : 
-                                       member.validationStatus === 'rejected' ? '#ef4444' : '#f59e0b',
-                                fontSize: '12px', 
-                                fontWeight: '600'
-                              }}>
-                                {member.validationStatus === 'approved' && '✅ Approuvé'}
-                                {member.validationStatus === 'rejected' && '❌ Rejeté'}
-                                {member.validationStatus === 'pending' && '⏳ En attente'}
-                              </div>
-                            </td>
-                            <td>
-                              {member.validationStatus === 'pending' && (
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                  <button
-                                    onClick={() => validateTeamMember(member.id, true, 'Approuvé')}
-                                    className="btn-success"
-                                    style={{ padding: '6px 12px', fontSize: '11px' }}
-                                  >
-                                    <Check style={{ width: '12px', height: '12px' }} />
-                                  </button>
-                                  <button
-                                    onClick={() => validateTeamMember(member.id, false, 'Rejeté')}
-                                    className="btn-danger"
-                                    style={{ padding: '6px 12px', fontSize: '11px' }}
-                                  >
-                                    <X style={{ width: '12px', height: '12px' }} />
-                                  </button>
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-
-                  {formData.team.members.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
-                      <Users style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p style={{ fontSize: '16px', margin: 0 }}>Aucun membre d'équipe ajouté</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ÉTAPE 7: Documentation */}
-              {currentStep === 6 && (
-                <div className="slide-in">
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      📸 Documentation
-                    </h2>
-                  </div>
-
-                  <PhotoCarousel
-                    photos={formData.documentation.photos}
-                    onAddPhoto={addPhoto}
-                    onRemovePhoto={removePhoto}
-                    onUpdateDescription={updatePhotoDescription}
-                  />
-                </div>
-              )}
-
-              {/* ÉTAPE 8: Validation Finale */}
-              {currentStep === 7 && (
-                <div className="slide-in">
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      ✅ Validation Finale
-                    </h2>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-                    <button
-                      onClick={handleGeneratePDF}
-                      className="btn-premium"
-                      style={{ padding: '20px', flexDirection: 'column', gap: '12px', height: 'auto' }}
-                    >
-                      <Download style={{ width: '32px', height: '32px' }} />
-                      <div>
-                        <div style={{ fontSize: '16px', fontWeight: '600' }}>Générer PDF</div>
-                        <div style={{ fontSize: '12px', opacity: 0.8 }}>Format 8.5"×11"</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={handleSendByEmail}
-                      className="btn-success"
-                      style={{ padding: '20px', flexDirection: 'column', gap: '12px', height: 'auto' }}
-                    >
-                      <Mail style={{ width: '32px', height: '32px' }} />
-                      <div>
-                        <div style={{ fontSize: '16px', fontWeight: '600' }}>Envoyer Email</div>
-                        <div style={{ fontSize: '12px', opacity: 0.8 }}>Au client</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={handleArchive}
-                      className="btn-secondary"
-                      style={{ padding: '20px', flexDirection: 'column', gap: '12px', height: 'auto' }}
-                    >
-                      <Archive style={{ width: '32px', height: '32px' }} />
-                      <div>
-                        <div style={{ fontSize: '16px', fontWeight: '600' }}>Archiver</div>
-                        <div style={{ fontSize: '12px', opacity: 0.8 }}>Dans Supabase</div>
-                      </div>
-                    </button>
-                  </div>
-
-                  <div style={{
-                    background: 'rgba(30, 41, 59, 0.8)',
-                    border: '1px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '16px',
-                    padding: '24px'
-                  }}>
-                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                      📊 Résumé Final
-                    </h3>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ color: '#3b82f6', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.projectInfo.workerCount || formData.team.members.length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Personnes sur la job</div>
-                      </div>
-
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.team.members.filter(m => m.validationStatus === 'approved').length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Approbations AST</div>
-                      </div>
-
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.electricalHazards.filter(h => h.isSelected).length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Dangers identifiés</div>
-                      </div>
-
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(168, 85, 247, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ color: '#a855f7', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.isolationPoints.length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Points d'isolement</div>
-                      </div>
-
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.documentation.photos.length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Photos ajoutées</div>
-                      </div>
-
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(251, 191, 36, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ 
-                          color: formData.team.members.length > 0 && 
-                                 formData.team.members.filter(m => m.validationStatus === 'approved').length >= (formData.projectInfo.workerCount || formData.team.members.length)
-                            ? '#22c55e' : '#f59e0b', 
-                          fontSize: '24px', 
-                          fontWeight: '700' 
-                        }}>
-                          {formData.team.members.length > 0 && (formData.projectInfo.workerCount || formData.team.members.length) > 0
-                            ? Math.round((formData.team.members.filter(m => m.validationStatus === 'approved').length / (formData.projectInfo.workerCount || formData.team.members.length)) * 100)
-                            : 0}%
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Taux de couverture</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Navigation */}
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              marginTop: '48px', 
-              paddingTop: '24px', 
-              borderTop: '1px solid rgba(100, 116, 139, 0.2)' 
-            }}>
-              <button 
-                className="btn-secondary" 
-                onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-                disabled={currentStep === 0}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px',
-                  opacity: currentStep === 0 ? 0.5 : 1,
-                  cursor: currentStep === 0 ? 'not-allowed' : 'pointer'
-                }}
-              >
-                <ChevronLeft style={{ width: '16px', height: '16px' }} /> 
-                Précédent
-              </button>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button 
-                  onClick={() => handleSave(true)} 
-                  className="btn-secondary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <Save style={{ width: '16px', height: '16px' }} /> 
-                  Sauvegarder
-                </button>
-                
-                {currentStep === steps.length - 1 ? (
-                  <button 
-                    onClick={handleFinalSubmission} 
-                    className="btn-success"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                    disabled={formData.team.members.length > 0 && 
-                             formData.team.members.filter(m => m.validationStatus === 'approved').length < (formData.projectInfo.workerCount || formData.team.members.length)}
-                  >
-                    <Send style={{ width: '16px', height: '16px' }} />
-                    Soumission Finale
-                  </button>
-                ) : (
-                  <button 
-                    className="btn-premium" 
-                    onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    Suivant 
-                    <ChevronRight style={{ width: '16px', height: '16px' }} />
-                  </button>
-                )}
-              </div>
-            </div>
+          {/* Téléphone d'urgence */}
+          <div>
+            <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+              📞 # Urgence
+            </label>
+            <input 
+              type="tel"
+              className="input-premium"
+              placeholder="Ex: 911, (514) 555-9999"
+              value={formData.projectInfo.emergencyPhone}
+              onChange={(e) => setFormData(prev => ({
+                ...prev,
+                projectInfo: { ...prev.projectInfo, emergencyPhone: e.target.value }
+              }))}
+            />
           </div>
         </div>
       </div>
-    </>
-  );
-}
+    </div>
+  </div>
+)}
