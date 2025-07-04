@@ -1174,8 +1174,8 @@ const PhotoCarousel: React.FC<{
     </div>
   );
 };
-// =================== AST SECTION 4/5 - COMPOSANT PRINCIPAL & LOGIQUE ===================
-// Section 4: Composant principal avec toutes les fonctions et logique métier
+// =================== AST SECTION 4/5 - COMPOSANT PRINCIPAL & LOGIQUE CORRIGÉE ===================
+// Section 4: Composant principal avec toutes les fonctions et logique métier CORRIGÉE
 
 // =================== STYLES CSS PREMIUM ===================
 const premiumStyles = `
@@ -1740,20 +1740,19 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
     return () => clearInterval(autoSaveInterval);
   }, [formData]);
 
-  // Injection des styles CSS
-// ✅ Code correct
-useEffect(() => {
-  const styleSheet = document.createElement("style");
-  styleSheet.innerText = premiumStyles;
-  document.head.appendChild(styleSheet);
-  
-  // Fonction de nettoyage correcte
-  return () => {
-    if (document.head.contains(styleSheet)) {
-      document.head.removeChild(styleSheet);
-    }
-  };
-}, []);
+  // Injection des styles CSS - CORRIGÉE
+  useEffect(() => {
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = premiumStyles;
+    document.head.appendChild(styleSheet);
+    
+    // Fonction de nettoyage correcte
+    return () => {
+      if (document.head.contains(styleSheet)) {
+        document.head.removeChild(styleSheet);
+      }
+    };
+  }, []);
 
   // =================== FONCTIONS DE SAUVEGARDE ===================
   const handleSave = async (isDraft = true, isAutoSave = false) => {
@@ -1937,28 +1936,38 @@ useEffect(() => {
     }));
   };
 
-  const addPhotoToIsolationPoint = (pointId: string, file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const newPhoto: Photo = {
-        id: `photo-${Date.now()}`,
-        name: file.name,
-        data: e.target?.result as string,
-        description: '',
-        timestamp: new Date().toISOString(),
-        category: 'isolation'
+  // ========== FONCTIONS PHOTOS CORRIGÉES ==========
+  const addPhotoToIsolationPoint = (pointId: string, file: File): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const newPhoto: Photo = {
+            id: `photo-${Date.now()}`,
+            name: file.name,
+            data: e.target?.result as string,
+            description: '',
+            timestamp: new Date().toISOString(),
+            category: 'isolation'
+          };
+          
+          setFormData(prev => ({
+            ...prev,
+            isolationPoints: prev.isolationPoints.map(point =>
+              point.id === pointId 
+                ? { ...point, photos: [...point.photos, newPhoto] }
+                : point
+            )
+          }));
+          
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
       };
-      
-      setFormData(prev => ({
-        ...prev,
-        isolationPoints: prev.isolationPoints.map(point =>
-          point.id === pointId 
-            ? { ...point, photos: [...point.photos, newPhoto] }
-            : point
-        )
-      }));
-    };
-    reader.readAsDataURL(file);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   const removePhotoFromIsolationPoint = (pointId: string, photoId: string) => {
@@ -2130,8 +2139,8 @@ useEffect(() => {
     return hazard.controlMeasures.some(control => control.isSelected);
   };
 
-  // ========== FONCTIONS PHOTOS ==========
-  const addPhoto = (file: File) => {
+  // ========== FONCTIONS PHOTOS PRINCIPALES CORRIGÉES ==========
+  const addPhoto = (file: File): Promise<void> => {
     return new Promise<void>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
