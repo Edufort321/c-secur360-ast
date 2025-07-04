@@ -1741,12 +1741,19 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   }, [formData]);
 
   // Injection des styles CSS
-  useEffect(() => {
-    const styleSheet = document.createElement("style");
-    styleSheet.innerText = premiumStyles;
-    document.head.appendChild(styleSheet);
-    return () => document.head.removeChild(styleSheet);
-  }, []);
+// ✅ Code correct
+useEffect(() => {
+  const styleSheet = document.createElement("style");
+  styleSheet.innerText = premiumStyles;
+  document.head.appendChild(styleSheet);
+  
+  // Fonction de nettoyage correcte
+  return () => {
+    if (document.head.contains(styleSheet)) {
+      document.head.removeChild(styleSheet);
+    }
+  };
+}, []);
 
   // =================== FONCTIONS DE SAUVEGARDE ===================
   const handleSave = async (isDraft = true, isAutoSave = false) => {
