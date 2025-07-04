@@ -19,19 +19,30 @@ export async function GET() {
       update: {},
       create: {
         subdomain: 'demo',
-        companyName: 'Démo AST MDL',
+        companyName: 'Version Démo C-Secur360',
         plan: 'demo'
       }
     })
     
-    // Créer tenant C-Secur360 seulement s'il n'existe pas
+    // Créer tenant futureclient seulement s'il n'existe pas
+    const futureClientTenant = await prisma.tenant.upsert({
+      where: { subdomain: 'futureclient' },
+      update: {},
+      create: {
+        subdomain: 'futureclient',
+        companyName: 'Client Potentiel',
+        plan: 'trial'
+      }
+    })
+    
+    // Garder le tenant c-secur360 pour usage interne si nécessaire
     const csecurTenant = await prisma.tenant.upsert({
       where: { subdomain: 'c-secur360' },
       update: {},
       create: {
         subdomain: 'c-secur360',
-        companyName: 'C-Secur360',
-        plan: 'premium'
+        companyName: 'C-Secur360 (Admin)',
+        plan: 'admin'
       }
     })
     
@@ -40,8 +51,13 @@ export async function GET() {
     return NextResponse.json({ 
       success: true, 
       message: '🎉 Base de données connectée et tenants créés!',
-      tenants: [demoTenant, csecurTenant],
-      totalTenants: existingTenants.length + 2
+      tenants: [demoTenant, futureClientTenant, csecurTenant],
+      totalTenants: existingTenants.length,
+      created: {
+        demo: demoTenant.companyName,
+        futureclient: futureClientTenant.companyName,
+        admin: csecurTenant.companyName
+      }
     })
     
   } catch (error: any) {
@@ -49,7 +65,8 @@ export async function GET() {
     return NextResponse.json({ 
       success: false, 
       error: error.message,
-      code: error.code
+      code: error.code,
+      details: 'Vérifiez les variables d\'environnement Supabase'
     }, { status: 500 })
   }
 }
