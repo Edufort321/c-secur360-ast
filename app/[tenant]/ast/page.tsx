@@ -15,7 +15,7 @@ export default async function ASTListPage({ params }: ASTListPageProps) {
     return <div>Tenant not found</div>
   }
 
-  const astForms = await prisma.astForm.findMany({
+  const astForms = await prisma.aSTForm.findMany({
     where: { tenantId: tenant.id },
     orderBy: { createdAt: 'desc' },
     take: 50
