@@ -1118,9 +1118,9 @@ const premiumStyles = `
       padding: 20px;
     }
   }
-// =================== SECTION 3/4: FONCTIONS & COMPOSANTS ===================
+// =================== SECTION 3/4: FONCTIONS & COMPOSANTS CORRIGÉE ===================
 // AST Form Ultra Premium - Client Potentiel
-// Section 3: Fonctions utilitaires et composants
+// Section 3: Fonctions utilitaires et composants - VERSION CORRIGÉE
 
 // =================== COMPOSANT CARROUSEL PHOTOS ===================
 const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto }: {
@@ -1253,7 +1253,7 @@ const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto }: {
   )
 }
 
-// =================== COMPOSANT VALIDATION ÉQUIPE ===================
+// =================== COMPOSANT VALIDATION ÉQUIPE CORRIGÉ ===================
 const TeamValidationCard = ({ member, onValidate }: {
   member: TeamMember
   onValidate: (memberId: string, approved: boolean, comments: string) => void
@@ -1282,8 +1282,19 @@ const TeamValidationCard = ({ member, onValidate }: {
     }
   }
 
+  // CORRECTION: Utiliser une logique conditionnelle au lieu d'un template literal complexe
+  const getValidationCardClass = () => {
+    let baseClass = 'validation-card'
+    if (member.validationStatus === 'approved') {
+      baseClass += ' validation-approved'
+    } else if (member.validationStatus === 'rejected') {
+      baseClass += ' validation-rejected'
+    }
+    return baseClass
+  }
+
   return (
-    <div className={`validation-card ${member.validationStatus === 'approved' ? 'validation-approved' : member.validationStatus === 'rejected' ? 'validation-rejected' : ''}`}>
+    <div className={getValidationCardClass()}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
         <div>
           <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: 0 }}>
