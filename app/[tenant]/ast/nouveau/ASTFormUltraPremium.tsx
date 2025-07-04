@@ -2107,8 +2107,8 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
               {[1, 2, 3, 6].includes(currentStep) && (
                 <div className="slide-in">
                   <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      {steps[currentStep].icon({ style: { width: '32px', height: '32px', marginRight: '12px' } })}
+                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                      {React.createElement(steps[currentStep].icon, { style: { width: '32px', height: '32px' } })}
                       {t.steps[steps[currentStep].key]}
                     </h2>
                   </div>
