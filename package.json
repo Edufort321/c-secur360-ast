@@ -29,7 +29,8 @@
     "postcss": "^8.4.31",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
-    "tailwind-merge": "^2.2.0"
+    "tailwind-merge": "^2.2.0",
+    "jspdf": "^2.5.1"
   },
   "devDependencies": {
     "typescript": "^5",
