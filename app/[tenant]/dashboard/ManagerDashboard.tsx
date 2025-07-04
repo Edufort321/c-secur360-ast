@@ -1,5 +1,4 @@
-{/* KPI Cards Fonctionnels */}
-          <div 'use client'
+'use client'
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
