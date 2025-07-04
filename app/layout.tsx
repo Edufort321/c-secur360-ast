@@ -5,7 +5,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'AST MDL - Analyse Sécuritaire de Tâches',
+  title: 'C-Secur360 - Analyse Sécuritaire de Tâches',
   description: 'Application d\'analyse sécuritaire de tâches pour MDL',
   manifest: '/manifest.json',
   themeColor: '#3498db',
