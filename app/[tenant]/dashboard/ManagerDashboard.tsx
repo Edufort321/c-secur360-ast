@@ -579,8 +579,8 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                       alt="C-Secur360"
                       className="logo-glow"
                       style={{ 
-                        width: '96px', 
-                        height: '96px', 
+                        width: '120px', 
+                        height: '120px', 
                         objectFit: 'contain'
                       }}
                       onError={(e) => {
