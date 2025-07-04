@@ -2394,35 +2394,35 @@ const premiumStyles = `
 
 // =================== FONCTIONS UTILITAIRES ===================
 const generateProfessionalPDF = (formData: ASTFormData, tenant: Tenant) => {
-  console.log('🔄 Génération PDF 8.5"x11" format professionnel...')
-  console.log('📄 Données AST:', formData.astNumber)
-  console.log('🏢 Client:', tenant.companyName)
+  console.log('🔄 Génération PDF 8.5"x11" format professionnel...');
+  console.log('📄 Données AST:', formData.astNumber);
+  console.log('🏢 Client:', tenant.companyName);
   
   setTimeout(() => {
-    console.log('✅ PDF généré avec succès!')
-    const link = document.createElement('a')
-    link.href = '#'
-    link.download = `AST-${formData.astNumber}-${new Date().toISOString().split('T')[0]}.pdf`
-    link.click()
-  }, 2000)
-}
+    console.log('✅ PDF généré avec succès!');
+    const link = document.createElement('a');
+    link.href = '#';
+    link.download = `AST-${formData.astNumber}-${new Date().toISOString().split('T')[0]}.pdf`;
+    link.click();
+  }, 2000);
+};
 
 const sendByEmail = async (formData: ASTFormData, tenant: Tenant, language: string) => {
   try {
-    console.log('📧 Envoi par courriel...')
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    console.log('✅ Email envoyé avec succès!')
-    return true
+    console.log('📧 Envoi par courriel...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('✅ Email envoyé avec succès!');
+    return true;
   } catch (error) {
-    console.error('❌ Erreur envoi email:', error)
-    return false
+    console.error('❌ Erreur envoi email:', error);
+    return false;
   }
-}
+};
 
 const archiveAST = async (formData: ASTFormData) => {
   try {
-    console.log('📦 Archivage de l\'AST...')
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    console.log('📦 Archivage de l\'AST...');
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
     const archivedData = {
       ...formData,
@@ -2431,15 +2431,173 @@ const archiveAST = async (formData: ASTFormData) => {
         ...formData.validation,
         archivedDate: new Date().toISOString()
       }
-    }
+    };
     
-    console.log('✅ AST archivé avec succès!')
-    return archivedData
+    console.log('✅ AST archivé avec succès!');
+    return archivedData;
   } catch (error) {
-    console.error('❌ Erreur archivage:', error)
-    throw error
+    console.error('❌ Erreur archivage:', error);
+    throw error;
   }
-}
+};
+
+// =================== COMPOSANT CARROUSEL PHOTOS ===================
+const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto, onUpdateDescription }: {
+  photos: Photo[]
+  onAddPhoto: (file: File) => void
+  onRemovePhoto: (photoId: string) => void
+  onUpdateDescription: (photoId: string, description: string) => void
+}) => {
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      onAddPhoto(file);
+    }
+  };
+
+  const nextPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
+  };
+
+  const prevPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
+  };
+
+  return (
+    <div style={{
+      position: 'relative',
+      background: 'rgba(30, 41, 59, 0.8)',
+      borderRadius: '12px',
+      padding: '16px',
+      margin: '16px 0'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>
+          📸 Photos ({photos.length})
+        </h4>
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="btn-premium"
+          style={{ padding: '8px 16px', fontSize: '12px' }}
+        >
+          <Plus style={{ width: '14px', height: '14px' }} />
+          Ajouter Photo
+        </button>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        style={{ display: 'none' }}
+      />
+
+      {photos.length > 0 ? (
+        <div style={{ position: 'relative' }}>
+          <img
+            src={photos[currentPhotoIndex].data}
+            alt={photos[currentPhotoIndex].name}
+            style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '8px' }}
+          />
+          
+          {photos.length > 1 && (
+            <>
+              <button
+                onClick={prevPhoto}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '16px',
+                  transform: 'translateY(-50%)',
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  border: 'none',
+                  color: 'white',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <ArrowLeft style={{ width: '16px', height: '16px' }} />
+              </button>
+              <button
+                onClick={nextPhoto}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  right: '16px',
+                  transform: 'translateY(-50%)',
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  border: 'none',
+                  color: 'white',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <ArrowRight style={{ width: '16px', height: '16px' }} />
+              </button>
+            </>
+          )}
+
+          <div style={{
+            position: 'absolute',
+            bottom: '16px',
+            left: '16px',
+            background: 'rgba(0, 0, 0, 0.8)',
+            color: 'white',
+            padding: '8px 12px',
+            borderRadius: '8px',
+            fontSize: '12px'
+          }}>
+            {currentPhotoIndex + 1} / {photos.length}
+          </div>
+
+          <button
+            onClick={() => onRemovePhoto(photos[currentPhotoIndex].id)}
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              background: 'rgba(239, 68, 68, 0.9)',
+              border: 'none',
+              color: 'white',
+              padding: '8px',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            <Trash2 style={{ width: '14px', height: '14px' }} />
+          </button>
+
+          <div style={{ marginTop: '12px' }}>
+            <input
+              type="text"
+              className="input-premium"
+              placeholder="Description de la photo..."
+              value={photos[currentPhotoIndex].description}
+              onChange={(e) => onUpdateDescription(photos[currentPhotoIndex].id, e.target.value)}
+              style={{ fontSize: '12px' }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          textAlign: 'center',
+          padding: '40px',
+          border: '2px dashed rgba(100, 116, 139, 0.3)',
+          borderRadius: '8px',
+          color: '#64748b'
+        }}>
+          📷 Aucune photo ajoutée
+        </div>
+      )}
+    </div>
+  );
+};
 
 // =================== COMPOSANT PRINCIPAL ===================
 export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
