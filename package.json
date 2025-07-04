@@ -2,15 +2,15 @@
   "name": "c-secur360-ast",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && prisma db push && next build",
-    "start": "next start",
-    "lint": "next lint",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "postinstall": "prisma generate"
-  },
+"scripts": {
+  "dev": "next dev",
+  "build": "prisma generate && next build",
+  "start": "next start",
+  "lint": "next lint",
+  "db:generate": "prisma generate",
+  "db:push": "prisma db push",
+  "postinstall": "prisma generate"
+}
   "dependencies": {
     "react": "^18",
     "react-dom": "^18",
