@@ -1,21 +1,15 @@
 {
-  "name": "AST MDL - Analyse Sécuritaire de Tâches",
+  "name": "AST MDL",
   "short_name": "AST MDL",
-  "description": "Application d'analyse sécuritaire de tâches pour MDL",
+  "description": "Analyse Sécuritaire de Tâches",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#3498db",
-  "orientation": "portrait",
+  "background_color": "#0f0f23",
+  "theme_color": "#3b82f6",
   "icons": [
     {
       "src": "/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icon-512x512.png",
-      "sizes": "512x512",
       "type": "image/png"
     }
   ]
