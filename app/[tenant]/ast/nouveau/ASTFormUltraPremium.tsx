@@ -2080,8 +2080,8 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   };
 
   const overallProgress = steps.reduce((acc, _, index) => acc + calculateStepCompletion(index), 0) / steps.length;
-  // =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 5A/5 ===================
-// Section 5A: Rendu JSX début - Étapes 1 à 4
+// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 5/5 ===================
+// Section 5: Rendu JSX final CORRIGÉ - TOUTES les étapes
 
   return (
     <>
@@ -2229,8 +2229,6 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-                    
-                    {/* # AST Principal */}
                     <div>
                       <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
                         🔢 {t.projectInfo.astNumber}
@@ -2254,9 +2252,6 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                           }}>
                             {formData.astNumber}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
-                            {t.projectInfo.astInfo}
-                          </div>
                         </div>
                         <button 
                           onClick={regenerateASTNumber}
@@ -2266,66 +2261,12 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                             color: '#22c55e',
                             padding: '8px',
                             borderRadius: '8px',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease'
+                            cursor: 'pointer'
                           }}
-                          title="Régénérer le numéro"
                         >
                           <Copy style={{ width: '16px', height: '16px' }} />
                         </button>
                       </div>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                        📋 {t.projectInfo.astClientNumber}
-                      </label>
-                      <input 
-                        type="text"
-                        className="input-premium"
-                        placeholder="Numéro fourni par le client (optionnel)"
-                        value={formData.projectInfo.astClientNumber}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          projectInfo: { ...prev.projectInfo, astClientNumber: e.target.value }
-                        }))}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                        🏭 {t.projectInfo.industry} *
-                      </label>
-                      <select 
-                        className="input-premium"
-                        value={formData.industry}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          industry: e.target.value as ASTFormData['industry']
-                        }))}
-                      >
-                        <option value="electrical">{t.industries.electrical}</option>
-                        <option value="construction">{t.industries.construction}</option>
-                        <option value="industrial">{t.industries.industrial}</option>
-                        <option value="office">{t.industries.office}</option>
-                        <option value="manufacturing">{t.industries.manufacturing}</option>
-                        <option value="other">{t.industries.other}</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                        📅 {t.projectInfo.date} *
-                      </label>
-                      <input 
-                        type="date"
-                        className="input-premium"
-                        value={formData.projectInfo.date}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          projectInfo: { ...prev.projectInfo, date: e.target.value }
-                        }))}
-                      />
                     </div>
 
                     <div>
@@ -2362,22 +2303,6 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
 
                     <div style={{ gridColumn: '1 / -1' }}>
                       <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                        📍 {t.projectInfo.workLocation} *
-                      </label>
-                      <input 
-                        type="text"
-                        className="input-premium"
-                        placeholder="Adresse complète du lieu des travaux"
-                        value={formData.projectInfo.workLocation}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          projectInfo: { ...prev.projectInfo, workLocation: e.target.value }
-                        }))}
-                      />
-                    </div>
-
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
                         📝 {t.projectInfo.workDescription} *
                       </label>
                       <textarea 
@@ -2402,92 +2327,35 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
                       💬 {t.teamDiscussion.title}
                     </h2>
-                    <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>
-                      {t.teamDiscussion.subtitle}
-                    </p>
                   </div>
 
-                  {/* Liste des discussions */}
                   {formData.teamDiscussion.discussions.map((discussion) => (
                     <div
                       key={discussion.id}
-                      className={`discussion-item ${discussion.completed ? 'completed' : ''} ${discussion.priority}-priority`}
+                      className={`discussion-item ${discussion.completed ? 'completed' : ''}`}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <CustomCheckbox
                           checked={discussion.completed}
                           onChange={() => toggleDiscussion(discussion.id)}
                           label=""
                         />
                         <div style={{ flex: 1 }}>
-                          <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 4px 0' }}>
+                          <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0' }}>
                             {discussion.topic}
                           </h4>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: '12px', marginTop: '8px' }}>
-                            <input
-                              type="text"
-                              className="input-premium"
-                              placeholder={t.teamDiscussion.notes}
-                              value={discussion.notes}
-                              onChange={(e) => updateDiscussionNotes(discussion.id, e.target.value)}
-                              style={{ fontSize: '12px', padding: '8px 12px' }}
-                            />
-                            <input
-                              type="text"
-                              className="input-premium"
-                              placeholder={t.teamDiscussion.discussedBy}
-                              value={discussion.discussedBy}
-                              onChange={(e) => updateDiscussedBy(discussion.id, e.target.value)}
-                              style={{ fontSize: '12px', padding: '8px 12px' }}
-                            />
-                          </div>
-                        </div>
-                        <div style={{
-                          color: discussion.completed ? '#22c55e' : '#f59e0b',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          background: discussion.completed ? 'rgba(34, 197, 94, 0.1)' : 'rgba(251, 191, 36, 0.1)'
-                        }}>
-                          {discussion.completed ? t.teamDiscussion.completed : t.teamDiscussion.pending}
+                          <input
+                            type="text"
+                            className="input-premium"
+                            placeholder="Notes..."
+                            value={discussion.notes}
+                            onChange={(e) => updateDiscussionNotes(discussion.id, e.target.value)}
+                            style={{ fontSize: '12px', padding: '8px 12px' }}
+                          />
                         </div>
                       </div>
                     </div>
                   ))}
-
-                  {/* Résumé des discussions */}
-                  <div style={{
-                    marginTop: '32px',
-                    padding: '20px',
-                    background: 'rgba(30, 41, 59, 0.8)',
-                    border: '1px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '12px'
-                  }}>
-                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                      📊 Résumé des Discussions
-                    </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.teamDiscussion.discussions.filter(d => d.completed).length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Complétées</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#f59e0b', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.teamDiscussion.discussions.filter(d => !d.completed).length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>En attente</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.teamDiscussion.discussions.filter(d => d.priority === 'high').length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Priorité élevée</div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
 
@@ -2500,160 +2368,56 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     </h2>
                   </div>
 
-                  {/* Équipements groupés par catégorie */}
-                  {Object.entries(groupedEquipment).map(([category, equipment]) => (
-                    <div key={category} style={{ marginBottom: '32px' }}>
-                      <h3 style={{ color: 'white', fontSize: '20px', fontWeight: '600', marginBottom: '16px' }}>
-                        {t.safetyEquipment.categories[category as keyof typeof t.safetyEquipment.categories]}
-                      </h3>
-                      
-                      <div className="equipment-grid">
-                        {equipment.map((item) => (
-                          <div
-                            key={item.id}
-                            className={`equipment-item ${item.required ? 'required' : ''} ${item.verified ? 'verified' : ''}`}
-                          >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <CustomCheckbox
-                                  checked={item.required}
-                                  onChange={() => toggleEquipmentRequired(item.id)}
-                                  label=""
-                                />
-                                <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: '600' }}>
-                                  {t.safetyEquipment.required}
-                                </span>
-                                
-                                <CustomCheckbox
-                                  checked={item.available}
-                                  onChange={() => toggleEquipmentAvailable(item.id)}
-                                  label=""
-                                />
-                                <span style={{ fontSize: '12px', color: '#3b82f6', fontWeight: '600' }}>
-                                  {t.safetyEquipment.available}
-                                </span>
-                                
-                                <CustomCheckbox
-                                  checked={item.verified}
-                                  onChange={() => toggleEquipmentVerified(item.id)}
-                                  label=""
-                                />
-                                <span style={{ fontSize: '12px', color: '#22c55e', fontWeight: '600' }}>
-                                  {t.safetyEquipment.verified}
-                                </span>
-                              </div>
-                              
-                              <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: 0 }}>
-                                {item.name}
-                              </h4>
-                              
-                              <input
-                                type="text"
-                                className="input-premium"
-                                placeholder={t.safetyEquipment.notes}
-                                value={item.notes}
-                                onChange={(e) => updateEquipmentNotes(item.id, e.target.value)}
-                                style={{ fontSize: '12px', padding: '8px 12px' }}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Résumé des équipements */}
-                  <div style={{
-                    padding: '20px',
-                    background: 'rgba(30, 41, 59, 0.8)',
-                    border: '1px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '12px'
-                  }}>
-                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                      📊 Résumé des Équipements
-                    </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#f59e0b', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.safetyEquipment.filter(eq => eq.required).length}
+                  <div className="equipment-grid">
+                    {formData.safetyEquipment.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`equipment-item ${item.required ? 'required' : ''} ${item.verified ? 'verified' : ''}`}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                          <CustomCheckbox
+                            checked={item.required}
+                            onChange={() => toggleEquipmentRequired(item.id)}
+                            label=""
+                          />
+                          <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: '600' }}>Requis</span>
+                          
+                          <CustomCheckbox
+                            checked={item.available}
+                            onChange={() => toggleEquipmentAvailable(item.id)}
+                            label=""
+                          />
+                          <span style={{ fontSize: '12px', color: '#3b82f6', fontWeight: '600' }}>Disponible</span>
+                          
+                          <CustomCheckbox
+                            checked={item.verified}
+                            onChange={() => toggleEquipmentVerified(item.id)}
+                            label=""
+                          />
+                          <span style={{ fontSize: '12px', color: '#22c55e', fontWeight: '600' }}>Vérifié</span>
                         </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Requis</div>
+                        
+                        <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0' }}>
+                          {item.name}
+                        </h4>
                       </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#3b82f6', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.safetyEquipment.filter(eq => eq.available).length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Disponibles</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.safetyEquipment.filter(eq => eq.verified).length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Vérifiés</div>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               )}
 
-              {/* ÉTAPE 4: Dangers Potentiels avec Contrôles Avancés */}
+              {/* ÉTAPE 4: Dangers Potentiels */}
               {currentStep === 3 && (
                 <div className="slide-in">
                   <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                     <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
                       ⚠️ {t.hazards.title}
                     </h2>
-                    <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>
-                      Sélectionnez les dangers et définissez les moyens de contrôle
-                    </p>
                   </div>
 
-                  {/* Ajouter danger personnalisé */}
-                  <div style={{ 
-                    background: 'rgba(30, 41, 59, 0.6)', 
-                    padding: '20px', 
-                    borderRadius: '12px', 
-                    marginBottom: '24px' 
-                  }}>
-                    <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
-                      ➕ Ajouter un danger personnalisé
-                    </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '12px', alignItems: 'end' }}>
-                      <input
-                        type="text"
-                        className="input-premium"
-                        placeholder="Titre du danger"
-                        style={{ fontSize: '12px', padding: '8px 12px' }}
-                      />
-                      <input
-                        type="text"
-                        className="input-premium"
-                        placeholder="Description"
-                        style={{ fontSize: '12px', padding: '8px 12px' }}
-                      />
-                      <select
-                        className="input-premium"
-                        style={{ fontSize: '12px', padding: '8px 12px' }}
-                      >
-                        <option value="low">Faible</option>
-                        <option value="medium">Moyen</option>
-                        <option value="high">Élevé</option>
-                        <option value="critical">Critique</option>
-                      </select>
-                      <button
-                        className="btn-premium"
-                        style={{ padding: '8px 12px' }}
-                      >
-                        <Plus style={{ width: '14px', height: '14px' }} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Liste des dangers avec moyens de contrôle */}
                   <div className="hazard-grid">
                     {formData.electricalHazards.map((hazard) => (
                       <div key={hazard.id} style={{ gridColumn: '1 / -1' }}>
-                        {/* Carte principale du danger */}
                         <div
                           className={`hazard-item ${hazard.isSelected ? 'selected' : ''} ${hazard.riskLevel}`}
                           onClick={() => toggleHazard(hazard.id)}
@@ -2666,9 +2430,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                               label=""
                             />
                             <div style={{
-                              background: hazard.riskLevel === 'critical' ? '#dc2626' : 
-                                         hazard.riskLevel === 'high' ? '#f59e0b' :
-                                         hazard.riskLevel === 'medium' ? '#eab308' : '#22c55e',
+                              background: hazard.riskLevel === 'critical' ? '#dc2626' : '#f59e0b',
                               color: 'white',
                               padding: '4px 8px',
                               borderRadius: '4px',
@@ -2677,22 +2439,13 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                             }}>
                               {hazard.code}
                             </div>
-                            <span style={{
-                              color: hazard.riskLevel === 'critical' ? '#dc2626' : 
-                                     hazard.riskLevel === 'high' ? '#f59e0b' :
-                                     hazard.riskLevel === 'medium' ? '#eab308' : '#22c55e',
-                              fontSize: '12px',
-                              fontWeight: '600'
-                            }}>
-                              {t.hazards.levels[hazard.riskLevel]}
-                            </span>
                           </div>
                           
                           <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0' }}>
                             {hazard.title}
                           </h4>
                           
-                          <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 12px 0' }}>
+                          <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
                             {hazard.description}
                           </p>
 
@@ -2706,13 +2459,12 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                                 padding: '4px 8px',
                                 borderRadius: '4px'
                               }}>
-                                ✅ Danger sélectionné - Moyens de contrôle ci-dessous
+                                ✅ Danger sélectionné
                               </span>
                             </div>
                           )}
                         </div>
 
-                        {/* Moyens de contrôle (affichés quand danger sélectionné) */}
                         {hazard.isSelected && hazard.controlMeasures && (
                           <div style={{
                             background: 'rgba(20, 30, 48, 0.9)',
@@ -2721,15 +2473,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                             padding: '20px',
                             marginBottom: '16px'
                           }}>
-                            <h5 style={{ 
-                              color: '#22c55e', 
-                              fontSize: '16px', 
-                              fontWeight: '600', 
-                              margin: '0 0 16px 0',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}>
+                            <h5 style={{ color: '#22c55e', fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
                               🛡️ Moyens de contrôle pour: {hazard.title}
                             </h5>
 
@@ -2738,11 +2482,10 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                                 <div
                                   key={control.id}
                                   style={{
-                                    background: control.isSelected ? 'rgba(34, 197, 94, 0.1)' : 'rgba(51, 65, 85, 0.3)',
-                                    border: `1px solid ${control.isSelected ? '#22c55e' : 'rgba(100, 116, 139, 0.3)'}`,
+                                    background: 'rgba(51, 65, 85, 0.3)',
+                                    border: '1px solid rgba(100, 116, 139, 0.3)',
                                     borderRadius: '8px',
-                                    padding: '16px',
-                                    transition: 'all 0.3s ease'
+                                    padding: '16px'
                                   }}
                                 >
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
@@ -2752,10 +2495,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                                       label=""
                                     />
                                     <div style={{
-                                      background: control.category === 'elimination' ? '#dc2626' :
-                                                 control.category === 'substitution' ? '#f59e0b' :
-                                                 control.category === 'engineering' ? '#3b82f6' :
-                                                 control.category === 'administrative' ? '#8b5cf6' : '#22c55e',
+                                      background: '#3b82f6',
                                       color: 'white',
                                       padding: '2px 6px',
                                       borderRadius: '4px',
@@ -2770,45 +2510,9 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                                     {control.name}
                                   </h6>
                                   
-                                  <p style={{ color: '#94a3b8', fontSize: '12px', margin: '0 0 12px 0' }}>
+                                  <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>
                                     {control.description}
                                   </p>
-
-                                  {control.isSelected && (
-                                    <>
-                                      <input
-                                        type="text"
-                                        className="input-premium"
-                                        placeholder="Notes spécifiques pour ce contrôle..."
-                                        value={control.notes}
-                                        style={{ fontSize: '12px', padding: '8px 12px', marginBottom: '8px' }}
-                                      />
-
-                                      <div style={{
-                                        background: 'rgba(51, 65, 85, 0.3)',
-                                        borderRadius: '8px',
-                                        padding: '12px',
-                                        margin: '8px 0'
-                                      }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                          <span style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: '600' }}>
-                                            📸 Photos ({control.photos.length})
-                                          </span>
-                                          <button
-                                            className="btn-premium"
-                                            style={{ padding: '4px 8px', fontSize: '10px' }}
-                                          >
-                                            <Plus style={{ width: '12px', height: '12px' }} />
-                                          </button>
-                                        </div>
-                                        {control.photos.length === 0 && (
-                                          <div style={{ textAlign: 'center', padding: '20px', color: '#64748b', fontSize: '12px' }}>
-                                            📷 Aucune photo ajoutée
-                                          </div>
-                                        )}
-                                      </div>
-                                    </>
-                                  )}
                                 </div>
                               ))}
                             </div>
@@ -2817,53 +2521,284 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
 
-                  {/* Résumé avancé */}
+              {/* ÉTAPE 5: Points d'Isolement */}
+              {currentStep === 4 && (
+                <div className="slide-in">
+                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
+                      ⚙️ {t.isolation.title}
+                    </h2>
+                  </div>
+
+                  <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '24px', borderRadius: '16px', marginBottom: '24px' }}>
+                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+                      ➕ {t.isolation.addPoint}
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '16px', alignItems: 'end' }}>
+                      <input
+                        type="text"
+                        className="input-premium"
+                        placeholder={t.isolation.pointName}
+                        value={newIsolationPoint.name || ''}
+                        onChange={(e) => setNewIsolationPoint(prev => ({ ...prev, name: e.target.value }))}
+                      />
+                      <select
+                        className="input-premium"
+                        value={newIsolationPoint.type || ''}
+                        onChange={(e) => setNewIsolationPoint(prev => ({ ...prev, type: e.target.value as any }))}
+                      >
+                        <option value="">Sélectionner le type...</option>
+                        <option value="electrical">⚡ Électrique</option>
+                        <option value="mechanical">⚙️ Mécanique</option>
+                      </select>
+                      <button
+                        onClick={addIsolationPoint}
+                        className="btn-premium"
+                        style={{ padding: '14px 20px' }}
+                      >
+                        <Plus style={{ width: '16px', height: '16px' }} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {formData.isolationPoints.map((point) => (
+                    <div key={point.id} style={{ 
+                      background: 'rgba(30, 41, 59, 0.8)', 
+                      border: '1px solid rgba(100, 116, 139, 0.3)', 
+                      borderRadius: '16px', 
+                      padding: '24px', 
+                      marginBottom: '16px' 
+                    }}>
+                      <h4 style={{ color: 'white', fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0' }}>
+                        {point.type === 'electrical' ? '⚡' : '⚙️'} {point.name}
+                      </h4>
+                      <PhotoCarousel
+                        photos={point.photos}
+                        onAddPhoto={(file) => addPhotoToIsolationPoint(point.id, file)}
+                        onRemovePhoto={(photoId) => removePhotoFromIsolationPoint(point.id, photoId)}
+                        onUpdateDescription={(photoId, description) => updateIsolationPhotoDescription(point.id, photoId, description)}
+                      />
+                    </div>
+                  ))}
+
+                  {formData.isolationPoints.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
+                      <Settings style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                      <p style={{ fontSize: '16px', margin: 0 }}>Aucun point d'isolement configuré</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ÉTAPE 6: Validation Équipe */}
+              {currentStep === 5 && (
+                <div className="slide-in">
+                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
+                      👥 {t.team.validation}
+                    </h2>
+                  </div>
+
+                  <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '24px', borderRadius: '16px', marginBottom: '24px' }}>
+                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+                      ➕ {t.team.addMember}
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '16px', alignItems: 'end' }}>
+                      <input
+                        type="text"
+                        className="input-premium"
+                        placeholder={t.team.memberName}
+                        value={newTeamMember.name || ''}
+                        onChange={(e) => setNewTeamMember(prev => ({ ...prev, name: e.target.value }))}
+                      />
+                      <input
+                        type="text"
+                        className="input-premium"
+                        placeholder={t.team.department}
+                        value={newTeamMember.department || ''}
+                        onChange={(e) => setNewTeamMember(prev => ({ ...prev, department: e.target.value }))}
+                      />
+                      <button
+                        onClick={addTeamMember}
+                        className="btn-premium"
+                        style={{ padding: '14px 20px' }}
+                      >
+                        <Plus style={{ width: '16px', height: '16px' }} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {formData.team.members.map((member) => (
+                    <div
+                      key={member.id}
+                      style={{
+                        background: 'rgba(30, 41, 59, 0.8)',
+                        border: `1px solid ${
+                          member.validationStatus === 'approved' ? '#22c55e' : 
+                          member.validationStatus === 'rejected' ? '#ef4444' : 
+                          'rgba(100, 116, 139, 0.3)'
+                        }`,
+                        borderRadius: '16px',
+                        padding: '24px',
+                        marginBottom: '16px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                        <div>
+                          <h4 style={{ color: 'white', fontSize: '18px', fontWeight: '600', margin: 0 }}>
+                            {member.name}
+                          </h4>
+                          <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
+                            {member.department}
+                          </p>
+                        </div>
+                        <div style={{ 
+                          color: member.validationStatus === 'approved' ? '#22c55e' : 
+                                 member.validationStatus === 'rejected' ? '#ef4444' : '#f59e0b',
+                          fontSize: '14px', 
+                          fontWeight: '600'
+                        }}>
+                          {member.validationStatus === 'approved' && '✅ Approuvé'}
+                          {member.validationStatus === 'rejected' && '❌ Rejeté'}
+                          {member.validationStatus === 'pending' && '⏳ En attente'}
+                        </div>
+                      </div>
+
+                      {member.validationStatus === 'pending' && (
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                          <button
+                            onClick={() => validateTeamMember(member.id, true, 'Approuvé')}
+                            className="btn-success"
+                            style={{ flex: 1, padding: '12px' }}
+                          >
+                            <Check style={{ width: '16px', height: '16px' }} />
+                            Approuver
+                          </button>
+                          <button
+                            onClick={() => validateTeamMember(member.id, false, 'Rejeté')}
+                            className="btn-danger"
+                            style={{ flex: 1, padding: '12px' }}
+                          >
+                            <X style={{ width: '16px', height: '16px' }} />
+                            Rejeter
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {formData.team.members.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
+                      <Users style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                      <p style={{ fontSize: '16px', margin: 0 }}>Aucun membre d'équipe ajouté</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ÉTAPE 7: Documentation */}
+              {currentStep === 6 && (
+                <div className="slide-in">
+                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
+                      📸 Documentation
+                    </h2>
+                  </div>
+
+                  <PhotoCarousel
+                    photos={formData.documentation.photos}
+                    onAddPhoto={addPhoto}
+                    onRemovePhoto={removePhoto}
+                    onUpdateDescription={updatePhotoDescription}
+                  />
+                </div>
+              )}
+
+              {/* ÉTAPE 8: Validation Finale */}
+              {currentStep === 7 && (
+                <div className="slide-in">
+                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
+                      ✅ Validation Finale
+                    </h2>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+                    <button
+                      onClick={handleGeneratePDF}
+                      className="btn-premium"
+                      style={{ padding: '20px', flexDirection: 'column', gap: '12px', height: 'auto' }}
+                    >
+                      <Download style={{ width: '32px', height: '32px' }} />
+                      <div>
+                        <div style={{ fontSize: '16px', fontWeight: '600' }}>Générer PDF</div>
+                        <div style={{ fontSize: '12px', opacity: 0.8 }}>Format 8.5"×11"</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={handleSendByEmail}
+                      className="btn-success"
+                      style={{ padding: '20px', flexDirection: 'column', gap: '12px', height: 'auto' }}
+                    >
+                      <Mail style={{ width: '32px', height: '32px' }} />
+                      <div>
+                        <div style={{ fontSize: '16px', fontWeight: '600' }}>Envoyer Email</div>
+                        <div style={{ fontSize: '12px', opacity: 0.8 }}>Au client</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={handleArchive}
+                      className="btn-secondary"
+                      style={{ padding: '20px', flexDirection: 'column', gap: '12px', height: 'auto' }}
+                    >
+                      <Archive style={{ width: '32px', height: '32px' }} />
+                      <div>
+                        <div style={{ fontSize: '16px', fontWeight: '600' }}>Archiver</div>
+                        <div style={{ fontSize: '12px', opacity: 0.8 }}>Dans Supabase</div>
+                      </div>
+                    </button>
+                  </div>
+
                   <div style={{
-                    marginTop: '32px',
-                    padding: '20px',
                     background: 'rgba(30, 41, 59, 0.8)',
                     border: '1px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '12px'
+                    borderRadius: '16px',
+                    padding: '24px'
                   }}>
                     <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                      📊 Résumé Dangers & Contrôles
+                      📊 Résumé Final
                     </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
-                      <div style={{ textAlign: 'center' }}>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px' }}>
+                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.team.members.filter(m => m.validationStatus === 'approved').length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Validations</div>
+                      </div>
+
+                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px' }}>
                         <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: '700' }}>
                           {formData.electricalHazards.filter(h => h.isSelected).length}
                         </div>
                         <div style={{ color: '#94a3b8', fontSize: '12px' }}>Dangers identifiés</div>
                       </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#dc2626', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.electricalHazards.filter(h => h.isSelected && h.riskLevel === 'critical').length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Critiques</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.electricalHazards
-                            .filter(h => h.isSelected && h.controlMeasures)
-                            .reduce((acc, h) => acc + (h.controlMeasures?.filter(c => c.isSelected).length || 0), 0)}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Contrôles actifs</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
+
+                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px' }}>
                         <div style={{ color: '#3b82f6', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.electricalHazards
-                            .filter(h => h.isSelected && h.controlMeasures)
-                            .reduce((acc, h) => acc + (h.controlMeasures?.reduce((acc2, c) => acc2 + c.photos.length, 0) || 0), 0)}
+                          {formData.isolationPoints.length}
                         </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Photos contrôles</div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Points d'isolement</div>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
-
-              {/* Suite dans Section 5B... */}
             </div>
 
             {/* Navigation */}
@@ -2888,27 +2823,17 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                 }}
               >
                 <ChevronLeft style={{ width: '16px', height: '16px' }} /> 
-                {t.buttons.previous}
+                Précédent
               </button>
               
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ 
-                  color: '#94a3b8', 
-                  fontSize: '14px',
-                  background: 'rgba(30, 41, 59, 0.8)',
-                  padding: '8px 16px',
-                  borderRadius: '8px'
-                }}>
-                  📊 Progression: {Math.round(overallProgress)}%
-                </div>
-                
                 <button 
                   onClick={() => handleSave(true)} 
                   className="btn-secondary"
                   style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
                   <Save style={{ width: '16px', height: '16px' }} /> 
-                  {t.buttons.save}
+                  Sauvegarder
                 </button>
                 
                 {currentStep === steps.length - 1 ? (
@@ -2916,10 +2841,9 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     onClick={handleFinalSubmission} 
                     className="btn-success"
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                    disabled={!formData.team.allApproved}
                   >
                     <Send style={{ width: '16px', height: '16px' }} />
-                    {t.actions.finalApproval}
+                    Soumission Finale
                   </button>
                 ) : (
                   <button 
@@ -2927,499 +2851,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
-                    {t.buttons.next} 
-                    <ChevronRight style={{ width: '16px', height: '16px' }} />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 5B/5 ===================
-// Section 5B: Rendu JSX fin - Étapes 5 à 8 + Navigation finale
-// IMPORTANT: Cette section continue après la Section 5A
-
-              {/* ÉTAPE 5: Points d'Isolement avec Photos */}
-              {currentStep === 4 && (
-                <div className="slide-in">
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      ⚙️ {t.isolation.title}
-                    </h2>
-                  </div>
-
-                  {/* Ajouter nouveau point */}
-                  <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '24px', borderRadius: '16px', marginBottom: '24px' }}>
-                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                      ➕ {t.isolation.addPoint}
-                    </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '16px', alignItems: 'end' }}>
-                      <input
-                        type="text"
-                        className="input-premium"
-                        placeholder={t.isolation.pointName}
-                        value={newIsolationPoint.name || ''}
-                        onChange={(e) => setNewIsolationPoint(prev => ({ ...prev, name: e.target.value }))}
-                      />
-                      <select
-                        className="input-premium"
-                        value={newIsolationPoint.type || ''}
-                        onChange={(e) => setNewIsolationPoint(prev => ({ ...prev, type: e.target.value as any }))}
-                      >
-                        <option value="">{t.isolation.selectType}</option>
-                        <option value="electrical">⚡ Électrique</option>
-                        <option value="mechanical">⚙️ Mécanique</option>
-                        <option value="hydraulic">💧 Hydraulique</option>
-                        <option value="pneumatic">💨 Pneumatique</option>
-                      </select>
-                      <button
-                        onClick={addIsolationPoint}
-                        className="btn-premium"
-                        style={{ padding: '14px 20px' }}
-                      >
-                        <Plus style={{ width: '16px', height: '16px' }} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Liste des points d'isolement */}
-                  {formData.isolationPoints.map((point) => (
-                    <div key={point.id} style={{ 
-                      background: 'rgba(30, 41, 59, 0.8)', 
-                      border: '1px solid rgba(100, 116, 139, 0.3)', 
-                      borderRadius: '16px', 
-                      padding: '24px', 
-                      marginBottom: '16px' 
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                        <h4 style={{ color: 'white', fontSize: '18px', fontWeight: '600', margin: 0 }}>
-                          {point.type === 'electrical' ? '⚡' : point.type === 'mechanical' ? '⚙️' : point.type === 'hydraulic' ? '💧' : '💨'} {point.name}
-                        </h4>
-                        <span style={{ 
-                          background: point.type === 'electrical' ? '#ef4444' : point.type === 'mechanical' ? '#3b82f6' : '#06b6d4',
-                          color: 'white',
-                          padding: '4px 12px',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          fontWeight: '600'
-                        }}>
-                          {point.type}
-                        </span>
-                      </div>
-
-                      {/* Carrousel de photos pour ce point */}
-                      <PhotoCarousel
-                        photos={point.photos}
-                        onAddPhoto={(file) => addPhotoToIsolationPoint(point.id, file)}
-                        onRemovePhoto={(photoId) => removePhotoFromIsolationPoint(point.id, photoId)}
-                        onUpdateDescription={(photoId, description) => updateIsolationPhotoDescription(point.id, photoId, description)}
-                      />
-                    </div>
-                  ))}
-
-                  {formData.isolationPoints.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
-                      <Settings style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p style={{ fontSize: '16px', margin: 0 }}>{t.isolation.noPoints}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ÉTAPE 6: Validation Équipe */}
-              {currentStep === 5 && (
-                <div className="slide-in">
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      👥 {t.team.validation}
-                    </h2>
-                    <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>
-                      Chaque membre de l'équipe doit réviser et approuver l'AST
-                    </p>
-                  </div>
-
-                  {/* Ajouter membre */}
-                  <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '24px', borderRadius: '16px', marginBottom: '24px' }}>
-                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                      ➕ {t.team.addMember}
-                    </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '16px', alignItems: 'end' }}>
-                      <input
-                        type="text"
-                        className="input-premium"
-                        placeholder={t.team.memberName}
-                        value={newTeamMember.name || ''}
-                        onChange={(e) => setNewTeamMember(prev => ({ ...prev, name: e.target.value }))}
-                      />
-                      <input
-                        type="text"
-                        className="input-premium"
-                        placeholder={t.team.department}
-                        value={newTeamMember.department || ''}
-                        onChange={(e) => setNewTeamMember(prev => ({ ...prev, department: e.target.value }))}
-                      />
-                      <input
-                        type="text"
-                        className="input-premium"
-                        placeholder={t.team.qualification}
-                        value={newTeamMember.qualification || ''}
-                        onChange={(e) => setNewTeamMember(prev => ({ ...prev, qualification: e.target.value }))}
-                      />
-                      <button
-                        onClick={addTeamMember}
-                        className="btn-premium"
-                        style={{ padding: '14px 20px' }}
-                      >
-                        <Plus style={{ width: '16px', height: '16px' }} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Liste des membres avec validation */}
-                  {formData.team.members.map((member) => (
-                    <div
-                      key={member.id}
-                      style={{
-                        background: 'rgba(30, 41, 59, 0.8)',
-                        border: `1px solid ${
-                          member.validationStatus === 'approved' ? '#22c55e' : 
-                          member.validationStatus === 'rejected' ? '#ef4444' : 
-                          'rgba(100, 116, 139, 0.3)'
-                        }`,
-                        borderRadius: '16px',
-                        padding: '24px',
-                        marginBottom: '16px'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                        <div>
-                          <h4 style={{ color: 'white', fontSize: '18px', fontWeight: '600', margin: 0 }}>
-                            {member.name}
-                          </h4>
-                          <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
-                            {member.department} • {member.qualification}
-                          </p>
-                        </div>
-                        <div style={{ 
-                          color: member.validationStatus === 'approved' ? '#22c55e' : 
-                                 member.validationStatus === 'rejected' ? '#ef4444' : '#f59e0b',
-                          fontSize: '14px', 
-                          fontWeight: '600'
-                        }}>
-                          {member.validationStatus === 'approved' && '✅ Approuvé'}
-                          {member.validationStatus === 'rejected' && '❌ Rejeté'}
-                          {member.validationStatus === 'pending' && '⏳ En attente'}
-                        </div>
-                      </div>
-
-                      {member.validationStatus === 'pending' && (
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                          <button
-                            onClick={() => validateTeamMember(member.id, true, 'Approuvé par validation équipe')}
-                            className="btn-success"
-                            style={{ flex: 1, padding: '12px' }}
-                          >
-                            <Check style={{ width: '16px', height: '16px' }} />
-                            {t.buttons.approve}
-                          </button>
-                          <button
-                            onClick={() => validateTeamMember(member.id, false, 'Rejeté - révision nécessaire')}
-                            className="btn-danger"
-                            style={{ flex: 1, padding: '12px' }}
-                          >
-                            <X style={{ width: '16px', height: '16px' }} />
-                            {t.buttons.reject}
-                          </button>
-                        </div>
-                      )}
-
-                      {member.validationComments && (
-                        <div style={{
-                          marginTop: '16px',
-                          padding: '12px',
-                          background: 'rgba(100, 116, 139, 0.2)',
-                          borderRadius: '8px'
-                        }}>
-                          <p style={{ color: '#e2e8f0', fontSize: '14px', margin: 0 }}>
-                            💬 {member.validationComments}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-
-                  {formData.team.members.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
-                      <Users style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p style={{ fontSize: '16px', margin: 0 }}>Aucun membre d'équipe ajouté</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ÉTAPE 7: Photos & Documentation */}
-              {currentStep === 6 && (
-                <div className="slide-in">
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      📸 {t.steps.documentation}
-                    </h2>
-                  </div>
-
-                  <PhotoCarousel
-                    photos={formData.documentation.photos}
-                    onAddPhoto={addPhoto}
-                    onRemovePhoto={removePhoto}
-                    onUpdateDescription={updatePhotoDescription}
-                  />
-
-                  {/* Notes d'inspection */}
-                  <div style={{ marginTop: '32px' }}>
-                    <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                      📝 Notes d'inspection
-                    </label>
-                    <textarea 
-                      className="input-premium"
-                      style={{ minHeight: '120px', resize: 'vertical' }}
-                      placeholder="Notes détaillées sur l'inspection du site..."
-                      value={formData.documentation.inspectionNotes}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        documentation: { ...prev.documentation, inspectionNotes: e.target.value }
-                      }))}
-                    />
-                  </div>
-
-                  {/* Actions correctives */}
-                  <div style={{ marginTop: '24px' }}>
-                    <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                      🔧 Actions correctives requises
-                    </label>
-                    <textarea 
-                      className="input-premium"
-                      style={{ minHeight: '120px', resize: 'vertical' }}
-                      placeholder="Actions correctives identifiées et requises..."
-                      value={formData.documentation.correctiveActions}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        documentation: { ...prev.documentation, correctiveActions: e.target.value }
-                      }))}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* ÉTAPE 8: Validation Finale */}
-              {currentStep === 7 && (
-                <div className="slide-in">
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      ✅ {t.steps.validation}
-                    </h2>
-                  </div>
-
-                  {/* Actions principales */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-                    
-                    <button
-                      onClick={handleGeneratePDF}
-                      className="btn-premium"
-                      style={{ padding: '20px', flexDirection: 'column', gap: '12px', height: 'auto' }}
-                    >
-                      <Download style={{ width: '32px', height: '32px' }} />
-                      <div>
-                        <div style={{ fontSize: '16px', fontWeight: '600' }}>{t.actions.generatePDF}</div>
-                        <div style={{ fontSize: '12px', opacity: 0.8 }}>Format 8.5"×11" professionnel</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={handleSendByEmail}
-                      className="btn-success"
-                      style={{ padding: '20px', flexDirection: 'column', gap: '12px', height: 'auto' }}
-                    >
-                      <Mail style={{ width: '32px', height: '32px' }} />
-                      <div>
-                        <div style={{ fontSize: '16px', fontWeight: '600' }}>{t.actions.sendByEmail}</div>
-                        <div style={{ fontSize: '12px', opacity: 0.8 }}>Envoyer au client</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={handleArchive}
-                      className="btn-secondary"
-                      style={{ padding: '20px', flexDirection: 'column', gap: '12px', height: 'auto' }}
-                    >
-                      <Archive style={{ width: '32px', height: '32px' }} />
-                      <div>
-                        <div style={{ fontSize: '16px', fontWeight: '600' }}>{t.actions.archive}</div>
-                        <div style={{ fontSize: '12px', opacity: 0.8 }}>Archiver dans Supabase</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => window.print()}
-                      className="btn-secondary"
-                      style={{ padding: '20px', flexDirection: 'column', gap: '12px', height: 'auto' }}
-                    >
-                      <Printer style={{ width: '32px', height: '32px' }} />
-                      <div>
-                        <div style={{ fontSize: '16px', fontWeight: '600' }}>{t.actions.print}</div>
-                        <div style={{ fontSize: '12px', opacity: 0.8 }}>Impression directe</div>
-                      </div>
-                    </button>
-                  </div>
-
-                  {/* Résumé de conformité */}
-                  <div style={{
-                    background: 'rgba(30, 41, 59, 0.8)',
-                    border: '1px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '16px',
-                    padding: '24px'
-                  }}>
-                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                      📊 Résumé de Conformité
-                    </h3>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ color: '#3b82f6', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.team.members.length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Membres d'équipe</div>
-                      </div>
-                      
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.team.members.filter(m => m.validationStatus === 'approved').length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Validations</div>
-                      </div>
-
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(168, 85, 247, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ color: '#a855f7', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.isolationPoints.length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Points d'isolement</div>
-                      </div>
-
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(251, 191, 36, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ color: '#f59e0b', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.documentation.photos.length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Photos documentées</div>
-                      </div>
-
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.electricalHazards.filter(h => h.isSelected).length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Dangers identifiés</div>
-                      </div>
-
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
-                          {formData.safetyEquipment.filter(eq => eq.verified).length}
-                        </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Équipements vérifiés</div>
-                      </div>
-                    </div>
-
-                    {/* Status final */}
-                    <div style={{
-                      marginTop: '24px',
-                      padding: '20px',
-                      background: formData.team.allApproved ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                      border: `1px solid ${formData.team.allApproved ? '#22c55e' : '#ef4444'}`,
-                      borderRadius: '12px',
-                      textAlign: 'center'
-                    }}>
-                      <div style={{ 
-                        color: formData.team.allApproved ? '#22c55e' : '#ef4444',
-                        fontSize: '20px',
-                        fontWeight: '700',
-                        marginBottom: '8px'
-                      }}>
-                        {formData.team.allApproved ? '✅ AST PRÊT POUR SOUMISSION' : '⚠️ VALIDATION ÉQUIPE REQUISE'}
-                      </div>
-                      <div style={{ color: '#94a3b8', fontSize: '14px' }}>
-                        {formData.team.allApproved 
-                          ? 'Toutes les validations sont complètes. Archivage Supabase disponible.'
-                          : 'L\'équipe doit compléter la validation avant l\'archivage final.'
-                        }
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Navigation finale */}
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              marginTop: '48px', 
-              paddingTop: '24px', 
-              borderTop: '1px solid rgba(100, 116, 139, 0.2)' 
-            }}>
-              <button 
-                className="btn-secondary" 
-                onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-                disabled={currentStep === 0}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px',
-                  opacity: currentStep === 0 ? 0.5 : 1,
-                  cursor: currentStep === 0 ? 'not-allowed' : 'pointer'
-                }}
-              >
-                <ChevronLeft style={{ width: '16px', height: '16px' }} /> 
-                {t.buttons.previous}
-              </button>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ 
-                  color: '#94a3b8', 
-                  fontSize: '14px',
-                  background: 'rgba(30, 41, 59, 0.8)',
-                  padding: '8px 16px',
-                  borderRadius: '8px'
-                }}>
-                  📊 Progression: {Math.round(overallProgress)}%
-                </div>
-                
-                <button 
-                  onClick={() => handleSave(true)} 
-                  className="btn-secondary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <Save style={{ width: '16px', height: '16px' }} /> 
-                  {t.buttons.save}
-                </button>
-                
-                {currentStep === steps.length - 1 ? (
-                  <button 
-                    onClick={handleFinalSubmission} 
-                    className="btn-success"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                    disabled={!formData.team.allApproved}
-                  >
-                    <Send style={{ width: '16px', height: '16px' }} />
-                    {t.actions.finalApproval}
-                  </button>
-                ) : (
-                  <button 
-                    className="btn-premium" 
-                    onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    {t.buttons.next} 
+                    Suivant 
                     <ChevronRight style={{ width: '16px', height: '16px' }} />
                   </button>
                 )}
