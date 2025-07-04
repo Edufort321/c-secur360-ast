@@ -1,18 +1,15 @@
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    const { PrismaClient } = await import('@prisma/client')
-    const prisma = new PrismaClient()
-    
     console.log('🔄 Connecting to database...')
     
     // Test de connexion
     await prisma.$connect()
     console.log('✅ Connected to database')
     
-    // Créer un tenant de test pour forcer la création des tables
-    console.log('📋 Creating demo tenant...')
+    // Créer tenant démo
     const demoTenant = await prisma.tenant.upsert({
       where: { subdomain: 'demo' },
       update: {},
@@ -23,8 +20,7 @@ export async function GET() {
       }
     })
     
-    // Créer le tenant C-Secur360
-    console.log('📋 Creating C-Secur360 tenant...')
+    // Créer tenant C-Secur360
     const csecurTenant = await prisma.tenant.upsert({
       where: { subdomain: 'c-secur360' },
       update: {},
@@ -36,11 +32,10 @@ export async function GET() {
     })
     
     await prisma.$disconnect()
-    console.log('✅ Database initialized successfully')
     
     return NextResponse.json({ 
       success: true, 
-      message: 'Database initialized successfully! Check Supabase Table Editor now.',
+      message: '🎉 Tables créées avec succès! Vérifiez Supabase Table Editor maintenant.',
       tenants: [demoTenant, csecurTenant]
     })
     
@@ -49,7 +44,7 @@ export async function GET() {
     return NextResponse.json({ 
       success: false, 
       error: error.message,
-      details: 'Check that all environment variables are set correctly'
+      details: error.stack
     }, { status: 500 })
   }
 }
