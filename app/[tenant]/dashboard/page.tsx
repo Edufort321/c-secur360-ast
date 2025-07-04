@@ -6,7 +6,11 @@ interface DashboardPageProps {
 
 export default function DashboardPage({ params }: DashboardPageProps) {
   const isDemo = params.tenant === 'demo'
-  const companyName = params.tenant === 'demo' ? 'Démo AST MDL' : 'C-Secur360'
+  const companyName = params.tenant === 'demo' ? 'Version Démo' : 
+                     params.tenant === 'futureclient' ? 'Client Potentiel' : 
+                     params.tenant.charAt(0).toUpperCase() + params.tenant.slice(1)
+
+  // ... reste du code identique
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
