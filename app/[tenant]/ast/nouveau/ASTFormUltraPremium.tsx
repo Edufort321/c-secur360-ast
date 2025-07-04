@@ -82,7 +82,7 @@ interface ASTFormData {
   astNumber: string;
   created: string;
   lastModified: string;
-  language: 'fr' | 'en' | 'es';
+  language: 'fr' | 'en';
   status: 'draft' | 'completed' | 'team_validation' | 'approved' | 'archived';
   industry: 'electrical' | 'construction' | 'industrial' | 'office' | 'manufacturing' | 'other';
   
@@ -1180,7 +1180,7 @@ const generateComplianceReport = (formData: ASTFormData) => {
 export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<ASTFormData>(initialFormData);
-  const [language, setLanguage] = useState<'fr' | 'en' | 'es'>('fr');
+  const [language, setLanguage] = useState<'fr' | 'en'>('fr'); // Correction: Retiré 'es'
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSaveTime, setLastSaveTime] = useState<string>('');
   const [newTeamMember, setNewTeamMember] = useState<Partial<TeamMember>>({});
@@ -1531,7 +1531,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <select 
                   value={language} 
-                  onChange={(e) => setLanguage(e.target.value as 'fr' | 'en' | 'es')}
+                  onChange={(e) => setLanguage(e.target.value as 'fr' | 'en')}
                   className="input-premium"
                   style={{ padding: '8px 12px', minWidth: '120px' }}
                 >
