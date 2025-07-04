@@ -12,9 +12,9 @@ export default function HomePage() {
               🚀 Version Démo
             </button>
           </Link>
-          <Link href="/mdl/dashboard">
+          <Link href="/futureclient/dashboard">
             <button className="block w-full bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
-              🏢 Client MDL
+              🏢 Client Potentiel
             </button>
           </Link>
         </div>
