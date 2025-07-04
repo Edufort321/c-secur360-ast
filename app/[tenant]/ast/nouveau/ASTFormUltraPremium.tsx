@@ -1,6 +1,6 @@
-// =================== AST FORM ULTRA PREMIUM - SECTION 1/5 ===================
-// Client Potentiel - Version Finale Complète
-// Section 1: Imports et Interfaces
+// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 1/5 ===================
+// Client Potentiel - Version Finale Complète avec TOUTES les fonctionnalités
+// Section 1: Imports et Interfaces complètes
 
 "use client";
 
@@ -8,10 +8,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   FileText, MessageSquare, Shield, Zap, Settings, Users, Camera, CheckCircle,
   ChevronLeft, ChevronRight, Save, Download, Send, Copy, Check, X, Plus, Trash2,
-  ArrowLeft, ArrowRight, Eye, Mail, Archive, Printer, Upload, Star, AlertTriangle
+  ArrowLeft, ArrowRight, Eye, Mail, Archive, Printer, Upload, Star, AlertTriangle,
+  Edit, Clock, User, Phone, MapPin, Calendar, Briefcase, HardHat, Heart, Activity
 } from 'lucide-react';
 
-// =================== INTERFACES & TYPES ===================
+// =================== INTERFACES & TYPES COMPLETS ===================
 interface Tenant {
   id: string;
   subdomain: string;
@@ -67,6 +68,7 @@ interface SafetyEquipment {
   available: boolean;
   notes: string;
   verified: boolean;
+  category: 'head' | 'eye' | 'respiratory' | 'hand' | 'foot' | 'body' | 'fall' | 'electrical' | 'detection' | 'other';
 }
 
 interface TeamDiscussion {
@@ -75,6 +77,27 @@ interface TeamDiscussion {
   notes: string;
   completed: boolean;
   discussedBy: string;
+  discussedAt?: string;
+  priority: 'low' | 'medium' | 'high';
+}
+
+interface EmergencyProcedure {
+  id: string;
+  type: 'medical' | 'fire' | 'evacuation' | 'spill' | 'electrical' | 'other';
+  procedure: string;
+  responsiblePerson: string;
+  contactInfo: string;
+  isVerified: boolean;
+}
+
+interface RiskAssessment {
+  id: string;
+  hazardType: string;
+  riskLevel: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
+  controlMeasures: string[];
+  residualRisk: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
+  isAcceptable: boolean;
+  notes: string;
 }
 
 interface ASTFormData {
@@ -115,10 +138,12 @@ interface ASTFormData {
     briefingCompleted: boolean;
     briefingDate: string;
     briefingTime: string;
+    emergencyProceduresList: EmergencyProcedure[];
   };
   
   safetyEquipment: SafetyEquipment[];
   electricalHazards: ElectricalHazard[];
+  riskAssessments: RiskAssessment[];
   
   team: {
     supervisor: string;
@@ -173,8 +198,12 @@ const generateASTNumber = (): string => {
   const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
+// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 2/5 ===================
+// Section 2: Données prédéfinies et traductions complètes
 
-// =================== DONNÉES PRÉDÉFINIES ===================
+// =================== DONNÉES PRÉDÉFINIES COMPLÈTES ===================
+
+// Dangers électriques prédéfinis
 const predefinedElectricalHazards: ElectricalHazard[] = [
   {
     id: 'h0',
@@ -207,158 +236,163 @@ const predefinedElectricalHazards: ElectricalHazard[] = [
     description: 'Risque d\'incendie ou d\'explosion sur le site',
     riskLevel: 'critical',
     isSelected: false
+  },
+  {
+    id: 'h15',
+    code: '15',
+    title: 'ESPACES CLOS',
+    description: 'Travail dans des espaces confinés',
+    riskLevel: 'high',
+    isSelected: false
+  },
+  {
+    id: 'h18',
+    code: '18',
+    title: 'SUBSTANCES DANGEREUSES',
+    description: 'Exposition à des produits chimiques ou toxiques',
+    riskLevel: 'high',
+    isSelected: false
   }
 ];
 
+// Équipements de sécurité complets selon votre image
 const requiredSafetyEquipment: SafetyEquipment[] = [
-  {
-    id: 'eq1',
-    name: 'TROUSSE DE PREMIERS SOINS',
-    required: true,
-    available: false,
-    notes: '',
-    verified: false
-  },
-  {
-    id: 'eq2',
-    name: 'EXTINCTEUR PORTATIF',
-    required: true,
-    available: false,
-    notes: '',
-    verified: false
-  },
-  {
-    id: 'eq3',
-    name: 'PLAN D\'INTERVENTION D\'URGENCE',
-    required: true,
-    available: false,
-    notes: '',
-    verified: false
-  },
-  {
-    id: 'eq4',
-    name: 'ÉQUIPEMENT DE COMMUNICATION',
-    required: true,
-    available: false,
-    notes: '',
-    verified: false
-  }
+  // Protection de la tête
+  { id: 'eq1', name: 'Casque de sécurité', required: true, available: false, notes: '', verified: false, category: 'head' },
+  
+  // Protection des yeux
+  { id: 'eq2', name: 'Bottes de sécurité', required: true, available: false, notes: '', verified: false, category: 'foot' },
+  { id: 'eq3', name: 'Lunettes de protection', required: true, available: false, notes: '', verified: false, category: 'eye' },
+  { id: 'eq4', name: 'Lunettes monocoque', required: false, available: false, notes: '', verified: false, category: 'eye' },
+  { id: 'eq5', name: 'Visière', required: false, available: false, notes: '', verified: false, category: 'eye' },
+  
+  // Protection des mains
+  { id: 'eq6', name: 'Gants', required: true, available: false, notes: '', verified: false, category: 'hand' },
+  { id: 'eq7', name: 'Gants anti-coupures', required: false, available: false, notes: '', verified: false, category: 'hand' },
+  
+  // Protection électrique
+  { id: 'eq8', name: 'Détecteur de tension', required: true, available: false, notes: '', verified: false, category: 'electrical' },
+  { id: 'eq9', name: 'Mise à la terre (MALT)', required: false, available: false, notes: '', verified: false, category: 'electrical' },
+  { id: 'eq10', name: 'Cadenas individuels / collectifs (boîte)', required: true, available: false, notes: '', verified: false, category: 'electrical' },
+  { id: 'eq11', name: 'Affiches et rubans (périmètre de sécurité)', required: true, available: false, notes: '', verified: false, category: 'electrical' },
+  
+  // EPI énergie incidente
+  { id: 'eq12', name: 'EPI énergie incidente de moins de 1.2 cal/cm²', required: false, available: false, notes: '', verified: false, category: 'electrical' },
+  { id: 'eq13', name: 'EPI énergie incidente de 1.2 cal/cm² à 12 cal/cm²', required: false, available: false, notes: '', verified: false, category: 'electrical' },
+  { id: 'eq14', name: 'EPI énergie incidente plus grand que 12 cal/cm²', required: false, available: false, notes: '', verified: false, category: 'electrical' },
+  
+  // Protection diverses
+  { id: 'eq15', name: 'Dossard', required: false, available: false, notes: '', verified: false, category: 'body' },
+  { id: 'eq16', name: 'Protection auditive', required: false, available: false, notes: '', verified: false, category: 'respiratory' },
+  { id: 'eq17', name: 'Protection respiratoire (rasage de près)', required: false, available: false, notes: '', verified: false, category: 'respiratory' },
+  { id: 'eq18', name: 'Harnais anti-chutes', required: false, available: false, notes: '', verified: false, category: 'fall' },
+  { id: 'eq19', name: 'Détecteur quatre (4) gaz', required: false, available: false, notes: '', verified: false, category: 'detection' },
+  { id: 'eq20', name: 'Prise avec protection GFI', required: false, available: false, notes: '', verified: false, category: 'electrical' }
 ];
 
+// Discussion d'équipe selon votre image
 const predefinedDiscussions: TeamDiscussion[] = [
   {
     id: 'td1',
-    topic: 'Points de coupure électrique',
+    topic: 'Trousse de premiers soins',
     notes: '',
     completed: false,
-    discussedBy: ''
+    discussedBy: '',
+    priority: 'high'
   },
   {
     id: 'td2',
-    topic: 'Procédures de verrouillage',
+    topic: 'Matériel de contrôle de déversement',
     notes: '',
     completed: false,
-    discussedBy: ''
+    discussedBy: '',
+    priority: 'medium'
   },
   {
     id: 'td3',
-    topic: 'Équipements de protection individuelle',
+    topic: 'Évacuation, point de rassemblement',
     notes: '',
     completed: false,
-    discussedBy: ''
+    discussedBy: '',
+    priority: 'high'
   },
   {
     id: 'td4',
-    topic: 'Procédures d\'urgence',
+    topic: 'Extincteur portatif',
     notes: '',
     completed: false,
-    discussedBy: ''
+    discussedBy: '',
+    priority: 'high'
+  },
+  {
+    id: 'td5',
+    topic: 'Douche d\'urgence / Bain oculaire',
+    notes: '',
+    completed: false,
+    discussedBy: '',
+    priority: 'medium'
+  },
+  {
+    id: 'td6',
+    topic: 'Sécurité désigné / Infirmerie au site',
+    notes: '',
+    completed: false,
+    discussedBy: '',
+    priority: 'medium'
+  },
+  {
+    id: 'td7',
+    topic: 'Plan d\'intervention d\'urgence',
+    notes: '',
+    completed: false,
+    discussedBy: '',
+    priority: 'high'
+  },
+  {
+    id: 'td8',
+    topic: 'EPI',
+    notes: '',
+    completed: false,
+    discussedBy: '',
+    priority: 'high'
+  },
+  {
+    id: 'td9',
+    topic: 'Emplacement des pauses',
+    notes: '',
+    completed: false,
+    discussedBy: '',
+    priority: 'low'
   }
 ];
 
-// =================== DONNÉES INITIALES ===================
-const initialFormData: ASTFormData = {
-  id: `AST-${Date.now()}`,
-  astNumber: generateASTNumber(),
-  created: new Date().toISOString(),
-  lastModified: new Date().toISOString(),
-  language: 'fr',
-  status: 'draft',
-  industry: 'electrical',
-  
-  projectInfo: {
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().substring(0, 5),
-    client: '',
-    projectNumber: '',
-    astClientNumber: '',
-    workLocation: '',
-    workDescription: '',
-    estimatedDuration: '',
-    workerCount: 1,
-    clientRepresentative: '',
-    emergencyContact: '',
-    emergencyPhone: '',
-    workPermitRequired: false,
-    workPermitNumber: '',
-    weatherConditions: '',
-    specialConditions: ''
+// Procédures d'urgence
+const emergencyProcedures: EmergencyProcedure[] = [
+  {
+    id: 'ep1',
+    type: 'medical',
+    procedure: 'Premiers secours et évacuation médicale',
+    responsiblePerson: '',
+    contactInfo: '911',
+    isVerified: false
   },
-  
-  teamDiscussion: {
-    electricalCutoffPoints: '',
-    electricalHazardExplanation: '',
-    epiSpecificNotes: '',
-    specialWorkConditions: '',
-    emergencyProcedures: '',
-    discussions: [...predefinedDiscussions],
-    briefingCompleted: false,
-    briefingDate: '',
-    briefingTime: ''
+  {
+    id: 'ep2',
+    type: 'fire',
+    procedure: 'Extinction et évacuation incendie',
+    responsiblePerson: '',
+    contactInfo: '911',
+    isVerified: false
   },
-  
-  safetyEquipment: [...requiredSafetyEquipment],
-  electricalHazards: [...predefinedElectricalHazards],
-  
-  team: {
-    supervisor: '',
-    supervisorCertification: '',
-    members: [],
-    briefingCompleted: false,
-    briefingDate: '',
-    briefingTime: '',
-    totalMembers: 0,
-    acknowledgedMembers: 0,
-    validations: [],
-    allApproved: false
-  },
-  
-  isolationPoints: [],
-  
-  documentation: {
-    photos: [],
-    additionalDocuments: [],
-    inspectionNotes: '',
-    correctiveActions: ''
-  },
-  
-  validation: {
-    completedBy: '',
-    completedDate: '',
-    reviewedBy: '',
-    reviewedDate: '',
-    approvedBy: '',
-    approvedDate: '',
-    clientApproval: false,
-    finalApproval: false,
-    revisionNumber: 1,
-    comments: '',
-    emailSent: false
+  {
+    id: 'ep3',
+    type: 'electrical',
+    procedure: 'Coupure d\'urgence électrique',
+    responsiblePerson: '',
+    contactInfo: '',
+    isVerified: false
   }
-};
-// =================== AST FORM ULTRA PREMIUM - SECTION 2/5 ===================
-// Client Potentiel - Version Finale Complète
-// Section 2: Traductions et Styles CSS
+];
 
 // =================== TRADUCTIONS COMPLÈTES ===================
 const translations = {
@@ -391,6 +425,49 @@ const translations = {
       workLocation: "Lieu des Travaux",
       astInfo: "Numéro généré automatiquement - usage unique",
       astClientInfo: "Numéro fourni par le client (optionnel)"
+    },
+    
+    teamDiscussion: {
+      title: "Discussion avec l'Équipe",
+      subtitle: "Information à discuter avec l'équipe",
+      completed: "Complété",
+      pending: "En attente",
+      discussedBy: "Discuté par",
+      notes: "Notes",
+      priority: "Priorité"
+    },
+    
+    safetyEquipment: {
+      title: "Équipement de Protection Individuel et Collectif",
+      required: "Requis",
+      available: "Disponible",
+      verified: "Vérifié",
+      notes: "Notes",
+      categories: {
+        head: "Protection Tête",
+        eye: "Protection Yeux",
+        respiratory: "Protection Respiratoire",
+        hand: "Protection Mains",
+        foot: "Protection Pieds",
+        body: "Protection Corps",
+        fall: "Protection Chute",
+        electrical: "Protection Électrique",
+        detection: "Détection",
+        other: "Autre"
+      }
+    },
+    
+    hazards: {
+      title: "Dangers Potentiels",
+      selected: "Sélectionné",
+      riskLevel: "Niveau de Risque",
+      notes: "Notes supplémentaires",
+      levels: {
+        low: "Faible",
+        medium: "Moyen",
+        high: "Élevé",
+        critical: "Critique"
+      }
     },
     
     industries: {
@@ -435,7 +512,10 @@ const translations = {
       next: "Suivant",
       save: "Sauvegarder",
       approve: "Approuver",
-      reject: "Rejeter"
+      reject: "Rejeter",
+      add: "Ajouter",
+      edit: "Modifier",
+      delete: "Supprimer"
     },
 
     email: {
@@ -473,6 +553,49 @@ const translations = {
       workLocation: "Work Location",
       astInfo: "Auto-generated unique number",
       astClientInfo: "Client-provided number (optional)"
+    },
+    
+    teamDiscussion: {
+      title: "Team Discussion",
+      subtitle: "Information to discuss with team",
+      completed: "Completed",
+      pending: "Pending",
+      discussedBy: "Discussed by",
+      notes: "Notes",
+      priority: "Priority"
+    },
+    
+    safetyEquipment: {
+      title: "Individual and Collective Protection Equipment",
+      required: "Required",
+      available: "Available",
+      verified: "Verified",
+      notes: "Notes",
+      categories: {
+        head: "Head Protection",
+        eye: "Eye Protection",
+        respiratory: "Respiratory Protection",
+        hand: "Hand Protection",
+        foot: "Foot Protection",
+        body: "Body Protection",
+        fall: "Fall Protection",
+        electrical: "Electrical Protection",
+        detection: "Detection",
+        other: "Other"
+      }
+    },
+    
+    hazards: {
+      title: "Potential Hazards",
+      selected: "Selected",
+      riskLevel: "Risk Level",
+      notes: "Additional notes",
+      levels: {
+        low: "Low",
+        medium: "Medium",
+        high: "High",
+        critical: "Critical"
+      }
     },
     
     industries: {
@@ -517,7 +640,10 @@ const translations = {
       next: "Next",
       save: "Save",
       approve: "Approve",
-      reject: "Reject"
+      reject: "Reject",
+      add: "Add",
+      edit: "Edit",
+      delete: "Delete"
     },
 
     email: {
@@ -526,6 +652,91 @@ const translations = {
     }
   }
 };
+
+// =================== DONNÉES INITIALES COMPLÈTES ===================
+const initialFormData: ASTFormData = {
+  id: `AST-${Date.now()}`,
+  astNumber: generateASTNumber(),
+  created: new Date().toISOString(),
+  lastModified: new Date().toISOString(),
+  language: 'fr',
+  status: 'draft',
+  industry: 'electrical',
+  
+  projectInfo: {
+    date: new Date().toISOString().split('T')[0],
+    time: new Date().toTimeString().substring(0, 5),
+    client: '',
+    projectNumber: '',
+    astClientNumber: '',
+    workLocation: '',
+    workDescription: '',
+    estimatedDuration: '',
+    workerCount: 1,
+    clientRepresentative: '',
+    emergencyContact: '',
+    emergencyPhone: '',
+    workPermitRequired: false,
+    workPermitNumber: '',
+    weatherConditions: '',
+    specialConditions: ''
+  },
+  
+  teamDiscussion: {
+    electricalCutoffPoints: '',
+    electricalHazardExplanation: '',
+    epiSpecificNotes: '',
+    specialWorkConditions: '',
+    emergencyProcedures: '',
+    discussions: [...predefinedDiscussions],
+    briefingCompleted: false,
+    briefingDate: '',
+    briefingTime: '',
+    emergencyProceduresList: [...emergencyProcedures]
+  },
+  
+  safetyEquipment: [...requiredSafetyEquipment],
+  electricalHazards: [...predefinedElectricalHazards],
+  riskAssessments: [],
+  
+  team: {
+    supervisor: '',
+    supervisorCertification: '',
+    members: [],
+    briefingCompleted: false,
+    briefingDate: '',
+    briefingTime: '',
+    totalMembers: 0,
+    acknowledgedMembers: 0,
+    validations: [],
+    allApproved: false
+  },
+  
+  isolationPoints: [],
+  
+  documentation: {
+    photos: [],
+    additionalDocuments: [],
+    inspectionNotes: '',
+    correctiveActions: ''
+  },
+  
+  validation: {
+    completedBy: '',
+    completedDate: '',
+    reviewedBy: '',
+    reviewedDate: '',
+    approvedBy: '',
+    approvedDate: '',
+    clientApproval: false,
+    finalApproval: false,
+    revisionNumber: 1,
+    comments: '',
+    emailSent: false
+  }
+};
+// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 3/5 ===================
+// Section 3: Styles CSS Premium et Fonctions utilitaires
 
 // =================== STYLES CSS PREMIUM ===================
 const premiumStyles = `
@@ -584,6 +795,7 @@ const premiumStyles = `
     background: rgba(30, 41, 59, 0.6);
     border-radius: 16px;
     border: 1px solid rgba(100, 116, 139, 0.2);
+    flex-wrap: wrap;
   }
   
   .step-item {
@@ -595,6 +807,8 @@ const premiumStyles = `
     cursor: pointer;
     background: rgba(51, 65, 85, 0.3);
     border: 1px solid rgba(100, 116, 139, 0.2);
+    min-width: 160px;
+    justify-content: center;
   }
   
   .step-item.active {
@@ -670,36 +884,128 @@ const premiumStyles = `
     background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   }
   
-  .ast-number-display {
-    background: rgba(34, 197, 94, 0.1);
-    border: 1px solid #22c55e;
-    border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  
-  .ast-number-text {
-    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-    font-size: 16px;
-    font-weight: 700;
-    color: #22c55e;
-    letter-spacing: 0.5px;
-  }
-  
-  .refresh-btn {
-    background: none;
-    border: 1px solid #22c55e;
-    color: #22c55e;
-    padding: 8px;
-    border-radius: 8px;
+  .checkbox-premium {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(100, 116, 139, 0.5);
+    border-radius: 6px;
+    background: rgba(30, 41, 59, 0.8);
+    position: relative;
     cursor: pointer;
     transition: all 0.3s ease;
   }
   
-  .refresh-btn:hover {
-    background: rgba(34, 197, 94, 0.2);
+  .checkbox-premium.checked {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-color: #3b82f6;
+  }
+  
+  .checkbox-premium.checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  
+  .equipment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .equipment-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+  }
+  
+  .equipment-item:hover {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(100, 116, 139, 0.5);
+  }
+  
+  .equipment-item.required {
+    border-left: 4px solid #f59e0b;
+  }
+  
+  .equipment-item.verified {
+    border-left: 4px solid #22c55e;
+  }
+  
+  .hazard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .hazard-item {
+    padding: 20px;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  
+  .hazard-item.selected {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+  }
+  
+  .hazard-item.critical {
+    border-left: 4px solid #dc2626;
+  }
+  
+  .hazard-item.high {
+    border-left: 4px solid #f59e0b;
+  }
+  
+  .hazard-item.medium {
+    border-left: 4px solid #eab308;
+  }
+  
+  .hazard-item.low {
+    border-left: 4px solid #22c55e;
+  }
+  
+  .discussion-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+  }
+  
+  .discussion-item.completed {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: #22c55e;
+  }
+  
+  .discussion-item.high-priority {
+    border-left: 4px solid #ef4444;
+  }
+  
+  .discussion-item.medium-priority {
+    border-left: 4px solid #f59e0b;
+  }
+  
+  .discussion-item.low-priority {
+    border-left: 4px solid #22c55e;
   }
   
   .save-indicator {
@@ -792,17 +1098,23 @@ const premiumStyles = `
     .step-item {
       padding: 8px 12px;
       font-size: 12px;
+      min-width: 120px;
     }
     
     .glass-effect {
       margin: 16px;
       padding: 20px;
     }
+    
+    .equipment-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .hazard-grid {
+      grid-template-columns: 1fr;
+    }
   }
 `;
-// =================== AST FORM ULTRA PREMIUM - SECTION 3/5 ===================
-// Client Potentiel - Version Finale Complète
-// Section 3: Fonctions utilitaires et intégration Supabase
 
 // =================== FONCTIONS SUPABASE POUR ARCHIVAGE ===================
 const saveToSupabase = async (formData: ASTFormData) => {
@@ -850,33 +1162,6 @@ const archiveToSupabase = async (formData: ASTFormData, tenant: Tenant) => {
       }
     };
     
-    // Simulation d'archivage Supabase
-    // En production, remplacez par votre client Supabase
-    /*
-    const { data, error } = await supabase
-      .from('ast_forms')
-      .update({
-        status: 'archived',
-        archived_at: new Date().toISOString(),
-        data: archivedData
-      })
-      .eq('id', formData.id);
-    
-    if (error) throw error;
-    
-    // Optionnel : déplacer vers table d'archivage
-    const { error: archiveError } = await supabase
-      .from('ast_archives')
-      .insert({
-        original_id: formData.id,
-        ast_number: formData.astNumber,
-        tenant_id: tenant.id,
-        archived_data: archivedData,
-        archived_by: 'system',
-        archived_at: new Date().toISOString()
-      });
-    */
-    
     await new Promise(resolve => setTimeout(resolve, 1500));
     console.log('✅ Archivage Supabase réussi');
     return archivedData;
@@ -892,27 +1177,6 @@ const generateProfessionalPDF = (formData: ASTFormData, tenant: Tenant) => {
   console.log('📄 Données AST:', formData.astNumber);
   console.log('🏢 Client:', tenant.companyName);
   
-  // En production, intégrez jsPDF ou similaire
-  /*
-  const jsPDF = require('jspdf');
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'in',
-    format: [8.5, 11]
-  });
-  
-  // Header avec logo Client Potentiel
-  doc.setFontSize(20);
-  doc.text('ANALYSE SÉCURITAIRE DE TÂCHES', 1, 1);
-  doc.setFontSize(12);
-  doc.text(`AST #: ${formData.astNumber}`, 1, 1.5);
-  doc.text(`Client: ${formData.projectInfo.client}`, 1, 1.8);
-  doc.text(`Date: ${formData.projectInfo.date}`, 1, 2.1);
-  
-  // Contenu détaillé...
-  doc.save(`AST-${formData.astNumber}.pdf`);
-  */
-  
   setTimeout(() => {
     console.log('✅ PDF généré avec succès!');
     const link = document.createElement('a');
@@ -927,30 +1191,6 @@ const sendByEmail = async (formData: ASTFormData, tenant: Tenant, language: stri
   
   try {
     console.log('📧 Envoi par courriel...');
-    
-    // En production, intégrez EmailJS ou votre service email
-    /*
-    const emailParams = {
-      to_email: formData.projectInfo.client || 'client@example.com',
-      subject: `${t.email.subject} - ${formData.astNumber}`,
-      message: `${t.email.body}
-      
-      Détails du projet:
-      - Numéro AST: ${formData.astNumber}
-      - Projet: ${formData.projectInfo.projectNumber}
-      - Lieu: ${formData.projectInfo.workLocation}
-      - Date: ${formData.projectInfo.date}
-      
-      Équipe validée: ${formData.team.allApproved ? 'Oui' : 'Non'}
-      Points d'isolement: ${formData.isolationPoints.length}
-      Photos documentées: ${formData.documentation.photos.length}
-      `,
-      attachment: `AST-${formData.astNumber}.pdf`
-    };
-    
-    await emailjs.send('service_id', 'template_id', emailParams);
-    */
-    
     await new Promise(resolve => setTimeout(resolve, 2000));
     console.log('✅ Email envoyé avec succès!');
     return true;
@@ -1117,70 +1357,14 @@ const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto, onUpdateDescription 
     </div>
   );
 };
-
-// =================== FONCTIONS DE VALIDATION ===================
-const validateTeamApproval = (team: ASTFormData['team']): boolean => {
-  const totalMembers = team.members.length;
-  const approvedMembers = team.members.filter(m => m.validationStatus === 'approved').length;
-  return totalMembers > 0 && approvedMembers === totalMembers;
-};
-
-const calculateCompletionPercentage = (formData: ASTFormData): number => {
-  let completed = 0;
-  let total = 0;
-  
-  // Vérification des informations de base
-  total += 8;
-  if (formData.projectInfo.client) completed++;
-  if (formData.projectInfo.workDescription) completed++;
-  if (formData.projectInfo.workLocation) completed++;
-  if (formData.projectInfo.date) completed++;
-  if (formData.projectInfo.projectNumber) completed++;
-  if (formData.team.supervisor) completed++;
-  if (formData.team.members.length > 0) completed++;
-  if (formData.electricalHazards.some(h => h.isSelected)) completed++;
-  
-  // Vérification des validations équipe
-  total += 2;
-  if (formData.team.allApproved) completed++;
-  if (formData.validation.finalApproval) completed++;
-  
-  return Math.round((completed / total) * 100);
-};
-
-const generateComplianceReport = (formData: ASTFormData) => {
-  const report = {
-    astNumber: formData.astNumber,
-    completionRate: calculateCompletionPercentage(formData),
-    teamValidationStatus: validateTeamApproval(formData.team),
-    hazardsIdentified: formData.electricalHazards.filter(h => h.isSelected).length,
-    isolationPointsConfigured: formData.isolationPoints.length,
-    photosDocumented: formData.documentation.photos.length,
-    safetyEquipmentVerified: formData.safetyEquipment.filter(eq => eq.verified).length,
-    complianceScore: 0
-  };
-  
-  // Calcul du score de conformité
-  let score = 0;
-  if (report.completionRate >= 90) score += 25;
-  if (report.teamValidationStatus) score += 25;
-  if (report.hazardsIdentified >= 2) score += 20;
-  if (report.isolationPointsConfigured >= 1) score += 15;
-  if (report.photosDocumented >= 3) score += 10;
-  if (report.safetyEquipmentVerified >= 3) score += 5;
-  
-  report.complianceScore = score;
-  return report;
-};
-// =================== AST FORM ULTRA PREMIUM - SECTION 4/5 ===================
-// Client Potentiel - Version Finale Complète
-// Section 4: Début du composant principal et logique
+// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 4/5 ===================
+// Section 4: Composant principal et logique métier
 
 // =================== COMPOSANT PRINCIPAL ===================
 export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<ASTFormData>(initialFormData);
-  const [language, setLanguage] = useState<'fr' | 'en'>('fr'); // Correction: Retiré 'es'
+  const [language, setLanguage] = useState<'fr' | 'en'>('fr');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSaveTime, setLastSaveTime] = useState<string>('');
   const [newTeamMember, setNewTeamMember] = useState<Partial<TeamMember>>({});
@@ -1216,14 +1400,12 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
     setSaveStatus('saving');
     
     try {
-      // Mise à jour des métadonnées avec types explicites
       const updatedFormData: ASTFormData = {
         ...formData,
         lastModified: new Date().toISOString(),
-        status: isDraft ? 'draft' : 'completed' // Types littéraux explicites
+        status: isDraft ? 'draft' : 'completed'
       };
       
-      // Sauvegarde vers Supabase
       const success = await saveToSupabase(updatedFormData);
       
       if (success) {
@@ -1303,6 +1485,105 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
     });
   };
 
+  // ========== FONCTIONS DISCUSSION ==========
+  const toggleDiscussion = (discussionId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      teamDiscussion: {
+        ...prev.teamDiscussion,
+        discussions: prev.teamDiscussion.discussions.map(d =>
+          d.id === discussionId 
+            ? { 
+                ...d, 
+                completed: !d.completed,
+                discussedAt: !d.completed ? new Date().toISOString() : undefined
+              }
+            : d
+        )
+      }
+    }));
+  };
+
+  const updateDiscussionNotes = (discussionId: string, notes: string) => {
+    setFormData(prev => ({
+      ...prev,
+      teamDiscussion: {
+        ...prev.teamDiscussion,
+        discussions: prev.teamDiscussion.discussions.map(d =>
+          d.id === discussionId ? { ...d, notes } : d
+        )
+      }
+    }));
+  };
+
+  const updateDiscussedBy = (discussionId: string, discussedBy: string) => {
+    setFormData(prev => ({
+      ...prev,
+      teamDiscussion: {
+        ...prev.teamDiscussion,
+        discussions: prev.teamDiscussion.discussions.map(d =>
+          d.id === discussionId ? { ...d, discussedBy } : d
+        )
+      }
+    }));
+  };
+
+  // ========== FONCTIONS ÉQUIPEMENTS ==========
+  const toggleEquipmentRequired = (equipmentId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      safetyEquipment: prev.safetyEquipment.map(eq =>
+        eq.id === equipmentId ? { ...eq, required: !eq.required } : eq
+      )
+    }));
+  };
+
+  const toggleEquipmentAvailable = (equipmentId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      safetyEquipment: prev.safetyEquipment.map(eq =>
+        eq.id === equipmentId ? { ...eq, available: !eq.available } : eq
+      )
+    }));
+  };
+
+  const toggleEquipmentVerified = (equipmentId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      safetyEquipment: prev.safetyEquipment.map(eq =>
+        eq.id === equipmentId ? { ...eq, verified: !eq.verified } : eq
+      )
+    }));
+  };
+
+  const updateEquipmentNotes = (equipmentId: string, notes: string) => {
+    setFormData(prev => ({
+      ...prev,
+      safetyEquipment: prev.safetyEquipment.map(eq =>
+        eq.id === equipmentId ? { ...eq, notes } : eq
+      )
+    }));
+  };
+
+  // ========== FONCTIONS DANGERS ==========
+  const toggleHazard = (hazardId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      electricalHazards: prev.electricalHazards.map(h =>
+        h.id === hazardId ? { ...h, isSelected: !h.isSelected } : h
+      )
+    }));
+  };
+
+  const updateHazardNotes = (hazardId: string, notes: string) => {
+    setFormData(prev => ({
+      ...prev,
+      electricalHazards: prev.electricalHazards.map(h =>
+        h.id === hazardId ? { ...h, additionalNotes: notes } : h
+      )
+    }));
+  };
+
   // ========== FONCTIONS PHOTOS ==========
   const addPhoto = (file: File) => {
     const reader = new FileReader();
@@ -1313,7 +1594,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
         data: e.target?.result as string,
         description: '',
         timestamp: new Date().toISOString(),
-        category: 'isolation'
+        category: 'site'
       };
       
       setFormData(prev => ({
@@ -1453,7 +1734,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
     
     const finalData: ASTFormData = {
       ...formData,
-      status: 'completed', // Type littéral explicite
+      status: 'completed',
       validation: {
         ...formData.validation,
         finalApproval: true,
@@ -1464,14 +1745,75 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
     await saveToSupabase(finalData);
     setFormData(finalData);
     
-    // Redirection après soumission
     setTimeout(() => {
       window.location.href = `/${tenant.subdomain}/dashboard`;
     }, 2000);
   };
-// =================== AST FORM ULTRA PREMIUM - SECTION 5/5 ===================
-// Client Potentiel - Version Finale Complète
-// Section 5: Rendu JSX complet
+
+  // ========== COMPOSANTS CHECKBOX PERSONNALISÉS ==========
+  const CustomCheckbox = ({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={onChange}>
+      <div className={`checkbox-premium ${checked ? 'checked' : ''}`} />
+      <span style={{ color: '#e2e8f0', fontSize: '14px', flex: 1 }}>{label}</span>
+    </div>
+  );
+
+  // ========== GROUPEMENT D'ÉQUIPEMENTS PAR CATÉGORIE ==========
+  const groupedEquipment = formData.safetyEquipment.reduce((acc, equipment) => {
+    const category = equipment.category;
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(equipment);
+    return acc;
+  }, {} as Record<string, SafetyEquipment[]>);
+
+  // ========== CALCULS DE PROGRESSION ==========
+  const calculateStepCompletion = (stepIndex: number): number => {
+    switch (stepIndex) {
+      case 0: // Général
+        const basicFields = [
+          formData.projectInfo.client,
+          formData.projectInfo.projectNumber,
+          formData.projectInfo.workLocation,
+          formData.projectInfo.workDescription
+        ].filter(Boolean).length;
+        return (basicFields / 4) * 100;
+      
+      case 1: // Discussion
+        const completedDiscussions = formData.teamDiscussion.discussions.filter(d => d.completed).length;
+        return (completedDiscussions / formData.teamDiscussion.discussions.length) * 100;
+      
+      case 2: // Équipements
+        const verifiedEquipment = formData.safetyEquipment.filter(eq => eq.verified).length;
+        const requiredEquipment = formData.safetyEquipment.filter(eq => eq.required).length;
+        return requiredEquipment > 0 ? (verifiedEquipment / requiredEquipment) * 100 : 0;
+      
+      case 3: // Dangers
+        const selectedHazards = formData.electricalHazards.filter(h => h.isSelected).length;
+        return selectedHazards > 0 ? 100 : 0;
+      
+      case 4: // Isolation
+        return formData.isolationPoints.length > 0 ? 100 : 0;
+      
+      case 5: // Équipe
+        const approvedMembers = formData.team.members.filter(m => m.validationStatus === 'approved').length;
+        return formData.team.members.length > 0 ? (approvedMembers / formData.team.members.length) * 100 : 0;
+      
+      case 6: // Documentation
+        return formData.documentation.photos.length > 0 ? 100 : 0;
+      
+      case 7: // Validation
+        return formData.team.allApproved ? 100 : 0;
+      
+      default:
+        return 0;
+    }
+  };
+
+  const overallProgress = steps.reduce((acc, _, index) => acc + calculateStepCompletion(index), 0) / steps.length;
+  // =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 5/5 ===================
+// Section 5: Rendu JSX final avec toutes les fonctionnalités
 
   return (
     <>
@@ -1517,9 +1859,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
               
               <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                <div className="company-logo">
-                  CP
-                </div>
+                <div className="company-logo">CP</div>
                 <div>
                   <h1 style={{ color: 'white', fontSize: '24px', fontWeight: '700', margin: 0 }}>
                     {t.title}
@@ -1580,24 +1920,32 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
             <div className="progress-bar">
               <div 
                 className="progress-fill"
-                style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                style={{ width: `${overallProgress}%` }}
               />
             </div>
 
             {/* Indicateur d'étapes */}
             <div className="step-indicator">
-              {steps.map((step, index) => (
-                <div
-                  key={step.key}
-                  className={`step-item ${index === currentStep ? 'active' : index < currentStep ? 'completed' : ''}`}
-                  onClick={() => setCurrentStep(index)}
-                >
-                  <step.icon style={{ width: '18px', height: '18px', marginRight: '8px' }} />
-                  <span style={{ fontSize: '13px', fontWeight: '600' }}>
-                    {t.steps[step.key]}
-                  </span>
-                </div>
-              ))}
+              {steps.map((step, index) => {
+                const completion = calculateStepCompletion(index);
+                return (
+                  <div
+                    key={step.key}
+                    className={`step-item ${index === currentStep ? 'active' : completion === 100 ? 'completed' : ''}`}
+                    onClick={() => setCurrentStep(index)}
+                  >
+                    <step.icon style={{ width: '18px', height: '18px', marginRight: '8px' }} />
+                    <span style={{ fontSize: '13px', fontWeight: '600' }}>
+                      {t.steps[step.key]}
+                    </span>
+                    {completion > 0 && completion < 100 && (
+                      <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.7 }}>
+                        ({Math.round(completion)}%)
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Contenu des étapes */}
@@ -1619,16 +1967,40 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                       <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
                         🔢 {t.projectInfo.astNumber}
                       </label>
-                      <div className="ast-number-display">
+                      <div style={{
+                        background: 'rgba(34, 197, 94, 0.1)',
+                        border: '1px solid #22c55e',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}>
                         <div>
-                          <div className="ast-number-text">{formData.astNumber}</div>
+                          <div style={{
+                            fontFamily: 'Monaco, Menlo, Courier New, monospace',
+                            fontSize: '16px',
+                            fontWeight: '700',
+                            color: '#22c55e',
+                            letterSpacing: '0.5px'
+                          }}>
+                            {formData.astNumber}
+                          </div>
                           <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
                             {t.projectInfo.astInfo}
                           </div>
                         </div>
                         <button 
                           onClick={regenerateASTNumber}
-                          className="refresh-btn"
+                          style={{
+                            background: 'none',
+                            border: '1px solid #22c55e',
+                            color: '#22c55e',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease'
+                          }}
                           title="Régénérer le numéro"
                         >
                           <Copy style={{ width: '16px', height: '16px' }} />
@@ -1750,6 +2122,316 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                           projectInfo: { ...prev.projectInfo, workDescription: e.target.value }
                         }))}
                       />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ÉTAPE 2: Discussion avec l'Équipe */}
+              {currentStep === 1 && (
+                <div className="slide-in">
+                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
+                      💬 {t.teamDiscussion.title}
+                    </h2>
+                    <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>
+                      {t.teamDiscussion.subtitle}
+                    </p>
+                  </div>
+
+                  {/* Liste des discussions */}
+                  {formData.teamDiscussion.discussions.map((discussion) => (
+                    <div
+                      key={discussion.id}
+                      className={`discussion-item ${discussion.completed ? 'completed' : ''} ${discussion.priority}-priority`}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                        <CustomCheckbox
+                          checked={discussion.completed}
+                          onChange={() => toggleDiscussion(discussion.id)}
+                          label=""
+                        />
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 4px 0' }}>
+                            {discussion.topic}
+                          </h4>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: '12px', marginTop: '8px' }}>
+                            <input
+                              type="text"
+                              className="input-premium"
+                              placeholder={t.teamDiscussion.notes}
+                              value={discussion.notes}
+                              onChange={(e) => updateDiscussionNotes(discussion.id, e.target.value)}
+                              style={{ fontSize: '12px', padding: '8px 12px' }}
+                            />
+                            <input
+                              type="text"
+                              className="input-premium"
+                              placeholder={t.teamDiscussion.discussedBy}
+                              value={discussion.discussedBy}
+                              onChange={(e) => updateDiscussedBy(discussion.id, e.target.value)}
+                              style={{ fontSize: '12px', padding: '8px 12px' }}
+                            />
+                          </div>
+                        </div>
+                        <div style={{
+                          color: discussion.completed ? '#22c55e' : '#f59e0b',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          background: discussion.completed ? 'rgba(34, 197, 94, 0.1)' : 'rgba(251, 191, 36, 0.1)'
+                        }}>
+                          {discussion.completed ? t.teamDiscussion.completed : t.teamDiscussion.pending}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Résumé des discussions */}
+                  <div style={{
+                    marginTop: '32px',
+                    padding: '20px',
+                    background: 'rgba(30, 41, 59, 0.8)',
+                    border: '1px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '12px'
+                  }}>
+                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+                      📊 Résumé des Discussions
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.teamDiscussion.discussions.filter(d => d.completed).length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Complétées</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#f59e0b', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.teamDiscussion.discussions.filter(d => !d.completed).length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>En attente</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.teamDiscussion.discussions.filter(d => d.priority === 'high').length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Priorité élevée</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ÉTAPE 3: Équipements de Sécurité */}
+              {currentStep === 2 && (
+                <div className="slide-in">
+                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
+                      🛡️ {t.safetyEquipment.title}
+                    </h2>
+                  </div>
+
+                  {/* Équipements groupés par catégorie */}
+                  {Object.entries(groupedEquipment).map(([category, equipment]) => (
+                    <div key={category} style={{ marginBottom: '32px' }}>
+                      <h3 style={{ color: 'white', fontSize: '20px', fontWeight: '600', marginBottom: '16px' }}>
+                        {t.safetyEquipment.categories[category as keyof typeof t.safetyEquipment.categories]}
+                      </h3>
+                      
+                      <div className="equipment-grid">
+                        {equipment.map((item) => (
+                          <div
+                            key={item.id}
+                            className={`equipment-item ${item.required ? 'required' : ''} ${item.verified ? 'verified' : ''}`}
+                          >
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <CustomCheckbox
+                                  checked={item.required}
+                                  onChange={() => toggleEquipmentRequired(item.id)}
+                                  label=""
+                                />
+                                <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: '600' }}>
+                                  {t.safetyEquipment.required}
+                                </span>
+                                
+                                <CustomCheckbox
+                                  checked={item.available}
+                                  onChange={() => toggleEquipmentAvailable(item.id)}
+                                  label=""
+                                />
+                                <span style={{ fontSize: '12px', color: '#3b82f6', fontWeight: '600' }}>
+                                  {t.safetyEquipment.available}
+                                </span>
+                                
+                                <CustomCheckbox
+                                  checked={item.verified}
+                                  onChange={() => toggleEquipmentVerified(item.id)}
+                                  label=""
+                                />
+                                <span style={{ fontSize: '12px', color: '#22c55e', fontWeight: '600' }}>
+                                  {t.safetyEquipment.verified}
+                                </span>
+                              </div>
+                              
+                              <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: 0 }}>
+                                {item.name}
+                              </h4>
+                              
+                              <input
+                                type="text"
+                                className="input-premium"
+                                placeholder={t.safetyEquipment.notes}
+                                value={item.notes}
+                                onChange={(e) => updateEquipmentNotes(item.id, e.target.value)}
+                                style={{ fontSize: '12px', padding: '8px 12px' }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Résumé des équipements */}
+                  <div style={{
+                    padding: '20px',
+                    background: 'rgba(30, 41, 59, 0.8)',
+                    border: '1px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '12px'
+                  }}>
+                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+                      📊 Résumé des Équipements
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#f59e0b', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.safetyEquipment.filter(eq => eq.required).length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Requis</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#3b82f6', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.safetyEquipment.filter(eq => eq.available).length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Disponibles</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.safetyEquipment.filter(eq => eq.verified).length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Vérifiés</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ÉTAPE 4: Dangers Potentiels */}
+              {currentStep === 3 && (
+                <div className="slide-in">
+                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
+                      ⚠️ {t.hazards.title}
+                    </h2>
+                  </div>
+
+                  <div className="hazard-grid">
+                    {formData.electricalHazards.map((hazard) => (
+                      <div
+                        key={hazard.id}
+                        className={`hazard-item ${hazard.isSelected ? 'selected' : ''} ${hazard.riskLevel}`}
+                        onClick={() => toggleHazard(hazard.id)}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                          <CustomCheckbox
+                            checked={hazard.isSelected}
+                            onChange={() => toggleHazard(hazard.id)}
+                            label=""
+                          />
+                          <div style={{
+                            background: hazard.riskLevel === 'critical' ? '#dc2626' : 
+                                       hazard.riskLevel === 'high' ? '#f59e0b' :
+                                       hazard.riskLevel === 'medium' ? '#eab308' : '#22c55e',
+                            color: 'white',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: '600'
+                          }}>
+                            {hazard.code}
+                          </div>
+                          <span style={{
+                            color: hazard.riskLevel === 'critical' ? '#dc2626' : 
+                                   hazard.riskLevel === 'high' ? '#f59e0b' :
+                                   hazard.riskLevel === 'medium' ? '#eab308' : '#22c55e',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}>
+                            {t.hazards.levels[hazard.riskLevel]}
+                          </span>
+                        </div>
+                        
+                        <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0' }}>
+                          {hazard.title}
+                        </h4>
+                        
+                        <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 12px 0' }}>
+                          {hazard.description}
+                        </p>
+                        
+                        {hazard.isSelected && (
+                          <input
+                            type="text"
+                            className="input-premium"
+                            placeholder={t.hazards.notes}
+                            value={hazard.additionalNotes || ''}
+                            onChange={(e) => updateHazardNotes(hazard.id, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ fontSize: '12px', padding: '8px 12px' }}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Résumé des dangers */}
+                  <div style={{
+                    marginTop: '32px',
+                    padding: '20px',
+                    background: 'rgba(30, 41, 59, 0.8)',
+                    border: '1px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '12px'
+                  }}>
+                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+                      📊 Résumé des Dangers
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '16px' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#dc2626', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.electricalHazards.filter(h => h.isSelected && h.riskLevel === 'critical').length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Critiques</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#f59e0b', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.electricalHazards.filter(h => h.isSelected && h.riskLevel === 'high').length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Élevés</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#eab308', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.electricalHazards.filter(h => h.isSelected && h.riskLevel === 'medium').length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Moyens</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.electricalHazards.filter(h => h.isSelected).length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Total sélectionnés</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1973,6 +2655,58 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                 </div>
               )}
 
+              {/* ÉTAPE 7: Photos & Documentation */}
+              {currentStep === 6 && (
+                <div className="slide-in">
+                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
+                      📸 {t.steps.documentation}
+                    </h2>
+                  </div>
+
+                  <PhotoCarousel
+                    photos={formData.documentation.photos}
+                    onAddPhoto={addPhoto}
+                    onRemovePhoto={removePhoto}
+                    onUpdateDescription={updatePhotoDescription}
+                  />
+
+                  {/* Notes d'inspection */}
+                  <div style={{ marginTop: '32px' }}>
+                    <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                      📝 Notes d'inspection
+                    </label>
+                    <textarea 
+                      className="input-premium"
+                      style={{ minHeight: '120px', resize: 'vertical' }}
+                      placeholder="Notes détaillées sur l'inspection du site..."
+                      value={formData.documentation.inspectionNotes}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        documentation: { ...prev.documentation, inspectionNotes: e.target.value }
+                      }))}
+                    />
+                  </div>
+
+                  {/* Actions correctives */}
+                  <div style={{ marginTop: '24px' }}>
+                    <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                      🔧 Actions correctives requises
+                    </label>
+                    <textarea 
+                      className="input-premium"
+                      style={{ minHeight: '120px', resize: 'vertical' }}
+                      placeholder="Actions correctives identifiées et requises..."
+                      value={formData.documentation.correctiveActions}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        documentation: { ...prev.documentation, correctiveActions: e.target.value }
+                      }))}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* ÉTAPE 8: Validation Finale */}
               {currentStep === 7 && (
                 <div className="slide-in">
@@ -2073,6 +2807,20 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         </div>
                         <div style={{ color: '#94a3b8', fontSize: '12px' }}>Photos documentées</div>
                       </div>
+
+                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px' }}>
+                        <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.electricalHazards.filter(h => h.isSelected).length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Dangers identifiés</div>
+                      </div>
+
+                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px' }}>
+                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.safetyEquipment.filter(eq => eq.verified).length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Équipements vérifiés</div>
+                      </div>
                     </div>
 
                     {/* Status final */}
@@ -2099,23 +2847,6 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         }
                       </div>
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Autres étapes simplifiées */}
-              {[1, 2, 3, 6].includes(currentStep) && (
-                <div className="slide-in">
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                      {React.createElement(steps[currentStep].icon, { style: { width: '32px', height: '32px' } })}
-                      {t.steps[steps[currentStep].key]}
-                    </h2>
-                  </div>
-                  <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>
-                    <p style={{ fontSize: '16px', margin: 0 }}>
-                      Contenu de l'étape {t.steps[steps[currentStep].key]} - Implémentation à venir...
-                    </p>
                   </div>
                 </div>
               )}
@@ -2146,7 +2877,17 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                 {t.buttons.previous}
               </button>
               
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ 
+                  color: '#94a3b8', 
+                  fontSize: '14px',
+                  background: 'rgba(30, 41, 59, 0.8)',
+                  padding: '8px 16px',
+                  borderRadius: '8px'
+                }}>
+                  📊 Progression: {Math.round(overallProgress)}%
+                </div>
+                
                 <button 
                   onClick={() => handleSave(true)} 
                   className="btn-secondary"
@@ -2171,7 +2912,6 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     className="btn-premium" 
                     onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                    // Retiré le disabled pour permettre la navigation libre
                   >
                     {t.buttons.next} 
                     <ChevronRight style={{ width: '16px', height: '16px' }} />
