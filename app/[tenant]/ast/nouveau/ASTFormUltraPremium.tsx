@@ -1469,7 +1469,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
       window.location.href = `/${tenant.subdomain}/dashboard`;
     }, 2000);
   };
-  // =================== AST FORM ULTRA PREMIUM - SECTION 5/5 ===================
+// =================== AST FORM ULTRA PREMIUM - SECTION 5/5 ===================
 // Client Potentiel - Version Finale Complète
 // Section 5: Rendu JSX complet
 
@@ -2171,6 +2171,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     className="btn-premium" 
                     onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    // Retiré le disabled pour permettre la navigation libre
                   >
                     {t.buttons.next} 
                     <ChevronRight style={{ width: '16px', height: '16px' }} />
