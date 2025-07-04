@@ -3,71 +3,17 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    console.log('🔄 Connecting to database...')
+    console.log('🔄 Testing database connection...')
     
-    // Se connecter à la base de données
+    // Test simple de connexion
     await prisma.$connect()
     console.log('✅ Connected to database')
     
-    // Forcer la création des tables avec une requête SQL brute
-    console.log('📋 Creating tables...')
+    // Vérifier si les tenants existent déjà
+    const existingTenants = await prisma.tenant.findMany()
+    console.log('📊 Existing tenants:', existingTenants.length)
     
-    // Exécuter les migrations pour créer les tables
-    await prisma.$executeRaw`
-      CREATE TABLE IF NOT EXISTS "tenants" (
-        "id" TEXT NOT NULL PRIMARY KEY,
-        "subdomain" TEXT NOT NULL UNIQUE,
-        "companyName" TEXT NOT NULL,
-        "plan" TEXT NOT NULL DEFAULT 'basic',
-        "isActive" BOOLEAN NOT NULL DEFAULT true,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )
-    `
-    
-    await prisma.$executeRaw`
-      CREATE TABLE IF NOT EXISTS "users" (
-        "id" TEXT NOT NULL PRIMARY KEY,
-        "email" TEXT NOT NULL UNIQUE,
-        "name" TEXT,
-        "password" TEXT NOT NULL,
-        "role" TEXT NOT NULL DEFAULT 'user',
-        "tenantId" TEXT NOT NULL,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )
-    `
-    
-    await prisma.$executeRaw`
-      CREATE TABLE IF NOT EXISTS "ast_forms" (
-        "id" TEXT NOT NULL PRIMARY KEY,
-        "tenantId" TEXT NOT NULL,
-        "userId" TEXT NOT NULL,
-        "projectNumber" TEXT NOT NULL,
-        "clientName" TEXT NOT NULL,
-        "workLocation" TEXT NOT NULL,
-        "clientRep" TEXT,
-        "emergencyNumber" TEXT,
-        "astMdlNumber" TEXT NOT NULL,
-        "astClientNumber" TEXT,
-        "workDescription" TEXT NOT NULL,
-        "status" TEXT NOT NULL DEFAULT 'draft',
-        "generalInfo" JSONB,
-        "teamDiscussion" JSONB,
-        "isolation" JSONB,
-        "hazards" JSONB,
-        "controlMeasures" JSONB,
-        "workers" JSONB,
-        "photos" JSONB,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )
-    `
-    
-    console.log('✅ Tables created successfully')
-    
-    // Maintenant créer les tenants
-    console.log('📋 Creating demo tenant...')
+    // Créer tenant démo seulement s'il n'existe pas
     const demoTenant = await prisma.tenant.upsert({
       where: { subdomain: 'demo' },
       update: {},
@@ -78,7 +24,7 @@ export async function GET() {
       }
     })
     
-    console.log('📋 Creating C-Secur360 tenant...')
+    // Créer tenant C-Secur360 seulement s'il n'existe pas
     const csecurTenant = await prisma.tenant.upsert({
       where: { subdomain: 'c-secur360' },
       update: {},
@@ -93,15 +39,17 @@ export async function GET() {
     
     return NextResponse.json({ 
       success: true, 
-      message: '🎉 Tables et tenants créés avec succès! Vérifiez Supabase maintenant.',
-      tenants: [demoTenant, csecurTenant]
+      message: '🎉 Base de données connectée et tenants créés!',
+      tenants: [demoTenant, csecurTenant],
+      totalTenants: existingTenants.length + 2
     })
     
   } catch (error: any) {
     console.error('❌ Database error:', error)
     return NextResponse.json({ 
       success: false, 
-      error: error.message
+      error: error.message,
+      code: error.code
     }, { status: 500 })
   }
 }
