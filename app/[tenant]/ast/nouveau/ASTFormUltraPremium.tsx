@@ -1,4 +1,4 @@
-// =================== AST SECTION 1/5 CORRIGÉE - IMPORTS & INTERFACES ===================
+// =================== AST SECTION 1/5 - IMPORTS & INTERFACES ===================
 // Section 1: Imports et Interfaces complètes avec tous les nouveaux champs
 
 "use client";
@@ -26,7 +26,7 @@ interface ASTFormData {
     date: string;
     time: string;
     client: string;
-    clientPhone: string; // NOUVEAU
+    clientPhone: string;
     projectNumber: string;
     astClientNumber: string;
     workLocation: string;
@@ -34,7 +34,7 @@ interface ASTFormData {
     estimatedDuration: string;
     workerCount: number;
     clientRepresentative: string;
-    clientRepresentativePhone: string; // NOUVEAU
+    clientRepresentativePhone: string;
     emergencyContact: string;
     emergencyPhone: string;
     workPermitRequired: boolean;
@@ -120,7 +120,7 @@ interface TeamMember {
   validationComments?: string;
   consultationAst: boolean;
   cadenasAppose: boolean;
-  cadenasReleve: boolean; // Gardé pour compatibilité
+  cadenasReleve: boolean;
 }
 
 interface Photo {
@@ -143,7 +143,7 @@ interface IsolationPoint {
     cadenasAppose: boolean;
     absenceTension: boolean;
     miseALaTerre: boolean;
-    cadenasReleve: boolean; // Gardé pour compatibilité mais pas affiché
+    cadenasReleve: boolean;
   };
 }
 
@@ -221,7 +221,7 @@ const generateASTNumber = (): string => {
   const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
-// =================== AST SECTION 2/5 CORRIGÉE - DONNÉES & TRADUCTIONS ===================
+// =================== AST SECTION 2/5 - DONNÉES & TRADUCTIONS ===================
 // Section 2: Données complètes SANS DUPLICATIONS
 
 // =================== LOGO CLIENT POTENTIEL SVG (UNIQUE) ===================
@@ -353,7 +353,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
   { id: 'other-003', name: 'Équipement de communication', required: false, available: false, verified: false, notes: '', category: 'other' }
 ];
 
-// =================== DISCUSSIONS D'ÉQUIPE (GRIS MÉTALLIQUE) ===================
+// =================== DISCUSSIONS D'ÉQUIPE ===================
 const predefinedDiscussions: TeamDiscussion[] = [
   { id: 'disc-001', topic: 'Points de coupure électrique', notes: '', completed: false, discussedBy: '', priority: 'medium' },
   { id: 'disc-002', topic: 'Explication des dangers électriques', notes: '', completed: false, discussedBy: '', priority: 'medium' },
@@ -372,7 +372,7 @@ const emergencyProcedures: EmergencyProcedure[] = [
   { id: 'emerg-003', type: 'electrical', procedure: 'Coupure d\'urgence, consignation, vérification', responsiblePerson: 'Électricien qualifié', contactInfo: 'Responsable électrique', isVerified: false },
   { id: 'emerg-004', type: 'evacuation', procedure: 'Signal d\'évacuation, routes d\'évacuation, décompte', responsiblePerson: 'Responsable sécurité', contactInfo: 'Poste de commandement', isVerified: false }
 ];
-// =================== AST SECTION 3/5 CORRIGÉE - TRADUCTIONS & FONCTIONS ===================
+// =================== AST SECTION 3/5 - TRADUCTIONS & FONCTIONS ===================
 // Section 3: Traductions complètes, données initiales et fonctions Supabase
 
 // =================== TRADUCTIONS COMPLÈTES ===================
@@ -1174,7 +1174,7 @@ const PhotoCarousel: React.FC<{
     </div>
   );
 };
-// =================== AST SECTION 4/5 CORRIGÉE - COMPOSANT PRINCIPAL & LOGIQUE ===================
+// =================== AST SECTION 4/5 - COMPOSANT PRINCIPAL & LOGIQUE ===================
 // Section 4: Composant principal avec toutes les fonctions et logique métier
 
 // =================== STYLES CSS PREMIUM ===================
@@ -2382,11 +2382,11 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
     Math.round((approvedMembersCount / formData.team.members.length) * 100) : 0;
 
   // Le JSX return sera dans la section 5...
-  return (
 // =================== AST SECTION 5/5 FINALE - JSX INTERFACE COMPLÈTE ===================
 // Section 5: Interface utilisateur complète avec toutes les fonctionnalités
 
 // Continuation du return du composant principal...
+return (
     <div className="form-container">
       {/* INDICATEUR DE SAUVEGARDE */}
       {saveStatus !== 'idle' && (
@@ -3514,4 +3514,4 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
       </div>
     </div>
   );
-}    
+}
