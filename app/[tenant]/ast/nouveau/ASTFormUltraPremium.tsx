@@ -2,6 +2,8 @@
 // Client Potentiel - Version Finale Complète
 // Section 1: Imports et Interfaces
 
+"use client";
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   FileText, MessageSquare, Shield, Zap, Settings, Users, Camera, CheckCircle,
