@@ -1,4 +1,5 @@
-'use client'
+{/* KPI Cards Fonctionnels */}
+          <div 'use client'
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
@@ -30,26 +31,35 @@ import {
   History,
   Bookmark,
   Database,
-  ChevronDown
+  ChevronDown,
+  Camera,
+  Timer,
+  PieChart,
+  LineChart
 } from 'lucide-react'
 
 interface DashboardData {
+  // KPI Fonctionnels
   totalAST: number
   astThisMonth: number
   astCompleted: number
-  astOverdue: number
+  astMonthly: number[]
+  
   incidents: number
   nearMiss: number
   incidentsTrend: number
-  complianceRate: number
-  overdueAnalyses: number
-  upcomingRenewals: number
-  totalWorkers: number
-  trainedWorkers: number
-  certificationExpiring: number
-  suggestedImprovements: number
-  implementedImprovements: number
-  costSavings: number
+  incidentsByType: { type: string; count: number; color: string }[]
+  
+  hoursWorked: number
+  safeHours: number
+  safetyRate: number
+  
+  photosCount: number
+  photosThisWeek: number
+  
+  // Données graphiques
+  monthlyData: { month: string; ast: number; incidents: number; safety: number }[]
+  performanceTrend: number[]
 }
 
 interface Tenant {
@@ -58,51 +68,168 @@ interface Tenant {
   companyName: string
 }
 
-// Données simulées premium
-const mockData: DashboardData = {
-  totalAST: 1247,
-  astThisMonth: 89,
-  astCompleted: 1156,
-  astOverdue: 12,
-  incidents: 3,
-  nearMiss: 24,
-  incidentsTrend: -15,
-  complianceRate: 94.2,
-  overdueAnalyses: 8,
-  upcomingRenewals: 15,
-  totalWorkers: 156,
-  trainedWorkers: 148,
-  certificationExpiring: 12,
-  suggestedImprovements: 37,
-  implementedImprovements: 28,
-  costSavings: 145000
+// Données fonctionnelles réalistes
+const getFunctionalData = (isDemo: boolean): DashboardData => {
+  if (isDemo) {
+    // Données simulées pour démo
+    return {
+      totalAST: 347,
+      astThisMonth: 28,
+      astCompleted: 325,
+      astMonthly: [15, 22, 28, 31, 25, 29, 28],
+      
+      incidents: 2,
+      nearMiss: 8,
+      incidentsTrend: -25,
+      incidentsByType: [
+        { type: 'Électrique', count: 3, color: '#ef4444' },
+        { type: 'Chute', count: 2, color: '#f97316' },
+        { type: 'Équipement', count: 2, color: '#eab308' },
+        { type: 'Ergonomique', count: 1, color: '#22c55e' }
+      ],
+      
+      hoursWorked: 12480,
+      safeHours: 12456,
+      safetyRate: 99.8,
+      
+      photosCount: 156,
+      photosThisWeek: 12,
+      
+      monthlyData: [
+        { month: 'Jan', ast: 15, incidents: 3, safety: 98.2 },
+        { month: 'Fév', ast: 22, incidents: 2, safety: 98.8 },
+        { month: 'Mar', ast: 28, incidents: 1, safety: 99.1 },
+        { month: 'Avr', ast: 31, incidents: 2, safety: 98.9 },
+        { month: 'Mai', ast: 25, incidents: 1, safety: 99.3 },
+        { month: 'Jun', ast: 29, incidents: 0, safety: 99.8 },
+        { month: 'Jul', ast: 28, incidents: 1, safety: 99.5 }
+      ],
+      performanceTrend: [95, 96, 97, 98, 97, 99, 98, 99, 100]
+    }
+  } else {
+    // Données réelles client (à connecter à la DB)
+    return {
+      totalAST: 89,
+      astThisMonth: 12,
+      astCompleted: 84,
+      astMonthly: [8, 12, 15, 11, 9, 14, 12],
+      
+      incidents: 0,
+      nearMiss: 3,
+      incidentsTrend: -100,
+      incidentsByType: [
+        { type: 'Électrique', count: 1, color: '#ef4444' },
+        { type: 'Équipement', count: 2, color: '#eab308' }
+      ],
+      
+      hoursWorked: 3240,
+      safeHours: 3240,
+      safetyRate: 100,
+      
+      photosCount: 67,
+      photosThisWeek: 8,
+      
+      monthlyData: [
+        { month: 'Jan', ast: 8, incidents: 1, safety: 99.1 },
+        { month: 'Fév', ast: 12, incidents: 0, safety: 100 },
+        { month: 'Mar', ast: 15, incidents: 0, safety: 100 },
+        { month: 'Avr', ast: 11, incidents: 0, safety: 100 },
+        { month: 'Mai', ast: 9, incidents: 1, safety: 99.2 },
+        { month: 'Jun', ast: 14, incidents: 0, safety: 100 },
+        { month: 'Jul', ast: 12, incidents: 0, safety: 100 }
+      ],
+      performanceTrend: [98, 99, 100, 100, 99, 100, 100, 100, 100]
+    }
+  }
 }
 
-const recentAST = [
-  { id: 'AST-2024-089', project: 'Maintenance Turbine #3', client: 'Hydro-Québec', date: '2024-01-15', status: 'completed', risk: 'medium', progress: 100 },
-  { id: 'AST-2024-088', project: 'Réparation Transformateur', client: 'Énergir', date: '2024-01-14', status: 'pending', risk: 'high', progress: 75 },
-  { id: 'AST-2024-087', project: 'Installation Câblage', client: 'Bell Canada', date: '2024-01-14', status: 'overdue', risk: 'low', progress: 45 },
-  { id: 'AST-2024-086', project: 'Entretien Génératrice', client: 'Alstom', date: '2024-01-13', status: 'completed', risk: 'critical', progress: 100 }
-]
-
-const nearMissEvents = [
-  { id: 'NM-2024-024', description: 'Quasi-contact ligne électrique', severity: 'high', date: '2024-01-15', status: 'investigating', impact: 'Critique' },
-  { id: 'NM-2024-023', description: 'Chute outils depuis nacelle', severity: 'medium', date: '2024-01-14', status: 'resolved', impact: 'Modéré' },
-  { id: 'NM-2024-022', description: 'Mauvais EPI détecté', severity: 'low', date: '2024-01-13', status: 'resolved', impact: 'Faible' }
-]
-
-const improvements = [
-  { id: 'IMP-024', title: 'Procédure consignation améliorée', impact: 'Réduction risque 25%', cost: 15000, status: 'implemented', roi: 185 },
-  { id: 'IMP-023', title: 'Formation VR dangers électriques', impact: 'Engagement +40%', cost: 25000, status: 'planned', roi: 240 },
-  { id: 'IMP-022', title: 'App mobile check EPI', impact: 'Conformité +15%', cost: 8000, status: 'development', roi: 120 }
-]
+// Composant Graphique Simple
+const SimpleChart = ({ data, type = 'line' }: { data: any[], type?: 'line' | 'bar' | 'pie' }) => {
+  if (type === 'pie') {
+    const total = data.reduce((sum, item) => sum + item.count, 0)
+    let currentAngle = 0
+    
+    return (
+      <div style={{ width: '200px', height: '200px', position: 'relative', margin: '0 auto' }}>
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          {data.map((item, index) => {
+            const percentage = (item.count / total) * 100
+            const angle = (percentage / 100) * 360
+            const startAngle = currentAngle
+            currentAngle += angle
+            
+            const startX = 100 + 80 * Math.cos((startAngle - 90) * Math.PI / 180)
+            const startY = 100 + 80 * Math.sin((startAngle - 90) * Math.PI / 180)
+            const endX = 100 + 80 * Math.cos((currentAngle - 90) * Math.PI / 180)
+            const endY = 100 + 80 * Math.sin((currentAngle - 90) * Math.PI / 180)
+            
+            const largeArcFlag = angle > 180 ? 1 : 0
+            const pathData = `M 100 100 L ${startX} ${startY} A 80 80 0 ${largeArcFlag} 1 ${endX} ${endY} Z`
+            
+            return (
+              <path
+                key={index}
+                d={pathData}
+                fill={item.color}
+                opacity={0.8}
+                stroke="rgba(255,255,255,0.2)"
+                strokeWidth="2"
+              />
+            )
+          })}
+        </svg>
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+          <div style={{ color: 'white', fontSize: '24px', fontWeight: 'bold' }}>{total}</div>
+          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Total</div>
+        </div>
+      </div>
+    )
+  }
+  
+  if (type === 'line') {
+    const maxValue = Math.max(...data.map(d => d.ast))
+    const width = 300
+    const height = 150
+    const padding = 20
+    
+    return (
+      <svg width={width} height={height} style={{ overflow: 'visible' }}>
+        {/* Ligne de performance */}
+        <polyline
+          fill="none"
+          stroke="#22c55e"
+          strokeWidth="3"
+          points={data.map((d, i) => 
+            `${padding + (i * (width - 2 * padding) / (data.length - 1))},${height - padding - (d.ast / maxValue) * (height - 2 * padding)}`
+          ).join(' ')}
+        />
+        {/* Points */}
+        {data.map((d, i) => (
+          <circle
+            key={i}
+            cx={padding + (i * (width - 2 * padding) / (data.length - 1))}
+            cy={height - padding - (d.ast / maxValue) * (height - 2 * padding)}
+            r="4"
+            fill="#22c55e"
+            stroke="white"
+            strokeWidth="2"
+          />
+        ))}
+      </svg>
+    )
+  }
+  
+  return <div>Graphique en développement</div>
+}
 
 export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo', companyName: 'Demo Company' } }: { tenant?: Tenant }) {
   const [timeFilter, setTimeFilter] = useState('30d')
   const [isVisible, setIsVisible] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [showArchiveMenu, setShowArchiveMenu] = useState(false)
-  const data = mockData
+  
+  const isDemo = tenant.subdomain === 'demo'
+  const data = getFunctionalData(isDemo)
 
   // Animation d'entrée
   useEffect(() => {
@@ -118,7 +245,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
 
   return (
     <>
-      {/* CSS Animations Global + Nouvelles animations */}
+      {/* CSS Animations Global */}
       <style dangerouslySetInnerHTML={{
         __html: `
           @keyframes gradientShift {
@@ -167,10 +294,10 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           
           @keyframes glow {
             0%, 100% { 
-              box-shadow: 0 0 30px rgba(245, 158, 11, 0.4), inset 0 0 20px rgba(245, 158, 11, 0.1);
+              box-shadow: 0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15);
             }
             50% { 
-              box-shadow: 0 0 50px rgba(245, 158, 11, 0.7), inset 0 0 30px rgba(245, 158, 11, 0.2);
+              box-shadow: 0 0 70px rgba(245, 158, 11, 0.8), inset 0 0 40px rgba(245, 158, 11, 0.25);
             }
           }
           
@@ -187,10 +314,10 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           
           @keyframes logoGlow {
             0%, 100% { 
-              filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 10px rgba(245, 158, 11, 0.3));
+              filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 15px rgba(245, 158, 11, 0.4));
             }
             50% { 
-              filter: brightness(1.4) contrast(1.2) drop-shadow(0 0 20px rgba(245, 158, 11, 0.6));
+              filter: brightness(1.5) contrast(1.3) drop-shadow(0 0 25px rgba(245, 158, 11, 0.7));
             }
           }
           
@@ -278,21 +405,6 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
             box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4);
           }
           
-          .btn-premium:before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
-          }
-          
-          .btn-premium:hover:before {
-            left: 100%;
-          }
-          
           .dropdown-menu {
             position: absolute;
             top: 100%;
@@ -324,40 +436,6 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
             transform: translateX(8px);
           }
           
-          .dropdown-item:last-child {
-            border-bottom: none;
-          }
-          
-          .status-badge {
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-          }
-          
-          .status-completed {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-            border: 1px solid rgba(34, 197, 94, 0.3);
-          }
-          
-          .status-pending {
-            background: rgba(234, 179, 8, 0.2);
-            color: #eab308;
-            border: 1px solid rgba(234, 179, 8, 0.3);
-          }
-          
-          .status-overdue {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-          }
-          
           .interactive-bg {
             position: absolute;
             width: 300px;
@@ -371,7 +449,57 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           
           @media (max-width: 768px) {
             .slide-in-up { animation-delay: 0.1s; }
-            .dashboard-container { padding: 16px; }
+            .dashboard-container { padding: 12px; }
+            
+            .mobile-grid {
+              grid-template-columns: 1fr !important;
+              gap: 16px !important;
+            }
+            
+            .mobile-padding {
+              padding: 16px !important;
+            }
+            
+            .mobile-text {
+              font-size: 14px !important;
+            }
+            
+            .mobile-title {
+              font-size: 24px !important;
+            }
+            
+            .mobile-kpi {
+              font-size: 28px !important;
+            }
+          }
+          
+          @media (max-width: 480px) {
+            .dashboard-container { padding: 8px; }
+            
+            .ultra-mobile-grid {
+              grid-template-columns: 1fr !important;
+              gap: 12px !important;
+            }
+            
+            .ultra-mobile-padding {
+              padding: 12px !important;
+            }
+          }
+          
+          @media (min-width: 769px) and (max-width: 1024px) {
+            .tablet-grid {
+              grid-template-columns: repeat(2, 1fr) !important;
+            }
+          }
+          
+          @media (min-width: 1025px) {
+            .desktop-grid {
+              grid-template-columns: repeat(3, 1fr) !important;
+            }
+            
+            .desktop-kpi-grid {
+              grid-template-columns: repeat(4, 1fr) !important;
+            }
           }
         `
       }} />
@@ -399,7 +527,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           zIndex: 1
         }} />
 
-        {/* Header Ultra Premium avec Logo Premium */}
+        {/* Header Ultra Premium avec Logo Ultra Grossi */}
         <header style={{
           background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
           backdropFilter: 'blur(20px)',
@@ -424,23 +552,23 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               gap: '20px'
             }}>
               
-              {/* Logo Premium avec Encadré Noir */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+              {/* Logo Premium Ultra Grossi */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
                 <div 
                   className="float-animation glow-effect"
                   style={{
                     background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
-                    padding: '24px',
-                    borderRadius: '28px',
-                    border: '3px solid #f59e0b',
-                    boxShadow: '0 0 40px rgba(245, 158, 11, 0.5), inset 0 0 20px rgba(245, 158, 11, 0.1)',
+                    padding: '32px',
+                    borderRadius: '32px',
+                    border: '4px solid #f59e0b',
+                    boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
                     position: 'relative',
                     overflow: 'hidden'
                   }}
                 >
                   <div style={{
-                    width: '72px',
-                    height: '72px',
+                    width: '96px',
+                    height: '96px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -452,8 +580,8 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                       alt="C-Secur360"
                       className="logo-glow"
                       style={{ 
-                        width: '72px', 
-                        height: '72px', 
+                        width: '96px', 
+                        height: '96px', 
                         objectFit: 'contain'
                       }}
                       onError={(e) => {
@@ -463,28 +591,37 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                       }}
                     />
                     <BarChart3 style={{ 
-                      width: '48px', 
-                      height: '48px', 
+                      width: '64px', 
+                      height: '64px', 
                       display: 'none',
                       color: '#f59e0b'
                     }} />
                   </div>
                   
-                  {/* Effet brillance animé */}
+                  {/* Effet brillance animé renforcé */}
                   <div style={{
                     position: 'absolute',
                     top: 0,
                     left: '-100%',
                     width: '100%',
                     height: '100%',
-                    background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.3), transparent)',
-                    animation: 'shine 3s ease-in-out infinite'
+                    background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
+                    animation: 'shine 2.5s ease-in-out infinite'
+                  }} />
+                  
+                  {/* Effet de pulse en arrière-plan */}
+                  <div style={{
+                    position: 'absolute',
+                    inset: '-10px',
+                    border: '2px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '40px',
+                    animation: 'pulse 3s ease-in-out infinite'
                   }} />
                 </div>
                 
                 <div className="slide-in-right">
                   <h1 className="text-gradient" style={{
-                    fontSize: '36px',
+                    fontSize: '40px',
                     margin: 0,
                     lineHeight: 1.2,
                     fontWeight: '900',
@@ -494,7 +631,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   </h1>
                   <p style={{
                     color: 'rgba(251, 191, 36, 0.9)',
-                    fontSize: '18px',
+                    fontSize: '20px',
                     margin: 0,
                     fontWeight: '600'
                   }}>
@@ -504,26 +641,39 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
-                    marginTop: '8px'
+                    marginTop: '12px'
                   }}>
                     <div style={{
-                      width: '10px',
-                      height: '10px',
+                      width: '12px',
+                      height: '12px',
                       borderRadius: '50%',
                       background: '#22c55e'
                     }} className="pulse-animation" />
                     <span style={{
                       color: '#22c55e',
-                      fontSize: '14px',
+                      fontSize: '16px',
                       fontWeight: '600'
                     }}>
                       Système opérationnel
                     </span>
+                    {isDemo && (
+                      <span style={{
+                        background: 'rgba(245, 158, 11, 0.2)',
+                        color: '#f59e0b',
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        marginLeft: '8px'
+                      }}>
+                        VERSION DÉMO
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
               
-              {/* Contrôles premium avec Archives */}
+              {/* Contrôles premium */}
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -545,69 +695,12 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     cursor: 'pointer',
                     transition: 'all 0.3s ease'
                   }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = 'rgba(251, 191, 36, 0.6)';
-                    e.target.style.boxShadow = '0 0 20px rgba(251, 191, 36, 0.2)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = 'rgba(251, 191, 36, 0.3)';
-                    e.target.style.boxShadow = 'none';
-                  }}
                 >
                   <option value="7d">7 derniers jours</option>
                   <option value="30d">30 derniers jours</option>
                   <option value="90d">3 derniers mois</option>
                   <option value="1y">Dernière année</option>
                 </select>
-
-                {/* Bouton Archives avec Dropdown */}
-                <div style={{ position: 'relative' }}>
-                  <button 
-                    className="btn-premium"
-                    onClick={() => setShowArchiveMenu(!showArchiveMenu)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    <Archive style={{ width: '16px', height: '16px' }} />
-                    Archives
-                    <ChevronDown style={{ width: '14px', height: '14px' }} />
-                  </button>
-
-                  {showArchiveMenu && (
-                    <div className="dropdown-menu">
-                      <Link href={`/${tenant.subdomain}/archives/ast`} className="dropdown-item">
-                        <FileText style={{ width: '16px', height: '16px' }} />
-                        <div>
-                          <div style={{ fontWeight: '600' }}>AST Historique</div>
-                          <div style={{ fontSize: '12px', opacity: 0.7 }}>Par année/projet/date</div>
-                        </div>
-                      </Link>
-                      
-                      <Link href={`/${tenant.subdomain}/archives/near-miss`} className="dropdown-item">
-                        <AlertTriangle style={{ width: '16px', height: '16px' }} />
-                        <div>
-                          <div style={{ fontWeight: '600' }}>Passé Proche</div>
-                          <div style={{ fontSize: '12px', opacity: 0.7 }}>Incidents archivés</div>
-                        </div>
-                      </Link>
-                      
-                      <Link href={`/${tenant.subdomain}/archives/improvements`} className="dropdown-item">
-                        <Target style={{ width: '16px', height: '16px' }} />
-                        <div>
-                          <div style={{ fontWeight: '600' }}>Améliorations</div>
-                          <div style={{ fontSize: '12px', opacity: 0.7 }}>Recommandations & ROI</div>
-                        </div>
-                      </Link>
-                      
-                      <Link href={`/${tenant.subdomain}/archives/reports`} className="dropdown-item">
-                        <Database style={{ width: '16px', height: '16px' }} />
-                        <div>
-                          <div style={{ fontWeight: '600' }}>Rapports Annuels</div>
-                          <div style={{ fontSize: '12px', opacity: 0.7 }}>Compilation complète</div>
-                        </div>
-                      </Link>
-                    </div>
-                  )}
-                </div>
                 
                 <button className="btn-premium">
                   <Download style={{ width: '16px', height: '16px', marginRight: '8px' }} />
@@ -618,7 +711,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           </div>
         </header>
 
-        {/* Container principal */}
+                  {/* Container principal */}
         <div style={{ 
           maxWidth: '1400px', 
           margin: '0 auto', 
@@ -626,20 +719,169 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           position: 'relative',
           zIndex: 5
         }}>
+
+          {/* Actions Rapides EN HAUT - Responsive */}
+          <div 
+            className="slide-in-up mobile-grid tablet-grid desktop-grid"
+            style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+              gap: '24px',
+              marginBottom: '48px'
+            }}
+          >
+            {[
+              { 
+                href: `/${tenant.subdomain}/ast/nouveau`, 
+                icon: FileText, 
+                title: 'Nouveau AST', 
+                desc: 'Créer une analyse complète', 
+                color: '#3b82f6',
+                gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                priority: true
+              },
+              { 
+                href: `/${tenant.subdomain}/near-miss/nouveau`, 
+                icon: AlertTriangle, 
+                title: 'Passé Proche', 
+                desc: 'Signaler un incident/accident', 
+                color: '#f97316',
+                gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                priority: true
+              },
+              { 
+                href: `/${tenant.subdomain}/improvements/nouveau`, 
+                icon: Target, 
+                title: 'Amélioration', 
+                desc: 'Suggérer une amélioration', 
+                color: '#22c55e',
+                gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                priority: true
+              }
+            ].map((action, index) => {
+              const Icon = action.icon;
+              return (
+                <Link key={index} href={action.href} style={{ textDecoration: 'none' }}>
+                  <div 
+                    className="glass-effect card-hover mobile-padding"
+                    style={{
+                      padding: '32px 24px',
+                      textAlign: 'center',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      border: `2px solid rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.4)`,
+                      minHeight: '180px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                  >
+                    {/* Barre colorée en haut */}
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '6px',
+                      background: action.gradient,
+                      opacity: 0.9
+                    }} />
+                    
+                    {/* Badge priorité */}
+                    <div className="mobile-text" style={{
+                      position: 'absolute',
+                      top: '16px',
+                      right: '16px',
+                      background: action.gradient,
+                      color: 'white',
+                      padding: '4px 8px',
+                      borderRadius: '8px',
+                      fontSize: '10px',
+                      fontWeight: '700',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      Priorité
+                    </div>
+                    
+                    {/* Icône principale */}
+                    <div 
+                      className="float-animation"
+                      style={{
+                        width: '64px',
+                        height: '64px',
+                        margin: '0 auto 16px auto',
+                        background: action.gradient,
+                        borderRadius: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: `0 8px 32px rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.4)`,
+                        position: 'relative'
+                      }}
+                    >
+                      <Icon style={{ width: '32px', height: '32px', color: 'white' }} />
+                    </div>
+                    
+                    {/* Titre */}
+                    <h3 className="text-gradient mobile-text" style={{ 
+                      fontSize: '18px', 
+                      fontWeight: '700', 
+                      margin: '0 0 8px 0',
+                      textAlign: 'center'
+                    }}>
+                      {action.title}
+                    </h3>
+                    
+                    {/* Description */}
+                    <p className="mobile-text" style={{ 
+                      color: '#94a3b8', 
+                      fontSize: '13px', 
+                      margin: '0 0 16px 0',
+                      fontWeight: '500',
+                      textAlign: 'center',
+                      lineHeight: 1.4
+                    }}>
+                      {action.desc}
+                    </p>
+                    
+                    {/* Call to action */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      color: action.color,
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      background: `rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.1)`,
+                      padding: '8px 16px',
+                      borderRadius: '12px',
+                      border: `1px solid rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.2)`
+                    }}>
+                      <Play style={{ width: '12px', height: '12px' }} />
+                      Commencer
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
           
-          {/* KPI Cards Ultra Premium (identique à avant) */}
+          {/* KPI Cards Fonctionnels */}
           <div 
             className="slide-in-up" 
             style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-              gap: '24px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+              gap: '20px',
               marginBottom: '40px'
             }}
           >
             
-            {/* AST Complétés */}
-            <div className="glass-effect card-hover" style={{ padding: '28px', position: 'relative', overflow: 'hidden' }}>
+            {/* AST Complétés - FONCTIONNEL */}
+            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
               <div style={{ 
                 position: 'absolute', 
                 top: '-50%', 
@@ -653,9 +895,9 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                 <div style={{ flex: 1 }}>
                   <p style={{ 
                     color: 'rgba(34, 197, 94, 0.9)', 
-                    fontSize: '14px', 
+                    fontSize: '12px', 
                     fontWeight: '600', 
-                    margin: '0 0 12px 0', 
+                    margin: '0 0 8px 0', 
                     textTransform: 'uppercase', 
                     letterSpacing: '0.1em' 
                   }}>
@@ -663,9 +905,9 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   </p>
                   <p style={{ 
                     color: 'white', 
-                    fontSize: '42px', 
+                    fontSize: '32px', 
                     fontWeight: '900', 
-                    margin: '0 0 8px 0', 
+                    margin: '0 0 6px 0', 
                     lineHeight: 1,
                     textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                   }}>
@@ -673,19 +915,19 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   </p>
                   <p style={{ 
                     color: 'rgba(34, 197, 94, 0.8)', 
-                    fontSize: '14px', 
+                    fontSize: '12px', 
                     margin: 0, 
                     fontWeight: '500',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '4px'
                   }}>
-                    <TrendingUp style={{ width: '14px', height: '14px' }} />
+                    <TrendingUp style={{ width: '12px', height: '12px' }} />
                     +{data.astThisMonth} ce mois
                   </p>
                   <div style={{
-                    marginTop: '12px',
-                    height: '4px',
+                    marginTop: '10px',
+                    height: '3px',
                     background: 'rgba(34, 197, 94, 0.2)',
                     borderRadius: '2px',
                     overflow: 'hidden'
@@ -694,7 +936,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                       height: '100%',
                       background: 'linear-gradient(90deg, #22c55e, #16a34a)',
                       borderRadius: '2px',
-                      '--progress': '93%'
+                      '--progress': `${Math.min((data.astCompleted / data.totalAST) * 100, 100)}%`
                     } as any} />
                   </div>
                 </div>
@@ -702,19 +944,19 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   className="pulse-animation"
                   style={{
                     background: 'rgba(34, 197, 94, 0.2)',
-                    padding: '20px',
-                    borderRadius: '20px',
+                    padding: '16px',
+                    borderRadius: '16px',
                     backdropFilter: 'blur(10px)',
                     border: '1px solid rgba(34, 197, 94, 0.3)'
                   }}
                 >
-                  <CheckCircle style={{ width: '36px', height: '36px', color: '#22c55e' }} />
+                  <CheckCircle style={{ width: '28px', height: '28px', color: '#22c55e' }} />
                 </div>
               </div>
             </div>
 
-            {/* Conformité */}
-            <div className="glass-effect card-hover" style={{ padding: '28px', position: 'relative', overflow: 'hidden' }}>
+            {/* AST Mensuels - REMPLACE Conformité */}
+            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
               <div style={{ 
                 position: 'absolute', 
                 top: '-50%', 
@@ -728,39 +970,39 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                 <div style={{ flex: 1 }}>
                   <p style={{ 
                     color: 'rgba(59, 130, 246, 0.9)', 
-                    fontSize: '14px', 
+                    fontSize: '12px', 
                     fontWeight: '600', 
-                    margin: '0 0 12px 0', 
+                    margin: '0 0 8px 0', 
                     textTransform: 'uppercase', 
                     letterSpacing: '0.1em' 
                   }}>
-                    Conformité CNESST
+                    AST Mensuels
                   </p>
                   <p style={{ 
                     color: 'white', 
-                    fontSize: '42px', 
+                    fontSize: '32px', 
                     fontWeight: '900', 
-                    margin: '0 0 8px 0', 
+                    margin: '0 0 6px 0', 
                     lineHeight: 1,
                     textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                   }}>
-                    {data.complianceRate}%
+                    {data.astThisMonth}
                   </p>
                   <p style={{ 
                     color: 'rgba(59, 130, 246, 0.8)', 
-                    fontSize: '14px', 
+                    fontSize: '12px', 
                     margin: 0, 
                     fontWeight: '500',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '4px'
                   }}>
-                    <Award style={{ width: '14px', height: '14px' }} />
-                    Standard Excellence
+                    <Calendar style={{ width: '12px', height: '12px' }} />
+                    Objectif: {Math.round(data.totalAST / 12)}/mois
                   </p>
                   <div style={{
-                    marginTop: '12px',
-                    height: '4px',
+                    marginTop: '10px',
+                    height: '3px',
                     background: 'rgba(59, 130, 246, 0.2)',
                     borderRadius: '2px',
                     overflow: 'hidden'
@@ -769,7 +1011,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                       height: '100%',
                       background: 'linear-gradient(90deg, #3b82f6, #2563eb)',
                       borderRadius: '2px',
-                      '--progress': '94%'
+                      '--progress': `${Math.min((data.astThisMonth / (data.totalAST / 12)) * 100, 100)}%`
                     } as any} />
                   </div>
                 </div>
@@ -777,19 +1019,19 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   className="pulse-animation"
                   style={{
                     background: 'rgba(59, 130, 246, 0.2)',
-                    padding: '20px',
-                    borderRadius: '20px',
+                    padding: '16px',
+                    borderRadius: '16px',
                     backdropFilter: 'blur(10px)',
                     border: '1px solid rgba(59, 130, 246, 0.3)'
                   }}
                 >
-                  <Shield style={{ width: '36px', height: '36px', color: '#3b82f6' }} />
+                  <Calendar style={{ width: '28px', height: '28px', color: '#3b82f6' }} />
                 </div>
               </div>
             </div>
 
-            {/* Incidents Évités */}
-            <div className="glass-effect card-hover" style={{ padding: '28px', position: 'relative', overflow: 'hidden' }}>
+            {/* Incidents - FONCTIONNEL */}
+            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
               <div style={{ 
                 position: 'absolute', 
                 top: '-50%', 
@@ -803,9 +1045,9 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                 <div style={{ flex: 1 }}>
                   <p style={{ 
                     color: 'rgba(245, 158, 11, 0.9)', 
-                    fontSize: '14px', 
+                    fontSize: '12px', 
                     fontWeight: '600', 
-                    margin: '0 0 12px 0', 
+                    margin: '0 0 8px 0', 
                     textTransform: 'uppercase', 
                     letterSpacing: '0.1em' 
                   }}>
@@ -813,9 +1055,9 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   </p>
                   <p style={{ 
                     color: 'white', 
-                    fontSize: '42px', 
+                    fontSize: '32px', 
                     fontWeight: '900', 
-                    margin: '0 0 8px 0', 
+                    margin: '0 0 6px 0', 
                     lineHeight: 1,
                     textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                   }}>
@@ -823,48 +1065,51 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   </p>
                   <p style={{ 
                     color: 'rgba(245, 158, 11, 0.8)', 
-                    fontSize: '14px', 
+                    fontSize: '12px', 
                     margin: 0, 
                     fontWeight: '500',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '4px'
                   }}>
-                    <TrendingUp style={{ width: '14px', height: '14px' }} />
-                    {Math.abs(data.incidentsTrend)}% réduction
+                    <TrendingUp style={{ width: '12px', height: '12px' }} />
+                    {Math.abs(data.incidentsTrend)}% {data.incidentsTrend < 0 ? 'réduction' : 'augmentation'}
                   </p>
                   <div style={{
-                    marginTop: '12px',
-                    height: '4px',
+                    marginTop: '10px',
+                    height: '3px',
                     background: 'rgba(245, 158, 11, 0.2)',
                     borderRadius: '2px',
                     overflow: 'hidden'
                   }}>
                     <div className="progress-bar" style={{
                       height: '100%',
-                      background: 'linear-gradient(90deg, #f59e0b, #d97706)',
+                      background: data.incidents === 0 ? 'linear-gradient(90deg, #22c55e, #16a34a)' : 'linear-gradient(90deg, #f59e0b, #d97706)',
                       borderRadius: '2px',
-                      '--progress': '85%'
+                      '--progress': `${data.incidents === 0 ? 100 : Math.max(100 - (data.incidents * 20), 20)}%`
                     } as any} />
                   </div>
                 </div>
                 <div 
                   className="pulse-animation"
                   style={{
-                    background: 'rgba(245, 158, 11, 0.2)',
-                    padding: '20px',
-                    borderRadius: '20px',
+                    background: data.incidents === 0 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                    padding: '16px',
+                    borderRadius: '16px',
                     backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(245, 158, 11, 0.3)'
+                    border: `1px solid ${data.incidents === 0 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
                   }}
                 >
-                  <AlertTriangle style={{ width: '36px', height: '36px', color: '#f59e0b' }} />
+                  {data.incidents === 0 ? 
+                    <CheckCircle style={{ width: '28px', height: '28px', color: '#22c55e' }} /> :
+                    <AlertTriangle style={{ width: '28px', height: '28px', color: '#f59e0b' }} />
+                  }
                 </div>
               </div>
             </div>
 
-            {/* Économies Réalisées */}
-            <div className="glass-effect card-hover" style={{ padding: '28px', position: 'relative', overflow: 'hidden' }}>
+            {/* Heures Sécuritaires - REMPLACE Économies */}
+            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
               <div style={{ 
                 position: 'absolute', 
                 top: '-50%', 
@@ -878,39 +1123,39 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                 <div style={{ flex: 1 }}>
                   <p style={{ 
                     color: 'rgba(147, 51, 234, 0.9)', 
-                    fontSize: '14px', 
+                    fontSize: '12px', 
                     fontWeight: '600', 
-                    margin: '0 0 12px 0', 
+                    margin: '0 0 8px 0', 
                     textTransform: 'uppercase', 
                     letterSpacing: '0.1em' 
                   }}>
-                    Économies Réalisées
+                    Heures Sécuritaires
                   </p>
                   <p style={{ 
                     color: 'white', 
-                    fontSize: '42px', 
+                    fontSize: '32px', 
                     fontWeight: '900', 
-                    margin: '0 0 8px 0', 
+                    margin: '0 0 6px 0', 
                     lineHeight: 1,
                     textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                   }}>
-                    {(data.costSavings / 1000).toFixed(0)}K$
+                    {(data.safeHours / 1000).toFixed(1)}K
                   </p>
                   <p style={{ 
                     color: 'rgba(147, 51, 234, 0.8)', 
-                    fontSize: '14px', 
+                    fontSize: '12px', 
                     margin: 0, 
                     fontWeight: '500',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '4px'
                   }}>
-                    <Target style={{ width: '14px', height: '14px' }} />
-                    ROI 240% prévention
+                    <Timer style={{ width: '12px', height: '12px' }} />
+                    {data.safetyRate}% taux sécurité
                   </p>
                   <div style={{
-                    marginTop: '12px',
-                    height: '4px',
+                    marginTop: '10px',
+                    height: '3px',
                     background: 'rgba(147, 51, 234, 0.2)',
                     borderRadius: '2px',
                     overflow: 'hidden'
@@ -919,7 +1164,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                       height: '100%',
                       background: 'linear-gradient(90deg, #9333ea, #7c3aed)',
                       borderRadius: '2px',
-                      '--progress': '78%'
+                      '--progress': `${data.safetyRate}%`
                     } as any} />
                   </div>
                 </div>
@@ -927,24 +1172,24 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   className="pulse-animation"
                   style={{
                     background: 'rgba(147, 51, 234, 0.2)',
-                    padding: '20px',
-                    borderRadius: '20px',
+                    padding: '16px',
+                    borderRadius: '16px',
                     backdropFilter: 'blur(10px)',
                     border: '1px solid rgba(147, 51, 234, 0.3)'
                   }}
                 >
-                  <Target style={{ width: '36px', height: '36px', color: '#9333ea' }} />
+                  <Timer style={{ width: '28px', height: '28px', color: '#9333ea' }} />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Alertes Critiques Ultra Premium (identique à avant) */}
+          {/* Graphiques de Performance - REMPLACE Alertes Prioritaires */}
           <div 
             className="glass-effect slide-in-up"
             style={{
-              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%)',
-              borderColor: 'rgba(239, 68, 68, 0.2)',
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)',
+              borderColor: 'rgba(59, 130, 246, 0.2)',
               padding: '32px',
               marginBottom: '40px',
               position: 'relative',
@@ -957,172 +1202,204 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               left: 0,
               right: 0,
               height: '4px',
-              background: 'linear-gradient(90deg, #ef4444, #f97316, #eab308)',
+              background: 'linear-gradient(90deg, #3b82f6, #9333ea, #22c55e)',
               opacity: 0.6
             }} />
             
             <h2 className="text-gradient" style={{
               fontSize: '28px',
-              margin: '0 0 24px 0',
+              margin: '0 0 32px 0',
               display: 'flex',
               alignItems: 'center',
               gap: '16px',
               fontWeight: '700'
             }}>
-              <Bell className="pulse-animation" style={{ width: '28px', height: '28px', color: '#ef4444' }} />
-              Alertes Prioritaires
-              <span style={{
-                background: 'rgba(239, 68, 68, 0.2)',
-                color: '#ef4444',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                fontSize: '12px',
-                fontWeight: '600'
-              }}>
-                {data.astOverdue + data.certificationExpiring} alertes
-              </span>
+              <BarChart3 className="pulse-animation" style={{ width: '28px', height: '28px', color: '#3b82f6' }} />
+              Graphiques de Performance
+              {isDemo && (
+                <span style={{
+                  background: 'rgba(245, 158, 11, 0.2)',
+                  color: '#f59e0b',
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}>
+                  Données simulées
+                </span>
+              )}
             </h2>
             
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-              gap: '24px' 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', 
+              gap: '32px' 
             }}>
-              {[
-                { 
-                  title: 'AST En Retard', 
-                  value: data.astOverdue, 
-                  desc: 'Action requise immédiate', 
-                  color: '#ef4444',
-                  icon: Clock,
-                  urgent: true
-                },
-                { 
-                  title: 'Certifications Expirantes', 
-                  value: data.certificationExpiring, 
-                  desc: 'Dans les 30 prochains jours', 
-                  color: '#f97316',
-                  icon: Award,
-                  urgent: false
-                },
-                { 
-                  title: 'Renouvellements AST', 
-                  value: data.upcomingRenewals, 
-                  desc: 'Planification requise', 
-                  color: '#eab308',
-                  icon: Calendar,
-                  urgent: false
-                }
-              ].map((alert, index) => {
-                const Icon = alert.icon;
-                return (
-                  <div 
-                    key={index}
-                    className="card-hover"
-                    style={{
-                      background: `rgba(${alert.color === '#ef4444' ? '239, 68, 68' : alert.color === '#f97316' ? '249, 115, 22' : '234, 179, 8'}, 0.15)`,
-                      border: `1px solid rgba(${alert.color === '#ef4444' ? '239, 68, 68' : alert.color === '#f97316' ? '249, 115, 22' : '234, 179, 8'}, 0.3)`,
-                      borderRadius: '20px',
-                      padding: '24px',
-                      backdropFilter: 'blur(10px)',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    {alert.urgent && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '16px',
-                        right: '16px',
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        background: '#ef4444'
-                      }} className="pulse-animation" />
-                    )}
-                    
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
-                      <div style={{
-                        background: `rgba(${alert.color === '#ef4444' ? '239, 68, 68' : alert.color === '#f97316' ? '249, 115, 22' : '234, 179, 8'}, 0.2)`,
-                        padding: '12px',
-                        borderRadius: '12px'
-                      }}>
-                        <Icon style={{ width: '24px', height: '24px', color: alert.color }} />
-                      </div>
-                      <h3 style={{ 
-                        color: alert.color, 
-                        fontSize: '16px', 
-                        fontWeight: '700', 
-                        margin: 0,
-                        flex: 1
-                      }}>
-                        {alert.title}
-                      </h3>
+              
+              {/* Évolution AST par mois */}
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.4)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '20px',
+                padding: '24px',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <h3 style={{ 
+                  color: '#3b82f6', 
+                  fontSize: '18px', 
+                  fontWeight: '700', 
+                  margin: '0 0 20px 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <LineChart style={{ width: '20px', height: '20px' }} />
+                  Évolution AST
+                </h3>
+                <SimpleChart data={data.monthlyData} type="line" />
+                <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8' }}>
+                  <span>Jan</span>
+                  <span>Mar</span>
+                  <span>Mai</span>
+                  <span>Jul</span>
+                </div>
+              </div>
+
+              {/* Types d'incidents (Camembert) */}
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.4)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                borderRadius: '20px',
+                padding: '24px',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <h3 style={{ 
+                  color: '#f59e0b', 
+                  fontSize: '18px', 
+                  fontWeight: '700', 
+                  margin: '0 0 20px 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <PieChart style={{ width: '20px', height: '20px' }} />
+                  Types d'Incidents
+                </h3>
+                <SimpleChart data={data.incidentsByType} type="pie" />
+                <div style={{ marginTop: '16px' }}>
+                  {data.incidentsByType.map((item, index) => (
+                    <div key={index} style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      marginBottom: '8px',
+                      fontSize: '12px'
+                    }}>
+                      <div style={{ 
+                        width: '12px', 
+                        height: '12px', 
+                        borderRadius: '50%', 
+                        background: item.color 
+                      }} />
+                      <span style={{ color: 'white', flex: 1 }}>{item.type}</span>
+                      <span style={{ color: '#94a3b8' }}>{item.count}</span>
                     </div>
-                    
-                    <p style={{ 
-                      color: 'white', 
-                      fontSize: '32px', 
-                      fontWeight: '900', 
-                      margin: '0 0 8px 0',
-                      textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                    }}>
-                      {alert.value}
-                    </p>
-                    <p style={{ 
-                      color: `rgba(${alert.color === '#ef4444' ? '239, 68, 68' : alert.color === '#f97316' ? '249, 115, 22' : '234, 179, 8'}, 0.8)`, 
-                      fontSize: '13px', 
-                      margin: 0,
-                      fontWeight: '500'
-                    }}>
-                      {alert.desc}
-                    </p>
+                  ))}
+                </div>
+              </div>
+
+              {/* Photos AST */}
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.4)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                borderRadius: '20px',
+                padding: '24px',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <h3 style={{ 
+                  color: '#22c55e', 
+                  fontSize: '18px', 
+                  fontWeight: '700', 
+                  margin: '0 0 20px 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <Camera style={{ width: '20px', height: '20px' }} />
+                  Photos Documentation
+                </h3>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ 
+                    color: 'white', 
+                    fontSize: '48px', 
+                    fontWeight: '900', 
+                    margin: '20px 0 8px 0',
+                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                  }}>
+                    {data.photosCount}
                   </div>
-                );
-              })}
+                  <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600' }}>
+                    Photos totales
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '8px' }}>
+                    +{data.photosThisWeek} cette semaine
+                  </div>
+                  
+                  <div style={{
+                    marginTop: '20px',
+                    height: '6px',
+                    background: 'rgba(34, 197, 94, 0.2)',
+                    borderRadius: '3px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      height: '100%',
+                      background: 'linear-gradient(90deg, #22c55e, #16a34a)',
+                      borderRadius: '3px',
+                      width: `${Math.min((data.photosCount / (data.astCompleted * 3)) * 100, 100)}%`,
+                      transition: 'width 2s ease'
+                    }} />
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '8px' }}>
+                    Objectif: 3 photos/AST
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Actions Rapides Ultra Premium (identique à avant mais avec Archives intégré) */}
+          {/* Actions Secondaires */}
           <div 
             className="slide-in-up"
             style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-              gap: '24px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+              gap: '20px',
               marginBottom: '40px'
             }}
           >
             {[
               { 
-                href: `/${tenant.subdomain}/ast/nouveau`, 
-                icon: FileText, 
-                title: 'Nouveau AST', 
-                desc: 'Créer une analyse sécuritaire', 
-                color: '#3b82f6',
-                gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
-              },
-              { 
                 href: `/${tenant.subdomain}/reports`, 
                 icon: BarChart3, 
                 title: 'Rapports Analytics', 
-                desc: 'Tableaux de bord détaillés', 
+                desc: 'Graphiques détaillés', 
                 color: '#9333ea',
                 gradient: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)'
               },
               { 
-                href: `/${tenant.subdomain}/team`, 
-                icon: Users, 
-                title: 'Gestion Équipe', 
-                desc: 'Personnel et formations', 
+                href: `/${tenant.subdomain}/photos`, 
+                icon: Camera, 
+                title: 'Photos AST', 
+                desc: 'Galerie documentation', 
                 color: '#22c55e',
                 gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
               },
               { 
                 href: `/${tenant.subdomain}/archives`, 
                 icon: Archive, 
-                title: 'Archives & Historique', 
-                desc: 'Données historiques complètes', 
+                title: 'Archives', 
+                desc: 'Historique des données', 
                 color: '#f59e0b',
                 gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
               }
@@ -1133,11 +1410,16 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   <div 
                     className="glass-effect card-hover"
                     style={{
-                      padding: '32px',
+                      padding: '20px',
                       textAlign: 'center',
                       position: 'relative',
                       overflow: 'hidden',
-                      border: `1px solid rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#9333ea' ? '147, 51, 234' : action.color === '#22c55e' ? '34, 197, 94' : '245, 158, 11'}, 0.3)`
+                      border: `1px solid rgba(${action.color === '#9333ea' ? '147, 51, 234' : action.color === '#22c55e' ? '34, 197, 94' : '245, 158, 11'}, 0.3)`,
+                      minHeight: '140px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center'
                     }}
                   >
                     <div style={{
@@ -1145,58 +1427,42 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                       top: 0,
                       left: 0,
                       right: 0,
-                      height: '4px',
+                      height: '3px',
                       background: action.gradient,
                       opacity: 0.8
                     }} />
                     
                     <div 
-                      className="float-animation"
                       style={{
-                        width: '80px',
-                        height: '80px',
-                        margin: '0 auto 20px auto',
+                        width: '48px',
+                        height: '48px',
+                        margin: '0 auto 12px auto',
                         background: action.gradient,
-                        borderRadius: '24px',
+                        borderRadius: '12px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: `0 10px 25px rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#9333ea' ? '147, 51, 234' : action.color === '#22c55e' ? '34, 197, 94' : '245, 158, 11'}, 0.3)`,
-                        position: 'relative'
+                        boxShadow: `0 6px 20px rgba(${action.color === '#9333ea' ? '147, 51, 234' : action.color === '#22c55e' ? '34, 197, 94' : '245, 158, 11'}, 0.3)`
                       }}
                     >
-                      <Icon style={{ width: '36px', height: '36px', color: 'white' }} />
+                      <Icon style={{ width: '24px', height: '24px', color: 'white' }} />
                     </div>
                     
                     <h3 className="text-gradient" style={{ 
-                      fontSize: '20px', 
-                      fontWeight: '700', 
-                      margin: '0 0 8px 0' 
+                      fontSize: '16px', 
+                      fontWeight: '600', 
+                      margin: '0 0 6px 0' 
                     }}>
                       {action.title}
                     </h3>
                     <p style={{ 
                       color: '#94a3b8', 
-                      fontSize: '14px', 
+                      fontSize: '12px', 
                       margin: 0,
                       fontWeight: '500'
                     }}>
                       {action.desc}
                     </p>
-                    
-                    <div style={{
-                      marginTop: '16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      color: action.color,
-                      fontSize: '14px',
-                      fontWeight: '600'
-                    }}>
-                      <Play style={{ width: '14px', height: '14px' }} />
-                      Commencer
-                    </div>
                   </div>
                 </Link>
               );
@@ -1204,7 +1470,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           </div>
         </div>
 
-        {/* Footer Ultra Premium (identique à avant) */}
+        {/* Footer Ultra Premium */}
         <footer style={{
           background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
           backdropFilter: 'blur(20px)',
@@ -1239,7 +1505,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   fontSize: '12px', 
                   margin: 0 
                 }}>
-                  Plateforme certifiée pour la sécurité au travail
+                  {isDemo ? 'Plateforme de démonstration avec données simulées' : 'Plateforme certifiée pour la sécurité au travail'}
                 </p>
               </div>
               <div style={{ 
@@ -1265,6 +1531,11 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   }} className="pulse-animation" />
                   Système opérationnel
                 </div>
+                {isDemo && (
+                  <span style={{ color: '#f59e0b', fontWeight: '600' }}>
+                    MODE DÉMONSTRATION
+                  </span>
+                )}
               </div>
             </div>
           </div>
