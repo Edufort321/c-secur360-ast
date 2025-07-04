@@ -1,6 +1,6 @@
-// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 1/5 ===================
-// Client Potentiel - Version Finale Complète avec TOUTES les fonctionnalités
-// Section 1: Imports et Interfaces complètes
+// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 1/5 V2 ===================
+// Client Potentiel - Version avec Approbations et Checklists
+// Section 1: Imports et Interfaces mises à jour
 
 "use client";
 
@@ -9,7 +9,8 @@ import {
   FileText, MessageSquare, Shield, Zap, Settings, Users, Camera, CheckCircle,
   ChevronLeft, ChevronRight, Save, Download, Send, Copy, Check, X, Plus, Trash2,
   ArrowLeft, ArrowRight, Eye, Mail, Archive, Printer, Upload, Star, AlertTriangle,
-  Edit, Clock, User, Phone, MapPin, Calendar, Briefcase, HardHat, Heart, Activity
+  Edit, Clock, User, Phone, MapPin, Calendar, Briefcase, HardHat, Heart, Activity,
+  Lock, Unlock
 } from 'lucide-react';
 
 // =================== INTERFACES & TYPES COMPLETS ===================
@@ -31,6 +32,10 @@ interface TeamMember {
   joinedAt: string;
   validationStatus: 'pending' | 'approved' | 'rejected';
   validationComments?: string;
+  // Nouveaux champs pour approbation avec cadenas selon votre image
+  consultationAst: boolean;
+  cadenasAppose: boolean;
+  cadenasReleve: boolean;
 }
 
 interface Photo {
@@ -49,6 +54,13 @@ interface IsolationPoint {
   isActive: boolean;
   createdAt: string;
   photos: Photo[];
+  // Nouvelle checklist pour points d'isolement selon votre image
+  checklist: {
+    cadenasAppose: boolean;
+    absenceTension: boolean;
+    miseALaTerre: boolean;
+    cadenasReleve: boolean;
+  };
 }
 
 interface ControlMeasure {
@@ -210,14 +222,14 @@ const generateASTNumber = (): string => {
   const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
-// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 2/5 ===================
-// Section 2: Données prédéfinies et traductions complètes
+// =================== AST SECTION 2/5 V2 - DONNÉES COMPLÈTES ===================
+// Section 2: Données avec TOUS les dangers + PDF professionnel
 
 // =================== MOYENS DE CONTRÔLE PRÉDÉFINIS ===================
 const getControlMeasuresForHazard = (hazardId: string): ControlMeasure[] => {
   const commonControls: ControlMeasure[] = [
     {
-      id: 'ctrl-elim-1',
+      id: `ctrl-${hazardId}-elim-1`,
       name: 'Élimination à la source',
       description: 'Retirer complètement le danger',
       category: 'elimination',
@@ -226,7 +238,7 @@ const getControlMeasuresForHazard = (hazardId: string): ControlMeasure[] => {
       notes: ''
     },
     {
-      id: 'ctrl-sub-1', 
+      id: `ctrl-${hazardId}-sub-1`, 
       name: 'Substitution par alternative plus sûre',
       description: 'Remplacer par une méthode moins dangereuse',
       category: 'substitution',
@@ -235,25 +247,25 @@ const getControlMeasuresForHazard = (hazardId: string): ControlMeasure[] => {
       notes: ''
     },
     {
-      id: 'ctrl-eng-1',
-      name: 'Isolation/Verrouillage',
-      description: 'Mesures d\'ingénierie pour isoler le danger',
+      id: `ctrl-${hazardId}-eng-1`,
+      name: 'Mesures d\'ingénierie',
+      description: 'Contrôles techniques et d\'ingénierie',
       category: 'engineering',
       isSelected: false,
       photos: [],
       notes: ''
     },
     {
-      id: 'ctrl-admin-1',
-      name: 'Formation et procédures',
-      description: 'Formation du personnel et procédures de sécurité',
+      id: `ctrl-${hazardId}-admin-1`,
+      name: 'Contrôles administratifs',
+      description: 'Formation, procédures et signalisation',
       category: 'administrative',
       isSelected: false,
       photos: [],
       notes: ''
     },
     {
-      id: 'ctrl-ppe-1',
+      id: `ctrl-${hazardId}-ppe-1`,
       name: 'Équipement de protection individuelle',
       description: 'Port d\'EPI approprié',
       category: 'ppe',
@@ -267,7 +279,7 @@ const getControlMeasuresForHazard = (hazardId: string): ControlMeasure[] => {
   const specificControls: Record<string, ControlMeasure[]> = {
     'h0': [ // Risque électrique
       {
-        id: 'ctrl-h0-1',
+        id: 'ctrl-h0-spec-1',
         name: 'Coupure électrique et verrouillage',
         description: 'Couper l\'alimentation et verrouiller les disjoncteurs',
         category: 'engineering',
@@ -276,38 +288,9 @@ const getControlMeasuresForHazard = (hazardId: string): ControlMeasure[] => {
         notes: ''
       },
       {
-        id: 'ctrl-h0-2',
+        id: 'ctrl-h0-spec-2',
         name: 'Vérification absence de tension',
         description: 'Utiliser un détecteur de tension certifié',
-        category: 'administrative',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      },
-      {
-        id: 'ctrl-h0-3',
-        name: 'EPI arc électrique approprié',
-        description: 'Combinaison ignifuge selon énergie incidente',
-        category: 'ppe',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      }
-    ],
-    'h1': [ // Appareillage sous-tension
-      {
-        id: 'ctrl-h1-1',
-        name: 'Périmètre de sécurité délimité',
-        description: 'Délimiter la zone d\'approche restreinte',
-        category: 'engineering',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      },
-      {
-        id: 'ctrl-h1-2',
-        name: 'Surveillant sécurité électrique',
-        description: 'Personne qualifiée pour surveiller les travaux',
         category: 'administrative',
         isSelected: false,
         photos: [],
@@ -316,7 +299,7 @@ const getControlMeasuresForHazard = (hazardId: string): ControlMeasure[] => {
     ],
     'h9': [ // Risque de chute
       {
-        id: 'ctrl-h9-1',
+        id: 'ctrl-h9-spec-1',
         name: 'Garde-corps temporaires',
         description: 'Installation de garde-corps sécuritaires',
         category: 'engineering',
@@ -325,105 +308,9 @@ const getControlMeasuresForHazard = (hazardId: string): ControlMeasure[] => {
         notes: ''
       },
       {
-        id: 'ctrl-h9-2',
-        name: 'Système d\'arrêt de chute',
-        description: 'Harnais + longe + point d\'ancrage certifié',
-        category: 'ppe',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      },
-      {
-        id: 'ctrl-h9-3',
-        name: 'Plateforme de travail sécuritaire',
-        description: 'Utiliser échafaudage ou nacelle',
-        category: 'engineering',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      }
-    ],
-    'h12': [ // Incendie/Explosion
-      {
-        id: 'ctrl-h12-1',
-        name: 'Permis de travail à chaud',
-        description: 'Obtenir et respecter le permis feu',
-        category: 'administrative',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      },
-      {
-        id: 'ctrl-h12-2',
-        name: 'Surveillance incendie',
-        description: 'Surveillant avec extincteur pendant et après travaux',
-        category: 'administrative',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      },
-      {
-        id: 'ctrl-h12-3',
-        name: 'Retrait matières combustibles',
-        description: 'Éliminer ou protéger les matières inflammables',
-        category: 'elimination',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      }
-    ],
-    'h15': [ // Espaces clos
-      {
-        id: 'ctrl-h15-1',
-        name: 'Test atmosphérique continu',
-        description: 'Surveillance continue de l\'atmosphère',
-        category: 'administrative',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      },
-      {
-        id: 'ctrl-h15-2',
-        name: 'Ventilation forcée',
-        description: 'Système de ventilation mécanique',
-        category: 'engineering',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      },
-      {
-        id: 'ctrl-h15-3',
-        name: 'Surveillant d\'espace clos',
-        description: 'Personne qualifiée en surveillance continue',
-        category: 'administrative',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      }
-    ],
-    'h18': [ // Substances dangereuses
-      {
-        id: 'ctrl-h18-1',
-        name: 'Fiche de données de sécurité',
-        description: 'Consultation des FDS avant manipulation',
-        category: 'administrative',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      },
-      {
-        id: 'ctrl-h18-2',
-        name: 'Ventilation locale',
-        description: 'Système d\'aspiration à la source',
-        category: 'engineering',
-        isSelected: false,
-        photos: [],
-        notes: ''
-      },
-      {
-        id: 'ctrl-h18-3',
-        name: 'EPI spécialisé',
-        description: 'Protection respiratoire et cutanée adaptée',
+        id: 'ctrl-h9-spec-2',
+        name: 'Harnais anti-chute',
+        description: 'Système complet d\'arrêt de chute',
         category: 'ppe',
         isSelected: false,
         photos: [],
@@ -435,9 +322,7 @@ const getControlMeasuresForHazard = (hazardId: string): ControlMeasure[] => {
   return [...commonControls, ...(specificControls[hazardId] || [])];
 };
 
-// =================== DONNÉES PRÉDÉFINIES COMPLÈTES ===================
-
-// Dangers électriques avec moyens de contrôle
+// =================== LISTE COMPLÈTE DES DANGERS POTENTIELS ===================
 const predefinedElectricalHazards: ElectricalHazard[] = [
   {
     id: 'h0',
@@ -460,6 +345,76 @@ const predefinedElectricalHazards: ElectricalHazard[] = [
     showControls: false
   },
   {
+    id: 'h2',
+    code: '2',
+    title: 'MACHINE - OUTIL ROTATIF',
+    description: 'Risques liés aux outils et machines rotatives',
+    riskLevel: 'high',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h2'),
+    showControls: false
+  },
+  {
+    id: 'h3',
+    code: '3',
+    title: 'CIRCUIT SOUS CHARGE CAPACITIVE',
+    description: 'Circuits avec charge capacitive résiduelle',
+    riskLevel: 'high',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h3'),
+    showControls: false
+  },
+  {
+    id: 'h4',
+    code: '4',
+    title: 'GÉNÉRATRICE (RÉSEAU D\'URGENCE)',
+    description: 'Risques liés aux génératrices et réseaux d\'urgence',
+    riskLevel: 'high',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h4'),
+    showControls: false
+  },
+  {
+    id: 'h5',
+    code: '5',
+    title: 'CIRCUIT ADJACENT / AUXILIAIRE',
+    description: 'Circuits adjacents ou auxiliaires sous tension',
+    riskLevel: 'medium',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h5'),
+    showControls: false
+  },
+  {
+    id: 'h6',
+    code: '6',
+    title: 'ZONE DE TRAVAIL SUPERPOSÉE',
+    description: 'Zones de travail superposées avec d\'autres équipes',
+    riskLevel: 'medium',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h6'),
+    showControls: false
+  },
+  {
+    id: 'h7',
+    code: '7',
+    title: 'TRAVAIL ISOLÉ ET SEUL',
+    description: 'Travail effectué en isolement sans supervision',
+    riskLevel: 'medium',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h7'),
+    showControls: false
+  },
+  {
+    id: 'h8',
+    code: '8',
+    title: 'TRAVAUX DE LEVAGE',
+    description: 'Opérations de levage et manutention',
+    riskLevel: 'high',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h8'),
+    showControls: false
+  },
+  {
     id: 'h9',
     code: '9',
     title: 'RISQUE DE CHUTE',
@@ -470,64 +425,183 @@ const predefinedElectricalHazards: ElectricalHazard[] = [
     showControls: false
   },
   {
+    id: 'h10',
+    code: '10',
+    title: 'ÉCHELLE / ESCABEAU (3 POINTS D\'APPUI)',
+    description: 'Utilisation d\'échelles et escabeaux',
+    riskLevel: 'medium',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h10'),
+    showControls: false
+  },
+  {
+    id: 'h11',
+    code: '11',
+    title: 'RÉALIMENTATION PARTIELLE DURANT TRAVAUX',
+    description: 'Réalimentation partielle pendant les travaux',
+    riskLevel: 'critical',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h11'),
+    showControls: false
+  },
+  {
     id: 'h12',
     code: '12',
-    title: 'INCENDIE / EXPLOSION',
-    description: 'Risque d\'incendie ou d\'explosion sur le site',
-    riskLevel: 'critical',
+    title: 'PRODUITS CHIMIQUES',
+    description: 'Exposition à des substances chimiques dangereuses',
+    riskLevel: 'high',
     isSelected: false,
     controlMeasures: getControlMeasuresForHazard('h12'),
     showControls: false
   },
   {
+    id: 'h13',
+    code: '13',
+    title: 'ZONE DE TRAVAIL PARTAGÉE (CO-ACTIVITÉ)',
+    description: 'Zones de travail partagées avec d\'autres activités',
+    riskLevel: 'medium',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h13'),
+    showControls: false
+  },
+  {
+    id: 'h14',
+    code: '14',
+    title: 'ÉTAT DES LIEUX',
+    description: 'Évaluation de l\'état et des conditions du lieu de travail',
+    riskLevel: 'low',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h14'),
+    showControls: false
+  },
+  {
     id: 'h15',
     code: '15',
-    title: 'ESPACES CLOS',
-    description: 'Travail dans des espaces confinés',
-    riskLevel: 'high',
+    title: 'ERGONOMIE',
+    description: 'Risques ergonomiques et postures de travail',
+    riskLevel: 'medium',
     isSelected: false,
     controlMeasures: getControlMeasuresForHazard('h15'),
     showControls: false
   },
   {
-    id: 'h18',
-    code: '18',
-    title: 'SUBSTANCES DANGEREUSES',
-    description: 'Exposition à des produits chimiques ou toxiques',
+    id: 'h16',
+    code: '16',
+    title: 'ÉCLAIRAGE',
+    description: 'Éclairage insuffisant ou inadéquat',
+    riskLevel: 'low',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h16'),
+    showControls: false
+  },
+  {
+    id: 'h17',
+    code: '17',
+    title: 'LIGNE DE TIR',
+    description: 'Risques liés aux lignes de tir et projections',
     riskLevel: 'high',
     isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h17'),
+    showControls: false
+  },
+  {
+    id: 'h18',
+    code: '18',
+    title: 'DÉVERSEMENT',
+    description: 'Risques de déversement de liquides dangereux',
+    riskLevel: 'medium',
+    isSelected: false,
     controlMeasures: getControlMeasuresForHazard('h18'),
+    showControls: false
+  },
+  {
+    id: 'h19',
+    code: '19',
+    title: 'TRAVAUX EN ESPACE CLOS (REMPLIR LE FORMULAIRE)',
+    description: 'Travail dans des espaces confinés',
+    riskLevel: 'critical',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h19'),
+    showControls: false
+  },
+  {
+    id: 'h20',
+    code: '20',
+    title: 'TRAVAIL À CHAUD',
+    description: 'Travaux à chaud avec risque d\'incendie',
+    riskLevel: 'high',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h20'),
+    showControls: false
+  },
+  {
+    id: 'h21',
+    code: '21',
+    title: 'LIGNE ÉLECTRIQUE À PROXIMITÉ',
+    description: 'Travail à proximité de lignes électriques',
+    riskLevel: 'critical',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h21'),
+    showControls: false
+  },
+  {
+    id: 'h22',
+    code: '22',
+    title: 'CLIMAT (VENT, PLUIE, BRUME, GLACE ET NEIGE)',
+    description: 'Conditions climatiques défavorables',
+    riskLevel: 'medium',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h22'),
+    showControls: false
+  },
+  {
+    id: 'h23',
+    code: '23',
+    title: 'CONTRAINTE THERMIQUE',
+    description: 'Exposition à des températures extrêmes',
+    riskLevel: 'medium',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h23'),
+    showControls: false
+  },
+  {
+    id: 'h24',
+    code: '24',
+    title: 'CO-ACTIVITÉ AVEC ENGIN MOTORISÉ (CHARIOT ÉLÉVATEUR, ETC.)',
+    description: 'Travail avec des engins motorisés',
+    riskLevel: 'high',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h24'),
+    showControls: false
+  },
+  {
+    id: 'h25',
+    code: '25',
+    title: 'AUTRE',
+    description: 'Autres dangers non listés ci-dessus',
+    riskLevel: 'medium',
+    isSelected: false,
+    controlMeasures: getControlMeasuresForHazard('h25'),
     showControls: false
   }
 ];
 
-// Équipements de sécurité complets selon votre image
+// =================== ÉQUIPEMENTS DE SÉCURITÉ ===================
 const requiredSafetyEquipment: SafetyEquipment[] = [
-  // Protection de la tête
   { id: 'eq1', name: 'Casque de sécurité', required: true, available: false, notes: '', verified: false, category: 'head' },
-  
-  // Protection des yeux
   { id: 'eq2', name: 'Bottes de sécurité', required: true, available: false, notes: '', verified: false, category: 'foot' },
   { id: 'eq3', name: 'Lunettes de protection', required: true, available: false, notes: '', verified: false, category: 'eye' },
   { id: 'eq4', name: 'Lunettes monocoque', required: false, available: false, notes: '', verified: false, category: 'eye' },
   { id: 'eq5', name: 'Visière', required: false, available: false, notes: '', verified: false, category: 'eye' },
-  
-  // Protection des mains
   { id: 'eq6', name: 'Gants', required: true, available: false, notes: '', verified: false, category: 'hand' },
   { id: 'eq7', name: 'Gants anti-coupures', required: false, available: false, notes: '', verified: false, category: 'hand' },
-  
-  // Protection électrique
   { id: 'eq8', name: 'Détecteur de tension', required: true, available: false, notes: '', verified: false, category: 'electrical' },
   { id: 'eq9', name: 'Mise à la terre (MALT)', required: false, available: false, notes: '', verified: false, category: 'electrical' },
   { id: 'eq10', name: 'Cadenas individuels / collectifs (boîte)', required: true, available: false, notes: '', verified: false, category: 'electrical' },
   { id: 'eq11', name: 'Affiches et rubans (périmètre de sécurité)', required: true, available: false, notes: '', verified: false, category: 'electrical' },
-  
-  // EPI énergie incidente
   { id: 'eq12', name: 'EPI énergie incidente de moins de 1.2 cal/cm²', required: false, available: false, notes: '', verified: false, category: 'electrical' },
   { id: 'eq13', name: 'EPI énergie incidente de 1.2 cal/cm² à 12 cal/cm²', required: false, available: false, notes: '', verified: false, category: 'electrical' },
   { id: 'eq14', name: 'EPI énergie incidente plus grand que 12 cal/cm²', required: false, available: false, notes: '', verified: false, category: 'electrical' },
-  
-  // Protection diverses
   { id: 'eq15', name: 'Dossard', required: false, available: false, notes: '', verified: false, category: 'body' },
   { id: 'eq16', name: 'Protection auditive', required: false, available: false, notes: '', verified: false, category: 'respiratory' },
   { id: 'eq17', name: 'Protection respiratoire (rasage de près)', required: false, available: false, notes: '', verified: false, category: 'respiratory' },
@@ -536,109 +610,574 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
   { id: 'eq20', name: 'Prise avec protection GFI', required: false, available: false, notes: '', verified: false, category: 'electrical' }
 ];
 
-// Discussion d'équipe selon votre image
+// =================== DISCUSSIONS D'ÉQUIPE ===================
 const predefinedDiscussions: TeamDiscussion[] = [
-  {
-    id: 'td1',
-    topic: 'Trousse de premiers soins',
-    notes: '',
-    completed: false,
-    discussedBy: '',
-    priority: 'high'
-  },
-  {
-    id: 'td2',
-    topic: 'Matériel de contrôle de déversement',
-    notes: '',
-    completed: false,
-    discussedBy: '',
-    priority: 'medium'
-  },
-  {
-    id: 'td3',
-    topic: 'Évacuation, point de rassemblement',
-    notes: '',
-    completed: false,
-    discussedBy: '',
-    priority: 'high'
-  },
-  {
-    id: 'td4',
-    topic: 'Extincteur portatif',
-    notes: '',
-    completed: false,
-    discussedBy: '',
-    priority: 'high'
-  },
-  {
-    id: 'td5',
-    topic: 'Douche d\'urgence / Bain oculaire',
-    notes: '',
-    completed: false,
-    discussedBy: '',
-    priority: 'medium'
-  },
-  {
-    id: 'td6',
-    topic: 'Sécurité désigné / Infirmerie au site',
-    notes: '',
-    completed: false,
-    discussedBy: '',
-    priority: 'medium'
-  },
-  {
-    id: 'td7',
-    topic: 'Plan d\'intervention d\'urgence',
-    notes: '',
-    completed: false,
-    discussedBy: '',
-    priority: 'high'
-  },
-  {
-    id: 'td8',
-    topic: 'EPI',
-    notes: '',
-    completed: false,
-    discussedBy: '',
-    priority: 'high'
-  },
-  {
-    id: 'td9',
-    topic: 'Emplacement des pauses',
-    notes: '',
-    completed: false,
-    discussedBy: '',
-    priority: 'low'
-  }
+  { id: 'td1', topic: 'Trousse de premiers soins', notes: '', completed: false, discussedBy: '', priority: 'high' },
+  { id: 'td2', topic: 'Matériel de contrôle de déversement', notes: '', completed: false, discussedBy: '', priority: 'medium' },
+  { id: 'td3', topic: 'Évacuation, point de rassemblement', notes: '', completed: false, discussedBy: '', priority: 'high' },
+  { id: 'td4', topic: 'Extincteur portatif', notes: '', completed: false, discussedBy: '', priority: 'high' },
+  { id: 'td5', topic: 'Douche d\'urgence / Bain oculaire', notes: '', completed: false, discussedBy: '', priority: 'medium' },
+  { id: 'td6', topic: 'Sécurité désigné / Infirmerie au site', notes: '', completed: false, discussedBy: '', priority: 'medium' },
+  { id: 'td7', topic: 'Plan d\'intervention d\'urgence', notes: '', completed: false, discussedBy: '', priority: 'high' },
+  { id: 'td8', topic: 'EPI', notes: '', completed: false, discussedBy: '', priority: 'high' },
+  { id: 'td9', topic: 'Emplacement des pauses', notes: '', completed: false, discussedBy: '', priority: 'low' }
 ];
 
-// Procédures d'urgence
+// =================== PROCÉDURES D'URGENCE ===================
 const emergencyProcedures: EmergencyProcedure[] = [
-  {
-    id: 'ep1',
-    type: 'medical',
-    procedure: 'Premiers secours et évacuation médicale',
-    responsiblePerson: '',
-    contactInfo: '911',
-    isVerified: false
-  },
-  {
-    id: 'ep2',
-    type: 'fire',
-    procedure: 'Extinction et évacuation incendie',
-    responsiblePerson: '',
-    contactInfo: '911',
-    isVerified: false
-  },
-  {
-    id: 'ep3',
-    type: 'electrical',
-    procedure: 'Coupure d\'urgence électrique',
-    responsiblePerson: '',
-    contactInfo: '',
-    isVerified: false
-  }
+  { id: 'ep1', type: 'medical', procedure: 'Premiers secours et évacuation médicale', responsiblePerson: '', contactInfo: '911', isVerified: false },
+  { id: 'ep2', type: 'fire', procedure: 'Extinction et évacuation incendie', responsiblePerson: '', contactInfo: '911', isVerified: false },
+  { id: 'ep3', type: 'electrical', procedure: 'Coupure d\'urgence électrique', responsiblePerson: '', contactInfo: '', isVerified: false }
 ];
+
+// =================== LOGO CLIENT POTENTIEL EN SVG ===================
+const ClientPotentielLogo = () => (
+  <svg width="120" height="80" viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+    {/* Bouclier principal */}
+    <path
+      d="M60 5 L85 15 L85 35 Q85 50 60 65 Q35 50 35 35 L35 15 Z"
+      fill="url(#shieldGradient)"
+      stroke="#ffffff"
+      strokeWidth="2"
+    />
+    
+    {/* Lettre C */}
+    <path
+      d="M50 25 Q45 20 40 25 Q40 30 40 35 Q40 40 45 45 Q50 50 55 45"
+      fill="none"
+      stroke="#ffffff"
+      strokeWidth="3"
+      strokeLinecap="round"
+    />
+    
+    {/* Éléments décoratifs */}
+    <circle cx="70" cy="30" r="3" fill="#ffaa00"/>
+    <circle cx="68" cy="38" r="2" fill="#ffaa00"/>
+    <circle cx="72" cy="42" r="2" fill="#ffaa00"/>
+    
+    {/* Définition du gradient */}
+    <defs>
+      <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#1e40af"/>
+        <stop offset="50%" stopColor="#3b82f6"/>
+        <stop offset="100%" stopColor="#1e293b"/>
+      </linearGradient>
+    </defs>
+    
+    {/* Texte Client Potentiel */}
+    <text x="60" y="75" textAnchor="middle" fill="#1e40af" fontSize="10" fontWeight="bold">
+      CLIENT POTENTIEL
+    </text>
+  </svg>
+);
+
+// =================== GÉNÉRATION PDF PROFESSIONNELLE ===================
+const generateProfessionalPDF = async (formData: ASTFormData, tenant: Tenant) => {
+  console.log('🔄 Génération PDF professionnel avec logo Client Potentiel...');
+  
+  try {
+    // Template HTML professionnel pour PDF
+    const pdfTemplate = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>AST ${formData.astNumber} - ${formData.projectInfo.client}</title>
+        <style>
+          @page { 
+            size: letter; 
+            margin: 0.75in; 
+            @top-left { content: "AST ${formData.astNumber}"; }
+            @bottom-center { content: "Page " counter(page) " de " counter(pages); }
+          }
+          
+          body { 
+            font-family: 'Arial', sans-serif; 
+            font-size: 11px; 
+            line-height: 1.3; 
+            color: #333;
+          }
+          
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #1e40af;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+          }
+          
+          .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+          }
+          
+          .company-info h1 {
+            color: #1e40af;
+            font-size: 24px;
+            margin: 0;
+            font-weight: bold;
+          }
+          
+          .company-info p {
+            margin: 2px 0;
+            color: #666;
+            font-size: 12px;
+          }
+          
+          .ast-info {
+            text-align: right;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #1e40af;
+          }
+          
+          .ast-number {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1e40af;
+            font-family: monospace;
+          }
+          
+          .section {
+            margin: 20px 0;
+            page-break-inside: avoid;
+          }
+          
+          .section-title {
+            background: linear-gradient(90deg, #1e40af, #3b82f6);
+            color: white;
+            padding: 8px 15px;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+          }
+          
+          .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 10px 0;
+          }
+          
+          .field {
+            margin: 8px 0;
+          }
+          
+          .field-label {
+            font-weight: bold;
+            color: #1e40af;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          
+          .field-value {
+            margin-top: 2px;
+            padding: 4px;
+            background: #f8fafc;
+            border-radius: 3px;
+            min-height: 20px;
+          }
+          
+          .hazard-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+          }
+          
+          .hazard-item {
+            border: 1px solid #e2e8f0;
+            padding: 10px;
+            border-radius: 6px;
+            background: white;
+          }
+          
+          .hazard-selected {
+            border-left: 4px solid #ef4444;
+            background: #fef2f2;
+          }
+          
+          .hazard-code {
+            background: #ef4444;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+          }
+          
+          .equipment-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+          }
+          
+          .equipment-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 10px;
+          }
+          
+          .check-box {
+            width: 12px;
+            height: 12px;
+            border: 1px solid #666;
+            display: inline-block;
+            position: relative;
+          }
+          
+          .checked::after {
+            content: '✓';
+            position: absolute;
+            left: 1px;
+            top: -2px;
+            color: #22c55e;
+            font-weight: bold;
+            font-size: 10px;
+          }
+          
+          .team-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+          }
+          
+          .team-table th,
+          .team-table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+            text-align: left;
+            font-size: 10px;
+          }
+          
+          .team-table th {
+            background: #1e40af;
+            color: white;
+            font-weight: bold;
+          }
+          
+          .status-approved { background: #dcfce7; color: #166534; }
+          .status-pending { background: #fef3c7; color: #92400e; }
+          .status-rejected { background: #fee2e2; color: #991b1b; }
+          
+          .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            color: #666;
+            font-size: 10px;
+          }
+          
+          .signature-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+          }
+          
+          .signature-box {
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            min-height: 80px;
+            text-align: center;
+            background: #f8fafc;
+          }
+        </style>
+      </head>
+      <body>
+        <!-- HEADER AVEC LOGO -->
+        <div class="header">
+          <div class="logo-section">
+            ${ClientPotentielLogo().props.dangerouslySetInnerHTML ? ClientPotentielLogo().props.dangerouslySetInnerHTML.__html : ''}
+            <div class="company-info">
+              <h1>ANALYSE SÉCURITAIRE DE TÂCHES</h1>
+              <p><strong>Client:</strong> ${tenant.companyName}</p>
+              <p><strong>Projet:</strong> ${formData.projectInfo.projectNumber}</p>
+              <p><strong>Date:</strong> ${new Date(formData.projectInfo.date).toLocaleDateString('fr-CA')}</p>
+            </div>
+          </div>
+          <div class="ast-info">
+            <div class="ast-number">${formData.astNumber}</div>
+            <p>Statut: ${formData.status.toUpperCase()}</p>
+            <p>Révision: ${formData.validation.revisionNumber}</p>
+          </div>
+        </div>
+
+        <!-- INFORMATIONS GÉNÉRALES -->
+        <div class="section">
+          <div class="section-title">📋 INFORMATIONS GÉNÉRALES</div>
+          <div class="grid">
+            <div class="field">
+              <div class="field-label">Client</div>
+              <div class="field-value">${formData.projectInfo.client || 'Non spécifié'}</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Numéro de Projet</div>
+              <div class="field-value">${formData.projectInfo.projectNumber || 'Non spécifié'}</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Lieu des Travaux</div>
+              <div class="field-value">${formData.projectInfo.workLocation || 'Non spécifié'}</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Durée Estimée</div>
+              <div class="field-value">${formData.projectInfo.estimatedDuration || 'Non spécifié'}</div>
+            </div>
+          </div>
+          <div class="field">
+            <div class="field-label">Description des Travaux</div>
+            <div class="field-value">${formData.projectInfo.workDescription || 'Non spécifiée'}</div>
+          </div>
+        </div>
+
+        <!-- DANGERS IDENTIFIÉS -->
+        <div class="section">
+          <div class="section-title">⚠️ DANGERS POTENTIELS IDENTIFIÉS</div>
+          <div class="hazard-list">
+            ${formData.electricalHazards.filter(h => h.isSelected).map(hazard => `
+              <div class="hazard-item hazard-selected">
+                <div class="hazard-code">${hazard.code}</div>
+                <strong>${hazard.title}</strong>
+                <p>${hazard.description}</p>
+                ${hazard.additionalNotes ? `<p><em>Notes: ${hazard.additionalNotes}</em></p>` : ''}
+              </div>
+            `).join('')}
+          </div>
+          ${formData.electricalHazards.filter(h => h.isSelected).length === 0 ? '<p>Aucun danger identifié.</p>' : ''}
+        </div>
+
+        <!-- ÉQUIPEMENTS DE SÉCURITÉ -->
+        <div class="section">
+          <div class="section-title">🛡️ ÉQUIPEMENTS DE SÉCURITÉ REQUIS</div>
+          <div class="equipment-grid">
+            ${formData.safetyEquipment.filter(eq => eq.required).map(equipment => `
+              <div class="equipment-item">
+                <span class="check-box ${equipment.verified ? 'checked' : ''}"></span>
+                ${equipment.name}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- ÉQUIPE DE TRAVAIL -->
+        <div class="section">
+          <div class="section-title">👥 ÉQUIPE DE TRAVAIL</div>
+          <table class="team-table">
+            <thead>
+              <tr>
+                <th>Nom du Travailleur</th>
+                <th>Département</th>
+                <th>Consultation AST</th>
+                <th>Cadenas Apposé</th>
+                <th>Cadenas Relevé</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${formData.team.members.map(member => `
+                <tr>
+                  <td>${member.name}</td>
+                  <td>${member.department}</td>
+                  <td><span class="check-box ${member.consultationAst ? 'checked' : ''}"></span></td>
+                  <td><span class="check-box ${member.cadenasAppose ? 'checked' : ''}"></span></td>
+                  <td><span class="check-box ${member.cadenasReleve ? 'checked' : ''}"></span></td>
+                  <td class="status-${member.validationStatus}">
+                    ${member.validationStatus === 'approved' ? 'Approuvé' : 
+                      member.validationStatus === 'rejected' ? 'Rejeté' : 'En attente'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- POINTS D'ISOLEMENT -->
+        ${formData.isolationPoints.length > 0 ? `
+        <div class="section">
+          <div class="section-title">⚙️ POINTS D'ISOLEMENT</div>
+          ${formData.isolationPoints.map(point => `
+            <div style="margin: 10px 0; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px;">
+              <strong>${point.name} (${point.type})</strong>
+              <div style="margin-top: 8px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                <div>
+                  <span class="check-box ${point.checklist.cadenasAppose ? 'checked' : ''}"></span>
+                  Cadenas Apposé
+                </div>
+                <div>
+                  <span class="check-box ${point.checklist.absenceTension ? 'checked' : ''}"></span>
+                  Absence de Tension
+                </div>
+                <div>
+                  <span class="check-box ${point.checklist.miseALaTerre ? 'checked' : ''}"></span>
+                  Mise à la Terre
+                </div>
+                <div>
+                  <span class="check-box ${point.checklist.cadenasReleve ? 'checked' : ''}"></span>
+                  Cadenas Relevé
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
+
+        <!-- SIGNATURES -->
+        <div class="section">
+          <div class="section-title">✅ VALIDATION ET SIGNATURES</div>
+          <div class="signature-section">
+            <div class="signature-box">
+              <strong>Superviseur</strong><br>
+              ${formData.team.supervisor || '_________________'}<br><br>
+              Signature: ________________<br>
+              Date: ${formData.validation.completedDate || '________________'}
+            </div>
+            <div class="signature-box">
+              <strong>Révisé par</strong><br>
+              ${formData.validation.reviewedBy || '_________________'}<br><br>
+              Signature: ________________<br>
+              Date: ${formData.validation.reviewedDate || '________________'}
+            </div>
+            <div class="signature-box">
+              <strong>Approuvé par</strong><br>
+              ${formData.validation.approvedBy || '_________________'}<br><br>
+              Signature: ________________<br>
+              Date: ${formData.validation.approvedDate || '________________'}
+            </div>
+          </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+          <p><strong>Client Potentiel</strong> - Analyse Sécuritaire de Tâches</p>
+          <p>Document généré le ${new Date().toLocaleString('fr-CA')} | AST ${formData.astNumber}</p>
+          <p>Ce document est confidentiel et propriétaire.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Simulation de génération PDF (en production, utilisez une librairie comme jsPDF + html2canvas ou puppeteer)
+    console.log('📄 Template PDF généré:', pdfTemplate.length, 'caractères');
+    
+    // Ici vous pourriez utiliser:
+    // - html2pdf.js pour conversion côté client
+    // - API backend avec Puppeteer pour PDF serveur
+    // - Service PDF tiers comme PDFShift
+    
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Simulation de téléchargement
+    const blob = new Blob([pdfTemplate], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `AST-${formData.astNumber}-${new Date().toISOString().split('T')[0]}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    console.log('✅ PDF professionnel généré avec succès!');
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Erreur génération PDF:', error);
+    return false;
+  }
+};
+
+// =================== FONCTIONS EMAIL PROFESSIONNELLES ===================
+const sendByEmail = async (formData: ASTFormData, tenant: Tenant, language: string) => {
+  const t = translations[language as keyof typeof translations];
+  
+  try {
+    console.log('📧 Envoi email professionnel...');
+    
+    const emailData = {
+      to: formData.projectInfo.clientRepresentative || 'client@example.com',
+      subject: `AST ${formData.astNumber} - ${formData.projectInfo.client}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .header { background: #1e40af; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; }
+            .footer { background: #f8fafc; padding: 15px; text-align: center; font-size: 12px; color: #666; }
+            .highlight { background: #fef3c7; padding: 8px; border-radius: 4px; margin: 10px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Client Potentiel</h1>
+            <p>Analyse Sécuritaire de Tâches</p>
+          </div>
+          
+          <div class="content">
+            <h2>AST ${formData.astNumber} - ${formData.projectInfo.client}</h2>
+            
+            <div class="highlight">
+              <strong>Projet:</strong> ${formData.projectInfo.projectNumber}<br>
+              <strong>Date:</strong> ${new Date(formData.projectInfo.date).toLocaleDateString('fr-CA')}<br>
+              <strong>Statut:</strong> ${formData.status.toUpperCase()}
+            </div>
+            
+            <p>Bonjour,</p>
+            
+            <p>Veuillez trouver ci-joint l'Analyse Sécuritaire de Tâches pour le projet <strong>${formData.projectInfo.projectNumber}</strong>.</p>
+            
+            <h3>Résumé:</h3>
+            <ul>
+              <li><strong>Dangers identifiés:</strong> ${formData.electricalHazards.filter(h => h.isSelected).length}</li>
+              <li><strong>Équipe validée:</strong> ${formData.team.members.filter(m => m.validationStatus === 'approved').length}/${formData.team.members.length} membres</li>
+              <li><strong>Points d'isolement:</strong> ${formData.isolationPoints.length}</li>
+              <li><strong>Documentation:</strong> ${formData.documentation.photos.length} photos</li>
+            </ul>
+            
+            <p>Cette AST a été ${formData.validation.finalApproval ? 'approuvée' : 'préparée'} et est prête pour révision.</p>
+            
+            <p>Cordialement,<br>
+            <strong>Équipe Client Potentiel</strong></p>
+          </div>
+          
+          <div class="footer">
+            <p>Client Potentiel - Solutions de sécurité industrielle</p>
+            <p>Ce message est confidentiel et destiné uniquement au destinataire.</p>
+          </div>
+        </body>
+        </html>
+      `,
+      attachments: [
+        {
+          filename: `AST-${formData.astNumber}.pdf`,
+          content: 'PDF_CONTENT_PLACEHOLDER' // En production, attachez le vrai PDF
+        }
+      ]
+    };
+    
+    // Simulation d'envoi email (en production, utilisez un service comme SendGrid, Nodemailer, etc.)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('✅ Email envoyé:', emailData.to);
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur envoi email:', error);
+    return false;
+  }
+};
 
 // =================== TRADUCTIONS COMPLÈTES ===================
 const translations = {
@@ -651,7 +1190,7 @@ const translations = {
     steps: {
       general: "Informations Générales",
       discussion: "Discussion Équipe",
-      equipment: "Équipements Sécurité",
+      equipment: "Équipements Sécurité", 
       hazards: "Dangers & Risques",
       isolation: "Points d'Isolement",
       team: "Équipe de Travail",
@@ -686,7 +1225,7 @@ const translations = {
     safetyEquipment: {
       title: "Équipement de Protection Individuel et Collectif",
       required: "Requis",
-      available: "Disponible",
+      available: "Disponible", 
       verified: "Vérifié",
       notes: "Notes",
       categories: {
@@ -712,7 +1251,7 @@ const translations = {
       addCustomHazard: "Ajouter un danger personnalisé",
       levels: {
         low: "Faible",
-        medium: "Moyen",
+        medium: "Moyen", 
         high: "Élevé",
         critical: "Critique"
       },
@@ -742,7 +1281,10 @@ const translations = {
       employeeId: "ID Employé",
       department: "Département",
       qualification: "Qualification",
-      validation: "Validation Équipe"
+      validation: "Validation Équipe",
+      consultationAst: "Consultation AST",
+      cadenasAppose: "Cadenas Apposé",
+      cadenasReleve: "Cadenas Relevé"
     },
     
     isolation: {
@@ -751,7 +1293,13 @@ const translations = {
       pointName: "Nom du Point d'Isolement",
       isolationType: "Type d'Isolement",
       selectType: "Sélectionner le type...",
-      noPoints: "Aucun point d'isolement configuré"
+      noPoints: "Aucun point d'isolement configuré",
+      checklist: {
+        cadenasAppose: "Cadenas Apposé",
+        absenceTension: "Absence de Tension",
+        miseALaTerre: "Mise à la Terre",
+        cadenasReleve: "Cadenas Relevé"
+      }
     },
     
     actions: {
@@ -879,7 +1427,10 @@ const translations = {
       employeeId: "Employee ID",
       department: "Department",
       qualification: "Qualification",
-      validation: "Team Validation"
+      validation: "Team Validation",
+      consultationAst: "AST Consultation",
+      cadenasAppose: "Lock Applied",
+      cadenasReleve: "Lock Removed"
     },
     
     isolation: {
@@ -888,7 +1439,13 @@ const translations = {
       pointName: "Isolation Point Name",
       isolationType: "Isolation Type",
       selectType: "Select type...",
-      noPoints: "No isolation points configured"
+      noPoints: "No isolation points configured",
+      checklist: {
+        cadenasAppose: "Lock Applied",
+        absenceTension: "Absence of Voltage",
+        miseALaTerre: "Grounded",
+        cadenasReleve: "Lock Removed"
+      }
     },
     
     actions: {
@@ -917,7 +1474,7 @@ const translations = {
   }
 };
 
-// =================== DONNÉES INITIALES COMPLÈTES ===================
+// =================== DONNÉES INITIALES MISES À JOUR ===================
 const initialFormData: ASTFormData = {
   id: `AST-${Date.now()}`,
   astNumber: generateASTNumber(),
@@ -999,10 +1556,10 @@ const initialFormData: ASTFormData = {
     emailSent: false
   }
 };
-// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 3/5 ===================
-// Section 3: Styles CSS Premium et Fonctions utilitaires
+// =================== AST SECTION 3/5 V2 - STYLES & FONCTIONS ===================
+// Section 3: Styles CSS Premium et Fonctions Supabase mises à jour
 
-// =================== STYLES CSS PREMIUM ===================
+// =================== STYLES CSS PREMIUM AVEC NOUVELLES FONCTIONNALITÉS ===================
 const premiumStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
   
@@ -1129,6 +1686,12 @@ const premiumStyles = `
     box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
   }
   
+  .btn-premium:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
   .btn-secondary {
     background: rgba(100, 116, 139, 0.2);
     border: 1px solid rgba(100, 116, 139, 0.3);
@@ -1148,6 +1711,74 @@ const premiumStyles = `
     background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   }
   
+  /* NOUVEAUX STYLES POUR APPROBATIONS */
+  .approval-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(30, 41, 59, 0.8);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 16px 0;
+  }
+  
+  .approval-table th {
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    color: white;
+    padding: 12px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .approval-table td {
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+    color: #e2e8f0;
+  }
+  
+  .approval-table tr:hover {
+    background: rgba(51, 65, 85, 0.3);
+  }
+  
+  .worker-name-cell {
+    text-align: left !important;
+    font-weight: 600;
+    color: white;
+  }
+  
+  /* STYLES POUR CHECKLIST ISOLATION */
+  .isolation-checklist {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+    padding: 16px;
+    background: rgba(30, 41, 59, 0.6);
+    border-radius: 12px;
+    border: 1px solid rgba(100, 116, 139, 0.3);
+  }
+  
+  .checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  
+  .checklist-item:hover {
+    background: rgba(51, 65, 85, 0.3);
+  }
+  
+  .checklist-item.completed {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+  }
+  
   .checkbox-premium {
     width: 20px;
     height: 20px;
@@ -1157,6 +1788,7 @@ const premiumStyles = `
     position: relative;
     cursor: pointer;
     transition: all 0.3s ease;
+    flex-shrink: 0;
   }
   
   .checkbox-premium.checked {
@@ -1173,6 +1805,32 @@ const premiumStyles = `
     color: white;
     font-size: 12px;
     font-weight: bold;
+  }
+  
+  /* STYLES POUR CADENAS */
+  .lock-icon {
+    transition: all 0.3s ease;
+  }
+  
+  .lock-icon.locked {
+    color: #ef4444;
+  }
+  
+  .lock-icon.unlocked {
+    color: #22c55e;
+  }
+  
+  .lock-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+  }
+  
+  .lock-button:hover {
+    background: rgba(100, 116, 139, 0.2);
   }
   
   .equipment-grid {
@@ -1225,6 +1883,8 @@ const premiumStyles = `
   .hazard-item.selected {
     background: rgba(239, 68, 68, 0.1);
     border-color: #ef4444;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.2);
   }
   
   .hazard-item.critical {
@@ -1329,6 +1989,7 @@ const premiumStyles = `
     font-size: 20px;
   }
   
+  /* ANIMATIONS AMÉLIORÉES */
   @keyframes slideInUp {
     from {
       opacity: 0;
@@ -1345,6 +2006,19 @@ const premiumStyles = `
     50% { opacity: 0.5; }
   }
   
+  @keyframes checkmark {
+    0% { transform: scale(0) rotate(45deg); }
+    50% { transform: scale(1.2) rotate(45deg); }
+    100% { transform: scale(1) rotate(45deg); }
+  }
+  
+  @keyframes lockSpin {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(10deg); }
+    75% { transform: rotate(-10deg); }
+    100% { transform: rotate(0deg); }
+  }
+  
   .slide-in {
     animation: slideInUp 0.5s ease-out;
   }
@@ -1353,6 +2027,15 @@ const premiumStyles = `
     animation: pulse 2s infinite;
   }
   
+  .checkbox-premium.checked::after {
+    animation: checkmark 0.3s ease-out;
+  }
+  
+  .lock-icon.locked {
+    animation: lockSpin 0.5s ease-out;
+  }
+  
+  /* STYLES RESPONSIVE */
   @media (max-width: 768px) {
     .step-indicator {
       gap: 4px;
@@ -1377,36 +2060,157 @@ const premiumStyles = `
     .hazard-grid {
       grid-template-columns: 1fr;
     }
+    
+    .approval-table {
+      font-size: 12px;
+    }
+    
+    .approval-table th,
+    .approval-table td {
+      padding: 8px 4px;
+    }
+    
+    .isolation-checklist {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  /* STYLES POUR IMPRESSION */
+  @media print {
+    .form-container {
+      background: white;
+    }
+    
+    .glass-effect {
+      background: white;
+      box-shadow: none;
+      border: 1px solid #ccc;
+    }
+    
+    .btn-premium,
+    .btn-secondary,
+    .save-indicator {
+      display: none;
+    }
+    
+    .step-indicator {
+      display: none;
+    }
   }
 `;
 
-// =================== FONCTIONS SUPABASE POUR ARCHIVAGE ===================
+// =================== FONCTIONS SUPABASE MISES À JOUR ===================
 const saveToSupabase = async (formData: ASTFormData) => {
   try {
-    console.log('💾 Sauvegarde Supabase en cours...');
+    console.log('💾 Sauvegarde Supabase en cours...', formData.astNumber);
     
-    // Simulation d'appel Supabase
+    // Structure de données pour Supabase
+    const supabaseData = {
+      id: formData.id,
+      ast_number: formData.astNumber,
+      created_at: formData.created,
+      updated_at: new Date().toISOString(),
+      status: formData.status,
+      language: formData.language,
+      industry: formData.industry,
+      
+      // Informations projet
+      project_info: formData.projectInfo,
+      
+      // Discussions équipe
+      team_discussion: formData.teamDiscussion,
+      
+      // Équipements de sécurité
+      safety_equipment: formData.safetyEquipment,
+      
+      // Dangers avec moyens de contrôle
+      electrical_hazards: formData.electricalHazards,
+      
+      // Équipe avec approbations
+      team: {
+        ...formData.team,
+        members: formData.team.members.map(member => ({
+          ...member,
+          // S'assurer que les nouveaux champs sont présents
+          consultationAst: member.consultationAst || false,
+          cadenasAppose: member.cadenasAppose || false,
+          cadenasReleve: member.cadenasReleve || false
+        }))
+      },
+      
+      // Points d'isolement avec checklist
+      isolation_points: formData.isolationPoints.map(point => ({
+        ...point,
+        // S'assurer que la checklist est présente
+        checklist: point.checklist || {
+          cadenasAppose: false,
+          absenceTension: false,
+          miseALaTerre: false,
+          cadenasReleve: false
+        }
+      })),
+      
+      // Documentation
+      documentation: formData.documentation,
+      
+      // Validation
+      validation: formData.validation,
+      
+      // Métadonnées pour recherche et tri
+      client_name: formData.projectInfo.client,
+      project_number: formData.projectInfo.projectNumber,
+      work_location: formData.projectInfo.workLocation,
+      hazards_count: formData.electricalHazards.filter(h => h.isSelected).length,
+      team_size: formData.team.members.length,
+      approved_members: formData.team.members.filter(m => m.validationStatus === 'approved').length,
+      photos_count: formData.documentation.photos.length,
+      isolation_points_count: formData.isolationPoints.length
+    };
+    
     // En production, remplacez par votre client Supabase
     /*
     const { data, error } = await supabase
       .from('ast_forms')
-      .upsert({
-        id: formData.id,
-        ast_number: formData.astNumber,
-        tenant_id: tenant.id,
-        status: formData.status,
-        data: formData,
-        created_at: formData.created,
-        updated_at: formData.lastModified
+      .upsert(supabaseData, {
+        onConflict: 'id'
       });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Erreur Supabase:', error);
+      throw error;
+    }
+    
+    // Sauvegarde des photos séparément si nécessaire
+    if (formData.documentation.photos.length > 0) {
+      const { data: photoData, error: photoError } = await supabase
+        .from('ast_photos')
+        .upsert(
+          formData.documentation.photos.map(photo => ({
+            id: photo.id,
+            ast_id: formData.id,
+            name: photo.name,
+            data: photo.data,
+            description: photo.description,
+            timestamp: photo.timestamp,
+            category: photo.category
+          }))
+        );
+      
+      if (photoError) {
+        console.error('Erreur sauvegarde photos:', photoError);
+      }
+    }
+    
+    console.log('✅ Sauvegarde Supabase réussie:', data);
     */
     
-    // Simulation temporaire
+    // Simulation temporaire avec localStorage pour test
+    localStorage.setItem(`ast_${formData.id}`, JSON.stringify(supabaseData));
+    
     await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('✅ Sauvegarde Supabase réussie');
+    console.log('✅ Sauvegarde Supabase simulée réussie');
     return true;
+    
   } catch (error) {
     console.error('❌ Erreur sauvegarde Supabase:', error);
     return false;
@@ -1415,56 +2219,113 @@ const saveToSupabase = async (formData: ASTFormData) => {
 
 const archiveToSupabase = async (formData: ASTFormData, tenant: Tenant) => {
   try {
-    console.log('📦 Archivage Supabase en cours...');
+    console.log('📦 Archivage Supabase en cours...', formData.astNumber);
     
-    const archivedData = {
+    const archivedData: ASTFormData = {
       ...formData,
-      status: 'archived' as const,
+      status: 'archived',
       validation: {
         ...formData.validation,
         archivedDate: new Date().toISOString()
       }
     };
     
+    // Archivage avec métadonnées supplémentaires
+    const archiveData = {
+      ...archivedData,
+      archived_at: new Date().toISOString(),
+      archived_by: tenant.companyName,
+      final_status: archivedData.status,
+      completion_percentage: calculateOverallCompletion(archivedData),
+      summary: {
+        client: archivedData.projectInfo.client,
+        project: archivedData.projectInfo.projectNumber,
+        dangers_identified: archivedData.electricalHazards.filter(h => h.isSelected).length,
+        team_approved: archivedData.team.members.filter(m => m.validationStatus === 'approved').length,
+        isolation_points: archivedData.isolationPoints.length,
+        photos_attached: archivedData.documentation.photos.length,
+        final_approval: archivedData.validation.finalApproval
+      }
+    };
+    
+    // En production:
+    /*
+    const { data, error } = await supabase
+      .from('ast_archives')
+      .insert(archiveData);
+    
+    if (error) throw error;
+    
+    // Optionnel: déplacer vers table d'archive et supprimer de la table active
+    const { error: deleteError } = await supabase
+      .from('ast_forms')
+      .delete()
+      .eq('id', formData.id);
+    
+    if (deleteError) {
+      console.error('Erreur suppression après archivage:', deleteError);
+    }
+    */
+    
     await new Promise(resolve => setTimeout(resolve, 1500));
+    localStorage.setItem(`ast_archive_${formData.id}`, JSON.stringify(archiveData));
+    
     console.log('✅ Archivage Supabase réussi');
     return archivedData;
+    
   } catch (error) {
     console.error('❌ Erreur archivage Supabase:', error);
     throw error;
   }
 };
 
-// =================== FONCTIONS PDF ET EMAIL ===================
-const generateProfessionalPDF = (formData: ASTFormData, tenant: Tenant) => {
-  console.log('🔄 Génération PDF 8.5"x11" format professionnel...');
-  console.log('📄 Données AST:', formData.astNumber);
-  console.log('🏢 Client:', tenant.companyName);
+// =================== FONCTION DE CALCUL DE COMPLETION ===================
+const calculateOverallCompletion = (formData: ASTFormData): number => {
+  let totalFields = 0;
+  let completedFields = 0;
   
-  setTimeout(() => {
-    console.log('✅ PDF généré avec succès!');
-    const link = document.createElement('a');
-    link.href = '#';
-    link.download = `AST-${formData.astNumber}-${new Date().toISOString().split('T')[0]}.pdf`;
-    link.click();
-  }, 2000);
-};
-
-const sendByEmail = async (formData: ASTFormData, tenant: Tenant, language: string) => {
-  const t = translations[language as keyof typeof translations];
+  // Informations de base (25%)
+  const basicFields = [
+    formData.projectInfo.client,
+    formData.projectInfo.projectNumber,
+    formData.projectInfo.workLocation,
+    formData.projectInfo.workDescription
+  ];
+  totalFields += basicFields.length;
+  completedFields += basicFields.filter(field => field?.trim()).length;
   
-  try {
-    console.log('📧 Envoi par courriel...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    console.log('✅ Email envoyé avec succès!');
-    return true;
-  } catch (error) {
-    console.error('❌ Erreur envoi email:', error);
-    return false;
+  // Discussions d'équipe (15%)
+  const discussions = formData.teamDiscussion.discussions;
+  totalFields += discussions.length;
+  completedFields += discussions.filter(d => d.completed).length;
+  
+  // Équipements requis (15%)
+  const requiredEquipment = formData.safetyEquipment.filter(eq => eq.required);
+  totalFields += requiredEquipment.length;
+  completedFields += requiredEquipment.filter(eq => eq.verified).length;
+  
+  // Dangers identifiés (20%)
+  const selectedHazards = formData.electricalHazards.filter(h => h.isSelected);
+  if (selectedHazards.length > 0) {
+    totalFields += 1;
+    completedFields += 1;
   }
+  
+  // Équipe validée (15%)
+  const teamMembers = formData.team.members;
+  totalFields += teamMembers.length;
+  completedFields += teamMembers.filter(m => m.validationStatus === 'approved').length;
+  
+  // Documentation (10%)
+  if (formData.documentation.photos.length > 0) {
+    totalFields += 1;
+    completedFields += 1;
+  }
+  
+  return totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0;
 };
 
-// =================== COMPOSANT CARROUSEL PHOTOS ===================
+// =================== COMPOSANT CARROUSEL PHOTOS AMÉLIORÉ ===================
 const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto, onUpdateDescription }: {
   photos: Photo[];
   onAddPhoto: (file: File) => void;
@@ -1472,12 +2333,35 @@ const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto, onUpdateDescription 
   onUpdateDescription: (photoId: string, description: string) => void;
 }) => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      onAddPhoto(file);
+      setIsUploading(true);
+      
+      // Validation du fichier
+      if (file.size > 10 * 1024 * 1024) { // 10MB max
+        alert('La taille du fichier ne peut pas dépasser 10MB');
+        setIsUploading(false);
+        return;
+      }
+      
+      if (!file.type.startsWith('image/')) {
+        alert('Seules les images sont acceptées');
+        setIsUploading(false);
+        return;
+      }
+      
+      try {
+        await onAddPhoto(file);
+      } catch (error) {
+        console.error('Erreur upload photo:', error);
+        alert('Erreur lors de l\'ajout de la photo');
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -1495,7 +2379,8 @@ const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto, onUpdateDescription 
       background: 'rgba(30, 41, 59, 0.8)',
       borderRadius: '12px',
       padding: '16px',
-      margin: '16px 0'
+      margin: '16px 0',
+      border: '1px solid rgba(100, 116, 139, 0.3)'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
         <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>
@@ -1505,9 +2390,19 @@ const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto, onUpdateDescription 
           onClick={() => fileInputRef.current?.click()}
           className="btn-premium"
           style={{ padding: '8px 16px', fontSize: '12px' }}
+          disabled={isUploading}
         >
-          <Plus style={{ width: '14px', height: '14px' }} />
-          Ajouter Photo
+          {isUploading ? (
+            <>
+              <div className="pulse" style={{ width: '14px', height: '14px', marginRight: '8px' }}>⏳</div>
+              Upload...
+            </>
+          ) : (
+            <>
+              <Plus style={{ width: '14px', height: '14px' }} />
+              Ajouter Photo
+            </>
+          )}
         </button>
       </div>
 
@@ -1524,7 +2419,13 @@ const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto, onUpdateDescription 
           <img
             src={photos[currentPhotoIndex].data}
             alt={photos[currentPhotoIndex].name}
-            style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '8px' }}
+            style={{ 
+              width: '100%', 
+              height: '200px', 
+              objectFit: 'cover', 
+              borderRadius: '8px',
+              border: '1px solid rgba(100, 116, 139, 0.3)'
+            }}
           />
           
           {photos.length > 1 && (
@@ -1536,13 +2437,16 @@ const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto, onUpdateDescription 
                   top: '50%',
                   left: '16px',
                   transform: 'translateY(-50%)',
-                  background: 'rgba(0, 0, 0, 0.7)',
+                  background: 'rgba(0, 0, 0, 0.8)',
                   border: 'none',
                   color: 'white',
-                  padding: '8px',
-                  borderRadius: '8px',
-                  cursor: 'pointer'
+                  padding: '12px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.8)'}
               >
                 <ArrowLeft style={{ width: '16px', height: '16px' }} />
               </button>
@@ -1553,13 +2457,16 @@ const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto, onUpdateDescription 
                   top: '50%',
                   right: '16px',
                   transform: 'translateY(-50%)',
-                  background: 'rgba(0, 0, 0, 0.7)',
+                  background: 'rgba(0, 0, 0, 0.8)',
                   border: 'none',
                   color: 'white',
-                  padding: '8px',
-                  borderRadius: '8px',
-                  cursor: 'pointer'
+                  padding: '12px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.8)'}
               >
                 <ArrowRight style={{ width: '16px', height: '16px' }} />
               </button>
@@ -1574,7 +2481,8 @@ const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto, onUpdateDescription 
             color: 'white',
             padding: '8px 12px',
             borderRadius: '8px',
-            fontSize: '12px'
+            fontSize: '12px',
+            fontWeight: '600'
           }}>
             {currentPhotoIndex + 1} / {photos.length}
           </div>
@@ -1590,8 +2498,11 @@ const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto, onUpdateDescription 
               color: 'white',
               padding: '8px',
               borderRadius: '8px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.3s ease'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 1)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.9)'}
           >
             <Trash2 style={{ width: '14px', height: '14px' }} />
           </button>
@@ -1615,14 +2526,15 @@ const PhotoCarousel = ({ photos, onAddPhoto, onRemovePhoto, onUpdateDescription 
           borderRadius: '8px',
           color: '#64748b'
         }}>
-          📷 Aucune photo ajoutée
+          📷 Aucune photo ajoutée<br/>
+          <small>Formats acceptés: JPG, PNG, GIF (max 10MB)</small>
         </div>
       )}
     </div>
   );
 };
-// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 4/5 ===================
-// Section 4: Composant principal et logique métier
+// =================== AST SECTION 4/5 V2 - COMPOSANT PRINCIPAL ===================
+// Section 4: Composant principal avec nouvelles fonctionnalités d'approbation
 
 // =================== COMPOSANT PRINCIPAL ===================
 export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
@@ -1695,7 +2607,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
     }));
   };
 
-  // ========== FONCTIONS ÉQUIPE ==========
+  // ========== NOUVELLES FONCTIONS ÉQUIPE AVEC APPROBATIONS ==========
   const addTeamMember = () => {
     if (newTeamMember.name?.trim()) {
       const member: TeamMember = {
@@ -1706,7 +2618,11 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
         qualification: newTeamMember.qualification || '',
         hasAcknowledged: false,
         joinedAt: new Date().toISOString(),
-        validationStatus: 'pending'
+        validationStatus: 'pending',
+        // Nouveaux champs d'approbation
+        consultationAst: false,
+        cadenasAppose: false,
+        cadenasReleve: false
       };
       
       setFormData(prev => ({
@@ -1720,6 +2636,48 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
       
       setNewTeamMember({});
     }
+  };
+
+  const toggleConsultationAst = (memberId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      team: {
+        ...prev.team,
+        members: prev.team.members.map(m =>
+          m.id === memberId 
+            ? { ...m, consultationAst: !m.consultationAst }
+            : m
+        )
+      }
+    }));
+  };
+
+  const toggleCadenasAppose = (memberId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      team: {
+        ...prev.team,
+        members: prev.team.members.map(m =>
+          m.id === memberId 
+            ? { ...m, cadenasAppose: !m.cadenasAppose }
+            : m
+        )
+      }
+    }));
+  };
+
+  const toggleCadenasReleve = (memberId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      team: {
+        ...prev.team,
+        members: prev.team.members.map(m =>
+          m.id === memberId 
+            ? { ...m, cadenasReleve: !m.cadenasReleve }
+            : m
+        )
+      }
+    }));
   };
 
   const validateTeamMember = (memberId: string, approved: boolean, comments: string) => {
@@ -1736,7 +2694,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
       
       const allApproved = updatedMembers.every(m => m.validationStatus === 'approved');
       
-      const updatedFormData: ASTFormData = {
+      return {
         ...prev,
         team: {
           ...prev.team,
@@ -1744,9 +2702,103 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
           allApproved
         }
       };
-      
-      return updatedFormData;
     });
+  };
+
+  // ========== NOUVELLES FONCTIONS POINTS D'ISOLEMENT AVEC CHECKLIST ==========
+  const addIsolationPoint = () => {
+    if (newIsolationPoint.name?.trim() && newIsolationPoint.type) {
+      const point: IsolationPoint = {
+        id: `isolation-${Date.now()}`,
+        name: newIsolationPoint.name.trim(),
+        type: newIsolationPoint.type,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        photos: [],
+        // Nouvelle checklist
+        checklist: {
+          cadenasAppose: false,
+          absenceTension: false,
+          miseALaTerre: false,
+          cadenasReleve: false
+        }
+      };
+      
+      setFormData(prev => ({
+        ...prev,
+        isolationPoints: [...prev.isolationPoints, point]
+      }));
+      
+      setNewIsolationPoint({});
+    }
+  };
+
+  const updateIsolationChecklist = (pointId: string, checklistItem: keyof IsolationPoint['checklist']) => {
+    setFormData(prev => ({
+      ...prev,
+      isolationPoints: prev.isolationPoints.map(point =>
+        point.id === pointId 
+          ? {
+              ...point,
+              checklist: {
+                ...point.checklist,
+                [checklistItem]: !point.checklist[checklistItem]
+              }
+            }
+          : point
+      )
+    }));
+  };
+
+  const addPhotoToIsolationPoint = (pointId: string, file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const newPhoto: Photo = {
+        id: `photo-${Date.now()}`,
+        name: file.name,
+        data: e.target?.result as string,
+        description: '',
+        timestamp: new Date().toISOString(),
+        category: 'isolation'
+      };
+      
+      setFormData(prev => ({
+        ...prev,
+        isolationPoints: prev.isolationPoints.map(point =>
+          point.id === pointId 
+            ? { ...point, photos: [...point.photos, newPhoto] }
+            : point
+        )
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removePhotoFromIsolationPoint = (pointId: string, photoId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      isolationPoints: prev.isolationPoints.map(p =>
+        p.id === pointId 
+          ? { ...p, photos: p.photos.filter(photo => photo.id !== photoId) }
+          : p
+      )
+    }));
+  };
+
+  const updateIsolationPhotoDescription = (pointId: string, photoId: string, description: string) => {
+    setFormData(prev => ({
+      ...prev,
+      isolationPoints: prev.isolationPoints.map(p =>
+        p.id === pointId 
+          ? { 
+              ...p, 
+              photos: p.photos.map(photo => 
+                photo.id === photoId ? { ...photo, description } : photo
+              ) 
+            }
+          : p
+      )
+    }));
   };
 
   // ========== FONCTIONS DISCUSSION ==========
@@ -1829,22 +2881,19 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
     }));
   };
 
-  // ========== FONCTIONS DANGERS ==========
+  // ========== FONCTIONS DANGERS CORRIGÉES ==========
   const toggleHazard = (hazardId: string) => {
     setFormData(prev => ({
       ...prev,
       electricalHazards: prev.electricalHazards.map(h =>
-        h.id === hazardId ? { ...h, isSelected: !h.isSelected, showControls: !h.isSelected } : h
-      )
-    }));
-  };
-
-  const updateHazardNotes = (hazardId: string, notes: string) => {
-    setFormData(prev => ({
-      ...prev,
-      electricalHazards: prev.electricalHazards.map(h =>
-        h.id === hazardId ? { ...h, additionalNotes: notes } : h
-      )
+        h.id === hazardId 
+          ? { 
+              ...h, 
+              isSelected: !h.isSelected, 
+              showControls: !h.isSelected ? true : false
+            } 
+          : h
+    )
     }));
   };
 
@@ -1880,28 +2929,46 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
     }));
   };
 
+  const updateHazardNotes = (hazardId: string, notes: string) => {
+    setFormData(prev => ({
+      ...prev,
+      electricalHazards: prev.electricalHazards.map(h =>
+        h.id === hazardId ? { ...h, additionalNotes: notes } : h
+      )
+    }));
+  };
+
   // ========== FONCTIONS PHOTOS ==========
   const addPhoto = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const newPhoto: Photo = {
-        id: `photo-${Date.now()}`,
-        name: file.name,
-        data: e.target?.result as string,
-        description: '',
-        timestamp: new Date().toISOString(),
-        category: 'site'
-      };
-      
-      setFormData(prev => ({
-        ...prev,
-        documentation: {
-          ...prev.documentation,
-          photos: [...prev.documentation.photos, newPhoto]
+    return new Promise<void>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const newPhoto: Photo = {
+            id: `photo-${Date.now()}`,
+            name: file.name,
+            data: e.target?.result as string,
+            description: '',
+            timestamp: new Date().toISOString(),
+            category: 'site'
+          };
+          
+          setFormData(prev => ({
+            ...prev,
+            documentation: {
+              ...prev.documentation,
+              photos: [...prev.documentation.photos, newPhoto]
+            }
+          }));
+          
+          resolve();
+        } catch (error) {
+          reject(error);
         }
-      }));
-    };
-    reader.readAsDataURL(file);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   const removePhoto = (photoId: string) => {
@@ -1926,124 +2993,115 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
     }));
   };
 
-  // ========== FONCTIONS ISOLATION ==========
-  const addIsolationPoint = () => {
-    if (newIsolationPoint.name?.trim() && newIsolationPoint.type) {
-      const point: IsolationPoint = {
-        id: `isolation-${Date.now()}`,
-        name: newIsolationPoint.name.trim(),
-        type: newIsolationPoint.type,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        photos: []
-      };
-      
-      setFormData(prev => ({
-        ...prev,
-        isolationPoints: [...prev.isolationPoints, point]
-      }));
-      
-      setNewIsolationPoint({});
+  // ========== ACTIONS PRINCIPALES ==========
+  const handleGeneratePDF = async () => {
+    setSaveStatus('saving');
+    try {
+      const success = await generateProfessionalPDF(formData, tenant);
+      if (success) {
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    } catch (error) {
+      console.error('Erreur génération PDF:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
 
-  const addPhotoToIsolationPoint = (pointId: string, file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const newPhoto: Photo = {
-        id: `photo-${Date.now()}`,
-        name: file.name,
-        data: e.target?.result as string,
-        description: '',
-        timestamp: new Date().toISOString(),
-        category: 'isolation'
-      };
-      
-      setFormData(prev => ({
-        ...prev,
-        isolationPoints: prev.isolationPoints.map(point =>
-          point.id === pointId 
-            ? { ...point, photos: [...point.photos, newPhoto] }
-            : point
-        )
-      }));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const removePhotoFromIsolationPoint = (pointId: string, photoId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      isolationPoints: prev.isolationPoints.map(p =>
-        p.id === pointId 
-          ? { ...p, photos: p.photos.filter(photo => photo.id !== photoId) }
-          : p
-      )
-    }));
-  };
-
-  const updateIsolationPhotoDescription = (pointId: string, photoId: string, description: string) => {
-    setFormData(prev => ({
-      ...prev,
-      isolationPoints: prev.isolationPoints.map(p =>
-        p.id === pointId 
-          ? { 
-              ...p, 
-              photos: p.photos.map(photo => 
-                photo.id === photoId ? { ...photo, description } : photo
-              ) 
-            }
-          : p
-      )
-    }));
-  };
-
-  // ========== ACTIONS PRINCIPALES ==========
-  const handleGeneratePDF = () => {
-    generateProfessionalPDF(formData, tenant);
-  };
-
   const handleSendByEmail = async () => {
-    const success = await sendByEmail(formData, tenant, language);
-    if (success) {
-      setFormData(prev => ({
-        ...prev,
-        validation: { ...prev.validation, emailSent: true }
-      }));
+    setSaveStatus('saving');
+    try {
+      const success = await sendByEmail(formData, tenant, language);
+      if (success) {
+        setFormData(prev => ({
+          ...prev,
+          validation: { ...prev.validation, emailSent: true }
+        }));
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    } catch (error) {
+      console.error('Erreur envoi email:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
 
   const handleArchive = async () => {
+    setSaveStatus('saving');
     try {
       const archivedData = await archiveToSupabase(formData, tenant);
       setFormData(archivedData);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (error) {
       console.error('Erreur archivage:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
 
   const handleFinalSubmission = async () => {
-    if (!formData.team.allApproved) {
-      alert('Toutes les validations d\'équipe doivent être complétées avant la soumission finale.');
+    // Vérifications avant soumission finale
+    const validationErrors: string[] = [];
+
+    if (!formData.team.allApproved && formData.team.members.length > 0) {
+      validationErrors.push('Toutes les validations d\'équipe doivent être complétées');
+    }
+
+    if (formData.electricalHazards.filter(h => h.isSelected).length === 0) {
+      validationErrors.push('Au moins un danger doit être identifié');
+    }
+
+    const requiredEquipment = formData.safetyEquipment.filter(eq => eq.required);
+    const verifiedEquipment = requiredEquipment.filter(eq => eq.verified);
+    if (verifiedEquipment.length < requiredEquipment.length) {
+      validationErrors.push('Tous les équipements requis doivent être vérifiés');
+    }
+
+    if (validationErrors.length > 0) {
+      alert(`Erreurs de validation:\n${validationErrors.join('\n')}`);
       return;
     }
     
-    const finalData: ASTFormData = {
-      ...formData,
-      status: 'completed',
-      validation: {
-        ...formData.validation,
-        finalApproval: true,
-        submissionDate: new Date().toISOString()
+    setSaveStatus('saving');
+    try {
+      const finalData: ASTFormData = {
+        ...formData,
+        status: 'completed',
+        validation: {
+          ...formData.validation,
+          finalApproval: true,
+          submissionDate: new Date().toISOString(),
+          completedDate: new Date().toISOString()
+        }
+      };
+      
+      const success = await saveToSupabase(finalData);
+      if (success) {
+        setFormData(finalData);
+        setSaveStatus('saved');
+        
+        // Redirection après soumission réussie
+        setTimeout(() => {
+          window.location.href = `/${tenant.subdomain}/dashboard`;
+        }, 2000);
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
       }
-    };
-    
-    await saveToSupabase(finalData);
-    setFormData(finalData);
-    
-    setTimeout(() => {
-      window.location.href = `/${tenant.subdomain}/dashboard`;
-    }, 2000);
+    } catch (error) {
+      console.error('Erreur soumission finale:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }
   };
 
   // ========== COMPOSANTS CHECKBOX PERSONNALISÉS ==========
@@ -2052,6 +3110,21 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
       <div className={`checkbox-premium ${checked ? 'checked' : ''}`} />
       <span style={{ color: '#e2e8f0', fontSize: '14px', flex: 1 }}>{label}</span>
     </div>
+  );
+
+  // ========== COMPOSANT CADENAS ==========
+  const LockButton = ({ locked, onToggle, memberId }: { locked: boolean; onToggle: () => void; memberId: string }) => (
+    <button
+      onClick={onToggle}
+      className="lock-button"
+      title={locked ? 'Cadenas posé' : 'Cadenas non posé'}
+    >
+      {locked ? (
+        <Lock className="lock-icon locked" style={{ width: '16px', height: '16px' }} />
+      ) : (
+        <Unlock className="lock-icon unlocked" style={{ width: '16px', height: '16px' }} />
+      )}
+    </button>
   );
 
   // ========== GROUPEMENT D'ÉQUIPEMENTS PAR CATÉGORIE ==========
@@ -2100,7 +3173,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
         return formData.documentation.photos.length > 0 ? 100 : 0;
       
       case 7: // Validation
-        return formData.team.allApproved ? 100 : 0;
+        return formData.team.allApproved && formData.validation.finalApproval ? 100 : 0;
       
       default:
         return 0;
@@ -2108,8 +3181,8 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   };
 
   const overallProgress = steps.reduce((acc, _, index) => acc + calculateStepCompletion(index), 0) / steps.length;
- // =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 5/5 ===================
-// Section 5: Rendu JSX final - TOUTES les étapes
+  // =================== AST SECTION 5/5 V2 FINALE - JSX RENDER COMPLET ===================
+// Section 5: Rendu JSX final avec compteurs de personnes et approbations
 
   return (
     <>
@@ -2163,6 +3236,45 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                   <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
                     {tenant.companyName} • {formData.astNumber} • {t.industries[formData.industry]}
                   </p>
+                </div>
+              </div>
+              
+              {/* NOUVEAU: Compteur de personnes dans le header */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '20px',
+                background: 'rgba(30, 41, 59, 0.8)',
+                padding: '12px 20px',
+                borderRadius: '12px',
+                border: '1px solid rgba(100, 116, 139, 0.3)'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ color: '#3b82f6', fontSize: '20px', fontWeight: '700' }}>
+                    {formData.projectInfo.workerCount || formData.team.members.length}
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '11px' }}>Personnes sur la job</div>
+                </div>
+                <div style={{ width: '1px', height: '40px', background: 'rgba(100, 116, 139, 0.3)' }}></div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ color: '#22c55e', fontSize: '20px', fontWeight: '700' }}>
+                    {formData.team.members.filter(m => m.validationStatus === 'approved').length}
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '11px' }}>Approuvé AST</div>
+                </div>
+                <div style={{ width: '1px', height: '40px', background: 'rgba(100, 116, 139, 0.3)' }}></div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ 
+                    color: formData.team.members.length > 0 && formData.team.members.filter(m => m.validationStatus === 'approved').length === formData.team.members.length 
+                      ? '#22c55e' : '#f59e0b', 
+                    fontSize: '20px', 
+                    fontWeight: '700' 
+                  }}>
+                    {formData.team.members.length > 0 
+                      ? Math.round((formData.team.members.filter(m => m.validationStatus === 'approved').length / formData.team.members.length) * 100)
+                      : 0}%
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '11px' }}>Taux d'approbation</div>
                 </div>
               </div>
               
@@ -2327,6 +3439,28 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                           projectInfo: { ...prev.projectInfo, projectNumber: e.target.value }
                         }))}
                       />
+                    </div>
+
+                    {/* NOUVEAU: Champ nombre de personnes */}
+                    <div>
+                      <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                        👥 Nombre de personnes sur la job *
+                      </label>
+                      <input 
+                        type="number"
+                        min="1"
+                        max="100"
+                        className="input-premium"
+                        placeholder="Ex: 5"
+                        value={formData.projectInfo.workerCount}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          projectInfo: { ...prev.projectInfo, workerCount: parseInt(e.target.value) || 1 }
+                        }))}
+                      />
+                      <small style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                        Ce nombre sera comparé aux approbations d'équipe
+                      </small>
                     </div>
 
                     <div style={{ gridColumn: '1 / -1' }}>
@@ -2622,6 +3756,47 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                          point.type === 'hydraulic' ? '💧' :
                          point.type === 'chemical' ? '🧪' : '🔥'} {point.name}
                       </h4>
+
+                      {/* NOUVELLE CHECKLIST SELON VOTRE IMAGE */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <h5 style={{ color: '#3b82f6', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
+                          📋 Points d'Isolement - Checklist
+                        </h5>
+                        <div className="isolation-checklist">
+                          <div 
+                            className={`checklist-item ${point.checklist.cadenasAppose ? 'completed' : ''}`}
+                            onClick={() => updateIsolationChecklist(point.id, 'cadenasAppose')}
+                          >
+                            <div className={`checkbox-premium ${point.checklist.cadenasAppose ? 'checked' : ''}`} />
+                            <span style={{ color: '#e2e8f0', fontSize: '14px' }}>Cadenas Apposé</span>
+                          </div>
+                          
+                          <div 
+                            className={`checklist-item ${point.checklist.absenceTension ? 'completed' : ''}`}
+                            onClick={() => updateIsolationChecklist(point.id, 'absenceTension')}
+                          >
+                            <div className={`checkbox-premium ${point.checklist.absenceTension ? 'checked' : ''}`} />
+                            <span style={{ color: '#e2e8f0', fontSize: '14px' }}>Absence de Tension</span>
+                          </div>
+                          
+                          <div 
+                            className={`checklist-item ${point.checklist.miseALaTerre ? 'completed' : ''}`}
+                            onClick={() => updateIsolationChecklist(point.id, 'miseALaTerre')}
+                          >
+                            <div className={`checkbox-premium ${point.checklist.miseALaTerre ? 'checked' : ''}`} />
+                            <span style={{ color: '#e2e8f0', fontSize: '14px' }}>Mise à la Terre</span>
+                          </div>
+                          
+                          <div 
+                            className={`checklist-item ${point.checklist.cadenasReleve ? 'completed' : ''}`}
+                            onClick={() => updateIsolationChecklist(point.id, 'cadenasReleve')}
+                          >
+                            <div className={`checkbox-premium ${point.checklist.cadenasReleve ? 'checked' : ''}`} />
+                            <span style={{ color: '#e2e8f0', fontSize: '14px' }}>Cadenas Relevé</span>
+                          </div>
+                        </div>
+                      </div>
+
                       <PhotoCarousel
                         photos={point.photos}
                         onAddPhoto={(file) => addPhotoToIsolationPoint(point.id, file)}
@@ -2640,13 +3815,58 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                 </div>
               )}
 
-              {/* ÉTAPE 6: Validation Équipe */}
+              {/* ÉTAPE 6: Validation Équipe avec Tableau d'Approbation */}
               {currentStep === 5 && (
                 <div className="slide-in">
                   <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                     <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
                       👥 {t.team.validation}
                     </h2>
+                    
+                    {/* NOUVEAU: Indicateur de progression d'équipe */}
+                    <div style={{ 
+                      background: 'rgba(30, 41, 59, 0.6)', 
+                      padding: '16px', 
+                      borderRadius: '12px', 
+                      margin: '16px 0',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      gap: '32px',
+                      flexWrap: 'wrap'
+                    }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#3b82f6', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.projectInfo.workerCount || formData.team.members.length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Personnes attendues</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#f59e0b', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.team.members.length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Ajoutées à l'équipe</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.team.members.filter(m => m.validationStatus === 'approved').length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Ont approuvé l'AST</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ 
+                          color: formData.team.members.length > 0 && 
+                                 formData.team.members.filter(m => m.validationStatus === 'approved').length >= (formData.projectInfo.workerCount || formData.team.members.length)
+                            ? '#22c55e' : '#ef4444', 
+                          fontSize: '24px', 
+                          fontWeight: '700' 
+                        }}>
+                          {formData.team.members.length > 0 && (formData.projectInfo.workerCount || formData.team.members.length) > 0
+                            ? Math.round((formData.team.members.filter(m => m.validationStatus === 'approved').length / (formData.projectInfo.workerCount || formData.team.members.length)) * 100)
+                            : 0}%
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Couverture d'approbation</div>
+                      </div>
+                    </div>
                   </div>
 
                   <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '24px', borderRadius: '16px', marginBottom: '24px' }}>
@@ -2678,64 +3898,86 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     </div>
                   </div>
 
-                  {formData.team.members.map((member) => (
-                    <div
-                      key={member.id}
-                      style={{
-                        background: 'rgba(30, 41, 59, 0.8)',
-                        border: `1px solid ${
-                          member.validationStatus === 'approved' ? '#22c55e' : 
-                          member.validationStatus === 'rejected' ? '#ef4444' : 
-                          'rgba(100, 116, 139, 0.3)'
-                        }`,
-                        borderRadius: '16px',
-                        padding: '24px',
-                        marginBottom: '16px'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                        <div>
-                          <h4 style={{ color: 'white', fontSize: '18px', fontWeight: '600', margin: 0 }}>
-                            {member.name}
-                          </h4>
-                          <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
-                            {member.department}
-                          </p>
-                        </div>
-                        <div style={{ 
-                          color: member.validationStatus === 'approved' ? '#22c55e' : 
-                                 member.validationStatus === 'rejected' ? '#ef4444' : '#f59e0b',
-                          fontSize: '14px', 
-                          fontWeight: '600'
-                        }}>
-                          {member.validationStatus === 'approved' && '✅ Approuvé'}
-                          {member.validationStatus === 'rejected' && '❌ Rejeté'}
-                          {member.validationStatus === 'pending' && '⏳ En attente'}
-                        </div>
-                      </div>
-
-                      {member.validationStatus === 'pending' && (
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                          <button
-                            onClick={() => validateTeamMember(member.id, true, 'Approuvé')}
-                            className="btn-success"
-                            style={{ flex: 1, padding: '12px' }}
-                          >
-                            <Check style={{ width: '16px', height: '16px' }} />
-                            Approuver
-                          </button>
-                          <button
-                            onClick={() => validateTeamMember(member.id, false, 'Rejeté')}
-                            className="btn-danger"
-                            style={{ flex: 1, padding: '12px' }}
-                          >
-                            <X style={{ width: '16px', height: '16px' }} />
-                            Rejeter
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                  {/* NOUVEAU: Tableau d'approbation selon votre image */}
+                  {formData.team.members.length > 0 && (
+                    <table className="approval-table">
+                      <thead>
+                        <tr>
+                          <th style={{ textAlign: 'left' }}>NOM DU TRAVAILLEUR</th>
+                          <th>CONSULTATION AST</th>
+                          <th>CADENAS APPOSÉ</th>
+                          <th>CADENAS RELEVÉ</th>
+                          <th>STATUT</th>
+                          <th>ACTIONS</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {formData.team.members.map((member) => (
+                          <tr key={member.id}>
+                            <td className="worker-name-cell">
+                              <div>
+                                <div style={{ fontWeight: '600' }}>{member.name}</div>
+                                <div style={{ fontSize: '11px', opacity: 0.8 }}>{member.department}</div>
+                              </div>
+                            </td>
+                            <td>
+                              <LockButton
+                                locked={member.consultationAst}
+                                onToggle={() => toggleConsultationAst(member.id)}
+                                memberId={member.id}
+                              />
+                            </td>
+                            <td>
+                              <LockButton
+                                locked={member.cadenasAppose}
+                                onToggle={() => toggleCadenasAppose(member.id)}
+                                memberId={member.id}
+                              />
+                            </td>
+                            <td>
+                              <LockButton
+                                locked={member.cadenasReleve}
+                                onToggle={() => toggleCadenasReleve(member.id)}
+                                memberId={member.id}
+                              />
+                            </td>
+                            <td>
+                              <div style={{ 
+                                color: member.validationStatus === 'approved' ? '#22c55e' : 
+                                       member.validationStatus === 'rejected' ? '#ef4444' : '#f59e0b',
+                                fontSize: '12px', 
+                                fontWeight: '600'
+                              }}>
+                                {member.validationStatus === 'approved' && '✅ Approuvé'}
+                                {member.validationStatus === 'rejected' && '❌ Rejeté'}
+                                {member.validationStatus === 'pending' && '⏳ En attente'}
+                              </div>
+                            </td>
+                            <td>
+                              {member.validationStatus === 'pending' && (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <button
+                                    onClick={() => validateTeamMember(member.id, true, 'Approuvé')}
+                                    className="btn-success"
+                                    style={{ padding: '6px 12px', fontSize: '11px' }}
+                                  >
+                                    <Check style={{ width: '12px', height: '12px' }} />
+                                  </button>
+                                  <button
+                                    onClick={() => validateTeamMember(member.id, false, 'Rejeté')}
+                                    className="btn-danger"
+                                    style={{ padding: '6px 12px', fontSize: '11px' }}
+                                  >
+                                    <X style={{ width: '12px', height: '12px' }} />
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
 
                   {formData.team.members.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
@@ -2822,11 +4064,18 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     </h3>
                     
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px' }}>
+                        <div style={{ color: '#3b82f6', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.projectInfo.workerCount || formData.team.members.length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Personnes sur la job</div>
+                      </div>
+
                       <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px' }}>
                         <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
                           {formData.team.members.filter(m => m.validationStatus === 'approved').length}
                         </div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Validations</div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Approbations AST</div>
                       </div>
 
                       <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px' }}>
@@ -2836,18 +4085,33 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         <div style={{ color: '#94a3b8', fontSize: '12px' }}>Dangers identifiés</div>
                       </div>
 
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ color: '#3b82f6', fontSize: '24px', fontWeight: '700' }}>
+                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(168, 85, 247, 0.1)', borderRadius: '8px' }}>
+                        <div style={{ color: '#a855f7', fontSize: '24px', fontWeight: '700' }}>
                           {formData.isolationPoints.length}
                         </div>
                         <div style={{ color: '#94a3b8', fontSize: '12px' }}>Points d'isolement</div>
                       </div>
 
-                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(168, 85, 247, 0.1)', borderRadius: '8px' }}>
-                        <div style={{ color: '#a855f7', fontSize: '24px', fontWeight: '700' }}>
+                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px' }}>
+                        <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: '700' }}>
                           {formData.documentation.photos.length}
                         </div>
                         <div style={{ color: '#94a3b8', fontSize: '12px' }}>Photos ajoutées</div>
+                      </div>
+
+                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(251, 191, 36, 0.1)', borderRadius: '8px' }}>
+                        <div style={{ 
+                          color: formData.team.members.length > 0 && 
+                                 formData.team.members.filter(m => m.validationStatus === 'approved').length >= (formData.projectInfo.workerCount || formData.team.members.length)
+                            ? '#22c55e' : '#f59e0b', 
+                          fontSize: '24px', 
+                          fontWeight: '700' 
+                        }}>
+                          {formData.team.members.length > 0 && (formData.projectInfo.workerCount || formData.team.members.length) > 0
+                            ? Math.round((formData.team.members.filter(m => m.validationStatus === 'approved').length / (formData.projectInfo.workerCount || formData.team.members.length)) * 100)
+                            : 0}%
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Taux de couverture</div>
                       </div>
                     </div>
                   </div>
@@ -2895,6 +4159,8 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     onClick={handleFinalSubmission} 
                     className="btn-success"
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    disabled={formData.team.members.length > 0 && 
+                             formData.team.members.filter(m => m.validationStatus === 'approved').length < (formData.projectInfo.workerCount || formData.team.members.length)}
                   >
                     <Send style={{ width: '16px', height: '16px' }} />
                     Soumission Finale
@@ -2916,4 +4182,4 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
       </div>
     </>
   );
-} 
+}
