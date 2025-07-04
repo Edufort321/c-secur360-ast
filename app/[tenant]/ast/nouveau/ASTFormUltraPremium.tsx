@@ -3182,7 +3182,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   // Début du JSX sera dans la section 5...
   return (
     <div className="form-container">,
-    // =================== AST SECTION 5/5 FINALE - JSX RENDER COMPLET ===================
+      // =================== AST SECTION 5/5 FINALE - JSX RENDER COMPLET ===================
 // Section 5: Interface utilisateur complète avec toutes les fonctionnalités
 
 // Continuation du return du composant principal...
@@ -4313,4 +4313,4 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
       </div>
     </div>
   );
-}  
+}
