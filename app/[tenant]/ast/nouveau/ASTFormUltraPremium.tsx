@@ -1278,11 +1278,11 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
 
   const validateTeamMember = (memberId: string, approved: boolean, comments: string) => {
     setFormData(prev => {
-      const updatedMembers = prev.team.members.map(m =>
+      const updatedMembers: TeamMember[] = prev.team.members.map(m =>
         m.id === memberId 
           ? { 
               ...m, 
-              validationStatus: approved ? 'approved' : 'rejected',
+              validationStatus: (approved ? 'approved' : 'rejected') as TeamMember['validationStatus'],
               validationComments: comments 
             }
           : m
@@ -1290,7 +1290,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
       
       const allApproved = updatedMembers.every(m => m.validationStatus === 'approved');
       
-      return {
+      const updatedFormData: ASTFormData = {
         ...prev,
         team: {
           ...prev.team,
@@ -1298,6 +1298,8 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
           allApproved
         }
       };
+      
+      return updatedFormData;
     });
   };
 
