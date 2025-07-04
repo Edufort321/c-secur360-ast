@@ -24,7 +24,13 @@ import {
   Activity,
   Award,
   Zap,
-  Play
+  Play,
+  Archive,
+  FolderOpen,
+  History,
+  Bookmark,
+  Database,
+  ChevronDown
 } from 'lucide-react'
 
 interface DashboardData {
@@ -95,6 +101,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
   const [timeFilter, setTimeFilter] = useState('30d')
   const [isVisible, setIsVisible] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const [showArchiveMenu, setShowArchiveMenu] = useState(false)
   const data = mockData
 
   // Animation d'entrée
@@ -111,7 +118,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
 
   return (
     <>
-      {/* CSS Animations Global */}
+      {/* CSS Animations Global + Nouvelles animations */}
       <style dangerouslySetInnerHTML={{
         __html: `
           @keyframes gradientShift {
@@ -160,16 +167,31 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           
           @keyframes glow {
             0%, 100% { 
-              box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+              box-shadow: 0 0 30px rgba(245, 158, 11, 0.4), inset 0 0 20px rgba(245, 158, 11, 0.1);
             }
             50% { 
-              box-shadow: 0 0 40px rgba(251, 191, 36, 0.6), 0 0 60px rgba(251, 191, 36, 0.3);
+              box-shadow: 0 0 50px rgba(245, 158, 11, 0.7), inset 0 0 30px rgba(245, 158, 11, 0.2);
             }
+          }
+          
+          @keyframes shine {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
           }
           
           @keyframes progressFill {
             from { width: 0%; }
             to { width: var(--progress, 0%); }
+          }
+          
+          @keyframes logoGlow {
+            0%, 100% { 
+              filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 10px rgba(245, 158, 11, 0.3));
+            }
+            50% { 
+              filter: brightness(1.4) contrast(1.2) drop-shadow(0 0 20px rgba(245, 158, 11, 0.6));
+            }
           }
           
           .dashboard-container {
@@ -199,6 +221,10 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           
           .glow-effect {
             animation: glow 4s ease-in-out infinite;
+          }
+          
+          .logo-glow {
+            animation: logoGlow 3s ease-in-out infinite;
           }
           
           .card-hover {
@@ -265,6 +291,41 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           
           .btn-premium:hover:before {
             left: 100%;
+          }
+          
+          .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            min-width: 280px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow: hidden;
+          }
+          
+          .dropdown-item {
+            padding: 16px 20px;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          }
+          
+          .dropdown-item:hover {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            transform: translateX(8px);
+          }
+          
+          .dropdown-item:last-child {
+            border-bottom: none;
           }
           
           .status-badge {
@@ -338,7 +399,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           zIndex: 1
         }} />
 
-        {/* Header Ultra Premium */}
+        {/* Header Ultra Premium avec Logo Premium */}
         <header style={{
           background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
           backdropFilter: 'blur(20px)',
@@ -363,34 +424,36 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               gap: '20px'
             }}>
               
-              {/* Logo et titre avec animation */}
+              {/* Logo Premium avec Encadré Noir */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                 <div 
                   className="float-animation glow-effect"
                   style={{
-                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                    padding: '16px',
-                    borderRadius: '20px',
+                    background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
+                    padding: '24px',
+                    borderRadius: '28px',
+                    border: '3px solid #f59e0b',
+                    boxShadow: '0 0 40px rgba(245, 158, 11, 0.5), inset 0 0 20px rgba(245, 158, 11, 0.1)',
                     position: 'relative',
                     overflow: 'hidden'
                   }}
                 >
                   <div style={{
-                    width: '48px',
-                    height: '48px',
+                    width: '72px',
+                    height: '72px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'white',
                     position: 'relative',
                     zIndex: 1
                   }}>
                     <img 
                       src="/c-secur360-logo.png" 
                       alt="C-Secur360"
+                      className="logo-glow"
                       style={{ 
-                        width: '48px', 
-                        height: '48px', 
+                        width: '72px', 
+                        height: '72px', 
                         objectFit: 'contain'
                       }}
                       onError={(e) => {
@@ -400,28 +463,40 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                       }}
                     />
                     <BarChart3 style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      display: 'none'
+                      width: '48px', 
+                      height: '48px', 
+                      display: 'none',
+                      color: '#f59e0b'
                     }} />
                   </div>
+                  
+                  {/* Effet brillance animé */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '-100%',
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.3), transparent)',
+                    animation: 'shine 3s ease-in-out infinite'
+                  }} />
                 </div>
                 
                 <div className="slide-in-right">
                   <h1 className="text-gradient" style={{
-                    fontSize: '32px',
+                    fontSize: '36px',
                     margin: 0,
                     lineHeight: 1.2,
-                    fontWeight: '800',
+                    fontWeight: '900',
                     letterSpacing: '-0.025em'
                   }}>
                     🛡️ C-Secur360
                   </h1>
                   <p style={{
                     color: 'rgba(251, 191, 36, 0.9)',
-                    fontSize: '16px',
+                    fontSize: '18px',
                     margin: 0,
-                    fontWeight: '500'
+                    fontWeight: '600'
                   }}>
                     Dashboard Gestionnaire SST • {tenant.companyName}
                   </p>
@@ -432,14 +507,14 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     marginTop: '8px'
                   }}>
                     <div style={{
-                      width: '8px',
-                      height: '8px',
+                      width: '10px',
+                      height: '10px',
                       borderRadius: '50%',
                       background: '#22c55e'
                     }} className="pulse-animation" />
                     <span style={{
                       color: '#22c55e',
-                      fontSize: '12px',
+                      fontSize: '14px',
                       fontWeight: '600'
                     }}>
                       Système opérationnel
@@ -448,7 +523,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                 </div>
               </div>
               
-              {/* Contrôles premium */}
+              {/* Contrôles premium avec Archives */}
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -484,6 +559,55 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   <option value="90d">3 derniers mois</option>
                   <option value="1y">Dernière année</option>
                 </select>
+
+                {/* Bouton Archives avec Dropdown */}
+                <div style={{ position: 'relative' }}>
+                  <button 
+                    className="btn-premium"
+                    onClick={() => setShowArchiveMenu(!showArchiveMenu)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <Archive style={{ width: '16px', height: '16px' }} />
+                    Archives
+                    <ChevronDown style={{ width: '14px', height: '14px' }} />
+                  </button>
+
+                  {showArchiveMenu && (
+                    <div className="dropdown-menu">
+                      <Link href={`/${tenant.subdomain}/archives/ast`} className="dropdown-item">
+                        <FileText style={{ width: '16px', height: '16px' }} />
+                        <div>
+                          <div style={{ fontWeight: '600' }}>AST Historique</div>
+                          <div style={{ fontSize: '12px', opacity: 0.7 }}>Par année/projet/date</div>
+                        </div>
+                      </Link>
+                      
+                      <Link href={`/${tenant.subdomain}/archives/near-miss`} className="dropdown-item">
+                        <AlertTriangle style={{ width: '16px', height: '16px' }} />
+                        <div>
+                          <div style={{ fontWeight: '600' }}>Passé Proche</div>
+                          <div style={{ fontSize: '12px', opacity: 0.7 }}>Incidents archivés</div>
+                        </div>
+                      </Link>
+                      
+                      <Link href={`/${tenant.subdomain}/archives/improvements`} className="dropdown-item">
+                        <Target style={{ width: '16px', height: '16px' }} />
+                        <div>
+                          <div style={{ fontWeight: '600' }}>Améliorations</div>
+                          <div style={{ fontSize: '12px', opacity: 0.7 }}>Recommandations & ROI</div>
+                        </div>
+                      </Link>
+                      
+                      <Link href={`/${tenant.subdomain}/archives/reports`} className="dropdown-item">
+                        <Database style={{ width: '16px', height: '16px' }} />
+                        <div>
+                          <div style={{ fontWeight: '600' }}>Rapports Annuels</div>
+                          <div style={{ fontSize: '12px', opacity: 0.7 }}>Compilation complète</div>
+                        </div>
+                      </Link>
+                    </div>
+                  )}
+                </div>
                 
                 <button className="btn-premium">
                   <Download style={{ width: '16px', height: '16px', marginRight: '8px' }} />
@@ -503,7 +627,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           zIndex: 5
         }}>
           
-          {/* KPI Cards Ultra Premium */}
+          {/* KPI Cards Ultra Premium (identique à avant) */}
           <div 
             className="slide-in-up" 
             style={{ 
@@ -815,7 +939,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
             </div>
           </div>
 
-          {/* Alertes Critiques Ultra Premium */}
+          {/* Alertes Critiques Ultra Premium (identique à avant) */}
           <div 
             className="glass-effect slide-in-up"
             style={{
@@ -959,7 +1083,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
             </div>
           </div>
 
-          {/* Actions Rapides Ultra Premium */}
+          {/* Actions Rapides Ultra Premium (identique à avant mais avec Archives intégré) */}
           <div 
             className="slide-in-up"
             style={{ 
@@ -995,10 +1119,10 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                 gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
               },
               { 
-                href: `/${tenant.subdomain}/settings`, 
-                icon: Shield, 
-                title: 'Configuration', 
-                desc: 'Paramètres système', 
+                href: `/${tenant.subdomain}/archives`, 
+                icon: Archive, 
+                title: 'Archives & Historique', 
+                desc: 'Données historiques complètes', 
                 color: '#f59e0b',
                 gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
               }
@@ -1042,14 +1166,6 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                       }}
                     >
                       <Icon style={{ width: '36px', height: '36px', color: 'white' }} />
-                      <div style={{
-                        position: 'absolute',
-                        inset: 0,
-                        borderRadius: '24px',
-                        background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.2) 50%, transparent 70%)',
-                        opacity: 0,
-                        transition: 'opacity 0.3s ease'
-                      }} className="shine-effect" />
                     </div>
                     
                     <h3 className="text-gradient" style={{ 
@@ -1088,7 +1204,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           </div>
         </div>
 
-        {/* Footer Ultra Premium */}
+        {/* Footer Ultra Premium (identique à avant) */}
         <footer style={{
           background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
           backdropFilter: 'blur(20px)',
