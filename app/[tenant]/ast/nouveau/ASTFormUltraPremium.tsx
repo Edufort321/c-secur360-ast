@@ -1216,11 +1216,11 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
     setSaveStatus('saving');
     
     try {
-      // Mise à jour des métadonnées
-      const updatedFormData = {
+      // Mise à jour des métadonnées avec types explicites
+      const updatedFormData: ASTFormData = {
         ...formData,
         lastModified: new Date().toISOString(),
-        status: isDraft ? 'draft' : 'completed'
+        status: isDraft ? 'draft' : 'completed' // Types littéraux explicites
       };
       
       // Sauvegarde vers Supabase
@@ -1449,9 +1449,9 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
       return;
     }
     
-    const finalData = {
+    const finalData: ASTFormData = {
       ...formData,
-      status: 'completed' as const,
+      status: 'completed', // Type littéral explicite
       validation: {
         ...formData.validation,
         finalApproval: true,
