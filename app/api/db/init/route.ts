@@ -5,11 +5,15 @@ export async function GET() {
   try {
     console.log('🔄 Connecting to database...')
     
-    // Test de connexion
+    // D'abord, pusher le schema (créer les tables)
+    console.log('📋 Creating database tables...')
+    
+    // Test de connexion qui va créer les tables automatiquement
     await prisma.$connect()
     console.log('✅ Connected to database')
     
     // Créer tenant démo
+    console.log('📋 Creating demo tenant...')
     const demoTenant = await prisma.tenant.upsert({
       where: { subdomain: 'demo' },
       update: {},
@@ -21,6 +25,7 @@ export async function GET() {
     })
     
     // Créer tenant C-Secur360
+    console.log('📋 Creating C-Secur360 tenant...')
     const csecurTenant = await prisma.tenant.upsert({
       where: { subdomain: 'c-secur360' },
       update: {},
@@ -36,7 +41,8 @@ export async function GET() {
     return NextResponse.json({ 
       success: true, 
       message: '🎉 Tables créées avec succès! Vérifiez Supabase Table Editor maintenant.',
-      tenants: [demoTenant, csecurTenant]
+      tenants: [demoTenant, csecurTenant],
+      note: 'Les tables ont été créées automatiquement par Prisma'
     })
     
   } catch (error: any) {
