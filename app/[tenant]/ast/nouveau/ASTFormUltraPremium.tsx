@@ -127,10 +127,11 @@ interface ASTFormProps {
   tenant: Tenant
 }
 
-// Traductions
+// Traductions corrigées
 const translations = {
   fr: {
     title: "Nouvelle Analyse Sécuritaire de Tâches",
+    subtitle: "Renseignez les informations de base du projet",
     steps: {
       general: "Informations Générales",
       team: "Équipe de Travail", 
@@ -147,10 +148,32 @@ const translations = {
       addPhoto: "Ajouter Photo",
       addWorker: "Ajouter Travailleur",
       addHazard: "Ajouter Danger"
+    },
+    labels: {
+      projectNumber: "Numéro de projet",
+      client: "Client",
+      location: "Lieu des travaux",
+      workDate: "Date des travaux",
+      workDescription: "Description détaillée des travaux",
+      estimatedDuration: "Durée estimée",
+      astNumber: "Numéro AST",
+      workPermit: "Permis de travail",
+      supervisor: "Nom du superviseur",
+      certifications: "Certifications"
+    },
+    placeholders: {
+      projectNumber: "Ex: PROJ-2024-001",
+      client: "Nom du client",
+      location: "Adresse complète",
+      workDescription: "Décrivez en détail les travaux à effectuer, les étapes prévues, les équipements impliqués...",
+      duration: "Ex: 2 jours, 4 heures",
+      astNumber: "Généré automatiquement",
+      certifications: "Ex: CNESST, CSA Z462"
     }
   },
   en: {
     title: "New Job Safety Analysis",
+    subtitle: "Fill in the basic project information",
     steps: {
       general: "General Information",
       team: "Work Team",
@@ -167,6 +190,27 @@ const translations = {
       addPhoto: "Add Photo",
       addWorker: "Add Worker",
       addHazard: "Add Hazard"
+    },
+    labels: {
+      projectNumber: "Project number",
+      client: "Client",
+      location: "Work location",
+      workDate: "Work date",
+      workDescription: "Detailed work description",
+      estimatedDuration: "Estimated duration",
+      astNumber: "JSA number",
+      workPermit: "Work permit",
+      supervisor: "Supervisor name",
+      certifications: "Certifications"
+    },
+    placeholders: {
+      projectNumber: "Ex: PROJ-2024-001",
+      client: "Client name",
+      location: "Complete address",
+      workDescription: "Describe in detail the work to be performed, planned steps, equipment involved...",
+      duration: "Ex: 2 days, 4 hours",
+      astNumber: "Auto-generated",
+      certifications: "Ex: CNESST, CSA Z462"
     }
   }
 }
@@ -226,16 +270,16 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const steps = [
-    { icon: FileText, key: 'general' },
-    { icon: Users, key: 'team' },
-    { icon: AlertTriangle, key: 'hazards' },
-    { icon: Shield, key: 'equipment' },
-    { icon: Camera, key: 'documentation' },
-    { icon: CheckCircle, key: 'validation' }
+    { icon: FileText, key: 'general' as const },
+    { icon: Users, key: 'team' as const },
+    { icon: AlertTriangle, key: 'hazards' as const },
+    { icon: Shield, key: 'equipment' as const },
+    { icon: Camera, key: 'documentation' as const },
+    { icon: CheckCircle, key: 'validation' as const }
   ]
 
   const isDemo = tenant.subdomain === 'demo'
-  const getText = (key: string) => translations[language][key as keyof typeof translations.fr] || key
+  const t = translations[language]
 
   // Animation d'entrée
   useEffect(() => {
@@ -539,7 +583,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent'
                   }}>
-                    {getText('title')}
+                    {t.title}
                   </h1>
                   <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
                     {tenant.companyName} • {formData.id}
@@ -679,7 +723,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                       textAlign: 'center',
                       lineHeight: 1.2
                     }}>
-                      {getText(`steps.${step.key}`)}
+                      {t.steps[step.key]}
                     </span>
                     {isCompleted && !isActive && (
                       <CheckCircle style={{ 
@@ -713,10 +757,10 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent'
                   }}>
-                    📋 {getText('steps.general')}
+                    📋 {t.steps.general}
                   </h2>
                   <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
-                    Renseignez les informations de base du projet
+                    {t.subtitle}
                   </p>
                 </div>
 
@@ -733,7 +777,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                       fontWeight: '600', 
                       marginBottom: '8px' 
                     }}>
-                      Numéro de projet *
+                      {t.labels.projectNumber} *
                     </label>
                     <input
                       type="text"
@@ -744,7 +788,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         ...prev,
                         projectInfo: { ...prev.projectInfo, number: e.target.value }
                       }))}
-                      placeholder="Ex: PROJ-2024-001"
+                      placeholder={t.placeholders.projectNumber}
                     />
                   </div>
 
@@ -756,7 +800,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                       fontWeight: '600', 
                       marginBottom: '8px' 
                     }}>
-                      Client *
+                      {t.labels.client} *
                     </label>
                     <input
                       type="text"
@@ -767,7 +811,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         ...prev,
                         projectInfo: { ...prev.projectInfo, client: e.target.value }
                       }))}
-                      placeholder="Nom du client"
+                      placeholder={t.placeholders.client}
                     />
                   </div>
 
@@ -779,7 +823,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                       fontWeight: '600', 
                       marginBottom: '8px' 
                     }}>
-                      Lieu des travaux *
+                      {t.labels.location} *
                     </label>
                     <input
                       type="text"
@@ -790,7 +834,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         ...prev,
                         projectInfo: { ...prev.projectInfo, location: e.target.value }
                       }))}
-                      placeholder="Adresse complète"
+                      placeholder={t.placeholders.location}
                     />
                   </div>
 
@@ -802,7 +846,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                       fontWeight: '600', 
                       marginBottom: '8px' 
                     }}>
-                      Date des travaux *
+                      {t.labels.workDate} *
                     </label>
                     <input
                       type="date"
@@ -824,7 +868,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                       fontWeight: '600', 
                       marginBottom: '8px' 
                     }}>
-                      Description détaillée des travaux *
+                      {t.labels.workDescription} *
                     </label>
                     <textarea
                       className="input-premium"
@@ -834,7 +878,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         ...prev,
                         projectInfo: { ...prev.projectInfo, workDescription: e.target.value }
                       }))}
-                      placeholder="Décrivez en détail les travaux à effectuer, les étapes prévues, les équipements impliqués..."
+                      placeholder={t.placeholders.workDescription}
                     />
                   </div>
 
@@ -846,7 +890,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                       fontWeight: '600', 
                       marginBottom: '8px' 
                     }}>
-                      Durée estimée
+                      {t.labels.estimatedDuration}
                     </label>
                     <input
                       type="text"
@@ -857,7 +901,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         ...prev,
                         projectInfo: { ...prev.projectInfo, estimatedDuration: e.target.value }
                       }))}
-                      placeholder="Ex: 2 jours, 4 heures"
+                      placeholder={t.placeholders.duration}
                     />
                   </div>
 
@@ -869,7 +913,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                       fontWeight: '600', 
                       marginBottom: '8px' 
                     }}>
-                      Numéro AST
+                      {t.labels.astNumber}
                     </label>
                     <input
                       type="text"
@@ -880,7 +924,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         ...prev,
                         projectInfo: { ...prev.projectInfo, astNumber: e.target.value }
                       }))}
-                      placeholder="Généré automatiquement"
+                      placeholder={t.placeholders.astNumber}
                     />
                   </div>
                 </div>
@@ -894,7 +938,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                   borderRadius: '16px'
                 }}>
                   <h3 style={{ color: '#3b82f6', fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0' }}>
-                    🎫 Permis de travail
+                    🎫 {t.labels.workPermit}
                   </h3>
                   
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -943,7 +987,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent'
                   }}>
-                    👥 {getText('steps.team')}
+                    👥 {t.steps.team}
                   </h2>
                   <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
                     Définissez l'équipe et les responsabilités
@@ -975,7 +1019,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         fontWeight: '600', 
                         marginBottom: '8px' 
                       }}>
-                        Nom du superviseur *
+                        {t.labels.supervisor} *
                       </label>
                       <input
                         type="text"
@@ -997,7 +1041,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         fontWeight: '600', 
                         marginBottom: '8px' 
                       }}>
-                        Certifications *
+                        {t.labels.certifications} *
                       </label>
                       <input
                         type="text"
@@ -1008,7 +1052,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                           ...prev,
                           team: { ...prev.team, supervisorCert: e.target.value }
                         }))}
-                        placeholder="Ex: CNESST, CSA Z462"
+                        placeholder={t.placeholders.certifications}
                       />
                     </div>
                   </div>
@@ -1026,7 +1070,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                       style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                       <Plus style={{ width: '16px', height: '16px' }} />
-                      {getText('buttons.addWorker')}
+                      {t.buttons.addWorker}
                     </button>
                   </div>
 
@@ -1154,6 +1198,18 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
               </div>
             )}
 
+            {/* Autres étapes peuvent être ajoutées ici */}
+            {currentStep > 1 && (
+              <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+                <h2 style={{ color: 'white', fontSize: '24px', fontWeight: '700', marginBottom: '16px' }}>
+                  🚧 Étape en développement
+                </h2>
+                <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>
+                  Cette section sera complétée dans la prochaine version
+                </p>
+              </div>
+            )}
+
             {/* Navigation */}
             <div style={{ 
               display: 'flex', 
@@ -1176,7 +1232,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                 }}
               >
                 <ChevronLeft style={{ width: '16px', height: '16px' }} />
-                {getText('buttons.previous')}
+                {t.buttons.previous}
               </button>
 
               <div style={{ display: 'flex', gap: '12px' }}>
@@ -1196,7 +1252,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                   }}
                 >
                   <Save style={{ width: '16px', height: '16px' }} />
-                  {getText('buttons.save')}
+                  {t.buttons.save}
                 </button>
 
                 {currentStep === steps.length - 1 ? (
@@ -1212,7 +1268,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     }}
                   >
                     <Send style={{ width: '16px', height: '16px' }} />
-                    {getText('buttons.submit')}
+                    {t.buttons.submit}
                   </button>
                 ) : (
                   <button
@@ -1220,7 +1276,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                     onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
-                    {getText('buttons.next')}
+                    {t.buttons.next}
                     <ChevronRight style={{ width: '16px', height: '16px' }} />
                   </button>
                 )}
