@@ -127,8 +127,60 @@ interface ASTFormProps {
   tenant: Tenant
 }
 
-// Traductions corrigées
-const translations = {
+// Interface complète pour les traductions
+interface TranslationLabels {
+  projectNumber: string
+  client: string
+  location: string
+  workDate: string
+  workDescription: string
+  estimatedDuration: string
+  astNumber: string
+  workPermit: string
+  supervisor: string
+  certifications: string
+}
+
+interface TranslationPlaceholders {
+  projectNumber: string
+  client: string
+  location: string
+  workDescription: string
+  duration: string
+  astNumber: string
+  certifications: string
+}
+
+interface TranslationButtons {
+  previous: string
+  next: string
+  save: string
+  submit: string
+  addPhoto: string
+  addWorker: string
+  addHazard: string
+}
+
+interface TranslationSteps {
+  general: string
+  team: string
+  hazards: string
+  equipment: string
+  documentation: string
+  validation: string
+}
+
+interface Translations {
+  title: string
+  subtitle: string
+  steps: TranslationSteps
+  buttons: TranslationButtons
+  labels: TranslationLabels
+  placeholders: TranslationPlaceholders
+}
+
+// Traductions corrigées avec interface complète
+const translations: Record<'fr' | 'en', Translations> = {
   fr: {
     title: "Nouvelle Analyse Sécuritaire de Tâches",
     subtitle: "Renseignez les informations de base du projet",
@@ -270,12 +322,12 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const steps = [
-    { icon: FileText, key: 'general' as const },
-    { icon: Users, key: 'team' as const },
-    { icon: AlertTriangle, key: 'hazards' as const },
-    { icon: Shield, key: 'equipment' as const },
-    { icon: Camera, key: 'documentation' as const },
-    { icon: CheckCircle, key: 'validation' as const }
+    { icon: FileText, key: 'general' as keyof TranslationSteps },
+    { icon: Users, key: 'team' as keyof TranslationSteps },
+    { icon: AlertTriangle, key: 'hazards' as keyof TranslationSteps },
+    { icon: Shield, key: 'equipment' as keyof TranslationSteps },
+    { icon: Camera, key: 'documentation' as keyof TranslationSteps },
+    { icon: CheckCircle, key: 'validation' as keyof TranslationSteps }
   ]
 
   const isDemo = tenant.subdomain === 'demo'
@@ -654,8 +706,8 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                   height: '100%',
                   background: 'linear-gradient(90deg, #3b82f6, #22c55e)',
                   borderRadius: '3px',
-                  '--progress': `${getStepProgress()}%`
-                } as any}
+                  width: `${getStepProgress()}%`
+                }}
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8' }}>
