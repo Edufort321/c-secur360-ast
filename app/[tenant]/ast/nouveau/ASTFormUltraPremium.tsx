@@ -798,7 +798,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
             
             {/* Step 0: Informations générales */}
             {currentStep === 0 && (
-              <div style={{ space: '32px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                 <div style={{ marginBottom: '32px', textAlign: 'center' }}>
                   <h2 style={{ 
                     color: 'white', 
