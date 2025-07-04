@@ -51,6 +51,16 @@ interface IsolationPoint {
   photos: Photo[];
 }
 
+interface ControlMeasure {
+  id: string;
+  name: string;
+  description: string;
+  category: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
+  isSelected: boolean;
+  photos: Photo[];
+  notes: string;
+}
+
 interface ElectricalHazard {
   id: string;
   code: string;
@@ -59,6 +69,8 @@ interface ElectricalHazard {
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   isSelected: boolean;
   additionalNotes?: string;
+  controlMeasures: ControlMeasure[];
+  showControls: boolean;
 }
 
 interface SafetyEquipment {
@@ -199,23 +211,7 @@ const generateASTNumber = (): string => {
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
 // =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 2/5 ===================
-// Section 2: Données prédéfinies et traductions complètes - MISE À JOUR AVEC CONTRÔLES
-
-// =================== NOUVELLES INTERFACES POUR CONTRÔLES ===================
-interface ControlMeasure {
-  id: string;
-  name: string;
-  description: string;
-  category: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
-  isSelected: boolean;
-  photos: Photo[];
-  notes: string;
-}
-
-interface HazardWithControls extends ElectricalHazard {
-  controlMeasures: ControlMeasure[];
-  showControls: boolean;
-}
+// Section 2: Données prédéfinies et traductions complètes
 
 // =================== MOYENS DE CONTRÔLE PRÉDÉFINIS ===================
 const getControlMeasuresForHazard = (hazardId: string): ControlMeasure[] => {
@@ -442,7 +438,7 @@ const getControlMeasuresForHazard = (hazardId: string): ControlMeasure[] => {
 // =================== DONNÉES PRÉDÉFINIES COMPLÈTES ===================
 
 // Dangers électriques avec moyens de contrôle
-const predefinedElectricalHazards: HazardWithControls[] = [
+const predefinedElectricalHazards: ElectricalHazard[] = [
   {
     id: 'h0',
     code: '0',
@@ -1838,7 +1834,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
     setFormData(prev => ({
       ...prev,
       electricalHazards: prev.electricalHazards.map(h =>
-        h.id === hazardId ? { ...h, isSelected: !h.isSelected } : h
+        h.id === hazardId ? { ...h, isSelected: !h.isSelected, showControls: !h.isSelected } : h
       )
     }));
   };
@@ -1848,6 +1844,38 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
       ...prev,
       electricalHazards: prev.electricalHazards.map(h =>
         h.id === hazardId ? { ...h, additionalNotes: notes } : h
+      )
+    }));
+  };
+
+  const toggleControlMeasure = (hazardId: string, controlId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      electricalHazards: prev.electricalHazards.map(h =>
+        h.id === hazardId 
+          ? {
+              ...h,
+              controlMeasures: h.controlMeasures.map(c =>
+                c.id === controlId ? { ...c, isSelected: !c.isSelected } : c
+              )
+            }
+          : h
+      )
+    }));
+  };
+
+  const updateControlNotes = (hazardId: string, controlId: string, notes: string) => {
+    setFormData(prev => ({
+      ...prev,
+      electricalHazards: prev.electricalHazards.map(h =>
+        h.id === hazardId 
+          ? {
+              ...h,
+              controlMeasures: h.controlMeasures.map(c =>
+                c.id === controlId ? { ...c, notes } : c
+              )
+            }
+          : h
       )
     }));
   };
@@ -2080,8 +2108,8 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   };
 
   const overallProgress = steps.reduce((acc, _, index) => acc + calculateStepCompletion(index), 0) / steps.length;
-// =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 5/5 ===================
-// Section 5: Rendu JSX final CORRIGÉ - TOUTES les étapes
+ // =================== AST FORM ULTRA PREMIUM COMPLET - SECTION 5/5 ===================
+// Section 5: Rendu JSX final - TOUTES les étapes
 
   return (
     <>
@@ -2332,7 +2360,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                   {formData.teamDiscussion.discussions.map((discussion) => (
                     <div
                       key={discussion.id}
-                      className={`discussion-item ${discussion.completed ? 'completed' : ''}`}
+                      className={`discussion-item ${discussion.completed ? 'completed' : ''} ${discussion.priority}-priority`}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <CustomCheckbox
@@ -2465,7 +2493,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                           )}
                         </div>
 
-                        {hazard.isSelected && hazard.controlMeasures && (
+                        {hazard.isSelected && hazard.showControls && hazard.controlMeasures && (
                           <div style={{
                             background: 'rgba(20, 30, 48, 0.9)',
                             border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -2491,7 +2519,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                                     <CustomCheckbox
                                       checked={control.isSelected}
-                                      onChange={() => {}}
+                                      onChange={() => toggleControlMeasure(hazard.id, control.id)}
                                       label=""
                                     />
                                     <div style={{
@@ -2510,9 +2538,20 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                                     {control.name}
                                   </h6>
                                   
-                                  <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>
+                                  <p style={{ color: '#94a3b8', fontSize: '12px', margin: '0 0 8px 0' }}>
                                     {control.description}
                                   </p>
+
+                                  {control.isSelected && (
+                                    <input
+                                      type="text"
+                                      className="input-premium"
+                                      placeholder="Notes spécifiques..."
+                                      value={control.notes}
+                                      onChange={(e) => updateControlNotes(hazard.id, control.id, e.target.value)}
+                                      style={{ fontSize: '12px', padding: '8px' }}
+                                    />
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -2553,6 +2592,10 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         <option value="">Sélectionner le type...</option>
                         <option value="electrical">⚡ Électrique</option>
                         <option value="mechanical">⚙️ Mécanique</option>
+                        <option value="pneumatic">🌪️ Pneumatique</option>
+                        <option value="hydraulic">💧 Hydraulique</option>
+                        <option value="chemical">🧪 Chimique</option>
+                        <option value="thermal">🔥 Thermique</option>
                       </select>
                       <button
                         onClick={addIsolationPoint}
@@ -2573,7 +2616,11 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                       marginBottom: '16px' 
                     }}>
                       <h4 style={{ color: 'white', fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0' }}>
-                        {point.type === 'electrical' ? '⚡' : '⚙️'} {point.name}
+                        {point.type === 'electrical' ? '⚡' : 
+                         point.type === 'mechanical' ? '⚙️' :
+                         point.type === 'pneumatic' ? '🌪️' :
+                         point.type === 'hydraulic' ? '💧' :
+                         point.type === 'chemical' ? '🧪' : '🔥'} {point.name}
                       </h4>
                       <PhotoCarousel
                         photos={point.photos}
@@ -2795,6 +2842,13 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
                         </div>
                         <div style={{ color: '#94a3b8', fontSize: '12px' }}>Points d'isolement</div>
                       </div>
+
+                      <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(168, 85, 247, 0.1)', borderRadius: '8px' }}>
+                        <div style={{ color: '#a855f7', fontSize: '24px', fontWeight: '700' }}>
+                          {formData.documentation.photos.length}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Photos ajoutées</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2862,4 +2916,4 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
       </div>
     </>
   );
-}
+} 
