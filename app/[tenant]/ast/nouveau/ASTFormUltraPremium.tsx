@@ -1469,10 +1469,12 @@ const mobileOptimizedStyles = `
   }
 }
 `;
+// =================== AST SECTION 4A/5 - COMPOSANT PRINCIPAL + ÉTAPES 1-3 ===================
+// Section 4A: Composant principal avec hooks, fonctions et étapes 1-3
 
-// =================== COMPOSANT PRINCIPAL ===================
+// =================== COMPOSANT PRINCIPAL ASTFORMULTRAPREMIUM ===================
 const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
-  // =================== ÉTATS ===================
+  // =================== ÉTATS ET HOOKS ===================
   const [currentStep, setCurrentStep] = useState(0);
   const [language, setLanguage] = useState<'fr' | 'en'>('fr');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -1480,9 +1482,10 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
   const [newEquipment, setNewEquipment] = useState({ nom: '', categorie: '', norme: '' });
   const [newQualification, setNewQualification] = useState('');
 
+  // =================== TRADUCTIONS ACTIVES ===================
   const t = translations[language];
 
-  // =================== FONCTIONS ===================
+  // =================== FONCTIONS DE MISE À JOUR ===================
   const updateFormData = (updates: Partial<ASTFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
   };
@@ -1499,6 +1502,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
     }
   };
 
+  // =================== FONCTIONS PHOTOS ===================
   const handleAddPhoto = async (category: string, file: File): Promise<void> => {
     const photoId = `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const photoUrl = URL.createObjectURL(file);
@@ -1523,6 +1527,42 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
     });
   };
 
+  // =================== FONCTIONS ÉQUIPEMENTS ===================
+  const updateEquipementSecurite = (nom: string, utilise: boolean, conforme: boolean, notes: string) => {
+    const nouveauxEquipements = formData.equipementsSecurite.map(equip =>
+      equip.nom === nom ? { ...equip, utilise, conforme, notes } : equip
+    );
+    updateFormData({ equipementsSecurite: nouveauxEquipements });
+  };
+
+  const addCustomEquipment = () => {
+    if (newEquipment.nom && newEquipment.categorie) {
+      const nouvelEquipement: SafetyEquipment = {
+        nom: newEquipment.nom,
+        categorie: newEquipment.categorie,
+        utilise: false,
+        conforme: false,
+        notes: '',
+        norme: newEquipment.norme
+      };
+      
+      updateFormData({
+        equipementsSecurite: [...formData.equipementsSecurite, nouvelEquipement]
+      });
+      
+      setNewEquipment({ nom: '', categorie: '', norme: '' });
+    }
+  };
+
+  // =================== FONCTIONS DANGERS ===================
+  const updateDanger = (nom: string, present: boolean, niveauRisque: string, moyensControle: string[], notes: string) => {
+    const nouveauxDangers = formData.dangersIdentifies.map(danger =>
+      danger.nom === nom ? { ...danger, present, niveauRisque, moyensControle, notes } : danger
+    );
+    updateFormData({ dangersIdentifies: nouveauxDangers });
+  };
+
+  // =================== FONCTIONS ÉQUIPE ===================
   const addMember = () => {
     const nouveauMembre: TeamMember = {
       id: `member-${Date.now()}`,
@@ -1551,20 +1591,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
     updateFormData({ equipe: nouvelleEquipe });
   };
 
-  const updateEquipementSecurite = (nom: string, utilise: boolean, conforme: boolean, notes: string) => {
-    const nouveauxEquipements = formData.equipementsSecurite.map(equip =>
-      equip.nom === nom ? { ...equip, utilise, conforme, notes } : equip
-    );
-    updateFormData({ equipementsSecurite: nouveauxEquipements });
-  };
-
-  const updateDanger = (nom: string, present: boolean, niveauRisque: string, moyensControle: string[], notes: string) => {
-    const nouveauxDangers = formData.dangersIdentifies.map(danger =>
-      danger.nom === nom ? { ...danger, present, niveauRisque, moyensControle, notes } : danger
-    );
-    updateFormData({ dangersIdentifies: nouveauxDangers });
-  };
-
+  // =================== FONCTIONS ISOLATION ===================
   const addPointIsolement = () => {
     const nouveauPoint: IsolationPoint = {
       id: `isolation-${Date.now()}`,
@@ -1588,19 +1615,39 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
     updateFormData({ pointsIsolement: nouveauxPoints });
   };
 
-  // =================== EFFETS ===================
-  useEffect(() => {
-    const styleSheet = document.createElement('style');
-    styleSheet.textContent = mobileOptimizedStyles;
-    document.head.appendChild(styleSheet);
-
-    return () => {
-      if (document.head.contains(styleSheet)) {
-        document.head.removeChild(styleSheet);
-      }
+  const addPhotoToIsolationPoint = async (pointId: string, file: File): Promise<void> => {
+    const photoId = `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const photoUrl = URL.createObjectURL(file);
+    
+    const newPhoto: Photo = {
+      id: photoId,
+      name: file.name,
+      url: photoUrl,
+      description: '',
+      timestamp: new Date().toISOString(),
+      category: 'isolation'
     };
-  }, []);
 
+    const nouveauxPoints = formData.pointsIsolement.map(point =>
+      point.id === pointId 
+        ? { ...point, photos: [...point.photos, newPhoto] }
+        : point
+    );
+    
+    updateFormData({ pointsIsolement: nouveauxPoints });
+  };
+
+  const removePhotoFromIsolationPoint = (pointId: string, photoIndex: number) => {
+    const nouveauxPoints = formData.pointsIsolement.map(point =>
+      point.id === pointId 
+        ? { ...point, photos: point.photos.filter((_, i) => i !== photoIndex) }
+        : point
+    );
+    
+    updateFormData({ pointsIsolement: nouveauxPoints });
+  };
+
+  // =================== AUTO-SAVE ===================
   useEffect(() => {
     const autoSaveInterval = setInterval(() => {
       if (formData.projet.trim()) {
@@ -1618,6 +1665,19 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
 
     return () => clearInterval(autoSaveInterval);
   }, [formData]);
+
+  // =================== STYLES CSS INJECTÉS ===================
+  useEffect(() => {
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = mobileOptimizedStyles;
+    document.head.appendChild(styleSheet);
+
+    return () => {
+      if (document.head.contains(styleSheet)) {
+        document.head.removeChild(styleSheet);
+      }
+    };
+  }, []);
 
   // =================== COMPOSANTS INTERNES ===================
   const PhotoCarousel: React.FC<{
@@ -1653,6 +1713,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                   <button
                     onClick={() => onRemovePhoto(stepId, photo.id)}
                     className="opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition-all duration-200 transform hover:scale-105"
+                    aria-label="Supprimer photo"
                   >
                     <X size={16} />
                   </button>
@@ -1677,12 +1738,18 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-3 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 border-dashed rounded-lg text-blue-600 font-medium transition-all duration-200 hover:border-blue-300"
-              style={{ touchAction: 'manipulation' }}
+              className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-3 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 border-dashed rounded-lg text-blue-600 font-medium transition-all duration-200 hover:border-blue-300 touch-manipulation"
             >
               <Camera size={20} />
               <span>Ajouter Photo ({photos.length}/{maxPhotos})</span>
             </button>
+          </div>
+        )}
+
+        {photos.length >= maxPhotos && (
+          <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <AlertTriangle size={16} className="inline mr-2" />
+            Maximum {maxPhotos} photos atteint
           </div>
         )}
       </div>
@@ -1693,42 +1760,51 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
     checked: boolean;
     onChange: (checked: boolean) => void;
     label?: string;
+    description?: string;
+    required?: boolean;
     variant?: 'default' | 'success';
-  }> = ({ checked, onChange, label, variant = 'default' }) => (
-    <div className="flex items-start space-x-3">
+  }> = ({ checked, onChange, label, description, required = false, variant = 'default' }) => (
+    <div className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors duration-150">
       <button
         onClick={() => onChange(!checked)}
-        className={`flex-shrink-0 w-5 h-5 border-2 rounded transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+        className={`flex-shrink-0 w-5 h-5 border-2 rounded transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 touch-manipulation ${
           checked
             ? variant === 'success' 
               ? 'bg-green-500 border-green-500 text-white'
               : 'bg-blue-500 border-blue-500 text-white'
             : 'border-gray-300 hover:border-gray-400'
         }`}
-        style={{ touchAction: 'manipulation' }}
+        aria-label={label || 'Checkbox'}
       >
         {checked && <Check size={12} className="mx-auto" />}
       </button>
       {label && (
-        <span className="text-sm text-gray-700">{label}</span>
+        <div className="flex-1 min-w-0">
+          <label className={`block text-sm font-medium text-gray-900 ${required ? 'required-field' : ''}`}>
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+          {description && (
+            <p className="text-xs text-gray-600 mt-1">{description}</p>
+          )}
+        </div>
       )}
     </div>
   );
 
-  // =================== RENDER ===================
+  // =================== RETURN DU COMPOSANT PRINCIPAL ===================
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
-      {/* Background Pattern */}
+      {/* Background Pattern Mobile-Friendly */}
       <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0 bg-repeat" style={{
-          backgroundImage: "url('data:image/svg+xml,<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"><g fill=\"none\" fill-rule=\"evenodd\"><g fill=\"%23000000\" fill-opacity=\"0.1\"><circle cx=\"30\" cy=\"30\" r=\"1.5\"/></g></g></svg>')"
-        }}></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"><g fill=\"none\" fill-rule=\"evenodd\"><g fill=\"%23000000\" fill-opacity=\"0.1\"><circle cx=\"30\" cy=\"30\" r=\"1.5\"/></g></g></svg>')] bg-repeat"></div>
       </div>
 
-      {/* Header */}
+      {/* Header Sticky Mobile-Optimized */}
       <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-white/20 shadow-sm">
         <div className="container mx-auto px-4 py-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+            {/* Logo et Titre */}
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
                 <Shield className="text-white" size={24} />
@@ -1739,7 +1815,9 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
               </div>
             </div>
 
+            {/* Compteurs et Actions Mobile */}
             <div className="flex items-center justify-between sm:justify-end space-x-4">
+              {/* Barre de progression */}
               <div className="flex-1 sm:flex-none sm:w-32">
                 <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
                   <div 
@@ -1752,6 +1830,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                 </p>
               </div>
 
+              {/* Auto-save indicator */}
               <div className="flex items-center space-x-2">
                 {autoSaveStatus === 'saving' && (
                   <div className="animate-spin">
@@ -1762,10 +1841,10 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                 {autoSaveStatus === 'error' && <AlertTriangle size={16} className="text-red-500" />}
               </div>
 
+              {/* Langue Toggle Mobile-Friendly */}
               <button
                 onClick={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
-                className="flex items-center space-x-1 px-3 py-2 bg-white/60 hover:bg-white/80 rounded-lg border border-gray-200 transition-all duration-200"
-                style={{ touchAction: 'manipulation' }}
+                className="flex items-center space-x-1 px-3 py-2 bg-white/60 hover:bg-white/80 rounded-lg border border-gray-200 transition-all duration-200 touch-manipulation"
               >
                 <Settings size={16} />
                 <span className="text-sm font-medium">{language.toUpperCase()}</span>
@@ -1775,7 +1854,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
         </div>
       </div>
 
-      {/* Content */}
+      {/* Container Principal Mobile-First */}
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl overflow-hidden">
           
@@ -1787,7 +1866,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                   <FileText className="text-white" size={32} />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">{t.generalInfo}</h2>
-                <p className="text-gray-600">Informations de base du projet</p>
+                <p className="text-gray-600">Informations de base du projet et responsabilités</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -1801,7 +1880,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                       value={formData.projet}
                       onChange={(e) => updateFormData({ projet: e.target.value })}
                       className="input-field"
-                      placeholder="Ex: Maintenance électrique"
+                      placeholder="Ex: Maintenance électrique bâtiment A"
                       required
                     />
                   </div>
@@ -1829,7 +1908,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                       onChange={(e) => updateFormData({ descriptionTache: e.target.value })}
                       rows={4}
                       className="input-field resize-none"
-                      placeholder="Décrivez les tâches..."
+                      placeholder="Décrivez en détail les tâches à effectuer..."
                       required
                     />
                   </div>
@@ -1838,7 +1917,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date <span className="text-red-500">*</span>
+                      Date de début <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
@@ -1851,7 +1930,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Heure <span className="text-red-500">*</span>
+                      Heure de début <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="time"
@@ -1875,13 +1954,26 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                       required
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Durée estimée
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.dureeEstimee}
+                      onChange={(e) => updateFormData({ dureeEstimee: e.target.value })}
+                      className="input-field"
+                      placeholder="Ex: 4 heures"
+                    />
+                  </div>
                 </div>
               </div>
 
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <Camera className="mr-2" size={20} />
-                  Photos du projet
+                  Photos du site et du projet
                 </h3>
                 <PhotoCarousel
                   photos={formData.photos}
@@ -1894,20 +1986,276 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
             </div>
           )}
 
-          {/* Autres étapes - ajouter ici les sections 5A et 5B */}
+          {/* ÉTAPE 2: DISCUSSION D'ÉQUIPE */}
+          {currentStep === 1 && (
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="mb-6">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                  {t.teamDiscussion}
+                </h2>
+                <p className="text-sm sm:text-base text-gray-600">
+                  Points de discussion obligatoires et communication d'équipe
+                </p>
+              </div>
 
-          {/* Navigation */}
+              {/* Points de discussion obligatoires */}
+              <div className="mb-8">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-blue-600" />
+                  Points de discussion obligatoires
+                </h3>
+                
+                <div className="grid grid-cols-1 gap-3">
+                  {formData.discussionsEquipe.map((discussion, index) => (
+                    <div key={index} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
+                      <div className="flex items-start gap-3">
+                        <CustomCheckbox
+                          checked={discussion.discute}
+                          onChange={(checked) => {
+                            const newDiscussions = [...formData.discussionsEquipe];
+                            newDiscussions[index].discute = checked;
+                            setFormData(prev => ({ ...prev, discussionsEquipe: newDiscussions }));
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-1">
+                            {discussion.sujet}
+                          </h4>
+                          <p className="text-xs sm:text-sm text-gray-600 mb-3">
+                            {discussion.description}
+                          </p>
+                          
+                          {discussion.discute && (
+                            <div className="mt-3">
+                              <label className="block text-xs font-medium text-gray-700 mb-2">
+                                Notes et observations:
+                              </label>
+                              <textarea
+                                value={discussion.notes}
+                                onChange={(e) => {
+                                  const newDiscussions = [...formData.discussionsEquipe];
+                                  newDiscussions[index].notes = e.target.value;
+                                  setFormData(prev => ({ ...prev, discussionsEquipe: newDiscussions }));
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                rows={2}
+                                placeholder="Ajoutez vos notes..."
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Communication d'urgence */}
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 sm:p-6">
+                <h3 className="text-lg sm:text-xl font-semibold text-red-800 mb-4 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5" />
+                  Procédures d'urgence
+                </h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-red-700 mb-2">
+                      Numéro d'urgence principal
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.numeroUrgence}
+                      onChange={(e) => setFormData(prev => ({ ...prev, numeroUrgence: e.target.value }))}
+                      className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 bg-white"
+                      placeholder="911 ou numéro interne"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-red-700 mb-2">
+                      Responsable sécurité sur site
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.responsableSecurite}
+                      onChange={(e) => setFormData(prev => ({ ...prev, responsableSecurite: e.target.value }))}
+                      className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 bg-white"
+                      placeholder="Nom et poste #"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-semibold text-red-700 mb-2">
+                    Point de rassemblement d'urgence
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.pointRassemblement}
+                    onChange={(e) => setFormData(prev => ({ ...prev, pointRassemblement: e.target.value }))}
+                    className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 bg-white"
+                    placeholder="Localisation précise du point de rassemblement"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ÉTAPE 3: ÉQUIPEMENTS DE SÉCURITÉ */}
+          {currentStep === 2 && (
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="mb-6">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                  {t.safetyEquipment}
+                </h2>
+                <p className="text-sm sm:text-base text-gray-600">
+                  Équipements de protection individuelle et collective requis
+                </p>
+              </div>
+
+              {/* Résumé en haut mobile */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="w-5 h-5 text-blue-600" />
+                  <span className="font-semibold text-blue-800">
+                    {formData.equipementsSecurite.filter(e => e.utilise).length} équipements sélectionnés
+                  </span>
+                </div>
+                <div className="text-sm text-blue-700">
+                  Vérifiez que tous les équipements requis sont disponibles et conformes
+                </div>
+              </div>
+
+              {/* Équipements par catégorie */}
+              <div className="space-y-6">
+                {Object.entries(
+                  formData.equipementsSecurite.reduce((acc, equip) => {
+                    if (!acc[equip.categorie]) acc[equip.categorie] = [];
+                    acc[equip.categorie].push(equip);
+                    return acc;
+                  }, {} as Record<string, typeof formData.equipementsSecurite>)
+                ).map(([categorie, equipements]) => (
+                  <div key={categorie} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                      <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                        {categorie}
+                        <span className="text-sm text-gray-500 ml-auto">
+                          {equipements.filter(e => e.utilise).length}/{equipements.length}
+                        </span>
+                      </h3>
+                    </div>
+                    
+                    <div className="p-4">
+                      <div className="grid grid-cols-1 gap-3">
+                        {equipements.map((equip, index) => (
+                          <div key={index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                            <CustomCheckbox
+                              checked={equip.utilise}
+                              onChange={(checked) => updateEquipementSecurite(equip.nom, checked, equip.conforme, equip.notes)}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <h4 className="font-medium text-gray-900 text-sm">{equip.nom}</h4>
+                                {equip.utilise && (
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <CustomCheckbox
+                                      checked={equip.conforme}
+                                      onChange={(checked) => updateEquipementSecurite(equip.nom, equip.utilise, checked, equip.notes)}
+                                      variant="success"
+                                    />
+                                    <span className="text-xs text-gray-600">Conforme</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {equip.norme && (
+                                <p className="text-xs text-blue-600 mt-1">
+                                  Norme: {equip.norme}
+                                </p>
+                              )}
+                              
+                              {equip.utilise && (
+                                <div className="mt-2">
+                                  <input
+                                    type="text"
+                                    value={equip.notes}
+                                    onChange={(e) => updateEquipementSecurite(equip.nom, equip.utilise, equip.conforme, e.target.value)}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                    placeholder="Notes (état, quantité, etc.)"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Équipement personnalisé mobile */}
+              <div className="mt-6 bg-white rounded-xl border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Ajouter un équipement spécifique
+                </h3>
+                
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      value={newEquipment.nom}
+                      onChange={(e) => setNewEquipment(prev => ({ ...prev, nom: e.target.value }))}
+                      className="input-field text-sm"
+                      placeholder="Nom de l'équipement"
+                    />
+                    <select
+                      value={newEquipment.categorie}
+                      onChange={(e) => setNewEquipment(prev => ({ ...prev, categorie: e.target.value }))}
+                      className="input-field text-sm"
+                    >
+                      <option value="">Catégorie</option>
+                      <option value="Protection individuelle">Protection individuelle</option>
+                      <option value="Protection collective">Protection collective</option>
+                      <option value="Outils sécuritaires">Outils sécuritaires</option>
+                      <option value="Équipement d'urgence">Équipement d'urgence</option>
+                    </select>
+                  </div>
+                  
+                  <input
+                    type="text"
+                    value={newEquipment.norme}
+                    onChange={(e) => setNewEquipment(prev => ({ ...prev, norme: e.target.value }))}
+                    className="input-field text-sm"
+                    placeholder="Norme applicable (optionnel)"
+                  />
+                  
+                  <button
+                    onClick={addCustomEquipment}
+                    disabled={!newEquipment.nom || !newEquipment.categorie}
+                    className="w-full btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ajouter l'équipement
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Bottom Mobile-Optimized */}
           <div className="border-t border-gray-200 bg-gray-50/50 px-6 py-4">
             <div className="flex items-center justify-between">
               <button
                 onClick={previousStep}
                 disabled={currentStep === 0}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 touch-manipulation ${
                   currentStep === 0
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'btn-secondary'
                 }`}
-                style={{ touchAction: 'manipulation' }}
               >
                 <ChevronLeft size={16} />
                 <span className="hidden sm:inline">{t.previous}</span>
@@ -1918,14 +2266,13 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                   <button
                     key={i}
                     onClick={() => setCurrentStep(i)}
-                    className={`w-8 h-8 rounded-full text-xs font-medium transition-all duration-200 ${
+                    className={`w-8 h-8 rounded-full text-xs font-medium transition-all duration-200 touch-manipulation ${
                       i === currentStep
                         ? 'bg-blue-500 text-white shadow-lg'
                         : i < currentStep
                         ? 'bg-green-500 text-white'
                         : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                     }`}
-                    style={{ touchAction: 'manipulation' }}
                   >
                     {i + 1}
                   </button>
@@ -1935,12 +2282,11 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
               <button
                 onClick={nextStep}
                 disabled={currentStep === 7}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 touch-manipulation ${
                   currentStep === 7
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'btn-primary'
                 }`}
-                style={{ touchAction: 'manipulation' }}
               >
                 <span className="hidden sm:inline">{t.next}</span>
                 <ChevronRight size={16} />
@@ -1951,6 +2297,848 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
       </div>
     </div>
   );
+  {/* ÉTAPE 4: IDENTIFICATION DES DANGERS */}
+          {currentStep === 3 && (
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="mb-6">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                  {t.hazardIdentification}
+                </h2>
+                <p className="text-sm sm:text-base text-gray-600">
+                  Identification et évaluation des risques avec moyens de contrôle CNESST
+                </p>
+              </div>
+
+              {/* Résumé des risques mobile */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                  <div className="text-lg sm:text-xl font-bold text-red-700">
+                    {formData.dangersIdentifies.filter(d => d.present && d.niveauRisque === 'Élevé').length}
+                  </div>
+                  <div className="text-xs text-red-600">Risque élevé</div>
+                </div>
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
+                  <div className="text-lg sm:text-xl font-bold text-orange-700">
+                    {formData.dangersIdentifies.filter(d => d.present && d.niveauRisque === 'Moyen').length}
+                  </div>
+                  <div className="text-xs text-orange-600">Risque moyen</div>
+                </div>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+                  <div className="text-lg sm:text-xl font-bold text-yellow-700">
+                    {formData.dangersIdentifies.filter(d => d.present && d.niveauRisque === 'Faible').length}
+                  </div>
+                  <div className="text-xs text-yellow-600">Risque faible</div>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                  <div className="text-lg sm:text-xl font-bold text-green-700">
+                    {formData.dangersIdentifies.filter(d => d.present && d.moyensControle.length > 0).length}
+                  </div>
+                  <div className="text-xs text-green-600">Contrôlés</div>
+                </div>
+              </div>
+
+              {/* Dangers par catégorie mobile-first */}
+              <div className="space-y-4">
+                {Object.entries(
+                  formData.dangersIdentifies.reduce((acc, danger) => {
+                    if (!acc[danger.categorie]) acc[danger.categorie] = [];
+                    acc[danger.categorie].push(danger);
+                    return acc;
+                  }, {} as Record<string, typeof formData.dangersIdentifies>)
+                ).map(([categorie, dangers]) => (
+                  <div key={categorie} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                      <h3 className="font-semibold text-gray-800 flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                          {categorie}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {dangers.filter(d => d.present).length}/{dangers.length}
+                        </span>
+                      </h3>
+                    </div>
+                    
+                    <div className="p-4 space-y-4">
+                      {dangers.map((danger, index) => (
+                        <div key={index} className={`border rounded-xl p-4 transition-all duration-200 ${
+                          danger.present ? 'border-orange-300 bg-orange-50' : 'border-gray-200 bg-white hover:bg-gray-50'
+                        }`}>
+                          <div className="flex items-start gap-3">
+                            <CustomCheckbox
+                              checked={danger.present}
+                              onChange={(checked) => updateDanger(danger.nom, checked, danger.niveauRisque, danger.moyensControle, danger.notes)}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-1">
+                                {danger.nom}
+                              </h4>
+                              <p className="text-xs sm:text-sm text-gray-600 mb-3">
+                                {danger.description}
+                              </p>
+                              
+                              {danger.present && (
+                                <div className="space-y-3">
+                                  {/* Niveau de risque */}
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                      Niveau de risque:
+                                    </label>
+                                    <select
+                                      value={danger.niveauRisque}
+                                      onChange={(e) => updateDanger(danger.nom, danger.present, e.target.value, danger.moyensControle, danger.notes)}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                    >
+                                      <option value="Faible">🟡 Faible</option>
+                                      <option value="Moyen">🟠 Moyen</option>
+                                      <option value="Élevé">🔴 Élevé</option>
+                                    </select>
+                                  </div>
+
+                                  {/* Moyens de contrôle CNESST */}
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-2">
+                                      Moyens de contrôle CNESST (hiérarchie):
+                                    </label>
+                                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                                      {moyensControleCNESST[danger.nom] && moyensControleCNESST[danger.nom].map((moyen, moyenIndex) => (
+                                        <div key={moyenIndex} className="flex items-start gap-2">
+                                          <CustomCheckbox
+                                            checked={danger.moyensControle.includes(moyen.nom)}
+                                            onChange={(checked) => {
+                                              const nouveauxMoyens = checked 
+                                                ? [...danger.moyensControle, moyen.nom]
+                                                : danger.moyensControle.filter(m => m !== moyen.nom);
+                                              updateDanger(danger.nom, danger.present, danger.niveauRisque, nouveauxMoyens, danger.notes);
+                                            }}
+                                          />
+                                          <div className="flex-1 min-w-0">
+                                            <div className="text-xs font-medium text-gray-800">{moyen.nom}</div>
+                                            <div className={`text-xs px-1.5 py-0.5 rounded-full inline-block ${
+                                              moyen.niveau === 'Élimination' ? 'bg-green-100 text-green-700' :
+                                              moyen.niveau === 'Substitution' ? 'bg-blue-100 text-blue-700' :
+                                              moyen.niveau === 'Ingénierie' ? 'bg-purple-100 text-purple-700' :
+                                              moyen.niveau === 'Administrative' ? 'bg-orange-100 text-orange-700' :
+                                              'bg-red-100 text-red-700'
+                                            }`}>
+                                              {moyen.niveau}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Notes */}
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                      Notes et mesures spécifiques:
+                                    </label>
+                                    <textarea
+                                      value={danger.notes}
+                                      onChange={(e) => updateDanger(danger.nom, danger.present, danger.niveauRisque, danger.moyensControle, e.target.value)}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                      rows={2}
+                                      placeholder="Mesures spécifiques, observations..."
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ÉTAPE 5: ISOLEMENT DES ÉNERGIES */}
+          {currentStep === 4 && (
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="mb-6">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                  {t.energyIsolation}
+                </h2>
+                <p className="text-sm sm:text-base text-gray-600">
+                  Procédures de cadenassage et isolation des énergies (LOTO)
+                </p>
+              </div>
+
+              {/* Résumé isolation mobile */}
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Lock className="w-5 h-5 text-purple-600" />
+                  <span className="font-semibold text-purple-800">
+                    {formData.pointsIsolement.filter(p => p.isole).length} points isolés
+                  </span>
+                </div>
+                <div className="text-sm text-purple-700">
+                  Vérifiez que tous les points d'énergie sont identifiés et sécurisés
+                </div>
+              </div>
+
+              {/* Points d'isolement */}
+              <div className="space-y-4">
+                {formData.pointsIsolement.map((point, index) => (
+                  <div key={index} className={`bg-white rounded-xl border p-4 transition-all duration-200 ${
+                    point.isole ? 'border-purple-300 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <CustomCheckbox
+                        checked={point.isole}
+                        onChange={(checked) => updatePointIsolement(index, { ...point, isole: checked })}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Source d'énergie:
+                            </label>
+                            <input
+                              type="text"
+                              value={point.source}
+                              onChange={(e) => updatePointIsolement(index, { ...point, source: e.target.value })}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              placeholder="Ex: Panneau électrique #A-1"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Type d'énergie:
+                            </label>
+                            <select
+                              value={point.type}
+                              onChange={(e) => updatePointIsolement(index, { ...point, type: e.target.value })}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            >
+                              <option value="">Sélectionner</option>
+                              <option value="Électrique">⚡ Électrique</option>
+                              <option value="Mécanique">⚙️ Mécanique</option>
+                              <option value="Hydraulique">🔧 Hydraulique</option>
+                              <option value="Pneumatique">💨 Pneumatique</option>
+                              <option value="Thermique">🔥 Thermique</option>
+                              <option value="Chimique">🧪 Chimique</option>
+                              <option value="Gravitationnelle">📏 Gravitationnelle</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {point.isole && (
+                          <div className="space-y-3 pt-3 border-t border-purple-200">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Méthode d'isolement:
+                                </label>
+                                <select
+                                  value={point.methode}
+                                  onChange={(e) => updatePointIsolement(index, { ...point, methode: e.target.value })}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                >
+                                  <option value="">Sélectionner</option>
+                                  <option value="Cadenas">🔒 Cadenas</option>
+                                  <option value="Étiquette">🏷️ Étiquette</option>
+                                  <option value="Disjoncteur">🔌 Disjoncteur</option>
+                                  <option value="Vanne">🚰 Vanne</option>
+                                  <option value="Disconnecteur">⚡ Disconnecteur</option>
+                                  <option value="Blocage mécanique">🔧 Blocage mécanique</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Responsable du cadenas:
+                                </label>
+                                <input
+                                  type="text"
+                                  value={point.responsable}
+                                  onChange={(e) => updatePointIsolement(index, { ...point, responsable: e.target.value })}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  placeholder="Nom du responsable"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Notes de vérification:
+                              </label>
+                              <textarea
+                                value={point.notes}
+                                onChange={(e) => updatePointIsolement(index, { ...point, notes: e.target.value })}
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                rows={2}
+                                placeholder="Test de vérification, numéro de cadenas, observations..."
+                              />
+                            </div>
+
+                            {/* Photos d'isolement */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-2">
+                                Photos du point d'isolement:
+                              </label>
+                              <PhotoCarousel
+                                photos={point.photos}
+                                onAddPhoto={(stepId, file) => addPhotoToIsolationPoint(point.id, file)}
+                                onRemovePhoto={(stepId, photoIndex) => removePhotoFromIsolationPoint(point.id, parseInt(photoIndex))}
+                                stepId={`isolation-${point.id}`}
+                                maxPhotos={3}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Ajouter point d'isolement */}
+              <div className="mt-6 bg-white rounded-xl border border-gray-200 p-4">
+                <button
+                  onClick={addPointIsolement}
+                  className="w-full btn-secondary text-sm flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Ajouter un point d'isolement
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ÉTAPE 6: GESTION D'ÉQUIPE */}
+          {currentStep === 5 && (
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="mb-6">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                  {t.teamManagement}
+                </h2>
+                <p className="text-sm sm:text-base text-gray-600">
+                  Membres de l'équipe, rôles et qualifications
+                </p>
+              </div>
+
+              {/* Résumé équipe mobile */}
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-5 h-5 text-green-600" />
+                  <span className="font-semibold text-green-800">
+                    {formData.equipe.length} personnes dans l'équipe
+                  </span>
+                </div>
+                <div className="text-sm text-green-700">
+                  Vérifiez les qualifications et formations de chaque membre
+                </div>
+              </div>
+
+              {/* Membres d'équipe */}
+              <div className="space-y-4">
+                {formData.equipe.map((membre, index) => (
+                  <div key={index} className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        Membre {index + 1}
+                      </h3>
+                      <button
+                        onClick={() => removeMember(index)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Nom complet *
+                        </label>
+                        <input
+                          type="text"
+                          value={membre.nom}
+                          onChange={(e) => updateMember(index, { ...membre, nom: e.target.value })}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          placeholder="Prénom et nom"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Poste/Fonction *
+                        </label>
+                        <input
+                          type="text"
+                          value={membre.poste}
+                          onChange={(e) => updateMember(index, { ...membre, poste: e.target.value })}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          placeholder="Ex: Électricien"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Entreprise
+                        </label>
+                        <input
+                          type="text"
+                          value={membre.entreprise}
+                          onChange={(e) => updateMember(index, { ...membre, entreprise: e.target.value })}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          placeholder="Nom de l'entreprise"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Années d'expérience
+                        </label>
+                        <select
+                          value={membre.experience}
+                          onChange={(e) => updateMember(index, { ...membre, experience: e.target.value })}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="< 1 an">Moins d'1 an</option>
+                          <option value="1-3 ans">1 à 3 ans</option>
+                          <option value="3-5 ans">3 à 5 ans</option>
+                          <option value="5-10 ans">5 à 10 ans</option>
+                          <option value="10+ ans">Plus de 10 ans</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <label className="block text-xs font-medium text-gray-700 mb-2">
+                        Formations et certifications:
+                      </label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {membre.qualifications.map((qual, qualIndex) => (
+                          <span key={qualIndex} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                            {qual}
+                            <button
+                              onClick={() => {
+                                const newQuals = membre.qualifications.filter((_, i) => i !== qualIndex);
+                                updateMember(index, { ...membre, qualifications: newQuals });
+                              }}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newQualification}
+                          onChange={(e) => setNewQualification(e.target.value)}
+                          className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
+                          placeholder="Ex: RCR, Hauteur, SIMDUT..."
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && newQualification.trim()) {
+                              updateMember(index, { 
+                                ...membre, 
+                                qualifications: [...membre.qualifications, newQualification.trim()] 
+                              });
+                              setNewQualification('');
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            if (newQualification.trim()) {
+                              updateMember(index, { 
+                                ...membre, 
+                                qualifications: [...membre.qualifications, newQualification.trim()] 
+                              });
+                              setNewQualification('');
+                            }
+                          }}
+                          className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Rôle spécifique dans cette tâche:
+                      </label>
+                      <textarea
+                        value={membre.roleSpecifique}
+                        onChange={(e) => updateMember(index, { ...membre, roleSpecifique: e.target.value })}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                        rows={2}
+                        placeholder="Responsabilités spécifiques pour cette AST..."
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Ajouter membre */}
+              <div className="mt-6 bg-white rounded-xl border border-gray-200 p-4">
+                <button
+                  onClick={addMember}
+                  className="w-full btn-secondary text-sm flex items-center justify-center gap-2"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Ajouter un membre à l'équipe
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ÉTAPE 7: DOCUMENTATION */}
+          {currentStep === 6 && (
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="mb-6">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                  {t.documentation}
+                </h2>
+                <p className="text-sm sm:text-base text-gray-600">
+                  Photos, schémas et documentation de support
+                </p>
+              </div>
+
+              {/* Photos générales */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-blue-600" />
+                  Photos du site et de la tâche
+                </h3>
+                
+                <PhotoCarousel
+                  photos={formData.photos}
+                  onAddPhoto={(stepId, file) => handleAddPhoto('documentation', file)}
+                  onRemovePhoto={(stepId, photoId) => handleRemovePhoto('documentation', photoId)}
+                  stepId="documentation"
+                  maxPhotos={15}
+                />
+              </div>
+
+              {/* Observations */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Observations et notes importantes
+                </h3>
+                
+                <textarea
+                  value={formData.observations}
+                  onChange={(e) => setFormData(prev => ({ ...prev, observations: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  rows={6}
+                  placeholder="Ajoutez vos observations, conditions particulières, défis identifiés, recommandations..."
+                />
+              </div>
+
+              {/* Documents de référence */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Documents de référence
+                </h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Procédures applicables
+                    </label>
+                    <textarea
+                      value={formData.proceduresApplicables}
+                      onChange={(e) => setFormData(prev => ({ ...prev, proceduresApplicables: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                      rows={4}
+                      placeholder="• Procédure LOTO-001&#10;• Guide sécurité électrique&#10;• Instructions fabricant..."
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Normes et réglementations
+                    </label>
+                    <textarea
+                      value={formData.normesReglementations}
+                      onChange={(e) => setFormData(prev => ({ ...prev, normesReglementations: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                      rows={4}
+                      placeholder="• CSA Z462&#10;• Code électrique du Québec&#10;• CNESST..."
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ÉTAPE 8: VALIDATION FINALE */}
+          {currentStep === 7 && (
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="mb-6">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                  {t.finalValidation}
+                </h2>
+                <p className="text-sm sm:text-base text-gray-600">
+                  Vérification finale et approbations requises
+                </p>
+              </div>
+
+              {/* Résumé final mobile */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                  <div className="text-lg sm:text-xl font-bold text-blue-700">{formData.equipe.length}</div>
+                  <div className="text-xs text-blue-600">Personnes</div>
+                </div>
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
+                  <div className="text-lg sm:text-xl font-bold text-orange-700">
+                    {formData.dangersIdentifies.filter(d => d.present).length}
+                  </div>
+                  <div className="text-xs text-orange-600">Risques</div>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                  <div className="text-lg sm:text-xl font-bold text-green-700">
+                    {formData.equipementsSecurite.filter(e => e.utilise).length}
+                  </div>
+                  <div className="text-xs text-green-600">Équipements</div>
+                </div>
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-center">
+                  <div className="text-lg sm:text-xl font-bold text-purple-700">
+                    {formData.pointsIsolement.filter(p => p.isole).length}
+                  </div>
+                  <div className="text-xs text-purple-600">Isolements</div>
+                </div>
+              </div>
+
+              {/* Vérifications finales */}
+              <div className="space-y-6">
+                {/* Validation des informations */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <CheckSquare className="w-5 h-5 text-green-600" />
+                    Validation des informations
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    {[
+                      { key: 'infoComplete', label: 'Toutes les informations requises sont complètes' },
+                      { key: 'risquesEvalues', label: 'Tous les risques ont été évalués et des contrôles sont en place' },
+                      { key: 'equipementVerifie', label: 'Tous les équipements de sécurité ont été vérifiés' },
+                      { key: 'equipeFormee', label: 'Tous les membres de l\'équipe sont formés et qualifiés' },
+                      { key: 'proceduresComprises', label: 'Les procédures de sécurité sont comprises par tous' }
+                    ].map((validation) => (
+                      <div key={validation.key} className="flex items-start gap-3">
+                        <CustomCheckbox
+                          checked={formData.validations[validation.key] || false}
+                          onChange={(checked) => setFormData(prev => ({
+                            ...prev,
+                            validations: { ...prev.validations, [validation.key]: checked }
+                          }))}
+                        />
+                        <span className="text-sm text-gray-700">{validation.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Approbations */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <UserCheck className="w-5 h-5 text-blue-600" />
+                    Approbations requises
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    {formData.approbations.map((approbation, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Rôle:
+                            </label>
+                            <input
+                              type="text"
+                              value={approbation.role}
+                              onChange={(e) => {
+                                const newApprobations = [...formData.approbations];
+                                newApprobations[index].role = e.target.value;
+                                setFormData(prev => ({ ...prev, approbations: newApprobations }));
+                              }}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              placeholder="Ex: Superviseur"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Nom:
+                            </label>
+                            <input
+                              type="text"
+                              value={approbation.nom}
+                              onChange={(e) => {
+                                const newApprobations = [...formData.approbations];
+                                newApprobations[index].nom = e.target.value;
+                                setFormData(prev => ({ ...prev, approbations: newApprobations }));
+                              }}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              placeholder="Nom complet"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Date/Heure:
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={approbation.dateHeure}
+                              onChange={(e) => {
+                                const newApprobations = [...formData.approbations];
+                                newApprobations[index].dateHeure = e.target.value;
+                                setFormData(prev => ({ ...prev, approbations: newApprobations }));
+                              }}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                          <CustomCheckbox
+                            checked={approbation.approuve}
+                            onChange={(checked) => {
+                              const newApprobations = [...formData.approbations];
+                              newApprobations[index].approuve = checked;
+                              if (checked) {
+                                newApprobations[index].dateHeure = new Date().toISOString().slice(0, 16);
+                              }
+                              setFormData(prev => ({ ...prev, approbations: newApprobations }));
+                            }}
+                            variant="success"
+                          />
+                          <span className="text-sm text-gray-700">
+                            {approbation.approuve ? '✅ Approuvé' : '⏳ En attente d\'approbation'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Actions finales */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-indigo-600" />
+                    Actions finales
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <button
+                      onClick={() => generateProfessionalPDF(formData, tenant)}
+                      className="btn-primary text-sm flex items-center justify-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      PDF C-Secur360
+                    </button>
+                    
+                    <button
+                      onClick={() => sendEmailNotification(formData, tenant)}
+                      className="btn-secondary text-sm flex items-center justify-center gap-2"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Envoyer par email
+                    </button>
+                    
+                    <button
+                      onClick={() => archiveAST(formData)}
+                      className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <Archive className="w-4 h-4" />
+                      Archiver
+                    </button>
+                    
+                    <button
+                      onClick={() => submitAST(formData)}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Soumettre
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation entre les étapes - Optimisée mobile */}
+          <div className="flex flex-col sm:flex-row items-center justify-between p-4 sm:p-6 border-t border-gray-200 bg-gray-50/50 gap-4">
+            <button
+              onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
+              disabled={currentStep === 0}
+              className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 w-full sm:w-auto justify-center"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>{t.previous}</span>
+            </button>
+            
+            <div className="flex items-center gap-2">
+              {Array.from({ length: 8 }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentStep(i)}
+                  className={`w-8 h-8 rounded-full text-xs font-medium transition-all duration-200 ${
+                    i === currentStep
+                      ? 'bg-blue-600 text-white'
+                      : i < currentStep
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+            
+            <button
+              onClick={() => {
+                if (currentStep === 7) {
+                  // Validation finale et soumission
+                  const allValidated = Object.values(formData.validations).every(v => v);
+                  const allApproved = formData.approbations.every(a => a.approuve);
+                  
+                  if (!allValidated || !allApproved) {
+                    alert('Toutes les validations et approbations sont requises avant la soumission.');
+                    return;
+                  }
+                  
+                  submitAST(formData);
+                } else {
+                  setCurrentStep(prev => Math.min(7, prev + 1));
+                }
+              }}
+              className={`flex items-center gap-2 w-full sm:w-auto justify-center transition-colors ${
+                currentStep === 7 
+                  ? 'bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg'
+                  : 'btn-primary'
+              }`}
+            >
+              <span>{currentStep === 7 ? 'Finaliser AST' : t.next}</span>
+              {currentStep === 7 ? <CheckCircle className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer mobile sticky */}
+      <div className="bg-white/90 backdrop-blur-lg border-t border-gray-200 p-3 sm:hidden sticky bottom-0">
+        <div className="flex items-center justify-center gap-4 text-xs text-gray-600">
+          <span>AST #{formData.numeroAST}</span>
+          <span>•</span>
+          <span>C-Secur360</span>
+          <span>•</span>
+          <span>{formData.equipe.length} personnes</span>
+        </div>
+      </div>
+    </div>
+  );
 };
 
+// =================== EXPORT DU COMPOSANT ===================
 export default ASTFormUltraPremium;
