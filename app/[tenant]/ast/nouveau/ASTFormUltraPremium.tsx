@@ -1,5 +1,5 @@
-// =================== AST SECTION 1/5 - IMPORTS & INTERFACES ===================
-// Section 1: Imports et Interfaces complètes avec tous les nouveaux champs
+// =================== AST SECTION 1/5 CORRIGÉE - IMPORTS & INTERFACES ===================
+// Section 1: Imports et Interfaces complètes corrigées
 
 "use client";
 
@@ -9,149 +9,49 @@ import {
   ChevronLeft, ChevronRight, Save, Download, Send, Copy, Check, X, Plus, Trash2,
   ArrowLeft, ArrowRight, Eye, Mail, Archive, Printer, Upload, Star, AlertTriangle,
   Edit, Clock, User, Phone, MapPin, Calendar, Briefcase, HardHat, Heart, Activity,
-  Lock, Unlock
+  Lock, Unlock, UserPlus, CheckSquare, UserCheck
 } from 'lucide-react';
 
-// =================== INTERFACES COMPLÈTES ===================
-interface ASTFormData {
-  id: string;
-  astNumber: string;
-  created: string;
-  lastModified: string;
-  language: 'fr' | 'en';
-  status: 'draft' | 'completed' | 'team_validation' | 'approved' | 'archived';
-  industry: 'electrical' | 'construction' | 'industrial' | 'office' | 'manufacturing' | 'other';
-  
-  projectInfo: {
-    date: string;
-    time: string;
-    client: string;
-    clientPhone: string;
-    projectNumber: string;
-    astClientNumber: string;
-    workLocation: string;
-    workDescription: string;
-    estimatedDuration: string;
-    workerCount: number;
-    clientRepresentative: string;
-    clientRepresentativePhone: string;
-    emergencyContact: string;
-    emergencyPhone: string;
-    workPermitRequired: boolean;
-    workPermitNumber?: string;
-    weatherConditions: string;
-    specialConditions: string;
-  };
-  
-  teamDiscussion: {
-    electricalCutoffPoints: string;
-    electricalHazardExplanation: string;
-    epiSpecificNotes: string;
-    specialWorkConditions: string;
-    emergencyProcedures: string;
-    discussions: TeamDiscussion[];
-    briefingCompleted: boolean;
-    briefingDate: string;
-    briefingTime: string;
-    emergencyProceduresList: EmergencyProcedure[];
-  };
-  
-  safetyEquipment: SafetyEquipment[];
-  electricalHazards: ElectricalHazard[];
-  riskAssessments: RiskAssessment[];
-  
-  team: {
-    supervisor: string;
-    supervisorCertification: string;
-    supervisorSignature?: string;
-    members: TeamMember[];
-    briefingCompleted: boolean;
-    briefingDate: string;
-    briefingTime: string;
-    totalMembers: number;
-    acknowledgedMembers: number;
-    validations: any[];
-    allApproved: boolean;
-  };
-  
-  isolationPoints: IsolationPoint[];
-  
-  documentation: {
-    photos: Photo[];
-    additionalDocuments: string[];
-    inspectionNotes: string;
-    correctiveActions: string;
-  };
-  
-  validation: {
-    completedBy: string;
-    completedDate: string;
-    reviewedBy: string;
-    reviewedDate: string;
-    approvedBy: string;
-    approvedDate: string;
-    clientApproval: boolean;
-    finalApproval: boolean;
-    submissionDate?: string;
-    revisionNumber: number;
-    comments: string;
-    emailSent: boolean;
-    archivedDate?: string;
-  };
-}
-
-interface Tenant {
-  id: string;
-  subdomain: string;
-  companyName: string;
-}
-
-interface TeamMember {
-  id: string;
-  name: string;
-  employeeId: string;
-  department: string;
-  qualification: string;
-  hasAcknowledged: boolean;
-  acknowledgmentTime?: string;
-  signature?: string;
-  joinedAt: string;
-  validationStatus: 'pending' | 'approved' | 'rejected';
-  validationComments?: string;
-  consultationAst: boolean;
-  cadenasAppose: boolean;
-  cadenasReleve: boolean;
-}
-
+// =================== INTERFACES PRINCIPALES CORRIGÉES ===================
 interface Photo {
   id: string;
   name: string;
-  data: string;
+  url: string;
   description: string;
   timestamp: string;
   category: 'site' | 'equipment' | 'hazard' | 'team' | 'isolation' | 'other';
 }
 
+interface TeamMember {
+  id: string;
+  nom: string;
+  poste: string;
+  entreprise: string;
+  experience: string;
+  qualifications: string[];
+  roleSpecifique: string;
+  validationStatus: 'pending' | 'approved' | 'rejected';
+  validationComments?: string;
+  signature?: string;
+  acknowledgmentTime?: string;
+}
+
 interface IsolationPoint {
   id: string;
-  name: string;
-  type: 'electrical' | 'mechanical' | 'pneumatic' | 'hydraulic' | 'chemical' | 'thermal';
-  isActive: boolean;
-  createdAt: string;
+  source: string;
+  type: string;
+  methode: string;
+  responsable: string;
+  notes: string;
+  isole: boolean;
   photos: Photo[];
-  checklist: {
-    cadenasAppose: boolean;
-    absenceTension: boolean;
-    miseALaTerre: boolean;
-    cadenasReleve: boolean;
-  };
 }
 
 interface ControlMeasure {
   id: string;
-  name: string;
+  nom: string;
   description: string;
-  category: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
+  niveau: 'Élimination' | 'Substitution' | 'Ingénierie' | 'Administrative' | 'EPI';
   isSelected: boolean;
   photos: Photo[];
   notes: string;
@@ -169,21 +69,31 @@ interface ElectricalHazard {
   showControls: boolean;
 }
 
-interface SafetyEquipment {
-  id: string;
-  name: string;
-  required: boolean;
-  available: boolean;
+interface Danger {
+  nom: string;
+  description: string;
+  categorie: string;
+  present: boolean;
+  niveauRisque: string;
+  moyensControle: string[];
   notes: string;
-  verified: boolean;
-  category: 'head' | 'eye' | 'respiratory' | 'hand' | 'foot' | 'body' | 'fall' | 'electrical' | 'detection' | 'other';
+}
+
+interface SafetyEquipment {
+  nom: string;
+  categorie: string;
+  utilise: boolean;
+  conforme: boolean;
+  notes: string;
+  norme?: string;
 }
 
 interface TeamDiscussion {
   id: string;
-  topic: string;
+  sujet: string;
+  description: string;
+  discute: boolean;
   notes: string;
-  completed: boolean;
   discussedBy: string;
   discussedAt?: string;
   priority: 'low' | 'medium' | 'high';
@@ -198,14 +108,68 @@ interface EmergencyProcedure {
   isVerified: boolean;
 }
 
-interface RiskAssessment {
+interface ASTFormData {
+  // Identifiants
   id: string;
-  hazardType: string;
-  riskLevel: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
-  controlMeasures: string[];
-  residualRisk: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
-  isAcceptable: boolean;
-  notes: string;
+  numeroAST: string;
+  created: string;
+  lastModified: string;
+  language: 'fr' | 'en';
+  status: 'draft' | 'completed' | 'team_validation' | 'approved' | 'archived';
+  
+  // Informations projet
+  projet: string;
+  lieu: string;
+  descriptionTache: string;
+  date: string;
+  heure: string;
+  responsable: string;
+  dureeEstimee: string;
+  conditionsMeteo: string;
+  
+  // Communication d'urgence
+  numeroUrgence: string;
+  responsableSecurite: string;
+  pointRassemblement: string;
+  
+  // Discussions équipe
+  discussionsEquipe: TeamDiscussion[];
+  
+  // Équipements sécurité
+  equipementsSecurite: SafetyEquipment[];
+  
+  // Dangers identifiés
+  dangersIdentifies: Danger[];
+  
+  // Points d'isolement
+  pointsIsolement: IsolationPoint[];
+  
+  // Équipe
+  equipe: TeamMember[];
+  
+  // Documentation
+  photos: Photo[];
+  observations: string;
+  proceduresApplicables: string;
+  normesReglementations: string;
+  
+  // Validations
+  validations: Record<string, boolean>;
+  approbations: Array<{
+    role: string;
+    nom: string;
+    dateHeure: string;
+    approuve: boolean;
+  }>;
+  
+  // Historique
+  electricalHazards?: ElectricalHazard[];
+}
+
+interface Tenant {
+  id: string;
+  subdomain: string;
+  companyName: string;
 }
 
 interface ASTFormProps {
@@ -221,7 +185,7 @@ const generateASTNumber = (): string => {
   const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
-// =================== AST SECTION 2/5 - MOYENS DE CONTRÔLE CNESST & DONNÉES ===================
+// =================== AST SECTION 2/5 CORRIGÉE - DONNÉES & MOYENS DE CONTRÔLE CNESST ===================
 // Section 2: Moyens de contrôle réels selon CNESST/CSA Z462 et données professionnelles
 
 // =================== HIÉRARCHIE DES MOYENS DE CONTRÔLE SELON CNESST ===================
@@ -232,1346 +196,665 @@ const generateASTNumber = (): string => {
 // 5. ÉQUIPEMENT DE PROTECTION INDIVIDUELLE (le moins efficace)
 
 // =================== MOYENS DE CONTRÔLE PROFESSIONNELS PAR RISQUE ===================
-const professionalControlMeasures: Record<string, ControlMeasure[]> = {
+const moyensControleCNESST: Record<string, Array<{ nom: string; niveau: string; description: string }>> = {
   // Électrocution - CSA Z462 conforme
-  'ELEC-001': [
+  'Électrocution': [
     // ÉLIMINATION
-    { id: 'elec-001-elim-1', name: 'Mise hors tension complète', description: 'Couper complètement l\'alimentation électrique et vérifier l\'absence de tension', category: 'elimination', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-001-elim-2', name: 'Travail différé', description: 'Reporter les travaux pour permettre une mise hors tension sécuritaire', category: 'elimination', isSelected: false, photos: [], notes: '' },
+    { nom: 'Mise hors tension complète', niveau: 'Élimination', description: 'Couper complètement l\'alimentation électrique et vérifier l\'absence de tension' },
+    { nom: 'Travail différé', niveau: 'Élimination', description: 'Reporter les travaux pour permettre une mise hors tension sécuritaire' },
     
     // SUBSTITUTION
-    { id: 'elec-001-sub-1', name: 'Outils isolés certifiés', description: 'Utiliser des outils isolés 1000V certifiés CSA/IEC', category: 'substitution', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-001-sub-2', name: 'Équipement basse tension', description: 'Remplacer par des équipements fonctionnant à tension réduite (<50V)', category: 'substitution', isSelected: false, photos: [], notes: '' },
+    { nom: 'Outils isolés certifiés', niveau: 'Substitution', description: 'Utiliser des outils isolés 1000V certifiés CSA/IEC' },
+    { nom: 'Équipement basse tension', niveau: 'Substitution', description: 'Remplacer par des équipements fonctionnant à tension réduite (<50V)' },
     
     // INGÉNIERIE
-    { id: 'elec-001-eng-1', name: 'Consignation LOTO complète', description: 'Lockout/Tagout selon CSA Z460 avec cadenas personnels', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-001-eng-2', name: 'Vérification absence tension (VAT)', description: 'Utiliser VAT certifié et testé selon CSA Z462', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-001-eng-3', name: 'Mise à la terre temporaire', description: 'Installer équipotentialité et mise à la terre de sécurité', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-001-eng-4', name: 'Barrières de protection', description: 'Installer barrières physiques autour des zones sous tension', category: 'engineering', isSelected: false, photos: [], notes: '' },
+    { nom: 'Consignation LOTO complète', niveau: 'Ingénierie', description: 'Lockout/Tagout selon CSA Z460 avec cadenas personnels' },
+    { nom: 'Vérification absence tension (VAT)', niveau: 'Ingénierie', description: 'Utiliser VAT certifié et testé selon CSA Z462' },
+    { nom: 'Mise à la terre temporaire', niveau: 'Ingénierie', description: 'Installer équipotentialité et mise à la terre de sécurité' },
+    { nom: 'Barrières de protection', niveau: 'Ingénierie', description: 'Installer barrières physiques autour des zones sous tension' },
     
     // ADMINISTRATIF
-    { id: 'elec-001-adm-1', name: 'Formation CSA Z462', description: 'Formation électrique qualifiée selon standard canadien', category: 'administrative', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-001-adm-2', name: 'Permis travail électrique', description: 'Émission permis travail énergisé avec analyse risques', category: 'administrative', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-001-adm-3', name: 'Surveillance constante', description: 'Présence surveillant électrique qualifié en permanence', category: 'administrative', isSelected: false, photos: [], notes: '' },
+    { nom: 'Formation CSA Z462', niveau: 'Administrative', description: 'Formation électrique qualifiée selon standard canadien' },
+    { nom: 'Permis travail électrique', niveau: 'Administrative', description: 'Émission permis travail énergisé avec analyse risques' },
+    { nom: 'Surveillance constante', niveau: 'Administrative', description: 'Présence surveillant électrique qualifié en permanence' },
     
     // EPI
-    { id: 'elec-001-epi-1', name: 'Gants isolants classe appropriée', description: 'Gants isolants testés selon tension de travail', category: 'ppe', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-001-epi-2', name: 'Chaussures isolantes CSA', description: 'Chaussures électriques certifiées CSA', category: 'ppe', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-001-epi-3', name: 'Casque classe E', description: 'Casque de sécurité classe électrique', category: 'ppe', isSelected: false, photos: [], notes: '' }
+    { nom: 'Gants isolants classe appropriée', niveau: 'EPI', description: 'Gants isolants testés selon tension de travail' },
+    { nom: 'Chaussures isolantes CSA', niveau: 'EPI', description: 'Chaussures électriques certifiées CSA' },
+    { nom: 'Casque classe E', niveau: 'EPI', description: 'Casque de sécurité classe électrique' }
   ],
 
   // Arc électrique - CSA Z462 2024
-  'ELEC-002': [
+  'Arc électrique': [
     // ÉLIMINATION
-    { id: 'elec-002-elim-1', name: 'Mise hors tension systématique', description: 'Éliminer complètement le risque d\'arc par mise hors tension', category: 'elimination', isSelected: false, photos: [], notes: '' },
+    { nom: 'Mise hors tension systématique', niveau: 'Élimination', description: 'Éliminer complètement le risque d\'arc par mise hors tension' },
     
     // SUBSTITUTION
-    { id: 'elec-002-sub-1', name: 'Équipement télécommandé', description: 'Utiliser perches isolantes et commandes à distance', category: 'substitution', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-002-sub-2', name: 'Technologie sans arc', description: 'Remplacer par équipements à coupure sous vide ou SF6', category: 'substitution', isSelected: false, photos: [], notes: '' },
+    { nom: 'Équipement télécommandé', niveau: 'Substitution', description: 'Utiliser perches isolantes et commandes à distance' },
+    { nom: 'Technologie sans arc', niveau: 'Substitution', description: 'Remplacer par équipements à coupure sous vide ou SF6' },
     
     // INGÉNIERIE
-    { id: 'elec-002-eng-1', name: 'Calcul énergie incidente', description: 'Analyse arc flash selon IEEE 1584 et CSA Z462', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-002-eng-2', name: 'Réduction courant défaut', description: 'Installer limiteurs de courant et protections rapides', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-002-eng-3', name: 'Distance de sécurité', description: 'Maintenir distance minimale selon calcul arc flash', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-002-eng-4', name: 'Blindage arc flash', description: 'Installer écrans et blindages anti-arc', category: 'engineering', isSelected: false, photos: [], notes: '' },
+    { nom: 'Calcul énergie incidente', niveau: 'Ingénierie', description: 'Analyse arc flash selon IEEE 1584 et CSA Z462' },
+    { nom: 'Réduction courant défaut', niveau: 'Ingénierie', description: 'Installer limiteurs de courant et protections rapides' },
+    { nom: 'Distance de sécurité', niveau: 'Ingénierie', description: 'Maintenir distance minimale selon calcul arc flash' },
+    { nom: 'Blindage arc flash', niveau: 'Ingénierie', description: 'Installer écrans et blindages anti-arc' },
     
     // ADMINISTRATIF
-    { id: 'elec-002-adm-1', name: 'Étiquetage arc flash', description: 'Affichage énergie incidente et PPE requis', category: 'administrative', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-002-adm-2', name: 'Procédures spécifiques', description: 'Modes opératoires détaillés pour chaque équipement', category: 'administrative', isSelected: false, photos: [], notes: '' },
+    { nom: 'Étiquetage arc flash', niveau: 'Administrative', description: 'Affichage énergie incidente et PPE requis' },
+    { nom: 'Procédures spécifiques', niveau: 'Administrative', description: 'Modes opératoires détaillés pour chaque équipement' },
     
     // EPI
-    { id: 'elec-002-epi-1', name: 'Vêtements arc flash certifiés', description: 'Habits résistants arc selon catégorie PPE calculée', category: 'ppe', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-002-epi-2', name: 'Casque arc flash', description: 'Casque avec écran facial arc flash intégré', category: 'ppe', isSelected: false, photos: [], notes: '' },
-    { id: 'elec-002-epi-3', name: 'Gants cuir par-dessus isolants', description: 'Gants cuir de protection pour les gants isolants', category: 'ppe', isSelected: false, photos: [], notes: '' }
+    { nom: 'Vêtements arc flash certifiés', niveau: 'EPI', description: 'Habits résistants arc selon catégorie PPE calculée' },
+    { nom: 'Casque arc flash', niveau: 'EPI', description: 'Casque avec écran facial arc flash intégré' },
+    { nom: 'Gants cuir par-dessus isolants', niveau: 'EPI', description: 'Gants cuir de protection pour les gants isolants' }
   ],
 
   // Chute de hauteur - Réglementation québécoise
-  'FALL-001': [
+  'Chute de hauteur': [
     // ÉLIMINATION
-    { id: 'fall-001-elim-1', name: 'Travail au sol', description: 'Modifier méthode pour effectuer travail au niveau du sol', category: 'elimination', isSelected: false, photos: [], notes: '' },
-    { id: 'fall-001-elim-2', name: 'Préfabrication au sol', description: 'Assembler les composants au sol avant installation', category: 'elimination', isSelected: false, photos: [], notes: '' },
+    { nom: 'Travail au sol', niveau: 'Élimination', description: 'Modifier méthode pour effectuer travail au niveau du sol' },
+    { nom: 'Préfabrication au sol', niveau: 'Élimination', description: 'Assembler les composants au sol avant installation' },
     
     // SUBSTITUTION
-    { id: 'fall-001-sub-1', name: 'Plateforme élévatrice', description: 'Utiliser nacelle ou plateforme sécurisée au lieu d\'échelle', category: 'substitution', isSelected: false, photos: [], notes: '' },
-    { id: 'fall-001-sub-2', name: 'Échafaudage sécurisé', description: 'Monter échafaudage conforme avec garde-corps', category: 'substitution', isSelected: false, photos: [], notes: '' },
+    { nom: 'Plateforme élévatrice', niveau: 'Substitution', description: 'Utiliser nacelle ou plateforme sécurisée au lieu d\'échelle' },
+    { nom: 'Échafaudage sécurisé', niveau: 'Substitution', description: 'Monter échafaudage conforme avec garde-corps' },
     
     // INGÉNIERIE
-    { id: 'fall-001-eng-1', name: 'Garde-corps permanents', description: 'Installer garde-corps 1070mm avec lisse intermédiaire', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'fall-001-eng-2', name: 'Filets de sécurité', description: 'Installer filets certifiés sous zone de travail', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'fall-001-eng-3', name: 'Points d\'ancrage certifiés', description: 'Installer ancrages 22,2 kN certifiés CSA Z259', category: 'engineering', isSelected: false, photos: [], notes: '' },
+    { nom: 'Garde-corps permanents', niveau: 'Ingénierie', description: 'Installer garde-corps 1070mm avec lisse intermédiaire' },
+    { nom: 'Filets de sécurité', niveau: 'Ingénierie', description: 'Installer filets certifiés sous zone de travail' },
+    { nom: 'Points d\'ancrage certifiés', niveau: 'Ingénierie', description: 'Installer ancrages 22,2 kN certifiés CSA Z259' },
     
     // ADMINISTRATIF
-    { id: 'fall-001-adm-1', name: 'Formation travail en hauteur', description: 'Formation protection contre chutes CNESST', category: 'administrative', isSelected: false, photos: [], notes: '' },
-    { id: 'fall-001-adm-2', name: 'Plan de sauvetage', description: 'Procédure secours en cas de chute avec suspension', category: 'administrative', isSelected: false, photos: [], notes: '' },
-    { id: 'fall-001-adm-3', name: 'Inspection quotidienne', description: 'Vérification EPI et équipements avant utilisation', category: 'administrative', isSelected: false, photos: [], notes: '' },
+    { nom: 'Formation travail en hauteur', niveau: 'Administrative', description: 'Formation protection contre chutes CNESST' },
+    { nom: 'Plan de sauvetage', niveau: 'Administrative', description: 'Procédure secours en cas de chute avec suspension' },
+    { nom: 'Inspection quotidienne', niveau: 'Administrative', description: 'Vérification EPI et équipements avant utilisation' },
     
     // EPI
-    { id: 'fall-001-epi-1', name: 'Harnais complet CSA Z259', description: 'Harnais dorsal et sternal certifié', category: 'ppe', isSelected: false, photos: [], notes: '' },
-    { id: 'fall-001-epi-2', name: 'Longe avec absorbeur', description: 'Cordon rétractable ou absorbeur d\'énergie', category: 'ppe', isSelected: false, photos: [], notes: '' },
-    { id: 'fall-001-epi-3', name: 'Casque mentonnière', description: 'Casque avec jugulaire pour éviter perte', category: 'ppe', isSelected: false, photos: [], notes: '' }
+    { nom: 'Harnais complet CSA Z259', niveau: 'EPI', description: 'Harnais dorsal et sternal certifié' },
+    { nom: 'Longe avec absorbeur', niveau: 'EPI', description: 'Cordon rétractable ou absorbeur d\'énergie' },
+    { nom: 'Casque mentonnière', niveau: 'EPI', description: 'Casque avec jugulaire pour éviter perte' }
   ],
 
   // Happement mécanique
-  'MECH-001': [
+  'Happement/entraînement': [
     // ÉLIMINATION
-    { id: 'mech-001-elim-1', name: 'Arrêt machine complet', description: 'Stopper complètement machine avant intervention', category: 'elimination', isSelected: false, photos: [], notes: '' },
+    { nom: 'Arrêt machine complet', niveau: 'Élimination', description: 'Stopper complètement machine avant intervention' },
     
     // SUBSTITUTION
-    { id: 'mech-001-sub-1', name: 'Outils à distance', description: 'Utiliser outils prolongateurs pour éviter proximité', category: 'substitution', isSelected: false, photos: [], notes: '' },
+    { nom: 'Outils à distance', niveau: 'Substitution', description: 'Utiliser outils prolongateurs pour éviter proximité' },
     
     // INGÉNIERIE
-    { id: 'mech-001-eng-1', name: 'Protecteurs de machine', description: 'Installer garde de sécurité avec verrouillage', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'mech-001-eng-2', name: 'Consignation mécanique', description: 'LOTO complet avec blocage mécanique', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'mech-001-eng-3', name: 'Détecteurs de présence', description: 'Capteurs laser ou rideaux lumineux', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'mech-001-eng-4', name: 'Arrêts d\'urgence', description: 'Boutons coup de poing accessibles', category: 'engineering', isSelected: false, photos: [], notes: '' },
+    { nom: 'Protecteurs de machine', niveau: 'Ingénierie', description: 'Installer garde de sécurité avec verrouillage' },
+    { nom: 'Consignation mécanique', niveau: 'Ingénierie', description: 'LOTO complet avec blocage mécanique' },
+    { nom: 'Détecteurs de présence', niveau: 'Ingénierie', description: 'Capteurs laser ou rideaux lumineux' },
+    { nom: 'Arrêts d\'urgence', niveau: 'Ingénierie', description: 'Boutons coup de poing accessibles' },
     
     // ADMINISTRATIF
-    { id: 'mech-001-adm-1', name: 'Formation sécurité machine', description: 'Formation spécifique aux dangers mécaniques', category: 'administrative', isSelected: false, photos: [], notes: '' },
-    { id: 'mech-001-adm-2', name: 'Procédures LOTO', description: 'Méthodes de cadenassage documentées', category: 'administrative', isSelected: false, photos: [], notes: '' },
+    { nom: 'Formation sécurité machine', niveau: 'Administrative', description: 'Formation spécifique aux dangers mécaniques' },
+    { nom: 'Procédures LOTO', niveau: 'Administrative', description: 'Méthodes de cadenassage documentées' },
     
     // EPI
-    { id: 'mech-001-epi-1', name: 'Gants résistants coupures', description: 'Gants niveau 3-5 selon ISO 13997', category: 'ppe', isSelected: false, photos: [], notes: '' },
-    { id: 'mech-001-epi-2', name: 'Vêtements ajustés', description: 'Éviter vêtements amples près machines', category: 'ppe', isSelected: false, photos: [], notes: '' }
+    { nom: 'Gants résistants coupures', niveau: 'EPI', description: 'Gants niveau 3-5 selon ISO 13997' },
+    { nom: 'Vêtements ajustés', niveau: 'EPI', description: 'Éviter vêtements amples près machines' }
   ],
 
   // Espace clos - Réglementation CNESST
-  'SPACE-001': [
+  'Espace clos': [
     // ÉLIMINATION
-    { id: 'space-001-elim-1', name: 'Travail extérieur', description: 'Modifier processus pour éviter entrée espace clos', category: 'elimination', isSelected: false, photos: [], notes: '' },
+    { nom: 'Travail extérieur', niveau: 'Élimination', description: 'Modifier processus pour éviter entrée espace clos' },
     
     // SUBSTITUTION
-    { id: 'space-001-sub-1', name: 'Télécommande/robotique', description: 'Utiliser équipement télécommandé ou robots', category: 'substitution', isSelected: false, photos: [], notes: '' },
+    { nom: 'Télécommande/robotique', niveau: 'Substitution', description: 'Utiliser équipement télécommandé ou robots' },
     
     // INGÉNIERIE
-    { id: 'space-001-eng-1', name: 'Ventilation mécanique', description: 'Ventilation forcée continue avec débit calculé', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'space-001-eng-2', name: 'Ouvertures multiples', description: 'Créer entrées/sorties supplémentaires sécurisées', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'space-001-eng-3', name: 'Systèmes de communication', description: 'Radio bidirectionnelle continue avec extérieur', category: 'engineering', isSelected: false, photos: [], notes: '' },
+    { nom: 'Ventilation mécanique', niveau: 'Ingénierie', description: 'Ventilation forcée continue avec débit calculé' },
+    { nom: 'Ouvertures multiples', niveau: 'Ingénierie', description: 'Créer entrées/sorties supplémentaires sécurisées' },
+    { nom: 'Systèmes de communication', niveau: 'Ingénierie', description: 'Radio bidirectionnelle continue avec extérieur' },
     
     // ADMINISTRATIF
-    { id: 'space-001-adm-1', name: 'Permis espace clos', description: 'Autorisation écrite avec analyses atmosphère', category: 'administrative', isSelected: false, photos: [], notes: '' },
-    { id: 'space-001-adm-2', name: 'Surveillant formé', description: 'Surveillant qualifié en permanence à l\'extérieur', category: 'administrative', isSelected: false, photos: [], notes: '' },
-    { id: 'space-001-adm-3', name: 'Plan de sauvetage', description: 'Équipe secours formée avec équipement', category: 'administrative', isSelected: false, photos: [], notes: '' },
-    { id: 'space-001-adm-4', name: 'Tests atmosphère continus', description: 'Monitoring O2, LIE, H2S, CO en continu', category: 'administrative', isSelected: false, photos: [], notes: '' },
+    { nom: 'Permis espace clos', niveau: 'Administrative', description: 'Autorisation écrite avec analyses atmosphère' },
+    { nom: 'Surveillant formé', niveau: 'Administrative', description: 'Surveillant qualifié en permanence à l\'extérieur' },
+    { nom: 'Plan de sauvetage', niveau: 'Administrative', description: 'Équipe secours formée avec équipement' },
+    { nom: 'Tests atmosphère continus', niveau: 'Administrative', description: 'Monitoring O2, LIE, H2S, CO en continu' },
     
     // EPI
-    { id: 'space-001-epi-1', name: 'Appareil respiratoire', description: 'ARI ou adduction d\'air selon analyse', category: 'ppe', isSelected: false, photos: [], notes: '' },
-    { id: 'space-001-epi-2', name: 'Harnais de récupération', description: 'Harnais avec point dorsal pour extraction', category: 'ppe', isSelected: false, photos: [], notes: '' },
-    { id: 'space-001-epi-3', name: 'Détecteur de gaz portable', description: 'Détecteur 4 gaz porté en permanence', category: 'ppe', isSelected: false, photos: [], notes: '' }
-  ],
-
-  // Moyens de contrôle génériques (pour autres risques)
-  'default': [
-    // ÉLIMINATION
-    { id: 'def-elim-1', name: 'Suppression du danger', description: 'Éliminer complètement la source du risque', category: 'elimination', isSelected: false, photos: [], notes: '' },
-    { id: 'def-elim-2', name: 'Modification du processus', description: 'Changer la méthode de travail pour éviter le risque', category: 'elimination', isSelected: false, photos: [], notes: '' },
-    
-    // SUBSTITUTION
-    { id: 'def-sub-1', name: 'Remplacement sécuritaire', description: 'Substituer par solution moins dangereuse', category: 'substitution', isSelected: false, photos: [], notes: '' },
-    { id: 'def-sub-2', name: 'Matériaux alternatifs', description: 'Utiliser substances ou équipements plus sûrs', category: 'substitution', isSelected: false, photos: [], notes: '' },
-    
-    // INGÉNIERIE
-    { id: 'def-eng-1', name: 'Protections collectives', description: 'Installer dispositifs de protection groupe', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'def-eng-2', name: 'Isolement/confinement', description: 'Séparer physiquement danger et travailleurs', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'def-eng-3', name: 'Ventilation adéquate', description: 'Système ventilation pour évacuer contaminants', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    { id: 'def-eng-4', name: 'Automatisation', description: 'Mécaniser tâches dangereuses', category: 'engineering', isSelected: false, photos: [], notes: '' },
-    
-    // ADMINISTRATIF
-    { id: 'def-adm-1', name: 'Formation spécialisée', description: 'Formation adaptée aux risques spécifiques', category: 'administrative', isSelected: false, photos: [], notes: '' },
-    { id: 'def-adm-2', name: 'Procédures sécuritaires', description: 'Modes opératoires normalisés documentés', category: 'administrative', isSelected: false, photos: [], notes: '' },
-    { id: 'def-adm-3', name: 'Supervision renforcée', description: 'Surveillance par personne compétente', category: 'administrative', isSelected: false, photos: [], notes: '' },
-    { id: 'def-adm-4', name: 'Rotation des tâches', description: 'Limiter temps exposition individuelle', category: 'administrative', isSelected: false, photos: [], notes: '' },
-    
-    // EPI
-    { id: 'def-epi-1', name: 'EPI adapté au risque', description: 'Équipement protection selon danger identifié', category: 'ppe', isSelected: false, photos: [], notes: '' },
-    { id: 'def-epi-2', name: 'Entretien EPI', description: 'Maintenance et remplacement selon programme', category: 'ppe', isSelected: false, photos: [], notes: '' }
+    { nom: 'Appareil respiratoire', niveau: 'EPI', description: 'ARI ou adduction d\'air selon analyse' },
+    { nom: 'Harnais de récupération', niveau: 'EPI', description: 'Harnais avec point dorsal pour extraction' },
+    { nom: 'Détecteur de gaz portable', niveau: 'EPI', description: 'Détecteur 4 gaz porté en permanence' }
   ]
 };
 
 // =================== DANGERS ACTUALISÉS AVEC VRAIS CONTRÔLES ===================
-const updatedElectricalHazards: ElectricalHazard[] = [
+const dangersIdentifiesInitiaux: Danger[] = [
   // Dangers électriques critiques
-  { id: 'ELEC-001', code: 'ELEC-001', title: 'Électrocution', description: 'Contact direct ou indirect avec pièces sous tension pouvant causer arrêt cardiaque', riskLevel: 'critical', isSelected: false, controlMeasures: professionalControlMeasures['ELEC-001'], showControls: false },
-  { id: 'ELEC-002', code: 'ELEC-002', title: 'Arc électrique', description: 'Dégagement d\'énergie causant brûlures graves et explosion', riskLevel: 'critical', isSelected: false, controlMeasures: professionalControlMeasures['ELEC-002'], showControls: false },
+  { nom: 'Électrocution', description: 'Contact direct ou indirect avec pièces sous tension pouvant causer arrêt cardiaque', categorie: 'Électrique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
+  { nom: 'Arc électrique', description: 'Dégagement d\'énergie causant brûlures graves et explosion', categorie: 'Électrique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Dangers de chute - Tolérance zéro CNESST
-  { id: 'FALL-001', code: 'FALL-001', title: 'Chute de hauteur', description: 'Chute depuis surface élevée >3m ou près ouverture', riskLevel: 'critical', isSelected: false, controlMeasures: professionalControlMeasures['FALL-001'], showControls: false },
-  { id: 'FALL-002', code: 'FALL-002', title: 'Chute de plain-pied', description: 'Glissade/trébuchement sur surface niveau', riskLevel: 'medium', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
-  { id: 'FALL-003', code: 'FALL-003', title: 'Chute d\'objets', description: 'Objets tombant et frappant personnes en bas', riskLevel: 'high', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
+  { nom: 'Chute de hauteur', description: 'Chute depuis surface élevée >3m ou près ouverture', categorie: 'Chute', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
+  { nom: 'Chute de plain-pied', description: 'Glissade/trébuchement sur surface niveau', categorie: 'Chute', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
+  { nom: 'Chute d\'objets', description: 'Objets tombant et frappant personnes en bas', categorie: 'Chute', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Dangers mécaniques
-  { id: 'MECH-001', code: 'MECH-001', title: 'Happement/entraînement', description: 'Capture par pièces mobiles machines/équipements', riskLevel: 'critical', isSelected: false, controlMeasures: professionalControlMeasures['MECH-001'], showControls: false },
-  { id: 'MECH-002', code: 'MECH-002', title: 'Coupure/lacération', description: 'Blessures par surfaces/objets tranchants', riskLevel: 'medium', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
-  { id: 'MECH-003', code: 'MECH-003', title: 'Écrasement', description: 'Compression par objets lourds/équipements', riskLevel: 'high', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
+  { nom: 'Happement/entraînement', description: 'Capture par pièces mobiles machines/équipements', categorie: 'Mécanique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
+  { nom: 'Coupure/lacération', description: 'Blessures par surfaces/objets tranchants', categorie: 'Mécanique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
+  { nom: 'Écrasement', description: 'Compression par objets lourds/équipements', categorie: 'Mécanique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Dangers incendie/explosion
-  { id: 'FIRE-001', code: 'FIRE-001', title: 'Incendie', description: 'Combustion matières inflammables', riskLevel: 'critical', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
-  { id: 'FIRE-002', code: 'FIRE-002', title: 'Explosion', description: 'Déflagration gaz/vapeurs/poussières', riskLevel: 'critical', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
+  { nom: 'Incendie', description: 'Combustion matières inflammables', categorie: 'Incendie', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
+  { nom: 'Explosion', description: 'Déflagration gaz/vapeurs/poussières', categorie: 'Incendie', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Dangers chimiques
-  { id: 'CHEM-001', code: 'CHEM-001', title: 'Exposition substances toxiques', description: 'Contact cutané/ingestion/inhalation produits chimiques', riskLevel: 'high', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
-  { id: 'CHEM-002', code: 'CHEM-002', title: 'Inhalation vapeurs nocives', description: 'Respiration contaminants atmosphériques', riskLevel: 'high', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
+  { nom: 'Exposition substances toxiques', description: 'Contact cutané/ingestion/inhalation produits chimiques', categorie: 'Chimique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
+  { nom: 'Inhalation vapeurs nocives', description: 'Respiration contaminants atmosphériques', categorie: 'Chimique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Dangers physiques
-  { id: 'NOISE-001', code: 'NOISE-001', title: 'Exposition bruit excessif', description: 'Niveau sonore >85 dBA causant surdité', riskLevel: 'medium', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
-  { id: 'TEMP-001', code: 'TEMP-001', title: 'Stress thermique', description: 'Exposition chaleur excessive >WBGT', riskLevel: 'medium', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
-  { id: 'TEMP-002', code: 'TEMP-002', title: 'Hypothermie', description: 'Exposition froid extrême <-10°C', riskLevel: 'medium', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
-  { id: 'VIB-001', code: 'VIB-001', title: 'Vibrations main-bras', description: 'Exposition vibrations >2,5 m/s² sur 8h', riskLevel: 'low', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
-  { id: 'RAD-001', code: 'RAD-001', title: 'Radiations ionisantes', description: 'Exposition rayonnements nucléaires', riskLevel: 'high', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
+  { nom: 'Exposition bruit excessif', description: 'Niveau sonore >85 dBA causant surdité', categorie: 'Physique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
+  { nom: 'Stress thermique', description: 'Exposition chaleur excessive >WBGT', categorie: 'Physique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
+  { nom: 'Hypothermie', description: 'Exposition froid extrême <-10°C', categorie: 'Physique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
+  { nom: 'Vibrations main-bras', description: 'Exposition vibrations >2,5 m/s² sur 8h', categorie: 'Physique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
+  { nom: 'Radiations ionisantes', description: 'Exposition rayonnements nucléaires', categorie: 'Physique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Dangers biologiques
-  { id: 'BIO-001', code: 'BIO-001', title: 'Agents biologiques', description: 'Exposition microorganismes pathogènes', riskLevel: 'medium', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
+  { nom: 'Agents biologiques', description: 'Exposition microorganismes pathogènes', categorie: 'Biologique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Dangers ergonomiques
-  { id: 'ERGO-001', code: 'ERGO-001', title: 'Troubles musculo-squelettiques', description: 'Lésions par mouvements répétitifs/manutention', riskLevel: 'medium', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
+  { nom: 'Troubles musculo-squelettiques', description: 'Lésions par mouvements répétitifs/manutention', categorie: 'Ergonomique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Dangers d'espace clos - Tolérance zéro
-  { id: 'SPACE-001', code: 'SPACE-001', title: 'Espace clos', description: 'Travail espace confiné avec risques atmosphériques', riskLevel: 'critical', isSelected: false, controlMeasures: professionalControlMeasures['SPACE-001'], showControls: false },
+  { nom: 'Espace clos', description: 'Travail espace confiné avec risques atmosphériques', categorie: 'Espace clos', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Dangers circulation/véhicules
-  { id: 'VEH-001', code: 'VEH-001', title: 'Collision véhicules', description: 'Accident avec équipements mobiles/véhicules', riskLevel: 'high', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
+  { nom: 'Collision véhicules', description: 'Accident avec équipements mobiles/véhicules', categorie: 'Circulation', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Dangers manutention
-  { id: 'LIFT-001', code: 'LIFT-001', title: 'Manutention manuelle', description: 'Soulèvement >23kg ou postures contraignantes', riskLevel: 'medium', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
+  { nom: 'Manutention manuelle', description: 'Soulèvement >23kg ou postures contraignantes', categorie: 'Manutention', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Dangers équipements
-  { id: 'EQUIP-001', code: 'EQUIP-001', title: 'Défaillance équipement', description: 'Panne équipement critique ou surpression', riskLevel: 'high', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
+  { nom: 'Défaillance équipement', description: 'Panne équipement critique ou surpression', categorie: 'Équipement', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Dangers environnementaux
-  { id: 'ENV-001', code: 'ENV-001', title: 'Conditions météo dangereuses', description: 'Intempéries compromettant sécurité travail', riskLevel: 'medium', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
+  { nom: 'Conditions météo dangereuses', description: 'Intempéries compromettant sécurité travail', categorie: 'Environnemental', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Dangers psychosociaux
-  { id: 'PSY-001', code: 'PSY-001', title: 'Stress/fatigue excessive', description: 'Épuisement affectant vigilance sécuritaire', riskLevel: 'low', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false },
+  { nom: 'Stress/fatigue excessive', description: 'Épuisement affectant vigilance sécuritaire', categorie: 'Psychosocial', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
   
   // Autres dangers spécifiques
-  { id: 'OTHER-001', code: 'OTHER-001', title: 'Dangers spécifiques au site', description: 'Risques particuliers identifiés sur site', riskLevel: 'medium', isSelected: false, controlMeasures: professionalControlMeasures['default'], showControls: false }
+  { nom: 'Dangers spécifiques au site', description: 'Risques particuliers identifiés sur site', categorie: 'Autre', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' }
 ];
 
 // =================== ÉQUIPEMENTS SÉCURITÉ CERTIFIÉS ===================
-const professionalSafetyEquipment: SafetyEquipment[] = [
+const equipementsSecuriteInitiaux: SafetyEquipment[] = [
   // Protection tête - CSA Z94.1
-  { id: 'head-001', name: 'Casque CSA Type 1 Classe E', required: false, available: false, verified: false, notes: '', category: 'head' },
-  { id: 'head-002', name: 'Casque escalade CSA Z259.1', required: false, available: false, verified: false, notes: '', category: 'head' },
-  { id: 'head-003', name: 'Casque arc flash avec écran', required: false, available: false, verified: false, notes: '', category: 'head' },
+  { nom: 'Casque CSA Type 1 Classe E', categorie: 'Protection crânienne', utilise: false, conforme: false, notes: '', norme: 'CSA Z94.1' },
+  { nom: 'Casque escalade CSA Z259.1', categorie: 'Protection crânienne', utilise: false, conforme: false, notes: '', norme: 'CSA Z259.1' },
+  { nom: 'Casque arc flash avec écran', categorie: 'Protection crânienne', utilise: false, conforme: false, notes: '', norme: 'ASTM F1506' },
   
   // Protection yeux/visage - CSA Z94.3
-  { id: 'eye-001', name: 'Lunettes CSA Z94.3 impact', required: false, available: false, verified: false, notes: '', category: 'eye' },
-  { id: 'eye-002', name: 'Écran facial polycarbonate', required: false, available: false, verified: false, notes: '', category: 'eye' },
-  { id: 'eye-003', name: 'Lunettes soudage teinte variable', required: false, available: false, verified: false, notes: '', category: 'eye' },
-  { id: 'eye-004', name: 'Lunettes chimiques étanches', required: false, available: false, verified: false, notes: '', category: 'eye' },
+  { nom: 'Lunettes CSA Z94.3 impact', categorie: 'Protection oculaire', utilise: false, conforme: false, notes: '', norme: 'CSA Z94.3' },
+  { nom: 'Écran facial polycarbonate', categorie: 'Protection oculaire', utilise: false, conforme: false, notes: '', norme: 'CSA Z94.3' },
+  { nom: 'Lunettes soudage teinte variable', categorie: 'Protection oculaire', utilise: false, conforme: false, notes: '', norme: 'CSA Z94.3' },
+  { nom: 'Lunettes chimiques étanches', categorie: 'Protection oculaire', utilise: false, conforme: false, notes: '', norme: 'CSA Z94.3' },
   
   // Protection respiratoire - CSA Z94.4
-  { id: 'resp-001', name: 'Masque N95 certifié NIOSH', required: false, available: false, verified: false, notes: '', category: 'respiratory' },
-  { id: 'resp-002', name: 'ARI 30min certifié CSA', required: false, available: false, verified: false, notes: '', category: 'respiratory' },
-  { id: 'resp-003', name: 'Demi-masque P100 + cartouches', required: false, available: false, verified: false, notes: '', category: 'respiratory' },
-  { id: 'resp-004', name: 'Masque complet adduction air', required: false, available: false, verified: false, notes: '', category: 'respiratory' },
+  { nom: 'Masque N95 certifié NIOSH', categorie: 'Protection respiratoire', utilise: false, conforme: false, notes: '', norme: 'NIOSH 42CFR84' },
+  { nom: 'ARI 30min certifié CSA', categorie: 'Protection respiratoire', utilise: false, conforme: false, notes: '', norme: 'CSA Z94.4' },
+  { nom: 'Demi-masque P100 + cartouches', categorie: 'Protection respiratoire', utilise: false, conforme: false, notes: '', norme: 'CSA Z94.4' },
+  { nom: 'Masque complet adduction air', categorie: 'Protection respiratoire', utilise: false, conforme: false, notes: '', norme: 'CSA Z94.4' },
   
   // Protection mains - ASTM/EN
-  { id: 'hand-001', name: 'Gants isolants Classe 0 (1kV)', required: false, available: false, verified: false, notes: '', category: 'hand' },
-  { id: 'hand-002', name: 'Gants isolants Classe 1 (7.5kV)', required: false, available: false, verified: false, notes: '', category: 'hand' },
-  { id: 'hand-003', name: 'Gants anti-coupure niveau 5', required: false, available: false, verified: false, notes: '', category: 'hand' },
-  { id: 'hand-004', name: 'Gants chimiques nitrile', required: false, available: false, verified: false, notes: '', category: 'hand' },
-  { id: 'hand-005', name: 'Gants cuir protection isolants', required: false, available: false, verified: false, notes: '', category: 'hand' },
+  { nom: 'Gants isolants Classe 0 (1kV)', categorie: 'Protection des mains', utilise: false, conforme: false, notes: '', norme: 'ASTM D120' },
+  { nom: 'Gants isolants Classe 1 (7.5kV)', categorie: 'Protection des mains', utilise: false, conforme: false, notes: '', norme: 'ASTM D120' },
+  { nom: 'Gants anti-coupure niveau 5', categorie: 'Protection des mains', utilise: false, conforme: false, notes: '', norme: 'EN 388' },
+  { nom: 'Gants chimiques nitrile', categorie: 'Protection des mains', utilise: false, conforme: false, notes: '', norme: 'EN 374' },
+  { nom: 'Gants cuir protection isolants', categorie: 'Protection des mains', utilise: false, conforme: false, notes: '', norme: 'ASTM D120' },
   
   // Protection pieds - CSA Z195
-  { id: 'foot-001', name: 'Bottes CSA électriques EH', required: false, available: false, verified: false, notes: '', category: 'foot' },
-  { id: 'foot-002', name: 'Chaussures CSA Vert/Triangle', required: false, available: false, verified: false, notes: '', category: 'foot' },
-  { id: 'foot-003', name: 'Couvre-chaussures isolants', required: false, available: false, verified: false, notes: '', category: 'foot' },
-  { id: 'foot-004', name: 'Bottes chimiques Viton', required: false, available: false, verified: false, notes: '', category: 'foot' },
+  { nom: 'Bottes CSA électriques EH', categorie: 'Protection des pieds', utilise: false, conforme: false, notes: '', norme: 'CSA Z195' },
+  { nom: 'Chaussures CSA Vert/Triangle', categorie: 'Protection des pieds', utilise: false, conforme: false, notes: '', norme: 'CSA Z195' },
+  { nom: 'Couvre-chaussures isolants', categorie: 'Protection des pieds', utilise: false, conforme: false, notes: '', norme: 'ASTM D178' },
+  { nom: 'Bottes chimiques Viton', categorie: 'Protection des pieds', utilise: false, conforme: false, notes: '', norme: 'EN ISO 20345' },
   
   // Protection corps - ASTM F1506
-  { id: 'body-001', name: 'Vêtements arc flash Cat 2 (8 cal/cm²)', required: false, available: false, verified: false, notes: '', category: 'body' },
-  { id: 'body-002', name: 'Vêtements arc flash Cat 4 (40 cal/cm²)', required: false, available: false, verified: false, notes: '', category: 'body' },
-  { id: 'body-003', name: 'Veste haute visibilité Classe 2', required: false, available: false, verified: false, notes: '', category: 'body' },
-  { id: 'body-004', name: 'Combinaison Tyvek QC', required: false, available: false, verified: false, notes: '', category: 'body' },
-  { id: 'body-005', name: 'Tablier soudeur cuir', required: false, available: false, verified: false, notes: '', category: 'body' },
+  { nom: 'Vêtements arc flash Cat 2 (8 cal/cm²)', categorie: 'Protection corporelle', utilise: false, conforme: false, notes: '', norme: 'ASTM F1506' },
+  { nom: 'Vêtements arc flash Cat 4 (40 cal/cm²)', categorie: 'Protection corporelle', utilise: false, conforme: false, notes: '', norme: 'ASTM F1506' },
+  { nom: 'Veste haute visibilité Classe 2', categorie: 'Protection corporelle', utilise: false, conforme: false, notes: '', norme: 'CSA Z96' },
+  { nom: 'Combinaison Tyvek QC', categorie: 'Protection corporelle', utilise: false, conforme: false, notes: '', norme: 'EN 14126' },
+  { nom: 'Tablier soudeur cuir', categorie: 'Protection corporelle', utilise: false, conforme: false, notes: '', norme: 'CSA Z49.1' },
   
   // Protection chute - CSA Z259
-  { id: 'fall-001', name: 'Harnais CSA Z259.10 Classe A', required: false, available: false, verified: false, notes: '', category: 'fall' },
-  { id: 'fall-002', name: 'Longe avec absorbeur 1.8m', required: false, available: false, verified: false, notes: '', category: 'fall' },
-  { id: 'fall-003', name: 'Antichute rétractable 3m', required: false, available: false, verified: false, notes: '', category: 'fall' },
-  { id: 'fall-004', name: 'Point ancrage temporaire', required: false, available: false, verified: false, notes: '', category: 'fall' },
+  { nom: 'Harnais CSA Z259.10 Classe A', categorie: 'Protection antichute', utilise: false, conforme: false, notes: '', norme: 'CSA Z259.10' },
+  { nom: 'Longe avec absorbeur 1.8m', categorie: 'Protection antichute', utilise: false, conforme: false, notes: '', norme: 'CSA Z259.11' },
+  { nom: 'Antichute rétractable 3m', categorie: 'Protection antichute', utilise: false, conforme: false, notes: '', norme: 'CSA Z259.2.2' },
+  { nom: 'Point ancrage temporaire', categorie: 'Protection antichute', utilise: false, conforme: false, notes: '', norme: 'CSA Z259.15' },
   
   // Protection électrique spécialisée
-  { id: 'elec-001', name: 'Tapis isolant Classe 2', required: false, available: false, verified: false, notes: '', category: 'electrical' },
-  { id: 'elec-002', name: 'Perche isolante 1m testée', required: false, available: false, verified: false, notes: '', category: 'electrical' },
-  { id: 'elec-003', name: 'VAT Fluke T6-1000 certifié', required: false, available: false, verified: false, notes: '', category: 'electrical' },
-  { id: 'elec-004', name: 'Cadenas consignation rouge', required: false, available: false, verified: false, notes: '', category: 'electrical' },
-  { id: 'elec-005', name: 'Étiquettes LOTO personnalisées', required: false, available: false, verified: false, notes: '', category: 'electrical' },
+  { nom: 'Tapis isolant Classe 2', categorie: 'Protection électrique', utilise: false, conforme: false, notes: '', norme: 'ASTM D178' },
+  { nom: 'Perche isolante 1m testée', categorie: 'Protection électrique', utilise: false, conforme: false, notes: '', norme: 'ASTM F711' },
+  { nom: 'VAT Fluke T6-1000 certifié', categorie: 'Protection électrique', utilise: false, conforme: false, notes: '', norme: 'CSA Z462' },
+  { nom: 'Cadenas consignation rouge', categorie: 'Protection électrique', utilise: false, conforme: false, notes: '', norme: 'CSA Z460' },
+  { nom: 'Étiquettes LOTO personnalisées', categorie: 'Protection électrique', utilise: false, conforme: false, notes: '', norme: 'CSA Z460' },
   
   // Détection atmosphère
-  { id: 'detect-001', name: 'Détecteur 4 gaz BW Honeywell', required: false, available: false, verified: false, notes: '', category: 'detection' },
-  { id: 'detect-002', name: 'Détecteur O2 portable calibré', required: false, available: false, verified: false, notes: '', category: 'detection' },
-  { id: 'detect-003', name: 'Détecteur LIE/H2S portable', required: false, available: false, verified: false, notes: '', category: 'detection' },
+  { nom: 'Détecteur 4 gaz BW Honeywell', categorie: 'Détection atmosphérique', utilise: false, conforme: false, notes: '', norme: 'CSA 22.2' },
+  { nom: 'Détecteur O2 portable calibré', categorie: 'Détection atmosphérique', utilise: false, conforme: false, notes: '', norme: 'CSA 22.2' },
+  { nom: 'Détecteur LIE/H2S portable', categorie: 'Détection atmosphérique', utilise: false, conforme: false, notes: '', norme: 'CSA 22.2' },
   
   // Équipements urgence/secours
-  { id: 'other-001', name: 'Trousse premiers soins CSA', required: false, available: false, verified: false, notes: '', category: 'other' },
-  { id: 'other-002', name: 'Douche oculaire portable', required: false, available: false, verified: false, notes: '', category: 'other' },
-  { id: 'other-003', name: 'Radio bidirectionnelle', required: false, available: false, verified: false, notes: '', category: 'other' },
-  { id: 'other-004', name: 'Éclairage LED explosion-proof', required: false, available: false, verified: false, notes: '', category: 'other' },
-  { id: 'other-005', name: 'Extincteur CO2 5 lbs', required: false, available: false, verified: false, notes: '', category: 'other' }
+  { nom: 'Trousse premiers soins CSA', categorie: 'Équipement d\'urgence', utilise: false, conforme: false, notes: '', norme: 'CSA Z1220' },
+  { nom: 'Douche oculaire portable', categorie: 'Équipement d\'urgence', utilise: false, conforme: false, notes: '', norme: 'ANSI Z358.1' },
+  { nom: 'Radio bidirectionnelle', categorie: 'Équipement d\'urgence', utilise: false, conforme: false, notes: '', norme: 'IC RSS-119' },
+  { nom: 'Éclairage LED explosion-proof', categorie: 'Équipement d\'urgence', utilise: false, conforme: false, notes: '', norme: 'CSA 22.2' },
+  { nom: 'Extincteur CO2 5 lbs', categorie: 'Équipement d\'urgence', utilise: false, conforme: false, notes: '', norme: 'ULC-S508' }
 ];
 
 // =================== DISCUSSIONS ÉQUIPE PROFESSIONNELLES ===================
-const professionalDiscussions: TeamDiscussion[] = [
-  { id: 'disc-001', topic: 'Identification dangers tolérance zéro', notes: '', completed: false, discussedBy: '', priority: 'high' },
-  { id: 'disc-002', topic: 'Procédures LOTO spécifiques site', notes: '', completed: false, discussedBy: '', priority: 'high' },
-  { id: 'disc-003', topic: 'EPI obligatoires et vérifications', notes: '', completed: false, discussedBy: '', priority: 'high' },
-  { id: 'disc-004', topic: 'Permis de travail requis', notes: '', completed: false, discussedBy: '', priority: 'medium' },
-  { id: 'disc-005', topic: 'Plans d\'urgence et évacuation', notes: '', completed: false, discussedBy: '', priority: 'high' },
-  { id: 'disc-006', topic: 'Communications sécuritaires', notes: '', completed: false, discussedBy: '', priority: 'medium' },
-  { id: 'disc-007', topic: 'Surveillance et supervision', notes: '', completed: false, discussedBy: '', priority: 'medium' },
-  { id: 'disc-008', topic: 'Signalement incidents/presqu\'accidents', notes: '', completed: false, discussedBy: '', priority: 'medium' }
+const discussionsEquipeInitiales: TeamDiscussion[] = [
+  { id: 'disc-001', sujet: 'Identification dangers tolérance zéro', description: 'Passer en revue tous les dangers critiques (électrocution, chute, espace clos, arc flash)', discute: false, notes: '', discussedBy: '', priority: 'high' },
+  { id: 'disc-002', sujet: 'Procédures LOTO spécifiques site', description: 'Réviser les procédures de cadenassage et points d\'isolement', discute: false, notes: '', discussedBy: '', priority: 'high' },
+  { id: 'disc-003', sujet: 'EPI obligatoires et vérifications', description: 'Confirmer disponibilité et conformité de tous les équipements requis', discute: false, notes: '', discussedBy: '', priority: 'high' },
+  { id: 'disc-004', sujet: 'Permis de travail requis', description: 'Vérifier si des permis spéciaux sont nécessaires (travail à chaud, espace clos, etc.)', discute: false, notes: '', discussedBy: '', priority: 'medium' },
+  { id: 'disc-005', sujet: 'Plans d\'urgence et évacuation', description: 'Revoir les procédures d\'urgence et points de rassemblement', discute: false, notes: '', discussedBy: '', priority: 'high' },
+  { id: 'disc-006', sujet: 'Communications sécuritaires', description: 'Établir les moyens de communication et signalisation', discute: false, notes: '', discussedBy: '', priority: 'medium' },
+  { id: 'disc-007', sujet: 'Surveillance et supervision', description: 'Définir les rôles de surveillance et fréquence des vérifications', discute: false, notes: '', discussedBy: '', priority: 'medium' },
+  { id: 'disc-008', sujet: 'Signalement incidents/presqu\'accidents', description: 'Rappeler les procédures de signalement et importance du reporting', discute: false, notes: '', discussedBy: '', priority: 'medium' }
 ];
 
 // =================== PROCÉDURES URGENCE RÉGLEMENTAIRES ===================
-const regulatoryEmergencyProcedures: EmergencyProcedure[] = [
+const proceduresUrgenceInitiales: EmergencyProcedure[] = [
   { id: 'emerg-001', type: 'medical', procedure: 'Composer 911 - Premiers soins certifiés - Évacuation médicale', responsiblePerson: 'Secouriste certifié CNESST', contactInfo: '911 + Contact interne urgence', isVerified: false },
   { id: 'emerg-002', type: 'fire', procedure: 'Alarme incendie - Évacuation totale - Point rassemblement', responsiblePerson: 'Responsable évacuation', contactInfo: 'Service incendie municipal', isVerified: false },
   { id: 'emerg-003', type: 'electrical', procedure: 'Coupure urgence secteur - Consignation - VAT - Secours électrique', responsiblePerson: 'Électricien qualifié CSA Z462', contactInfo: 'Hydro-Québec + Électricien', isVerified: false },
   { id: 'emerg-004', type: 'evacuation', procedure: 'Signal évacuation - Routes primaires/secondaires - Décompte personnel', responsiblePerson: 'Coordonnateur urgence', contactInfo: 'Poste commandement', isVerified: false },
   { id: 'emerg-005', type: 'spill', procedure: 'Confinement déversement - Ventilation - Évacuation zone - Équipe HAZMAT', responsiblePerson: 'Responsable matières dangereuses', contactInfo: 'URGENCE-ENVIRONNEMENT', isVerified: false }
 ];
-// =================== AST SECTION 3/5 - OPTIMISATION MOBILE & BRANDING C-SECUR360 ===================
-// Section 3: Traductions professionnelles, CSS mobile et branding premium
+// =================== AST SECTION 3/5 CORRIGÉE - TRADUCTIONS & FONCTIONS OPTIMISÉES ===================
+// Section 3: Traductions professionnelles, fonctions et données optimisées mobile
 
 // =================== TRADUCTIONS PROFESSIONNELLES MISES À JOUR ===================
-const professionalTranslations = {
+const translations = {
   fr: {
     title: "Analyse Sécuritaire de Tâches - C-Secur360",
     subtitle: "Plateforme professionnelle conforme CNESST/CSA Z462",
     saving: "Sauvegarde en cours...",
     saved: "✅ Enregistré avec succès",
     
-    counters: {
-      onJob: "Travailleurs",
-      approved: "Validés AST", 
-      approvalRate: "Taux validation",
-      completion: "Progression"
-    },
+    // Navigation et étapes
+    generalInfo: "Informations Générales",
+    teamDiscussion: "Discussion d'Équipe",
+    safetyEquipment: "Équipements de Sécurité",
+    hazardIdentification: "Identification des Dangers",
+    energyIsolation: "Isolement des Énergies",
+    teamManagement: "Gestion d'Équipe",
+    documentation: "Documentation",
+    finalValidation: "Validation Finale",
     
-    steps: {
-      general: "Informations Projet",
-      discussion: "Briefing Sécurité", 
-      equipment: "EPI & Équipements",
-      hazards: "Analyse Risques",
-      isolation: "Consignation LOTO",
-      team: "Validation Équipe",
-      documentation: "Documentation", 
-      validation: "Approbation Finale"
-    },
+    // Champs de base
+    project: "Projet",
+    location: "Lieu",
+    taskDescription: "Description de la Tâche",
+    responsible: "Responsable",
     
-    projectInfo: {
-      title: "Informations du Projet",
-      industry: "Secteur d'Activité",
-      astNumber: "# AST",
-      astClientNumber: "# Référence Client", 
-      date: "Date",
-      client: "Client",
-      clientPhone: "Téléphone Client",
-      projectNumber: "Numéro Projet",
-      workDescription: "Description Travaux",
-      workLocation: "Lieu d'Intervention",
-      clientRepresentative: "Responsable Client",
-      clientRepresentativePhone: "Téléphone Responsable",
-      workerCount: "Nombre Travailleurs",
-      estimatedDuration: "Durée Estimée",
-      emergencyContact: "Contact Urgence",
-      emergencyPhone: "Numéro Urgence",
-      astInfo: "Numéro unique généré automatiquement",
-      astClientInfo: "Référence fournie par le client (optionnel)"
-    },
-    
-    teamDiscussion: {
-      title: "Briefing Sécuritaire Équipe",
-      subtitle: "Points obligatoires à discuter avec l'équipe",
-      completed: "✅ Discuté",
-      pending: "⏳ À faire", 
-      discussedBy: "Animé par",
-      notes: "Notes du briefing",
-      priority: "Priorité",
-      toleranceZero: "Tolérance Zéro CNESST"
-    },
-    
-    safetyEquipment: {
-      title: "Équipements de Protection Individuelle et Collective",
-      required: "Obligatoire",
-      available: "Disponible",
-      verified: "Vérifié/Testé", 
-      notes: "Observations",
-      inspection: "Inspection pré-utilisation",
-      categories: {
-        head: "Protection Crânienne",
-        eye: "Protection Oculaire/Faciale",
-        respiratory: "Protection Respiratoire",
-        hand: "Protection des Mains", 
-        foot: "Protection des Pieds",
-        body: "Protection Corporelle",
-        fall: "Protection Antichute",
-        electrical: "Protection Électrique",
-        detection: "Détection Atmosphérique",
-        other: "Équipements Urgence"
-      }
-    },
-    
-    hazards: {
-      title: "Identification et Analyse des Risques",
-      selected: "Identifié",
-      riskLevel: "Niveau Criticité",
-      notes: "Observations complémentaires",
-      controlMeasures: "Moyens de Contrôle",
-      controlsRequired: "⚠️ MOYENS DE CONTRÔLE REQUIS",
-      controlsInPlace: "✅ MESURES DE PRÉVENTION EN PLACE",
-      hierarchyTitle: "Hiérarchie des Mesures (CNESST)",
-      addCustomHazard: "Ajouter risque spécifique",
-      toleranceZero: "🚨 TOLÉRANCE ZÉRO",
-      levels: {
-        low: "Faible",
-        medium: "Modéré",
-        high: "Élevé", 
-        critical: "Critique"
-      },
-      categories: {
-        elimination: "1. Élimination",
-        substitution: "2. Substitution",
-        engineering: "3. Ingénierie",
-        administrative: "4. Administrative",
-        ppe: "5. EPI"
-      }
-    },
-    
-    industries: {
-      electrical: "Électrique",
-      construction: "Construction",
-      industrial: "Industriel",
-      office: "Bureau/Services",
-      manufacturing: "Manufacturier",
-      other: "Autre Secteur"
-    },
-    
-    team: {
-      title: "Validation de l'Équipe",
-      supervisor: "Superviseur/Chargé Projet",
-      addMember: "Ajouter Travailleur",
-      memberName: "Nom Complet",
-      employeeId: "Matricule",
-      department: "Service/Département", 
-      qualification: "Qualification/Certification",
-      validation: "Statut Validation",
-      consultationAst: "Consultation AST",
-      cadenasAppose: "Cadenas Posé",
-      cadenasReleve: "Fin Travaux",
-      status: "Statut",
-      actions: "Actions",
-      pending: "En attente",
-      approved: "✅ Validé",
-      rejected: "❌ Refusé",
-      competency: "Personne compétente"
-    },
-    
-    isolation: {
-      title: "Points de Consignation LOTO",
-      addPoint: "Nouveau Point LOTO",
-      pointName: "Identification Point",
-      isolationType: "Type Énergie",
-      selectType: "Sélectionner type énergie...",
-      noPoints: "Aucun point de consignation configuré",
-      lotozero: "Tolérance ZÉRO - Consignation obligatoire",
-      checklist: {
-        cadenasAppose: "Cadenas Personnel Posé",
-        absenceTension: "Absence Tension Vérifiée", 
-        miseALaTerre: "Mise à la Terre Sécurité",
-        verified: "Vérifié Personne Compétente"
-      }
-    },
-    
-    actions: {
-      sendByEmail: "Transmettre par Courriel",
-      archive: "Archiver Document",
-      generatePDF: "Rapport PDF",
-      print: "Imprimer",
-      finalApproval: "Approbation Finale",
-      export: "Exporter Données"
-    },
-    
-    buttons: {
-      previous: "‹ Précédent",
-      next: "Suivant ›", 
-      save: "Sauvegarder",
-      approve: "Approuver",
-      reject: "Refuser",
-      add: "+ Ajouter",
-      edit: "Modifier",
-      delete: "Supprimer",
-      validate: "Valider",
-      cancel: "Annuler"
-    },
-
-    email: {
-      subject: "AST C-Secur360 - Analyse Sécuritaire de Tâches",
-      body: "Veuillez trouver ci-joint l'Analyse Sécuritaire de Tâches générée via la plateforme C-Secur360 pour votre validation."
-    },
-
-    validation: {
-      errors: "Erreurs de validation",
-      missing: "Champs manquants",
-      incomplete: "Analyse incomplète",
-      success: "Validation réussie"
-    }
+    // Actions
+    previous: "Précédent",
+    next: "Suivant",
+    save: "Sauvegarder",
+    generatePDF: "Générer PDF",
+    sendEmail: "Envoyer par Email",
+    archive: "Archiver",
+    submit: "Soumettre"
   },
   
   en: {
     title: "Job Safety Analysis - C-Secur360",
-    subtitle: "Professional platform compliant with CNESST/CSA Z462", 
+    subtitle: "Professional platform compliant with CNESST/CSA Z462",
     saving: "Saving...",
     saved: "✅ Successfully saved",
     
-    counters: {
-      onJob: "Workers",
-      approved: "JSA Validated",
-      approvalRate: "Approval Rate",
-      completion: "Progress"
-    },
+    // Navigation et étapes
+    generalInfo: "General Information",
+    teamDiscussion: "Team Discussion",
+    safetyEquipment: "Safety Equipment",
+    hazardIdentification: "Hazard Identification",
+    energyIsolation: "Energy Isolation",
+    teamManagement: "Team Management",
+    documentation: "Documentation",
+    finalValidation: "Final Validation",
     
-    steps: {
-      general: "Project Information",
-      discussion: "Safety Briefing", 
-      equipment: "PPE & Equipment",
-      hazards: "Risk Analysis",
-      isolation: "LOTO Lockout",
-      team: "Team Validation",
-      documentation: "Documentation",
-      validation: "Final Approval"
-    },
+    // Champs de base
+    project: "Project",
+    location: "Location",
+    taskDescription: "Task Description",
+    responsible: "Responsible",
     
-    projectInfo: {
-      title: "Project Information",
-      industry: "Industry Sector",
-      astNumber: "# JSA",
-      astClientNumber: "# Client Reference",
-      date: "Date",
-      client: "Client", 
-      clientPhone: "Client Phone",
-      projectNumber: "Project Number",
-      workDescription: "Work Description",
-      workLocation: "Work Location",
-      clientRepresentative: "Client Representative",
-      clientRepresentativePhone: "Representative Phone",
-      workerCount: "Number of Workers",
-      estimatedDuration: "Estimated Duration",
-      emergencyContact: "Emergency Contact",
-      emergencyPhone: "Emergency Phone",
-      astInfo: "Auto-generated unique number",
-      astClientInfo: "Client-provided reference (optional)"
-    },
-    
-    teamDiscussion: {
-      title: "Team Safety Briefing",
-      subtitle: "Mandatory points to discuss with team",
-      completed: "✅ Discussed",
-      pending: "⏳ Pending",
-      discussedBy: "Led by", 
-      notes: "Briefing notes",
-      priority: "Priority",
-      toleranceZero: "CNESST Zero Tolerance"
-    },
-    
-    safetyEquipment: {
-      title: "Individual and Collective Protection Equipment",
-      required: "Required",
-      available: "Available",
-      verified: "Verified/Tested",
-      notes: "Observations",
-      inspection: "Pre-use inspection",
-      categories: {
-        head: "Head Protection",
-        eye: "Eye/Face Protection", 
-        respiratory: "Respiratory Protection",
-        hand: "Hand Protection",
-        foot: "Foot Protection",
-        body: "Body Protection", 
-        fall: "Fall Protection",
-        electrical: "Electrical Protection",
-        detection: "Atmospheric Detection",
-        other: "Emergency Equipment"
-      }
-    },
-    
-    hazards: {
-      title: "Risk Identification and Analysis",
-      selected: "Identified",
-      riskLevel: "Criticality Level", 
-      notes: "Additional observations",
-      controlMeasures: "Control Measures",
-      controlsRequired: "⚠️ CONTROL MEASURES REQUIRED",
-      controlsInPlace: "✅ PREVENTION MEASURES IN PLACE",
-      hierarchyTitle: "Hierarchy of Controls (CNESST)",
-      addCustomHazard: "Add specific hazard",
-      toleranceZero: "🚨 ZERO TOLERANCE",
-      levels: {
-        low: "Low",
-        medium: "Moderate",
-        high: "High",
-        critical: "Critical"
-      },
-      categories: {
-        elimination: "1. Elimination",
-        substitution: "2. Substitution", 
-        engineering: "3. Engineering",
-        administrative: "4. Administrative",
-        ppe: "5. PPE"
-      }
-    },
-    
-    industries: {
-      electrical: "Electrical",
-      construction: "Construction",
-      industrial: "Industrial",
-      office: "Office/Services",
-      manufacturing: "Manufacturing",
-      other: "Other Sector"
-    },
-    
-    team: {
-      title: "Team Validation",
-      supervisor: "Supervisor/Project Lead",
-      addMember: "Add Worker",
-      memberName: "Full Name",
-      employeeId: "Employee ID",
-      department: "Department/Service",
-      qualification: "Qualification/Certification",
-      validation: "Validation Status",
-      consultationAst: "JSA Consultation", 
-      cadenasAppose: "Lock Applied",
-      cadenasReleve: "Work Complete",
-      status: "Status",
-      actions: "Actions",
-      pending: "Pending",
-      approved: "✅ Approved",
-      rejected: "❌ Rejected",
-      competency: "Competent person"
-    },
-    
-    isolation: {
-      title: "LOTO Lockout Points",
-      addPoint: "New LOTO Point",
-      pointName: "Point Identification",
-      isolationType: "Energy Type",
-      selectType: "Select energy type...",
-      noPoints: "No lockout points configured",
-      lotozero: "ZERO Tolerance - Lockout mandatory",
-      checklist: {
-        cadenasAppose: "Personal Lock Applied",
-        absenceTension: "Absence of Voltage Verified",
-        miseALaTerre: "Safety Grounding",
-        verified: "Verified by Competent Person"
-      }
-    },
-    
-    actions: {
-      sendByEmail: "Send by Email",
-      archive: "Archive Document", 
-      generatePDF: "PDF Report",
-      print: "Print",
-      finalApproval: "Final Approval",
-      export: "Export Data"
-    },
-    
-    buttons: {
-      previous: "‹ Previous",
-      next: "Next ›",
-      save: "Save",
-      approve: "Approve",
-      reject: "Reject",
-      add: "+ Add",
-      edit: "Edit",
-      delete: "Delete",
-      validate: "Validate",
-      cancel: "Cancel"
-    },
-
-    email: {
-      subject: "JSA C-Secur360 - Job Safety Analysis",
-      body: "Please find attached the Job Safety Analysis generated via C-Secur360 platform for your validation."
-    },
-
-    validation: {
-      errors: "Validation errors",
-      missing: "Missing fields",
-      incomplete: "Incomplete analysis",
-      success: "Validation successful"
-    }
+    // Actions
+    previous: "Previous",
+    next: "Next",
+    save: "Save",
+    generatePDF: "Generate PDF",
+    sendEmail: "Send Email",
+    archive: "Archive",
+    submit: "Submit"
   }
 };
 
-// =================== DONNÉES INITIALES MISES À JOUR ===================
-const initialProfessionalFormData: ASTFormData = {
+// =================== DONNÉES INITIALES OPTIMISÉES ===================
+const getInitialFormData = (): ASTFormData => ({
+  // Identifiants
   id: `AST-${Date.now()}`,
-  astNumber: generateASTNumber(),
+  numeroAST: generateASTNumber(),
   created: new Date().toISOString(),
   lastModified: new Date().toISOString(),
   language: 'fr',
   status: 'draft',
-  industry: 'electrical',
   
-  projectInfo: {
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().substring(0, 5),
-    client: '',
-    clientPhone: '',
-    projectNumber: '',
-    astClientNumber: '',
-    workLocation: '',
-    workDescription: '',
-    estimatedDuration: '',
-    workerCount: 1,
-    clientRepresentative: '',
-    clientRepresentativePhone: '',
-    emergencyContact: '',
-    emergencyPhone: '',
-    workPermitRequired: false,
-    workPermitNumber: '',
-    weatherConditions: '',
-    specialConditions: ''
+  // Informations projet
+  projet: '',
+  lieu: '',
+  descriptionTache: '',
+  date: new Date().toISOString().split('T')[0],
+  heure: new Date().toTimeString().substring(0, 5),
+  responsable: '',
+  dureeEstimee: '',
+  conditionsMeteo: '',
+  
+  // Communication d'urgence
+  numeroUrgence: '911',
+  responsableSecurite: '',
+  pointRassemblement: '',
+  
+  // Discussions équipe
+  discussionsEquipe: [...discussionsEquipeInitiales],
+  
+  // Équipements sécurité
+  equipementsSecurite: [...equipementsSecuriteInitiaux],
+  
+  // Dangers identifiés
+  dangersIdentifies: [...dangersIdentifiesInitiaux],
+  
+  // Points d'isolement
+  pointsIsolement: [],
+  
+  // Équipe
+  equipe: [],
+  
+  // Documentation
+  photos: [],
+  observations: '',
+  proceduresApplicables: '',
+  normesReglementations: '',
+  
+  // Validations
+  validations: {
+    infoComplete: false,
+    risquesEvalues: false,
+    equipementVerifie: false,
+    equipeFormee: false,
+    proceduresComprises: false
   },
-  
-  teamDiscussion: {
-    electricalCutoffPoints: '',
-    electricalHazardExplanation: '',
-    epiSpecificNotes: '',
-    specialWorkConditions: '',
-    emergencyProcedures: '',
-    discussions: [...professionalDiscussions],
-    briefingCompleted: false,
-    briefingDate: '',
-    briefingTime: '',
-    emergencyProceduresList: [...regulatoryEmergencyProcedures]
-  },
-  
-  safetyEquipment: [...professionalSafetyEquipment],
-  electricalHazards: [...updatedElectricalHazards],
-  riskAssessments: [],
-  
-  team: {
-    supervisor: '',
-    supervisorCertification: '',
-    members: [],
-    briefingCompleted: false,
-    briefingDate: '',
-    briefingTime: '',
-    totalMembers: 0,
-    acknowledgedMembers: 0,
-    validations: [],
-    allApproved: false
-  },
-  
-  isolationPoints: [],
-  
-  documentation: {
-    photos: [],
-    additionalDocuments: [],
-    inspectionNotes: '',
-    correctiveActions: ''
-  },
-  
-  validation: {
-    completedBy: '',
-    completedDate: '',
-    reviewedBy: '',
-    reviewedDate: '',
-    approvedBy: '',
-    approvedDate: '',
-    clientApproval: false,
-    finalApproval: false,
-    revisionNumber: 1,
-    comments: '',
-    emailSent: false
-  }
-};
+  approbations: [
+    { role: 'Superviseur', nom: '', dateHeure: '', approuve: false },
+    { role: 'Responsable Sécurité', nom: '', dateHeure: '', approuve: false },
+    { role: 'Client', nom: '', dateHeure: '', approuve: false }
+  ]
+});
 
 // =================== STYLES CSS OPTIMISÉS MOBILE ===================
 const mobileOptimizedStyles = `
-/* Variables CSS pour cohérence */
+/* Variables CSS pour cohérence C-Secur360 */
 :root {
   --primary-blue: #3b82f6;
   --dark-blue: #1d4ed8;
   --success-green: #10b981;
   --warning-orange: #f59e0b;
   --danger-red: #ef4444;
-  --dark-bg: #0f172a;
-  --card-bg: rgba(15, 23, 42, 0.8);
+  --csecur-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  --glass-bg: rgba(255, 255, 255, 0.1);
   --border-color: rgba(100, 116, 139, 0.3);
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   --border-radius: 12px;
   --border-radius-lg: 24px;
 }
 
-/* Base responsive */
-.form-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, var(--dark-bg) 0%, #1e293b 50%, #334155 100%);
-  padding: 10px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-@media (min-width: 768px) {
-  .form-container {
-    padding: 20px;
-  }
-}
-
-/* Conteneur principal adaptatif */
-.glass-effect {
-  background: var(--card-bg);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-lg);
-  padding: 16px;
-  box-shadow: var(--shadow-lg);
-  max-width: 100%;
-  margin: 0 auto;
-  overflow-x: hidden;
-}
-
-@media (min-width: 768px) {
-  .glass-effect {
-    padding: 32px;
-    max-width: 1200px;
-  }
-}
-
-/* Header mobile-first */
-.header-counters {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding: 16px;
-  background: rgba(30, 41, 59, 0.6);
-  border-radius: var(--border-radius);
-  border: 1px solid var(--border-color);
-}
-
-@media (min-width: 768px) {
-  .header-counters {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    padding: 20px;
-  }
-}
-
-/* Logo et info entreprise */
-.company-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-align: center;
-}
-
-@media (min-width: 768px) {
-  .company-info {
-    text-align: left;
-    gap: 16px;
-  }
-}
-
-.company-logo {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 700;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-
-@media (min-width: 768px) {
-  .company-logo {
-    width: 50px;
-    height: 50px;
-    border-radius: var(--border-radius);
-    font-size: 14px;
-  }
-}
-
-/* Compteurs mobiles */
-.counters-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-@media (min-width: 576px) {
-  .counters-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-}
-
-@media (min-width: 768px) {
-  .counters-grid {
-    display: flex;
-    gap: 24px;
-  }
-}
-
-.counter-item {
-  text-align: center;
-  padding: 12px 8px;
-  background: var(--card-bg);
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  min-width: 0;
-}
-
-@media (min-width: 768px) {
-  .counter-item {
-    padding: 12px 20px;
-    border-radius: var(--border-radius);
-  }
-}
-
-.counter-number {
-  display: block;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--primary-blue);
-  line-height: 1;
-}
-
-@media (min-width: 768px) {
-  .counter-number {
-    font-size: 24px;
-  }
-}
-
-.counter-label {
-  display: block;
-  font-size: 10px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-  line-height: 1.2;
-}
-
-@media (min-width: 768px) {
-  .counter-label {
-    font-size: 12px;
-  }
-}
-
-/* Indicateur d'étapes responsive */
-.step-indicator {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  margin-bottom: 24px;
-}
-
-@media (min-width: 576px) {
-  .step-indicator {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-@media (min-width: 1024px) {
-  .step-indicator {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 32px;
-  }
-}
-
-.step-item {
-  flex: 1;
-  min-width: 0;
-  padding: 8px 6px;
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  text-align: center;
-  position: relative;
-}
-
-@media (min-width: 768px) {
-  .step-item {
-    padding: 12px 10px;
-    border-radius: var(--border-radius);
-    flex-direction: row;
-    text-align: left;
-  }
-}
-
-@media (min-width: 1024px) {
-  .step-item {
-    min-width: 140px;
-    padding: 12px 16px;
-  }
-}
-
-.step-item:hover {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.3);
-}
-
-.step-item.active {
-  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
-  color: white;
-  border-color: var(--primary-blue);
-}
-
-.step-item.completed {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.3);
-  color: var(--success-green);
-}
-
-/* Texte des étapes responsive */
-.step-text {
-  font-size: 10px;
-  font-weight: 600;
-  margin-top: 4px;
-  line-height: 1.2;
-}
-
-@media (min-width: 768px) {
-  .step-text {
-    font-size: 12px;
-    margin-top: 0;
-    margin-left: 8px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .step-text {
-    font-size: 13px;
-  }
-}
-
-/* Progress badge mobile */
-.progress-badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: rgba(255,255,255,0.9);
-  color: var(--primary-blue);
-  border-radius: 10px;
-  padding: 2px 6px;
-  font-size: 8px;
-  font-weight: 700;
-  min-width: 20px;
-  text-align: center;
-}
-
-@media (min-width: 768px) {
-  .progress-badge {
-    position: static;
-    background: rgba(255,255,255,0.1);
-    color: inherit;
-    margin-left: 8px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 11px;
-  }
-}
-
-/* Grilles responsives */
-.equipment-grid,
-.hazard-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-}
-
-@media (min-width: 768px) {
-  .equipment-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  }
-  .hazard-grid {
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  }
-}
-
-@media (min-width: 1200px) {
-  .equipment-grid {
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  }
-  .hazard-grid {
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  }
-}
-
-/* Boutons adaptés mobile */
-.btn-mobile-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-}
-
-@media (min-width: 576px) {
-  .btn-mobile-stack {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-}
-
-.btn-premium,
-.btn-secondary,
-.btn-success,
-.btn-danger {
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-  border: none;
-  min-height: 44px; /* Touch target */
-  font-size: 14px;
-}
-
-@media (min-width: 768px) {
-  .btn-premium,
-  .btn-secondary,
-  .btn-success,
-  .btn-danger {
-    padding: 12px 24px;
-    min-height: auto;
-  }
-}
-
-/* Tableaux responsives */
-.table-responsive {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.approval-table {
-  width: 100%;
-  min-width: 600px;
-  border-collapse: collapse;
-  background: rgba(30, 41, 59, 0.6);
-  border-radius: var(--border-radius);
-  overflow: hidden;
-}
-
-.approval-table th,
-.approval-table td {
-  padding: 8px 6px;
-  text-align: left;
-  font-size: 12px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-@media (min-width: 768px) {
-  .approval-table th,
-  .approval-table td {
-    padding: 16px 12px;
-    font-size: 14px;
-  }
-}
-
-/* Navigation mobile */
-.navigation-mobile {
-  position: sticky;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--card-bg);
-  border-top: 1px solid var(--border-color);
-  padding: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  backdrop-filter: blur(20px);
-  z-index: 100;
-}
-
-@media (min-width: 768px) {
-  .navigation-mobile {
-    position: static;
-    background: none;
-    border-top: 1px solid var(--border-color);
-    margin-top: 32px;
-    padding-top: 24px;
-    backdrop-filter: none;
-  }
-}
-
-/* Inputs optimisés mobile */
-.input-premium {
+/* Base responsive optimisée */
+.input-field {
   width: 100%;
   padding: 12px 16px;
-  background: var(--card-bg);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  color: var(--text-primary);
-  font-size: 16px; /* Évite zoom iOS */
+  border-radius: var(--border-radius);
+  color: #334155;
+  font-size: 16px;
   transition: all 0.3s ease;
+  min-height: 44px;
 }
 
-.input-premium:focus {
+.input-field:focus {
   outline: none;
   border-color: var(--primary-blue);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background: rgba(255, 255, 255, 1);
 }
 
-/* Animations optimisées performance */
-.slide-in {
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Photo carousel mobile */
-.photo-carousel-mobile {
-  margin-top: 24px;
-}
-
-.photo-carousel-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-@media (min-width: 576px) {
-  .photo-carousel-controls {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-}
-
-/* Classes utilitaires mobile */
-.hide-mobile {
-  display: none;
-}
-
-@media (min-width: 768px) {
-  .hide-mobile {
-    display: block;
-  }
-}
-
-.show-mobile {
-  display: block;
-}
-
-@media (min-width: 768px) {
-  .show-mobile {
-    display: none;
-  }
-}
-
-.text-xs-mobile {
-  font-size: 12px;
-}
-
-@media (min-width: 768px) {
-  .text-xs-mobile {
-    font-size: 14px;
-  }
-}
-
-/* Performance et accessibilité */
-* {
-  box-sizing: border-box;
-}
-
-button, input, select, textarea {
-  font-family: inherit;
-}
-
-/* Indicateur sauvegarde mobile */
-.save-indicator {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  left: 10px;
-  padding: 12px 16px;
-  border-radius: 8px;
+/* Boutons premium responsive */
+.btn-primary {
+  background: var(--csecur-gradient);
   color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--border-radius);
   font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  z-index: 1000;
-  transition: all 0.3s ease;
+  min-height: 44px;
   font-size: 14px;
 }
 
-@media (min-width: 768px) {
-  .save-indicator {
-    top: 20px;
-    right: 20px;
-    left: auto;
-    padding: 12px 20px;
-    width: auto;
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--primary-blue);
+  border: 1px solid var(--border-color);
+  padding: 12px 24px;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 14px;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: var(--primary-blue);
+}
+
+/* Grilles responsives */
+.form-group {
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .input-field {
+    font-size: 16px; /* Évite zoom iOS */
+    padding: 14px 16px;
+  }
+  
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 16px;
   }
 }
 
-/* États de sauvegarde */
-.save-indicator.saving {
-  background: linear-gradient(135deg, var(--warning-orange) 0%, #d97706 100%);
-  animation: pulse 2s infinite;
+/* Checkbox personnalisé premium */
+.custom-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.save-indicator.saved {
-  background: linear-gradient(135deg, var(--success-green) 0%, #059669 100%);
+.custom-checkbox.checked {
+  background: var(--csecur-gradient);
+  border-color: var(--primary-blue);
 }
 
-.save-indicator.error {
-  background: linear-gradient(135deg, var(--danger-red) 0%, #dc2626 100%);
+.custom-checkbox.checked::after {
+  content: '✓';
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
 }
 
+.custom-checkbox.success.checked {
+  background: var(--success-green);
+  border-color: var(--success-green);
+}
+
+/* Responsive navigation mobile */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  
+  .glass-effect {
+    border-radius: 16px;
+    margin: 8px;
+  }
+}
+
+/* Animation loading */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  50% { opacity: 0.5; }
+}
+
+.saving-indicator {
+  animation: pulse 2s infinite;
 }
 `;
 
+// =================== FONCTIONS UTILITAIRES OPTIMISÉES ===================
+
+// Fonction de sauvegarde Supabase simulée
+const saveToSupabase = async (formData: ASTFormData): Promise<boolean> => {
+  try {
+    console.log('💾 Sauvegarde Supabase simulée...', formData.numeroAST);
+    
+    // Simulation délai réseau
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Simulation sauvegarde réussie
+    const savedData = {
+      ...formData,
+      lastModified: new Date().toISOString()
+    };
+    
+    // En réalité, ici on ferait :
+    // const { data, error } = await supabase
+    //   .from('ast_forms')
+    //   .upsert(savedData);
+    
+    console.log('✅ Sauvegarde réussie');
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur sauvegarde:', error);
+    return false;
+  }
+};
+
+// Fonction d'archivage
+const archiveAST = async (formData: ASTFormData): Promise<boolean> => {
+  try {
+    console.log('📁 Archivage AST...', formData.numeroAST);
+    
+    const archivedData = {
+      ...formData,
+      status: 'archived' as const,
+      lastModified: new Date().toISOString()
+    };
+    
+    // Simulation archivage
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    console.log('✅ AST archivé avec succès');
+    alert(`AST ${formData.numeroAST} archivé avec succès`);
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur archivage:', error);
+    alert('Erreur lors de l\'archivage');
+    return false;
+  }
+};
+
+// Fonction de soumission finale
+const submitAST = async (formData: ASTFormData): Promise<boolean> => {
+  try {
+    console.log('📤 Soumission finale AST...', formData.numeroAST);
+    
+    const submittedData = {
+      ...formData,
+      status: 'completed' as const,
+      lastModified: new Date().toISOString()
+    };
+    
+    // Simulation soumission
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    console.log('✅ AST soumis avec succès');
+    alert(`AST ${formData.numeroAST} soumis et validé avec succès !`);
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur soumission:', error);
+    alert('Erreur lors de la soumission');
+    return false;
+  }
+};
+
 // =================== GÉNÉRATION PDF PROFESSIONNELLE AVEC BRANDING C-SECUR360 ===================
-const generateProfessionalPDFWithBranding = async (formData: ASTFormData, tenant: Tenant): Promise<boolean> => {
+const generateProfessionalPDF = async (formData: ASTFormData, tenant: Tenant): Promise<boolean> => {
   try {
     console.log('📄 Génération PDF C-Secur360...');
     
-    // Import dynamique jsPDF
+    // Import dynamique jsPDF avec gestion d'erreur
     let jsPDF;
     try {
       const jsPDFModule = await import('jspdf');
       jsPDF = jsPDFModule.jsPDF;
     } catch (error) {
-      console.warn('jsPDF non disponible');
-      alert('Module PDF indisponible. Veuillez installer jsPDF.');
-      return false;
+      console.warn('jsPDF non disponible, ouverture alternative...');
+      
+      // Alternative : ouvrir fenêtre d'impression
+      const printContent = generatePrintableHTML(formData, tenant);
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        printWindow.print();
+      }
+      return true;
     }
     
     const doc = new jsPDF('p', 'mm', 'a4');
@@ -1579,56 +862,44 @@ const generateProfessionalPDFWithBranding = async (formData: ASTFormData, tenant
     const pageHeight = 297;
     let currentY = 20;
     const margin = 20;
-    const lineHeight = 6;
     
     // =================== EN-TÊTE PREMIUM C-SECUR360 ===================
     // Fond dégradé header
-    doc.setFillColor(15, 23, 42); // --dark-bg
+    doc.setFillColor(59, 130, 246); // primary-blue
     doc.rect(0, 0, pageWidth, 50, 'F');
     
     // Logo C-Secur360 stylisé
-    doc.setFillColor(59, 130, 246); // --primary-blue
+    doc.setFillColor(255, 255, 255);
     doc.circle(35, 25, 12, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text('C', 32, 28);
-    
-    // Cercle intérieur
-    doc.setFillColor(29, 78, 216); // --dark-blue
-    doc.circle(35, 25, 8, 'F');
-    doc.setFontSize(10);
-    doc.text('360', 28, 28);
-    
-    // Nom entreprise
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
+    doc.setTextColor(59, 130, 246);
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.text('C-SECUR360', 55, 25);
     
-    doc.setFontSize(12);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(255, 255, 255);
     doc.text('Plateforme Professionnelle SST', 55, 32);
     
     // Numéro AST en vedette
-    doc.setFillColor(16, 185, 129); // --success-green
+    doc.setFillColor(16, 185, 129); // success-green
     doc.roundedRect(140, 15, 50, 20, 3, 3, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(10);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.text('AST N°', 145, 22);
-    doc.setFontSize(12);
-    doc.text(formData.astNumber, 145, 28);
+    doc.setFontSize(10);
+    doc.text(formData.numeroAST, 145, 28);
     
     currentY = 60;
     
     // =================== TITRE PRINCIPAL ===================
     doc.setTextColor(30, 64, 175);
-    doc.setFontSize(20);
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.text('ANALYSE SÉCURITAIRE DE TÂCHES', margin, currentY);
     
-    doc.setFontSize(12);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 116, 139);
     doc.text(`Conforme CNESST/CSA Z462 • Généré le ${new Date().toLocaleDateString('fr-CA')}`, margin, currentY + 8);
@@ -1636,204 +907,94 @@ const generateProfessionalPDFWithBranding = async (formData: ASTFormData, tenant
     currentY += 25;
     
     // =================== INFORMATIONS PROJET ===================
-    // Encadré principal
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(margin, currentY - 5, pageWidth - 2 * margin, 45, 3, 3, 'F');
-    doc.setDrawColor(203, 213, 225);
-    doc.roundedRect(margin, currentY - 5, pageWidth - 2 * margin, 45, 3, 3, 'S');
+    doc.roundedRect(margin, currentY - 5, pageWidth - 2 * margin, 35, 3, 3, 'F');
     
     doc.setTextColor(51, 65, 85);
-    doc.setFontSize(14);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.text('INFORMATIONS PROJET', margin + 5, currentY + 5);
     
-    // Données en colonnes
+    // Données projet en colonnes
     const projectData = [
-      ['Client:', formData.projectInfo.client || 'Non spécifié'],
-      ['Téléphone:', formData.projectInfo.clientPhone || 'Non spécifié'],
-      ['Projet:', formData.projectInfo.projectNumber || 'Non spécifié'],
-      ['Lieu:', formData.projectInfo.workLocation || 'Non spécifié'],
-      ['Date:', formData.projectInfo.date || 'Non spécifié'],
-      ['Durée:', formData.projectInfo.estimatedDuration || 'Non spécifié'],
-      ['Équipe:', `${formData.team.members.length} personne(s)`],
-      ['Urgence:', formData.projectInfo.emergencyPhone || '911']
+      ['Projet:', formData.projet || 'Non spécifié'],
+      ['Lieu:', formData.lieu || 'Non spécifié'],
+      ['Date:', formData.date || 'Non spécifié'],
+      ['Responsable:', formData.responsable || 'Non spécifié']
     ];
     
-    doc.setFontSize(10);
-    let colX = margin + 10;
+    doc.setFontSize(9);
     let colY = currentY + 15;
     
-    projectData.forEach((item, index) => {
-      if (index === 4) { // Nouvelle colonne après 4 items
-        colX = margin + 100;
-        colY = currentY + 15;
-      }
-      
+    projectData.forEach((item) => {
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(51, 65, 85);
-      doc.text(item[0], colX, colY);
+      doc.text(item[0], margin + 10, colY);
       
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(75, 85, 99);
-      doc.text(item[1], colX + 25, colY);
+      doc.text(item[1], margin + 35, colY);
       
-      colY += lineHeight;
+      colY += 6;
     });
     
-    currentY += 55;
+    currentY += 45;
     
     // =================== DESCRIPTION TRAVAUX ===================
-    if (formData.projectInfo.workDescription) {
+    if (formData.descriptionTache) {
       doc.setFillColor(239, 246, 255);
-      doc.roundedRect(margin, currentY - 5, pageWidth - 2 * margin, 25, 3, 3, 'F');
-      doc.setDrawColor(147, 197, 253);
-      doc.roundedRect(margin, currentY - 5, pageWidth - 2 * margin, 25, 3, 3, 'S');
+      doc.roundedRect(margin, currentY - 5, pageWidth - 2 * margin, 20, 3, 3, 'F');
       
       doc.setTextColor(30, 64, 175);
-      doc.setFontSize(12);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('DESCRIPTION DES TRAVAUX', margin + 5, currentY + 5);
       
       doc.setTextColor(51, 65, 85);
-      doc.setFontSize(10);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      const descLines = doc.splitTextToSize(formData.projectInfo.workDescription, pageWidth - 2 * margin - 10);
+      const descLines = doc.splitTextToSize(formData.descriptionTache, pageWidth - 2 * margin - 10);
       doc.text(descLines, margin + 5, currentY + 12);
       
-      currentY += 35;
+      currentY += 30;
     }
     
-    // =================== DANGERS IDENTIFIÉS ===================
-    const selectedHazards = formData.electricalHazards.filter(h => h.isSelected);
+    // =================== RÉSUMÉ SÉCURITÉ ===================
+    const selectedHazards = formData.dangersIdentifies.filter(d => d.present);
+    const selectedEquipment = formData.equipementsSecurite.filter(e => e.utilise);
     
-    if (selectedHazards.length > 0) {
-      doc.setFillColor(254, 242, 242);
-      doc.roundedRect(margin, currentY - 5, pageWidth - 2 * margin, Math.min(selectedHazards.length * 8 + 15, 60), 3, 3, 'F');
-      doc.setDrawColor(252, 165, 165);
-      doc.roundedRect(margin, currentY - 5, pageWidth - 2 * margin, Math.min(selectedHazards.length * 8 + 15, 60), 3, 3, 'S');
-      
-      doc.setTextColor(185, 28, 28);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('DANGERS IDENTIFIÉS & MESURES DE CONTRÔLE', margin + 5, currentY + 5);
-      
-      doc.setFontSize(10);
-      let hazardY = currentY + 15;
-      
-      selectedHazards.forEach((hazard, index) => {
-        if (hazardY > pageHeight - 30) {
-          doc.addPage();
-          hazardY = 20;
-        }
-        
-        // Indicateur de criticité
-        const riskColors = {
-          critical: [220, 38, 38],
-          high: [245, 158, 11],
-          medium: [234, 179, 8],
-          low: [34, 197, 94]
-        };
-        
-        const color = riskColors[hazard.riskLevel] || [100, 116, 139];
-        doc.setFillColor(color[0], color[1], color[2]);
-        doc.circle(margin + 8, hazardY - 1, 2, 'F');
-        
-        doc.setTextColor(51, 65, 85);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${index + 1}. ${hazard.code} - ${hazard.title}`, margin + 15, hazardY);
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(75, 85, 99);
-        const descText = doc.splitTextToSize(hazard.description, pageWidth - 2 * margin - 20);
-        doc.text(descText, margin + 18, hazardY + 4);
-        
-        hazardY += 8;
-      });
-      
-      currentY = hazardY + 10;
-    }
+    doc.setFillColor(254, 242, 242);
+    doc.roundedRect(margin, currentY - 5, pageWidth - 2 * margin, 25, 3, 3, 'F');
     
-    // =================== ÉQUIPE DE TRAVAIL ===================
-    if (formData.team.members.length > 0) {
-      if (currentY > pageHeight - 50) {
-        doc.addPage();
-        currentY = 20;
-      }
-      
-      doc.setFillColor(240, 253, 244);
-      doc.roundedRect(margin, currentY - 5, pageWidth - 2 * margin, formData.team.members.length * 6 + 20, 3, 3, 'F');
-      doc.setDrawColor(167, 243, 208);
-      doc.roundedRect(margin, currentY - 5, pageWidth - 2 * margin, formData.team.members.length * 6 + 20, 3, 3, 'S');
-      
-      doc.setTextColor(5, 150, 105);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('ÉQUIPE DE TRAVAIL VALIDÉE', margin + 5, currentY + 5);
-      
-      doc.setTextColor(51, 65, 85);
-      doc.setFontSize(10);
-      let teamY = currentY + 15;
-      
-      formData.team.members.forEach(member => {
-        const statusIcon = member.validationStatus === 'approved' ? '✓' : 
-                          member.validationStatus === 'rejected' ? '✗' : '⏳';
-        const statusColor = member.validationStatus === 'approved' ? [34, 197, 94] :
-                           member.validationStatus === 'rejected' ? [239, 68, 68] : [251, 191, 36];
-        
-        doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
-        doc.text(statusIcon, margin + 8, teamY);
-        
-        doc.setTextColor(51, 65, 85);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`${member.name} - ${member.department} (${member.qualification})`, margin + 15, teamY);
-        
-        teamY += 6;
-      });
-      
-      currentY = teamY + 10;
-    }
-    
-    // =================== SECTION SIGNATURES ===================
-    if (currentY > pageHeight - 70) {
-      doc.addPage();
-      currentY = 20;
-    }
-    
-    doc.setFillColor(249, 250, 251);
-    doc.roundedRect(margin, currentY - 5, pageWidth - 2 * margin, 50, 3, 3, 'F');
-    doc.setDrawColor(209, 213, 219);
-    doc.roundedRect(margin, currentY - 5, pageWidth - 2 * margin, 50, 3, 3, 'S');
-    
-    doc.setTextColor(55, 65, 81);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text('SIGNATURES ET APPROBATIONS', margin + 5, currentY + 5);
-    
+    doc.setTextColor(185, 28, 28);
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('helvetica', 'bold');
+    doc.text('RÉSUMÉ SÉCURITÉ', margin + 5, currentY + 5);
     
-    // Lignes de signature
-    const signatureY = currentY + 20;
+    doc.setFontSize(9);
+    doc.setTextColor(51, 65, 85);
+    doc.text(`• ${selectedHazards.length} danger(s) identifié(s)`, margin + 10, currentY + 12);
+    doc.text(`• ${selectedEquipment.length} équipement(s) de sécurité`, margin + 10, currentY + 18);
+    doc.text(`• ${formData.equipe.length} membre(s) d'équipe`, margin + 100, currentY + 12);
+    doc.text(`• ${formData.pointsIsolement.filter(p => p.isole).length} point(s) d'isolement`, margin + 100, currentY + 18);
     
-    doc.setTextColor(75, 85, 99);
-    doc.text('Superviseur/Chargé de projet:', margin + 10, signatureY);
-    doc.line(margin + 60, signatureY, margin + 120, signatureY);
-    doc.text('Date:', margin + 130, signatureY);
-    doc.line(margin + 145, signatureY, margin + 180, signatureY);
-    
-    doc.text('Responsable sécurité:', margin + 10, signatureY + 15);
-    doc.line(margin + 60, signatureY + 15, margin + 120, signatureY + 15);
-    doc.text('Date:', margin + 130, signatureY + 15);
-    doc.line(margin + 145, signatureY + 15, margin + 180, signatureY + 15);
+    currentY += 35;
     
     // =================== PIED DE PAGE ===================
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setTextColor(107, 114, 128);
-    doc.text(`Document généré par C-Secur360 • ${new Date().toLocaleString('fr-CA')} • Page 1`, margin, pageHeight - 10);
-    doc.text(`AST ${formData.astNumber} • Conforme CNESST/CSA Z462`, pageWidth - margin - 80, pageHeight - 10);
+    doc.text(`Document généré par C-Secur360 • ${new Date().toLocaleString('fr-CA')}`, margin, pageHeight - 15);
+    doc.text(`AST ${formData.numeroAST} • Conforme CNESST/CSA Z462`, pageWidth - margin - 60, pageHeight - 15);
+    
+    // Ligne de signature
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, pageHeight - 30, pageWidth - margin, pageHeight - 30);
+    doc.setFontSize(8);
+    doc.text('Signature responsable:', margin, pageHeight - 25);
+    doc.text('Date:', pageWidth - margin - 30, pageHeight - 25);
     
     // Sauvegarde du PDF
-    const fileName = `AST_C-Secur360_${formData.astNumber}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const fileName = `AST_C-Secur360_${formData.numeroAST}_${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(fileName);
     
     console.log('✅ PDF C-Secur360 généré:', fileName);
@@ -1841,61 +1002,104 @@ const generateProfessionalPDFWithBranding = async (formData: ASTFormData, tenant
     
   } catch (error) {
     console.error('❌ Erreur génération PDF:', error);
+    alert('Erreur lors de la génération du PDF');
     return false;
   }
 };
 
+// =================== GÉNÉRATION HTML IMPRIMABLE ===================
+const generatePrintableHTML = (formData: ASTFormData, tenant: Tenant): string => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>AST ${formData.numeroAST} - C-Secur360</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+        .header { background: #3b82f6; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .logo { font-size: 24px; font-weight: bold; }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px; }
+        .section h3 { margin-top: 0; color: #1d4ed8; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .signature { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 20px; }
+        @media print { body { margin: 0; } .no-print { display: none; } }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="logo">C-SECUR360</div>
+        <div>Analyse Sécuritaire de Tâches - ${formData.numeroAST}</div>
+      </div>
+      
+      <div class="section">
+        <h3>Informations Projet</h3>
+        <div class="grid">
+          <div><strong>Projet:</strong> ${formData.projet}</div>
+          <div><strong>Lieu:</strong> ${formData.lieu}</div>
+          <div><strong>Date:</strong> ${formData.date}</div>
+          <div><strong>Responsable:</strong> ${formData.responsable}</div>
+        </div>
+      </div>
+      
+      <div class="section">
+        <h3>Description</h3>
+        <p>${formData.descriptionTache}</p>
+      </div>
+      
+      <div class="section">
+        <h3>Résumé Sécurité</h3>
+        <ul>
+          <li>${formData.dangersIdentifies.filter(d => d.present).length} danger(s) identifié(s)</li>
+          <li>${formData.equipementsSecurite.filter(e => e.utilise).length} équipement(s) de sécurité</li>
+          <li>${formData.equipe.length} membre(s) d'équipe</li>
+          <li>${formData.pointsIsolement.filter(p => p.isole).length} point(s) d'isolement</li>
+        </ul>
+      </div>
+      
+      <div class="signature">
+        <div class="grid">
+          <div>Signature responsable: ________________</div>
+          <div>Date: ________________</div>
+        </div>
+      </div>
+      
+      <div style="margin-top: 20px; font-size: 12px; color: #666; text-align: center;">
+        Document généré par C-Secur360 • ${new Date().toLocaleDateString('fr-CA')} • Conforme CNESST/CSA Z462
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 // =================== FONCTIONS EMAIL PROFESSIONNELLES ===================
-const sendProfessionalEmail = async (formData: ASTFormData, tenant: Tenant, language: 'fr' | 'en'): Promise<boolean> => {
+const sendEmailNotification = async (formData: ASTFormData, tenant: Tenant): Promise<boolean> => {
   try {
     console.log('📧 Envoi email professionnel...');
     
-    const t = professionalTranslations[language];
-    const subject = `${t.email.subject} - ${formData.astNumber} - ${formData.projectInfo.client}`;
+    const subject = `AST C-Secur360 - ${formData.numeroAST} - ${formData.projet}`;
     
-    const emailBody = language === 'fr' ? 
-      `Bonjour,
+    const emailBody = `Bonjour,
 
 Veuillez trouver ci-joint l'Analyse Sécuritaire de Tâches générée via la plateforme C-Secur360.
 
 DÉTAILS DU PROJET:
-• Numéro AST: ${formData.astNumber}
-• Client: ${formData.projectInfo.client}
-• Projet: ${formData.projectInfo.projectNumber}
-• Lieu: ${formData.projectInfo.workLocation}
-• Date: ${formData.projectInfo.date}
-• Équipe: ${formData.team.members.length} travailleur(s)
+• Numéro AST: ${formData.numeroAST}
+• Projet: ${formData.projet}
+• Lieu: ${formData.lieu}
+• Date: ${formData.date}
+• Responsable: ${formData.responsable}
 
-STATUT VALIDATION:
-• Dangers identifiés: ${formData.electricalHazards.filter(h => h.isSelected).length}
-• Membres validés: ${formData.team.members.filter(m => m.validationStatus === 'approved').length}/${formData.team.members.length}
-• Statut: ${formData.validation.finalApproval ? 'Approuvé final' : 'En cours'}
+RÉSUMÉ SÉCURITÉ:
+• Dangers identifiés: ${formData.dangersIdentifies.filter(d => d.present).length}
+• Équipements sécurité: ${formData.equipementsSecurite.filter(e => e.utilise).length}
+• Membres équipe: ${formData.equipe.length}
+• Points isolation: ${formData.pointsIsolement.filter(p => p.isole).length}
 
 Ce document a été généré en conformité avec les normes CNESST et CSA Z462.
 
 Cordialement,
-Plateforme C-Secur360` :
-      `Hello,
-
-Please find attached the Job Safety Analysis generated via the C-Secur360 platform.
-
-PROJECT DETAILS:
-• JSA Number: ${formData.astNumber}
-• Client: ${formData.projectInfo.client}
-• Project: ${formData.projectInfo.projectNumber}
-• Location: ${formData.projectInfo.workLocation}
-• Date: ${formData.projectInfo.date}
-• Team: ${formData.team.members.length} worker(s)
-
-VALIDATION STATUS:
-• Hazards identified: ${formData.electricalHazards.filter(h => h.isSelected).length}
-• Members validated: ${formData.team.members.filter(m => m.validationStatus === 'approved').length}/${formData.team.members.length}
-• Status: ${formData.validation.finalApproval ? 'Final approval' : 'In progress'}
-
-This document was generated in compliance with CNESST and CSA Z462 standards.
-
-Best regards,
-C-Secur360 Platform`;
+Plateforme C-Secur360`;
     
     const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
     window.open(mailtoUrl);
@@ -1907,8 +1111,278 @@ C-Secur360 Platform`;
     return false;
   }
 };
-// =================== AST SECTION 4/5 - STRUCTURE CORRIGÉE (FIN DES FONCTIONS + DÉBUT RETURN) ===================
-// Section 4: Fin des fonctions utilitaires et début du return principal
+// =================== AST SECTION 4/5 CORRIGÉE - COMPOSANT PRINCIPAL & LOGIQUE ===================
+// Section 4: Composant principal avec toutes les fonctions et logique métier
+
+// =================== COMPOSANT PRINCIPAL ASTFORMULTRAPREMIUM ===================
+const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
+  // =================== HOOKS D'ÉTAT ===================
+  const [formData, setFormData] = useState<ASTFormData>(getInitialFormData);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [language, setLanguage] = useState<'fr' | 'en'>('fr');
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [newQualification, setNewQualification] = useState('');
+  const [newEquipment, setNewEquipment] = useState({
+    nom: '',
+    categorie: '',
+    norme: ''
+  });
+
+  // =================== EFFET D'INJECTION DES STYLES ===================
+  useEffect(() => {
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = mobileOptimizedStyles;
+    document.head.appendChild(styleSheet);
+    
+    // Fonction de nettoyage correcte
+    return () => {
+      if (document.head.contains(styleSheet)) {
+        document.head.removeChild(styleSheet);
+      }
+    };
+  }, []);
+
+  // =================== AUTO-SAVE TOUTES LES 30 SECONDES ===================
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (formData.id) {
+        setIsAutoSaving(true);
+        await saveToSupabase(formData);
+        setIsAutoSaving(false);
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [formData]);
+
+  // =================== FONCTIONS GESTION ÉQUIPE ===================
+  const addMember = () => {
+    const newMember: TeamMember = {
+      id: `member-${Date.now()}`,
+      nom: '',
+      poste: '',
+      entreprise: '',
+      experience: '',
+      qualifications: [],
+      roleSpecifique: '',
+      validationStatus: 'pending',
+      validationComments: '',
+      signature: '',
+      acknowledgmentTime: ''
+    };
+    
+    setFormData(prev => ({
+      ...prev,
+      equipe: [...prev.equipe, newMember]
+    }));
+  };
+
+  const updateMember = (index: number, updatedMember: TeamMember) => {
+    setFormData(prev => ({
+      ...prev,
+      equipe: prev.equipe.map((member, i) => 
+        i === index ? updatedMember : member
+      )
+    }));
+  };
+
+  const removeMember = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      equipe: prev.equipe.filter((_, i) => i !== index)
+    }));
+  };
+
+  // =================== FONCTIONS GESTION ÉQUIPEMENTS ===================
+  const updateEquipementSecurite = (nom: string, utilise: boolean, conforme: boolean, notes: string) => {
+    setFormData(prev => ({
+      ...prev,
+      equipementsSecurite: prev.equipementsSecurite.map(equip =>
+        equip.nom === nom 
+          ? { ...equip, utilise, conforme, notes }
+          : equip
+      )
+    }));
+  };
+
+  const addCustomEquipment = () => {
+    if (!newEquipment.nom || !newEquipment.categorie) return;
+
+    const customEquip: SafetyEquipment = {
+      nom: newEquipment.nom,
+      categorie: newEquipment.categorie,
+      utilise: false,
+      conforme: false,
+      notes: '',
+      norme: newEquipment.norme || undefined
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      equipementsSecurite: [...prev.equipementsSecurite, customEquip]
+    }));
+
+    setNewEquipment({ nom: '', categorie: '', norme: '' });
+  };
+
+  // =================== FONCTIONS GESTION DANGERS ===================
+  const updateDanger = (nom: string, present: boolean, niveauRisque: string, moyensControle: string[], notes: string) => {
+    setFormData(prev => ({
+      ...prev,
+      dangersIdentifies: prev.dangersIdentifies.map(danger =>
+        danger.nom === nom 
+          ? { ...danger, present, niveauRisque, moyensControle, notes }
+          : danger
+      )
+    }));
+  };
+
+  // =================== FONCTIONS GESTION POINTS D'ISOLEMENT ===================
+  const addPointIsolement = () => {
+    const newPoint: IsolationPoint = {
+      id: `isolation-${Date.now()}`,
+      source: '',
+      type: '',
+      methode: '',
+      responsable: '',
+      notes: '',
+      isole: false,
+      photos: []
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      pointsIsolement: [...prev.pointsIsolement, newPoint]
+    }));
+  };
+
+  const updatePointIsolement = (index: number, updatedPoint: IsolationPoint) => {
+    setFormData(prev => ({
+      ...prev,
+      pointsIsolement: prev.pointsIsolement.map((point, i) => 
+        i === index ? updatedPoint : point
+      )
+    }));
+  };
+
+  // =================== FONCTIONS GESTION PHOTOS ===================
+  const addPhoto = (file: File): Promise<void> => {
+    return new Promise<void>((resolve, reject) => {
+      try {
+        const reader = new FileReader();
+        
+        reader.onload = () => {
+          const newPhoto: Photo = {
+            id: `photo-${Date.now()}`,
+            name: file.name,
+            url: reader.result as string,
+            description: '',
+            timestamp: new Date().toISOString(),
+            category: 'site'
+          };
+
+          setFormData(prev => ({
+            ...prev,
+            photos: [...prev.photos, newPhoto]
+          }));
+          
+          resolve();
+        };
+
+        reader.onerror = () => {
+          reject(new Error('Erreur lecture fichier'));
+        };
+
+        reader.readAsDataURL(file);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
+
+  const removePhoto = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index)
+    }));
+  };
+
+  const addPhotoToIsolationPoint = (pointId: string, file: File): Promise<void> => {
+    return new Promise<void>((resolve, reject) => {
+      try {
+        const reader = new FileReader();
+        
+        reader.onload = () => {
+          const newPhoto: Photo = {
+            id: `photo-${Date.now()}`,
+            name: file.name,
+            url: reader.result as string,
+            description: '',
+            timestamp: new Date().toISOString(),
+            category: 'isolation'
+          };
+
+          setFormData(prev => ({
+            ...prev,
+            pointsIsolement: prev.pointsIsolement.map(point =>
+              point.id === pointId 
+                ? { ...point, photos: [...point.photos, newPhoto] }
+                : point
+            )
+          }));
+          
+          resolve();
+        };
+
+        reader.onerror = () => {
+          reject(new Error('Erreur lecture fichier'));
+        };
+
+        reader.readAsDataURL(file);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
+
+  const removePhotoFromIsolationPoint = (pointId: string, photoIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      pointsIsolement: prev.pointsIsolement.map(point =>
+        point.id === pointId 
+          ? { ...point, photos: point.photos.filter((_, i) => i !== photoIndex) }
+          : point
+      )
+    }));
+  };
+
+  // =================== COMPOSANTS PERSONNALISÉS ===================
+  const CustomCheckbox: React.FC<{
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+    variant?: 'default' | 'success';
+  }> = ({ checked, onChange, variant = 'default' }) => (
+    <div
+      className={`custom-checkbox ${checked ? 'checked' : ''} ${variant}`}
+      onClick={() => onChange(!checked)}
+    />
+  );
+
+  const LockButton: React.FC<{
+    isLocked: boolean;
+    onClick: () => void;
+  }> = ({ isLocked, onClick }) => (
+    <button
+      onClick={onClick}
+      className={`p-2 rounded-lg transition-colors ${
+        isLocked 
+          ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+          : 'bg-green-100 text-green-600 hover:bg-green-200'
+      }`}
+    >
+      {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+    </button>
+  );
 
   // =================== COMPOSANT PHOTOCAROUSEL MOBILE-FRIENDLY ===================
   const PhotoCarousel: React.FC<{
@@ -1945,7 +1419,7 @@ C-Secur360 Platform`;
               <div key={index} className="relative group">
                 <img
                   src={photo.url}
-                  alt={photo.nom}
+                  alt={photo.name}
                   className="w-full h-24 sm:h-32 object-cover rounded-lg border border-gray-200"
                 />
                 <button
@@ -1955,7 +1429,7 @@ C-Secur360 Platform`;
                   <X className="w-3 h-3" />
                 </button>
                 <div className="absolute bottom-1 left-1 right-1 bg-black/50 text-white text-xs p-1 rounded truncate">
-                  {photo.nom}
+                  {photo.name}
                 </div>
               </div>
             ))}
@@ -1991,10 +1465,7 @@ C-Secur360 Platform`;
     );
   };
 
-  // =================== FIN DE TOUTES LES FONCTIONS UTILITAIRES ===================
-  // Toutes les fonctions du composant sont maintenant définies
-  // Le return principal du composant ASTFormUltraPremium commence ici
-
+  // =================== RETURN DU COMPOSANT PRINCIPAL ===================
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
       {/* Background Pattern Mobile-Friendly */}
@@ -2238,8 +1709,8 @@ C-Secur360 Platform`;
             )}
 
             {/* CONTINUER AVEC LES SECTIONS 5A ET 5B POUR LES AUTRES ÉTAPES */}
-            // =================== AST SECTION 5A/5 - CONTINUATION JSX (ÉTAPES 2-4) ===================
-// Section 5A: Continuation du JSX - Étapes 2 à 4 (SANS nouveau return)
+            // =================== AST SECTION 5A/5 CORRIGÉE - ÉTAPES 2-5 INTERFACE MOBILE ===================
+// Section 5A: Continuation du JSX - Étapes 2 à 5 (SANS nouveau return)
 
             {/* ÉTAPE 2: DISCUSSION D'ÉQUIPE */}
             {currentStep === 1 && (
@@ -2658,10 +2129,6 @@ C-Secur360 Platform`;
               </div>
             )}
 
-            {/* CONTINUER AVEC LA SECTION 5B POUR LES ÉTAPES 5-8 ET NAVIGATION FINALE */}
-            // =================== AST SECTION 5B/5 FINALE - INTERFACE COMPLÈTE (ÉTAPES 5-8 + NAVIGATION) ===================
-// Section 5B: Étapes 5 à 8, navigation complète et actions finales
-
             {/* ÉTAPE 5: ISOLEMENT DES ÉNERGIES */}
             {currentStep === 4 && (
               <div className="p-4 sm:p-6 lg:p-8">
@@ -2813,6 +2280,10 @@ C-Secur360 Platform`;
                 </div>
               </div>
             )}
+
+            {/* CONTINUER AVEC LA SECTION 5B POUR LES ÉTAPES 6-8 ET NAVIGATION FINALE */}
+            // =================== AST SECTION 5B/5 FINALE - ÉTAPES 6-8 + NAVIGATION + EXPORT ===================
+// Section 5B: Étapes finales, navigation complète et export du composant
 
             {/* ÉTAPE 6: GESTION D'ÉQUIPE */}
             {currentStep === 5 && (
@@ -3280,7 +2751,7 @@ C-Secur360 Platform`;
                 className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 w-full sm:w-auto justify-center"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span>Précédent</span>
+                <span>{translations[language].previous}</span>
               </button>
               
               <div className="flex items-center gap-2">
@@ -3324,7 +2795,7 @@ C-Secur360 Platform`;
                     : 'btn-primary'
                 }`}
               >
-                <span>{currentStep === 7 ? 'Finaliser AST' : 'Suivant'}</span>
+                <span>{currentStep === 7 ? 'Finaliser AST' : translations[language].next}</span>
                 {currentStep === 7 ? <CheckCircle className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </button>
             </div>
@@ -3346,5 +2817,5 @@ C-Secur360 Platform`;
   );
 };
 
-// Export du composant
+// =================== EXPORT DU COMPOSANT ===================
 export default ASTFormUltraPremium;
