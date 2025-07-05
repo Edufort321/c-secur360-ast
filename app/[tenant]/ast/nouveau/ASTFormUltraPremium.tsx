@@ -1111,10 +1111,231 @@ Plateforme C-Secur360`;
     return false;
   }
 };
-// =================== AST SECTION 4/5 - STRUCTURE CORRIGÉE FINALE ===================
-// Section 4: Fin correcte de toutes les fonctions + return principal
+// =================== AST SECTION 4/5 FINALE - COMPOSANT PRINCIPAL COMPLET ===================
+// Section 4: Composant principal avec tous les hooks, fonctions et début du return
 
-  // =================== COMPOSANT PHOTOCAROUSEL MOBILE-FRIENDLY ===================
+// =================== COMPOSANT PRINCIPAL ASTFORMULTRAPREMIUM ===================
+const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
+  // =================== ÉTATS ET HOOKS ===================
+  const [currentStep, setCurrentStep] = useState(0);
+  const [language, setLanguage] = useState<'fr' | 'en'>('fr');
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [formData, setFormData] = useState<ASTFormData>(getInitialFormData());
+  const [newEquipment, setNewEquipment] = useState({ nom: '', categorie: '', norme: '' });
+  const [newQualification, setNewQualification] = useState('');
+
+  // =================== TRADUCTIONS ACTIVES ===================
+  const t = translations[language];
+
+  // =================== FONCTIONS DE MISE À JOUR ===================
+  const updateFormData = (updates: Partial<ASTFormData>) => {
+    setFormData(prev => ({ ...prev, ...updates }));
+  };
+
+  const nextStep = () => {
+    if (currentStep < 7) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const previousStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // =================== FONCTIONS PHOTOS ===================
+  const handleAddPhoto = async (category: string, file: File): Promise<void> => {
+    const photoId = `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const photoUrl = URL.createObjectURL(file);
+    
+    const newPhoto: Photo = {
+      id: photoId,
+      name: file.name,
+      url: photoUrl,
+      description: '',
+      timestamp: new Date().toISOString(),
+      category: 'site'
+    };
+
+    if (category === 'project') {
+      updateFormData({
+        photos: [...formData.photos, newPhoto]
+      });
+    }
+  };
+
+  const handleRemovePhoto = (category: string, photoId: string) => {
+    if (category === 'project') {
+      updateFormData({
+        photos: formData.photos.filter(photo => photo.id !== photoId)
+      });
+    }
+  };
+
+  const addPhoto = async (file: File): Promise<void> => {
+    await handleAddPhoto('general', file);
+  };
+
+  const removePhoto = (photoId: string) => {
+    updateFormData({
+      photos: formData.photos.filter(photo => photo.id !== photoId)
+    });
+  };
+
+  // =================== FONCTIONS ÉQUIPEMENTS ===================
+  const updateEquipementSecurite = (nom: string, utilise: boolean, conforme: boolean, notes: string) => {
+    const nouveauxEquipements = formData.equipementsSecurite.map(equip =>
+      equip.nom === nom ? { ...equip, utilise, conforme, notes } : equip
+    );
+    updateFormData({ equipementsSecurite: nouveauxEquipements });
+  };
+
+  const addCustomEquipment = () => {
+    if (newEquipment.nom && newEquipment.categorie) {
+      const nouvelEquipement: SafetyEquipment = {
+        nom: newEquipment.nom,
+        categorie: newEquipment.categorie,
+        utilise: false,
+        conforme: false,
+        notes: '',
+        norme: newEquipment.norme
+      };
+      
+      updateFormData({
+        equipementsSecurite: [...formData.equipementsSecurite, nouvelEquipement]
+      });
+      
+      setNewEquipment({ nom: '', categorie: '', norme: '' });
+    }
+  };
+
+  // =================== FONCTIONS DANGERS ===================
+  const updateDanger = (nom: string, present: boolean, niveauRisque: string, moyensControle: string[], notes: string) => {
+    const nouveauxDangers = formData.dangersIdentifies.map(danger =>
+      danger.nom === nom ? { ...danger, present, niveauRisque, moyensControle, notes } : danger
+    );
+    updateFormData({ dangersIdentifies: nouveauxDangers });
+  };
+
+  // =================== FONCTIONS ÉQUIPE ===================
+  const addMember = () => {
+    const nouveauMembre: TeamMember = {
+      id: `member-${Date.now()}`,
+      nom: '',
+      poste: '',
+      entreprise: '',
+      experience: '',
+      qualifications: [],
+      roleSpecifique: '',
+      validationStatus: 'pending'
+    };
+    
+    updateFormData({
+      equipe: [...formData.equipe, nouveauMembre]
+    });
+  };
+
+  const updateMember = (index: number, membre: TeamMember) => {
+    const nouvelleEquipe = [...formData.equipe];
+    nouvelleEquipe[index] = membre;
+    updateFormData({ equipe: nouvelleEquipe });
+  };
+
+  const removeMember = (index: number) => {
+    const nouvelleEquipe = formData.equipe.filter((_, i) => i !== index);
+    updateFormData({ equipe: nouvelleEquipe });
+  };
+
+  // =================== FONCTIONS ISOLATION ===================
+  const addPointIsolement = () => {
+    const nouveauPoint: IsolationPoint = {
+      id: `isolation-${Date.now()}`,
+      source: '',
+      type: '',
+      methode: '',
+      responsable: '',
+      notes: '',
+      isole: false,
+      photos: []
+    };
+    
+    updateFormData({
+      pointsIsolement: [...formData.pointsIsolement, nouveauPoint]
+    });
+  };
+
+  const updatePointIsolement = (index: number, point: IsolationPoint) => {
+    const nouveauxPoints = [...formData.pointsIsolement];
+    nouveauxPoints[index] = point;
+    updateFormData({ pointsIsolement: nouveauxPoints });
+  };
+
+  const addPhotoToIsolationPoint = async (pointId: string, file: File): Promise<void> => {
+    const photoId = `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const photoUrl = URL.createObjectURL(file);
+    
+    const newPhoto: Photo = {
+      id: photoId,
+      name: file.name,
+      url: photoUrl,
+      description: '',
+      timestamp: new Date().toISOString(),
+      category: 'isolation'
+    };
+
+    const nouveauxPoints = formData.pointsIsolement.map(point =>
+      point.id === pointId 
+        ? { ...point, photos: [...point.photos, newPhoto] }
+        : point
+    );
+    
+    updateFormData({ pointsIsolement: nouveauxPoints });
+  };
+
+  const removePhotoFromIsolationPoint = (pointId: string, photoIndex: number) => {
+    const nouveauxPoints = formData.pointsIsolement.map(point =>
+      point.id === pointId 
+        ? { ...point, photos: point.photos.filter((_, i) => i !== photoIndex) }
+        : point
+    );
+    
+    updateFormData({ pointsIsolement: nouveauxPoints });
+  };
+
+  // =================== AUTO-SAVE ===================
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      if (formData.projet.trim()) {
+        setAutoSaveStatus('saving');
+        saveToSupabase(formData).then(success => {
+          if (success) {
+            setAutoSaveStatus('saved');
+            setTimeout(() => setAutoSaveStatus('idle'), 2000);
+          } else {
+            setAutoSaveStatus('error');
+          }
+        });
+      }
+    }, 30000);
+
+    return () => clearInterval(autoSaveInterval);
+  }, [formData]);
+
+  // =================== STYLES CSS INJECTÉS ===================
+  useEffect(() => {
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = mobileOptimizedStyles;
+    document.head.appendChild(styleSheet);
+
+    return () => {
+      if (document.head.contains(styleSheet)) {
+        document.head.removeChild(styleSheet);
+      }
+    };
+  }, []);
+
+  // =================== COMPOSANTS INTERNES ===================
   const PhotoCarousel: React.FC<{
     photos: Photo[];
     onAddPhoto: (stepId: string, file: File) => Promise<void>;
@@ -1124,7 +1345,7 @@ Plateforme C-Secur360`;
   }> = ({ photos, onAddPhoto, onRemovePhoto, stepId, maxPhotos = 5 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleAddPhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAddPhotoCarousel = async (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = event.target.files;
       if (files && files.length > 0) {
         for (let i = 0; i < Math.min(files.length, maxPhotos - photos.length); i++) {
@@ -1135,7 +1356,6 @@ Plateforme C-Secur360`;
 
     return (
       <div className="space-y-4">
-        {/* Photos Grid Mobile-Optimized */}
         {photos.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {photos.map((photo) => (
@@ -1149,7 +1369,7 @@ Plateforme C-Secur360`;
                   <button
                     onClick={() => onRemovePhoto(stepId, photo.id)}
                     className="opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition-all duration-200 transform hover:scale-105"
-                    aria-label={t.deletePhoto}
+                    aria-label="Supprimer photo"
                   >
                     <X size={16} />
                   </button>
@@ -1162,7 +1382,6 @@ Plateforme C-Secur360`;
           </div>
         )}
 
-        {/* Add Photo Button Mobile-Friendly */}
         {photos.length < maxPhotos && (
           <div>
             <input
@@ -1170,7 +1389,7 @@ Plateforme C-Secur360`;
               type="file"
               accept="image/*"
               multiple
-              onChange={handleAddPhoto}
+              onChange={handleAddPhotoCarousel}
               className="hidden"
             />
             <button
@@ -1178,78 +1397,58 @@ Plateforme C-Secur360`;
               className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-3 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 border-dashed rounded-lg text-blue-600 font-medium transition-all duration-200 hover:border-blue-300 touch-manipulation"
             >
               <Camera size={20} />
-              <span>{t.addPhoto} ({photos.length}/{maxPhotos})</span>
+              <span>Ajouter Photo ({photos.length}/{maxPhotos})</span>
             </button>
           </div>
         )}
 
         {photos.length >= maxPhotos && (
           <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <AlertCircle size={16} className="inline mr-2" />
-            {t.maxPhotosReached.replace('{max}', maxPhotos.toString())}
+            <AlertTriangle size={16} className="inline mr-2" />
+            Maximum {maxPhotos} photos atteint
           </div>
         )}
       </div>
     );
   };
 
-  // =================== COMPOSANT CUSTOMCHECKBOX ===================
   const CustomCheckbox: React.FC<{
     checked: boolean;
     onChange: (checked: boolean) => void;
-    label: string;
+    label?: string;
     description?: string;
     required?: boolean;
-  }> = ({ checked, onChange, label, description, required = false }) => (
+    variant?: 'default' | 'success';
+  }> = ({ checked, onChange, label, description, required = false, variant = 'default' }) => (
     <div className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors duration-150">
       <button
         onClick={() => onChange(!checked)}
         className={`flex-shrink-0 w-5 h-5 border-2 rounded transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 touch-manipulation ${
           checked
-            ? 'bg-blue-500 border-blue-500 text-white'
+            ? variant === 'success' 
+              ? 'bg-green-500 border-green-500 text-white'
+              : 'bg-blue-500 border-blue-500 text-white'
             : 'border-gray-300 hover:border-gray-400'
         }`}
-        aria-label={label}
+        aria-label={label || 'Checkbox'}
       >
         {checked && <Check size={12} className="mx-auto" />}
       </button>
-      <div className="flex-1 min-w-0">
-        <label className={`block text-sm font-medium text-gray-900 ${required ? 'required-field' : ''}`}>
-          {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
-        </label>
-        {description && (
-          <p className="text-xs text-gray-600 mt-1">{description}</p>
-        )}
-      </div>
+      {label && (
+        <div className="flex-1 min-w-0">
+          <label className={`block text-sm font-medium text-gray-900 ${required ? 'required-field' : ''}`}>
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+          {description && (
+            <p className="text-xs text-gray-600 mt-1">{description}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 
-  // =================== COMPOSANT LOCKBUTTON ===================
-  const LockButton: React.FC<{
-    locked: boolean;
-    onToggle: () => void;
-    label: string;
-  }> = ({ locked, onToggle, label }) => (
-    <button
-      onClick={onToggle}
-      className={`flex items-center space-x-2 px-3 py-2 rounded-lg border-2 transition-all duration-200 touch-manipulation ${
-        locked
-          ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'
-          : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
-      }`}
-    >
-      {locked ? <Lock size={16} /> : <Unlock size={16} />}
-      <span className="text-sm font-medium">{label}</span>
-    </button>
-  );
-
-}; // FERMETURE DU COMPOSANT PRINCIPAL ASTFormUltraPremium
-
-// =================== RETURN DU COMPOSANT PRINCIPAL ===================
-const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
-  // ... (tous les hooks et états vont ici - je les ai omis pour la clarté, mais ils doivent être au début du composant)
-  
+  // =================== RETURN DU COMPOSANT PRINCIPAL ===================
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
       {/* Background Pattern Mobile-Friendly */}
@@ -1267,8 +1466,8 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                 <Shield className="text-white" size={24} />
               </div>
               <div>
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900">{t.formTitle}</h1>
-                <p className="text-xs text-gray-600">AST #{formData.astNumber}</p>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">{t.title}</h1>
+                <p className="text-xs text-gray-600">AST #{formData.numeroAST}</p>
               </div>
             </div>
 
@@ -1283,7 +1482,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                   ></div>
                 </div>
                 <p className="text-xs text-gray-600 mt-1 text-center">
-                  {t.step} {currentStep + 1}/8
+                  Étape {currentStep + 1}/8
                 </p>
               </div>
 
@@ -1295,7 +1494,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                   </div>
                 )}
                 {autoSaveStatus === 'saved' && <Save size={16} className="text-green-500" />}
-                {autoSaveStatus === 'error' && <AlertCircle size={16} className="text-red-500" />}
+                {autoSaveStatus === 'error' && <AlertTriangle size={16} className="text-red-500" />}
               </div>
 
               {/* Langue Toggle Mobile-Friendly */}
@@ -1303,7 +1502,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                 onClick={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
                 className="flex items-center space-x-1 px-3 py-2 bg-white/60 hover:bg-white/80 rounded-lg border border-gray-200 transition-all duration-200 touch-manipulation"
               >
-                <Globe size={16} />
+                <Settings size={16} />
                 <span className="text-sm font-medium">{language.toUpperCase()}</span>
               </button>
             </div>
@@ -1322,8 +1521,8 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                   <FileText className="text-white" size={32} />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">{t.step1Title}</h2>
-                <p className="text-gray-600">{t.step1Description}</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">{t.generalInfo}</h2>
+                <p className="text-gray-600">Informations de base du projet et responsabilités</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -1331,14 +1530,14 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t.projectName} <span className="text-red-500">*</span>
+                      {t.project} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      value={formData.projectName}
-                      onChange={(e) => updateFormData({ projectName: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      placeholder={t.projectNamePlaceholder}
+                      value={formData.projet}
+                      onChange={(e) => updateFormData({ projet: e.target.value })}
+                      className="input-field"
+                      placeholder="Ex: Maintenance électrique bâtiment A"
                       required
                     />
                   </div>
@@ -1349,24 +1548,24 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                     </label>
                     <input
                       type="text"
-                      value={formData.location}
-                      onChange={(e) => updateFormData({ location: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      placeholder={t.locationPlaceholder}
+                      value={formData.lieu}
+                      onChange={(e) => updateFormData({ lieu: e.target.value })}
+                      className="input-field"
+                      placeholder="Ex: Usine XYZ, Local 101"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t.workDescription} <span className="text-red-500">*</span>
+                      {t.taskDescription} <span className="text-red-500">*</span>
                     </label>
                     <textarea
-                      value={formData.workDescription}
-                      onChange={(e) => updateFormData({ workDescription: e.target.value })}
+                      value={formData.descriptionTache}
+                      onChange={(e) => updateFormData({ descriptionTache: e.target.value })}
                       rows={4}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
-                      placeholder={t.workDescriptionPlaceholder}
+                      className="input-field resize-none"
+                      placeholder="Décrivez en détail les tâches à effectuer..."
                       required
                     />
                   </div>
@@ -1376,54 +1575,54 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t.startDate} <span className="text-red-500">*</span>
+                      Date de début <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
-                      value={formData.startDate}
-                      onChange={(e) => updateFormData({ startDate: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      value={formData.date}
+                      onChange={(e) => updateFormData({ date: e.target.value })}
+                      className="input-field"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t.endDate} <span className="text-red-500">*</span>
+                      Heure de début <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="date"
-                      value={formData.endDate}
-                      onChange={(e) => updateFormData({ endDate: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      type="time"
+                      value={formData.heure}
+                      onChange={(e) => updateFormData({ heure: e.target.value })}
+                      className="input-field"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t.responsiblePerson} <span className="text-red-500">*</span>
+                      {t.responsible} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      value={formData.responsiblePerson}
-                      onChange={(e) => updateFormData({ responsiblePerson: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      placeholder={t.responsiblePersonPlaceholder}
+                      value={formData.responsable}
+                      onChange={(e) => updateFormData({ responsable: e.target.value })}
+                      className="input-field"
+                      placeholder="Nom du superviseur"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t.emergencyContact}
+                      Durée estimée
                     </label>
                     <input
-                      type="tel"
-                      value={formData.emergencyContact}
-                      onChange={(e) => updateFormData({ emergencyContact: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      placeholder={t.emergencyContactPlaceholder}
+                      type="text"
+                      value={formData.dureeEstimee}
+                      onChange={(e) => updateFormData({ dureeEstimee: e.target.value })}
+                      className="input-field"
+                      placeholder="Ex: 4 heures"
                     />
                   </div>
                 </div>
@@ -1433,10 +1632,10 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <Camera className="mr-2" size={20} />
-                  {t.projectPhotos}
+                  Photos du site et du projet
                 </h3>
                 <PhotoCarousel
-                  photos={formData.projectPhotos}
+                  photos={formData.photos}
                   onAddPhoto={(stepId, file) => handleAddPhoto('project', file)}
                   onRemovePhoto={(stepId, photoId) => handleRemovePhoto('project', photoId)}
                   stepId="project"
@@ -1455,7 +1654,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 touch-manipulation ${
                   currentStep === 0
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 shadow-sm'
+                    : 'btn-secondary'
                 }`}
               >
                 <ChevronLeft size={16} />
@@ -1486,7 +1685,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 touch-manipulation ${
                   currentStep === 7
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-500 text-white hover:bg-blue-600 shadow-lg'
+                    : 'btn-primary'
                 }`}
               >
                 <span className="hidden sm:inline">{t.next}</span>
