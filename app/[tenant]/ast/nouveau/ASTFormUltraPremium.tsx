@@ -1907,787 +1907,387 @@ C-Secur360 Platform`;
     return false;
   }
 };
-// =================== AST SECTION 4/5 - LOGIQUE MÉTIER & FONCTIONS MISES À JOUR ===================
-// Section 4: Composant principal avec logique professionnelle optimisée mobile
+// =================== AST SECTION 4/5 CORRIGÉE - FIN DU COMPOSANT PRINCIPAL ===================
+// Section 4: Fin correcte du composant principal avec return
 
-// =================== COMPOSANT PRINCIPAL OPTIMISÉ ===================
-export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState<ASTFormData>(initialProfessionalFormData);
-  const [language, setLanguage] = useState<'fr' | 'en'>('fr');
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [lastSaveTime, setLastSaveTime] = useState<string>('');
-  const [newTeamMember, setNewTeamMember] = useState<Partial<TeamMember>>({});
-  const [newIsolationPoint, setNewIsolationPoint] = useState<Partial<IsolationPoint>>({});
-  const [isMobile, setIsMobile] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // =================== COMPOSANT PHOTOCAROUSEL MOBILE-FRIENDLY ===================
+  const PhotoCarousel: React.FC<{
+    photos: Photo[];
+    onAddPhoto: (file: File) => Promise<void>;
+    onRemovePhoto: (index: number) => void;
+    maxPhotos?: number;
+  }> = ({ photos, onAddPhoto, onRemovePhoto, maxPhotos = 5 }) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const steps = [
-    { icon: FileText, key: 'general' as const },
-    { icon: MessageSquare, key: 'discussion' as const },
-    { icon: Shield, key: 'equipment' as const },
-    { icon: Zap, key: 'hazards' as const },
-    { icon: Settings, key: 'isolation' as const },
-    { icon: Users, key: 'team' as const },
-    { icon: Camera, key: 'documentation' as const },
-    { icon: CheckCircle, key: 'validation' as const }
-  ];
-
-  const t = professionalTranslations[language];
-
-  // =================== DÉTECTION MOBILE & RESPONSIVE ===================
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // =================== AUTO-SAVE OPTIMISÉ ===================
-  useEffect(() => {
-    const autoSaveInterval = setInterval(async () => {
-      if (formData.status === 'draft' && !isMobile) {
-        // Auto-save moins fréquent sur mobile pour économiser batterie
-        await handleSave(true, true);
-      }
-    }, isMobile ? 60000 : 30000); // 1min mobile, 30s desktop
-
-    return () => clearInterval(autoSaveInterval);
-  }, [formData, isMobile]);
-
-  // =================== INJECTION STYLES CSS OPTIMISÉS ===================
-  useEffect(() => {
-    const styleSheet = document.createElement("style");
-    styleSheet.innerText = mobileOptimizedStyles;
-    document.head.appendChild(styleSheet);
-    
-    return () => {
-      if (document.head.contains(styleSheet)) {
-        document.head.removeChild(styleSheet);
-      }
-    };
-  }, []);
-
-  // =================== FONCTIONS SAUVEGARDE PROFESSIONNELLES ===================
-  const handleSave = async (isDraft = true, isAutoSave = false) => {
-    setSaveStatus('saving');
-    
-    try {
-      const updatedFormData: ASTFormData = {
-        ...formData,
-        lastModified: new Date().toISOString(),
-        status: isDraft ? 'draft' : 'completed'
-      };
-      
-      const success = await saveToSupabase(updatedFormData);
-      
-      if (success) {
-        setFormData(updatedFormData);
-        setSaveStatus('saved');
-        setLastSaveTime(new Date().toLocaleTimeString());
-      } else {
-        setSaveStatus('error');
-      }
-      
-    } catch (error) {
-      console.error('Erreur sauvegarde:', error);
-      setSaveStatus('error');
-    } finally {
-      setTimeout(() => setSaveStatus('idle'), isAutoSave ? 2000 : 3000);
-    }
-  };
-
-  const regenerateASTNumber = () => {
-    setFormData(prev => ({
-      ...prev,
-      astNumber: generateASTNumber()
-    }));
-  };
-
-  // =================== GESTION ÉQUIPE PROFESSIONNELLE ===================
-  const addTeamMember = () => {
-    if (newTeamMember.name?.trim()) {
-      const member: TeamMember = {
-        id: `member-${Date.now()}`,
-        name: newTeamMember.name.trim(),
-        employeeId: newTeamMember.employeeId || '',
-        department: newTeamMember.department || '',
-        qualification: newTeamMember.qualification || '',
-        hasAcknowledged: false,
-        joinedAt: new Date().toISOString(),
-        validationStatus: 'pending',
-        consultationAst: false,
-        cadenasAppose: false,
-        cadenasReleve: false
-      };
-      
-      setFormData(prev => ({
-        ...prev,
-        team: {
-          ...prev.team,
-          members: [...prev.team.members, member],
-          totalMembers: prev.team.members.length + 1
-        }
-      }));
-      
-      setNewTeamMember({});
-    }
-  };
-
-  const removeTeamMember = (memberId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      team: {
-        ...prev.team,
-        members: prev.team.members.filter(m => m.id !== memberId),
-        totalMembers: Math.max(0, prev.team.totalMembers - 1)
-      }
-    }));
-  };
-
-  const toggleConsultationAst = (memberId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      team: {
-        ...prev.team,
-        members: prev.team.members.map(m =>
-          m.id === memberId 
-            ? { ...m, consultationAst: !m.consultationAst }
-            : m
-        )
-      }
-    }));
-  };
-
-  const toggleCadenasAppose = (memberId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      team: {
-        ...prev.team,
-        members: prev.team.members.map(m =>
-          m.id === memberId 
-            ? { ...m, cadenasAppose: !m.cadenasAppose }
-            : m
-        )
-      }
-    }));
-  };
-
-  const validateTeamMember = (memberId: string, approved: boolean, comments: string = '') => {
-    setFormData(prev => {
-      const updatedMembers: TeamMember[] = prev.team.members.map(m =>
-        m.id === memberId 
-          ? { 
-              ...m, 
-              validationStatus: (approved ? 'approved' : 'rejected') as TeamMember['validationStatus'],
-              validationComments: comments,
-              acknowledgmentTime: approved ? new Date().toISOString() : undefined
-            }
-          : m
-      );
-      
-      const allApproved = updatedMembers.every(m => m.validationStatus === 'approved');
-      const approvedCount = updatedMembers.filter(m => m.validationStatus === 'approved').length;
-      
-      return {
-        ...prev,
-        team: {
-          ...prev.team,
-          members: updatedMembers,
-          allApproved,
-          acknowledgedMembers: approvedCount
-        }
-      };
-    });
-  };
-
-  // =================== GESTION POINTS ISOLEMENT CNESST ===================
-  const addIsolationPoint = () => {
-    if (newIsolationPoint.name?.trim() && newIsolationPoint.type) {
-      const point: IsolationPoint = {
-        id: `isolation-${Date.now()}`,
-        name: newIsolationPoint.name.trim(),
-        type: newIsolationPoint.type,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        photos: [],
-        checklist: {
-          cadenasAppose: false,
-          absenceTension: false,
-          miseALaTerre: false,
-          cadenasReleve: false
-        }
-      };
-      
-      setFormData(prev => ({
-        ...prev,
-        isolationPoints: [...prev.isolationPoints, point]
-      }));
-      
-      setNewIsolationPoint({});
-    }
-  };
-
-  const removeIsolationPoint = (pointId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      isolationPoints: prev.isolationPoints.filter(p => p.id !== pointId)
-    }));
-  };
-
-  const updateIsolationChecklist = (pointId: string, checklistItem: keyof IsolationPoint['checklist']) => {
-    setFormData(prev => ({
-      ...prev,
-      isolationPoints: prev.isolationPoints.map(point =>
-        point.id === pointId 
-          ? {
-              ...point,
-              checklist: {
-                ...point.checklist,
-                [checklistItem]: !point.checklist[checklistItem]
-              }
-            }
-          : point
-      )
-    }));
-  };
-
-  // =================== GESTION PHOTOS OPTIMISÉE ===================
-  const addPhotoToIsolationPoint = (pointId: string, file: File): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const newPhoto: Photo = {
-            id: `photo-${Date.now()}`,
-            name: file.name,
-            data: e.target?.result as string,
-            description: '',
-            timestamp: new Date().toISOString(),
-            category: 'isolation'
-          };
-          
-          setFormData(prev => ({
-            ...prev,
-            isolationPoints: prev.isolationPoints.map(point =>
-              point.id === pointId 
-                ? { ...point, photos: [...point.photos, newPhoto] }
-                : point
-            )
-          }));
-          
-          resolve();
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const removePhotoFromIsolationPoint = (pointId: string, photoId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      isolationPoints: prev.isolationPoints.map(p =>
-        p.id === pointId 
-          ? { ...p, photos: p.photos.filter(photo => photo.id !== photoId) }
-          : p
-      )
-    }));
-  };
-
-  const updateIsolationPhotoDescription = (pointId: string, photoId: string, description: string) => {
-    setFormData(prev => ({
-      ...prev,
-      isolationPoints: prev.isolationPoints.map(p =>
-        p.id === pointId 
-          ? { 
-              ...p, 
-              photos: p.photos.map(photo => 
-                photo.id === photoId ? { ...photo, description } : photo
-              ) 
-            }
-          : p
-      )
-    }));
-  };
-
-  // =================== GESTION BRIEFINGS ÉQUIPE ===================
-  const toggleDiscussion = (discussionId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      teamDiscussion: {
-        ...prev.teamDiscussion,
-        discussions: prev.teamDiscussion.discussions.map(d =>
-          d.id === discussionId 
-            ? { 
-                ...d, 
-                completed: !d.completed,
-                discussedAt: !d.completed ? new Date().toISOString() : undefined
-              }
-            : d
-        )
-      }
-    }));
-  };
-
-  const updateDiscussionNotes = (discussionId: string, notes: string) => {
-    setFormData(prev => ({
-      ...prev,
-      teamDiscussion: {
-        ...prev.teamDiscussion,
-        discussions: prev.teamDiscussion.discussions.map(d =>
-          d.id === discussionId ? { ...d, notes } : d
-        )
-      }
-    }));
-  };
-
-  const updateDiscussedBy = (discussionId: string, discussedBy: string) => {
-    setFormData(prev => ({
-      ...prev,
-      teamDiscussion: {
-        ...prev.teamDiscussion,
-        discussions: prev.teamDiscussion.discussions.map(d =>
-          d.id === discussionId ? { ...d, discussedBy } : d
-        )
-      }
-    }));
-  };
-
-  // =================== GESTION EPI PROFESSIONNELLE ===================
-  const toggleEquipmentRequired = (equipmentId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      safetyEquipment: prev.safetyEquipment.map(eq =>
-        eq.id === equipmentId ? { ...eq, required: !eq.required } : eq
-      )
-    }));
-  };
-
-  const toggleEquipmentAvailable = (equipmentId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      safetyEquipment: prev.safetyEquipment.map(eq =>
-        eq.id === equipmentId ? { ...eq, available: !eq.available } : eq
-      )
-    }));
-  };
-
-  const toggleEquipmentVerified = (equipmentId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      safetyEquipment: prev.safetyEquipment.map(eq =>
-        eq.id === equipmentId ? { 
-          ...eq, 
-          verified: !eq.verified,
-          notes: eq.verified ? eq.notes : eq.notes + ` [Vérifié ${new Date().toLocaleString()}]`
-        } : eq
-      )
-    }));
-  };
-
-  const updateEquipmentNotes = (equipmentId: string, notes: string) => {
-    setFormData(prev => ({
-      ...prev,
-      safetyEquipment: prev.safetyEquipment.map(eq =>
-        eq.id === equipmentId ? { ...eq, notes } : eq
-      )
-    }));
-  };
-
-  // =================== ANALYSE RISQUES HIÉRARCHISÉE ===================
-  const toggleHazard = (hazardId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      electricalHazards: prev.electricalHazards.map(h =>
-        h.id === hazardId 
-          ? { 
-              ...h, 
-              isSelected: !h.isSelected, 
-              showControls: !h.isSelected ? true : false
-            } 
-          : h
-      )
-    }));
-  };
-
-  const toggleControlMeasure = (hazardId: string, controlId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      electricalHazards: prev.electricalHazards.map(h =>
-        h.id === hazardId 
-          ? {
-              ...h,
-              controlMeasures: h.controlMeasures.map(c =>
-                c.id === controlId ? { 
-                  ...c, 
-                  isSelected: !c.isSelected,
-                  notes: !c.isSelected && c.notes === '' ? `Appliqué ${new Date().toLocaleString()}` : c.notes
-                } : c
-              )
-            }
-          : h
-      )
-    }));
-  };
-
-  const updateControlNotes = (hazardId: string, controlId: string, notes: string) => {
-    setFormData(prev => ({
-      ...prev,
-      electricalHazards: prev.electricalHazards.map(h =>
-        h.id === hazardId 
-          ? {
-              ...h,
-              controlMeasures: h.controlMeasures.map(c =>
-                c.id === controlId ? { ...c, notes } : c
-              )
-            }
-          : h
-      )
-    }));
-  };
-
-  const updateHazardNotes = (hazardId: string, notes: string) => {
-    setFormData(prev => ({
-      ...prev,
-      electricalHazards: prev.electricalHazards.map(h =>
-        h.id === hazardId ? { ...h, additionalNotes: notes } : h
-      )
-    }));
-  };
-
-  // Vérification moyens de contrôle sélectionnés
-  const hasSelectedControls = (hazard: ElectricalHazard): boolean => {
-    return hazard.controlMeasures.some(control => control.isSelected);
-  };
-
-  // Évaluation criticité avec moyens de contrôle
-  const getHazardCriticalityWithControls = (hazard: ElectricalHazard): 'safe' | 'warning' | 'danger' => {
-    if (!hazard.isSelected) return 'safe';
-    
-    const hasControls = hasSelectedControls(hazard);
-    const isToleranceZero = ['ELEC-001', 'ELEC-002', 'FALL-001', 'SPACE-001', 'MECH-001'].includes(hazard.code);
-    
-    if (isToleranceZero && !hasControls) return 'danger';
-    if (hazard.riskLevel === 'critical' && !hasControls) return 'danger';
-    if (hasControls) return 'safe';
-    return 'warning';
-  };
-
-  // =================== GESTION PHOTOS DOCUMENTATION ===================
-  const addPhoto = (file: File): Promise<void> => {
-    return new Promise<void>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const newPhoto: Photo = {
-            id: `photo-${Date.now()}`,
-            name: file.name,
-            data: e.target?.result as string,
-            description: '',
-            timestamp: new Date().toISOString(),
-            category: 'site'
-          };
-          
-          setFormData(prev => ({
-            ...prev,
-            documentation: {
-              ...prev.documentation,
-              photos: [...prev.documentation.photos, newPhoto]
-            }
-          }));
-          
-          resolve();
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const removePhoto = (photoId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      documentation: {
-        ...prev.documentation,
-        photos: prev.documentation.photos.filter(p => p.id !== photoId)
-      }
-    }));
-  };
-
-  const updatePhotoDescription = (photoId: string, description: string) => {
-    setFormData(prev => ({
-      ...prev,
-      documentation: {
-        ...prev.documentation,
-        photos: prev.documentation.photos.map(p =>
-          p.id === photoId ? { ...p, description } : p
-        )
-      }
-    }));
-  };
-
-  // =================== ACTIONS PROFESSIONNELLES ===================
-  const handleGeneratePDF = async () => {
-    setSaveStatus('saving');
-    try {
-      const success = await generateProfessionalPDFWithBranding(formData, tenant);
-      if (success) {
-        setSaveStatus('saved');
-        setTimeout(() => setSaveStatus('idle'), 3000);
-      } else {
-        setSaveStatus('error');
-        setTimeout(() => setSaveStatus('idle'), 3000);
-      }
-    } catch (error) {
-      console.error('Erreur génération PDF:', error);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    }
-  };
-
-  const handleSendByEmail = async () => {
-    setSaveStatus('saving');
-    try {
-      const success = await sendProfessionalEmail(formData, tenant, language);
-      if (success) {
-        setFormData(prev => ({
-          ...prev,
-          validation: { 
-            ...prev.validation, 
-            emailSent: true,
-            submissionDate: new Date().toISOString()
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      for (const file of files) {
+        if (photos.length < maxPhotos) {
+          try {
+            await onAddPhoto(file);
+          } catch (error) {
+            console.error('Erreur upload photo:', error);
+            alert('Erreur lors de l\'ajout de la photo');
           }
-        }));
-        setSaveStatus('saved');
-        setTimeout(() => setSaveStatus('idle'), 3000);
-      } else {
-        setSaveStatus('error');
-        setTimeout(() => setSaveStatus('idle'), 3000);
-      }
-    } catch (error) {
-      console.error('Erreur envoi email:', error);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    }
-  };
-
-  const handleArchive = async () => {
-    setSaveStatus('saving');
-    try {
-      const archivedData = await archiveToSupabase(formData, tenant);
-      setFormData(archivedData);
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    } catch (error) {
-      console.error('Erreur archivage:', error);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    }
-  };
-
-  // =================== VALIDATION FINALE CNESST ===================
-  const handleFinalSubmission = async () => {
-    const validationErrors: string[] = [];
-
-    // Validation équipe
-    if (formData.team.members.length === 0) {
-      validationErrors.push('Au moins un membre d\'équipe doit être ajouté');
-    }
-
-    if (!formData.team.allApproved && formData.team.members.length > 0) {
-      validationErrors.push('Toutes les validations d\'équipe doivent être complétées');
-    }
-
-    // Validation dangers tolérance zéro
-    const toleranceZeroHazards = formData.electricalHazards.filter(h => 
-      h.isSelected && ['ELEC-001', 'ELEC-002', 'FALL-001', 'SPACE-001', 'MECH-001'].includes(h.code)
-    );
-    
-    const toleranceZeroWithoutControls = toleranceZeroHazards.filter(h => !hasSelectedControls(h));
-    if (toleranceZeroWithoutControls.length > 0) {
-      validationErrors.push(`Dangers tolérance zéro sans moyens de contrôle: ${toleranceZeroWithoutControls.map(h => h.code).join(', ')}`);
-    }
-
-    // Validation générale dangers
-    if (formData.electricalHazards.filter(h => h.isSelected).length === 0) {
-      validationErrors.push('Au moins un danger doit être identifié');
-    }
-
-    // Validation EPI
-    const requiredEquipment = formData.safetyEquipment.filter(eq => eq.required);
-    const verifiedEquipment = requiredEquipment.filter(eq => eq.verified);
-    if (verifiedEquipment.length < requiredEquipment.length) {
-      validationErrors.push('Tous les EPI obligatoires doivent être vérifiés');
-    }
-
-    // Validation briefing
-    const completedDiscussions = formData.teamDiscussion.discussions.filter(d => d.completed);
-    if (completedDiscussions.length < 5) { // Au moins 5 points clés
-      validationErrors.push('Briefing sécurité incomplet (minimum 5 points requis)');
-    }
-
-    // Validation informations projet
-    if (!formData.projectInfo.client || !formData.projectInfo.workDescription || !formData.projectInfo.workLocation) {
-      validationErrors.push('Informations projet incomplètes (client, description, lieu requis)');
-    }
-
-    if (validationErrors.length > 0) {
-      const errorMessage = `${t.validation.errors}:\n${validationErrors.join('\n• ')}`;
-      alert(errorMessage);
-      return;
-    }
-    
-    setSaveStatus('saving');
-    try {
-      const finalData: ASTFormData = {
-        ...formData,
-        status: 'completed',
-        validation: {
-          ...formData.validation,
-          finalApproval: true,
-          submissionDate: new Date().toISOString(),
-          completedDate: new Date().toISOString(),
-          completedBy: formData.team.supervisor || 'Superviseur'
         }
-      };
-      
-      const success = await saveToSupabase(finalData);
-      if (success) {
-        setFormData(finalData);
-        setSaveStatus('saved');
-        
-        setTimeout(() => {
-          alert(`${t.validation.success} ! AST ${formData.astNumber} approuvée.`);
-        }, 1000);
-      } else {
-        setSaveStatus('error');
-        setTimeout(() => setSaveStatus('idle'), 3000);
       }
-    } catch (error) {
-      console.error('Erreur soumission finale:', error);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    }
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    };
+
+    return (
+      <div className="space-y-3">
+        {/* Photos existantes */}
+        {photos.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {photos.map((photo, index) => (
+              <div key={index} className="relative group">
+                <img
+                  src={photo.url}
+                  alt={photo.nom}
+                  className="w-full h-24 sm:h-32 object-cover rounded-lg border border-gray-200"
+                />
+                <button
+                  onClick={() => onRemovePhoto(index)}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+                <div className="absolute bottom-1 left-1 right-1 bg-black/50 text-white text-xs p-1 rounded truncate">
+                  {photo.nom}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Bouton d'ajout */}
+        {photos.length < maxPhotos && (
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 text-center hover:border-blue-400 hover:bg-blue-50 transition-colors"
+            >
+              <Camera className="w-6 h-6 mx-auto text-gray-400 mb-2" />
+              <div className="text-sm text-gray-600">
+                Ajouter des photos ({photos.length}/{maxPhotos})
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Formats acceptés: JPG, PNG, HEIC
+              </div>
+            </button>
+          </div>
+        )}
+      </div>
+    );
   };
 
-  // =================== COMPOSANTS UI OPTIMISÉS ===================
-  const CustomCheckbox = ({ checked, onChange, label, disabled = false }: { 
-    checked: boolean; 
-    onChange: () => void; 
-    label: string;
-    disabled?: boolean;
-  }) => (
-    <div 
-      style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '12px', 
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.6 : 1
-      }} 
-      onClick={disabled ? undefined : onChange}
-    >
-      <div className={`checkbox-premium ${checked ? 'checked' : ''}`} />
-      <span style={{ color: '#e2e8f0', fontSize: isMobile ? '14px' : '15px', flex: 1 }}>
-        {label}
-      </span>
+  // =================== RETURN DU COMPOSANT PRINCIPAL ===================
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+      {/* Background Pattern Mobile-Friendly */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"><g fill=\"none\" fill-rule=\"evenodd\"><g fill=\"%23000000\" fill-opacity=\"0.1\"><circle cx=\"30\" cy=\"30\" r=\"1.5\"/></g></g></svg>')] bg-repeat"></div>
+      </div>
+
+      {/* Header Mobile Optimisé */}
+      <div className="relative z-10">
+        <div className="bg-white/90 backdrop-blur-lg border-b border-white/20 shadow-lg sticky top-0 z-50">
+          <div className="container mx-auto px-3 sm:px-6 py-3 sm:py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              {/* Logo et titre responsive */}
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
+                  <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-blue-700 to-indigo-800 bg-clip-text text-transparent truncate">
+                    {translations[language].title}
+                  </h1>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs sm:text-sm text-gray-600">
+                      AST #{formData.numeroAST}
+                    </span>
+                    {isAutoSaving && (
+                      <div className="flex items-center gap-1 text-xs text-blue-600">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                        <span className="hidden sm:inline">Sauvegarde...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions header mobile */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
+                  className="px-3 py-1.5 text-xs sm:text-sm bg-white/80 hover:bg-white border border-gray-200 rounded-lg transition-all duration-200 font-medium text-gray-700 hover:text-blue-600"
+                >
+                  {language === 'fr' ? 'EN' : 'FR'}
+                </button>
+                <button className="p-2 bg-white/80 hover:bg-white border border-gray-200 rounded-lg transition-all duration-200 text-gray-600 hover:text-blue-600">
+                  <MessageSquare className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Barre de progression mobile optimisée */}
+            <div className="mt-4 bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-500 ease-out shadow-sm"
+                style={{ width: `${((currentStep + 1) / 8) * 100}%` }}
+              />
+            </div>
+            
+            {/* Navigation étapes mobile */}
+            <div className="mt-3 flex items-center justify-between text-xs sm:text-sm">
+              <span className="text-gray-600 font-medium">
+                Étape {currentStep + 1} sur 8
+              </span>
+              <span className="text-blue-600 font-semibold">
+                {Math.round(((currentStep + 1) / 8) * 100)}% complété
+              </span>
+            </div>
+
+            {/* Compteurs temps réel mobile */}
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="bg-green-50 border border-green-200 rounded-lg px-2 py-1.5 text-center">
+                <div className="text-lg sm:text-xl font-bold text-green-700">{formData.equipe.length}</div>
+                <div className="text-xs text-green-600">Personnes</div>
+              </div>
+              <div className="bg-orange-50 border border-orange-200 rounded-lg px-2 py-1.5 text-center">
+                <div className="text-lg sm:text-xl font-bold text-orange-700">
+                  {formData.dangersIdentifies.filter(d => d.present).length}
+                </div>
+                <div className="text-xs text-orange-600">Risques</div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg px-2 py-1.5 text-center">
+                <div className="text-lg sm:text-xl font-bold text-blue-700">
+                  {formData.equipementsSecurite.filter(e => e.utilise).length}
+                </div>
+                <div className="text-xs text-blue-600">EPI</div>
+              </div>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg px-2 py-1.5 text-center">
+                <div className="text-lg sm:text-xl font-bold text-purple-700">
+                  {formData.pointsIsolement.filter(p => p.isole).length}
+                </div>
+                <div className="text-xs text-purple-600">Isolements</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Contenu principal mobile-first */}
+        <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-6">
+          <div className="bg-white/70 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/30 overflow-hidden">
+            
+            {/* ÉTAPE 1: INFORMATIONS GÉNÉRALES */}
+            {currentStep === 0 && (
+              <div className="p-4 sm:p-6 lg:p-8">
+                <div className="mb-6">
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                    {translations[language].generalInfo}
+                  </h2>
+                  <p className="text-sm sm:text-base text-gray-600">
+                    Informations de base pour l'analyse sécuritaire du travail
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                  {/* Colonne gauche */}
+                  <div className="space-y-4 sm:space-y-6">
+                    <div className="form-group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        {translations[language].project} *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.projet}
+                        onChange={(e) => setFormData(prev => ({ ...prev, projet: e.target.value }))}
+                        className="input-field"
+                        placeholder="Ex: Installation électrique Bâtiment A"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        {translations[language].location} *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.lieu}
+                        onChange={(e) => setFormData(prev => ({ ...prev, lieu: e.target.value }))}
+                        className="input-field"
+                        placeholder="Ex: 123 Rue Industrielle, Montréal, QC"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        {translations[language].taskDescription} *
+                      </label>
+                      <textarea
+                        value={formData.descriptionTache}
+                        onChange={(e) => setFormData(prev => ({ ...prev, descriptionTache: e.target.value }))}
+                        className="input-field resize-none"
+                        rows={3}
+                        placeholder="Décrivez en détail la tâche à effectuer..."
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Colonne droite */}
+                  <div className="space-y-4 sm:space-y-6">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="form-group">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Date *
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.date}
+                          onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                          className="input-field"
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Heure *
+                        </label>
+                        <input
+                          type="time"
+                          value={formData.heure}
+                          onChange={(e) => setFormData(prev => ({ ...prev, heure: e.target.value }))}
+                          className="input-field"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        {translations[language].responsible} *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.responsable}
+                        onChange={(e) => setFormData(prev => ({ ...prev, responsable: e.target.value }))}
+                        className="input-field"
+                        placeholder="Nom du responsable de l'équipe"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Durée estimée
+                      </label>
+                      <select
+                        value={formData.dureeEstimee}
+                        onChange={(e) => setFormData(prev => ({ ...prev, dureeEstimee: e.target.value }))}
+                        className="input-field"
+                      >
+                        <option value="">Sélectionner la durée</option>
+                        <option value="< 1 heure">Moins d'1 heure</option>
+                        <option value="1-4 heures">1 à 4 heures</option>
+                        <option value="4-8 heures">4 à 8 heures (journée)</option>
+                        <option value="1-3 jours">1 à 3 jours</option>
+                        <option value="+ 3 jours">Plus de 3 jours</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Conditions météorologiques
+                      </label>
+                      <select
+                        value={formData.conditionsMeteo}
+                        onChange={(e) => setFormData(prev => ({ ...prev, conditionsMeteo: e.target.value }))}
+                        className="input-field"
+                      >
+                        <option value="">Conditions actuelles</option>
+                        <option value="Ensoleillé">☀️ Ensoleillé</option>
+                        <option value="Nuageux">☁️ Nuageux</option>
+                        <option value="Pluvieux">🌧️ Pluvieux</option>
+                        <option value="Neigeux">❄️ Neigeux</option>
+                        <option value="Venteux">💨 Venteux</option>
+                        <option value="Froid extrême">🥶 Froid extrême</option>
+                        <option value="Chaleur extrême">🥵 Chaleur extrême</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* LES AUTRES ÉTAPES CONTINUENT DANS LA SECTION 5A ET 5B */}
+
+            {/* Navigation entre les étapes */}
+            <div className="flex items-center justify-between p-4 sm:p-6 border-t border-gray-200 bg-gray-50/50">
+              <button
+                onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
+                disabled={currentStep === 0}
+                className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Précédent</span>
+              </button>
+              
+              <div className="flex items-center gap-2">
+                {Array.from({ length: 8 }, (_, i) => (
+                  <div
+                    key={i}
+                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                      i === currentStep
+                        ? 'bg-blue-600 w-6'
+                        : i < currentStep
+                        ? 'bg-green-500'
+                        : 'bg-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+              
+              <button
+                onClick={() => setCurrentStep(prev => Math.min(7, prev + 1))}
+                disabled={currentStep === 7}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <span className="hidden sm:inline">Suivant</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer mobile sticky */}
+      <div className="bg-white/90 backdrop-blur-lg border-t border-gray-200 p-3 sm:hidden sticky bottom-0">
+        <div className="flex items-center justify-center gap-4 text-xs text-gray-600">
+          <span>AST #{formData.numeroAST}</span>
+          <span>•</span>
+          <span>C-Secur360</span>
+          <span>•</span>
+          <span>{formData.equipe.length} personnes</span>
+        </div>
+      </div>
     </div>
   );
-
-  const LockButton = ({ locked, onToggle, title, disabled = false }: { 
-    locked: boolean; 
-    onToggle: () => void; 
-    title: string;
-    disabled?: boolean;
-  }) => (
-    <button
-      onClick={disabled ? undefined : onToggle}
-      className="lock-button"
-      title={title}
-      disabled={disabled}
-      style={{ opacity: disabled ? 0.5 : 1 }}
-    >
-      {locked ? (
-        <Lock className="lock-icon locked" style={{ width: '16px', height: '16px' }} />
-      ) : (
-        <Unlock className="lock-icon unlocked" style={{ width: '16px', height: '16px' }} />
-      )}
-    </button>
-  );
-
-  // =================== CALCULS PROGRESSION INTELLIGENTS ===================
-  const calculateStepCompletion = (stepIndex: number): number => {
-    switch (stepIndex) {
-      case 0: // Informations projet
-        const basicFields = [
-          formData.projectInfo.client,
-          formData.projectInfo.projectNumber,
-          formData.projectInfo.workLocation,
-          formData.projectInfo.workDescription
-        ].filter(Boolean).length;
-        return (basicFields / 4) * 100;
-      
-      case 1: // Briefing équipe
-        const completedDiscussions = formData.teamDiscussion.discussions.filter(d => d.completed).length;
-        return (completedDiscussions / formData.teamDiscussion.discussions.length) * 100;
-      
-      case 2: // EPI
-        const requiredEquipment = formData.safetyEquipment.filter(eq => eq.required);
-        const verifiedEquipment = requiredEquipment.filter(eq => eq.verified);
-        return requiredEquipment.length > 0 ? (verifiedEquipment.length / requiredEquipment.length) * 100 : 0;
-      
-      case 3: // Analyse risques
-        const selectedHazards = formData.electricalHazards.filter(h => h.isSelected);
-        const hazardsWithControls = selectedHazards.filter(h => hasSelectedControls(h));
-        return selectedHazards.length > 0 ? (hazardsWithControls.length / selectedHazards.length) * 100 : 0;
-      
-      case 4: // LOTO
-        const activePoints = formData.isolationPoints.filter(p => p.isActive);
-        const completedPoints = activePoints.filter(p => p.checklist.cadenasAppose && p.checklist.absenceTension);
-        return activePoints.length > 0 ? (completedPoints.length / activePoints.length) * 100 : 100;
-      
-      case 5: // Validation équipe
-        const approvedMembers = formData.team.members.filter(m => m.validationStatus === 'approved').length;
-        return formData.team.members.length > 0 ? (approvedMembers / formData.team.members.length) * 100 : 0;
-      
-      case 6: // Documentation
-        return formData.documentation.photos.length > 0 ? 100 : 0;
-      
-      case 7: // Approbation finale
-        return formData.validation.finalApproval ? 100 : 0;
-      
-      default:
-        return 0;
-    }
-  };
-
-  const overallProgress = steps.reduce((acc, _, index) => acc + calculateStepCompletion(index), 0) / steps.length;
-
-  // =================== MÉTRIQUES ÉQUIPE ===================
-  const approvedMembersCount = formData.team.members.filter(m => m.validationStatus === 'approved').length;
-  const approvalRate = formData.team.members.length > 0 ? 
-    Math.round((approvedMembersCount / formData.team.members.length) * 100) : 0;
-
-  // Groupement équipements par catégorie
-  const groupedEquipment = formData.safetyEquipment.reduce((acc, equipment) => {
-    const category = equipment.category;
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(equipment);
-    return acc;
-  }, {} as Record<string, SafetyEquipment[]>);
-
-  // Le JSX return sera dans la section 5...
+};
 // =================== AST SECTION 5A/5 - INTERFACE MOBILE OPTIMISÉE (ÉTAPES 1-4) ===================
 // Section 5A: Interface utilisateur mobile-first - Header + Étapes 1 à 4
 
