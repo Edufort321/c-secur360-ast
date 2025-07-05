@@ -1907,8 +1907,8 @@ C-Secur360 Platform`;
     return false;
   }
 };
-// =================== AST SECTION 4/5 CORRIGÉE - FIN DU COMPOSANT PRINCIPAL ===================
-// Section 4: Fin correcte du composant principal avec return
+// =================== AST SECTION 4/5 - STRUCTURE CORRIGÉE (FIN DES FONCTIONS + DÉBUT RETURN) ===================
+// Section 4: Fin des fonctions utilitaires et début du return principal
 
   // =================== COMPOSANT PHOTOCAROUSEL MOBILE-FRIENDLY ===================
   const PhotoCarousel: React.FC<{
@@ -1991,7 +1991,10 @@ C-Secur360 Platform`;
     );
   };
 
-  // =================== RETURN DU COMPOSANT PRINCIPAL ===================
+  // =================== FIN DE TOUTES LES FONCTIONS UTILITAIRES ===================
+  // Toutes les fonctions du composant sont maintenant définies
+  // Le return principal du composant ASTFormUltraPremium commence ici
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
       {/* Background Pattern Mobile-Friendly */}
@@ -2234,305 +2237,9 @@ C-Secur360 Platform`;
               </div>
             )}
 
-            {/* LES AUTRES ÉTAPES CONTINUENT DANS LA SECTION 5A ET 5B */}
-
-            {/* Navigation entre les étapes */}
-            <div className="flex items-center justify-between p-4 sm:p-6 border-t border-gray-200 bg-gray-50/50">
-              <button
-                onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
-                disabled={currentStep === 0}
-                className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Précédent</span>
-              </button>
-              
-              <div className="flex items-center gap-2">
-                {Array.from({ length: 8 }, (_, i) => (
-                  <div
-                    key={i}
-                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                      i === currentStep
-                        ? 'bg-blue-600 w-6'
-                        : i < currentStep
-                        ? 'bg-green-500'
-                        : 'bg-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
-              
-              <button
-                onClick={() => setCurrentStep(prev => Math.min(7, prev + 1))}
-                disabled={currentStep === 7}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <span className="hidden sm:inline">Suivant</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer mobile sticky */}
-      <div className="bg-white/90 backdrop-blur-lg border-t border-gray-200 p-3 sm:hidden sticky bottom-0">
-        <div className="flex items-center justify-center gap-4 text-xs text-gray-600">
-          <span>AST #{formData.numeroAST}</span>
-          <span>•</span>
-          <span>C-Secur360</span>
-          <span>•</span>
-          <span>{formData.equipe.length} personnes</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-// =================== AST SECTION 5A/5 - INTERFACE MOBILE OPTIMISÉE (ÉTAPES 1-4) ===================
-// Section 5A: Interface utilisateur mobile-first - Header + Étapes 1 à 4
-
-// Continuation du return du composant principal...
-return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
-      {/* Background Pattern Mobile-Friendly */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%23000000" fill-opacity="0.1"><circle cx="30" cy="30" r="1.5"/></g></g></svg>')] bg-repeat"></div>
-      </div>
-
-      {/* Header Mobile Optimisé */}
-      <div className="relative z-10">
-        <div className="bg-white/90 backdrop-blur-lg border-b border-white/20 shadow-lg sticky top-0 z-50">
-          <div className="container mx-auto px-3 sm:px-6 py-3 sm:py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              {/* Logo et titre responsive */}
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
-                  <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-blue-700 to-indigo-800 bg-clip-text text-transparent truncate">
-                    {translations[language].title}
-                  </h1>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs sm:text-sm text-gray-600">
-                      AST #{formData.numeroAST}
-                    </span>
-                    {isAutoSaving && (
-                      <div className="flex items-center gap-1 text-xs text-blue-600">
-                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                        <span className="hidden sm:inline">Sauvegarde...</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions header mobile */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  onClick={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
-                  className="px-3 py-1.5 text-xs sm:text-sm bg-white/80 hover:bg-white border border-gray-200 rounded-lg transition-all duration-200 font-medium text-gray-700 hover:text-blue-600"
-                >
-                  {language === 'fr' ? 'EN' : 'FR'}
-                </button>
-                <button className="p-2 bg-white/80 hover:bg-white border border-gray-200 rounded-lg transition-all duration-200 text-gray-600 hover:text-blue-600">
-                  <MessageSquare className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Barre de progression mobile optimisée */}
-            <div className="mt-4 bg-gray-200 rounded-full h-2 overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-500 ease-out shadow-sm"
-                style={{ width: `${((currentStep + 1) / 8) * 100}%` }}
-              />
-            </div>
-            
-            {/* Navigation étapes mobile */}
-            <div className="mt-3 flex items-center justify-between text-xs sm:text-sm">
-              <span className="text-gray-600 font-medium">
-                Étape {currentStep + 1} sur 8
-              </span>
-              <span className="text-blue-600 font-semibold">
-                {Math.round(((currentStep + 1) / 8) * 100)}% complété
-              </span>
-            </div>
-
-            {/* Compteurs temps réel mobile */}
-            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <div className="bg-green-50 border border-green-200 rounded-lg px-2 py-1.5 text-center">
-                <div className="text-lg sm:text-xl font-bold text-green-700">{formData.equipe.length}</div>
-                <div className="text-xs text-green-600">Personnes</div>
-              </div>
-              <div className="bg-orange-50 border border-orange-200 rounded-lg px-2 py-1.5 text-center">
-                <div className="text-lg sm:text-xl font-bold text-orange-700">
-                  {formData.dangersIdentifies.filter(d => d.present).length}
-                </div>
-                <div className="text-xs text-orange-600">Risques</div>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg px-2 py-1.5 text-center">
-                <div className="text-lg sm:text-xl font-bold text-blue-700">
-                  {formData.equipementsSecurite.filter(e => e.utilise).length}
-                </div>
-                <div className="text-xs text-blue-600">EPI</div>
-              </div>
-              <div className="bg-purple-50 border border-purple-200 rounded-lg px-2 py-1.5 text-center">
-                <div className="text-lg sm:text-xl font-bold text-purple-700">
-                  {formData.pointsIsolement.filter(p => p.isole).length}
-                </div>
-                <div className="text-xs text-purple-600">Isolements</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Contenu principal mobile-first */}
-        <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-6">
-          <div className="bg-white/70 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/30 overflow-hidden">
-            
-            {/* ÉTAPE 1: INFORMATIONS GÉNÉRALES */}
-            {currentStep === 0 && (
-              <div className="p-4 sm:p-6 lg:p-8">
-                <div className="mb-6">
-                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
-                    {translations[language].generalInfo}
-                  </h2>
-                  <p className="text-sm sm:text-base text-gray-600">
-                    Informations de base pour l'analyse sécuritaire du travail
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  {/* Colonne gauche */}
-                  <div className="space-y-4 sm:space-y-6">
-                    <div className="form-group">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        {translations[language].project} *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.projet}
-                        onChange={(e) => setFormData(prev => ({ ...prev, projet: e.target.value }))}
-                        className="input-field"
-                        placeholder="Ex: Installation électrique Bâtiment A"
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        {translations[language].location} *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.lieu}
-                        onChange={(e) => setFormData(prev => ({ ...prev, lieu: e.target.value }))}
-                        className="input-field"
-                        placeholder="Ex: 123 Rue Industrielle, Montréal, QC"
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        {translations[language].taskDescription} *
-                      </label>
-                      <textarea
-                        value={formData.descriptionTache}
-                        onChange={(e) => setFormData(prev => ({ ...prev, descriptionTache: e.target.value }))}
-                        className="input-field resize-none"
-                        rows={3}
-                        placeholder="Décrivez en détail la tâche à effectuer..."
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Colonne droite */}
-                  <div className="space-y-4 sm:space-y-6">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="form-group">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Date *
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.date}
-                          onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                          className="input-field"
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Heure *
-                        </label>
-                        <input
-                          type="time"
-                          value={formData.heure}
-                          onChange={(e) => setFormData(prev => ({ ...prev, heure: e.target.value }))}
-                          className="input-field"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="form-group">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        {translations[language].responsible} *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.responsable}
-                        onChange={(e) => setFormData(prev => ({ ...prev, responsable: e.target.value }))}
-                        className="input-field"
-                        placeholder="Nom du responsable de l'équipe"
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Durée estimée
-                      </label>
-                      <select
-                        value={formData.dureeEstimee}
-                        onChange={(e) => setFormData(prev => ({ ...prev, dureeEstimee: e.target.value }))}
-                        className="input-field"
-                      >
-                        <option value="">Sélectionner la durée</option>
-                        <option value="< 1 heure">Moins d'1 heure</option>
-                        <option value="1-4 heures">1 à 4 heures</option>
-                        <option value="4-8 heures">4 à 8 heures (journée)</option>
-                        <option value="1-3 jours">1 à 3 jours</option>
-                        <option value="+ 3 jours">Plus de 3 jours</option>
-                      </select>
-                    </div>
-
-                    <div className="form-group">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Conditions météorologiques
-                      </label>
-                      <select
-                        value={formData.conditionsMeteo}
-                        onChange={(e) => setFormData(prev => ({ ...prev, conditionsMeteo: e.target.value }))}
-                        className="input-field"
-                      >
-                        <option value="">Conditions actuelles</option>
-                        <option value="Ensoleillé">☀️ Ensoleillé</option>
-                        <option value="Nuageux">☁️ Nuageux</option>
-                        <option value="Pluvieux">🌧️ Pluvieux</option>
-                        <option value="Neigeux">❄️ Neigeux</option>
-                        <option value="Venteux">💨 Venteux</option>
-                        <option value="Froid extrême">🥶 Froid extrême</option>
-                        <option value="Chaleur extrême">🥵 Chaleur extrême</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* CONTINUER AVEC LES SECTIONS 5A ET 5B POUR LES AUTRES ÉTAPES */}
+            // =================== AST SECTION 5A/5 - CONTINUATION JSX (ÉTAPES 2-4) ===================
+// Section 5A: Continuation du JSX - Étapes 2 à 4 (SANS nouveau return)
 
             {/* ÉTAPE 2: DISCUSSION D'ÉQUIPE */}
             {currentStep === 1 && (
@@ -2951,48 +2658,8 @@ return (
               </div>
             )}
 
-            {/* Navigation entre les étapes */}
-            <div className="flex items-center justify-between p-4 sm:p-6 border-t border-gray-200 bg-gray-50/50">
-              <button
-                onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
-                disabled={currentStep === 0}
-                className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Précédent</span>
-              </button>
-              
-              <div className="flex items-center gap-2">
-                {Array.from({ length: 8 }, (_, i) => (
-                  <div
-                    key={i}
-                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                      i === currentStep
-                        ? 'bg-blue-600 w-6'
-                        : i < currentStep
-                        ? 'bg-green-500'
-                        : 'bg-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
-              
-              <button
-                onClick={() => setCurrentStep(prev => Math.min(7, prev + 1))}
-                disabled={currentStep === 7}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <span className="hidden sm:inline">Suivant</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-// =================== AST SECTION 5B/5 FINALE - INTERFACE COMPLÈTE (ÉTAPES 5-8 + NAVIGATION) ===================
+            {/* CONTINUER AVEC LA SECTION 5B POUR LES ÉTAPES 5-8 ET NAVIGATION FINALE */}
+            // =================== AST SECTION 5B/5 FINALE - INTERFACE COMPLÈTE (ÉTAPES 5-8 + NAVIGATION) ===================
 // Section 5B: Étapes 5 à 8, navigation complète et actions finales
 
             {/* ÉTAPE 5: ISOLEMENT DES ÉNERGIES */}
