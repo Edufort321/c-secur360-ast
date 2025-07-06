@@ -1,1 +1,196 @@
+/* animations.css - Animations pour le système AST */
 
+/* =================== ANIMATIONS GÉNÉRALES =================== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@keyframes bounce {
+  0%, 20%, 60%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-10px); }
+  80% { transform: translateY(-5px); }
+}
+
+/* =================== ANIMATIONS SPÉCIFIQUES AST =================== */
+@keyframes riskPulse {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes safetyGlow {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  50% { 
+    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+  }
+}
+
+@keyframes warningBlink {
+  0%, 50% { background-color: #fbbf24; }
+  25%, 75% { background-color: #f59e0b; }
+}
+
+/* =================== CLASSES D'ANIMATION =================== */
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.slide-in {
+  animation: slideIn 0.4s ease-out;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.4s ease-out;
+}
+
+.pulse-effect {
+  animation: pulse 2s infinite;
+}
+
+.shake-error {
+  animation: shake 0.5s ease-in-out;
+}
+
+.bounce-success {
+  animation: bounce 0.6s ease-out;
+}
+
+/* =================== ANIMATIONS ÉTAT RISQUE =================== */
+.risk-critical {
+  animation: riskPulse 2s infinite;
+  border: 2px solid #ef4444;
+}
+
+.risk-high {
+  animation: warningBlink 3s infinite;
+}
+
+.safety-validated {
+  animation: safetyGlow 2s infinite;
+}
+
+/* =================== TRANSITIONS FORMULAIRE =================== */
+.form-step-enter {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.form-step-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 0.3s ease-out;
+}
+
+.form-step-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.form-step-exit-active {
+  opacity: 0;
+  transform: translateX(-30px);
+  transition: all 0.3s ease-in;
+}
+
+/* =================== HOVER EFFECTS =================== */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.hover-glow {
+  transition: box-shadow 0.3s ease;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+}
+
+/* =================== LOADING ANIMATIONS =================== */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes dots {
+  0%, 20% { color: rgba(0, 0, 0, 0); text-shadow: .25em 0 0 rgba(0, 0, 0, 0), .5em 0 0 rgba(0, 0, 0, 0); }
+  40% { color: black; text-shadow: .25em 0 0 rgba(0, 0, 0, 0), .5em 0 0 rgba(0, 0, 0, 0); }
+  60% { text-shadow: .25em 0 0 black, .5em 0 0 rgba(0, 0, 0, 0); }
+  80%, 100% { text-shadow: .25em 0 0 black, .5em 0 0 black; }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+.loading-dots::after {
+  content: "...";
+  animation: dots 2s infinite;
+}
+
+/* =================== RESPONSIVE ANIMATIONS =================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* =================== DARK MODE ANIMATIONS =================== */
+@media (prefers-color-scheme: dark) {
+  .risk-critical {
+    border-color: #f87171;
+  }
+  
+  .safety-validated {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+  }
+}
+
+/* =================== ANIMATIONS MOBILES =================== */
+@media (max-width: 768px) {
+  .fade-in,
+  .slide-in,
+  .slide-in-right {
+    animation-duration: 0.2s;
+  }
+  
+  .hover-lift:active {
+    transform: translateY(-1px);
+  }
+}
