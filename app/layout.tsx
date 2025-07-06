@@ -4,16 +4,19 @@ import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
+// ✅ VIEWPORT SÉPARÉ (obligatoire Next.js 14+)
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  userScalable: false,
+}
+
+// ✅ METADATA SANS VIEWPORT
 export const metadata: Metadata = {
   title: 'C-Secur360 - Analyse Sécuritaire de Tâches',
   description: 'Application d\'analyse sécuritaire de tâches pour MDL',
   manifest: '/manifest.json',
   themeColor: '#3498db',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    userScalable: false,
-  },
 }
 
 export default function RootLayout({
