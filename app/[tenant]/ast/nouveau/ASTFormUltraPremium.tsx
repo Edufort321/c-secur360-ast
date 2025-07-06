@@ -59,7 +59,11 @@ import {
 // =================== INTERFACES TYPESCRIPT ===================
 
 interface ASTFormProps {
-  tenant?: string;
+  tenant?: string | {
+    id: string;
+    subdomain: string;
+    companyName: string;
+  };
 }
 
 interface WorkType {
@@ -2142,6 +2146,9 @@ const translations = {
 
 // Composant principal AST avec partage équipe
 export default function ASTFormUltraPremium({ tenant = 'default' }: ASTFormProps) {
+  // Normaliser le tenant
+  const tenantId = typeof tenant === 'string' ? tenant : tenant?.subdomain || 'default';
+  const tenantName = typeof tenant === 'string' ? tenant : tenant?.companyName || 'Default Company';
   // États principaux
   const [currentStep, setCurrentStep] = useState(1);
   const [language, setLanguage] = useState<'fr' | 'en'>('fr');
