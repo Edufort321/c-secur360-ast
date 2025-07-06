@@ -1,356 +1,323 @@
 // app/data/hazards/electrical.ts
-import { HazardData } from './template';
+import { Hazard, createNewHazard } from './template';
 
-export const electricalShock: HazardData = {
-  id: 'ELEC-001',
-  code: 'ELEC-001',
+// =================== DANGERS ÉLECTRIQUES ===================
+
+export const electricShock: Hazard = createNewHazard({
+  id: 'electrical_shock',
   name: 'Choc électrique',
+  category: 'electrical',
+  subcategory: 'direct_contact',
   displayName: {
     fr: 'Choc électrique',
-    en: 'Electrical shock'
+    en: 'Electric shock'
   },
-  description: 'Contact direct ou indirect avec des parties sous tension pouvant causer des blessures graves ou la mort',
-  category: 'electrical',
-  subcategory: 'contact',
-  baseSeverity: 5,
-  baseProbability: 3,
-  riskLevel: 'critical',
+  description: 'Risque de choc électrique par contact direct ou indirect avec des parties sous tension',
+  severity: 5,
+  probability: 3,
   
-  regulations: [
-    'RSST Article 185-186',
-    'CSA Z462',
-    'Code électrique canadien CE',
-    'NFPA 70E'
+  eliminationMethods: [
+    'Mise hors tension complète',
+    'Consignation LOTO',
+    'Vérification absence de tension'
   ],
-  standards: [
-    'IEEE 1584',
-    'ASTM F1506',
-    'IEC 61482'
+  
+  substitutionOptions: [
+    'Utilisation d\'outils isolés',
+    'Équipements basse tension (<50V)',
+    'Systèmes pneumatiques ou hydrauliques'
   ],
-  complianceRequirements: [
-    'Formation électrique qualifiée',
-    'Analyse des dangers électriques',
-    'Procédures de travail sécuritaires'
+  
+  engineeringControls: [
+    'Barrières physiques',
+    'Garde-corps isolants',
+    'Écrans de protection',
+    'Dispositifs différentiels (DDR)',
+    'Disjoncteurs de protection'
+  ],
+  
+  administrativeControls: [
+    'Procédures de consignation',
+    'Permis de travail électrique',
+    'Formation qualification électrique',
+    'Supervision par personne qualifiée',
+    'Vérification des équipements'
+  ],
+  
+  ppeRequirements: [
+    'Gants isolants classe appropriée',
+    'Chaussures de sécurité isolantes',
+    'Casque isolant',
+    'Vêtements ignifuges',
+    'Écran facial arc électrique'
   ],
   
   requiredEquipment: [
-    'CAS-001', // Casque classe E
-    'ELC-001', // Gants isolants
-    'ELC-002', // Chaussures diélectriques
-    'ELC-003', // Vérificateur absence tension
-    'LUN-001'  // Lunettes sécurité
+    'ppe_electrical_gloves',
+    'ppe_insulated_shoes',
+    'ppe_arc_flash_suit',
+    'electrical_tester',
+    'lockout_kit'
   ],
+  
   recommendedEquipment: [
-    'ELC-004', // Tapis isolant
-    'ELC-005', // Perche isolante
-    'ELC-006'  // Écran de protection
+    'insulated_tools',
+    'grounding_equipment',
+    'electrical_mats'
   ],
   
-  symptoms: [
-    'Brûlures aux points de contact',
-    'Douleur musculaire',
-    'Perte de conscience',
-    'Arrêt cardiaque',
-    'Arrêt respiratoire',
-    'Paralysie temporaire',
-    'Confusion mentale'
-  ],
-  
-  earlyWarningSignals: [
-    'Étincelles visibles',
-    'Odeur de brûlé',
-    'Bruit anormal (grésillements)',
-    'Chaleur excessive',
-    'Vibrations anormales',
-    'Disjoncteurs qui sautent fréquemment'
-  ],
-  
-  aggravatingFactors: [
-    'Humidité élevée',
-    'Surfaces mouillées',
-    'Transpiration excessive',
-    'Bijoux métalliques',
-    'Équipements endommagés',
-    'Isolation défectueuse',
-    'Mise à la terre inadéquate'
-  ],
-  
-  environmentalFactors: [
-    'Conditions météorologiques défavorables',
-    'Température extrême',
-    'Présence de vapeur d\'eau',
-    'Atmosphère corrosive',
-    'Vibrations mécaniques'
-  ],
-  
-  preventionMeasures: [
-    'Mise hors tension avant intervention',
-    'Vérification absence de tension',
-    'Cadenassage/étiquetage (LOTO)',
-    'Utilisation EPI appropriés',
-    'Formation du personnel',
-    'Respect des distances sécuritaires',
-    'Inspection des équipements',
-    'Maintien des espaces de travail secs'
-  ],
-  
-  emergencyProcedures: [
-    'Couper l\'alimentation si sécuritaire',
-    'NE PAS toucher la victime directement',
-    'Utiliser matériau isolant pour séparer',
-    'Appeler les secours (911)',
-    'Vérifier les signes vitaux',
-    'RCR si nécessaire',
-    'Traiter les brûlures',
-    'Transport d\'urgence même si conscient'
-  ],
-  
-  specialData: {
-    voltageThresholds: {
-      safe: 50, // V AC / 120 V DC
-      dangerous: 1000,
-      highVoltage: 1000
-    },
-    currentEffects: {
-      perception: 1, // mA
-      muscularControl: 5,
-      pain: 10,
-      muscularParalysis: 20,
-      respiratoryParalysis: 50,
-      ventricularFibrillation: 100
-    },
-    bodyResistance: {
-      dry: 100000, // ohms
-      wet: 1000,
-      internal: 500
-    }
+  regulations: {
+    csa: ['CSA Z462', 'CSA Z432'],
+    rsst: ['Section V - Électricité', 'Art. 185-196'],
+    other: ['Code électrique canadien', 'IEEE 1584']
   },
   
-  isActive: true,
-  lastUpdated: '2024-01-15T10:00:00Z',
-  version: '2.1.0'
-};
+  weatherRestrictions: [
+    {
+      condition: 'precipitation',
+      operator: '>',
+      value: 0,
+      unit: 'mm/h',
+      description: 'Interdiction par temps humide'
+    },
+    {
+      condition: 'humidity',
+      operator: '>',
+      value: 85,
+      unit: '%',
+      description: 'Humidité excessive'
+    }
+  ],
+  
+  requiredTraining: [
+    'Qualification électrique',
+    'Sécurité électrique CSA Z462',
+    'Premiers secours RCR'
+  ],
+  
+  certificationRequired: true,
+  monitoringRequired: true,
+  inspectionFrequency: 'Avant chaque intervention',
+  
+  emergencyProcedures: [
+    'Couper alimentation immédiatement',
+    'Ne pas toucher la victime si sous tension',
+    'Appeler 911',
+    'RCR si nécessaire',
+    'Position latérale de sécurité'
+  ],
+  
+  firstAidMeasures: [
+    'Évaluer conscience et respiration',
+    'Traiter les brûlures',
+    'Surveiller signes de choc',
+    'Évacuation médicale si contact HT'
+  ],
+  
+  tags: ['haute_tension', 'basse_tension', 'qualification_requise', 'loto']
+});
 
-export const arcFlash: HazardData = {
-  id: 'ELEC-002',
-  code: 'ELEC-002',
+export const arcFlash: Hazard = createNewHazard({
+  id: 'arc_flash',
   name: 'Arc électrique',
+  category: 'electrical',
+  subcategory: 'arc_flash',
   displayName: {
-    fr: 'Arc électrique',
+    fr: 'Arc électrique / Arc flash',
     en: 'Arc flash'
   },
-  description: 'Décharge électrique dans l\'air entre conducteurs causant chaleur intense, lumière aveuglante et explosion',
-  category: 'electrical',
-  subcategory: 'arc',
-  baseSeverity: 5,
-  baseProbability: 2,
-  riskLevel: 'critical',
+  description: 'Risque d\'arc électrique avec libération d\'énergie thermique et lumineuse intense',
+  severity: 5,
+  probability: 2,
   
-  regulations: [
-    'CSA Z462 Section 4.3',
-    'NFPA 70E Article 130',
-    'RSST Article 185'
+  eliminationMethods: [
+    'Mise hors tension',
+    'Consignation complète',
+    'Travail sur installation froide'
   ],
-  standards: [
-    'IEEE 1584-2018',
-    'ASTM F1506',
-    'ASTM F2178'
+  
+  engineeringControls: [
+    'Équipements arc-résistants',
+    'Dispositifs de protection rapide',
+    'Relais de protection différentielle',
+    'Limiteurs de courant'
+  ],
+  
+  administrativeControls: [
+    'Étude d\'arc flash',
+    'Calcul énergie incidente',
+    'Détermination catégorie EPI',
+    'Distance de sécurité',
+    'Procédures spécifiques'
+  ],
+  
+  ppeRequirements: [
+    'Costume arc électrique complet',
+    'Cagoule arc flash',
+    'Gants isolants + surgants',
+    'Chaussures cuir pleine fleur'
   ],
   
   requiredEquipment: [
-    'ELC-007', // Vêtements résistants arc
-    'ELC-008', // Cagoule arc
-    'ELC-001', // Gants isolants avec surgants
-    'ELC-002', // Chaussures diélectriques
-    'ELC-009'  // Sous-vêtements ignifuges
+    'ppe_arc_flash_suit_cat4',
+    'ppe_arc_hood',
+    'ppe_electrical_gloves_class4',
+    'arc_flash_calculator'
   ],
   
-  symptoms: [
-    'Brûlures de 2e et 3e degré',
-    'Lésions oculaires permanentes',
-    'Perte auditive',
-    'Inhalation de vapeurs toxiques',
-    'Blessures par explosion',
-    'Traumatisme psychologique'
-  ],
-  
-  earlyWarningSignals: [
-    'Surcharge du système',
-    'Court-circuit imminent',
-    'Équipement surchauffé',
-    'Isolation dégradée',
-    'Contacts défaillants',
-    'Maintenance insuffisante'
-  ],
-  
-  aggravatingFactors: [
-    'Courant de court-circuit élevé',
-    'Temps de coupure long',
-    'Distance rapprochée',
-    'Espace confiné',
-    'Équipement vieillissant',
-    'Procédures inadéquates'
-  ],
-  
-  preventionMeasures: [
-    'Travail hors tension prioritaire',
-    'Analyse d\'arc électrique',
-    'EPI résistants à l\'arc appropriés',
-    'Outils isolants',
-    'Procédures de travail sécuritaires',
-    'Formation spécialisée arc électrique',
-    'Maintenance préventive',
-    'Dispositifs de protection modernes'
-  ],
-  
-  emergencyProcedures: [
-    'Évacuation immédiate de la zone',
-    'Coupure d\'urgence si possible',
-    'Appel secours spécialisés',
-    'Premiers soins brûlures',
-    'Irrigation yeux si exposition',
-    'Surveillance médicale prolongée',
-    'Documentation incident',
-    'Investigation cause racine'
-  ],
-  
-  specialData: {
-    energyLevels: {
-      category1: 4,    // cal/cm²
-      category2: 8,
-      category3: 25,
-      category4: 40
-    },
-    boundaries: {
-      arcFlashBoundary: 'calculated', // distance calculée
-      limitedApproach: 1.0,          // mètres
-      restrictedApproach: 0.3,
-      prohibitedApproach: 0.03
-    },
-    temperature: {
-      arc: 19000, // °C (plus chaud que surface soleil)
-      copper: 1083 // °C point fusion
-    }
+  regulations: {
+    csa: ['CSA Z462', 'CSA Z463'],
+    rsst: ['Section V'],
+    other: ['NFPA 70E', 'IEEE 1584']
   },
   
-  isActive: true,
-  lastUpdated: '2024-01-15T10:00:00Z',
-  version: '2.0.0'
-};
-
-export const electricalBurns: HazardData = {
-  id: 'ELEC-003',
-  code: 'ELEC-003',
-  name: 'Brûlures électriques',
-  description: 'Lésions tissulaires causées par le passage du courant électrique ou l\'exposition à un arc',
-  category: 'electrical',
-  subcategory: 'thermal',
-  baseSeverity: 4,
-  baseProbability: 3,
-  riskLevel: 'high',
-  
-  regulations: [
-    'RSST Article 185',
-    'CSA Z462'
-  ],
-  
-  requiredEquipment: [
-    'ELC-001', // Gants isolants
-    'ELC-007', // Vêtements résistants
-    'LUN-001', // Protection oculaire
-    'CAS-001'  // Casque
-  ],
-  
-  symptoms: [
-    'Brûlures aux points d\'entrée/sortie',
-    'Dommages tissulaires internes',
-    'Nécroses',
-    'Complications cardiovasculaires',
-    'Infections secondaires'
-  ],
-  
-  preventionMeasures: [
-    'Isolation électrique appropriée',
-    'EPI résistants thermiques',
-    'Procédures sécuritaires',
-    'Formation personnel'
-  ],
-  
-  emergencyProcedures: [
-    'Soins immédiats brûlures',
-    'Transport médical urgent',
-    'Surveillance complications',
-    'Suivi médical prolongé'
-  ],
-  
-  isActive: true,
-  lastUpdated: '2024-01-15T10:00:00Z',
-  version: '1.5.0'
-};
-
-export const electromagneticFields: HazardData = {
-  id: 'ELEC-004',
-  code: 'ELEC-004',
-  name: 'Champs électromagnétiques',
-  description: 'Exposition aux rayonnements électromagnétiques non-ionisants',
-  category: 'electrical',
-  subcategory: 'radiation',
-  baseSeverity: 2,
-  baseProbability: 3,
-  riskLevel: 'medium',
-  
-  regulations: [
-    'Santé Canada Code 6',
-    'IEEE C95.1',
-    'ICNIRP Guidelines'
-  ],
-  
-  requiredEquipment: [
-    'EM-001', // Détecteur champs EM
-    'VET-006'  // Vêtements protection RF
-  ],
-  
-  symptoms: [
-    'Maux de tête',
-    'Fatigue',
-    'Troubles concentration',
-    'Échauffement tissulaire'
-  ],
-  
-  preventionMeasures: [
-    'Mesure exposition',
-    'Respect limites réglementaires',
-    'Blindage si nécessaire',
-    'Limitation temps exposition'
-  ],
-  
-  emergencyProcedures: [
-    'Éloignement source',
-    'Évaluation médicale',
-    'Surveillance symptômes'
-  ],
-  
-  specialData: {
-    frequencyBands: {
-      elf: '0-300 Hz',      // Extremely Low Frequency
-      rf: '300 kHz-300 GHz', // Radio Frequency
-      microwave: '300 MHz-300 GHz'
-    },
-    exposureLimits: {
-      occupational: 'Selon IEEE C95.1',
-      publicGeneral: 'Selon Code 6 SC'
+  weatherRestrictions: [
+    {
+      condition: 'wind',
+      operator: '>',
+      value: 25,
+      unit: 'km/h',
+      description: 'Vent fort - risque propagation'
     }
+  ],
+  
+  requiredTraining: [
+    'Formation arc électrique CSA Z462',
+    'Qualification électrique avancée',
+    'Analyse des risques'
+  ],
+  
+  certificationRequired: true,
+  monitoringRequired: true,
+  
+  emergencyProcedures: [
+    'Évacuer zone immédiatement',
+    'Couper alimentation si possible',
+    'Appeler pompiers et ambulance',
+    'Refroidir brûlures avec eau',
+    'Ne pas retirer vêtements collés'
+  ],
+  
+  tags: ['arc_flash', 'haute_energie', 'brulures', 'qualification_avancee']
+});
+
+export const liveWork: Hazard = createNewHazard({
+  id: 'live_electrical_work',
+  name: 'Travail sous tension',
+  category: 'electrical',
+  subcategory: 'live_work',
+  displayName: {
+    fr: 'Travail sous tension',
+    en: 'Live electrical work'
+  },
+  description: 'Travaux sur équipements électriques restant sous tension',
+  severity: 5,
+  probability: 4,
+  
+  eliminationMethods: [
+    'Planifier arrêt programmé',
+    'Consignation complète',
+    'Reports des travaux'
+  ],
+  
+  substitutionOptions: [
+    'Méthodes à distance',
+    'Outils isolés longue portée',
+    'Robotique'
+  ],
+  
+  engineeringControls: [
+    'Perches isolantes',
+    'Plateformes isolées',
+    'Barrières de protection',
+    'Équipements spécialisés TST'
+  ],
+  
+  administrativeControls: [
+    'Justification écrite obligatoire',
+    'Autorisation direction',
+    'Plan de travail détaillé',
+    'Équipe qualifiée TST',
+    'Surveillance continue'
+  ],
+  
+  ppeRequirements: [
+    'Équipement TST complet',
+    'Gants isolants testés',
+    'Vêtements isolants',
+    'Casque classe E',
+    'Chaussures isolantes testées'
+  ],
+  
+  requiredEquipment: [
+    'live_work_tools',
+    'insulation_tester',
+    'ppe_live_work_kit',
+    'grounding_equipment'
+  ],
+  
+  regulations: {
+    csa: ['CSA Z462 - Annexe O'],
+    rsst: ['Art. 189-191'],
+    other: ['Norme TST entreprise']
   },
   
-  isActive: true,
-  lastUpdated: '2024-01-15T10:00:00Z',
-  version: '1.3.0'
-};
+  weatherRestrictions: [
+    {
+      condition: 'precipitation',
+      operator: '>',
+      value: 0,
+      unit: 'mm',
+      description: 'Aucune précipitation tolérée'
+    },
+    {
+      condition: 'wind',
+      operator: '>',
+      value: 20,
+      unit: 'km/h',
+      description: 'Limite vent pour TST extérieur'
+    }
+  ],
+  
+  timeRestrictions: {
+    startTime: '08:00',
+    endTime: '16:00',
+    days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+    reason: 'Support médical et technique disponible'
+  },
+  
+  requiredTraining: [
+    'Certification TST',
+    'Formation spécialisée métier',
+    'Mise à jour annuelle',
+    'Simulation pratique'
+  ],
+  
+  certificationRequired: true,
+  monitoringRequired: true,
+  inspectionFrequency: 'Continue pendant travaux',
+  
+  emergencyProcedures: [
+    'Signal d\'arrêt immédiat',
+    'Évacuation zone sécurisée',
+    'Coupure alimentation si possible',
+    'Intervention équipe secours'
+  ],
+  
+  tags: ['tst', 'haute_qualification', 'autorisation_speciale', 'surveillance_continue']
+});
 
-// Export de tous les dangers électriques
-export const electricalHazards = {
-  shock: electricalShock,
-  arcFlash: arcFlash,
-  burns: electricalBurns,
-  electromagnetic: electromagneticFields
-};
+// =================== EXPORT DANGERS ÉLECTRIQUES ===================
+export const electricalHazards = [
+  electricShock,
+  arcFlash,
+  liveWork,
+  // Plus de dangers électriques peuvent être ajoutés ici
+];
+
+export const electricalHazardsById = electricalHazards.reduce((acc, hazard) => {
+  acc[hazard.id] = hazard;
+  return acc;
+}, {} as Record<string, Hazard>);
+
+export default electricalHazards;
