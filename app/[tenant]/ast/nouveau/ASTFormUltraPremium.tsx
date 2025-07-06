@@ -2639,12 +2639,7 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   // Le JSX return sera dans la section 5...
 // =================== AST SECTION 5/5 FINALE - JSX INTERFACE COMPLÈTE ===================
 // Section 5: Interface utilisateur complète avec toutes les fonctionnalités
-
-  // ========== CALCULS POUR COMPTEURS ==========
-  const approvedMembersCount = formData.team.members.filter(m => m.validationStatus === 'approved').length;
-  const approvalRate = formData.team.members.length > 0 ? 
-    Math.round((approvedMembersCount / formData.team.members.length) * 100) : 0;
-
+  
   // ========== RETOUR JSX PRINCIPAL ==========
   return (
     <div className="form-container">
