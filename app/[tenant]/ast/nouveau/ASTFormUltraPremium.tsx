@@ -1364,7 +1364,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
     );
   };
 
-  const CustomCheckbox: React.FC<{
+const CustomCheckbox: React.FC<{
     checked: boolean;
     onChange: (checked: boolean) => void;
     label?: string;
@@ -1398,7 +1398,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
         </div>
       )}
     </div>
-  );
+  ); 
 
   // =================== RETURN UNIQUE DU COMPOSANT ===================
   return (
