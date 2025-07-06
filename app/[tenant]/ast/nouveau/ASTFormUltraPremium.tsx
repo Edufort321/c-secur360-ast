@@ -2213,7 +2213,7 @@ export default function ASTFormUltraPremium({ tenant = 'default' }: ASTFormProps
   const [teamNotifications, setTeamNotifications] = useState<Array<{
     employeeId: string;
     method: 'sms' | 'email' | 'whatsapp';
-    status: 'pending' | 'sent' | 'delivered' | 'read';
+    status: 'pending' | 'sent' | 'delivered' | 'read' | 'error';
     timestamp: string;
   }>>([]);
 
