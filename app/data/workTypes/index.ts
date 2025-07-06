@@ -2,6 +2,9 @@
 import { WorkType, workTypeTemplate, createNewWorkType } from './template';
 import { electricalWorkTypes } from './electrical';
 import { gasWorkTypes } from './gas';
+import { constructionWorkTypes } from './construction';
+import { telecomWorkTypes } from './telecom';
+import { maintenanceWorkTypes } from './maintenance';
 
 // Export des types
 export type { WorkType };
@@ -17,10 +20,14 @@ export const workTypesRegistry: Record<string, WorkType> = {
   // Types gaziers
   ...gasWorkTypes,
   
-  // Types de base (à ajouter dans les prochains fichiers)
-  // ...constructionWorkTypes,
-  // ...telecomWorkTypes,
-  // ...maintenanceWorkTypes,
+  // Types construction
+  ...constructionWorkTypes,
+  
+  // Types télécommunications
+  ...telecomWorkTypes,
+  
+  // Types maintenance
+  ...maintenanceWorkTypes,
 };
 
 // Fonction pour obtenir un type de travail par ID
