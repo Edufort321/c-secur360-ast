@@ -1080,8 +1080,8 @@ Plateforme C-Secur360`;
     return false;
   }
 };
-// =================== AST SECTION 4/5 - COMPOSANT PRINCIPAL + ÉTAPES 1-4 ===================
-// Section 4: Composant principal avec hooks, fonctions et étapes 1-4
+// =================== AST SECTION 4/5 - COMPOSANT PRINCIPAL + ÉTAPES 1-4 CORRIGÉ ===================
+// Section 4: Composant principal avec hooks, fonctions et étapes 1-4 SANS DOUBLE RETURN
 
 // =================== COMPOSANT PRINCIPAL ASTFORMULTRAPREMIUM ===================
 const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
@@ -1095,6 +1095,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
 
   // =================== TRADUCTIONS ACTIVES ===================
   const t = translations[language];
+  const astNumber = formData.numeroAST;
 
   // =================== FONCTIONS DE MISE À JOUR ===================
   const updateFormData = (updates: Partial<ASTFormData>) => {
@@ -1191,9 +1192,9 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
     });
   };
 
-  const updateMember = (index: number, membre: TeamMember) => {
+  const updateMember = (index: number, field: string, value: any) => {
     const nouvelleEquipe = [...formData.equipe];
-    nouvelleEquipe[index] = membre;
+    nouvelleEquipe[index] = { ...nouvelleEquipe[index], [field]: value };
     updateFormData({ equipe: nouvelleEquipe });
   };
 
@@ -1203,7 +1204,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
   };
 
   // =================== FONCTIONS ISOLATION ===================
-  const addPointIsolement = () => {
+  const addIsolationPoint = () => {
     const nouveauPoint: IsolationPoint = {
       id: `isolation-${Date.now()}`,
       source: '',
@@ -1220,13 +1221,18 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
     });
   };
 
-  const updatePointIsolement = (index: number, point: IsolationPoint) => {
+  const updateIsolationPoint = (index: number, field: string, value: any) => {
     const nouveauxPoints = [...formData.pointsIsolement];
-    nouveauxPoints[index] = point;
+    nouveauxPoints[index] = { ...nouveauxPoints[index], [field]: value };
     updateFormData({ pointsIsolement: nouveauxPoints });
   };
 
-  const addPhotoToIsolationPoint = async (pointId: string, file: File): Promise<void> => {
+  const removeIsolationPoint = (index: number) => {
+    const nouveauxPoints = formData.pointsIsolement.filter((_, i) => i !== index);
+    updateFormData({ pointsIsolement: nouveauxPoints });
+  };
+
+  const addPhotoToIsolationPoint = async (pointIndex: number, file: File): Promise<void> => {
     const photoId = `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const photoUrl = URL.createObjectURL(file);
     
@@ -1239,32 +1245,34 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
       category: 'isolation'
     };
 
-    const nouveauxPoints = formData.pointsIsolement.map(point =>
-      point.id === pointId 
-        ? { ...point, photos: [...point.photos, newPhoto] }
-        : point
-    );
-    
+    const nouveauxPoints = [...formData.pointsIsolement];
+    nouveauxPoints[pointIndex].photos = [...nouveauxPoints[pointIndex].photos, newPhoto];
     updateFormData({ pointsIsolement: nouveauxPoints });
   };
 
-  const removePhotoFromIsolationPoint = (pointId: string, photoIndex: number) => {
-    const nouveauxPoints = formData.pointsIsolement.map(point =>
-      point.id === pointId 
-        ? { ...point, photos: point.photos.filter((_, i) => i !== photoIndex) }
-        : point
-    );
-    
+  const removePhotoFromIsolationPoint = (pointIndex: number, photoIndex: number) => {
+    const nouveauxPoints = [...formData.pointsIsolement];
+    nouveauxPoints[pointIndex].photos = nouveauxPoints[pointIndex].photos.filter((_, i) => i !== photoIndex);
     updateFormData({ pointsIsolement: nouveauxPoints });
   };
 
-  // =================== AUTO-SAVE CORRIGÉ (SANS BOUCLE INFINIE) ===================
-  useEffect(() => {
-    // Auto-save manuel uniquement (pas automatique pour éviter les boucles)
-    if (formData.projet.trim() && formData.lieu.trim()) {
-      console.log('📝 Données mises à jour:', formData.numeroAST);
-    }
-  }, [formData.projet, formData.lieu, formData.responsable]); // Dépendances spécifiques seulement
+  // =================== AUTO-SAVE DÉSACTIVÉ TEMPORAIREMENT ===================
+  // useEffect(() => {
+  //   const autoSaveInterval = setInterval(() => {
+  //     if (formData.projet.trim()) {
+  //       setAutoSaveStatus('saving');
+  //       saveToSupabase(formData).then(success => {
+  //         if (success) {
+  //           setAutoSaveStatus('saved');
+  //           setTimeout(() => setAutoSaveStatus('idle'), 2000);
+  //         } else {
+  //           setAutoSaveStatus('error');
+  //         }
+  //       });
+  //     }
+  //   }, 30000);
+  //   return () => clearInterval(autoSaveInterval);
+  // }, [formData]);
 
   // =================== STYLES CSS INJECTÉS ===================
   useEffect(() => {
@@ -1392,7 +1400,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
     </div>
   );
 
-  // =================== RETURN DU COMPOSANT PRINCIPAL ===================
+  // =================== RETURN UNIQUE DU COMPOSANT ===================
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
       {/* Background Pattern Mobile-Friendly */}
@@ -1411,7 +1419,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
               </div>
               <div>
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900">{t.title}</h1>
-                <p className="text-xs text-gray-600">AST #{formData.numeroAST}</p>
+                <p className="text-xs text-gray-600">AST #{astNumber}</p>
               </div>
             </div>
 
@@ -2052,10 +2060,16 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
             </div>
           </div>
         </div>
+
+        {/* Mobile Footer Info */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-blue-500 text-white p-2 text-center text-xs z-40">
+          AST #{astNumber} • C-Secur360 • Équipe: {formData.equipe.length} personnes
+        </div>
       </div>
     </div>
   );
-  // =================== AST SECTION 5/5 FINALE - ÉTAPES 5-8 + FERMETURE ===================
+};
+// =================== AST SECTION 5/5 FINALE - ÉTAPES 5-8 + FERMETURE ===================
 // Section 5: Étapes finales (5-8) avec validation complète et fermeture du composant
 
           {/* ÉTAPE 5: ISOLEMENT DES ÉNERGIES (LOTO) */}
