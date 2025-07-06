@@ -43,7 +43,6 @@ import {
   Trash2,
   Copy,
   Share2,
-  Print,
   Upload,
   RefreshCw,
   Search,
@@ -1526,6 +1525,619 @@ const predefinedHazards: Hazard[] = [
     tags: ['énergie', 'cadenassage', 'démarrage', 'maintenance']
   }
 ];
+// =================== AST SECTION 5/6 - ÉQUIPEMENTS DE SÉCURITÉ ET TRADUCTIONS ===================
+
+// Base de données des équipements de sécurité requis
+const requiredSafetyEquipment: SafetyEquipment[] = [
+  // PROTECTION TÊTE
+  {
+    id: 'hardhat_class_e',
+    name: 'Casque de sécurité Classe E',
+    category: 'Protection tête',
+    mandatory: true,
+    workTypes: ['electrical_maintenance', 'electrical_installation', 'construction_general'],
+    description: 'Casque isolant électrique jusqu\'à 20 000V',
+    certifications: ['CSA Z94.1', 'ANSI Z89.1 Classe E'],
+    inspectionFrequency: 'Quotidienne',
+    lifespan: '5 ans ou selon usure',
+    cost: '50-150 CAD',
+    supplier: 'MSA, 3M, Honeywell'
+  },
+  {
+    id: 'hardhat_standard',
+    name: 'Casque de sécurité standard',
+    category: 'Protection tête',
+    mandatory: true,
+    workTypes: ['construction_general', 'excavation', 'industrial_maintenance'],
+    description: 'Protection contre chocs et objets qui tombent',
+    certifications: ['CSA Z94.1', 'ANSI Z89.1 Classe G'],
+    inspectionFrequency: 'Quotidienne',
+    lifespan: '5 ans ou selon usure',
+    cost: '25-75 CAD',
+    supplier: 'MSA, 3M, Honeywell, Bullard'
+  },
+
+  // PROTECTION OCULAIRE
+  {
+    id: 'safety_glasses',
+    name: 'Lunettes de sécurité',
+    category: 'Protection oculaire',
+    mandatory: true,
+    workTypes: ['construction_general', 'industrial_maintenance', 'welding'],
+    description: 'Protection contre impacts et projections',
+    certifications: ['CSA Z94.3', 'ANSI Z87.1'],
+    inspectionFrequency: 'Quotidienne',
+    lifespan: '2 ans ou selon rayures',
+    cost: '10-50 CAD',
+    supplier: 'Uvex, 3M, Honeywell, Jackson Safety'
+  },
+  {
+    id: 'welding_helmet',
+    name: 'Masque de soudage',
+    category: 'Protection oculaire',
+    mandatory: true,
+    workTypes: ['welding'],
+    description: 'Protection contre rayonnements de soudage',
+    certifications: ['CSA Z94.3', 'ANSI Z87.1', 'CSA W117.2'],
+    inspectionFrequency: 'Avant chaque utilisation',
+    lifespan: '3-5 ans selon usage',
+    cost: '100-500 CAD',
+    supplier: 'Lincoln Electric, Miller, ESAB, 3M'
+  },
+
+  // PROTECTION RESPIRATOIRE
+  {
+    id: 'n95_respirator',
+    name: 'Masque N95',
+    category: 'Protection respiratoire',
+    mandatory: false,
+    workTypes: ['construction_general', 'environmental_cleanup'],
+    description: 'Protection contre particules non-huileuses',
+    certifications: ['NIOSH N95', 'CSA Z94.4'],
+    inspectionFrequency: 'Avant chaque utilisation',
+    lifespan: 'Usage unique ou selon contamination',
+    cost: '2-5 CAD',
+    supplier: '3M, Honeywell, Moldex'
+  },
+  {
+    id: 'half_face_respirator',
+    name: 'Demi-masque respiratoire',
+    category: 'Protection respiratoire',
+    mandatory: false,
+    workTypes: ['chemical_handling', 'environmental_cleanup', 'industrial_maintenance'],
+    description: 'Protection contre vapeurs et gaz avec cartouches',
+    certifications: ['NIOSH', 'CSA Z94.4'],
+    inspectionFrequency: 'Avant chaque utilisation',
+    lifespan: '5 ans (masque), cartouches selon exposition',
+    cost: '50-200 CAD',
+    supplier: '3M, Honeywell, MSA, Moldex'
+  },
+  {
+    id: 'scba',
+    name: 'Appareil respiratoire autonome',
+    category: 'Protection respiratoire',
+    mandatory: true,
+    workTypes: ['confined_space_entry', 'emergency_response'],
+    description: 'Air respirable autonome pour espaces confinés',
+    certifications: ['NIOSH', 'CSA Z94.4', 'NFPA 1981'],
+    inspectionFrequency: 'Quotidienne et après chaque usage',
+    lifespan: '15 ans selon maintenance',
+    cost: '3000-8000 CAD',
+    supplier: 'MSA, Scott Safety, Dräger'
+  },
+
+  // PROTECTION MAINS
+  {
+    id: 'electrical_gloves',
+    name: 'Gants isolants électriques',
+    category: 'Protection mains',
+    mandatory: true,
+    workTypes: ['electrical_maintenance', 'electrical_installation'],
+    description: 'Gants diélectriques avec surgants cuir',
+    certifications: ['ASTM D120', 'IEC 60903', 'CSA Z462'],
+    inspectionFrequency: 'Avant chaque utilisation + test 6 mois',
+    lifespan: '3 ans ou selon tests',
+    cost: '100-300 CAD',
+    supplier: 'Salisbury, Cementex, Regeltex'
+  },
+  {
+    id: 'cut_resistant_gloves',
+    name: 'Gants anti-coupure',
+    category: 'Protection mains',
+    mandatory: false,
+    workTypes: ['construction_general', 'glass_handling', 'metal_work'],
+    description: 'Protection contre coupures niveau A2-A5',
+    certifications: ['ANSI/ISEA 105', 'EN 388', 'CSA Z94.4'],
+    inspectionFrequency: 'Quotidienne',
+    lifespan: '3-6 mois selon usage',
+    cost: '15-50 CAD',
+    supplier: 'Ansell, HexArmor, MCR Safety, Superior Glove'
+  },
+  {
+    id: 'chemical_gloves',
+    name: 'Gants chimiques',
+    category: 'Protection mains',
+    mandatory: false,
+    workTypes: ['chemical_handling', 'environmental_cleanup'],
+    description: 'Protection contre produits chimiques spécifiques',
+    certifications: ['ASTM F739', 'EN 374', 'CSA Z94.4'],
+    inspectionFrequency: 'Avant chaque utilisation',
+    lifespan: 'Selon tableau perméation',
+    cost: '5-30 CAD',
+    supplier: 'Ansell, Showa, Mapa, MCR Safety'
+  },
+
+  // PROTECTION PIEDS
+  {
+    id: 'safety_boots_steel',
+    name: 'Bottes à embout d\'acier',
+    category: 'Protection pieds',
+    mandatory: true,
+    workTypes: ['construction_general', 'industrial_maintenance', 'excavation'],
+    description: 'Protection contre écrasement et perforation',
+    certifications: ['CSA Z195', 'ASTM F2413'],
+    inspectionFrequency: 'Hebdomadaire',
+    lifespan: '12-18 mois selon usage',
+    cost: '150-400 CAD',
+    supplier: 'Dakota, Terra, Timberland PRO, Caterpillar'
+  },
+  {
+    id: 'dielectric_boots',
+    name: 'Bottes diélectriques',
+    category: 'Protection pieds',
+    mandatory: true,
+    workTypes: ['electrical_maintenance', 'electrical_installation'],
+    description: 'Isolation électrique et protection mécanique',
+    certifications: ['ASTM F2413 EH', 'CSA Z195', 'ASTM F1117'],
+    inspectionFrequency: 'Quotidienne + test annuel',
+    lifespan: '2-3 ans selon tests',
+    cost: '200-500 CAD',
+    supplier: 'Salisbury, Cementex, NASCO'
+  },
+
+  // PROTECTION CORPS
+  {
+    id: 'high_vis_vest',
+    name: 'Veste haute visibilité',
+    category: 'Protection corps',
+    mandatory: true,
+    workTypes: ['road_work', 'construction_general', 'railway_maintenance'],
+    description: 'Visibilité jour/nuit avec bandes rétroréfléchissantes',
+    certifications: ['CSA Z96', 'ANSI/ISEA 107'],
+    inspectionFrequency: 'Quotidienne',
+    lifespan: '2-3 ans selon lavages',
+    cost: '25-75 CAD',
+    supplier: 'Forcefield, ML Kishigo, PIP, Radians'
+  },
+  {
+    id: 'arc_flash_suit',
+    name: 'Vêtement résistant à l\'arc',
+    category: 'Protection corps',
+    mandatory: true,
+    workTypes: ['electrical_maintenance'],
+    description: 'Protection contre arc électrique selon cal/cm²',
+    certifications: ['ASTM F1506', 'NFPA 70E', 'CSA Z462'],
+    inspectionFrequency: 'Avant chaque utilisation',
+    lifespan: '5 ans ou selon dommages',
+    cost: '500-2000 CAD',
+    supplier: 'Salisbury, Oberon, National Safety Apparel'
+  },
+  {
+    id: 'chemical_suit',
+    name: 'Combinaison chimique',
+    category: 'Protection corps',
+    mandatory: false,
+    workTypes: ['chemical_handling', 'environmental_cleanup'],
+    description: 'Protection intégrale contre substances chimiques',
+    certifications: ['NFPA 1991', 'NFPA 1992', 'EN 943'],
+    inspectionFrequency: 'Avant chaque utilisation',
+    lifespan: 'Usage unique ou selon contamination',
+    cost: '100-500 CAD',
+    supplier: 'DuPont, Lakeland, Kappler, 3M'
+  },
+
+  // PROTECTION CHUTE
+  {
+    id: 'full_body_harness',
+    name: 'Harnais intégral',
+    category: 'Protection chute',
+    mandatory: true,
+    workTypes: ['roofing', 'construction_general', 'tree_work', 'telecom_installation'],
+    description: 'Harnais avec points d\'attache dorsal et pectoral',
+    certifications: ['CSA Z259.10', 'ANSI Z359.11'],
+    inspectionFrequency: 'Avant chaque utilisation',
+    lifespan: '5 ans ou selon usure',
+    cost: '150-400 CAD',
+    supplier: '3M, MSA, Miller, Honeywell'
+  },
+  {
+    id: 'shock_absorbing_lanyard',
+    name: 'Longe avec absorbeur',
+    category: 'Protection chute',
+    mandatory: true,
+    workTypes: ['roofing', 'construction_general', 'tree_work'],
+    description: 'Longe avec système absorption d\'énergie',
+    certifications: ['CSA Z259.11', 'ANSI Z359.13'],
+    inspectionFrequency: 'Avant chaque utilisation',
+    lifespan: '5 ans ou après choc',
+    cost: '100-250 CAD',
+    supplier: '3M, MSA, Miller, Honeywell'
+  },
+  {
+    id: 'anchor_point',
+    name: 'Point d\'ancrage temporaire',
+    category: 'Protection chute',
+    mandatory: true,
+    workTypes: ['roofing', 'construction_general'],
+    description: 'Point d\'ancrage mobile ou permanent >22kN',
+    certifications: ['CSA Z259.15', 'ANSI Z359.18'],
+    inspectionFrequency: 'Avant installation',
+    lifespan: '10 ans selon inspection',
+    cost: '200-800 CAD',
+    supplier: '3M, MSA, Miller, Guardian Fall'
+  },
+
+  // DÉTECTION ET SURVEILLANCE
+  {
+    id: 'gas_detector_4_gas',
+    name: 'Détecteur 4 gaz',
+    category: 'Détection',
+    mandatory: true,
+    workTypes: ['confined_space_entry', 'gas_maintenance'],
+    description: 'Détection O₂, LIE, CO, H₂S avec alarmes',
+    certifications: ['CSA C22.2', 'ATEX', 'IECEx'],
+    inspectionFrequency: 'Calibration quotidienne',
+    lifespan: '3-5 ans selon capteurs',
+    cost: '800-2000 CAD',
+    supplier: 'Honeywell, MSA, Dräger, Industrial Scientific'
+  },
+  {
+    id: 'sound_level_meter',
+    name: 'Sonomètre',
+    category: 'Détection',
+    mandatory: false,
+    workTypes: ['industrial_maintenance', 'construction_general'],
+    description: 'Mesure niveaux sonores pour protection auditive',
+    certifications: ['IEC 61672', 'ANSI S1.4'],
+    inspectionFrequency: 'Calibration annuelle',
+    lifespan: '10+ ans avec calibration',
+    cost: '500-3000 CAD',
+    supplier: 'Brüel & Kjær, Larson Davis, 3M, Casella'
+  },
+
+  // PREMIERS SECOURS
+  {
+    id: 'first_aid_kit',
+    name: 'Trousse premiers secours',
+    category: 'Premiers secours',
+    mandatory: true,
+    workTypes: ['all_work_types'],
+    description: 'Trousse conforme réglementation provinciale',
+    certifications: ['CSA Z1220', 'Réglementation provinciale'],
+    inspectionFrequency: 'Mensuelle',
+    lifespan: 'Remplacement selon péremption',
+    cost: '50-200 CAD',
+    supplier: 'Johnson & Johnson, Honeywell, Acme United'
+  },
+  {
+    id: 'emergency_shower',
+    name: 'Douche d\'urgence',
+    category: 'Premiers secours',
+    mandatory: false,
+    workTypes: ['chemical_handling', 'laboratory_work'],
+    description: 'Douche et lave-yeux d\'urgence 15 min',
+    certifications: ['ANSI Z358.1', 'CSA Z1611'],
+    inspectionFrequency: 'Hebdomadaire',
+    lifespan: '15+ ans avec maintenance',
+    cost: '2000-8000 CAD',
+    supplier: 'Haws, Bradley, Speakman, Guardian'
+  }
+];
+
+// Traductions complètes français/anglais
+const translations = {
+  fr: {
+    // Interface générale
+    title: 'Analyse Sécuritaire du Travail (AST)',
+    subtitle: 'Formulaire d\'évaluation des risques conforme CSA',
+    loading: 'Chargement en cours...',
+    save: 'Sauvegarder',
+    cancel: 'Annuler',
+    continue: 'Continuer',
+    previous: 'Précédent',
+    next: 'Suivant',
+    finish: 'Terminer',
+    edit: 'Modifier',
+    delete: 'Supprimer',
+    add: 'Ajouter',
+    search: 'Rechercher',
+    filter: 'Filtrer',
+    export: 'Exporter',
+    
+    // Étapes du formulaire
+    step1: 'Informations projet',
+    step2: 'Identification dangers',
+    step3: 'Mesures de contrôle',
+    step4: 'Équipe de travail',
+    step5: 'Équipements sécurité',
+    step6: 'Conditions météo',
+    step7: 'Documentation',
+    step8: 'Signatures',
+    
+    // Champs de base
+    projectName: 'Nom du projet',
+    location: 'Lieu de travail',
+    client: 'Client',
+    contractor: 'Entrepreneur',
+    supervisor: 'Superviseur',
+    date: 'Date',
+    startTime: 'Heure début',
+    endTime: 'Heure fin',
+    duration: 'Durée (heures)',
+    workType: 'Type de travail',
+    description: 'Description des travaux',
+    
+    // Informations équipe
+    teamMember: 'Membre d\'équipe',
+    position: 'Poste',
+    experience: 'Expérience (années)',
+    certifications: 'Certifications',
+    medicalRestrictions: 'Restrictions médicales',
+    
+    // Dangers et risques
+    hazardIdentification: 'Identification des dangers',
+    riskAssessment: 'Évaluation des risques',
+    controlMeasures: 'Mesures de contrôle',
+    severity: 'Gravité',
+    probability: 'Probabilité',
+    riskLevel: 'Niveau de risque',
+    residualRisk: 'Risque résiduel',
+    
+    // Niveaux de risque
+    low: 'Faible',
+    medium: 'Moyen',
+    high: 'Élevé',
+    critical: 'Critique',
+    
+    // Probabilité
+    rare: 'Rare',
+    unlikely: 'Improbable',
+    possible: 'Possible',
+    likely: 'Probable',
+    almostCertain: 'Quasi-certain',
+    
+    // Mesures de contrôle
+    elimination: 'Élimination',
+    substitution: 'Substitution',
+    engineering: 'Contrôles techniques',
+    administrative: 'Contrôles administratifs',
+    ppe: 'Équipements protection individuelle',
+    
+    // Équipements
+    equipment: 'Équipement',
+    quantity: 'Quantité',
+    condition: 'État',
+    inspected: 'Inspecté',
+    inspector: 'Inspecteur',
+    inspectionDate: 'Date inspection',
+    
+    // États d'équipement
+    excellent: 'Excellent',
+    good: 'Bon',
+    fair: 'Acceptable',
+    poor: 'Défaillant',
+    
+    // Météo
+    weather: 'Conditions météorologiques',
+    temperature: 'Température (°C)',
+    humidity: 'Humidité (%)',
+    windSpeed: 'Vitesse vent (km/h)',
+    windDirection: 'Direction vent',
+    precipitation: 'Précipitations (mm)',
+    visibility: 'Visibilité (km)',
+    uvIndex: 'Indice UV',
+    
+    // Signatures
+    signatures: 'Signatures et approbations',
+    worker: 'Travailleur',
+    safety_officer: 'Agent sécurité',
+    client_rep: 'Représentant client',
+    signatureRequired: 'Signature requise',
+    signatureDate: 'Date signature',
+    
+    // Statuts
+    draft: 'Brouillon',
+    review: 'En révision',
+    approved: 'Approuvé',
+    inProgress: 'En cours',
+    completed: 'Terminé',
+    cancelled: 'Annulé',
+    
+    // Messages
+    saveSuccess: 'AST sauvegardée avec succès',
+    saveError: 'Erreur lors de la sauvegarde',
+    requiredField: 'Champ obligatoire',
+    invalidEmail: 'Adresse courriel invalide',
+    invalidPhone: 'Numéro de téléphone invalide',
+    
+    // Validation
+    validation: {
+      required: 'Ce champ est obligatoire',
+      email: 'Format d\'adresse courriel invalide',
+      phone: 'Format de numéro de téléphone invalide',
+      minLength: 'Longueur minimale requise',
+      maxLength: 'Longueur maximale dépassée',
+      numeric: 'Valeur numérique requise',
+      positive: 'Valeur positive requise'
+    },
+    
+    // Documentation
+    documents: 'Documents associés',
+    permits: 'Permis requis',
+    procedures: 'Procédures',
+    emergencyPlan: 'Plan d\'urgence',
+    evacuationPlan: 'Plan d\'évacuation',
+    msds: 'Fiches signalétiques',
+    
+    // Conformité
+    compliance: 'Conformité réglementaire',
+    csa: 'Normes CSA',
+    ohsa: 'LSST Ontario',
+    iso45001: 'ISO 45001',
+    clientStandards: 'Normes client'
+  },
+  
+  en: {
+    // General interface
+    title: 'Job Safety Analysis (JSA)',
+    subtitle: 'CSA-compliant risk assessment form',
+    loading: 'Loading...',
+    save: 'Save',
+    cancel: 'Cancel',
+    continue: 'Continue',
+    previous: 'Previous',
+    next: 'Next',
+    finish: 'Finish',
+    edit: 'Edit',
+    delete: 'Delete',
+    add: 'Add',
+    search: 'Search',
+    filter: 'Filter',
+    export: 'Export',
+    
+    // Form steps
+    step1: 'Project Information',
+    step2: 'Hazard Identification',
+    step3: 'Control Measures',
+    step4: 'Work Team',
+    step5: 'Safety Equipment',
+    step6: 'Weather Conditions',
+    step7: 'Documentation',
+    step8: 'Signatures',
+    
+    // Basic fields
+    projectName: 'Project Name',
+    location: 'Work Location',
+    client: 'Client',
+    contractor: 'Contractor',
+    supervisor: 'Supervisor',
+    date: 'Date',
+    startTime: 'Start Time',
+    endTime: 'End Time',
+    duration: 'Duration (hours)',
+    workType: 'Work Type',
+    description: 'Work Description',
+    
+    // Team information
+    teamMember: 'Team Member',
+    position: 'Position',
+    experience: 'Experience (years)',
+    certifications: 'Certifications',
+    medicalRestrictions: 'Medical Restrictions',
+    
+    // Hazards and risks
+    hazardIdentification: 'Hazard Identification',
+    riskAssessment: 'Risk Assessment',
+    controlMeasures: 'Control Measures',
+    severity: 'Severity',
+    probability: 'Probability',
+    riskLevel: 'Risk Level',
+    residualRisk: 'Residual Risk',
+    
+    // Risk levels
+    low: 'Low',
+    medium: 'Medium',
+    high: 'High',
+    critical: 'Critical',
+    
+    // Probability
+    rare: 'Rare',
+    unlikely: 'Unlikely',
+    possible: 'Possible',
+    likely: 'Likely',
+    almostCertain: 'Almost Certain',
+    
+    // Control measures
+    elimination: 'Elimination',
+    substitution: 'Substitution',
+    engineering: 'Engineering Controls',
+    administrative: 'Administrative Controls',
+    ppe: 'Personal Protective Equipment',
+    
+    // Equipment
+    equipment: 'Equipment',
+    quantity: 'Quantity',
+    condition: 'Condition',
+    inspected: 'Inspected',
+    inspector: 'Inspector',
+    inspectionDate: 'Inspection Date',
+    
+    // Equipment conditions
+    excellent: 'Excellent',
+    good: 'Good',
+    fair: 'Fair',
+    poor: 'Poor',
+    
+    // Weather
+    weather: 'Weather Conditions',
+    temperature: 'Temperature (°C)',
+    humidity: 'Humidity (%)',
+    windSpeed: 'Wind Speed (km/h)',
+    windDirection: 'Wind Direction',
+    precipitation: 'Precipitation (mm)',
+    visibility: 'Visibility (km)',
+    uvIndex: 'UV Index',
+    
+    // Signatures
+    signatures: 'Signatures and Approvals',
+    worker: 'Worker',
+    safety_officer: 'Safety Officer',
+    client_rep: 'Client Representative',
+    signatureRequired: 'Signature Required',
+    signatureDate: 'Signature Date',
+    
+    // Status
+    draft: 'Draft',
+    review: 'Under Review',
+    approved: 'Approved',
+    inProgress: 'In Progress',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+    
+    // Messages
+    saveSuccess: 'JSA saved successfully',
+    saveError: 'Error saving JSA',
+    requiredField: 'Required field',
+    invalidEmail: 'Invalid email address',
+    invalidPhone: 'Invalid phone number',
+    
+    // Validation
+    validation: {
+      required: 'This field is required',
+      email: 'Invalid email format',
+      phone: 'Invalid phone format',
+      minLength: 'Minimum length required',
+      maxLength: 'Maximum length exceeded',
+      numeric: 'Numeric value required',
+      positive: 'Positive value required'
+    },
+    
+    // Documentation
+    documents: 'Associated Documents',
+    permits: 'Required Permits',
+    procedures: 'Procedures',
+    emergencyPlan: 'Emergency Plan',
+    evacuationPlan: 'Evacuation Plan',
+    msds: 'Material Safety Data Sheets',
+    
+    // Compliance
+    compliance: 'Regulatory Compliance',
+    csa: 'CSA Standards',
+    ohsa: 'OHSA Ontario',
+    iso45001: 'ISO 45001',
+    clientStandards: 'Client Standards'
+  }
+};
 // =================== AST SECTION 6/6 - COMPOSANT PRINCIPAL COMPLET ===================
 
 // Composant principal AST avec partage équipe
