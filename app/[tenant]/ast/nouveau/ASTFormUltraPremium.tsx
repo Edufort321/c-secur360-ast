@@ -770,7 +770,8 @@ const translations = {
     team: {
       title: "Équipe de Travail",
       supervisor: "Superviseur",
-      // =================== AST SECTION 5/6 - ÉQUIPEMENTS ET TRADUCTIONS ===================
+      
+// =================== AST SECTION 5/6 - ÉQUIPEMENTS ET TRADUCTIONS CORRIGÉE ===================
 
 // =================== ÉQUIPEMENTS DE SÉCURITÉ COMPLETS ===================
 const requiredSafetyEquipment: SafetyEquipment[] = [
@@ -783,44 +784,58 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
   { id: 'eye-001', name: 'Lunettes de sécurité', required: false, available: false, verified: false, notes: '', category: 'eye' },
   { id: 'eye-002', name: 'Écran facial', required: false, available: false, verified: false, notes: '', category: 'eye' },
   { id: 'eye-003', name: 'Lunettes de soudage', required: false, available: false, verified: false, notes: '', category: 'eye' },
+  { id: 'eye-004', name: 'Écran facial anti-projection', required: false, available: false, verified: false, notes: '', category: 'eye' },
   
   // Protection respiratoire
   { id: 'resp-001', name: 'Masque anti-poussière N95', required: false, available: false, verified: false, notes: '', category: 'respiratory' },
   { id: 'resp-002', name: 'Appareil respiratoire autonome', required: false, available: false, verified: false, notes: '', category: 'respiratory' },
-  { id: 'resp-003', name: 'Masque P100 silice', required: false, available: false, verified: false, notes: '', category: 'respiratory' },
+  { id: 'resp-003', name: 'Demi-masque avec cartouches', required: false, available: false, verified: false, notes: '', category: 'respiratory' },
+  { id: 'resp-004', name: 'Masque P100 silice', required: false, available: false, verified: false, notes: '', category: 'respiratory' },
   
   // Protection des mains
   { id: 'hand-001', name: 'Gants isolants électriques', required: false, available: false, verified: false, notes: '', category: 'hand' },
-  { id: 'hand-002', name: 'Gants résistants aux coupures', required: false, available: false, verified: false, notes: '', category: 'hand' },
-  { id: 'hand-003', name: 'Gants haute température', required: false, available: false, verified: false, notes: '', category: 'hand' },
+  { id: 'hand-002', name: 'Gants de travail mécaniques', required: false, available: false, verified: false, notes: '', category: 'hand' },
+  { id: 'hand-003', name: 'Gants résistants aux coupures', required: false, available: false, verified: false, notes: '', category: 'hand' },
+  { id: 'hand-004', name: 'Gants chimiques', required: false, available: false, verified: false, notes: '', category: 'hand' },
+  { id: 'hand-005', name: 'Gants haute température', required: false, available: false, verified: false, notes: '', category: 'hand' },
+  { id: 'hand-006', name: 'Gants pour élingues', required: false, available: false, verified: false, notes: '', category: 'hand' },
   
   // Protection des pieds
   { id: 'foot-001', name: 'Chaussures de sécurité isolantes', required: false, available: false, verified: false, notes: '', category: 'foot' },
   { id: 'foot-002', name: 'Bottes de sécurité CSA', required: false, available: false, verified: false, notes: '', category: 'foot' },
-  { id: 'foot-003', name: 'Chaussures antidérapantes', required: false, available: false, verified: false, notes: '', category: 'foot' },
+  { id: 'foot-003', name: 'Bottes étanches', required: false, available: false, verified: false, notes: '', category: 'foot' },
+  { id: 'foot-004', name: 'Chaussures antidérapantes', required: false, available: false, verified: false, notes: '', category: 'foot' },
   
   // Protection du corps
   { id: 'body-001', name: 'Vêtements arc flash', required: false, available: false, verified: false, notes: '', category: 'body' },
   { id: 'body-002', name: 'Veste haute visibilité classe 3', required: false, available: false, verified: false, notes: '', category: 'body' },
   { id: 'body-003', name: 'Combinaison Tyvek', required: false, available: false, verified: false, notes: '', category: 'body' },
+  { id: 'body-004', name: 'Tablier résistant chimique', required: false, available: false, verified: false, notes: '', category: 'body' },
   
   // Protection contre les chutes
   { id: 'fall-001', name: 'Harnais de sécurité complet', required: false, available: false, verified: false, notes: '', category: 'fall' },
   { id: 'fall-002', name: 'Longe avec absorbeur', required: false, available: false, verified: false, notes: '', category: 'fall' },
+  { id: 'fall-003', name: 'Harnais grutier', required: false, available: false, verified: false, notes: '', category: 'fall' },
   
   // Protection électrique
   { id: 'elec-001', name: 'Tapis isolant', required: false, available: false, verified: false, notes: '', category: 'electrical' },
-  { id: 'elec-002', name: 'Vérificateur d\'absence de tension', required: false, available: false, verified: false, notes: '', category: 'electrical' },
+  { id: 'elec-002', name: 'Perche isolante', required: false, available: false, verified: false, notes: '', category: 'electrical' },
+  { id: 'elec-003', name: 'Vérificateur d\'absence de tension', required: false, available: false, verified: false, notes: '', category: 'electrical' },
   
   // Détection et mesure
   { id: 'detect-001', name: 'Détecteur multigaz H2S/CH4/O2', required: false, available: false, verified: false, notes: '', category: 'detection' },
-  { id: 'detect-002', name: 'Anémomètre portable', required: false, available: false, verified: false, notes: '', category: 'detection' },
-  { id: 'detect-003', name: 'Dosimètre personnel radiations', required: false, available: false, verified: false, notes: '', category: 'detection' },
+  { id: 'detect-002', name: 'Dosimètre personnel radiations', required: false, available: false, verified: false, notes: '', category: 'detection' },
+  { id: 'detect-003', name: 'Anémomètre portable', required: false, available: false, verified: false, notes: '', category: 'detection' },
+  { id: 'detect-004', name: 'Dynamomètre élingues', required: false, available: false, verified: false, notes: '', category: 'detection' },
+  { id: 'detect-005', name: 'Thermomètre infrarouge', required: false, available: false, verified: false, notes: '', category: 'detection' },
+  { id: 'detect-006', name: 'Moniteur qualité air CO2', required: false, available: false, verified: false, notes: '', category: 'detection' },
   
   // Autres équipements
   { id: 'other-001', name: 'Trousse de premiers soins', required: false, available: false, verified: false, notes: '', category: 'other' },
   { id: 'other-002', name: 'Radio bidirectionnelle', required: false, available: false, verified: false, notes: '', category: 'other' },
-  { id: 'other-003', name: 'Vêtement flottaison individuel', required: false, available: false, verified: false, notes: '', category: 'other' }
+  { id: 'other-003', name: 'Vêtement flottaison individuel', required: false, available: false, verified: false, notes: '', category: 'other' },
+  { id: 'other-004', name: 'Support ergonomique écran', required: false, available: false, verified: false, notes: '', category: 'other' },
+  { id: 'other-005', name: 'Token sécurité multifacteur', required: false, available: false, verified: false, notes: '', category: 'other' }
 ];
 
 // =================== TRADUCTIONS COMPLÈTES ===================
@@ -834,13 +849,17 @@ const translations = {
     counters: {
       onJob: "Sur la job",
       approved: "Approuvé AST", 
-      approvalRate: "Taux d'approbation"
+      approvalRate: "Taux d'approbation",
+      team: "Équipe",
+      isolation: "Isolement",
+      hazards: "Dangers",
+      equipment: "Équipements"
     },
     
     steps: {
       general: "Informations Générales",
-      isolation: "Points d'Isolement", // DÉPLACÉ EN POSITION 2
-      discussion: "Discussion Équipe", // DÉPLACÉ EN POSITION 3
+      isolation: "Points d'Isolement",
+      discussion: "Discussion Équipe",
       equipment: "Équipements Sécurité",
       hazards: "Dangers & Risques",
       team: "Équipe de Travail",
@@ -853,12 +872,15 @@ const translations = {
       subtitle: "Sélectionnez le(s) type(s) de travaux pour filtrer les dangers pertinents",
       showAll: "Voir Tous les Dangers",
       showFiltered: "Dangers Filtrés",
-      noSelection: "Aucun type sélectionné"
+      noSelection: "Aucun type sélectionné",
+      selectedTypes: "Types sélectionnés"
     },
     
     projectInfo: {
       title: "Informations du Projet",
+      industry: "Type d'Industrie",
       astNumber: "# AST",
+      astClientNumber: "# AST du Client", 
       date: "Date",
       client: "Client",
       clientPhone: "# Téléphone Client",
@@ -870,7 +892,9 @@ const translations = {
       workerCount: "Nombre de personnes sur la job",
       estimatedDuration: "Durée Estimée",
       emergencyContact: "Contact d'Urgence",
-      emergencyPhone: "# Urgence"
+      emergencyPhone: "# Urgence",
+      astInfo: "Numéro généré automatiquement - usage unique",
+      astClientInfo: "Numéro fourni par le client (optionnel)"
     },
     
     isolation: {
@@ -935,6 +959,7 @@ const translations = {
       controlMeasures: "Moyens de Contrôle",
       controlsRequired: "⚠️ Moyens de contrôle requis",
       controlsInPlace: "VIGILANCE - Moyens de contrôle en place",
+      addCustomHazard: "Ajouter un danger personnalisé",
       levels: {
         low: "Faible",
         medium: "Moyen",
@@ -948,6 +973,15 @@ const translations = {
         administrative: "Administrative",
         ppe: "EPI"
       }
+    },
+    
+    industries: {
+      electrical: "Électrique",
+      construction: "Construction",
+      industrial: "Industriel",
+      office: "Bureau/Administratif",
+      manufacturing: "Manufacturier",
+      other: "Autre"
     },
     
     team: {
@@ -1001,13 +1035,17 @@ const translations = {
     counters: {
       onJob: "On Job",
       approved: "JSA Approved",
-      approvalRate: "Approval Rate"
+      approvalRate: "Approval Rate",
+      team: "Team",
+      isolation: "Isolation",
+      hazards: "Hazards",
+      equipment: "Equipment"
     },
     
     steps: {
       general: "General Information",
-      isolation: "Isolation Points", // MOVED TO POSITION 2
-      discussion: "Team Discussion", // MOVED TO POSITION 3
+      isolation: "Isolation Points",
+      discussion: "Team Discussion",
       equipment: "Safety Equipment",
       hazards: "Hazards & Risks",
       team: "Work Team",
@@ -1020,7 +1058,133 @@ const translations = {
       subtitle: "Select work type(s) to filter relevant hazards",
       showAll: "Show All Hazards",
       showFiltered: "Filtered Hazards",
-      noSelection: "No type selected"
+      noSelection: "No type selected",
+      selectedTypes: "Selected types"
+    },
+    
+    projectInfo: {
+      title: "Project Information",
+      industry: "Industry Type",
+      astNumber: "AST #",
+      astClientNumber: "Client AST #",
+      date: "Date",
+      client: "Client",
+      clientPhone: "Client Phone",
+      projectNumber: "Project Number",
+      workDescription: "Work Description",
+      workLocation: "Work Location",
+      clientRepresentative: "Representative Name",
+      clientRepresentativePhone: "Representative Phone",
+      workerCount: "Number of workers on job",
+      estimatedDuration: "Estimated Duration",
+      emergencyContact: "Emergency Contact",
+      emergencyPhone: "Emergency Phone",
+      astInfo: "Auto-generated number - single use",
+      astClientInfo: "Number provided by client (optional)"
+    },
+    
+    isolation: {
+      title: "Isolation and Lockout Points",
+      subtitle: "LOTO configuration before team discussion",
+      addPoint: "Add Isolation Point",
+      pointName: "Isolation Point Name",
+      isolationType: "Isolation Type",
+      selectType: "Select type...",
+      noPoints: "No isolation points configured",
+      checklist: {
+        cadenasAppose: "🔒 Lock Applied",
+        absenceTension: "⚡ Zero Energy Verified",
+        miseALaTerre: "🌍 Grounding/Neutralization",
+        essaisEffectues: "🔄 Startup Tests Performed"
+      },
+      types: {
+        electrical: "⚡ Electrical",
+        mechanical: "⚙️ Mechanical",
+        pneumatic: "💨 Pneumatic",
+        hydraulic: "🌊 Hydraulic",
+        chemical: "🧪 Chemical",
+        thermal: "🔥 Thermal"
+      }
+    },
+    
+    teamDiscussion: {
+      title: "Team Discussion",
+      subtitle: "Information to discuss with team",
+      completed: "Completed",
+      pending: "Pending",
+      discussedBy: "Discussed by",
+      notes: "Notes",
+      priority: "Priority"
+    },
+    
+    safetyEquipment: {
+      title: "Personal and Collective Protective Equipment",
+      required: "Required",
+      available: "Available",
+      verified: "Verified",
+      notes: "Notes",
+      categories: {
+        head: "Head Protection",
+        eye: "Eye Protection",
+        respiratory: "Respiratory Protection",
+        hand: "Hand Protection",
+        foot: "Foot Protection",
+        body: "Body Protection",
+        fall: "Fall Protection",
+        electrical: "Electrical Protection",
+        detection: "Detection",
+        other: "Other"
+      }
+    },
+    
+    hazards: {
+      title: "Potential Hazards",
+      selected: "Selected",
+      riskLevel: "Risk Level",
+      notes: "Additional notes",
+      controlMeasures: "Control Measures",
+      controlsRequired: "⚠️ Control measures required",
+      controlsInPlace: "VIGILANCE - Control measures in place",
+      addCustomHazard: "Add custom hazard",
+      levels: {
+        low: "Low",
+        medium: "Medium",
+        high: "High",
+        critical: "Critical"
+      },
+      categories: {
+        elimination: "Elimination",
+        substitution: "Substitution",
+        engineering: "Engineering",
+        administrative: "Administrative",
+        ppe: "PPE"
+      }
+    },
+    
+    industries: {
+      electrical: "Electrical",
+      construction: "Construction",
+      industrial: "Industrial",
+      office: "Office/Administrative",
+      manufacturing: "Manufacturing",
+      other: "Other"
+    },
+    
+    team: {
+      title: "Work Team",
+      supervisor: "Supervisor",
+      addMember: "Add Team Member",
+      memberName: "Member Name",
+      employeeId: "Employee ID",
+      department: "Department",
+      qualification: "Qualification",
+      consultationAst: "AST Consultation",
+      cadenasAppose: "Lock Applied",
+      status: "Status",
+      actions: "Actions",
+      pending: "Pending",
+      approved: "Approved",
+      rejected: "Rejected"
     },
     
     buttons: {
@@ -1032,6 +1196,14 @@ const translations = {
       add: "Add",
       edit: "Edit",
       delete: "Delete"
+    },
+
+    actions: {
+      sendByEmail: "Send by Email",
+      archive: "Archive",
+      generatePDF: "Generate PDF",
+      print: "Print",
+      finalApproval: "Final Submission"
     },
 
     email: {
