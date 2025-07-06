@@ -1,477 +1,526 @@
-// types/api.ts - Types pour les API
+// types/hazards.ts - Types spécifiques aux dangers
 
-import { AST, ASTStatus, RiskLevel } from './ast';
-import { PaginationOptions, SearchFilters, SortOptions } from './index';
+import { 
+  BaseEntity, 
+  MultiLanguageText, 
+  RiskLevel, 
+  SeverityLevel, 
+  ProbabilityLevel,
+  WeatherRestriction,
+  WeatherParameter
+} from './index';
 
-// =================== TYPES RÉPONSE API GÉNÉRIQUES ===================
-export interface APIResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  errors?: APIError[];
-  timestamp: string;
-  requestId?: string;
+// =================== ÉNUMÉRATIONS DANGERS ===================
+export enum HazardCategory {
+  ELECTRICAL = 'electrical',
+  MECHANICAL = 'mechanical',
+  PHYSICAL = 'physical',
+  CHEMICAL = 'chemical',
+  BIOLOGICAL = 'biological',
+  ENVIRONMENTAL = 'environmental',
+  WORKPLACE = 'workplace',
+  ERGONOMIC = 'ergonomic',
+  RADIOLOGICAL = 'radiological',
+  PSYCHOSOCIAL = 'psychosocial'
 }
 
-export interface APIError {
-  code: string;
-  message: string;
-  field?: string;
-  details?: any;
+export enum ExposureFrequency {
+  CONTINUOUS = 'continuous',        // Continue (>6h/jour)
+  FREQUENT = 'frequent',           // Fréquente (1-6h/jour)
+  OCCASIONAL = 'occasional',       // Occasionnelle (30min-1h/jour)
+  INFREQUENT = 'infrequent',      // Peu fréquente (<30min/jour)
+  RARE = 'rare'                   // Rare (mensuel ou moins)
 }
 
-export interface APIListResponse<T> extends APIResponse<T[]> {
-  pagination?: PaginationMeta;
-  filters?: any;
-  sort?: SortOptions;
+export enum BodyPartAffected {
+  HEAD = 'head',
+  EYES = 'eyes',
+  EARS = 'ears',
+  RESPIRATORY = 'respiratory',
+  ARMS = 'arms',
+  HANDS = 'hands',
+  BACK = 'back',
+  LEGS = 'legs',
+  FEET = 'feet',
+  SKIN = 'skin',
+  WHOLE_BODY = 'whole_body',
+  INTERNAL_ORGANS = 'internal_organs'
 }
 
-export interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
+export enum InjuryType {
+  CUTS = 'cuts',
+  BURNS = 'burns',
+  FRACTURES = 'fractures',
+  SPRAINS = 'sprains',
+  CONTUSIONS = 'contusions',
+  LACERATIONS = 'lacerations',
+  PUNCTURES = 'punctures',
+  POISONING = 'poisoning',
+  ASPHYXIATION = 'asphyxiation',
+  ELECTROCUTION = 'electrocution',
+  CRUSHING = 'crushing',
+  REPETITIVE_STRAIN = 'repetitive_strain',
+  HEARING_LOSS = 'hearing_loss',
+  VISION_IMPAIRMENT = 'vision_impairment',
+  RESPIRATORY_DAMAGE = 'respiratory_damage',
+  DERMATITIS = 'dermatitis',
+  MUSCULOSKELETAL = 'musculoskeletal'
 }
 
-// =================== TYPES SPÉCIFIQUES AST API ===================
-export interface ASTListResponse extends APIListResponse<AST> {
-  summary?: ASTSummary;
+export enum RegulatoryStandard {
+  // Standards canadiens
+  CSA_Z462 = 'csa_z462',           // Sécurité électrique en milieu de travail
+  CSA_Z94_3 = 'csa_z94_3',         // Protection respiratoire
+  CSA_Z259 = 'csa_z259',           // Protection contre les chutes
+  CSA_Z96 = 'csa_z96',             // Vêtements haute visibilité
+  
+  // RSST Québec
+  RSST_ARTICLE_2_9_1 = 'rsst_2_9_1',   // Espaces clos
+  RSST_ARTICLE_2_10 = 'rsst_2_10',      // Travail en hauteur
+  RSST_ARTICLE_2_11 = 'rsst_2_11',      // Excavation
+  
+  // Standards internationaux
+  ANSI_Z87_1 = 'ansi_z87_1',       // Protection oculaire
+  ANSI_Z89_1 = 'ansi_z89_1',       // Casques de protection
+  EN_397 = 'en_397',               // Casques industriels (Europe)
+  EN_388 = 'en_388',               // Gants de protection
+  
+  // OSHA (États-Unis)
+  OSHA_1910_146 = 'osha_1910_146', // Permit-required confined spaces
+  OSHA_1926_501 = 'osha_1926_501', // Fall protection
+  
+  // SIMDUT
+  SIMDUT_2015 = 'simdut_2015',     // Système d'information sur les matières dangereuses
+  
+  // ISO
+  ISO_45001 = 'iso_45001',         // Système de management de la santé et sécurité
+  ISO_14001 = 'iso_14001'          // Système de management environnemental
 }
 
-export interface ASTSummary {
-  totalASTs: number;
-  byStatus: Record<ASTStatus, number>;
-  byRiskLevel: Record<RiskLevel, number>;
-  upcomingDeadlines: number;
-  overdueItems: number;
-  activeProjects: number;
-  completedThisMonth: number;
-  averageRiskLevel: RiskLevel;
-}
-
-export interface ASTCreateRequest {
-  title: string;
-  description?: string;
-  clientId: string;
-  projectName: string;
-  workTypeId: string;
-  workLocation: {
-    street: string;
-    city: string;
-    province: string;
-    postalCode: string;
-    country: string;
-    coordinates?: {
-      lat: number;
-      lng: number;
-    };
-  };
-  teamLeader: {
-    name: string;
-    phone?: string;
-    email?: string;
-    position?: string;
-  };
-  teamMembers?: Array<{
-    name: string;
-    phone?: string;
-    email?: string;
-    position?: string;
-  }>;
-  estimatedDuration: number;
-  plannedStartDate: string; // ISO string
-  plannedEndDate: string; // ISO string
-  notes?: string;
-}
-
-export interface ASTUpdateRequest extends Partial<ASTCreateRequest> {
-  id: string;
-  status?: ASTStatus;
-  actualStartDate?: string;
-  actualEndDate?: string;
-  completionPercentage?: number;
-}
-
-export interface ASTSearchRequest {
-  query?: string;
-  filters?: ASTFilters;
-  sort?: SortOptions;
-  pagination?: PaginationOptions;
-}
-
-export interface ASTFilters {
-  status?: ASTStatus[];
-  clientId?: string[];
-  workTypeId?: string[];
-  riskLevel?: RiskLevel[];
-  teamLeader?: string;
-  location?: string;
-  dateRange?: {
-    field: 'plannedStartDate' | 'actualStartDate' | 'createdAt';
-    startDate: string;
-    endDate: string;
-  };
-  hasOverdueItems?: boolean;
-  requiresReview?: boolean;
-}
-
-// =================== TYPES VALIDATION API ===================
-export interface ValidationResponse extends APIResponse<never> {
-  validationErrors: ValidationErrorDetail[];
-  validationWarnings: ValidationWarningDetail[];
-  isValid: boolean;
-}
-
-export interface ValidationErrorDetail {
-  field: string;
-  code: string;
-  message: string;
-  value?: any;
-  constraint?: any;
-}
-
-export interface ValidationWarningDetail {
-  field: string;
-  code: string;
-  message: string;
-  severity: 'low' | 'medium' | 'high';
-  recommendation?: string;
-}
-
-// =================== TYPES DANGERS API ===================
-export interface HazardListResponse extends APIListResponse<any> {
-  categories: string[];
-  riskLevels: RiskLevel[];
-}
-
-export interface HazardSearchRequest {
-  category?: string[];
-  workType?: string;
-  riskLevel?: RiskLevel[];
-  query?: string;
-}
-
-export interface HazardAssessmentRequest {
-  hazardId: string;
-  severityLevel: number;
-  probabilityLevel: number;
-  location?: string;
-  exposureDetails?: {
-    frequency: string;
-    duration: number;
-    numberOfPersons: number;
-  };
-  comments?: string;
-}
-
-// =================== TYPES ÉQUIPEMENTS API ===================
-export interface EquipmentListResponse extends APIListResponse<any> {
-  categories: string[];
-  protectionLevels: string[];
-  certificationStatus: {
-    valid: number;
-    expiring: number;
-    expired: number;
-  };
-}
-
-export interface EquipmentRequirementRequest {
-  equipmentId: string;
-  quantity: number;
-  isOptional: boolean;
-  specificRequirements?: string;
-  assignedTo?: string[];
-}
-
-export interface EquipmentAvailabilityRequest {
-  equipmentIds: string[];
-  startDate: string;
-  endDate: string;
-  location?: string;
-}
-
-export interface EquipmentAvailabilityResponse extends APIResponse<EquipmentAvailability[]> {}
-
-export interface EquipmentAvailability {
-  equipmentId: string;
-  available: boolean;
-  totalQuantity: number;
-  availableQuantity: number;
-  reservedQuantity: number;
-  nextAvailableDate?: string;
-  alternativeEquipment?: string[];
-}
-
-// =================== TYPES MESURES DE CONTRÔLE API ===================
-export interface ControlMeasureListResponse extends APIListResponse<any> {
-  hierarchyLevels: string[];
-  categories: string[];
-}
-
-export interface ControlMeasureAssignmentRequest {
-  controlMeasureId: string;
-  responsiblePerson: string;
-  targetImplementationDate?: string;
-  monitoringFrequency?: string;
-  specificInstructions?: string;
-}
-
-export interface ControlMeasureImplementationRequest {
-  assignmentId: string;
-  status: string;
-  implementationDate?: string;
-  verificationDate?: string;
-  effectivenessRating?: number;
-  implementationNotes?: string;
-  evidence?: string[]; // IDs de fichiers
-}
-
-// =================== TYPES CLIENTS API ===================
-export interface ClientListResponse extends APIListResponse<any> {
-  activeClients: number;
-  inactiveClients: number;
-  industries: string[];
-}
-
-export interface ClientCreateRequest {
+// =================== INTERFACE DANGER PRINCIPALE ===================
+export interface Hazard extends BaseEntity {
+  // Identification
   name: string;
-  industry: string;
-  address: {
-    street: string;
-    city: string;
-    province: string;
-    postalCode: string;
-    country: string;
+  displayName?: MultiLanguageText;
+  category: HazardCategory;
+  subcategory?: string;
+  code?: string; // Code interne de classification
+  
+  // Description
+  description: string;
+  detailedDescription?: MultiLanguageText;
+  synonyms?: string[];
+  keywords?: string[];
+  
+  // Évaluation par défaut
+  defaultSeverity?: SeverityLevel;
+  defaultProbability?: ProbabilityLevel;
+  defaultRiskLevel?: RiskLevel;
+  
+  // Spécifications techniques
+  physicalProperties?: PhysicalProperties;
+  chemicalProperties?: ChemicalProperties;
+  biologicalProperties?: BiologicalProperties;
+  
+  // Exposition et effets
+  exposureRoutes?: ExposureRoute[];
+  bodyPartsAffected: BodyPartAffected[];
+  potentialInjuries: InjuryType[];
+  acuteEffects?: string[];
+  chronicEffects?: string[];
+  
+  // Limites d'exposition
+  exposureLimits?: ExposureLimit[];
+  monitoringRequirements?: MonitoringRequirement[];
+  
+  // Facteurs de risque
+  riskFactors: RiskFactor[];
+  aggravatingFactors?: string[];
+  protectiveFactors?: string[];
+  
+  // Contexte d'application
+  workTypes: string[]; // IDs des types de travail
+  industries?: string[];
+  environments?: EnvironmentType[];
+  
+  // Conditions météo
+  weatherRestrictions?: WeatherRestriction[];
+  seasonalConsiderations?: SeasonalConsideration[];
+  
+  // Réglementation et conformité
+  regulatoryStandards: RegulatoryStandard[];
+  complianceRequirements?: ComplianceRequirement[];
+  
+  // Mesures de prévention
+  requiredTraining?: string[];
+  requiredCertifications?: string[];
+  requiredEquipment?: string[]; // IDs équipements
+  recommendedControlMeasures?: string[]; // IDs mesures de contrôle
+  
+  // Procédures d'urgence
+  emergencyProcedures?: EmergencyProcedureReference[];
+  firstAidRequirements?: FirstAidRequirement[];
+  evacuationRequirements?: EvacuationRequirement;
+  
+  // Documentation
+  references?: Reference[];
+  lastReviewDate?: Date;
+  nextReviewDate?: Date;
+  reviewedBy?: string;
+  
+  // Métadonnées
+  isActive: boolean;
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+  frequency?: number; // Fréquence d'occurrence dans l'industrie
+  costImpact?: number; // Impact financier moyen
+  
+  // Versions et révisions
+  versionNumber?: string;
+  previousVersions?: string[];
+  changeLog?: ChangeLogEntry[];
+}
+
+// =================== TYPES AUXILIAIRES ===================
+export interface PhysicalProperties {
+  temperature?: TemperatureRange;
+  pressure?: PressureRange;
+  noise?: NoiseLevel;
+  vibration?: VibrationLevel;
+  radiation?: RadiationLevel;
+  lighting?: LightingCondition;
+  space?: SpaceConstraint;
+}
+
+export interface ChemicalProperties {
+  casNumber?: string;
+  molecularFormula?: string;
+  molarMass?: number;
+  boilingPoint?: number;
+  meltingPoint?: number;
+  density?: number;
+  vaporPressure?: number;
+  solubility?: string;
+  pH?: number;
+  flashPoint?: number;
+  autoIgnitionTemp?: number;
+  explosiveLimits?: {
+    lower: number;
+    upper: number;
   };
-  primaryContact: {
-    name: string;
-    phone: string;
-    email: string;
-    position: string;
-  };
-  secondaryContact?: {
-    name: string;
-    phone?: string;
-    email?: string;
-    position?: string;
-  };
-  contractDetails?: {
-    contractNumber?: string;
-    startDate?: string;
-    endDate?: string;
-    value?: number;
-  };
-  notes?: string;
+  reactivity?: ReactivityData;
 }
 
-// =================== TYPES RAPPORTS API ===================
-export interface ReportRequest {
-  type: ReportType;
-  filters?: ReportFilters;
-  format: ReportFormat;
-  includeCharts?: boolean;
-  includeDetails?: boolean;
+export interface BiologicalProperties {
+  organism?: string;
+  pathogenicity?: PathogenicityLevel;
+  infectivity?: InfectivityLevel;
+  virulence?: VirulenceLevel;
+  transmissionRoute?: TransmissionRoute[];
+  incubationPeriod?: number; // en jours
+  infectiousPeriod?: number; // en jours
+  survivalOutsideHost?: number; // en heures
+  disinfectionRequirements?: DisinfectionRequirement[];
 }
 
-export enum ReportType {
-  AST_SUMMARY = 'ast_summary',
-  RISK_ANALYSIS = 'risk_analysis',
-  EQUIPMENT_USAGE = 'equipment_usage',
-  COMPLIANCE_STATUS = 'compliance_status',
-  PERFORMANCE_METRICS = 'performance_metrics',
-  MONTHLY_SUMMARY = 'monthly_summary',
-  CLIENT_ACTIVITY = 'client_activity'
-}
-
-export enum ReportFormat {
-  PDF = 'pdf',
-  EXCEL = 'excel',
-  CSV = 'csv',
-  JSON = 'json'
-}
-
-export interface ReportFilters {
-  dateRange?: {
-    startDate: string;
-    endDate: string;
-  };
-  clientIds?: string[];
-  workTypeIds?: string[];
-  riskLevels?: RiskLevel[];
-  status?: ASTStatus[];
-  includeArchived?: boolean;
-}
-
-export interface ReportResponse extends APIResponse<ReportData> {}
-
-export interface ReportData {
-  reportId: string;
-  type: ReportType;
-  format: ReportFormat;
-  generatedAt: string;
-  downloadUrl?: string;
-  expiresAt?: string;
-  metadata: ReportMetadata;
-}
-
-export interface ReportMetadata {
-  totalRecords: number;
-  dateRange: {
-    startDate: string;
-    endDate: string;
-  };
-  filters: ReportFilters;
-  generatedBy: string;
-  version: string;
-}
-
-// =================== TYPES FICHIERS API ===================
-export interface FileUploadRequest {
-  file: File;
-  type: FileType;
-  relatedEntityId?: string;
+export interface ExposureRoute {
+  route: 'inhalation' | 'dermal' | 'oral' | 'injection' | 'ocular';
+  likelihood: 'high' | 'medium' | 'low';
   description?: string;
 }
 
-export enum FileType {
-  DOCUMENT = 'document',
-  IMAGE = 'image',
-  CERTIFICATE = 'certificate',
-  PERMIT = 'permit',
-  MANUAL = 'manual',
-  EVIDENCE = 'evidence'
+export interface ExposureLimit {
+  type: 'TWA' | 'STEL' | 'Ceiling' | 'Peak';
+  value: number;
+  unit: string;
+  duration?: number; // en minutes
+  standard: RegulatoryStandard;
+  notes?: string;
 }
 
-export interface FileUploadResponse extends APIResponse<UploadedFile> {}
-
-export interface UploadedFile {
-  id: string;
-  fileName: string;
-  originalFileName: string;
-  fileType: FileType;
-  fileSize: number;
-  mimeType: string;
-  uploadedAt: string;
-  uploadedBy: string;
-  url: string;
-  thumbnailUrl?: string;
-  metadata?: FileMetadata;
+export interface MonitoringRequirement {
+  parameter: string;
+  frequency: 'continuous' | 'hourly' | 'daily' | 'weekly' | 'monthly';
+  method: string;
+  equipment?: string;
+  recordingRequired: boolean;
+  alertLevels?: AlertLevel[];
 }
 
-export interface FileMetadata {
-  dimensions?: {
-    width: number;
-    height: number;
-  };
-  duration?: number; // pour les vidéos
-  pageCount?: number; // pour les PDFs
-  checksum: string;
-  virusScanned: boolean;
-  extractedText?: string; // pour l'indexation
+export interface AlertLevel {
+  level: 'caution' | 'warning' | 'danger' | 'emergency';
+  threshold: number;
+  unit: string;
+  action: string;
 }
 
-// =================== TYPES NOTIFICATIONS API ===================
-export interface NotificationRequest {
-  type: NotificationType;
-  recipients: NotificationRecipient[];
-  message: NotificationMessage;
-  scheduledFor?: string;
-  priority: NotificationPriority;
+export interface RiskFactor {
+  factor: string;
+  impact: 'increases' | 'decreases';
+  magnitude: 'low' | 'medium' | 'high';
+  description?: string;
 }
 
-export enum NotificationType {
-  EMAIL = 'email',
-  SMS = 'sms',
-  PUSH = 'push',
-  IN_APP = 'in_app'
+export enum EnvironmentType {
+  INDOOR = 'indoor',
+  OUTDOOR = 'outdoor',
+  CONFINED_SPACE = 'confined_space',
+  UNDERGROUND = 'underground',
+  ELEVATED = 'elevated',
+  AQUATIC = 'aquatic',
+  EXTREME_TEMPERATURE = 'extreme_temperature',
+  HIGH_PRESSURE = 'high_pressure',
+  LOW_PRESSURE = 'low_pressure',
+  CORROSIVE = 'corrosive',
+  EXPLOSIVE_ATMOSPHERE = 'explosive_atmosphere'
 }
 
-export enum NotificationPriority {
+export interface SeasonalConsideration {
+  season: 'spring' | 'summer' | 'fall' | 'winter';
+  riskLevel: RiskLevel;
+  specificRisks?: string[];
+  additionalPrecautions?: string[];
+}
+
+export interface ComplianceRequirement {
+  standard: RegulatoryStandard;
+  requirement: string;
+  mandatory: boolean;
+  frequency?: string;
+  documentation?: string[];
+  inspectionRequired?: boolean;
+}
+
+export interface EmergencyProcedureReference {
+  procedureId: string;
+  procedureName: string;
+  triggerConditions: string[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface FirstAidRequirement {
+  injury: InjuryType;
+  immediateActions: string[];
+  treatmentProtocol?: string;
+  medicationRequired?: string[];
+  hospitalRequired?: boolean;
+  specialistRequired?: string;
+}
+
+export interface EvacuationRequirement {
+  triggerConditions: string[];
+  evacuationRadius?: number; // en mètres
+  evacuationDirection?: string;
+  shelterInPlace?: boolean;
+  specialInstructions?: string[];
+}
+
+export interface Reference {
+  title: string;
+  author?: string;
+  source: string;
+  date?: Date;
+  url?: string;
+  standard?: RegulatoryStandard;
+  relevance: 'primary' | 'secondary' | 'supplementary';
+}
+
+export interface ChangeLogEntry {
+  version: string;
+  date: Date;
+  author: string;
+  changes: string[];
+  reason: string;
+}
+
+// =================== TYPES SPÉCIALISÉS ===================
+export interface TemperatureRange {
+  min?: number;
+  max?: number;
+  unit: 'celsius' | 'fahrenheit' | 'kelvin';
+  criticalPoints?: number[];
+}
+
+export interface PressureRange {
+  min?: number;
+  max?: number;
+  unit: 'pascal' | 'bar' | 'psi' | 'mmHg';
+  vacuum?: boolean;
+}
+
+export interface NoiseLevel {
+  level: number;
+  unit: 'dB' | 'dBA' | 'dBC';
+  frequency?: number; // Hz
+  duration?: number; // minutes
+  type?: 'continuous' | 'intermittent' | 'impact';
+}
+
+export interface VibrationLevel {
+  acceleration: number;
+  unit: 'm/s²' | 'g';
+  frequency: number; // Hz
+  direction: 'x' | 'y' | 'z' | 'combined';
+  bodyPart: BodyPartAffected;
+}
+
+export interface RadiationLevel {
+  type: 'ionizing' | 'non_ionizing';
+  dose?: number;
+  doseRate?: number;
+  unit: 'Sv' | 'mSv' | 'μSv' | 'Gy' | 'mGy' | 'W/m²';
+  wavelength?: number; // pour radiations non-ionisantes
+  frequency?: number; // Hz
+}
+
+export interface LightingCondition {
+  illuminance?: number; // lux
+  uniformity?: number;
+  glare?: 'none' | 'low' | 'medium' | 'high';
+  flickering?: boolean;
+  colorTemperature?: number; // Kelvin
+  UV_content?: number;
+}
+
+export interface SpaceConstraint {
+  minimumHeight?: number; // cm
+  minimumWidth?: number; // cm
+  minimumDepth?: number; // cm
+  accessLimitations?: string[];
+  confinedSpace?: boolean;
+  entryRequirements?: string[];
+}
+
+export interface ReactivityData {
+  stability: 'stable' | 'unstable';
+  incompatibleMaterials?: string[];
+  hazardousDecomposition?: string[];
+  polymerization?: 'none' | 'possible' | 'likely';
+  conditions_to_avoid?: string[];
+}
+
+export enum PathogenicityLevel {
+  NON_PATHOGENIC = 'non_pathogenic',
   LOW = 'low',
-  NORMAL = 'normal',
+  MODERATE = 'moderate',
   HIGH = 'high',
-  URGENT = 'urgent'
+  EXTREME = 'extreme'
 }
 
-export interface NotificationRecipient {
-  type: 'user' | 'email' | 'phone';
-  value: string;
-  name?: string;
+export enum InfectivityLevel {
+  LOW = 'low',
+  MODERATE = 'moderate',
+  HIGH = 'high',
+  VERY_HIGH = 'very_high'
 }
 
-export interface NotificationMessage {
-  subject: string;
-  body: string;
-  actionUrl?: string;
-  actionText?: string;
-  template?: string;
-  variables?: Record<string, any>;
+export enum VirulenceLevel {
+  LOW = 'low',
+  MODERATE = 'moderate',
+  HIGH = 'high',
+  VERY_HIGH = 'very_high'
 }
 
-export interface NotificationResponse extends APIResponse<NotificationResult> {}
-
-export interface NotificationResult {
-  notificationId: string;
-  sentAt: string;
-  deliveryStatus: NotificationDeliveryStatus[];
-  failedDeliveries: NotificationFailure[];
+export enum TransmissionRoute {
+  AIRBORNE = 'airborne',
+  DROPLET = 'droplet',
+  CONTACT = 'contact',
+  VECTOR = 'vector',
+  FOODBORNE = 'foodborne',
+  WATERBORNE = 'waterborne',
+  BLOODBORNE = 'bloodborne'
 }
 
-export interface NotificationDeliveryStatus {
-  recipient: string;
-  type: NotificationType;
-  status: 'sent' | 'delivered' | 'failed' | 'pending';
-  deliveredAt?: string;
+export interface DisinfectionRequirement {
+  agent: string;
+  concentration: number;
+  contactTime: number; // minutes
+  temperature?: number; // celsius
+  method: 'spray' | 'wipe' | 'immersion' | 'fumigation';
 }
 
-export interface NotificationFailure {
-  recipient: string;
-  type: NotificationType;
-  error: string;
-  retryAt?: string;
+// =================== TYPES UTILITAIRES DANGERS ===================
+export interface HazardSearchCriteria {
+  category?: HazardCategory[];
+  workType?: string[];
+  riskLevel?: RiskLevel[];
+  bodyPart?: BodyPartAffected[];
+  injuryType?: InjuryType[];
+  environment?: EnvironmentType[];
+  season?: string;
+  weatherConditions?: WeatherParameter[];
+  query?: string;
 }
 
-// =================== TYPES EXPORTS ===================
+export interface HazardAssessmentTemplate {
+  hazardId: string;
+  assessmentQuestions: AssessmentQuestion[];
+  scoringMethod: 'matrix' | 'additive' | 'weighted';
+  riskMatrix?: RiskMatrix;
+}
+
+export interface AssessmentQuestion {
+  id: string;
+  question: string;
+  type: 'scale' | 'boolean' | 'multiple_choice' | 'text';
+  options?: string[];
+  weight?: number;
+  category: 'severity' | 'probability' | 'exposure' | 'control';
+}
+
+export interface RiskMatrix {
+  severityLevels: MatrixLevel[];
+  probabilityLevels: MatrixLevel[];
+  riskLevels: RiskLevel[][];
+}
+
+export interface MatrixLevel {
+  value: number;
+  label: string;
+  description: string;
+  color?: string;
+}
+
+export interface HazardStatistics {
+  totalHazards: number;
+  byCategory: Record<HazardCategory, number>;
+  byRiskLevel: Record<RiskLevel, number>;
+  mostCommon: string[];
+  leastCommon: string[];
+  recentlyUpdated: string[];
+  requiresReview: string[];
+}
+
+// =================== EXPORTS ===================
 export type {
-  APIResponse,
-  APIError,
-  APIListResponse,
-  PaginationMeta,
-  ASTListResponse,
-  ASTSummary,
-  ASTCreateRequest,
-  ASTUpdateRequest,
-  ASTSearchRequest,
-  ASTFilters,
-  ValidationResponse,
-  ValidationErrorDetail,
-  ValidationWarningDetail,
-  HazardListResponse,
-  HazardSearchRequest,
-  HazardAssessmentRequest,
-  EquipmentListResponse,
-  EquipmentRequirementRequest,
-  EquipmentAvailabilityRequest,
-  EquipmentAvailabilityResponse,
-  EquipmentAvailability,
-  ControlMeasureListResponse,
-  ControlMeasureAssignmentRequest,
-  ControlMeasureImplementationRequest,
-  ClientListResponse,
-  ClientCreateRequest,
-  ReportRequest,
-  ReportResponse,
-  ReportData,
-  ReportMetadata,
-  FileUploadRequest,
-  FileUploadResponse,
-  UploadedFile,
-  FileMetadata,
-  NotificationRequest,
-  NotificationResponse,
-  NotificationResult,
-  NotificationDeliveryStatus,
-  NotificationFailure
+  Hazard,
+  PhysicalProperties,
+  ChemicalProperties,
+  BiologicalProperties,
+  ExposureRoute,
+  ExposureLimit,
+  MonitoringRequirement,
+  AlertLevel,
+  RiskFactor,
+  SeasonalConsideration,
+  ComplianceRequirement,
+  EmergencyProcedureReference,
+  FirstAidRequirement,
+  EvacuationRequirement,
+  Reference,
+  ChangeLogEntry,
+  TemperatureRange,
+  PressureRange,
+  NoiseLevel,
+  VibrationLevel,
+  RadiationLevel,
+  LightingCondition,
+  SpaceConstraint,
+  ReactivityData,
+  DisinfectionRequirement,
+  HazardSearchCriteria,
+  HazardAssessmentTemplate,
+  AssessmentQuestion,
+  RiskMatrix,
+  MatrixLevel,
+  HazardStatistics
 };
