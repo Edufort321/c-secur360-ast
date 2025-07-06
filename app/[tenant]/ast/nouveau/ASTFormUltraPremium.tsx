@@ -2235,7 +2235,7 @@ export default function ASTFormUltraPremium({ tenant = 'default' }: ASTFormProps
   const formRef = useRef<HTMLFormElement>(null);
 
   // Fonctions utilitaires
-  const t = (key: string) => translations[language][key] || key;
+  const t = (key: string) => (translations[language] as any)[key] || key;
 
   const generateUniqueId = () => {
     return `AST-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
