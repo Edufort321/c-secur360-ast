@@ -1,5 +1,5 @@
-// =================== AST SECTION 1/5 CORRIGÉE - IMPORTS & INTERFACES ===================
-// Section 1: Imports et Interfaces complètes corrigées
+// =================== AST SECTION 1/5 FINALE - IMPORTS & INTERFACES ===================
+// Section 1: Imports et Interfaces complètes corrigées pour build stable
 
 "use client";
 
@@ -185,7 +185,7 @@ const generateASTNumber = (): string => {
   const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
-// =================== AST SECTION 2/5 CORRIGÉE - DONNÉES & MOYENS DE CONTRÔLE CNESST ===================
+// =================== AST SECTION 2/5 - DONNÉES CNESST & MOYENS DE CONTRÔLE ===================
 // Section 2: Moyens de contrôle réels selon CNESST/CSA Z462 et données professionnelles
 
 // =================== HIÉRARCHIE DES MOYENS DE CONTRÔLE SELON CNESST ===================
@@ -459,19 +459,10 @@ const discussionsEquipeInitiales: TeamDiscussion[] = [
   { id: 'disc-007', sujet: 'Surveillance et supervision', description: 'Définir les rôles de surveillance et fréquence des vérifications', discute: false, notes: '', discussedBy: '', priority: 'medium' },
   { id: 'disc-008', sujet: 'Signalement incidents/presqu\'accidents', description: 'Rappeler les procédures de signalement et importance du reporting', discute: false, notes: '', discussedBy: '', priority: 'medium' }
 ];
+// =================== AST SECTION 3/5 - TRADUCTIONS, STYLES & FONCTIONS ===================
+// Section 3: Traductions professionnelles, styles CSS et fonctions utilitaires
 
-// =================== PROCÉDURES URGENCE RÉGLEMENTAIRES ===================
-const proceduresUrgenceInitiales: EmergencyProcedure[] = [
-  { id: 'emerg-001', type: 'medical', procedure: 'Composer 911 - Premiers soins certifiés - Évacuation médicale', responsiblePerson: 'Secouriste certifié CNESST', contactInfo: '911 + Contact interne urgence', isVerified: false },
-  { id: 'emerg-002', type: 'fire', procedure: 'Alarme incendie - Évacuation totale - Point rassemblement', responsiblePerson: 'Responsable évacuation', contactInfo: 'Service incendie municipal', isVerified: false },
-  { id: 'emerg-003', type: 'electrical', procedure: 'Coupure urgence secteur - Consignation - VAT - Secours électrique', responsiblePerson: 'Électricien qualifié CSA Z462', contactInfo: 'Hydro-Québec + Électricien', isVerified: false },
-  { id: 'emerg-004', type: 'evacuation', procedure: 'Signal évacuation - Routes primaires/secondaires - Décompte personnel', responsiblePerson: 'Coordonnateur urgence', contactInfo: 'Poste commandement', isVerified: false },
-  { id: 'emerg-005', type: 'spill', procedure: 'Confinement déversement - Ventilation - Évacuation zone - Équipe HAZMAT', responsiblePerson: 'Responsable matières dangereuses', contactInfo: 'URGENCE-ENVIRONNEMENT', isVerified: false }
-];
-// =================== AST SECTION 3/5 CORRIGÉE - TRADUCTIONS & FONCTIONS OPTIMISÉES ===================
-// Section 3: Traductions professionnelles, fonctions et données optimisées mobile
-
-// =================== TRADUCTIONS PROFESSIONNELLES MISES À JOUR ===================
+// =================== TRADUCTIONS PROFESSIONNELLES ===================
 const translations = {
   fr: {
     title: "Analyse Sécuritaire de Tâches - C-Secur360",
@@ -758,25 +749,15 @@ const mobileOptimizedStyles = `
 
 // =================== FONCTIONS UTILITAIRES OPTIMISÉES ===================
 
-// Fonction de sauvegarde Supabase simulée
+// Fonction de sauvegarde Supabase simulée (SANS BOUCLE INFINIE)
 const saveToSupabase = async (formData: ASTFormData): Promise<boolean> => {
   try {
     console.log('💾 Sauvegarde Supabase simulée...', formData.numeroAST);
     
     // Simulation délai réseau
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     // Simulation sauvegarde réussie
-    const savedData = {
-      ...formData,
-      lastModified: new Date().toISOString()
-    };
-    
-    // En réalité, ici on ferait :
-    // const { data, error } = await supabase
-    //   .from('ast_forms')
-    //   .upsert(savedData);
-    
     console.log('✅ Sauvegarde réussie');
     return true;
   } catch (error) {
@@ -789,12 +770,6 @@ const saveToSupabase = async (formData: ASTFormData): Promise<boolean> => {
 const archiveAST = async (formData: ASTFormData): Promise<boolean> => {
   try {
     console.log('📁 Archivage AST...', formData.numeroAST);
-    
-    const archivedData = {
-      ...formData,
-      status: 'archived' as const,
-      lastModified: new Date().toISOString()
-    };
     
     // Simulation archivage
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -814,12 +789,6 @@ const submitAST = async (formData: ASTFormData): Promise<boolean> => {
   try {
     console.log('📤 Soumission finale AST...', formData.numeroAST);
     
-    const submittedData = {
-      ...formData,
-      status: 'completed' as const,
-      lastModified: new Date().toISOString()
-    };
-    
     // Simulation soumission
     await new Promise(resolve => setTimeout(resolve, 800));
     
@@ -833,7 +802,7 @@ const submitAST = async (formData: ASTFormData): Promise<boolean> => {
   }
 };
 
-// =================== GÉNÉRATION PDF PROFESSIONNELLE AVEC BRANDING C-SECUR360 ===================
+// =================== GÉNÉRATION PDF PROFESSIONNELLE ===================
 const generateProfessionalPDF = async (formData: ASTFormData, tenant: Tenant): Promise<boolean> => {
   try {
     console.log('📄 Génération PDF C-Secur360...');
@@ -1111,366 +1080,8 @@ Plateforme C-Secur360`;
     return false;
   }
 };
-// =================== COMPOSANT UNIQUE COMPLET - ASTFORMULTRAPREMIUM ===================
-// REMPLACEZ TOUT LE CONTENU DE VOTRE FICHIER PAR CE CODE COMPLET
-
-"use client";
-
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  FileText, MessageSquare, Shield, Zap, Settings, Users, Camera, CheckCircle,
-  ChevronLeft, ChevronRight, Save, Download, Send, Copy, Check, X, Plus, Trash2,
-  ArrowLeft, ArrowRight, Eye, Mail, Archive, Printer, Upload, Star, AlertTriangle,
-  Edit, Clock, User, Phone, MapPin, Calendar, Briefcase, HardHat, Heart, Activity,
-  Lock, Unlock, UserPlus, CheckSquare, UserCheck
-} from 'lucide-react';
-
-// =================== INTERFACES PRINCIPALES ===================
-interface Photo {
-  id: string;
-  name: string;
-  url: string;
-  description: string;
-  timestamp: string;
-  category: 'site' | 'equipment' | 'hazard' | 'team' | 'isolation' | 'other';
-}
-
-interface TeamMember {
-  id: string;
-  nom: string;
-  poste: string;
-  entreprise: string;
-  experience: string;
-  qualifications: string[];
-  roleSpecifique: string;
-  validationStatus: 'pending' | 'approved' | 'rejected';
-  validationComments?: string;
-  signature?: string;
-  acknowledgmentTime?: string;
-}
-
-interface IsolationPoint {
-  id: string;
-  source: string;
-  type: string;
-  methode: string;
-  responsable: string;
-  notes: string;
-  isole: boolean;
-  photos: Photo[];
-}
-
-interface Danger {
-  nom: string;
-  description: string;
-  categorie: string;
-  present: boolean;
-  niveauRisque: string;
-  moyensControle: string[];
-  notes: string;
-}
-
-interface SafetyEquipment {
-  nom: string;
-  categorie: string;
-  utilise: boolean;
-  conforme: boolean;
-  notes: string;
-  norme?: string;
-}
-
-interface TeamDiscussion {
-  id: string;
-  sujet: string;
-  description: string;
-  discute: boolean;
-  notes: string;
-  discussedBy: string;
-  discussedAt?: string;
-  priority: 'low' | 'medium' | 'high';
-}
-
-interface ASTFormData {
-  id: string;
-  numeroAST: string;
-  created: string;
-  lastModified: string;
-  language: 'fr' | 'en';
-  status: 'draft' | 'completed' | 'team_validation' | 'approved' | 'archived';
-  
-  projet: string;
-  lieu: string;
-  descriptionTache: string;
-  date: string;
-  heure: string;
-  responsable: string;
-  dureeEstimee: string;
-  conditionsMeteo: string;
-  
-  numeroUrgence: string;
-  responsableSecurite: string;
-  pointRassemblement: string;
-  
-  discussionsEquipe: TeamDiscussion[];
-  equipementsSecurite: SafetyEquipment[];
-  dangersIdentifies: Danger[];
-  pointsIsolement: IsolationPoint[];
-  equipe: TeamMember[];
-  photos: Photo[];
-  observations: string;
-  proceduresApplicables: string;
-  normesReglementations: string;
-  
-  validations: Record<string, boolean>;
-  approbations: Array<{
-    role: string;
-    nom: string;
-    dateHeure: string;
-    approuve: boolean;
-  }>;
-}
-
-interface Tenant {
-  id: string;
-  subdomain: string;
-  companyName: string;
-}
-
-interface ASTFormProps {
-  tenant: Tenant;
-}
-
-// =================== DONNÉES INITIALES ===================
-const generateASTNumber = (): string => {
-  const year = new Date().getFullYear();
-  const month = String(new Date().getMonth() + 1).padStart(2, '0');
-  const day = String(new Date().getDate()).padStart(2, '0');
-  const timestamp = Date.now().toString().slice(-6);
-  const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
-  return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
-};
-
-const getInitialFormData = (): ASTFormData => ({
-  id: `AST-${Date.now()}`,
-  numeroAST: generateASTNumber(),
-  created: new Date().toISOString(),
-  lastModified: new Date().toISOString(),
-  language: 'fr',
-  status: 'draft',
-  
-  projet: '',
-  lieu: '',
-  descriptionTache: '',
-  date: new Date().toISOString().split('T')[0],
-  heure: new Date().toTimeString().substring(0, 5),
-  responsable: '',
-  dureeEstimee: '',
-  conditionsMeteo: '',
-  
-  numeroUrgence: '911',
-  responsableSecurite: '',
-  pointRassemblement: '',
-  
-  discussionsEquipe: [
-    { id: 'disc-001', sujet: 'Identification dangers critiques', description: 'Révision des risques électriques, chutes, espaces clos', discute: false, notes: '', discussedBy: '', priority: 'high' },
-    { id: 'disc-002', sujet: 'Procédures LOTO', description: 'Cadenassage et isolation des énergies', discute: false, notes: '', discussedBy: '', priority: 'high' },
-    { id: 'disc-003', sujet: 'EPI requis', description: 'Vérification équipements protection', discute: false, notes: '', discussedBy: '', priority: 'high' },
-    { id: 'disc-004', sujet: 'Plans d\'urgence', description: 'Procédures évacuation et secours', discute: false, notes: '', discussedBy: '', priority: 'medium' }
-  ],
-  
-  equipementsSecurite: [
-    { nom: 'Casque CSA Type 1', categorie: 'Protection crânienne', utilise: false, conforme: false, notes: '', norme: 'CSA Z94.1' },
-    { nom: 'Lunettes sécurité CSA', categorie: 'Protection oculaire', utilise: false, conforme: false, notes: '', norme: 'CSA Z94.3' },
-    { nom: 'Gants isolants Classe 0', categorie: 'Protection mains', utilise: false, conforme: false, notes: '', norme: 'ASTM D120' },
-    { nom: 'Chaussures CSA électriques', categorie: 'Protection pieds', utilise: false, conforme: false, notes: '', norme: 'CSA Z195' },
-    { nom: 'Harnais CSA Z259', categorie: 'Protection antichute', utilise: false, conforme: false, notes: '', norme: 'CSA Z259.10' }
-  ],
-  
-  dangersIdentifies: [
-    { nom: 'Électrocution', description: 'Contact avec pièces sous tension', categorie: 'Électrique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
-    { nom: 'Arc électrique', description: 'Dégagement énergie et explosion', categorie: 'Électrique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
-    { nom: 'Chute de hauteur', description: 'Chute depuis surface élevée', categorie: 'Chute', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' },
-    { nom: 'Happement mécanique', description: 'Capture par pièces mobiles', categorie: 'Mécanique', present: false, niveauRisque: 'Faible', moyensControle: [], notes: '' }
-  ],
-  
-  pointsIsolement: [],
-  equipe: [],
-  photos: [],
-  observations: '',
-  proceduresApplicables: '',
-  normesReglementations: '',
-  
-  validations: {
-    infoComplete: false,
-    risquesEvalues: false,
-    equipementVerifie: false,
-    equipeFormee: false,
-    proceduresComprises: false
-  },
-  approbations: [
-    { role: 'Superviseur', nom: '', dateHeure: '', approuve: false },
-    { role: 'Responsable Sécurité', nom: '', dateHeure: '', approuve: false },
-    { role: 'Client', nom: '', dateHeure: '', approuve: false }
-  ]
-});
-
-// =================== TRADUCTIONS ===================
-const translations = {
-  fr: {
-    title: "Analyse Sécuritaire de Tâches - C-Secur360",
-    generalInfo: "Informations Générales",
-    teamDiscussion: "Discussion d'Équipe",
-    safetyEquipment: "Équipements de Sécurité",
-    hazardIdentification: "Identification des Dangers",
-    energyIsolation: "Isolement des Énergies",
-    teamManagement: "Gestion d'Équipe",
-    documentation: "Documentation",
-    finalValidation: "Validation Finale",
-    project: "Projet",
-    location: "Lieu",
-    taskDescription: "Description de la Tâche",
-    responsible: "Responsable",
-    previous: "Précédent",
-    next: "Suivant",
-    save: "Sauvegarder"
-  },
-  en: {
-    title: "Job Safety Analysis - C-Secur360",
-    generalInfo: "General Information",
-    teamDiscussion: "Team Discussion",
-    safetyEquipment: "Safety Equipment",
-    hazardIdentification: "Hazard Identification",
-    energyIsolation: "Energy Isolation",
-    teamManagement: "Team Management",
-    documentation: "Documentation",
-    finalValidation: "Final Validation",
-    project: "Project",
-    location: "Location",
-    taskDescription: "Task Description",
-    responsible: "Responsible",
-    previous: "Previous",
-    next: "Next",
-    save: "Save"
-  }
-};
-
-// =================== FONCTIONS UTILITAIRES ===================
-const saveToSupabase = async (formData: ASTFormData): Promise<boolean> => {
-  try {
-    console.log('💾 Sauvegarde simulée...', formData.numeroAST);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return true;
-  } catch (error) {
-    console.error('❌ Erreur sauvegarde:', error);
-    return false;
-  }
-};
-
-const archiveAST = async (formData: ASTFormData): Promise<boolean> => {
-  try {
-    console.log('📁 Archivage AST...', formData.numeroAST);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    alert(`AST ${formData.numeroAST} archivé avec succès`);
-    return true;
-  } catch (error) {
-    console.error('❌ Erreur archivage:', error);
-    return false;
-  }
-};
-
-const submitAST = async (formData: ASTFormData): Promise<boolean> => {
-  try {
-    console.log('📤 Soumission AST...', formData.numeroAST);
-    await new Promise(resolve => setTimeout(resolve, 800));
-    alert(`AST ${formData.numeroAST} soumis avec succès !`);
-    return true;
-  } catch (error) {
-    console.error('❌ Erreur soumission:', error);
-    return false;
-  }
-};
-
-// =================== STYLES CSS ===================
-const mobileOptimizedStyles = `
-.input-field {
-  width: 100%;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(100, 116, 139, 0.3);
-  border-radius: 12px;
-  color: #334155;
-  font-size: 16px;
-  transition: all 0.3s ease;
-  min-height: 44px;
-}
-
-.input-field:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  background: rgba(255, 255, 255, 1);
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  font-size: 14px;
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-}
-
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.9);
-  color: #3b82f6;
-  border: 1px solid rgba(100, 116, 139, 0.3);
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  font-size: 14px;
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 1);
-  border-color: #3b82f6;
-}
-
-@media (max-width: 768px) {
-  .input-field {
-    font-size: 16px;
-    padding: 14px 16px;
-  }
-  
-  .btn-primary,
-  .btn-secondary {
-    width: 100%;
-    padding: 14px 20px;
-    font-size: 16px;
-  }
-}
-`;
-// =================== AST SECTION 4A/5 - COMPOSANT PRINCIPAL + ÉTAPES 1-3 ===================
-// Section 4A: Composant principal avec hooks, fonctions et étapes 1-3
+// =================== AST SECTION 4/5 - COMPOSANT PRINCIPAL + ÉTAPES 1-4 ===================
+// Section 4: Composant principal avec hooks, fonctions et étapes 1-4
 
 // =================== COMPOSANT PRINCIPAL ASTFORMULTRAPREMIUM ===================
 const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
@@ -1647,24 +1258,13 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
     updateFormData({ pointsIsolement: nouveauxPoints });
   };
 
-  // =================== AUTO-SAVE ===================
+  // =================== AUTO-SAVE CORRIGÉ (SANS BOUCLE INFINIE) ===================
   useEffect(() => {
-    const autoSaveInterval = setInterval(() => {
-      if (formData.projet.trim()) {
-        setAutoSaveStatus('saving');
-        saveToSupabase(formData).then(success => {
-          if (success) {
-            setAutoSaveStatus('saved');
-            setTimeout(() => setAutoSaveStatus('idle'), 2000);
-          } else {
-            setAutoSaveStatus('error');
-          }
-        });
-      }
-    }, 30000);
-
-    return () => clearInterval(autoSaveInterval);
-  }, [formData]);
+    // Auto-save manuel uniquement (pas automatique pour éviter les boucles)
+    if (formData.projet.trim() && formData.lieu.trim()) {
+      console.log('📝 Données mises à jour:', formData.numeroAST);
+    }
+  }, [formData.projet, formData.lieu, formData.responsable]); // Dépendances spécifiques seulement
 
   // =================== STYLES CSS INJECTÉS ===================
   useEffect(() => {
@@ -2245,59 +1845,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
             </div>
           )}
 
-          {/* Navigation Bottom Mobile-Optimized */}
-          <div className="border-t border-gray-200 bg-gray-50/50 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={previousStep}
-                disabled={currentStep === 0}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 touch-manipulation ${
-                  currentStep === 0
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'btn-secondary'
-                }`}
-              >
-                <ChevronLeft size={16} />
-                <span className="hidden sm:inline">{t.previous}</span>
-              </button>
-
-              <div className="flex items-center space-x-2">
-                {Array.from({ length: 8 }, (_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentStep(i)}
-                    className={`w-8 h-8 rounded-full text-xs font-medium transition-all duration-200 touch-manipulation ${
-                      i === currentStep
-                        ? 'bg-blue-500 text-white shadow-lg'
-                        : i < currentStep
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={nextStep}
-                disabled={currentStep === 7}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 touch-manipulation ${
-                  currentStep === 7
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'btn-primary'
-                }`}
-              >
-                <span className="hidden sm:inline">{t.next}</span>
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-  {/* ÉTAPE 4: IDENTIFICATION DES DANGERS */}
+          {/* ÉTAPE 4: IDENTIFICATION DES DANGERS */}
           {currentStep === 3 && (
             <div className="p-4 sm:p-6 lg:p-8">
               <div className="mb-6">
@@ -2455,273 +2003,367 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
             </div>
           )}
 
-          {/* ÉTAPE 5: ISOLEMENT DES ÉNERGIES */}
+          {/* Navigation Bottom Mobile-Optimized */}
+          <div className="border-t border-gray-200 bg-gray-50/50 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={previousStep}
+                disabled={currentStep === 0}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 touch-manipulation ${
+                  currentStep === 0
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'btn-secondary'
+                }`}
+              >
+                <ChevronLeft size={16} />
+                <span className="hidden sm:inline">{t.previous}</span>
+              </button>
+
+              <div className="flex items-center space-x-2">
+                {Array.from({ length: 8 }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentStep(i)}
+                    className={`w-8 h-8 rounded-full text-xs font-medium transition-all duration-200 touch-manipulation ${
+                      i === currentStep
+                        ? 'bg-blue-500 text-white shadow-lg'
+                        : i < currentStep
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={nextStep}
+                disabled={currentStep === 7}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 touch-manipulation ${
+                  currentStep === 7
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'btn-primary'
+                }`}
+              >
+                <span className="hidden sm:inline">{t.next}</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+  // =================== AST SECTION 5/5 FINALE - ÉTAPES 5-8 + FERMETURE ===================
+// Section 5: Étapes finales (5-8) avec validation complète et fermeture du composant
+
+          {/* ÉTAPE 5: ISOLEMENT DES ÉNERGIES (LOTO) */}
           {currentStep === 4 && (
             <div className="p-4 sm:p-6 lg:p-8">
               <div className="mb-6">
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
-                  {t.energyIsolation}
+                  {translations[language].steps.step5}
                 </h2>
                 <p className="text-sm sm:text-base text-gray-600">
-                  Procédures de cadenassage et isolation des énergies (LOTO)
+                  {language === 'fr' 
+                    ? "Identifiez tous les points d'isolement énergétique selon les procédures LOTO" 
+                    : "Identify all energy isolation points according to LOTO procedures"
+                  }
                 </p>
               </div>
 
-              {/* Résumé isolation mobile */}
-              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Lock className="w-5 h-5 text-purple-600" />
-                  <span className="font-semibold text-purple-800">
-                    {formData.pointsIsolement.filter(p => p.isole).length} points isolés
-                  </span>
+              <div className="space-y-6">
+                {/* Résumé Points d'Isolement */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-blue-50 p-4 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {formData.isolationPoints?.length || 0}
+                    </div>
+                    <div className="text-sm text-blue-700">Points Total</div>
+                  </div>
+                  <div className="bg-yellow-50 p-4 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-yellow-600">
+                      {formData.isolationPoints?.filter(p => p.energyType === 'electrical').length || 0}
+                    </div>
+                    <div className="text-sm text-yellow-700">Électrique</div>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {formData.isolationPoints?.filter(p => p.energyType === 'mechanical').length || 0}
+                    </div>
+                    <div className="text-sm text-green-700">Mécanique</div>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {formData.isolationPoints?.filter(p => p.energyType === 'other').length || 0}
+                    </div>
+                    <div className="text-sm text-purple-700">Autres</div>
+                  </div>
                 </div>
-                <div className="text-sm text-purple-700">
-                  Vérifiez que tous les points d'énergie sont identifiés et sécurisés
-                </div>
-              </div>
 
-              {/* Points d'isolement */}
-              <div className="space-y-4">
-                {formData.pointsIsolement.map((point, index) => (
-                  <div key={index} className={`bg-white rounded-xl border p-4 transition-all duration-200 ${
-                    point.isole ? 'border-purple-300 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}>
-                    <div className="flex items-start gap-3">
-                      <CustomCheckbox
-                        checked={point.isole}
-                        onChange={(checked) => updatePointIsolement(index, { ...point, isole: checked })}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                              Source d'énergie:
-                            </label>
-                            <input
-                              type="text"
-                              value={point.source}
-                              onChange={(e) => updatePointIsolement(index, { ...point, source: e.target.value })}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              placeholder="Ex: Panneau électrique #A-1"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                              Type d'énergie:
-                            </label>
-                            <select
-                              value={point.type}
-                              onChange={(e) => updatePointIsolement(index, { ...point, type: e.target.value })}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                            >
-                              <option value="">Sélectionner</option>
-                              <option value="Électrique">⚡ Électrique</option>
-                              <option value="Mécanique">⚙️ Mécanique</option>
-                              <option value="Hydraulique">🔧 Hydraulique</option>
-                              <option value="Pneumatique">💨 Pneumatique</option>
-                              <option value="Thermique">🔥 Thermique</option>
-                              <option value="Chimique">🧪 Chimique</option>
-                              <option value="Gravitationnelle">📏 Gravitationnelle</option>
-                            </select>
-                          </div>
-                        </div>
+                {/* Liste des Points d'Isolement */}
+                {formData.isolationPoints?.map((point, index) => (
+                  <div key={index} className="bg-gray-50 p-6 rounded-lg border">
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Point d'Isolement #{index + 1}
+                      </h3>
+                      <button
+                        onClick={() => removeIsolationPoint(index)}
+                        className="text-red-500 hover:text-red-700 p-2"
+                        type="button"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
 
-                        {point.isole && (
-                          <div className="space-y-3 pt-3 border-t border-purple-200">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
-                                  Méthode d'isolement:
-                                </label>
-                                <select
-                                  value={point.methode}
-                                  onChange={(e) => updatePointIsolement(index, { ...point, methode: e.target.value })}
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                >
-                                  <option value="">Sélectionner</option>
-                                  <option value="Cadenas">🔒 Cadenas</option>
-                                  <option value="Étiquette">🏷️ Étiquette</option>
-                                  <option value="Disjoncteur">🔌 Disjoncteur</option>
-                                  <option value="Vanne">🚰 Vanne</option>
-                                  <option value="Disconnecteur">⚡ Disconnecteur</option>
-                                  <option value="Blocage mécanique">🔧 Blocage mécanique</option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
-                                  Responsable du cadenas:
-                                </label>
-                                <input
-                                  type="text"
-                                  value={point.responsable}
-                                  onChange={(e) => updatePointIsolement(index, { ...point, responsable: e.target.value })}
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                  placeholder="Nom du responsable"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Notes de vérification:
-                              </label>
-                              <textarea
-                                value={point.notes}
-                                onChange={(e) => updatePointIsolement(index, { ...point, notes: e.target.value })}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                rows={2}
-                                placeholder="Test de vérification, numéro de cadenas, observations..."
-                              />
-                            </div>
-
-                            {/* Photos d'isolement */}
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-2">
-                                Photos du point d'isolement:
-                              </label>
-                              <PhotoCarousel
-                                photos={point.photos}
-                                onAddPhoto={(stepId, file) => addPhotoToIsolationPoint(point.id, file)}
-                                onRemovePhoto={(stepId, photoIndex) => removePhotoFromIsolationPoint(point.id, parseInt(photoIndex))}
-                                stepId={`isolation-${point.id}`}
-                                maxPhotos={3}
-                              />
-                            </div>
-                          </div>
-                        )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Description du Point
+                        </label>
+                        <input
+                          type="text"
+                          value={point.description}
+                          onChange={(e) => updateIsolationPoint(index, 'description', e.target.value)}
+                          className="input-field"
+                          placeholder="Ex: Disjoncteur principal panneau A"
+                        />
                       </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Type d'Énergie
+                        </label>
+                        <select
+                          value={point.energyType}
+                          onChange={(e) => updateIsolationPoint(index, 'energyType', e.target.value)}
+                          className="input-field"
+                        >
+                          <option value="electrical">Électrique</option>
+                          <option value="mechanical">Mécanique</option>
+                          <option value="hydraulic">Hydraulique</option>
+                          <option value="pneumatic">Pneumatique</option>
+                          <option value="thermal">Thermique</option>
+                          <option value="chemical">Chimique</option>
+                          <option value="other">Autre</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Méthode d'Isolement
+                        </label>
+                        <select
+                          value={point.isolationMethod}
+                          onChange={(e) => updateIsolationPoint(index, 'isolationMethod', e.target.value)}
+                          className="input-field"
+                        >
+                          <option value="lockout">Cadenas (Lockout)</option>
+                          <option value="tagout">Étiquetage (Tagout)</option>
+                          <option value="both">Cadenas + Étiquette</option>
+                          <option value="disconnect">Déconnexion</option>
+                          <option value="valve">Fermeture vanne</option>
+                          <option value="breaker">Disjoncteur</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Responsable
+                        </label>
+                        <input
+                          type="text"
+                          value={point.responsible}
+                          onChange={(e) => updateIsolationPoint(index, 'responsible', e.target.value)}
+                          className="input-field"
+                          placeholder="Nom du responsable"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Photos du Point d'Isolement
+                      </label>
+                      <PhotoCarousel 
+                        photos={point.photos || []}
+                        onAddPhoto={(photo) => addPhotoToIsolationPoint(index, photo)}
+                        onRemovePhoto={(photoIndex) => removePhotoFromIsolationPoint(index, photoIndex)}
+                        maxPhotos={5}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Notes Spécifiques
+                      </label>
+                      <textarea
+                        value={point.notes}
+                        onChange={(e) => updateIsolationPoint(index, 'notes', e.target.value)}
+                        className="input-field"
+                        rows={2}
+                        placeholder="Précisions importantes sur cet isolement..."
+                      />
                     </div>
                   </div>
                 ))}
-              </div>
 
-              {/* Ajouter point d'isolement */}
-              <div className="mt-6 bg-white rounded-xl border border-gray-200 p-4">
+                {/* Bouton Ajouter Point */}
                 <button
-                  onClick={addPointIsolement}
-                  className="w-full btn-secondary text-sm flex items-center justify-center gap-2"
+                  onClick={addIsolationPoint}
+                  className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[var(--primary-blue)] hover:bg-blue-50 transition-colors"
+                  type="button"
                 >
-                  <Plus className="w-4 h-4" />
-                  Ajouter un point d'isolement
+                  <Plus className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                  <span className="text-gray-600">Ajouter un Point d'Isolement</span>
                 </button>
               </div>
             </div>
           )}
 
-          {/* ÉTAPE 6: GESTION D'ÉQUIPE */}
+          {/* ÉTAPE 6: GESTION DE L'ÉQUIPE */}
           {currentStep === 5 && (
             <div className="p-4 sm:p-6 lg:p-8">
               <div className="mb-6">
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
-                  {t.teamManagement}
+                  {translations[language].steps.step6}
                 </h2>
                 <p className="text-sm sm:text-base text-gray-600">
-                  Membres de l'équipe, rôles et qualifications
+                  {language === 'fr' 
+                    ? "Identifiez tous les membres de l'équipe et leurs qualifications" 
+                    : "Identify all team members and their qualifications"
+                  }
                 </p>
               </div>
 
-              {/* Résumé équipe mobile */}
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="w-5 h-5 text-green-600" />
-                  <span className="font-semibold text-green-800">
-                    {formData.equipe.length} personnes dans l'équipe
-                  </span>
+              <div className="space-y-6">
+                {/* Résumé Équipe */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-blue-50 p-4 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {formData.teamMembers?.length || 0}
+                    </div>
+                    <div className="text-sm text-blue-700">Membres Total</div>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {formData.teamMembers?.filter(m => m.qualifications?.length > 0).length || 0}
+                    </div>
+                    <div className="text-sm text-green-700">Qualifiés</div>
+                  </div>
+                  <div className="bg-yellow-50 p-4 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-yellow-600">
+                      {formData.teamMembers?.reduce((sum, m) => sum + (m.experience || 0), 0) || 0}
+                    </div>
+                    <div className="text-sm text-yellow-700">Années Exp.</div>
+                  </div>
                 </div>
-                <div className="text-sm text-green-700">
-                  Vérifiez les qualifications et formations de chaque membre
-                </div>
-              </div>
 
-              {/* Membres d'équipe */}
-              <div className="space-y-4">
-                {formData.equipe.map((membre, index) => (
-                  <div key={index} className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        Membre {index + 1}
+                {/* Liste des Membres */}
+                {formData.teamMembers?.map((member, index) => (
+                  <div key={index} className="bg-gray-50 p-6 rounded-lg border">
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Membre #{index + 1}
                       </h3>
                       <button
                         onClick={() => removeMember(index)}
-                        className="text-red-500 hover:text-red-700 p-1"
+                        className="text-red-500 hover:text-red-700 p-2"
+                        type="button"
                       >
-                        <X className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Nom complet *
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Nom Complet
                         </label>
                         <input
                           type="text"
-                          value={membre.nom}
-                          onChange={(e) => updateMember(index, { ...membre, nom: e.target.value })}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                          placeholder="Prénom et nom"
-                          required
+                          value={member.name}
+                          onChange={(e) => updateMember(index, 'name', e.target.value)}
+                          className="input-field"
+                          placeholder="Prénom Nom"
                         />
                       </div>
+
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Poste/Fonction *
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Poste/Fonction
                         </label>
                         <input
                           type="text"
-                          value={membre.poste}
-                          onChange={(e) => updateMember(index, { ...membre, poste: e.target.value })}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                          placeholder="Ex: Électricien"
-                          required
+                          value={member.position}
+                          onChange={(e) => updateMember(index, 'position', e.target.value)}
+                          className="input-field"
+                          placeholder="Ex: Électricien, Superviseur"
                         />
                       </div>
+
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Entreprise
                         </label>
                         <input
                           type="text"
-                          value={membre.entreprise}
-                          onChange={(e) => updateMember(index, { ...membre, entreprise: e.target.value })}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          value={member.company}
+                          onChange={(e) => updateMember(index, 'company', e.target.value)}
+                          className="input-field"
                           placeholder="Nom de l'entreprise"
                         />
                       </div>
+
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Années d'expérience
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Expérience (années)
                         </label>
-                        <select
-                          value={membre.experience}
-                          onChange={(e) => updateMember(index, { ...membre, experience: e.target.value })}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                        >
-                          <option value="">Sélectionner</option>
-                          <option value="< 1 an">Moins d'1 an</option>
-                          <option value="1-3 ans">1 à 3 ans</option>
-                          <option value="3-5 ans">3 à 5 ans</option>
-                          <option value="5-10 ans">5 à 10 ans</option>
-                          <option value="10+ ans">Plus de 10 ans</option>
-                        </select>
+                        <input
+                          type="number"
+                          value={member.experience}
+                          onChange={(e) => updateMember(index, 'experience', parseInt(e.target.value) || 0)}
+                          className="input-field"
+                          min="0"
+                          max="50"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Rôle dans cette Tâche
+                        </label>
+                        <input
+                          type="text"
+                          value={member.role}
+                          onChange={(e) => updateMember(index, 'role', e.target.value)}
+                          className="input-field"
+                          placeholder="Ex: Responsable sécurité, Opérateur principal"
+                        />
                       </div>
                     </div>
 
-                    <div className="mt-3">
-                      <label className="block text-xs font-medium text-gray-700 mb-2">
-                        Formations et certifications:
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Qualifications/Certifications
                       </label>
                       <div className="flex flex-wrap gap-2 mb-2">
-                        {membre.qualifications.map((qual, qualIndex) => (
-                          <span key={qualIndex} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                        {member.qualifications?.map((qual, qualIndex) => (
+                          <span
+                            key={qualIndex}
+                            className="bg-[var(--primary-blue)] text-white px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                          >
                             {qual}
                             <button
                               onClick={() => {
-                                const newQuals = membre.qualifications.filter((_, i) => i !== qualIndex);
-                                updateMember(index, { ...membre, qualifications: newQuals });
+                                const newQuals = [...(member.qualifications || [])];
+                                newQuals.splice(qualIndex, 1);
+                                updateMember(index, 'qualifications', newQuals);
                               }}
-                              className="text-blue-600 hover:text-blue-800"
+                              className="text-white hover:text-red-200"
+                              type="button"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -2731,140 +2373,136 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                       <div className="flex gap-2">
                         <input
                           type="text"
-                          value={newQualification}
-                          onChange={(e) => setNewQualification(e.target.value)}
-                          className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
-                          placeholder="Ex: RCR, Hauteur, SIMDUT..."
+                          placeholder="Ajouter une qualification..."
+                          className="input-field flex-1"
                           onKeyPress={(e) => {
-                            if (e.key === 'Enter' && newQualification.trim()) {
-                              updateMember(index, { 
-                                ...membre, 
-                                qualifications: [...membre.qualifications, newQualification.trim()] 
-                              });
-                              setNewQualification('');
+                            if (e.key === 'Enter' && e.target.value.trim()) {
+                              const newQuals = [...(member.qualifications || []), e.target.value.trim()];
+                              updateMember(index, 'qualifications', newQuals);
+                              e.target.value = '';
                             }
                           }}
                         />
                         <button
-                          onClick={() => {
-                            if (newQualification.trim()) {
-                              updateMember(index, { 
-                                ...membre, 
-                                qualifications: [...membre.qualifications, newQualification.trim()] 
-                              });
-                              setNewQualification('');
+                          onClick={(e) => {
+                            const input = e.target.previousElementSibling;
+                            if (input.value.trim()) {
+                              const newQuals = [...(member.qualifications || []), input.value.trim()];
+                              updateMember(index, 'qualifications', newQuals);
+                              input.value = '';
                             }
                           }}
-                          className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                          className="btn-secondary"
+                          type="button"
                         >
-                          <Plus className="w-3 h-3" />
+                          <Plus className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
-
-                    <div className="mt-3">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Rôle spécifique dans cette tâche:
-                      </label>
-                      <textarea
-                        value={membre.roleSpecifique}
-                        onChange={(e) => updateMember(index, { ...membre, roleSpecifique: e.target.value })}
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                        rows={2}
-                        placeholder="Responsabilités spécifiques pour cette AST..."
-                      />
-                    </div>
                   </div>
                 ))}
-              </div>
 
-              {/* Ajouter membre */}
-              <div className="mt-6 bg-white rounded-xl border border-gray-200 p-4">
+                {/* Bouton Ajouter Membre */}
                 <button
                   onClick={addMember}
-                  className="w-full btn-secondary text-sm flex items-center justify-center gap-2"
+                  className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[var(--primary-blue)] hover:bg-blue-50 transition-colors"
+                  type="button"
                 >
-                  <UserPlus className="w-4 h-4" />
-                  Ajouter un membre à l'équipe
+                  <Plus className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                  <span className="text-gray-600">Ajouter un Membre d'Équipe</span>
                 </button>
               </div>
             </div>
           )}
 
-          {/* ÉTAPE 7: DOCUMENTATION */}
+          {/* ÉTAPE 7: DOCUMENTATION SUPPLÉMENTAIRE */}
           {currentStep === 6 && (
             <div className="p-4 sm:p-6 lg:p-8">
               <div className="mb-6">
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
-                  {t.documentation}
+                  {translations[language].steps.step7}
                 </h2>
                 <p className="text-sm sm:text-base text-gray-600">
-                  Photos, schémas et documentation de support
+                  {language === 'fr' 
+                    ? "Ajoutez photos supplémentaires et observations importantes" 
+                    : "Add additional photos and important observations"
+                  }
                 </p>
               </div>
 
-              {/* Photos générales */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Camera className="w-5 h-5 text-blue-600" />
-                  Photos du site et de la tâche
-                </h3>
-                
-                <PhotoCarousel
-                  photos={formData.photos}
-                  onAddPhoto={(stepId, file) => handleAddPhoto('documentation', file)}
-                  onRemovePhoto={(stepId, photoId) => handleRemovePhoto('documentation', photoId)}
-                  stepId="documentation"
-                  maxPhotos={15}
-                />
-              </div>
+              <div className="space-y-8">
+                {/* Photos Supplémentaires */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Camera className="w-5 h-5" />
+                    Photos Supplémentaires du Site
+                  </h3>
+                  <PhotoCarousel 
+                    photos={formData.additionalPhotos || []}
+                    onAddPhoto={(photo) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        additionalPhotos: [...(prev.additionalPhotos || []), photo]
+                      }));
+                    }}
+                    onRemovePhoto={(index) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        additionalPhotos: (prev.additionalPhotos || []).filter((_, i) => i !== index)
+                      }));
+                    }}
+                    maxPhotos={15}
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    Maximum 15 photos (zones de travail, équipements, conditions particulières)
+                  </p>
+                </div>
 
-              {/* Observations */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                  Observations et notes importantes
-                </h3>
-                
-                <textarea
-                  value={formData.observations}
-                  onChange={(e) => setFormData(prev => ({ ...prev, observations: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  rows={6}
-                  placeholder="Ajoutez vos observations, conditions particulières, défis identifiés, recommandations..."
-                />
-              </div>
+                {/* Observations Importantes */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Observations et Notes Importantes
+                  </h3>
+                  <textarea
+                    value={formData.observations || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, observations: e.target.value }))}
+                    className="input-field min-h-[120px]"
+                    placeholder="Conditions particulières, défis identifiés, recommandations spéciales, points d'attention..."
+                  />
+                </div>
 
-              {/* Documents de référence */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                  Documents de référence
-                </h3>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Procédures applicables
-                    </label>
-                    <textarea
-                      value={formData.proceduresApplicables}
-                      onChange={(e) => setFormData(prev => ({ ...prev, proceduresApplicables: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                      rows={4}
-                      placeholder="• Procédure LOTO-001&#10;• Guide sécurité électrique&#10;• Instructions fabricant..."
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Normes et réglementations
-                    </label>
-                    <textarea
-                      value={formData.normesReglementations}
-                      onChange={(e) => setFormData(prev => ({ ...prev, normesReglementations: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                      rows={4}
-                      placeholder="• CSA Z462&#10;• Code électrique du Québec&#10;• CNESST..."
-                    />
+                {/* Procédures Applicables */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Shield className="w-5 h-5" />
+                    Procédures et Normes Applicables
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Procédures Internes
+                      </label>
+                      <textarea
+                        value={formData.internalProcedures || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, internalProcedures: e.target.value }))}
+                        className="input-field"
+                        rows={4}
+                        placeholder="Procédures spécifiques de l'entreprise..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Normes Réglementaires
+                      </label>
+                      <textarea
+                        value={formData.regulations || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, regulations: e.target.value }))}
+                        className="input-field"
+                        rows={4}
+                        placeholder="CNESST, CSA Z462, autres normes applicables..."
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2876,179 +2514,206 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
             <div className="p-4 sm:p-6 lg:p-8">
               <div className="mb-6">
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
-                  {t.finalValidation}
+                  {translations[language].steps.step8}
                 </h2>
                 <p className="text-sm sm:text-base text-gray-600">
-                  Vérification finale et approbations requises
+                  {language === 'fr' 
+                    ? "Validation finale et approbations avant mise en œuvre" 
+                    : "Final validation and approvals before implementation"
+                  }
                 </p>
               </div>
 
-              {/* Résumé final mobile */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                  <div className="text-lg sm:text-xl font-bold text-blue-700">{formData.equipe.length}</div>
-                  <div className="text-xs text-blue-600">Personnes</div>
-                </div>
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
-                  <div className="text-lg sm:text-xl font-bold text-orange-700">
-                    {formData.dangersIdentifies.filter(d => d.present).length}
-                  </div>
-                  <div className="text-xs text-orange-600">Risques</div>
-                </div>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-                  <div className="text-lg sm:text-xl font-bold text-green-700">
-                    {formData.equipementsSecurite.filter(e => e.utilise).length}
-                  </div>
-                  <div className="text-xs text-green-600">Équipements</div>
-                </div>
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-center">
-                  <div className="text-lg sm:text-xl font-bold text-purple-700">
-                    {formData.pointsIsolement.filter(p => p.isole).length}
-                  </div>
-                  <div className="text-xs text-purple-600">Isolements</div>
-                </div>
-              </div>
-
-              {/* Vérifications finales */}
-              <div className="space-y-6">
-                {/* Validation des informations */}
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <CheckSquare className="w-5 h-5 text-green-600" />
-                    Validation des informations
-                  </h3>
-                  
-                  <div className="space-y-3">
-                    {[
-                      { key: 'infoComplete', label: 'Toutes les informations requises sont complètes' },
-                      { key: 'risquesEvalues', label: 'Tous les risques ont été évalués et des contrôles sont en place' },
-                      { key: 'equipementVerifie', label: 'Tous les équipements de sécurité ont été vérifiés' },
-                      { key: 'equipeFormee', label: 'Tous les membres de l\'équipe sont formés et qualifiés' },
-                      { key: 'proceduresComprises', label: 'Les procédures de sécurité sont comprises par tous' }
-                    ].map((validation) => (
-                      <div key={validation.key} className="flex items-start gap-3">
-                        <CustomCheckbox
-                          checked={formData.validations[validation.key] || false}
-                          onChange={(checked) => setFormData(prev => ({
-                            ...prev,
-                            validations: { ...prev.validations, [validation.key]: checked }
-                          }))}
-                        />
-                        <span className="text-sm text-gray-700">{validation.label}</span>
+              <div className="space-y-8">
+                {/* Résumé Final */}
+                <div className="bg-gradient-to-r from-[var(--primary-blue)] to-[var(--accent-blue)] p-6 rounded-lg text-white">
+                  <h3 className="text-xl font-bold mb-4">Résumé de l'AST</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">{formData.teamMembers?.length || 0}</div>
+                      <div className="text-sm opacity-90">Personnes</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">
+                        {formData.dangers?.filter(d => d.riskLevel === 'high').length || 0}
                       </div>
-                    ))}
+                      <div className="text-sm opacity-90">Risques Élevés</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">
+                        {Object.values(formData.equipements || {}).filter(Boolean).length}
+                      </div>
+                      <div className="text-sm opacity-90">Équipements</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">{formData.isolationPoints?.length || 0}</div>
+                      <div className="text-sm opacity-90">Isolements</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Validations Obligatoires */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Shield className="w-5 h-5" />
+                    Validations Obligatoires
+                  </h3>
+                  <div className="space-y-3">
+                    <CustomCheckbox
+                      checked={formData.validations?.riskAssessment || false}
+                      onChange={(checked) => setFormData(prev => ({
+                        ...prev,
+                        validations: { ...prev.validations, riskAssessment: checked }
+                      }))}
+                      label="Tous les risques ont été identifiés et des mesures de contrôle appropriées sont en place"
+                      variant={formData.validations?.riskAssessment ? 'success' : 'default'}
+                    />
+                    
+                    <CustomCheckbox
+                      checked={formData.validations?.equipmentCheck || false}
+                      onChange={(checked) => setFormData(prev => ({
+                        ...prev,
+                        validations: { ...prev.validations, equipmentCheck: checked }
+                      }))}
+                      label="Tous les équipements de sécurité requis sont disponibles et en bon état"
+                      variant={formData.validations?.equipmentCheck ? 'success' : 'default'}
+                    />
+                    
+                    <CustomCheckbox
+                      checked={formData.validations?.teamBriefing || false}
+                      onChange={(checked) => setFormData(prev => ({
+                        ...prev,
+                        validations: { ...prev.validations, teamBriefing: checked }
+                      }))}
+                      label="L'équipe a été informée des risques et des procédures de sécurité"
+                      variant={formData.validations?.teamBriefing ? 'success' : 'default'}
+                    />
+                    
+                    <CustomCheckbox
+                      checked={formData.validations?.emergencyPlan || false}
+                      onChange={(checked) => setFormData(prev => ({
+                        ...prev,
+                        validations: { ...prev.validations, emergencyPlan: checked }
+                      }))}
+                      label="Les procédures d'urgence sont définies et comprises par tous"
+                      variant={formData.validations?.emergencyPlan ? 'success' : 'default'}
+                    />
+                    
+                    <CustomCheckbox
+                      checked={formData.validations?.authorityApproval || false}
+                      onChange={(checked) => setFormData(prev => ({
+                        ...prev,
+                        validations: { ...prev.validations, authorityApproval: checked }
+                      }))}
+                      label="Cette AST a été approuvée par l'autorité compétente"
+                      variant={formData.validations?.authorityApproval ? 'success' : 'default'}
+                    />
                   </div>
                 </div>
 
                 {/* Approbations */}
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <UserCheck className="w-5 h-5 text-blue-600" />
-                    Approbations requises
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    {formData.approbations.map((approbation, index) => (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                              Rôle:
-                            </label>
-                            <input
-                              type="text"
-                              value={approbation.role}
-                              onChange={(e) => {
-                                const newApprobations = [...formData.approbations];
-                                newApprobations[index].role = e.target.value;
-                                setFormData(prev => ({ ...prev, approbations: newApprobations }));
-                              }}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              placeholder="Ex: Superviseur"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                              Nom:
-                            </label>
-                            <input
-                              type="text"
-                              value={approbation.nom}
-                              onChange={(e) => {
-                                const newApprobations = [...formData.approbations];
-                                newApprobations[index].nom = e.target.value;
-                                setFormData(prev => ({ ...prev, approbations: newApprobations }));
-                              }}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              placeholder="Nom complet"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                              Date/Heure:
-                            </label>
-                            <input
-                              type="datetime-local"
-                              value={approbation.dateHeure}
-                              onChange={(e) => {
-                                const newApprobations = [...formData.approbations];
-                                newApprobations[index].dateHeure = e.target.value;
-                                setFormData(prev => ({ ...prev, approbations: newApprobations }));
-                              }}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-3">
-                          <CustomCheckbox
-                            checked={approbation.approuve}
-                            onChange={(checked) => {
-                              const newApprobations = [...formData.approbations];
-                              newApprobations[index].approuve = checked;
-                              if (checked) {
-                                newApprobations[index].dateHeure = new Date().toISOString().slice(0, 16);
-                              }
-                              setFormData(prev => ({ ...prev, approbations: newApprobations }));
-                            }}
-                            variant="success"
-                          />
-                          <span className="text-sm text-gray-700">
-                            {approbation.approuve ? '✅ Approuvé' : '⏳ En attente d\'approbation'}
-                          </span>
-                        </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Superviseur/Responsable Sécurité
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Nom et Signature
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.approvals?.supervisor || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            approvals: { ...prev.approvals, supervisor: e.target.value }
+                          }))}
+                          className="input-field"
+                          placeholder="Nom complet du superviseur"
+                        />
                       </div>
-                    ))}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Date d'Approbation
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.approvals?.supervisorDate || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            approvals: { ...prev.approvals, supervisorDate: e.target.value }
+                          }))}
+                          className="input-field"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Responsable du Travail
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Nom et Signature
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.approvals?.workLeader || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            approvals: { ...prev.approvals, workLeader: e.target.value }
+                          }))}
+                          className="input-field"
+                          placeholder="Nom complet du responsable"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Date d'Approbation
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.approvals?.workLeaderDate || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            approvals: { ...prev.approvals, workLeaderDate: e.target.value }
+                          }))}
+                          className="input-field"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Actions finales */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-indigo-600" />
-                    Actions finales
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Actions Finales */}
+                <div className="bg-gray-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions Finales</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <button
-                      onClick={() => generateProfessionalPDF(formData, tenant)}
-                      className="btn-primary text-sm flex items-center justify-center gap-2"
+                      onClick={() => generateProfessionalPDF(formData)}
+                      className="btn-secondary flex items-center justify-center gap-2"
+                      type="button"
                     >
                       <Download className="w-4 h-4" />
-                      PDF C-Secur360
+                      Générer PDF
                     </button>
                     
                     <button
-                      onClick={() => sendEmailNotification(formData, tenant)}
-                      className="btn-secondary text-sm flex items-center justify-center gap-2"
+                      onClick={() => sendEmailNotification(formData)}
+                      className="btn-secondary flex items-center justify-center gap-2"
+                      type="button"
                     >
                       <Mail className="w-4 h-4" />
-                      Envoyer par email
+                      Envoyer Email
                     </button>
                     
                     <button
                       onClick={() => archiveAST(formData)}
-                      className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
+                      className="btn-secondary flex items-center justify-center gap-2"
+                      type="button"
                     >
                       <Archive className="w-4 h-4" />
                       Archiver
@@ -3056,10 +2721,12 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
                     
                     <button
                       onClick={() => submitAST(formData)}
-                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
+                      className="btn-primary flex items-center justify-center gap-2"
+                      type="button"
+                      disabled={!Object.values(formData.validations || {}).every(Boolean)}
                     >
                       <CheckCircle className="w-4 h-4" />
-                      Soumettre
+                      Finaliser AST
                     </button>
                   </div>
                 </div>
@@ -3067,78 +2734,66 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
             </div>
           )}
 
-          {/* Navigation entre les étapes - Optimisée mobile */}
-          <div className="flex flex-col sm:flex-row items-center justify-between p-4 sm:p-6 border-t border-gray-200 bg-gray-50/50 gap-4">
-            <button
-              onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
-              disabled={currentStep === 0}
-              className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 w-full sm:w-auto justify-center"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>{t.previous}</span>
-            </button>
-            
-            <div className="flex items-center gap-2">
-              {Array.from({ length: 8 }, (_, i) => (
+          {/* Navigation Bottom Mobile-Optimized */}
+          <div className="border-t border-gray-200 bg-white p-4 sm:p-6 lg:p-8">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span>Étape {currentStep + 1} sur 8</span>
+                <div className="flex gap-1">
+                  {Array.from({ length: 8 }, (_, i) => (
+                    <div
+                      key={i}
+                      className={`w-2 h-2 rounded-full ${
+                        i <= currentStep ? 'bg-[var(--primary-blue)]' : 'bg-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 w-full sm:w-auto">
                 <button
-                  key={i}
-                  onClick={() => setCurrentStep(i)}
-                  className={`w-8 h-8 rounded-full text-xs font-medium transition-all duration-200 ${
-                    i === currentStep
-                      ? 'bg-blue-600 text-white'
-                      : i < currentStep
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
-                  }`}
+                  type="button"
+                  onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                  disabled={currentStep === 0}
+                  className="btn-secondary flex-1 sm:flex-none disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {i + 1}
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  {translations[language].navigation.previous}
                 </button>
-              ))}
+
+                {currentStep === 7 ? (
+                  <button
+                    type="button"
+                    onClick={() => submitAST(formData)}
+                    disabled={!Object.values(formData.validations || {}).every(Boolean)}
+                    className="btn-primary flex-1 sm:flex-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Finaliser AST
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(Math.min(7, currentStep + 1))}
+                    className="btn-primary flex-1 sm:flex-none"
+                  >
+                    {translations[language].navigation.next}
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </button>
+                )}
+              </div>
             </div>
-            
-            <button
-              onClick={() => {
-                if (currentStep === 7) {
-                  // Validation finale et soumission
-                  const allValidated = Object.values(formData.validations).every(v => v);
-                  const allApproved = formData.approbations.every(a => a.approuve);
-                  
-                  if (!allValidated || !allApproved) {
-                    alert('Toutes les validations et approbations sont requises avant la soumission.');
-                    return;
-                  }
-                  
-                  submitAST(formData);
-                } else {
-                  setCurrentStep(prev => Math.min(7, prev + 1));
-                }
-              }}
-              className={`flex items-center gap-2 w-full sm:w-auto justify-center transition-colors ${
-                currentStep === 7 
-                  ? 'bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg'
-                  : 'btn-primary'
-              }`}
-            >
-              <span>{currentStep === 7 ? 'Finaliser AST' : t.next}</span>
-              {currentStep === 7 ? <CheckCircle className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </button>
           </div>
         </div>
-      </div>
 
-      {/* Footer mobile sticky */}
-      <div className="bg-white/90 backdrop-blur-lg border-t border-gray-200 p-3 sm:hidden sticky bottom-0">
-        <div className="flex items-center justify-center gap-4 text-xs text-gray-600">
-          <span>AST #{formData.numeroAST}</span>
-          <span>•</span>
-          <span>C-Secur360</span>
-          <span>•</span>
-          <span>{formData.equipe.length} personnes</span>
+        {/* Mobile Footer Info */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-[var(--primary-blue)] text-white p-2 text-center text-xs z-40">
+          AST #{astNumber} • C-Secur360 • Équipe: {formData.teamMembers?.length || 0} personnes
         </div>
       </div>
     </div>
   );
 };
 
-// =================== EXPORT DU COMPOSANT ===================
 export default ASTFormUltraPremium;
