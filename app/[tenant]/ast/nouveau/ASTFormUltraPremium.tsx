@@ -1177,7 +1177,7 @@ const PhotoCarousel: React.FC<{
 // =================== AST SECTION 4/5 - COMPOSANT PRINCIPAL & LOGIQUE CORRIGÉE ===================
 // Section 4: Composant principal avec toutes les fonctions et logique métier CORRIGÉE
 
-// =================== STYLES CSS PREMIUM ===================
+// =================== STYLES CSS PREMIUM MOBILE OPTIMISÉ ===================
 const premiumStyles = `
 .form-container {
   min-height: 100vh;
@@ -1684,27 +1684,266 @@ const premiumStyles = `
   50% { opacity: 0.7; }
 }
 
+/* =================== OPTIMISATIONS MOBILE COMPLÈTES =================== */
+
+/* Base mobile */
 @media (max-width: 768px) {
+  .form-container {
+    padding: 10px;
+  }
+
+  .glass-effect {
+    padding: 16px;
+    border-radius: 16px;
+    margin: 0;
+  }
+
+  /* Header mobile */
   .header-counters {
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
+    padding: 16px;
   }
-  
+
+  .company-info {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .company-info h1 {
+    font-size: 20px !important;
+  }
+
   .counters-grid {
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
   }
-  
+
+  .counter-item {
+    padding: 8px 12px;
+  }
+
+  .counter-number {
+    font-size: 18px !important;
+  }
+
+  /* Steps mobile */
   .step-indicator {
-    grid-template-columns: repeat(2, 1fr);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 8px;
+    background: rgba(30, 41, 59, 0.4);
+    border-radius: 12px;
   }
-  
+
+  .step-item {
+    padding: 8px 12px;
+    min-width: auto;
+    font-size: 12px;
+    justify-content: flex-start;
+  }
+
+  .step-item span:last-child {
+    display: none; /* Cache le pourcentage */
+  }
+
+  /* Inputs mobile */
+  .input-premium {
+    font-size: 16px; /* Évite zoom iOS */
+    padding: 14px 16px;
+  }
+
+  /* Grids responsive */
   .equipment-grid,
   .hazard-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .equipment-item,
+  .hazard-item {
+    padding: 12px;
+  }
+
+  /* Tableaux mobile */
+  .approval-table {
+    font-size: 11px;
+  }
+
+  .approval-table th,
+  .approval-table td {
+    padding: 8px 4px;
+    min-width: 70px;
+  }
+
+  .worker-name-cell {
+    min-width: 100px;
+  }
+
+  .approval-table .btn-success,
+  .approval-table .btn-danger,
+  .approval-table .btn-secondary {
+    padding: 4px 6px;
+    font-size: 9px;
+  }
+
+  /* Touch targets améliorés */
+  .checkbox-premium {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+  }
+
+  .lock-button {
+    padding: 12px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Isolation mobile */
+  .isolation-checklist {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .checklist-item {
+    padding: 16px 12px;
+  }
+
+  /* Discussion mobile */
+  .discussion-item {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  /* Control measures mobile */
+  .control-measures-section {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  /* Navigation mobile fixe */
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(100, 116, 139, 0.3);
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .mobile-nav .btn-premium,
+  .mobile-nav .btn-secondary {
+    padding: 12px 20px;
+    font-size: 14px;
+    min-width: 100px;
+  }
+
+  /* Espacement pour nav fixe */
+  .content-with-mobile-nav {
+    margin-bottom: 80px;
+  }
+}
+
+/* Très petits écrans */
+@media (max-width: 480px) {
+  .glass-effect {
+    padding: 12px;
+  }
+
+  .header-counters {
+    padding: 12px;
+  }
+
+  .counters-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .counter-number {
+    font-size: 16px !important;
+  }
+
+  .counter-label {
+    font-size: 10px !important;
+  }
+
+  .mobile-nav {
+    padding: 8px;
+  }
+
+  .mobile-nav .btn-premium,
+  .mobile-nav .btn-secondary {
+    padding: 10px 16px;
+    font-size: 12px;
+    min-width: 80px;
+  }
+}
+
+/* Tablettes */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .step-indicator {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .equipment-grid,
+  .hazard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .counters-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Désactiver hover sur tactile */
+@media (hover: none) and (pointer: coarse) {
+  .step-item:hover,
+  .btn-premium:hover,
+  .btn-secondary:hover {
+    transform: none;
+    background: initial;
+  }
+
+  .btn-premium:active {
+    transform: scale(0.98);
+  }
+
+  .step-item:active {
+    background: rgba(59, 130, 246, 0.2);
+  }
+}
+
+/* Orientation paysage mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .step-indicator {
+    grid-template-columns: repeat(4, 1fr);
+    max-height: 100px;
+  }
+
+  .header-counters {
+    flex-direction: row;
+  }
+
+  .company-info {
+    flex-direction: row;
   }
 }
 `;
-
 // =================== COMPOSANT PRINCIPAL ===================
 export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
   const [currentStep, setCurrentStep] = useState(0);
@@ -3489,45 +3728,28 @@ return (
           )}
         </div>
 
-        {/* NAVIGATION */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '32px', paddingTop: '24px', borderTop: '1px solid rgba(100, 116, 139, 0.3)' }}>
-          <button
-            onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
-            className="btn-secondary"
-            disabled={currentStep === 0}
-          >
-            <ChevronLeft style={{ width: '16px', height: '16px' }} />
-            {t.buttons.previous}
-          </button>
-          
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={() => handleSave(true)}
-              className="btn-secondary"
-              disabled={saveStatus === 'saving'}
-            >
-              <Save style={{ width: '16px', height: '16px' }} />
-              {t.buttons.save}
-            </button>
-            
-            <button
-              onClick={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
-              className="btn-secondary"
-            >
-              {language === 'fr' ? '🇺🇸 EN' : '🇫🇷 FR'}
-            </button>
-          </div>
-          
-          <button
-            onClick={() => setCurrentStep(prev => Math.min(steps.length - 1, prev + 1))}
-            className="btn-premium"
-            disabled={currentStep === steps.length - 1}
-          >
-            {t.buttons.next}
-            <ChevronRight style={{ width: '16px', height: '16px' }} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+{/* NAVIGATION MOBILE OPTIMISÉE */}
+<div className={`mobile-nav ${currentStep === steps.length - 1 ? 'content-with-mobile-nav' : ''}`}>
+  <button
+    onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
+    className="btn-secondary"
+    disabled={currentStep === 0}
+  >
+    <ChevronLeft style={{ width: '16px', height: '16px' }} />
+    <span style={{ display: 'none' }}>{t.buttons.previous}</span>
+  </button>
+  
+  <div style={{ color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>
+    <div>{steps[currentStep].key}</div>
+    <div>{currentStep + 1}/{steps.length}</div>
+  </div>
+  
+  <button
+    onClick={() => setCurrentStep(prev => Math.min(steps.length - 1, prev + 1))}
+    className="btn-premium"
+    disabled={currentStep === steps.length - 1}
+  >
+    <span style={{ display: 'none' }}>{t.buttons.next}</span>
+    <ChevronRight style={{ width: '16px', height: '16px' }} />
+  </button>
+</div>
