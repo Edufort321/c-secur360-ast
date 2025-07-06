@@ -1363,7 +1363,8 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
       </div>
     );
   };
-
+  
+// =================== COMPOSANT CUSTOMCHECKBOX CORRIGÉ ===================
   const CustomCheckbox: React.FC<{
     checked: boolean;
     onChange: (checked: boolean) => void;
@@ -1399,7 +1400,7 @@ const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
       )}
     </div>
   );
-
+  
   // =================== RETURN UNIQUE DU COMPOSANT ===================
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
