@@ -1,10 +1,26 @@
-// app/data/hazards/index.ts
+export default allHazards;
+
+export {
+  electricalHazards,
+  mechanicalHazards,
+  physicalHazards,
+  chemicalHazards,
+  biologicalHazards,
+  environmentalHazards,
+  workplaceHazards,
+  ergonomicHazards
+};// app/data/hazards/index.ts
 
 // =================== IMPORTS DES DANGERS ===================
 import { Hazard, HazardCategory, calculateRiskLevel, getRiskColor, getRiskLabel } from './template';
 import { electricalHazards, electricalHazardsById } from './electrical';
 import { mechanicalHazards, mechanicalHazardsById } from './mechanical';
 import { physicalHazards, physicalHazardsById } from './physical';
+import { chemicalHazards, chemicalHazardsById } from './chemical';
+import { biologicalHazards, biologicalHazardsById } from './biological';
+import { environmentalHazards, environmentalHazardsById } from './environmental';
+import { workplaceHazards, workplaceHazardsById } from './workplace';
+import { ergonomicHazards, ergonomicHazardsById } from './ergonomic';
 
 // Export des types
 export type { Hazard, HazardCategory };
@@ -14,27 +30,35 @@ export { calculateRiskLevel, getRiskColor, getRiskLabel };
 export const allHazards: Hazard[] = [
   ...electricalHazards,
   ...mechanicalHazards,
-  ...physicalHazards
-  // Les autres catégories seront ajoutées ici
+  ...physicalHazards,
+  ...chemicalHazards,
+  ...biologicalHazards,
+  ...environmentalHazards,
+  ...workplaceHazards,
+  ...ergonomicHazards
 ];
 
 export const hazardsById: Record<string, Hazard> = {
   ...electricalHazardsById,
   ...mechanicalHazardsById,
-  ...physicalHazardsById
-  // Les autres seront ajoutées ici
+  ...physicalHazardsById,
+  ...chemicalHazardsById,
+  ...biologicalHazardsById,
+  ...environmentalHazardsById,
+  ...workplaceHazardsById,
+  ...ergonomicHazardsById
 };
 
 export const hazardsByCategory: Record<HazardCategory, Hazard[]> = {
   electrical: electricalHazards,
   mechanical: mechanicalHazards,
   physical: physicalHazards,
-  chemical: [], // À ajouter
-  biological: [], // À ajouter
-  environmental: [], // À ajouter
-  workplace: [], // À ajouter
-  transportation: [], // À ajouter
-  fire_explosion: [], // À ajouter
+  chemical: chemicalHazards,
+  biological: biologicalHazards,
+  environmental: environmentalHazards,
+  workplace: [...workplaceHazards, ...ergonomicHazards], // Ergonomie fait partie workplace
+  transportation: [], // À ajouter si nécessaire
+  fire_explosion: [], // À ajouter si nécessaire
   confined_space: allHazards.filter(h => h.subcategory === 'confined_space')
 };
 
