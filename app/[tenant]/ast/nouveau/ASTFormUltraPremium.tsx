@@ -1,8 +1,297 @@
-// =================== AJOUTS SECTION 1 - TYPES DE TRAVAUX ET CONFIGURATIONS ===================
-// À ajouter après la section des traductions dans votre premier code
+// =================== AST SECTION 1/8 - IMPORTS & INTERFACES CORRIGÉES ===================
+"use client";
 
-// Types de travaux prédéfinis avec catégories (NOUVEAU)
-const WORK_TYPES = [
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  FileText, MessageSquare, Shield, Zap, Settings, Users, Camera, CheckCircle,
+  ChevronLeft, ChevronRight, Save, Download, Send, Copy, Check, X, Plus, Trash2,
+  ArrowLeft, ArrowRight, Eye, Mail, Archive, Printer, Upload, Star, AlertTriangle,
+  Edit, Clock, User, Phone, MapPin, Calendar, Briefcase, HardHat, Heart, Activity,
+  Lock, Unlock, RefreshCw, Info, ExternalLink, Thermometer, Wind, Droplets, 
+  Sun, Cloud, CloudRain, Snowflake
+} from 'lucide-react';
+
+// =================== INTERFACES PRINCIPALES ===================
+interface ASTFormProps {
+  tenant: string;
+}
+
+interface WorkType {
+  id: string;
+  name: string;
+  icon: string;
+  category: string;
+  description: string;
+  baseHazards: string[];
+}
+
+interface WeatherData {
+  temperature: number;
+  humidity: number;
+  windSpeed: number;
+  windDirection: string;
+  precipitation: number;
+  visibility: number;
+  uvIndex: number;
+  conditions: string;
+  warnings: string[];
+  impact: 'low' | 'medium' | 'high';
+}
+
+interface TeamConsultationStatus {
+  consulted: boolean;
+  consentGiven: boolean;
+  timestamp: string;
+  ipAddress: string;
+  comments: string;
+}
+
+interface TeamNotification {
+  employeeId: string;
+  method: 'sms' | 'email' | 'whatsapp';
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'error';
+  timestamp: string;
+}
+
+interface ASTFormData {
+  id: string;
+  astNumber: string;
+  created: string;
+  lastModified: string;
+  language: 'fr' | 'en';
+  status: 'draft' | 'completed' | 'team_validation' | 'approved' | 'archived';
+  industry: 'electrical' | 'construction' | 'industrial' | 'office' | 'manufacturing' | 'other';
+  
+  projectInfo: {
+    date: string;
+    time: string;
+    client: string;
+    clientPhone: string;
+    projectNumber: string;
+    astClientNumber: string;
+    workLocation: string;
+    workDescription: string;
+    estimatedDuration: string;
+    workerCount: number;
+    clientRepresentative: string;
+    clientRepresentativePhone: string;
+    emergencyContact: string;
+    emergencyPhone: string;
+    workPermitRequired: boolean;
+    workPermitNumber?: string;
+    weatherConditions: string;
+    specialConditions: string;
+    // Nouvelles propriétés
+    workType?: WorkType;
+    coordinates?: { lat: number; lng: number };
+  };
+  
+  teamDiscussion: {
+    electricalCutoffPoints: string;
+    electricalHazardExplanation: string;
+    epiSpecificNotes: string;
+    specialWorkConditions: string;
+    emergencyProcedures: string;
+    discussions: TeamDiscussion[];
+    briefingCompleted: boolean;
+    briefingDate: string;
+    briefingTime: string;
+    emergencyProceduresList: EmergencyProcedure[];
+  };
+  
+  safetyEquipment: SafetyEquipment[];
+  electricalHazards: ElectricalHazard[];
+  riskAssessments: RiskAssessment[];
+  
+  team: {
+    supervisor: string;
+    supervisorCertification: string;
+    supervisorSignature?: string;
+    members: TeamMember[];
+    briefingCompleted: boolean;
+    briefingDate: string;
+    briefingTime: string;
+    totalMembers: number;
+    acknowledgedMembers: number;
+    validations: any[];
+    allApproved: boolean;
+  };
+  
+  isolationPoints: IsolationPoint[];
+  
+  documentation: {
+    photos: Photo[];
+    additionalDocuments: string[];
+    inspectionNotes: string;
+    correctiveActions: string;
+  };
+  
+  validation: {
+    completedBy: string;
+    completedDate: string;
+    reviewedBy: string;
+    reviewedDate: string;
+    approvedBy: string;
+    approvedDate: string;
+    clientApproval: boolean;
+    finalApproval: boolean;
+    submissionDate?: string;
+    revisionNumber: number;
+    comments: string;
+    emailSent: boolean;
+    archivedDate?: string;
+  };
+}
+
+interface TeamMember {
+  id: string;
+  name: string;
+  employeeId: string;
+  department: string;
+  qualification: string;
+  hasAcknowledged: boolean;
+  acknowledgmentTime?: string;
+  signature?: string;
+  joinedAt: string;
+  validationStatus: 'pending' | 'approved' | 'rejected';
+  validationComments?: string;
+  consultationAst: boolean;
+  cadenasAppose: boolean;
+  cadenasReleve: boolean;
+  phone?: string;
+  email?: string;
+}
+
+interface Photo {
+  id: string;
+  name: string;
+  data: string;
+  description: string;
+  timestamp: string;
+  category: 'site' | 'equipment' | 'hazard' | 'team' | 'isolation' | 'other';
+}
+
+interface IsolationPoint {
+  id: string;
+  name: string;
+  type: 'electrical' | 'mechanical' | 'pneumatic' | 'hydraulic' | 'chemical' | 'thermal';
+  isActive: boolean;
+  createdAt: string;
+  photos: Photo[];
+  checklist: {
+    cadenasAppose: boolean;
+    absenceTension: boolean;
+    miseALaTerre: boolean;
+    cadenasReleve: boolean;
+  };
+}
+
+interface ControlMeasure {
+  id: string;
+  hazardId?: string;
+  type: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
+  priority?: number;
+  measure: string;
+  description: string;
+  implementation: string;
+  responsible: string;
+  timeline: string;
+  cost: 'low' | 'medium' | 'high';
+  effectiveness: number;
+  compliance: string[];
+  isSelected: boolean;
+  photos: Photo[];
+  notes: string;
+}
+
+interface ElectricalHazard {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  isSelected: boolean;
+  additionalNotes?: string;
+  controlMeasures: ControlMeasure[];
+  showControls: boolean;
+}
+
+interface SafetyEquipment {
+  id: string;
+  name: string;
+  required: boolean;
+  available: boolean;
+  notes: string;
+  verified: boolean;
+  category: 'head' | 'eye' | 'respiratory' | 'hand' | 'foot' | 'body' | 'fall' | 'electrical' | 'detection' | 'other';
+  description?: string;
+  certifications?: string[];
+  inspectionFrequency?: string;
+  lifespan?: string;
+  cost?: string;
+  supplier?: string;
+}
+
+interface TeamDiscussion {
+  id: string;
+  topic: string;
+  notes: string;
+  completed: boolean;
+  discussedBy: string;
+  discussedAt?: string;
+  priority: 'low' | 'medium' | 'high';
+}
+
+interface EmergencyProcedure {
+  id: string;
+  type: 'medical' | 'fire' | 'evacuation' | 'spill' | 'electrical' | 'other';
+  procedure: string;
+  responsiblePerson: string;
+  contactInfo: string;
+  isVerified: boolean;
+}
+
+interface RiskAssessment {
+  id: string;
+  hazardType: string;
+  riskLevel: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
+  controlMeasures: string[];
+  residualRisk: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
+  isAcceptable: boolean;
+  notes: string;
+}
+
+// =================== GÉNÉRATEUR DE NUMÉRO AST ===================
+const generateASTNumber = (): string => {
+  const year = new Date().getFullYear();
+  const month = String(new Date().getMonth() + 1).padStart(2, '0');
+  const day = String(new Date().getDate()).padStart(2, '0');
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
+  return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
+};
+
+// =================== LOGO ENTREPRISE ===================
+const CLIENT_POTENTIEL_LOGO = `
+<svg width="120" height="60" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="50%" style="stop-color:#1d4ed8"/>
+      <stop offset="100%" style="stop-color:#1e40af"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="120" height="60" fill="url(#logoGradient)" rx="8"/>
+  <text x="60" y="25" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-weight="bold" font-size="12">CLIENT</text>
+  <text x="60" y="40" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-weight="bold" font-size="12">POTENTIEL</text>
+  <circle cx="20" cy="30" r="8" fill="white" opacity="0.2"/>
+  <circle cx="100" cy="30" r="8" fill="white" opacity="0.2"/>
+</svg>
+`;
+// =================== AST SECTION 2/8 - TYPES DE TRAVAUX ET CONFIGURATIONS ===================
+
+// =================== TYPES DE TRAVAUX PRÉDÉFINIS ===================
+const WORK_TYPES: WorkType[] = [
   // ÉLECTRICITÉ
   {
     id: 'electrical_maintenance',
@@ -10,7 +299,7 @@ const WORK_TYPES = [
     icon: '⚡',
     category: 'Électricité',
     description: 'Travaux de maintenance sur installations électriques',
-    baseHazards: ['electrical_shock', 'arc_flash', 'burns', 'falls']
+    baseHazards: ['electrical_shock', 'arc_flash', 'electrical_burns', 'falls']
   },
   {
     id: 'electrical_installation',
@@ -26,7 +315,7 @@ const WORK_TYPES = [
     icon: '🔍',
     category: 'Électricité',
     description: 'Inspection et tests d\'équipements électriques',
-    baseHazards: ['electrical_shock', 'arc_flash', 'confined_spaces']
+    baseHazards: ['electrical_shock', 'arc_flash', 'asphyxiation']
   },
 
   // GAZ ET PIPELINE
@@ -36,7 +325,7 @@ const WORK_TYPES = [
     icon: '🔥',
     category: 'Gaz & Pipeline',
     description: 'Maintenance sur réseaux de distribution de gaz',
-    baseHazards: ['gas_leak', 'explosion', 'fire', 'toxic_exposure', 'confined_spaces']
+    baseHazards: ['gas_leak', 'explosion', 'fire', 'toxic_exposure', 'asphyxiation']
   },
   {
     id: 'pipeline_inspection',
@@ -44,7 +333,15 @@ const WORK_TYPES = [
     icon: '🚰',
     category: 'Gaz & Pipeline',
     description: 'Inspection et contrôle de pipelines',
-    baseHazards: ['gas_leak', 'explosion', 'confined_spaces', 'toxic_exposure']
+    baseHazards: ['gas_leak', 'explosion', 'asphyxiation', 'toxic_exposure']
+  },
+  {
+    id: 'gas_installation',
+    name: 'Installation gazière',
+    icon: '⛽',
+    category: 'Gaz & Pipeline',
+    description: 'Installation de nouveaux équipements gaziers',
+    baseHazards: ['gas_leak', 'explosion', 'fire', 'cave_in', 'heavy_equipment']
   },
 
   // CONSTRUCTION
@@ -64,6 +361,76 @@ const WORK_TYPES = [
     description: 'Travaux d\'excavation et terrassement',
     baseHazards: ['cave_in', 'struck_by_objects', 'heavy_equipment', 'underground_utilities', 'falls']
   },
+  {
+    id: 'roofing',
+    name: 'Couverture',
+    icon: '🏠',
+    category: 'Construction',
+    description: 'Travaux de toiture et couverture',
+    baseHazards: ['falls', 'weather_exposure', 'heat_stress', 'cuts_lacerations']
+  },
+
+  // INDUSTRIEL
+  {
+    id: 'industrial_maintenance',
+    name: 'Maintenance industrielle',
+    icon: '⚙️',
+    category: 'Industriel',
+    description: 'Maintenance d\'équipements industriels',
+    baseHazards: ['mechanical_hazards', 'toxic_exposure', 'noise', 'heat_stress', 'lockout_tagout']
+  },
+  {
+    id: 'welding',
+    name: 'Soudage',
+    icon: '🔥',
+    category: 'Industriel',
+    description: 'Travaux de soudage et découpage',
+    baseHazards: ['electrical_burns', 'fire', 'toxic_exposure', 'radiation', 'electrical_shock']
+  },
+  {
+    id: 'confined_space_entry',
+    name: 'Espaces confinés',
+    icon: '🕳️',
+    category: 'Industriel',
+    description: 'Travaux en espaces confinés',
+    baseHazards: ['asphyxiation', 'toxic_exposure', 'oxygen_deficiency', 'engulfment']
+  },
+
+  // TRANSPORT
+  {
+    id: 'road_work',
+    name: 'Travaux routiers',
+    icon: '🚧',
+    category: 'Transport',
+    description: 'Travaux sur voies de circulation',
+    baseHazards: ['vehicle_traffic', 'struck_by_objects', 'weather_exposure', 'noise']
+  },
+  {
+    id: 'railway_maintenance',
+    name: 'Maintenance ferroviaire',
+    icon: '🚂',
+    category: 'Transport',
+    description: 'Maintenance d\'infrastructures ferroviaires',
+    baseHazards: ['train_traffic', 'electrical_shock', 'noise', 'vibration', 'weather_exposure']
+  },
+
+  // ENVIRONNEMENT
+  {
+    id: 'environmental_cleanup',
+    name: 'Décontamination',
+    icon: '♻️',
+    category: 'Environnement',
+    description: 'Travaux de décontamination environnementale',
+    baseHazards: ['toxic_exposure', 'biological_hazards', 'toxic_exposure', 'cuts_lacerations']
+  },
+  {
+    id: 'tree_work',
+    name: 'Élagage',
+    icon: '🌳',
+    category: 'Environnement',
+    description: 'Travaux d\'élagage et abattage',
+    baseHazards: ['falls', 'cuts_lacerations', 'struck_by_objects', 'electrical_lines']
+  },
 
   // TÉLÉCOMMUNICATIONS
   {
@@ -72,7 +439,15 @@ const WORK_TYPES = [
     icon: '📡',
     category: 'Télécommunications',
     description: 'Installation d\'équipements de télécommunication',
-    baseHazards: ['falls', 'electrical_shock', 'radio_frequency', 'weather_exposure']
+    baseHazards: ['falls', 'electrical_shock', 'electromagnetic_fields', 'weather_exposure']
+  },
+  {
+    id: 'fiber_optic',
+    name: 'Fibre optique',
+    icon: '💡',
+    category: 'Télécommunications',
+    description: 'Installation et maintenance de fibre optique',
+    baseHazards: ['radiation', 'cuts_lacerations', 'asphyxiation', 'falls']
   },
 
   // URGENCE
@@ -82,2680 +457,188 @@ const WORK_TYPES = [
     icon: '🚨',
     category: 'Urgence',
     description: 'Interventions d\'urgence et réparations critiques',
-    baseHazards: ['time_pressure', 'weather_exposure', 'unknown_hazards', 'stress']
+    baseHazards: ['weather_exposure', 'falls', 'electrical_shock', 'gas_leak']
+  },
+  {
+    id: 'storm_restoration',
+    name: 'Restauration tempête',
+    icon: '⛈️',
+    category: 'Urgence',
+    description: 'Restauration après événements météorologiques',
+    baseHazards: ['weather_exposure', 'electrical_shock', 'falls', 'struck_by_objects']
   }
 ];
 
-// Configuration clients spécifiques (NOUVEAU)
+// =================== CONFIGURATIONS CLIENTS ===================
 const CLIENT_CONFIGURATIONS = {
   'hydro-quebec': {
     logo: '⚡ Hydro-Québec',
     primaryColor: '#1e40af',
     secondaryColor: '#3b82f6',
     requiredFields: ['permit_number', 'safety_officer', 'emergency_contacts'],
-    customHazards: ['electrical_specific', 'high_voltage', 'substations'],
-    templates: ['electrical_maintenance', 'emergency_response']
+    customHazards: ['electrical_shock', 'arc_flash', 'electrical_lines'],
+    templates: ['electrical_maintenance', 'emergency_response', 'storm_restoration']
   },
   'energir': {
     logo: '🔥 Énergir',
     primaryColor: '#dc2626',
     secondaryColor: '#ef4444',
     requiredFields: ['gas_permit', 'excavation_permit', 'pipeline_clearance'],
-    customHazards: ['gas_specific', 'pipeline_integrity', 'odorization'],
-    templates: ['gas_maintenance', 'pipeline_inspection']
+    customHazards: ['gas_leak', 'explosion', 'underground_utilities'],
+    templates: ['gas_maintenance', 'pipeline_inspection', 'gas_installation']
   },
   'bell': {
     logo: '📡 Bell Canada',
     primaryColor: '#7c3aed',
     secondaryColor: '#8b5cf6',
     requiredFields: ['telecom_permit', 'fiber_clearance', 'rf_safety'],
-    customHazards: ['rf_radiation', 'fiber_safety', 'tower_climbing'],
+    customHazards: ['electromagnetic_fields', 'radiation', 'falls'],
+    templates: ['telecom_installation', 'fiber_optic']
+  },
+  'rogers': {
+    logo: '📱 Rogers',
+    primaryColor: '#dc2626',
+    secondaryColor: '#ef4444',
+    requiredFields: ['telecom_permit', 'antenna_clearance', 'rf_compliance'],
+    customHazards: ['electromagnetic_fields', 'radiation', 'falls'],
     templates: ['telecom_installation']
   }
 };
 
-// Interface pour les types de travaux (NOUVEAU)
-interface WorkType {
-  id: string;
-  name: string;
-  icon: string;
-  category: string;
-  description: string;
-  baseHazards: string[];
-}
+// =================== DISCUSSIONS D'ÉQUIPE PRÉDÉFINIES ===================
+const predefinedDiscussions: TeamDiscussion[] = [
+  { 
+    id: 'disc-001', 
+    topic: 'Points de coupure électrique', 
+    notes: '', 
+    completed: false, 
+    discussedBy: '', 
+    priority: 'high' 
+  },
+  { 
+    id: 'disc-002', 
+    topic: 'Explication des dangers électriques', 
+    notes: '', 
+    completed: false, 
+    discussedBy: '', 
+    priority: 'high' 
+  },
+  { 
+    id: 'disc-003', 
+    topic: 'EPI spécifiques requis', 
+    notes: '', 
+    completed: false, 
+    discussedBy: '', 
+    priority: 'medium' 
+  },
+  { 
+    id: 'disc-004', 
+    topic: 'Conditions particulières de travail', 
+    notes: '', 
+    completed: false, 
+    discussedBy: '', 
+    priority: 'medium' 
+  },
+  { 
+    id: 'disc-005', 
+    topic: 'Procédures d\'urgence', 
+    notes: '', 
+    completed: false, 
+    discussedBy: '', 
+    priority: 'high' 
+  },
+  { 
+    id: 'disc-006', 
+    topic: 'Communications et signalisation', 
+    notes: '', 
+    completed: false, 
+    discussedBy: '', 
+    priority: 'medium' 
+  },
+  { 
+    id: 'disc-007', 
+    topic: 'Analyse des risques spécifiques', 
+    notes: '', 
+    completed: false, 
+    discussedBy: '', 
+    priority: 'high' 
+  },
+  { 
+    id: 'disc-008', 
+    topic: 'Plan d\'évacuation d\'urgence', 
+    notes: '', 
+    completed: false, 
+    discussedBy: '', 
+    priority: 'medium' 
+  }
+];
 
-// Interface météo étendue (NOUVEAU)
-interface WeatherData {
-  temperature: number;
-  humidity: number;
-  windSpeed: number;
-  windDirection: string;
-  precipitation: number;
-  visibility: number;
-  uvIndex: number;
-  conditions: string;
-  warnings: string[];
-  impact: 'low' | 'medium' | 'high';
-}
+// =================== PROCÉDURES D'URGENCE ===================
+const emergencyProcedures: EmergencyProcedure[] = [
+  { 
+    id: 'emerg-001', 
+    type: 'medical', 
+    procedure: 'Appeler le 911, premiers soins, évacuation médicale', 
+    responsiblePerson: 'Superviseur de chantier', 
+    contactInfo: '911 / Contact urgence', 
+    isVerified: false 
+  },
+  { 
+    id: 'emerg-002', 
+    type: 'fire', 
+    procedure: 'Alarme incendie, évacuation, point de rassemblement', 
+    responsiblePerson: 'Chef d\'équipe', 
+    contactInfo: 'Service incendie 911', 
+    isVerified: false 
+  },
+  { 
+    id: 'emerg-003', 
+    type: 'electrical', 
+    procedure: 'Coupure d\'urgence, consignation, vérification', 
+    responsiblePerson: 'Électricien qualifié', 
+    contactInfo: 'Responsable électrique', 
+    isVerified: false 
+  },
+  { 
+    id: 'emerg-004', 
+    type: 'evacuation', 
+    procedure: 'Signal d\'évacuation, routes d\'évacuation, décompte', 
+    responsiblePerson: 'Responsable sécurité', 
+    contactInfo: 'Poste de commandement', 
+    isVerified: false 
+  }
+];
 
-// Ajout au formData existant - nouvelles propriétés
-interface ExtendedProjectInfo {
-  // Propriétés existantes...
-  workType?: WorkType;
-  coordinates?: { lat: number; lng: number };
-  weather?: WeatherData;
-  permits?: string[];
-  emergencyContacts?: Array<{
-    name: string;
-    role: string;
-    phone: string;
-    email: string;
-  }>;
-}
-
-// Fonction pour sélectionner dangers par type de travail (NOUVEAU)
+// =================== FONCTION POUR FILTRER DANGERS PAR TYPE DE TRAVAIL ===================
 const getHazardsByWorkType = (workTypeId: string): ElectricalHazard[] => {
   const workType = WORK_TYPES.find(wt => wt.id === workTypeId);
   if (!workType) return [];
   
-  return predefinedElectricalHazards.filter(hazard => 
-    workType.baseHazards.includes(hazard.id)
-  );
+  // Cette fonction sera utilisée avec la liste complète des dangers
+  // qui sera définie dans la section suivante
+  return [];
 };
 
-// Widget sélection type de travail (NOUVEAU - à ajouter à l'étape 1)
-const WorkTypeSelector = ({ 
-  selectedWorkType, 
-  onWorkTypeChange 
-}: { 
-  selectedWorkType?: WorkType; 
-  onWorkTypeChange: (workType: WorkType) => void; 
-}) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  
-  const categories = [...new Set(WORK_TYPES.map(wt => wt.category))];
-  const filteredWorkTypes = selectedCategory === 'all' 
-    ? WORK_TYPES 
-    : WORK_TYPES.filter(wt => wt.category === selectedCategory);
-
-  return (
-    <div style={{ marginBottom: '24px' }}>
-      <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
-        🏗️ Type de travail *
-      </label>
-      
-      {/* Filtres par catégorie */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        <button
-          onClick={() => setSelectedCategory('all')}
-          style={{
-            padding: '6px 12px',
-            borderRadius: '6px',
-            border: 'none',
-            fontSize: '12px',
-            cursor: 'pointer',
-            background: selectedCategory === 'all' ? '#3b82f6' : 'rgba(100, 116, 139, 0.2)',
-            color: selectedCategory === 'all' ? 'white' : '#94a3b8'
-          }}
-        >
-          Tous
-        </button>
-        {categories.map(category => (
-          <button
-            key={category}
-            onClick={() => setSelectedCategory(category)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: 'none',
-              fontSize: '12px',
-              cursor: 'pointer',
-              background: selectedCategory === category ? '#3b82f6' : 'rgba(100, 116, 139, 0.2)',
-              color: selectedCategory === category ? 'white' : '#94a3b8'
-            }}
-          >
-            {category}
-          </button>
-        ))}
-      </div>
-
-      {/* Grille des types de travaux */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-        gap: '12px' 
-      }}>
-        {filteredWorkTypes.map(workType => (
-          <div
-            key={workType.id}
-            onClick={() => onWorkTypeChange(workType)}
-            style={{
-              padding: '16px',
-              borderRadius: '12px',
-              border: selectedWorkType?.id === workType.id 
-                ? '2px solid #3b82f6' 
-                : '1px solid rgba(100, 116, 139, 0.3)',
-              background: selectedWorkType?.id === workType.id
-                ? 'rgba(59, 130, 246, 0.1)'
-                : 'rgba(30, 41, 59, 0.6)',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <span style={{ fontSize: '24px' }}>{workType.icon}</span>
-              <div>
-                <h4 style={{ color: 'white', fontSize: '14px', fontWeight: '600', margin: '0' }}>
-                  {workType.name}
-                </h4>
-                <span style={{ 
-                  color: '#94a3b8', 
-                  fontSize: '11px',
-                  background: 'rgba(100, 116, 139, 0.2)',
-                  padding: '2px 6px',
-                  borderRadius: '4px'
-                }}>
-                  {workType.category}
-                </span>
-              </div>
-            </div>
-            <p style={{ color: '#94a3b8', fontSize: '12px', margin: '0', lineHeight: '1.4' }}>
-              {workType.description}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+// =================== FONCTION POUR OBTENIR ICÔNE CATÉGORIE ===================
+const getCategoryIcon = (category: string): string => {
+  const icons: Record<string, string> = {
+    'head': '🪖',
+    'eye': '👁️',
+    'respiratory': '😷',
+    'hand': '🧤',
+    'foot': '🥾',
+    'body': '🦺',
+    'fall': '🪢',
+    'electrical': '⚡',
+    'detection': '📡',
+    'other': '🔧'
+  };
+  return icons[category] || '🛡️';
 };
+// =================== AST SECTION 3/8 - BASE DE DONNÉES COMPLÈTE DES DANGERS ===================
 
-export { WORK_TYPES, CLIENT_CONFIGURATIONS, WorkTypeSelector, getHazardsByWorkType };
-// =================== AJOUTS SECTION 2 - PARTAGE ÉQUIPE ET NOTIFICATIONS ===================
-// À ajouter après vos interfaces existantes
-
-// Interfaces pour le partage équipe (NOUVEAU)
-interface TeamConsultationStatus {
-  consulted: boolean;
-  consentGiven: boolean;
-  timestamp: string;
-  ipAddress: string;
-  comments: string;
-}
-
-interface TeamNotification {
-  employeeId: string;
-  method: 'sms' | 'email' | 'whatsapp';
-  status: 'pending' | 'sent' | 'delivered' | 'read' | 'error';
-  timestamp: string;
-}
-
-// États pour le partage équipe (NOUVEAU - à ajouter dans votre composant principal)
-const useTeamSharing = () => {
-  const [shareMode, setShareMode] = useState(false);
-  const [shareLink, setShareLink] = useState('');
-  const [teamConsultationStatus, setTeamConsultationStatus] = useState<Record<string, TeamConsultationStatus>>({});
-  const [isGeneratingShareLink, setIsGeneratingShareLink] = useState(false);
-  const [teamNotifications, setTeamNotifications] = useState<TeamNotification[]>([]);
-
-  // Fonction pour générer le lien de partage
-  const generateShareLink = async (astData: ASTFormData) => {
-    setIsGeneratingShareLink(true);
-    try {
-      const shareId = `share-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const shareData = {
-        ...astData,
-        id: shareId,
-        status: 'team_validation',
-        shareMode: true,
-        shareExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-      };
-
-      // Simulation sauvegarde (remplacer par vraie API)
-      localStorage.setItem(`ast_share_${shareId}`, JSON.stringify(shareData));
-      
-      const baseUrl = window.location.origin;
-      const generatedLink = `${baseUrl}/ast/consultation/${shareId}`;
-      setShareLink(generatedLink);
-      
-      // Initialiser le statut de consultation pour chaque membre
-      const initialStatus: Record<string, TeamConsultationStatus> = {};
-      astData.team.members.forEach(member => {
-        initialStatus[member.id] = {
-          consulted: false,
-          consentGiven: false,
-          timestamp: '',
-          ipAddress: '',
-          comments: ''
-        };
-      });
-      setTeamConsultationStatus(initialStatus);
-
-      return { success: true, link: generatedLink };
-    } catch (error) {
-      console.error('Erreur génération lien:', error);
-      return { success: false, error };
-    } finally {
-      setIsGeneratingShareLink(false);
-    }
-  };
-
-  // Fonction pour envoyer les notifications
-  const sendTeamNotifications = async (astData: ASTFormData, methods: Array<'sms' | 'email' | 'whatsapp'>) => {
-    if (!shareLink || !astData.team.members.length) return;
-
-    const notifications: TeamNotification[] = [];
-
-    for (const member of astData.team.members) {
-      for (const method of methods) {
-        try {
-          let message = '';
-          
-          if (method === 'sms' || method === 'whatsapp') {
-            message = `🔒 CONSULTATION AST REQUISE
-📋 Projet: ${astData.projectInfo.client} - ${astData.projectInfo.projectNumber}
-📅 Date: ${astData.projectInfo.date}
-👤 ${member.name}, votre consultation est requise pour l'AST.
-
-🔗 Lien consultation: ${shareLink}
-
-⚠️ Consultez et donnez votre consentement avant le début des travaux.
-⏰ Lien valide 7 jours.
-
-Sécur360 - Votre sécurité, notre priorité`;
-          }
-
-          // Simulation envoi (remplacer par vraies APIs)
-          console.log(`Envoi ${method} à ${member.name}:`, message);
-          
-          notifications.push({
-            employeeId: member.id,
-            method,
-            status: 'sent',
-            timestamp: new Date().toISOString()
-          });
-
-          // Simulation WhatsApp API
-          if (method === 'whatsapp' && member.phone) {
-            const whatsappUrl = `https://wa.me/${member.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-            window.open(whatsappUrl, '_blank');
-          }
-
-        } catch (error) {
-          console.error(`Erreur envoi ${method} à ${member.name}:`, error);
-          notifications.push({
-            employeeId: member.id,
-            method,
-            status: 'error',
-            timestamp: new Date().toISOString()
-          });
-        }
-      }
-    }
-
-    setTeamNotifications(notifications);
-    return notifications;
-  };
-
-  const copyShareLink = () => {
-    navigator.clipboard.writeText(shareLink);
-  };
-
-  const processTeamConsultation = (employeeId: string, consent: boolean, comments: string = '') => {
-    const consultation: TeamConsultationStatus = {
-      consulted: true,
-      consentGiven: consent,
-      timestamp: new Date().toISOString(),
-      ipAddress: '192.168.1.1', // Obtenir vraie IP
-      comments
-    };
-
-    setTeamConsultationStatus(prev => ({
-      ...prev,
-      [employeeId]: consultation
-    }));
-
-    return consultation;
-  };
-
-  return {
-    shareMode,
-    setShareMode,
-    shareLink,
-    teamConsultationStatus,
-    isGeneratingShareLink,
-    teamNotifications,
-    generateShareLink,
-    sendTeamNotifications,
-    copyShareLink,
-    processTeamConsultation
-  };
-};
-
-// Composant de partage équipe (NOUVEAU - à ajouter à l'étape 8)
-const TeamSharingComponent = ({ 
-  astData, 
-  teamSharing 
-}: { 
-  astData: ASTFormData; 
-  teamSharing: ReturnType<typeof useTeamSharing>; 
-}) => {
-  const {
-    shareLink,
-    teamConsultationStatus,
-    isGeneratingShareLink,
-    teamNotifications,
-    generateShareLink,
-    sendTeamNotifications,
-    copyShareLink
-  } = teamSharing;
-
-  const teamConsultationProgress = astData.team.members.length > 0 
-    ? Object.values(teamConsultationStatus).filter(s => s.consulted).length / astData.team.members.length * 100 
-    : 0;
-
-  return (
-    <div style={{
-      background: 'rgba(30, 41, 59, 0.6)',
-      border: '1px solid rgba(100, 116, 139, 0.3)',
-      borderRadius: '12px',
-      padding: '24px',
-      marginBottom: '24px'
-    }}>
-      <h3 style={{ color: '#3b82f6', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-        🔗 Partage équipe pour consultation
-      </h3>
-
-      {/* Statistiques de consultation */}
-      <div style={{
-        background: 'rgba(59, 130, 246, 0.1)',
-        border: '1px solid rgba(59, 130, 246, 0.3)',
-        borderRadius: '8px',
-        padding: '16px',
-        marginBottom: '20px'
-      }}>
-        <h4 style={{ color: '#3b82f6', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
-          📊 État des consultations équipe
-        </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '12px' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#3b82f6' }}>
-              {astData.team.members.length}
-            </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Membres équipe</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>
-              {Object.values(teamConsultationStatus).filter(s => s.consulted).length}
-            </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Consultations</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>
-              {Object.values(teamConsultationStatus).filter(s => s.consentGiven).length}
-            </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Approbations</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#f59e0b' }}>
-              {Math.round(teamConsultationProgress)}%
-            </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Progression</div>
-          </div>
-        </div>
-        
-        {/* Barre de progression */}
-        <div style={{ background: 'rgba(100, 116, 139, 0.3)', borderRadius: '4px', height: '6px' }}>
-          <div 
-            style={{ 
-              background: 'linear-gradient(90deg, #3b82f6 0%, #10b981 100%)',
-              height: '6px',
-              borderRadius: '4px',
-              width: `${teamConsultationProgress}%`,
-              transition: 'width 0.5s ease'
-            }}
-          />
-        </div>
-      </div>
-
-      {!shareLink ? (
-        <div style={{ textAlign: 'center', padding: '24px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔗</div>
-          <p style={{ color: '#94a3b8', marginBottom: '20px', fontSize: '14px' }}>
-            Générez un lien de consultation pour permettre à votre équipe de consulter et approuver l'AST
-          </p>
-          <button
-            onClick={() => generateShareLink(astData)}
-            disabled={isGeneratingShareLink || !astData.team.members.length}
-            style={{
-              background: isGeneratingShareLink 
-                ? 'rgba(100, 116, 139, 0.5)' 
-                : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              border: 'none',
-              color: 'white',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              cursor: isGeneratingShareLink ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              margin: '0 auto'
-            }}
-          >
-            {isGeneratingShareLink ? (
-              <>
-                <RefreshCw style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
-                Génération...
-              </>
-            ) : (
-              <>
-                <Share2 style={{ width: '16px', height: '16px' }} />
-                Générer lien consultation
-              </>
-            )}
-          </button>
-          {!astData.team.members.length && (
-            <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '8px' }}>
-              Ajoutez des membres d'équipe avant de générer le lien
-            </p>
-          )}
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Lien généré */}
-          <div style={{
-            background: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            borderRadius: '8px',
-            padding: '12px'
-          }}>
-            <label style={{ display: 'block', color: '#10b981', fontSize: '12px', fontWeight: '600', marginBottom: '8px' }}>
-              🔗 Lien de consultation (valide 7 jours)
-            </label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="text"
-                value={shareLink}
-                readOnly
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  borderRadius: '6px',
-                  color: '#e2e8f0',
-                  fontSize: '12px'
-                }}
-              />
-              <button
-                onClick={copyShareLink}
-                style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  border: 'none',
-                  color: 'white',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
-              >
-                <Copy style={{ width: '14px', height: '14px' }} />
-              </button>
-            </div>
-          </div>
-
-          {/* Options d'envoi */}
-          <div style={{
-            background: 'rgba(59, 130, 246, 0.1)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
-            borderRadius: '8px',
-            padding: '12px'
-          }}>
-            <h4 style={{ color: '#3b82f6', fontSize: '12px', fontWeight: '600', marginBottom: '12px' }}>
-              📱 Envoyer aux membres équipe
-            </h4>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => sendTeamNotifications(astData, ['sms'])}
-                style={{
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                  border: 'none',
-                  color: 'white',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                <MessageSquare style={{ width: '12px', height: '12px' }} />
-                SMS
-              </button>
-              <button
-                onClick={() => sendTeamNotifications(astData, ['whatsapp'])}
-                style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  border: 'none',
-                  color: 'white',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                <MessageSquare style={{ width: '12px', height: '12px' }} />
-                WhatsApp
-              </button>
-              <button
-                onClick={() => sendTeamNotifications(astData, ['email'])}
-                style={{
-                  background: 'rgba(100, 116, 139, 0.7)',
-                  border: 'none',
-                  color: 'white',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                <Mail style={{ width: '12px', height: '12px' }} />
-                Email
-              </button>
-              <button
-                onClick={() => sendTeamNotifications(astData, ['sms', 'whatsapp', 'email'])}
-                style={{
-                  background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
-                  border: 'none',
-                  color: 'white',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                <Share2 style={{ width: '12px', height: '12px' }} />
-                Tous
-              </button>
-            </div>
-          </div>
-
-          {/* Suivi des consultations individuelles */}
-          <div style={{
-            background: 'rgba(15, 23, 42, 0.8)',
-            border: '1px solid rgba(100, 116, 139, 0.3)',
-            borderRadius: '8px',
-            padding: '12px'
-          }}>
-            <h4 style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: '600', marginBottom: '12px' }}>
-              👁️ Suivi consultations individuelles
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {astData.team.members.map(member => {
-                const consultation = teamConsultationStatus[member.id];
-                return (
-                  <div key={member.id} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 12px',
-                    background: 'rgba(30, 41, 59, 0.6)',
-                    borderRadius: '6px'
-                  }}>
-                    <div>
-                      <div style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>{member.name}</div>
-                      <div style={{ color: '#94a3b8', fontSize: '11px' }}>{member.department}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      {consultation?.consulted ? (
-                        <div>
-                          <div style={{
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            color: consultation.consentGiven ? '#10b981' : '#ef4444'
-                          }}>
-                            {consultation.consentGiven ? '✅ Approuvé' : '❌ Refusé'}
-                          </div>
-                          <div style={{ fontSize: '10px', color: '#94a3b8' }}>
-                            {new Date(consultation.timestamp).toLocaleDateString('fr-CA')}
-                          </div>
-                          {consultation.comments && (
-                            <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
-                              💬 {consultation.comments}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#f59e0b' }}>
-                          ⏳ En attente
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export { useTeamSharing, TeamSharingComponent };
-// =================== AJOUTS SECTION 3 - WIDGET MÉTÉO ET STATISTIQUES ===================
-// À ajouter dans votre composant principal
-
-// Import des icônes météo supplémentaires
-import { 
-  Thermometer,
-  Wind,
-  Droplets,
-  Sun,
-  Cloud,
-  CloudRain,
-  Snowflake,
-  RefreshCw,
-  Info,
-  AlertTriangle
-} from 'lucide-react';
-
-// Widget météo avancé (NOUVEAU)
-const WeatherWidget = ({ 
-  showWidget, 
-  onClose, 
-  weatherData,
-  onWeatherUpdate 
-}: { 
-  showWidget: boolean; 
-  onClose: () => void;
-  weatherData?: WeatherData;
-  onWeatherUpdate?: (data: WeatherData) => void;
-}) => {
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [currentWeather, setCurrentWeather] = useState<WeatherData>(weatherData || {
-    temperature: 22,
-    humidity: 65,
-    windSpeed: 15,
-    windDirection: 'SO',
-    precipitation: 0,
-    visibility: 10,
-    uvIndex: 6,
-    conditions: 'Partiellement nuageux',
-    warnings: [],
-    impact: 'low'
-  });
-
-  const refreshWeatherData = async () => {
-    setIsRefreshing(true);
-    try {
-      // Simulation API météo (remplacer par vraie API)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const newWeather: WeatherData = {
-        ...currentWeather,
-        temperature: Math.round(Math.random() * 30 + 5),
-        humidity: Math.round(Math.random() * 40 + 40),
-        windSpeed: Math.round(Math.random() * 25 + 5),
-        uvIndex: Math.round(Math.random() * 10),
-        conditions: ['Ensoleillé', 'Partiellement nuageux', 'Nuageux', 'Pluvieux'][Math.floor(Math.random() * 4)]
-      };
-      
-      setCurrentWeather(newWeather);
-      onWeatherUpdate?.(newWeather);
-    } catch (error) {
-      console.error('Erreur refresh météo:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  const getWeatherIcon = (conditions: string) => {
-    const lowerConditions = conditions.toLowerCase();
-    if (lowerConditions.includes('ensoleillé')) return <Sun className="w-5 h-5 text-yellow-500" />;
-    if (lowerConditions.includes('nuageux')) return <Cloud className="w-5 h-5 text-gray-500" />;
-    if (lowerConditions.includes('pluvieux')) return <CloudRain className="w-5 h-5 text-blue-500" />;
-    if (lowerConditions.includes('neige')) return <Snowflake className="w-5 h-5 text-blue-300" />;
-    return <Sun className="w-5 h-5 text-yellow-500" />;
-  };
-
-  const getImpactColor = (impact: string) => {
-    switch (impact) {
-      case 'low': return '#10b981';
-      case 'medium': return '#f59e0b';
-      case 'high': return '#ef4444';
-      default: return '#6b7280';
-    }
-  };
-
-  const getImpactText = (impact: string) => {
-    switch (impact) {
-      case 'low': return '✅ Conditions favorables';
-      case 'medium': return '⚠️ Conditions modérées';
-      case 'high': return '🚫 Conditions défavorables';
-      default: return '❓ Impact inconnu';
-    }
-  };
-
-  if (!showWidget) return null;
-
-  return (
-    <div style={{
-      background: 'rgba(30, 41, 59, 0.6)',
-      border: '1px solid rgba(100, 116, 139, 0.3)',
-      borderRadius: '12px',
-      padding: '20px',
-      marginBottom: '24px'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <h3 style={{ color: '#3b82f6', fontSize: '16px', fontWeight: '600', margin: '0' }}>
-          🌤️ Conditions météorologiques
-        </h3>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={refreshWeatherData}
-            disabled={isRefreshing}
-            style={{
-              background: 'none',
-              border: '1px solid rgba(100, 116, 139, 0.3)',
-              color: '#94a3b8',
-              padding: '6px',
-              borderRadius: '6px',
-              cursor: isRefreshing ? 'not-allowed' : 'pointer'
-            }}
-          >
-            <RefreshCw 
-              style={{ 
-                width: '14px', 
-                height: '14px',
-                animation: isRefreshing ? 'spin 1s linear infinite' : 'none'
-              }} 
-            />
-          </button>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: '1px solid rgba(100, 116, 139, 0.3)',
-              color: '#94a3b8',
-              padding: '6px',
-              borderRadius: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            <X style={{ width: '14px', height: '14px' }} />
-          </button>
-        </div>
-      </div>
-
-      {/* Conditions principales */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
-        gap: '12px',
-        marginBottom: '16px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Thermometer className="w-4 h-4 text-red-500" />
-          <span style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '600' }}>
-            {currentWeather.temperature}°C
-          </span>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Wind className="w-4 h-4 text-blue-500" />
-          <span style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '600' }}>
-            {currentWeather.windSpeed} km/h
-          </span>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Droplets className="w-4 h-4 text-blue-600" />
-          <span style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '600' }}>
-            {currentWeather.humidity}%
-          </span>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {getWeatherIcon(currentWeather.conditions)}
-          <span style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '600' }}>
-            UV: {currentWeather.uvIndex}
-          </span>
-        </div>
-      </div>
-
-      {/* Conditions détaillées */}
-      <div style={{
-        background: 'rgba(15, 23, 42, 0.8)',
-        borderRadius: '8px',
-        padding: '12px',
-        marginBottom: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          {getWeatherIcon(currentWeather.conditions)}
-          <span style={{ color: '#e2e8f0', fontSize: '13px' }}>{currentWeather.conditions}</span>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
-          <div style={{ color: '#94a3b8' }}>Vent: {currentWeather.windDirection}</div>
-          <div style={{ color: '#94a3b8' }}>Visibilité: {currentWeather.visibility} km</div>
-          <div style={{ color: '#94a3b8' }}>Précipitations: {currentWeather.precipitation} mm</div>
-        </div>
-      </div>
-
-      {/* Impact sur les travaux */}
-      <div style={{
-        padding: '12px',
-        borderRadius: '8px',
-        background: `${getImpactColor(currentWeather.impact)}15`,
-        border: `1px solid ${getImpactColor(currentWeather.impact)}30`
-      }}>
-        <p style={{ 
-          color: getImpactColor(currentWeather.impact), 
-          fontSize: '12px', 
-          fontWeight: '600',
-          margin: '0'
-        }}>
-          {getImpactText(currentWeather.impact)}
-        </p>
-      </div>
-
-      {/* Alertes météo */}
-      {currentWeather.warnings.length > 0 && (
-        <div style={{
-          marginTop: '12px',
-          padding: '12px',
-          background: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: '8px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <AlertTriangle style={{ width: '16px', height: '16px', color: '#ef4444' }} />
-            <span style={{ color: '#ef4444', fontSize: '12px', fontWeight: '600' }}>
-              Alertes météorologiques
-            </span>
-          </div>
-          {currentWeather.warnings.map((warning, index) => (
-            <p key={index} style={{ color: '#ef4444', fontSize: '11px', margin: '4px 0' }}>
-              • {warning}
-            </p>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Panneau de statistiques avancées (NOUVEAU)
-const AdvancedStatsPanel = ({ 
-  astData, 
-  teamConsultationStatus 
-}: { 
-  astData: ASTFormData; 
-  teamConsultationStatus: Record<string, TeamConsultationStatus>;
-}) => {
-  // Calculs statistiques
-  const totalHazards = astData.electricalHazards.filter(h => h.isSelected).length;
-  const criticalHazards = astData.electricalHazards.filter(h => h.isSelected && h.riskLevel === 'critical').length;
-  const highHazards = astData.electricalHazards.filter(h => h.isSelected && h.riskLevel === 'high').length;
-  
-  const totalRisk = astData.electricalHazards
-    .filter(h => h.isSelected)
-    .reduce((sum, h) => {
-      const riskValue = h.riskLevel === 'critical' ? 4 : h.riskLevel === 'high' ? 3 : h.riskLevel === 'medium' ? 2 : 1;
-      return sum + riskValue;
-    }, 0);
-  
-  const avgRisk = totalHazards > 0 ? totalRisk / totalHazards : 0;
-  const riskLevel = avgRisk >= 3.5 ? 'critical' : avgRisk >= 2.5 ? 'high' : avgRisk >= 1.5 ? 'medium' : 'low';
-  
-  const requiredEquipment = astData.safetyEquipment.filter(eq => eq.required).length;
-  const verifiedEquipment = astData.safetyEquipment.filter(eq => eq.required && eq.verified).length;
-  const equipmentCompliance = requiredEquipment > 0 ? (verifiedEquipment / requiredEquipment) * 100 : 0;
-  
-  const teamProgress = astData.team.members.length > 0 
-    ? Object.values(teamConsultationStatus).filter(s => s.consulted).length / astData.team.members.length * 100 
-    : 0;
-
-  const completedDiscussions = astData.teamDiscussion.discussions.filter(d => d.completed).length;
-  const discussionProgress = (completedDiscussions / astData.teamDiscussion.discussions.length) * 100;
-
-  const overallProgress = [
-    totalHazards > 0 ? 100 : 0, // Dangers identifiés
-    equipmentCompliance, // Équipements
-    discussionProgress, // Discussions
-    teamProgress, // Équipe
-    astData.documentation.photos.length > 0 ? 100 : 0 // Documentation
-  ].reduce((sum, val) => sum + val, 0) / 5;
-
-  const getRiskColor = (level: string) => {
-    switch (level) {
-      case 'critical': return '#dc2626';
-      case 'high': return '#ea580c';
-      case 'medium': return '#d97706';
-      case 'low': return '#16a34a';
-      default: return '#6b7280';
-    }
-  };
-
-  return (
-    <div style={{
-      background: 'rgba(30, 41, 59, 0.6)',
-      border: '1px solid rgba(100, 116, 139, 0.3)',
-      borderRadius: '12px',
-      padding: '20px',
-      marginBottom: '24px'
-    }}>
-      <h3 style={{ color: '#3b82f6', fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-        📊 Statistiques détaillées
-      </h3>
-
-      {/* Progression générale */}
-      <div style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-          <span style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: '600' }}>
-            Progression générale
-          </span>
-          <span style={{ color: '#3b82f6', fontSize: '12px', fontWeight: '700' }}>
-            {Math.round(overallProgress)}%
-          </span>
-        </div>
-        <div style={{ background: 'rgba(100, 116, 139, 0.3)', borderRadius: '4px', height: '6px' }}>
-          <div 
-            style={{ 
-              background: 'linear-gradient(90deg, #3b82f6 0%, #10b981 100%)',
-              height: '6px',
-              borderRadius: '4px',
-              width: `${overallProgress}%`,
-              transition: 'width 0.5s ease'
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Grille des statistiques */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(2, 1fr)', 
-        gap: '12px',
-        marginBottom: '16px'
-      }}>
-        {/* Dangers */}
-        <div style={{
-          background: 'rgba(15, 23, 42, 0.8)',
-          borderRadius: '8px',
-          padding: '12px',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '20px', fontWeight: '700', color: getRiskColor(riskLevel) }}>
-            {totalHazards}
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '10px' }}>Dangers identifiés</div>
-          <div style={{ 
-            color: getRiskColor(riskLevel), 
-            fontSize: '9px', 
-            marginTop: '2px',
-            textTransform: 'uppercase',
-            fontWeight: '600'
-          }}>
-            Risque {riskLevel}
-          </div>
-        </div>
-
-        {/* Équipements */}
-        <div style={{
-          background: 'rgba(15, 23, 42, 0.8)',
-          borderRadius: '8px',
-          padding: '12px',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '20px', fontWeight: '700', color: equipmentCompliance >= 80 ? '#10b981' : equipmentCompliance >= 60 ? '#f59e0b' : '#ef4444' }}>
-            {Math.round(equipmentCompliance)}%
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '10px' }}>Équipements vérifiés</div>
-          <div style={{ color: '#94a3b8', fontSize: '9px', marginTop: '2px' }}>
-            {verifiedEquipment}/{requiredEquipment}
-          </div>
-        </div>
-
-        {/* Équipe */}
-        <div style={{
-          background: 'rgba(15, 23, 42, 0.8)',
-          borderRadius: '8px',
-          padding: '12px',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '20px', fontWeight: '700', color: teamProgress >= 100 ? '#10b981' : teamProgress >= 50 ? '#f59e0b' : '#ef4444' }}>
-            {Math.round(teamProgress)}%
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '10px' }}>Consultations équipe</div>
-          <div style={{ color: '#94a3b8', fontSize: '9px', marginTop: '2px' }}>
-            {Object.values(teamConsultationStatus).filter(s => s.consulted).length}/{astData.team.members.length}
-          </div>
-        </div>
-
-        {/* Discussions */}
-        <div style={{
-          background: 'rgba(15, 23, 42, 0.8)',
-          borderRadius: '8px',
-          padding: '12px',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '20px', fontWeight: '700', color: discussionProgress >= 80 ? '#10b981' : discussionProgress >= 60 ? '#f59e0b' : '#ef4444' }}>
-            {Math.round(discussionProgress)}%
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '10px' }}>Discussions complétées</div>
-          <div style={{ color: '#94a3b8', fontSize: '9px', marginTop: '2px' }}>
-            {completedDiscussions}/{astData.teamDiscussion.discussions.length}
-          </div>
-        </div>
-      </div>
-
-      {/* Détails des risques */}
-      {totalHazards > 0 && (
-        <div style={{
-          background: 'rgba(15, 23, 42, 0.8)',
-          borderRadius: '8px',
-          padding: '12px'
-        }}>
-          <h4 style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: '600', marginBottom: '8px' }}>
-            Répartition des risques
-          </h4>
-          <div style={{ display: 'flex', gap: '12px', fontSize: '11px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#dc2626' }} />
-              <span style={{ color: '#94a3b8' }}>Critique: {criticalHazards}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#ea580c' }} />
-              <span style={{ color: '#94a3b8' }}>Élevé: {highHazards}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Recommandations */}
-      <div style={{ marginTop: '16px' }}>
-        <h4 style={{ color: '#f59e0b', fontSize: '12px', fontWeight: '600', marginBottom: '8px' }}>
-          ⚠️ Points d'attention
-        </h4>
-        <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: '1.4' }}>
-          {criticalHazards > 0 && (
-            <div style={{ marginBottom: '4px' }}>• {criticalHazards} danger(s) critique(s) identifié(s)</div>
-          )}
-          {equipmentCompliance < 100 && (
-            <div style={{ marginBottom: '4px' }}>• Vérification équipements incomplète ({Math.round(equipmentCompliance)}%)</div>
-          )}
-          {teamProgress < 100 && (
-            <div style={{ marginBottom: '4px' }}>• Consultations équipe en attente ({Math.round(teamProgress)}%)</div>
-          )}
-          {discussionProgress < 100 && (
-            <div style={{ marginBottom: '4px' }}>• Discussions équipe incomplètes ({Math.round(discussionProgress)}%)</div>
-          )}
-          {overallProgress >= 90 && (
-            <div style={{ color: '#10b981' }}>✅ AST prête pour finalisation</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export { WeatherWidget, AdvancedStatsPanel };
-// =================== SECTION 4 - INTÉGRATIONS AU COMPOSANT PRINCIPAL AVEC GOOGLE MAPS ===================
-// Modifications à apporter à votre composant principal existant
-
-// 1. NOUVEAUX ÉTATS À AJOUTER (après vos useState existants)
-const [showWeatherWidget, setShowWeatherWidget] = useState(true);
-const [selectedWorkType, setSelectedWorkType] = useState<WorkType | undefined>();
-const [showLocationPicker, setShowLocationPicker] = useState(false);
-const [coordinates, setCoordinates] = useState<{lat: number, lng: number} | null>(null);
-const [weatherData, setWeatherData] = useState<WeatherData>({
-  temperature: 22,
-  humidity: 65,
-  windSpeed: 15,
-  windDirection: 'SO',
-  precipitation: 0,
-  visibility: 10,
-  uvIndex: 6,
-  conditions: 'Partiellement nuageux',
-  warnings: [],
-  impact: 'low'
-});
-
-// Initialiser les hooks de partage équipe
-const teamSharing = useTeamSharing();
-
-// 2. COMPOSANT SÉLECTEUR DE LOCALISATION GOOGLE MAPS
-const LocationPicker = ({ 
-  currentLocation, 
-  onLocationSelect, 
-  onClose 
-}: {
-  currentLocation: string;
-  onLocationSelect: (address: string, coords: {lat: number, lng: number}) => void;
-  onClose: () => void;
-}) => {
-  const [searchAddress, setSearchAddress] = useState(currentLocation);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-
-  // Fonction pour rechercher une adresse (simulation - remplacer par Google Places API)
-  const searchLocation = async (query: string) => {
-    if (!query.trim()) {
-      setSuggestions([]);
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      // Simulation API Google Places (remplacer par vraie API)
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const mockSuggestions = [
-        {
-          id: '1',
-          address: `${query}, Québec, QC, Canada`,
-          lat: 46.8139 + Math.random() * 0.1,
-          lng: -71.2082 + Math.random() * 0.1,
-          type: 'Adresse'
-        },
-        {
-          id: '2', 
-          address: `${query}, Montréal, QC, Canada`,
-          lat: 45.5017 + Math.random() * 0.1,
-          lng: -73.5673 + Math.random() * 0.1,
-          type: 'Adresse'
-        },
-        {
-          id: '3',
-          address: `${query}, Ottawa, ON, Canada`,
-          lat: 45.4215 + Math.random() * 0.1,
-          lng: -75.6972 + Math.random() * 0.1,
-          type: 'Adresse'
-        }
-      ];
-      
-      setSuggestions(mockSuggestions);
-    } catch (error) {
-      console.error('Erreur recherche localisation:', error);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  // Fonction pour obtenir la localisation actuelle
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const coords = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          
-          // Reverse geocoding simulation (remplacer par Google Geocoding API)
-          const address = `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)} (Position actuelle)`;
-          onLocationSelect(address, coords);
-        },
-        (error) => {
-          console.error('Erreur géolocalisation:', error);
-          alert('Impossible d\'obtenir votre position actuelle');
-        }
-      );
-    } else {
-      alert('Géolocalisation non supportée par ce navigateur');
-    }
-  };
-
-  const openGoogleMaps = () => {
-    const query = encodeURIComponent(searchAddress || currentLocation);
-    window.open(`https://www.google.com/maps/search/${query}`, '_blank');
-  };
-
-  return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0, 0, 0, 0.8)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        background: 'rgba(15, 23, 42, 0.95)',
-        borderRadius: '16px',
-        padding: '24px',
-        width: '90%',
-        maxWidth: '500px',
-        border: '1px solid rgba(100, 116, 139, 0.3)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', margin: 0 }}>
-            📍 Sélectionner la localisation
-          </h3>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#94a3b8',
-              cursor: 'pointer',
-              padding: '4px'
-            }}
-          >
-            <X style={{ width: '20px', height: '20px' }} />
-          </button>
-        </div>
-
-        {/* Barre de recherche */}
-        <div style={{ marginBottom: '16px' }}>
-          <input
-            type="text"
-            value={searchAddress}
-            onChange={(e) => {
-              setSearchAddress(e.target.value);
-              searchLocation(e.target.value);
-            }}
-            placeholder="Rechercher une adresse..."
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              background: 'rgba(30, 41, 59, 0.8)',
-              border: '1px solid rgba(100, 116, 139, 0.3)',
-              borderRadius: '8px',
-              color: '#e2e8f0',
-              fontSize: '14px'
-            }}
-          />
-        </div>
-
-        {/* Boutons d'action rapide */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          <button
-            onClick={getCurrentLocation}
-            style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              border: 'none',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <MapPin style={{ width: '14px', height: '14px' }} />
-            Ma position
-          </button>
-          
-          <button
-            onClick={openGoogleMaps}
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-              border: 'none',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <ExternalLink style={{ width: '14px', height: '14px' }} />
-            Google Maps
-          </button>
-        </div>
-
-        {/* Suggestions */}
-        {isSearching && (
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            padding: '12px', 
-            color: '#94a3b8',
-            fontSize: '14px'
-          }}>
-            <RefreshCw style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
-            Recherche en cours...
-          </div>
-        )}
-
-        {suggestions.length > 0 && !isSearching && (
-          <div style={{
-            background: 'rgba(30, 41, 59, 0.6)',
-            borderRadius: '8px',
-            border: '1px solid rgba(100, 116, 139, 0.3)',
-            maxHeight: '200px',
-            overflowY: 'auto'
-          }}>
-            {suggestions.map((suggestion) => (
-              <div
-                key={suggestion.id}
-                onClick={() => {
-                  onLocationSelect(suggestion.address, { lat: suggestion.lat, lng: suggestion.lng });
-                  onClose();
-                }}
-                style={{
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid rgba(100, 116, 139, 0.2)',
-                  transition: 'background 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                <div style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '500' }}>
-                  {suggestion.address}
-                </div>
-                <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>
-                  {suggestion.type} • {suggestion.lat.toFixed(4)}, {suggestion.lng.toFixed(4)}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {suggestions.length === 0 && !isSearching && searchAddress.trim() && (
-          <div style={{
-            textAlign: 'center',
-            padding: '20px',
-            color: '#94a3b8',
-            fontSize: '14px'
-          }}>
-            Aucun résultat trouvé
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// 3. FONCTION POUR METTRE À JOUR LE TYPE DE TRAVAIL  
-const handleWorkTypeChange = (workType: WorkType) => {
-  setSelectedWorkType(workType);
-  setFormData(prev => ({
-    ...prev,
-    projectInfo: {
-      ...prev.projectInfo,
-      workType: workType
-    }
-  }));
-
-  // Auto-sélectionner les dangers selon le type de travail
-  const relevantHazards = getHazardsByWorkType(workType.id);
-  const updatedHazards = formData.electricalHazards.map(hazard => ({
-    ...hazard,
-    isSelected: workType.baseHazards.includes(hazard.id)
-  }));
-  
-  setFormData(prev => ({
-    ...prev,
-    electricalHazards: updatedHazards
-  }));
-};
-
-// 4. GESTIONNAIRE DE SÉLECTION DE LOCALISATION
-const handleLocationSelect = (address: string, coords: {lat: number, lng: number}) => {
-  setCoordinates(coords);
-  setFormData(prev => ({
-    ...prev,
-    projectInfo: {
-      ...prev.projectInfo,
-      workLocation: address,
-      coordinates: coords
-    }
-  }));
-};
-// =================== SECTION 5 - MODIFICATION ÉTAPE 1 AVEC GOOGLE MAPS ===================
-// Remplacement complet de votre étape 1 existante
-
-{/* ÉTAPE 1: Informations Générales - VERSION AMÉLIORÉE */}
-{currentStep === 0 && (
-  <div className="slide-in">
-    <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-      <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-        📋 {t.projectInfo.title}
-      </h2>
-    </div>
-
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-      
-      {/* Numéro AST - EXISTANT */}
-      <div>
-        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-          🔢 # AST
-        </label>
-        <div style={{
-          background: 'rgba(34, 197, 94, 0.1)',
-          border: '1px solid #22c55e',
-          borderRadius: '12px',
-          padding: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div>
-            <div style={{
-              fontFamily: 'Monaco, Menlo, Courier New, monospace',
-              fontSize: '16px',
-              fontWeight: '700',
-              color: '#22c55e',
-              letterSpacing: '0.5px'
-            }}>
-              {formData.astNumber}
-            </div>
-          </div>
-          <button 
-            onClick={regenerateASTNumber}
-            style={{
-              background: 'none',
-              border: '1px solid #22c55e',
-              color: '#22c55e',
-              padding: '8px',
-              borderRadius: '8px',
-              cursor: 'pointer'
-            }}
-          >
-            <Copy style={{ width: '16px', height: '16px' }} />
-          </button>
-        </div>
-      </div>
-
-      {/* Client - EXISTANT */}
-      <div>
-        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-          🏢 Client *
-        </label>
-        <input 
-          type="text"
-          className="input-premium"
-          placeholder="Nom du client"
-          value={formData.projectInfo.client}
-          onChange={(e) => setFormData(prev => ({
-            ...prev,
-            projectInfo: { ...prev.projectInfo, client: e.target.value }
-          }))}
-        />
-      </div>
-
-      {/* Téléphone Client - EXISTANT */}
-      <div>
-        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-          📞 {t.projectInfo.clientPhone}
-        </label>
-        <input 
-          type="tel"
-          className="input-premium"
-          placeholder="Ex: (514) 555-0123"
-          value={formData.projectInfo.clientPhone}
-          onChange={(e) => setFormData(prev => ({
-            ...prev,
-            projectInfo: { ...prev.projectInfo, clientPhone: e.target.value }
-          }))}
-        />
-      </div>
-
-      {/* Numéro de Projet - EXISTANT */}
-      <div>
-        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-          🔢 Numéro de Projet *
-        </label>
-        <input 
-          type="text"
-          className="input-premium"
-          placeholder="Ex: PRJ-2025-001"
-          value={formData.projectInfo.projectNumber}
-          onChange={(e) => setFormData(prev => ({
-            ...prev,
-            projectInfo: { ...prev.projectInfo, projectNumber: e.target.value }
-          }))}
-        />
-      </div>
-
-      {/* Responsable - EXISTANT */}
-      <div>
-        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-          👤 {t.projectInfo.clientRepresentative}
-        </label>
-        <input 
-          type="text"
-          className="input-premium"
-          placeholder="Nom du responsable projet"
-          value={formData.projectInfo.clientRepresentative}
-          onChange={(e) => setFormData(prev => ({
-            ...prev,
-            projectInfo: { ...prev.projectInfo, clientRepresentative: e.target.value }
-          }))}
-        />
-      </div>
-
-      {/* Téléphone Responsable - EXISTANT */}
-      <div>
-        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-          📞 {t.projectInfo.clientRepresentativePhone}
-        </label>
-        <input 
-          type="tel"
-          className="input-premium"
-          placeholder="Ex: (514) 555-0456"
-          value={formData.projectInfo.clientRepresentativePhone}
-          onChange={(e) => setFormData(prev => ({
-            ...prev,
-            projectInfo: { ...prev.projectInfo, clientRepresentativePhone: e.target.value }
-          }))}
-        />
-      </div>
-
-      {/* Nombre de personnes - EXISTANT */}
-      <div>
-        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-          👥 {t.projectInfo.workerCount} *
-        </label>
-        <input 
-          type="number"
-          min="1"
-          max="100"
-          className="input-premium"
-          placeholder="Ex: 5"
-          value={formData.projectInfo.workerCount}
-          onChange={(e) => setFormData(prev => ({
-            ...prev,
-            projectInfo: { ...prev.projectInfo, workerCount: parseInt(e.target.value) || 1 }
-          }))}
-        />
-        <small style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-          Ce nombre sera comparé aux approbations d'équipe
-        </small>
-      </div>
-
-      {/* Lieu des travaux avec Google Maps - NOUVEAU */}
-      <div style={{ gridColumn: '1 / -1' }}>
-        <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-          📍 {t.projectInfo.workLocation} *
-        </label>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <input 
-            type="text"
-            className="input-premium"
-            style={{ flex: 1 }}
-            placeholder="Adresse ou description du lieu"
-            value={formData.projectInfo.workLocation}
-            onChange={(e) => setFormData(prev => ({
-              ...prev,
-              projectInfo: { ...prev.projectInfo, workLocation: e.target.value }
-            }))}
-          />
-          <button
-            onClick={() => setShowLocationPicker(true)}
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-              border: 'none',
-              color: 'white',
-              padding: '12px 16px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            <MapPin style={{ width: '16px', height: '16px' }} />
-            Localiser
-          </button>
-        </div>
-        
-        {/* Affichage des coordonnées si disponibles */}
-        {coordinates && (
-          <div style={{
-            marginTop: '8px',
-            padding: '8px 12px',
-            background: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            borderRadius: '6px',
-            fontSize: '12px',
-            color: '#10b981'
-          }}>
-            📍 Coordonnées: {coordinates.lat.toFixed(6)}, {coordinates.lng.toFixed(6)}
-            <button
-              onClick={() => window.open(`https://www.google.com/maps/search/${coordinates.lat},${coordinates.lng}`, '_blank')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#10b981',
-                cursor: 'pointer',
-                marginLeft: '8px',
-                textDecoration: 'underline'
-              }}
-            >
-              Voir sur Google Maps
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-
-    {/* Sélecteur de type de travail - NOUVEAU */}
-    <div style={{ marginTop: '32px' }}>
-      <WorkTypeSelector
-        selectedWorkType={selectedWorkType}
-        onWorkTypeChange={handleWorkTypeChange}
-      />
-    </div>
-
-    {/* Description des travaux - EXISTANT mais repositionné */}
-    <div style={{ marginTop: '24px' }}>
-      <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-        📝 {t.projectInfo.workDescription} *
-      </label>
-      <textarea 
-        className="input-premium"
-        style={{ minHeight: '120px', resize: 'vertical' }}
-        placeholder="Description détaillée des travaux à effectuer..."
-        value={formData.projectInfo.workDescription}
-        onChange={(e) => setFormData(prev => ({
-          ...prev,
-          projectInfo: { ...prev.projectInfo, workDescription: e.target.value }
-        }))}
-      />
-    </div>
-
-    {/* Section informations complémentaires - AMÉLIORÉE */}
-    <div style={{ marginTop: '32px' }}>
-      <h3 style={{ 
-        color: '#3b82f6', 
-        fontSize: '18px', 
-        fontWeight: '600', 
-        marginBottom: '16px', 
-        borderBottom: '1px solid rgba(59, 130, 246, 0.3)', 
-        paddingBottom: '8px' 
-      }}>
-        📋 Informations Complémentaires
-      </h3>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-        {/* Date et durée */}
-        <div>
-          <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-            📅 Date des travaux *
-          </label>
-          <input 
-            type="date"
-            className="input-premium"
-            value={formData.projectInfo.date}
-            onChange={(e) => setFormData(prev => ({
-              ...prev,
-              projectInfo: { ...prev.projectInfo, date: e.target.value }
-            }))}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-            ⏱️ {t.projectInfo.estimatedDuration}
-          </label>
-          <input 
-            type="text"
-            className="input-premium"
-            placeholder="Ex: 4 heures, 2 jours"
-            value={formData.projectInfo.estimatedDuration}
-            onChange={(e) => setFormData(prev => ({
-              ...prev,
-              projectInfo: { ...prev.projectInfo, estimatedDuration: e.target.value }
-            }))}
-          />
-        </div>
-
-        {/* Contacts d'urgence */}
-        <div>
-          <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-            🚨 {t.projectInfo.emergencyContact}
-          </label>
-          <input 
-            type="text"
-            className="input-premium"
-            placeholder="Nom du contact d'urgence"
-            value={formData.projectInfo.emergencyContact}
-            onChange={(e) => setFormData(prev => ({
-              ...prev,
-              projectInfo: { ...prev.projectInfo, emergencyContact: e.target.value }
-            }))}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-            📞 {t.projectInfo.emergencyPhone}
-          </label>
-          <input 
-            type="tel"
-            className="input-premium"
-            placeholder="Ex: 911, (514) 555-9999"
-            value={formData.projectInfo.emergencyPhone}
-            onChange={(e) => setFormData(prev => ({
-              ...prev,
-              projectInfo: { ...prev.projectInfo, emergencyPhone: e.target.value }
-            }))}
-          />
-        </div>
-
-        {/* Conditions météo et spéciales - NOUVEAU */}
-        <div>
-          <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-            🌤️ Conditions météorologiques
-          </label>
-          <input 
-            type="text"
-            className="input-premium"
-            placeholder="Ex: Ensoleillé, 22°C, vent léger"
-            value={formData.projectInfo.weatherConditions}
-            onChange={(e) => setFormData(prev => ({
-              ...prev,
-              projectInfo: { ...prev.projectInfo, weatherConditions: e.target.value }
-            }))}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-            ⚠️ Conditions spéciales
-          </label>
-          <input 
-            type="text"
-            className="input-premium"
-            placeholder="Ex: Circulation dense, site occupé"
-            value={formData.projectInfo.specialConditions}
-            onChange={(e) => setFormData(prev => ({
-              ...prev,
-              projectInfo: { ...prev.projectInfo, specialConditions: e.target.value }
-            }))}
-          />
-        </div>
-      </div>
-
-      {/* Permis de travail - NOUVEAU */}
-      <div style={{ marginTop: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-          <div 
-            onClick={() => setFormData(prev => ({
-              ...prev,
-              projectInfo: { ...prev.projectInfo, workPermitRequired: !prev.projectInfo.workPermitRequired }
-            }))}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              cursor: 'pointer' 
-            }}
-          >
-            <div className={`checkbox-premium ${formData.projectInfo.workPermitRequired ? 'checked' : ''}`} />
-            <span style={{ color: '#e2e8f0', fontSize: '14px' }}>
-              📋 Permis de travail requis
-            </span>
-          </div>
-        </div>
-        
-        {formData.projectInfo.workPermitRequired && (
-          <input 
-            type="text"
-            className="input-premium"
-            placeholder="Numéro du permis de travail"
-            value={formData.projectInfo.workPermitNumber || ''}
-            onChange={(e) => setFormData(prev => ({
-              ...prev,
-              projectInfo: { ...prev.projectInfo, workPermitNumber: e.target.value }
-            }))}
-          />
-        )}
-      </div>
-    </div>
-
-    {/* Modal de sélection de localisation */}
-    {showLocationPicker && (
-      <LocationPicker
-        currentLocation={formData.projectInfo.workLocation}
-        onLocationSelect={handleLocationSelect}
-        onClose={() => setShowLocationPicker(false)}
-      />
-    )}
-  </div>
-)}
-// =================== SECTION 6 - ÉTAPE 8 AMÉLIORÉE ET PANNEAU LATÉRAL ===================
-// Remplacement de votre étape 8 existante et amélioration du panneau latéral
-
-{/* ÉTAPE 8: Validation & Signatures - VERSION COMPLÈTE AMÉLIORÉE */}
-{currentStep === 7 && (
-  <div className="slide-in">
-    <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-      <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-        ✅ {t.steps.validation}
-      </h2>
-    </div>
-
-    {/* Résumé de l'AST - AMÉLIORÉ */}
-    <div style={{
-      background: 'rgba(30, 41, 59, 0.6)',
-      border: '1px solid rgba(100, 116, 139, 0.3)',
-      borderRadius: '12px',
-      padding: '24px',
-      marginBottom: '24px'
-    }}>
-      <h3 style={{ color: '#3b82f6', fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0' }}>
-        📊 Résumé détaillé de l'AST
-      </h3>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-        <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px' }}>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: '#3b82f6' }}>
-            {formData.electricalHazards.filter(h => h.isSelected).length}
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Dangers Identifiés</div>
-          <div style={{ color: '#3b82f6', fontSize: '10px', marginTop: '4px' }}>
-            {formData.electricalHazards.filter(h => h.isSelected && h.riskLevel === 'critical').length} critiques
-          </div>
-        </div>
-        
-        <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px' }}>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: '#22c55e' }}>
-            {formData.team.members.length}
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Membres d'Équipe</div>
-          <div style={{ color: '#22c55e', fontSize: '10px', marginTop: '4px' }}>
-            {formData.team.members.filter(m => m.validationStatus === 'approved').length} approuvés
-          </div>
-        </div>
-        
-        <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(168, 85, 247, 0.1)', borderRadius: '8px' }}>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: '#a855f7' }}>
-            {Object.values(teamSharing.teamConsultationStatus).filter(s => s.consulted).length}
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Consultations</div>
-          <div style={{ color: '#a855f7', fontSize: '10px', marginTop: '4px' }}>
-            {Object.values(teamSharing.teamConsultationStatus).filter(s => s.consentGiven).length} consentements
-          </div>
-        </div>
-        
-        <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(251, 191, 36, 0.1)', borderRadius: '8px' }}>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: '#f59e0b' }}>
-            {formData.documentation.photos.length}
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Photos</div>
-          <div style={{ color: '#f59e0b', fontSize: '10px', marginTop: '4px' }}>
-            Documentation
-          </div>
-        </div>
-
-        <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px' }}>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: '#ef4444' }}>
-            {formData.safetyEquipment.filter(eq => eq.required && !eq.verified).length}
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>EPI Non Vérifiés</div>
-          <div style={{ color: '#ef4444', fontSize: '10px', marginTop: '4px' }}>
-            Attention requise
-          </div>
-        </div>
-      </div>
-
-      {/* Indicateurs de completion */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span style={{ color: '#e2e8f0', fontSize: '12px' }}>Discussions équipe</span>
-            <span style={{ color: '#3b82f6', fontSize: '12px', fontWeight: '600' }}>
-              {Math.round((formData.teamDiscussion.discussions.filter(d => d.completed).length / formData.teamDiscussion.discussions.length) * 100)}%
-            </span>
-          </div>
-          <div style={{ background: 'rgba(100, 116, 139, 0.3)', borderRadius: '4px', height: '4px' }}>
-            <div style={{ 
-              background: '#3b82f6', 
-              height: '4px', 
-              borderRadius: '4px',
-              width: `${(formData.teamDiscussion.discussions.filter(d => d.completed).length / formData.teamDiscussion.discussions.length) * 100}%`
-            }} />
-          </div>
-        </div>
-        
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span style={{ color: '#e2e8f0', fontSize: '12px' }}>Équipements vérifiés</span>
-            <span style={{ color: '#10b981', fontSize: '12px', fontWeight: '600' }}>
-              {formData.safetyEquipment.filter(eq => eq.required).length > 0 
-                ? Math.round((formData.safetyEquipment.filter(eq => eq.required && eq.verified).length / formData.safetyEquipment.filter(eq => eq.required).length) * 100)
-                : 0}%
-            </span>
-          </div>
-          <div style={{ background: 'rgba(100, 116, 139, 0.3)', borderRadius: '4px', height: '4px' }}>
-            <div style={{ 
-              background: '#10b981', 
-              height: '4px', 
-              borderRadius: '4px',
-              width: `${formData.safetyEquipment.filter(eq => eq.required).length > 0 
-                ? (formData.safetyEquipment.filter(eq => eq.required && eq.verified).length / formData.safetyEquipment.filter(eq => eq.required).length) * 100
-                : 0}%`
-            }} />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {/* Partage équipe pour consultation - NOUVEAU */}
-    <TeamSharingComponent 
-      astData={formData} 
-      teamSharing={teamSharing} 
-    />
-
-    {/* Validation finale et conformité - AMÉLIORÉ */}
-    <div style={{
-      background: 'rgba(30, 41, 59, 0.6)',
-      border: '1px solid rgba(100, 116, 139, 0.3)',
-      borderRadius: '12px',
-      padding: '24px',
-      marginBottom: '24px'
-    }}>
-      <h3 style={{ color: '#3b82f6', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-        ⚖️ Conformité et validation finale
-      </h3>
-
-      {/* Checklist de conformité */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          padding: '8px 12px',
-          background: formData.electricalHazards.filter(h => h.isSelected).length > 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-          borderRadius: '6px'
-        }}>
-          <div className={`checkbox-premium ${formData.electricalHazards.filter(h => h.isSelected).length > 0 ? 'checked' : ''}`} />
-          <span style={{ color: '#e2e8f0', fontSize: '13px' }}>Dangers identifiés</span>
-        </div>
-
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          padding: '8px 12px',
-          background: formData.team.allApproved ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-          borderRadius: '6px'
-        }}>
-          <div className={`checkbox-premium ${formData.team.allApproved ? 'checked' : ''}`} />
-          <span style={{ color: '#e2e8f0', fontSize: '13px' }}>Équipe approuvée</span>
-        </div>
-
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          padding: '8px 12px',
-          background: Object.values(teamSharing.teamConsultationStatus).filter(s => s.consulted).length === formData.team.members.length ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-          borderRadius: '6px'
-        }}>
-          <div className={`checkbox-premium ${Object.values(teamSharing.teamConsultationStatus).filter(s => s.consulted).length === formData.team.members.length ? 'checked' : ''}`} />
-          <span style={{ color: '#e2e8f0', fontSize: '13px' }}>Consultations complètes</span>
-        </div>
-
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          padding: '8px 12px',
-          background: formData.safetyEquipment.filter(eq => eq.required && !eq.verified).length === 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-          borderRadius: '6px'
-        }}>
-          <div className={`checkbox-premium ${formData.safetyEquipment.filter(eq => eq.required && !eq.verified).length === 0 ? 'checked' : ''}`} />
-          <span style={{ color: '#e2e8f0', fontSize: '13px' }}>EPI vérifiés</span>
-        </div>
-      </div>
-
-      {/* Normes de conformité */}
-      <div style={{
-        background: 'rgba(15, 23, 42, 0.8)',
-        borderRadius: '8px',
-        padding: '16px',
-        marginBottom: '16px'
-      }}>
-        <h4 style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
-          📋 Conformité réglementaire
-        </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ color: '#94a3b8', fontSize: '12px' }}>CSA Z1002 (Gestion SST)</span>
-            <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ color: '#94a3b8', fontSize: '12px' }}>RSST Québec</span>
-            <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ color: '#94a3b8', fontSize: '12px' }}>CSA Z462 (Électrique)</span>
-            <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ color: '#94a3b8', fontSize: '12px' }}>ISO 45001</span>
-            <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {/* Actions finales - AMÉLIORÉES */}
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-      <button
-        onClick={() => handleSave(false)}
-        className="btn-premium"
-        disabled={saveStatus === 'saving'}
-      >
-        <Save style={{ width: '16px', height: '16px' }} />
-        {t.buttons.save}
-      </button>
-      
-      <button
-        onClick={handleGeneratePDF}
-        className="btn-secondary"
-        disabled={saveStatus === 'saving'}
-      >
-        <Download style={{ width: '16px', height: '16px' }} />
-        {t.actions.generatePDF}
-      </button>
-      
-      <button
-        onClick={handleSendByEmail}
-        className="btn-secondary"
-        disabled={saveStatus === 'saving'}
-      >
-        <Send style={{ width: '16px', height: '16px' }} />
-        {t.actions.sendByEmail}
-      </button>
-      
-      <button
-        onClick={handleArchive}
-        className="btn-secondary"
-        disabled={saveStatus === 'saving'}
-      >
-        <Archive style={{ width: '16px', height: '16px' }} />
-        {t.actions.archive}
-      </button>
-    </div>
-
-    {/* Soumission finale - AMÉLIORÉE */}
-    <div style={{
-      background: formData.team.allApproved && Object.values(teamSharing.teamConsultationStatus).filter(s => s.consulted).length === formData.team.members.length 
-        ? 'rgba(34, 197, 94, 0.1)' 
-        : 'rgba(239, 68, 68, 0.1)',
-      border: `1px solid ${formData.team.allApproved && Object.values(teamSharing.teamConsultationStatus).filter(s => s.consulted).length === formData.team.members.length 
-        ? '#22c55e' 
-        : '#ef4444'}`,
-      borderRadius: '12px',
-      padding: '24px',
-      textAlign: 'center'
-    }}>
-      <h3 style={{ 
-        color: formData.team.allApproved && Object.values(teamSharing.teamConsultationStatus).filter(s => s.consulted).length === formData.team.members.length 
-          ? '#22c55e' 
-          : '#ef4444', 
-        fontSize: '18px', 
-        fontWeight: '600', 
-        margin: '0 0 16px 0' 
-      }}>
-        {formData.team.allApproved && Object.values(teamSharing.teamConsultationStatus).filter(s => s.consulted).length === formData.team.members.length
-          ? '✅ Prêt pour soumission finale' 
-          : '⚠️ Validation requise'}
-      </h3>
-      
-      {/* Messages d'erreur détaillés */}
-      {(!formData.team.allApproved || Object.values(teamSharing.teamConsultationStatus).filter(s => s.consulted).length < formData.team.members.length) && (
-        <div style={{ marginBottom: '16px' }}>
-          {!formData.team.allApproved && formData.team.members.length > 0 && (
-            <p style={{ color: '#ef4444', fontSize: '13px', margin: '4px 0' }}>
-              • Toutes les validations d'équipe doivent être complétées
-            </p>
-          )}
-          {Object.values(teamSharing.teamConsultationStatus).filter(s => s.consulted).length < formData.team.members.length && (
-            <p style={{ color: '#ef4444', fontSize: '13px', margin: '4px 0' }}>
-              • Toutes les consultations équipe doivent être complétées
-            </p>
-          )}
-          {formData.safetyEquipment.filter(eq => eq.required && !eq.verified).length > 0 && (
-            <p style={{ color: '#f59e0b', fontSize: '13px', margin: '4px 0' }}>
-              • {formData.safetyEquipment.filter(eq => eq.required && !eq.verified).length} équipement(s) non vérifiés
-            </p>
-          )}
-        </div>
-      )}
-
-      <button
-        onClick={handleFinalSubmission}
-        className={formData.team.allApproved && Object.values(teamSharing.teamConsultationStatus).filter(s => s.consulted).length === formData.team.members.length 
-          ? 'btn-success' 
-          : 'btn-secondary'}
-        disabled={!(formData.team.allApproved && Object.values(teamSharing.teamConsultationStatus).filter(s => s.consulted).length === formData.team.members.length) || saveStatus === 'saving'}
-        style={{ fontSize: '16px', padding: '16px 32px' }}
-      >
-        <CheckCircle style={{ width: '20px', height: '20px' }} />
-        {t.actions.finalApproval}
-      </button>
-    </div>
-  </div>
-)}
-
-{/* PANNEAU LATÉRAL REMPLACÉ - Statistiques avancées */}
-<div className="space-y-6">
-  {/* Remplacement du panneau de statistiques existant */}
-  <AdvancedStatsPanel 
-    astData={formData} 
-    teamConsultationStatus={teamSharing.teamConsultationStatus} 
-  />
-
-  {/* Widget météo */}
-  <WeatherWidget
-    showWidget={showWeatherWidget}
-    onClose={() => setShowWeatherWidget(false)}
-    weatherData={weatherData}
-    onWeatherUpdate={setWeatherData}
-  />
-
-  {/* Conformité réglementaire - NOUVEAU */}
-  <div style={{
-    background: 'rgba(30, 41, 59, 0.6)',
-    border: '1px solid rgba(100, 116, 139, 0.3)',
-    borderRadius: '12px',
-    padding: '20px'
-  }}>
-    <h3 style={{ color: '#3b82f6', fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-      ⚖️ Conformité
-    </h3>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ color: '#94a3b8', fontSize: '12px' }}>CSA Z1002</span>
-        <CheckCircle style={{ width: '14px', height: '14px', color: '#10b981' }} />
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ color: '#94a3b8', fontSize: '12px' }}>RSST Québec</span>
-        <CheckCircle style={{ width: '14px', height: '14px', color: '#10b981' }} />
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ color: '#94a3b8', fontSize: '12px' }}>CSA Z462</span>
-        <CheckCircle style={{ width: '14px', height: '14px', color: '#10b981' }} />
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ color: '#94a3b8', fontSize: '12px' }}>ISO 45001</span>
-        <CheckCircle style={{ width: '14px', height: '14px', color: '#10b981' }} />
-      </div>
-    </div>
-  </div>
-</div>
-// =================== SECTION 7 - BASE DE DONNÉES COMPLÈTE DANGERS & CONTRÔLES ===================
-// Remplacer complètement vos dangers et mesures de contrôle existants
-
-// =================== BASE DE DONNÉES COMPLÈTE DES 39 DANGERS ===================
-const predefinedElectricalHazardsComplete: ElectricalHazard[] = [
-  // DANGERS ÉLECTRIQUES (1-5)
-  {
-    id: 'electrical_shock',
-    code: 'ELEC-001',
-    title: 'Choc électrique',
-    description: 'Contact direct ou indirect avec parties sous tension',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'arc_flash',
-    code: 'ELEC-002', 
-    title: 'Arc électrique',
-    description: 'Décharge électrique dans l\'air entre conducteurs',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'electrical_burns',
-    code: 'ELEC-003',
-    title: 'Brûlures électriques',
-    description: 'Brûlures causées par passage courant ou arc électrique',
-    riskLevel: 'high',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'electromagnetic_fields',
-    code: 'ELEC-004',
-    title: 'Champs électromagnétiques',
-    description: 'Exposition aux rayonnements électromagnétiques',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'static_electricity',
-    code: 'ELEC-005',
-    title: 'Électricité statique',
-    description: 'Accumulation charges électrostatiques',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-
-  // DANGERS GAZIERS ET CHIMIQUES (6-12)
-  {
-    id: 'gas_leak',
-    code: 'GAZ-001',
-    title: 'Fuite de gaz',
-    description: 'Échappement non contrôlé de gaz combustible ou toxique',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'explosion',
-    code: 'GAZ-002',
-    title: 'Explosion',
-    description: 'Combustion rapide en espace confiné ou nuage gazeux',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'fire',
-    code: 'FEU-001',
-    title: 'Incendie',
-    description: 'Combustion non contrôlée de matières inflammables',
-    riskLevel: 'high',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'toxic_exposure',
-    code: 'CHIM-001',
-    title: 'Exposition substances toxiques',
-    description: 'Contact avec substances chimiques dangereuses',
-    riskLevel: 'high',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'chemical_burns',
-    code: 'CHIM-002',
-    title: 'Brûlures chimiques',
-    description: 'Lésions cutanées par contact substances corrosives',
-    riskLevel: 'high',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'asphyxiation',
-    code: 'RESP-001',
-    title: 'Asphyxie',
-    description: 'Manque d\'oxygène ou présence gaz inertes',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'oxygen_deficiency',
-    code: 'RESP-002',
-    title: 'Déficience en oxygène',
-    description: 'Concentration oxygène inférieure à 19,5%',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-
-  // DANGERS PHYSIQUES ET MÉCANIQUES (13-23)
-  {
-    id: 'falls',
-    code: 'CHUTE-001',
-    title: 'Chutes de hauteur',
-    description: 'Chute depuis une surface élevée',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'struck_by_objects',
-    code: 'IMPACT-001',
-    title: 'Heurt par objets',
-    description: 'Impact par objets en mouvement ou qui tombent',
-    riskLevel: 'high',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'cuts_lacerations',
-    code: 'COUP-001',
-    title: 'Coupures et lacérations',
-    description: 'Blessures par objets tranchants ou coupants',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'mechanical_hazards',
-    code: 'MECA-001',
-    title: 'Dangers mécaniques',
-    description: 'Risques liés aux machines et équipements mécaniques',
-    riskLevel: 'high',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'heavy_equipment',
-    code: 'EQUIP-001',
-    title: 'Équipements lourds',
-    description: 'Risques associés aux véhicules et machines lourdes',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'vehicle_traffic',
-    code: 'CIRC-001',
-    title: 'Circulation véhiculaire',
-    description: 'Risques liés à la proximité de véhicules en circulation',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'train_traffic',
-    code: 'FERRO-001',
-    title: 'Circulation ferroviaire',
-    description: 'Risques près des voies ferrées et trains',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'cave_in',
-    code: 'EFFON-001',
-    title: 'Effondrement',
-    description: 'Affaissement de sols, tranchées ou structures',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'underground_utilities',
-    code: 'SOUS-001',
-    title: 'Services souterrains',
-    description: 'Contact accidentel avec services publics enterrés',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'engulfment',
-    code: 'ENGL-001',
-    title: 'Engloutissement',
-    description: 'Submersion dans matériaux fluides ou granulaires',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'electrical_lines',
-    code: 'LIGNE-001',
-    title: 'Lignes électriques',
-    description: 'Proximité ou contact avec lignes électriques aériennes',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-
-  // DANGERS BIOLOGIQUES (24-26)
-  {
-    id: 'biological_hazards',
-    code: 'BIO-001',
-    title: 'Dangers biologiques',
-    description: 'Exposition à agents biologiques pathogènes',
-    riskLevel: 'high',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'insect_stings',
-    code: 'BIO-002',
-    title: 'Piqûres d\'insectes',
-    description: 'Piqûres ou morsures d\'insectes venimeux',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'animal_attacks',
-    code: 'BIO-003',
-    title: 'Attaques d\'animaux',
-    description: 'Attaques par animaux sauvages ou domestiques',
-    riskLevel: 'high',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-
-  // DANGERS ERGONOMIQUES (27-29)
-  {
-    id: 'ergonomic_hazards',
-    code: 'ERGO-001',
-    title: 'Dangers ergonomiques',
-    description: 'Contraintes physiques et posturales',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'manual_handling',
-    code: 'MANU-001',
-    title: 'Manutention manuelle',
-    description: 'Soulèvement, transport, manipulation objets lourds',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'repetitive_motion',
-    code: 'REPE-001',
-    title: 'Mouvements répétitifs',
-    description: 'Gestes répétés sur périodes prolongées',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-
-  // DANGERS ENVIRONNEMENTAUX (30-35)
-  {
-    id: 'weather_exposure',
-    code: 'METEO-001',
-    title: 'Exposition météorologique',
-    description: 'Exposition conditions météorologiques extrêmes',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'heat_stress',
-    code: 'CHAL-001',
-    title: 'Stress thermique',
-    description: 'Exposition à chaleur excessive',
-    riskLevel: 'high',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'cold_exposure',
-    code: 'FROID-001',
-    title: 'Exposition au froid',
-    description: 'Exposition à températures froides extrêmes',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'uv_radiation',
-    code: 'UV-001',
-    title: 'Rayonnement UV',
-    description: 'Exposition rayonnement ultraviolet solaire',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'wind_exposure',
-    code: 'VENT-001',
-    title: 'Exposition au vent',
-    description: 'Exposition à vents forts et rafales',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'precipitation',
-    code: 'PREC-001',
-    title: 'Précipitations',
-    description: 'Pluie, neige, grêle affectant sécurité',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-
-  // DANGERS PHYSIQUES SPÉCIALISÉS (36-39)
-  {
-    id: 'noise',
-    code: 'BRUIT-001',
-    title: 'Bruit excessif',
-    description: 'Exposition à niveaux sonores élevés',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'vibration',
-    code: 'VIBR-001',
-    title: 'Vibrations',
-    description: 'Exposition vibrations corps entier ou main-bras',
-    riskLevel: 'medium',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'radiation',
-    code: 'RAD-001',
-    title: 'Rayonnements',
-    description: 'Exposition rayonnements ionisants ou non-ionisants',
-    riskLevel: 'high',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  },
-  {
-    id: 'lockout_tagout',
-    code: 'LOTO-001',
-    title: 'Énergies dangereuses',
-    description: 'Remise en marche inattendue d\'équipements',
-    riskLevel: 'critical',
-    isSelected: false,
-    additionalNotes: '',
-    controlMeasures: [],
-    showControls: false
-  }
-];
-
-// =================== MESURES DE CONTRÔLE COMPLÈTES SELON HIÉRARCHIE CSA ===================
-const predefinedControlMeasuresComplete: Record<string, ControlMeasure[]> = {
+// =================== MESURES DE CONTRÔLE SELON HIÉRARCHIE CSA ===================
+const predefinedControlMeasures: Record<string, ControlMeasure[]> = {
   // DANGERS ÉLECTRIQUES
   electrical_shock: [
     {
@@ -2840,6 +723,22 @@ const predefinedControlMeasuresComplete: Record<string, ControlMeasure[]> = {
       isSelected: false,
       photos: [],
       notes: ''
+    },
+    {
+      id: 'arc_003',
+      hazardId: 'arc_flash',
+      type: 'ppe',
+      measure: 'Vêtements résistants à l\'arc',
+      description: 'EPI avec indice d\'arc approprié (cal/cm²)',
+      implementation: 'Sélection selon étude d\'arc et catégorie EPI',
+      responsible: 'Travailleur qualifié',
+      timeline: 'Port obligatoire',
+      cost: 'high',
+      effectiveness: 80,
+      compliance: ['CSA Z462 Annexe H', 'ASTM F1506', 'CSA Z94.4'],
+      isSelected: false,
+      photos: [],
+      notes: ''
     }
   ],
 
@@ -2912,23 +811,19 @@ const predefinedControlMeasuresComplete: Record<string, ControlMeasure[]> = {
       isSelected: false,
       photos: [],
       notes: ''
-    }
-  ],
-
-  // ESPACES CONFINÉS
-  confined_spaces: [
+    },
     {
-      id: 'conf_001',
-      hazardId: 'asphyxiation',
-      type: 'elimination',
-      measure: 'Travail à l\'extérieur de l\'espace',
-      description: 'Modification méthodes pour éviter l\'entrée',
-      implementation: 'Équipements à distance, ouvertures, robots',
-      responsible: 'Ingénieur méthodes',
-      timeline: 'Phase planification',
-      cost: 'high',
-      effectiveness: 100,
-      compliance: ['RSST Article 3.9', 'CSA Z1006'],
+      id: 'fall_003',
+      hazardId: 'falls',
+      type: 'ppe',
+      measure: 'Système d\'arrêt de chute',
+      description: 'Harnais avec longe et point d\'ancrage certifié',
+      implementation: 'Harnais intégral avec longe absorption énergie',
+      responsible: 'Travailleur formé',
+      timeline: 'Port obligatoire >3m',
+      cost: 'medium',
+      effectiveness: 75,
+      compliance: ['RSST Article 2.10.15', 'CSA Z259 série', 'ANSI Z359'],
       isSelected: false,
       photos: [],
       notes: ''
@@ -3020,46 +915,468 @@ const predefinedControlMeasuresComplete: Record<string, ControlMeasure[]> = {
   ]
 };
 
+// =================== BASE DE DONNÉES COMPLÈTE DES 39 DANGERS ===================
+const predefinedElectricalHazards: ElectricalHazard[] = [
+  // DANGERS ÉLECTRIQUES (1-5)
+  {
+    id: 'electrical_shock',
+    code: 'ELEC-001',
+    title: 'Choc électrique',
+    description: 'Contact direct ou indirect avec parties sous tension',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['electrical_shock'],
+    showControls: false
+  },
+  {
+    id: 'arc_flash',
+    code: 'ELEC-002',
+    title: 'Arc électrique',
+    description: 'Décharge électrique dans l\'air entre conducteurs',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['arc_flash'],
+    showControls: false
+  },
+  {
+    id: 'electrical_burns',
+    code: 'ELEC-003',
+    title: 'Brûlures électriques',
+    description: 'Brûlures causées par passage courant ou arc électrique',
+    riskLevel: 'high',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'electromagnetic_fields',
+    code: 'ELEC-004',
+    title: 'Champs électromagnétiques',
+    description: 'Exposition aux rayonnements électromagnétiques',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'static_electricity',
+    code: 'ELEC-005',
+    title: 'Électricité statique',
+    description: 'Accumulation charges électrostatiques',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+
+  // DANGERS GAZIERS ET CHIMIQUES (6-12)
+  {
+    id: 'gas_leak',
+    code: 'GAZ-001',
+    title: 'Fuite de gaz',
+    description: 'Échappement non contrôlé de gaz combustible ou toxique',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['gas_leak'],
+    showControls: false
+  },
+  {
+    id: 'explosion',
+    code: 'GAZ-002',
+    title: 'Explosion',
+    description: 'Combustion rapide en espace confiné ou nuage gazeux',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'fire',
+    code: 'FEU-001',
+    title: 'Incendie',
+    description: 'Combustion non contrôlée de matières inflammables',
+    riskLevel: 'high',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'toxic_exposure',
+    code: 'CHIM-001',
+    title: 'Exposition substances toxiques',
+    description: 'Contact avec substances chimiques dangereuses',
+    riskLevel: 'high',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'chemical_burns',
+    code: 'CHIM-002',
+    title: 'Brûlures chimiques',
+    description: 'Lésions cutanées par contact substances corrosives',
+    riskLevel: 'high',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'asphyxiation',
+    code: 'RESP-001',
+    title: 'Asphyxie',
+    description: 'Manque d\'oxygène ou présence gaz inertes',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'oxygen_deficiency',
+    code: 'RESP-002',
+    title: 'Déficience en oxygène',
+    description: 'Concentration oxygène inférieure à 19,5%',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+
+  // DANGERS PHYSIQUES ET MÉCANIQUES (13-23)
+  {
+    id: 'falls',
+    code: 'CHUTE-001',
+    title: 'Chutes de hauteur',
+    description: 'Chute depuis une surface élevée',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['falls'],
+    showControls: false
+  },
+  {
+    id: 'struck_by_objects',
+    code: 'IMPACT-001',
+    title: 'Heurt par objets',
+    description: 'Impact par objets en mouvement ou qui tombent',
+    riskLevel: 'high',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'cuts_lacerations',
+    code: 'COUP-001',
+    title: 'Coupures et lacérations',
+    description: 'Blessures par objets tranchants ou coupants',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'mechanical_hazards',
+    code: 'MECA-001',
+    title: 'Dangers mécaniques',
+    description: 'Risques liés aux machines et équipements mécaniques',
+    riskLevel: 'high',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'heavy_equipment',
+    code: 'EQUIP-001',
+    title: 'Équipements lourds',
+    description: 'Risques associés aux véhicules et machines lourdes',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'vehicle_traffic',
+    code: 'CIRC-001',
+    title: 'Circulation véhiculaire',
+    description: 'Risques liés à la proximité de véhicules en circulation',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'train_traffic',
+    code: 'FERRO-001',
+    title: 'Circulation ferroviaire',
+    description: 'Risques près des voies ferrées et trains',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'cave_in',
+    code: 'EFFON-001',
+    title: 'Effondrement',
+    description: 'Affaissement de sols, tranchées ou structures',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'underground_utilities',
+    code: 'SOUS-001',
+    title: 'Services souterrains',
+    description: 'Contact accidentel avec services publics enterrés',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'engulfment',
+    code: 'ENGL-001',
+    title: 'Engloutissement',
+    description: 'Submersion dans matériaux fluides ou granulaires',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'electrical_lines',
+    code: 'LIGNE-001',
+    title: 'Lignes électriques',
+    description: 'Proximité ou contact avec lignes électriques aériennes',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+
+  // DANGERS BIOLOGIQUES (24-26)
+  {
+    id: 'biological_hazards',
+    code: 'BIO-001',
+    title: 'Dangers biologiques',
+    description: 'Exposition à agents biologiques pathogènes',
+    riskLevel: 'high',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'insect_stings',
+    code: 'BIO-002',
+    title: 'Piqûres d\'insectes',
+    description: 'Piqûres ou morsures d\'insectes venimeux',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'animal_attacks',
+    code: 'BIO-003',
+    title: 'Attaques d\'animaux',
+    description: 'Attaques par animaux sauvages ou domestiques',
+    riskLevel: 'high',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+
+  // DANGERS ERGONOMIQUES (27-29)
+  {
+    id: 'ergonomic_hazards',
+    code: 'ERGO-001',
+    title: 'Dangers ergonomiques',
+    description: 'Contraintes physiques et posturales',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'manual_handling',
+    code: 'MANU-001',
+    title: 'Manutention manuelle',
+    description: 'Soulèvement, transport, manipulation objets lourds',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'repetitive_motion',
+    code: 'REPE-001',
+    title: 'Mouvements répétitifs',
+    description: 'Gestes répétés sur périodes prolongées',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+
+  // DANGERS ENVIRONNEMENTAUX (30-35)
+  {
+    id: 'weather_exposure',
+    code: 'METEO-001',
+    title: 'Exposition météorologique',
+    description: 'Exposition conditions météorologiques extrêmes',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'heat_stress',
+    code: 'CHAL-001',
+    title: 'Stress thermique',
+    description: 'Exposition à chaleur excessive',
+    riskLevel: 'high',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'cold_exposure',
+    code: 'FROID-001',
+    title: 'Exposition au froid',
+    description: 'Exposition à températures froides extrêmes',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'uv_radiation',
+    code: 'UV-001',
+    title: 'Rayonnement UV',
+    description: 'Exposition rayonnement ultraviolet solaire',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'wind_exposure',
+    code: 'VENT-001',
+    title: 'Exposition au vent',
+    description: 'Exposition à vents forts et rafales',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'precipitation',
+    code: 'PREC-001',
+    title: 'Précipitations',
+    description: 'Pluie, neige, grêle affectant sécurité',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+
+  // DANGERS PHYSIQUES SPÉCIALISÉS (36-39)
+  {
+    id: 'noise',
+    code: 'BRUIT-001',
+    title: 'Bruit excessif',
+    description: 'Exposition à niveaux sonores élevés',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'vibration',
+    code: 'VIBR-001',
+    title: 'Vibrations',
+    description: 'Exposition vibrations corps entier ou main-bras',
+    riskLevel: 'medium',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'radiation',
+    code: 'RAD-001',
+    title: 'Rayonnements',
+    description: 'Exposition rayonnements ionisants ou non-ionisants',
+    riskLevel: 'high',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  },
+  {
+    id: 'lockout_tagout',
+    code: 'LOTO-001',
+    title: 'Énergies dangereuses',
+    description: 'Remise en marche inattendue d\'équipements',
+    riskLevel: 'critical',
+    isSelected: false,
+    additionalNotes: '',
+    controlMeasures: predefinedControlMeasures['default'],
+    showControls: false
+  }
+];
+
 // =================== FONCTION POUR ASSIGNER LES MESURES DE CONTRÔLE ===================
 const assignControlMeasures = (hazardId: string): ControlMeasure[] => {
-  // Retourner les mesures spécifiques au danger ou les mesures par défaut
-  return predefinedControlMeasuresComplete[hazardId] || predefinedControlMeasuresComplete['default'];
+  return predefinedControlMeasures[hazardId] || predefinedControlMeasures['default'];
 };
 
-// =================== FONCTION POUR INITIALISER LES DANGERS AVEC MESURES ===================
-const initializeHazardsWithControls = (): ElectricalHazard[] => {
-  return predefinedElectricalHazardsComplete.map(hazard => ({
-    ...hazard,
-    controlMeasures: assignControlMeasures(hazard.id)
-  }));
-};
-
-// =================== DONNÉES INITIALES MISES À JOUR ===================
-const initialFormDataUpdated: ASTFormData = {
-  ...initialFormData, // Vos données existantes
-  electricalHazards: initializeHazardsWithControls(), // Remplacer par la liste complète
-  
-  // Ajout des nouvelles propriétés
-  projectInfo: {
-    ...initialFormData.projectInfo,
-    workType: undefined, // Sera sélectionné par l'utilisateur
-    coordinates: undefined,
-    weatherConditions: '',
-    specialConditions: ''
-  }
-};
-
-// =================== FONCTION DE FILTRAGE AMÉLIORÉE ===================
+// =================== FONCTION MISE À JOUR POUR FILTRER DANGERS PAR TYPE DE TRAVAIL ===================
 const getHazardsByWorkTypeComplete = (workTypeId: string): ElectricalHazard[] => {
   const workType = WORK_TYPES.find(wt => wt.id === workTypeId);
   if (!workType) return [];
   
-  return predefinedElectricalHazardsComplete.filter(hazard => 
+  return predefinedElectricalHazards.filter(hazard => 
     workType.baseHazards.includes(hazard.id)
   );
 };
 
-// =================== FONCTION DE CALCUL DE RISQUE AVANCÉE ===================
+// =================== FONCTION DE CALCUL DE RISQUE ===================
 const calculateRiskScore = (hazard: ElectricalHazard): number => {
   const riskValues = {
     'critical': 4,
@@ -3073,26 +1390,13 @@ const calculateRiskScore = (hazard: ElectricalHazard): number => {
     .filter(c => c.isSelected)
     .reduce((sum, c) => sum + c.effectiveness, 0) / 100;
   
-  // Réduction du risque selon l'efficacité des mesures
   const residualRisk = Math.max(0.1, baseRisk * (1 - selectedControlsEffectiveness * 0.8));
-  
   return Math.round(residualRisk * 100) / 100;
 };
-
-// =================== EXPORT DES NOUVELLES DONNÉES ===================
-export { 
-  predefinedElectricalHazardsComplete,
-  predefinedControlMeasuresComplete,
-  initializeHazardsWithControls,
-  assignControlMeasures,
-  getHazardsByWorkTypeComplete,
-  calculateRiskScore,
-  initialFormDataUpdated
-};
-// =================== SECTION 8 - ÉQUIPEMENTS ÉTENDUS ET ÉTAPES 2-3 AMÉLIORÉES ===================
+// =================== AST SECTION 4/8 - ÉQUIPEMENTS DE SÉCURITÉ ÉTENDUS ===================
 
 // =================== BASE DE DONNÉES COMPLÈTE DES ÉQUIPEMENTS DE SÉCURITÉ ===================
-const requiredSafetyEquipmentComplete: SafetyEquipment[] = [
+const requiredSafetyEquipment: SafetyEquipment[] = [
   // PROTECTION TÊTE
   {
     id: 'hardhat_class_e',
@@ -3376,6 +1680,21 @@ const requiredSafetyEquipmentComplete: SafetyEquipment[] = [
     cost: '100-250 CAD',
     supplier: '3M, MSA, Miller, Honeywell'
   },
+  {
+    id: 'anchor_point',
+    name: 'Point d\'ancrage temporaire',
+    category: 'fall',
+    required: false,
+    available: false,
+    verified: false,
+    notes: '',
+    description: 'Point d\'ancrage mobile ou permanent >22kN',
+    certifications: ['CSA Z259.15', 'ANSI Z359.18'],
+    inspectionFrequency: 'Avant installation',
+    lifespan: '10 ans selon inspection',
+    cost: '200-800 CAD',
+    supplier: '3M, MSA, Miller, Guardian Fall'
+  },
 
   // PROTECTION ÉLECTRIQUE
   {
@@ -3391,6 +1710,21 @@ const requiredSafetyEquipmentComplete: SafetyEquipment[] = [
     inspectionFrequency: 'Avant chaque utilisation',
     lifespan: '10 ans ou selon tests',
     cost: '200-800 CAD',
+    supplier: 'Salisbury, Cementex, NASCO'
+  },
+  {
+    id: 'insulating_stick',
+    name: 'Perche isolante',
+    category: 'electrical',
+    required: false,
+    available: false,
+    verified: false,
+    notes: '',
+    description: 'Perche isolante pour manœuvres à distance',
+    certifications: ['ASTM F711', 'IEC 60855'],
+    inspectionFrequency: 'Avant chaque utilisation',
+    lifespan: '10 ans selon tests',
+    cost: '300-1000 CAD',
     supplier: 'Salisbury, Cementex, NASCO'
   },
   {
@@ -3426,6 +1760,21 @@ const requiredSafetyEquipmentComplete: SafetyEquipment[] = [
     supplier: 'Honeywell, MSA, Dräger, Industrial Scientific'
   },
   {
+    id: 'h2s_detector',
+    name: 'Détecteur H₂S personnel',
+    category: 'detection',
+    required: false,
+    available: false,
+    verified: false,
+    notes: '',
+    description: 'Détection sulfure d\'hydrogène personnel',
+    certifications: ['CSA C22.2', 'ATEX'],
+    inspectionFrequency: 'Calibration hebdomadaire',
+    lifespan: '2-3 ans selon capteur',
+    cost: '300-600 CAD',
+    supplier: 'Honeywell, MSA, Dräger'
+  },
+  {
     id: 'sound_level_meter',
     name: 'Sonomètre',
     category: 'detection',
@@ -3456,514 +1805,2489 @@ const requiredSafetyEquipmentComplete: SafetyEquipment[] = [
     lifespan: 'Remplacement selon péremption',
     cost: '50-200 CAD',
     supplier: 'Johnson & Johnson, Honeywell, Acme United'
+  },
+  {
+    id: 'emergency_shower',
+    name: 'Douche d\'urgence portable',
+    category: 'other',
+    required: false,
+    available: false,
+    verified: false,
+    notes: '',
+    description: 'Douche et lave-yeux d\'urgence portable',
+    certifications: ['ANSI Z358.1', 'CSA Z1611'],
+    inspectionFrequency: 'Hebdomadaire',
+    lifespan: '5 ans avec maintenance',
+    cost: '500-2000 CAD',
+    supplier: 'Haws, Bradley, Speakman, Guardian'
+  },
+  {
+    id: 'emergency_stretcher',
+    name: 'Civière d\'évacuation',
+    category: 'other',
+    required: false,
+    available: false,
+    verified: false,
+    notes: '',
+    description: 'Civière pour évacuation d\'urgence',
+    certifications: ['CSA Z1220'],
+    inspectionFrequency: 'Mensuelle',
+    lifespan: '10 ans selon entretien',
+    cost: '200-800 CAD',
+    supplier: 'Ferno, Stryker, Spencer'
   }
 ];
 
-// =================== ÉTAPE 2 AMÉLIORÉE - ÉQUIPEMENTS DE SÉCURITÉ ===================
-// Remplacer votre étape 2 existante par ceci :
+// =================== TRADUCTIONS COMPLÈTES ===================
+const translations = {
+  fr: {
+    // Interface générale
+    title: 'Nouvelle Analyse Sécuritaire de Tâches',
+    subtitle: 'Formulaire adaptatif conforme aux normes SST',
+    saving: 'Sauvegarde en cours...',
+    saved: '✅ Sauvegardé avec succès',
+    
+    counters: {
+      onJob: 'Sur la job',
+      approved: 'Approuvé AST', 
+      approvalRate: 'Taux d\'approbation',
+      consultation: 'Consultation',
+      criticalHazards: 'Dangers critiques'
+    },
+    
+    steps: {
+      general: 'Informations Générales',
+      equipment: 'Équipements Sécurité',
+      hazards: 'Dangers & Risques',
+      discussion: 'Discussion Équipe', 
+      isolation: 'Points d\'Isolement',
+      team: 'Équipe de Travail',
+      documentation: 'Photos & Documentation', 
+      validation: 'Validation & Signatures'
+    },
+    
+    projectInfo: {
+      title: 'Informations du Projet',
+      industry: 'Type d\'Industrie',
+      astNumber: '# AST',
+      astClientNumber: '# AST du Client', 
+      date: 'Date',
+      client: 'Client',
+      clientPhone: '# Téléphone Client',
+      projectNumber: 'Numéro de Projet',
+      workDescription: 'Description des Travaux',
+      workLocation: 'Lieu des Travaux',
+      clientRepresentative: 'Nom du Responsable',
+      clientRepresentativePhone: '# Téléphone Responsable',
+      workerCount: 'Nombre de personnes sur la job',
+      estimatedDuration: 'Durée Estimée',
+      emergencyContact: 'Contact d\'Urgence',
+      emergencyPhone: '# Urgence',
+      astInfo: 'Numéro généré automatiquement - usage unique',
+      astClientInfo: 'Numéro fourni par le client (optionnel)'
+    },
+    
+    teamDiscussion: {
+      title: 'Discussion avec l\'Équipe',
+      subtitle: 'Information à discuter avec l\'équipe',
+      completed: 'Complété',
+      pending: 'En attente', 
+      discussedBy: 'Discuté par',
+      notes: 'Notes',
+      priority: 'Priorité'
+    },
+    
+    safetyEquipment: {
+      title: 'Équipement de Protection Individuel et Collectif',
+      required: 'Requis',
+      available: 'Disponible',
+      verified: 'Vérifié', 
+      notes: 'Notes',
+      categories: {
+        head: 'Protection Tête',
+        eye: 'Protection Yeux',
+        respiratory: 'Protection Respiratoire',
+        hand: 'Protection Mains', 
+        foot: 'Protection Pieds',
+        body: 'Protection Corps',
+        fall: 'Protection Chute',
+        electrical: 'Protection Électrique',
+        detection: 'Détection',
+        other: 'Autre'
+      }
+    },
+    
+    hazards: {
+      title: 'Dangers Potentiels',
+      selected: 'Sélectionné',
+      riskLevel: 'Niveau de Risque',
+      notes: 'Notes supplémentaires',
+      controlMeasures: 'Mesures de Contrôle',
+      controlsRequired: '⚠️ Mesures de contrôle requises',
+      controlsInPlace: 'VIGILANCE - Mesures de contrôle en place',
+      addCustomHazard: 'Ajouter un danger personnalisé',
+      levels: {
+        low: 'Faible',
+        medium: 'Moyen',
+        high: 'Élevé', 
+        critical: 'Critique'
+      },
+      categories: {
+        elimination: 'Élimination',
+        substitution: 'Substitution',
+        engineering: 'Contrôles techniques',
+        administrative: 'Contrôles administratifs',
+        ppe: 'EPI'
+      }
+    },
+    
+    team: {
+      title: 'Équipe de Travail',
+      supervisor: 'Superviseur',
+      addMember: 'Ajouter Membre d\'Équipe',
+      memberName: 'Nom du Membre',
+      employeeId: 'ID Employé',
+      department: 'Département', 
+      qualification: 'Qualification',
+      validation: 'Validation Équipe',
+      consultationAst: 'Consultation AST',
+      cadenasAppose: 'Cadenas Apposé',
+      cadenasReleve: 'Cadenas Relevé',
+      status: 'Statut',
+      actions: 'Actions',
+      pending: 'En attente',
+      approved: 'Approuvé',
+      rejected: 'Rejeté'
+    },
+    
+    isolation: {
+      title: 'Points d\'Isolement',
+      addPoint: 'Ajouter Point d\'Isolement',
+      pointName: 'Nom du Point d\'Isolement',
+      isolationType: 'Type d\'Isolement',
+      selectType: 'Sélectionner le type...',
+      noPoints: 'Aucun point d\'isolement configuré',
+      checklist: {
+        cadenasAppose: 'Cadenas Apposé',
+        absenceTension: 'Absence de Tension', 
+        miseALaTerre: 'Mise à la Terre'
+      }
+    },
+    
+    actions: {
+      sendByEmail: 'Envoyer par Courriel',
+      archive: 'Archiver',
+      generatePDF: 'Générer PDF',
+      print: 'Imprimer',
+      finalApproval: 'Soumission Finale'
+    },
+    
+    buttons: {
+      previous: 'Précédent',
+      next: 'Suivant', 
+      save: 'Sauvegarder',
+      approve: 'Approuver',
+      reject: 'Rejeter',
+      add: 'Ajouter',
+      edit: 'Modifier',
+      delete: 'Supprimer'
+    },
 
-{/* ÉTAPE 2: Équipements de Sécurité - VERSION COMPLÈTE */}
-{currentStep === 1 && (
-  <div className="slide-in">
-    <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-      <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-        🛡️ {t.safetyEquipment.title}
-      </h2>
-      <p style={{ color: '#94a3b8', fontSize: '16px', margin: '0' }}>
-        Sélection et vérification des équipements de protection
-      </p>
-    </div>
+    email: {
+      subject: 'AST - Analyse Sécuritaire de Tâches',
+      body: 'Veuillez trouver ci-joint l\'Analyse Sécuritaire de Tâches pour votre révision.'
+    }
+  },
+  
+  en: {
+    // Interface générale
+    title: 'New Job Safety Analysis',
+    subtitle: 'Adaptive form compliant with OHS standards', 
+    saving: 'Saving...',
+    saved: '✅ Successfully saved',
+    
+    counters: {
+      onJob: 'On Job',
+      approved: 'JSA Approved',
+      approvalRate: 'Approval Rate',
+      consultation: 'Consultation',
+      criticalHazards: 'Critical Hazards'
+    },
+    
+    steps: {
+      general: 'General Information',
+      equipment: 'Safety Equipment',
+      hazards: 'Hazards & Risks',
+      discussion: 'Team Discussion', 
+      isolation: 'Isolation Points',
+      team: 'Work Team',
+      documentation: 'Photos & Documentation',
+      validation: 'Validation & Signatures'
+    },
+    
+    projectInfo: {
+      title: 'Project Information',
+      industry: 'Industry Type',
+      astNumber: '# JSA',
+      astClientNumber: '# Client JSA',
+      date: 'Date',
+      client: 'Client', 
+      clientPhone: 'Client Phone #',
+      projectNumber: 'Project Number',
+      workDescription: 'Work Description',
+      workLocation: 'Work Location',
+      clientRepresentative: 'Representative Name',
+      clientRepresentativePhone: 'Representative Phone #',
+      workerCount: 'Number of people on job',
+      estimatedDuration: 'Estimated Duration',
+      emergencyContact: 'Emergency Contact',
+      emergencyPhone: 'Emergency Phone #',
+      astInfo: 'Auto-generated unique number',
+      astClientInfo: 'Client-provided number (optional)'
+    },
+    
+    teamDiscussion: {
+      title: 'Team Discussion',
+      subtitle: 'Information to discuss with team',
+      completed: 'Completed',
+      pending: 'Pending',
+      discussedBy: 'Discussed by', 
+      notes: 'Notes',
+      priority: 'Priority'
+    },
+    
+    safetyEquipment: {
+      title: 'Individual and Collective Protection Equipment',
+      required: 'Required',
+      available: 'Available',
+      verified: 'Verified',
+      notes: 'Notes',
+      categories: {
+        head: 'Head Protection',
+        eye: 'Eye Protection', 
+        respiratory: 'Respiratory Protection',
+        hand: 'Hand Protection',
+        foot: 'Foot Protection',
+        body: 'Body Protection', 
+        fall: 'Fall Protection',
+        electrical: 'Electrical Protection',
+        detection: 'Detection',
+        other: 'Other'
+      }
+    },
+    
+    hazards: {
+      title: 'Potential Hazards',
+      selected: 'Selected',
+      riskLevel: 'Risk Level', 
+      notes: 'Additional notes',
+      controlMeasures: 'Control Measures',
+      controlsRequired: '⚠️ Control measures required',
+      controlsInPlace: 'VIGILANCE - Control measures in place',
+      addCustomHazard: 'Add custom hazard',
+      levels: {
+        low: 'Low',
+        medium: 'Medium',
+        high: 'High',
+        critical: 'Critical'
+      },
+      categories: {
+        elimination: 'Elimination',
+        substitution: 'Substitution', 
+        engineering: 'Engineering Controls',
+        administrative: 'Administrative Controls',
+        ppe: 'PPE'
+      }
+    },
+    
+    team: {
+      title: 'Work Team',
+      supervisor: 'Supervisor',
+      addMember: 'Add Team Member',
+      memberName: 'Member Name',
+      employeeId: 'Employee ID',
+      department: 'Department',
+      qualification: 'Qualification',
+      validation: 'Team Validation',
+      consultationAst: 'JSA Consultation', 
+      cadenasAppose: 'Lock Applied',
+      cadenasReleve: 'Lock Removed',
+      status: 'Status',
+      actions: 'Actions',
+      pending: 'Pending',
+      approved: 'Approved',
+      rejected: 'Rejected'
+    },
+    
+    isolation: {
+      title: 'Isolation Points',
+      addPoint: 'Add Isolation Point',
+      pointName: 'Isolation Point Name',
+      isolationType: 'Isolation Type',
+      selectType: 'Select type...',
+      noPoints: 'No isolation points configured',
+      checklist: {
+        cadenasAppose: 'Lock Applied',
+        absenceTension: 'Absence of Voltage',
+        miseALaTerre: 'Grounded'
+      }
+    },
+    
+    actions: {
+      sendByEmail: 'Send by Email',
+      archive: 'Archive', 
+      generatePDF: 'Generate PDF',
+      print: 'Print',
+      finalApproval: 'Final Submission'
+    },
+    
+    buttons: {
+      previous: 'Previous',
+      next: 'Next',
+      save: 'Save',
+      approve: 'Approve',
+      reject: 'Reject',
+      add: 'Add',
+      edit: 'Edit',
+      delete: 'Delete'
+    },
 
-    {/* Statistiques équipements */}
-    <div style={{
-      background: 'rgba(30, 41, 59, 0.6)',
-      border: '1px solid rgba(100, 116, 139, 0.3)',
-      borderRadius: '12px',
-      padding: '20px',
-      marginBottom: '24px'
-    }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#3b82f6' }}>
-            {formData.safetyEquipment.filter(eq => eq.required).length}
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Requis</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>
-            {formData.safetyEquipment.filter(eq => eq.available).length}
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Disponibles</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#f59e0b' }}>
-            {formData.safetyEquipment.filter(eq => eq.verified).length}
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Vérifiés</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: formData.safetyEquipment.filter(eq => eq.required && !eq.verified).length > 0 ? '#ef4444' : '#10b981' }}>
-            {Math.round(formData.safetyEquipment.filter(eq => eq.required).length > 0 
-              ? (formData.safetyEquipment.filter(eq => eq.required && eq.verified).length / formData.safetyEquipment.filter(eq => eq.required).length) * 100
-              : 0)}%
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Conformité</div>
-        </div>
-      </div>
-    </div>
+    email: {
+      subject: 'JSA - Job Safety Analysis',
+      body: 'Please find attached the Job Safety Analysis for your review.'
+    }
+  }
+};
+// =================== AST SECTION 5/8 - DONNÉES INITIALES & UTILITAIRES ===================
 
-    {/* Équipements par catégorie */}
-    {Object.entries(groupedEquipment).map(([category, equipment]) => (
-      <div key={category} style={{ marginBottom: '32px' }}>
-        <h3 style={{ 
-          color: '#3b82f6', 
-          fontSize: '18px', 
-          fontWeight: '600', 
-          marginBottom: '16px',
-          borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
-          paddingBottom: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <span>{getCategoryIcon(category)}</span>
-          {t.safetyEquipment.categories[category as keyof typeof t.safetyEquipment.categories]}
-          <span style={{ 
-            fontSize: '12px', 
-            color: '#94a3b8',
-            background: 'rgba(100, 116, 139, 0.2)',
-            padding: '2px 8px',
-            borderRadius: '4px'
-          }}>
-            {equipment.length} équipements
-          </span>
-        </h3>
-        
-        <div className="equipment-grid">
-          {equipment.map((item) => (
-            <div key={item.id} className={`equipment-item ${item.required ? 'required' : ''} ${item.verified ? 'verified' : ''}`}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <div style={{ flex: 1 }}>
-                    <h4 style={{ color: 'white', fontSize: '14px', fontWeight: '600', margin: '0 0 4px 0' }}>
-                      {item.name}
-                    </h4>
-                    <p style={{ color: '#94a3b8', fontSize: '12px', margin: '0 0 8px 0', lineHeight: '1.4' }}>
-                      {item.description}
-                    </p>
-                    
-                    {/* Certifications */}
-                    {item.certifications && item.certifications.length > 0 && (
-                      <div style={{ marginBottom: '8px' }}>
-                        <div style={{ color: '#94a3b8', fontSize: '10px', marginBottom: '4px' }}>
-                          Certifications:
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                          {item.certifications.map((cert, index) => (
-                            <span key={index} style={{
-                              background: 'rgba(59, 130, 246, 0.2)',
-                              color: '#3b82f6',
-                              fontSize: '9px',
-                              padding: '2px 6px',
-                              borderRadius: '3px'
-                            }}>
-                              {cert}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Indicateur de statut */}
-                  <div style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    background: item.verified ? '#10b981' : item.required ? '#ef4444' : '#94a3b8'
-                  }} />
-                </div>
-                
-                {/* Contrôles */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <CustomCheckbox
-                    checked={item.required}
-                    onChange={() => toggleEquipmentRequired(item.id)}
-                    label={t.safetyEquipment.required}
-                  />
-                  <CustomCheckbox
-                    checked={item.available}
-                    onChange={() => toggleEquipmentAvailable(item.id)}
-                    label={t.safetyEquipment.available}
-                  />
-                  <CustomCheckbox
-                    checked={item.verified}
-                    onChange={() => toggleEquipmentVerified(item.id)}
-                    label={t.safetyEquipment.verified}
-                  />
-                </div>
-                
-                {/* Notes */}
-                <input
-                  type="text"
-                  className="input-premium"
-                  style={{ fontSize: '12px' }}
-                  placeholder={t.safetyEquipment.notes}
-                  value={item.notes}
-                  onChange={(e) => updateEquipmentNotes(item.id, e.target.value)}
-                />
-
-                {/* Informations détaillées - affichage conditionnel */}
-                {item.required && (
-                  <div style={{
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    borderRadius: '6px',
-                    padding: '8px',
-                    fontSize: '10px',
-                    color: '#94a3b8'
-                  }}>
-                    <div>📅 Inspection: {item.inspectionFrequency}</div>
-                    <div>⏱️ Durée de vie: {item.lifespan}</div>
-                    <div>💰 Coût: {item.cost}</div>
-                    {item.supplier && <div>🏢 Fournisseurs: {item.supplier}</div>}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ))}
-
-    {/* Recommandations automatiques selon type de travail */}
-    {selectedWorkType && (
-      <div style={{
-        background: 'rgba(16, 185, 129, 0.1)',
-        border: '1px solid rgba(16, 185, 129, 0.3)',
-        borderRadius: '12px',
-        padding: '20px',
-        marginTop: '24px'
-      }}>
-        <h3 style={{ color: '#10b981', fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
-          💡 Recommandations pour: {selectedWorkType.name}
-        </h3>
-        <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '12px' }}>
-          {selectedWorkType.description}
-        </p>
-        <div style={{ color: '#10b981', fontSize: '12px' }}>
-          ✅ Équipements automatiquement suggérés selon le type de travail sélectionné
-        </div>
-      </div>
-    )}
-  </div>
-)}
-
-// =================== FONCTION HELPER POUR ICÔNES CATÉGORIES ===================
-const getCategoryIcon = (category: string): string => {
-  const icons: Record<string, string> = {
-    'head': '🪖',
-    'eye': '👁️',
-    'respiratory': '😷',
-    'hand': '🧤',
-    'foot': '🥾',
-    'body': '🦺',
-    'fall': '🪢',
-    'electrical': '⚡',
-    'detection': '📡',
-    'other': '🔧'
-  };
-  return icons[category] || '🛡️';
+// État initial complet du formulaire
+const initialProjectInfo: ProjectInfo = {
+  projectName: '',
+  location: '',
+  coordinates: { lat: 0, lng: 0 },
+  description: '',
+  startDate: '',
+  duration: '',
+  teamSize: '',
+  workType: 'electrical',
+  client: 'hydro-quebec',
+  supervisor: '',
+  contact: '',
+  emergencyContact: '',
+  permits: []
 };
 
-// =================== ÉTAPE 3 AMÉLIORÉE - DANGERS ET RISQUES ===================
-// Remplacer votre étape 3 existante par ceci :
+// Messages d'urgence prédéfinis
+const emergencyMessages = {
+  'hydro-quebec': {
+    fr: "URGENCE ÉLECTRIQUE - Composez le 911 et Hydro-Québec au 1-800-790-2424",
+    en: "ELECTRICAL EMERGENCY - Call 911 and Hydro-Québec at 1-800-790-2424"
+  },
+  'energir': {
+    fr: "URGENCE GAZ - Composez le 911 et Énergir au 1-800-361-8003",
+    en: "GAS EMERGENCY - Call 911 and Énergir at 1-800-361-8003"
+  },
+  'bell': {
+    fr: "URGENCE TÉLÉCOMS - Composez le 911 et Bell au 1-800-667-0123",
+    en: "TELECOM EMERGENCY - Call 911 and Bell at 1-800-667-0123"
+  },
+  'rogers': {
+    fr: "URGENCE TÉLÉCOMS - Composez le 911 et Rogers au 1-888-764-3771",
+    en: "TELECOM EMERGENCY - Call 911 and Rogers at 1-888-764-3771"
+  },
+  'videotron': {
+    fr: "URGENCE TÉLÉCOMS - Composez le 911 et Vidéotron au 1-888-433-6876",
+    en: "TELECOM EMERGENCY - Call 911 and Vidéotron at 1-888-433-6876"
+  },
+  'other': {
+    fr: "URGENCE - Composez le 911 et contactez votre superviseur",
+    en: "EMERGENCY - Call 911 and contact your supervisor"
+  }
+};
 
-{/* ÉTAPE 3: Dangers et Risques - VERSION COMPLÈTE */}
-{currentStep === 2 && (
-  <div className="slide-in">
-    <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-      <h2 style={{ color: 'white', fontSize: '32px', fontWeight: '700', margin: '0 0 8px 0' }}>
-        ⚠️ {t.hazards.title}
-      </h2>
-      <p style={{ color: '#94a3b8', fontSize: '16px', margin: '0' }}>
-        Identification des dangers et sélection des mesures de contrôle
-      </p>
-    </div>
+// Hook personnalisé pour la géolocalisation Google Maps
+const useGoogleMaps = () => {
+  const [isLoaded, setIsLoaded] = useState(false);
 
-    {/* Statistiques des dangers */}
-    <div style={{
-      background: 'rgba(30, 41, 59, 0.6)',
-      border: '1px solid rgba(100, 116, 139, 0.3)',
-      borderRadius: '12px',
-      padding: '20px',
-      marginBottom: '24px'
-    }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '16px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#ef4444' }}>
-            {formData.electricalHazards.filter(h => h.isSelected).length}
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Sélectionnés</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#dc2626' }}>
-            {formData.electricalHazards.filter(h => h.isSelected && h.riskLevel === 'critical').length}
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Critiques</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#f59e0b' }}>
-            {formData.electricalHazards.filter(h => h.isSelected && h.riskLevel === 'high').length}
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Élevés</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>
-            {formData.electricalHazards.filter(h => h.isSelected && h.controlMeasures.some(c => c.isSelected)).length}
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Contrôlés</div>
-        </div>
-      </div>
-    </div>
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.google) {
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places,geometry`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => setIsLoaded(true);
+      document.head.appendChild(script);
+    } else if (window.google) {
+      setIsLoaded(true);
+    }
+  }, []);
 
-    {/* Filtres et recherche - EXISTANT mais amélioré */}
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-        <input
-          type="text"
-          placeholder="🔍 Rechercher un danger..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="input-premium"
-          style={{ flex: 1, minWidth: '200px' }}
-        />
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="input-premium"
-          style={{ minWidth: '150px' }}
-        >
-          <option value="all">🎯 Toutes catégories</option>
-          <option value="electrical">⚡ Électriques</option>
-          <option value="gas">🔥 Gaziers</option>
-          <option value="physical">💥 Physiques</option>
-          <option value="biological">🦠 Biologiques</option>
-          <option value="ergonomic">🏃 Ergonomiques</option>
-          <option value="environmental">🌍 Environnementaux</option>
-        </select>
-      </div>
+  return isLoaded;
+};
 
-      {/* Filtre par niveau de risque */}
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-        <span style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '600' }}>Filtrer par risque:</span>
-        {['critical', 'high', 'medium', 'low'].map(level => (
-          <button
-            key={level}
-            onClick={() => setFilterCategory(level === filterCategory ? 'all' : level)}
-            style={{
-              padding: '4px 12px',
-              borderRadius: '6px',
-              border: 'none',
-              fontSize: '12px',
-              cursor: 'pointer',
-              background: level === filterCategory 
-                ? (level === 'critical' ? '#dc2626' : level === 'high' ? '#f59e0b' : level === 'medium' ? '#eab308' : '#10b981')
-                : 'rgba(100, 116, 139, 0.2)',
-              color: level === filterCategory ? 'white' : '#94a3b8'
-            }}
-          >
-            {t.hazards.levels[level as keyof typeof t.hazards.levels]}
-          </button>
-        ))}
-      </div>
-    </div>
+// Hook pour les données météo
+const useWeatherData = (coordinates: { lat: number; lng: number }) => {
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [loading, setLoading] = useState(false);
 
-    {/* Liste des dangers - utilise la nouvelle base complète */}
-    <div className="hazard-grid">
-      {filteredHazards.map(hazard => {
-        const hasControls = hasSelectedControls(hazard);
-        const showControlsRequired = hazard.isSelected && !hasControls;
-        const showControlsVigilance = hazard.isSelected && hasControls;
-        
+  const fetchWeather = async () => {
+    if (!coordinates.lat || !coordinates.lng) return;
+    
+    setLoading(true);
+    try {
+      // Simulation d'API météo - remplacer par vraie API
+      const mockWeather: WeatherData = {
+        temperature: Math.round(Math.random() * 30 - 10),
+        condition: ['ensoleillé', 'nuageux', 'pluvieux', 'neigeux'][Math.floor(Math.random() * 4)] as any,
+        humidity: Math.round(Math.random() * 100),
+        windSpeed: Math.round(Math.random() * 50),
+        visibility: Math.round(Math.random() * 10 + 5),
+        uvIndex: Math.round(Math.random() * 11),
+        alerts: []
+      };
+
+      // Ajouter des alertes météo si conditions dangereuses
+      if (mockWeather.temperature < -20) {
+        mockWeather.alerts.push('Froid extrême - Risque d\'hypothermie');
+      }
+      if (mockWeather.windSpeed > 30) {
+        mockWeather.alerts.push('Vents forts - Travail en hauteur déconseillé');
+      }
+      if (mockWeather.visibility < 3) {
+        mockWeather.alerts.push('Visibilité réduite - Prudence accrue requise');
+      }
+
+      setWeather(mockWeather);
+    } catch (error) {
+      console.error('Erreur météo:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWeather();
+  }, [coordinates.lat, coordinates.lng]);
+
+  return { weather, loading, refetch: fetchWeather };
+};
+
+// Hook pour le partage équipe
+const useTeamSharing = () => {
+  const [consultationStatus, setConsultationStatus] = useState<TeamConsultationStatus>({
+    sharedWith: [],
+    responses: [],
+    isActive: false,
+    expiresAt: null
+  });
+
+  const shareWithTeam = async (members: string[], method: 'email' | 'sms' | 'whatsapp', astData: any) => {
+    const shareId = `ast-${Date.now()}`;
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 jours
+    
+    try {
+      // Simulation d'envoi - remplacer par vraie API
+      console.log(`Partage AST via ${method} avec:`, members);
+      
+      setConsultationStatus({
+        sharedWith: members,
+        responses: [],
+        isActive: true,
+        expiresAt
+      });
+
+      // Générer lien de consultation
+      const consultationLink = `${window.location.origin}/consultation/${shareId}`;
+      
+      return {
+        success: true,
+        shareId,
+        consultationLink,
+        message: `AST partagée avec ${members.length} membre(s) via ${method}`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Erreur lors du partage'
+      };
+    }
+  };
+
+  const addResponse = (member: string, response: TeamResponse) => {
+    setConsultationStatus(prev => ({
+      ...prev,
+      responses: [...prev.responses.filter(r => r.member !== member), { member, ...response }]
+    }));
+  };
+
+  return {
+    consultationStatus,
+    shareWithTeam,
+    addResponse
+  };
+};
+
+// Fonctions utilitaires pour les calculs de risque
+const calculateRiskLevel = (hazards: SelectedHazard[]): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' => {
+  if (!hazards.length) return 'LOW';
+  
+  const maxSeverity = Math.max(...hazards.map(h => h.severity));
+  const maxProbability = Math.max(...hazards.map(h => h.probability));
+  const riskScore = maxSeverity * maxProbability;
+  
+  if (riskScore >= 15) return 'CRITICAL';
+  if (riskScore >= 10) return 'HIGH';
+  if (riskScore >= 5) return 'MEDIUM';
+  return 'LOW';
+};
+
+const calculateResidualRisk = (hazard: SelectedHazard): number => {
+  if (!hazard.controlMeasures?.length) return hazard.severity * hazard.probability;
+  
+  const totalEffectiveness = hazard.controlMeasures.reduce((total, measure) => {
+    const controlMeasure = controlMeasuresDatabase.find(cm => cm.id === measure.id);
+    return total + (controlMeasure?.effectiveness || 0);
+  }, 0);
+  
+  const reductionFactor = Math.min(0.9, totalEffectiveness / 100);
+  return Math.round((hazard.severity * hazard.probability) * (1 - reductionFactor));
+};
+
+const generateRiskMatrix = (hazards: SelectedHazard[]) => {
+  const matrix = Array(5).fill(null).map(() => Array(5).fill(0));
+  
+  hazards.forEach(hazard => {
+    const residualRisk = calculateResidualRisk(hazard);
+    const severity = Math.min(4, Math.max(0, Math.floor(residualRisk / 5)));
+    const probability = Math.min(4, Math.max(0, Math.floor(residualRisk % 5)));
+    matrix[severity][probability]++;
+  });
+  
+  return matrix;
+};
+
+// Fonctions de validation et conformité
+const validateComplianceRequirements = (hazards: SelectedHazard[], equipment: SelectedEquipment[]): {
+  isCompliant: boolean;
+  violations: string[];
+  recommendations: string[];
+} => {
+  const violations: string[] = [];
+  const recommendations: string[] = [];
+  
+  // Vérification des équipements obligatoires par danger
+  hazards.forEach(hazard => {
+    const hazardData = hazardsDatabase.find(h => h.id === hazard.hazardId);
+    if (hazardData?.requiredEquipment?.length) {
+      const missingEquipment = hazardData.requiredEquipment.filter(reqEquip => 
+        !equipment.some(equip => equip.equipmentId === reqEquip)
+      );
+      
+      if (missingEquipment.length > 0) {
+        violations.push(`Équipement manquant pour ${hazardData.name}: ${missingEquipment.join(', ')}`);
+      }
+    }
+  });
+  
+  // Vérifications spécifiques par type de danger
+  const electricalHazards = hazards.filter(h => h.hazardId.startsWith('ELEC-'));
+  if (electricalHazards.length > 0) {
+    const hasElectricalPPE = equipment.some(e => 
+      ['ELC-001', 'ELC-002', 'ELC-003'].includes(e.equipmentId)
+    );
+    if (!hasElectricalPPE) {
+      violations.push('Équipement électrique spécialisé requis pour travaux électriques');
+    }
+  }
+  
+  const heightHazards = hazards.filter(h => h.hazardId === 'PHY-003');
+  if (heightHazards.length > 0) {
+    const hasFallProtection = equipment.some(e => 
+      ['CHU-001', 'CHU-002', 'CHU-003'].includes(e.equipmentId)
+    );
+    if (!hasFallProtection) {
+      violations.push('Équipement antichute obligatoire pour travail en hauteur');
+    }
+  }
+  
+  // Recommandations d'amélioration
+  if (hazards.length > 5) {
+    recommendations.push('Considérer la division du travail pour réduire l\'exposition aux risques');
+  }
+  
+  const highRiskHazards = hazards.filter(h => h.severity * h.probability >= 15);
+  if (highRiskHazards.length > 0) {
+    recommendations.push('Révision par un superviseur requise pour les risques critiques');
+  }
+  
+  return {
+    isCompliant: violations.length === 0,
+    violations,
+    recommendations
+  };
+};
+
+// Fonctions de génération de documentation
+const generateASTDocument = (formData: any): string => {
+  const currentDate = new Date().toLocaleDateString('fr-CA');
+  const riskLevel = calculateRiskLevel(formData.hazards || []);
+  
+  return `
+ANALYSE DE SÉCURITÉ DU TRAVAIL (AST)
+=====================================
+
+INFORMATIONS GÉNÉRALES
+----------------------
+Projet: ${formData.projectInfo?.projectName || 'N/A'}
+Lieu: ${formData.projectInfo?.location || 'N/A'}
+Date: ${currentDate}
+Type de travail: ${workTypes.find(w => w.id === formData.projectInfo?.workType)?.name || 'N/A'}
+Client: ${clientConfigurations.find(c => c.id === formData.projectInfo?.client)?.name || 'N/A'}
+Superviseur: ${formData.projectInfo?.supervisor || 'N/A'}
+
+DANGERS IDENTIFIÉS
+------------------
+${formData.hazards?.map((h: SelectedHazard, index: number) => {
+  const hazardData = hazardsDatabase.find(hd => hd.id === h.hazardId);
+  return `${index + 1}. ${hazardData?.name || 'N/A'}
+   Sévérité: ${h.severity}/5, Probabilité: ${h.probability}/5
+   Risque résiduel: ${calculateResidualRisk(h)}/25`;
+}).join('\n') || 'Aucun danger identifié'}
+
+ÉQUIPEMENTS DE SÉCURITÉ
+-----------------------
+${formData.equipment?.map((e: SelectedEquipment, index: number) => {
+  const equipData = equipmentDatabase.find(ed => ed.id === e.equipmentId);
+  return `${index + 1}. ${equipData?.name || 'N/A'}
+   Certification: ${equipData?.certification || 'N/A'}
+   Inspection: ${e.inspectionDate || 'Non spécifiée'}`;
+}).join('\n') || 'Aucun équipement spécifié'}
+
+NIVEAU DE RISQUE GLOBAL: ${riskLevel}
+
+VALIDATION
+----------
+Créé par: ${formData.projectInfo?.contact || 'N/A'}
+Date de création: ${currentDate}
+Statut: ${formData.consultationStatus?.isActive ? 'En consultation équipe' : 'Complété'}
+  `;
+};
+
+// Export des fonctions utilitaires
+export {
+  initialProjectInfo,
+  emergencyMessages,
+  useGoogleMaps,
+  useWeatherData,
+  useTeamSharing,
+  calculateRiskLevel,
+  calculateResidualRisk,
+  generateRiskMatrix,
+  validateComplianceRequirements,
+  generateASTDocument
+};
+// =================== AST SECTION 6/8 - COMPOSANT PRINCIPAL & ÉTAPES 1-4 ===================
+
+const ASTFormUltraPremium: React.FC<ASTFormProps> = ({ tenant }) => {
+  // États principaux
+  const [currentStep, setCurrentStep] = useState(1);
+  const [language, setLanguage] = useState<'fr' | 'en'>('fr');
+  const [projectInfo, setProjectInfo] = useState<ProjectInfo>(initialProjectInfo);
+  const [selectedEquipment, setSelectedEquipment] = useState<SelectedEquipment[]>([]);
+  const [selectedHazards, setSelectedHazards] = useState<SelectedHazard[]>([]);
+  const [workPermits, setWorkPermits] = useState<WorkPermit[]>([]);
+  const [isGeneratingDocument, setIsGeneratingDocument] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [showTeamShare, setShowTeamShare] = useState(false);
+
+  // Hooks personnalisés
+  const isGoogleMapsLoaded = useGoogleMaps();
+  const { weather, loading: weatherLoading, refetch: refetchWeather } = useWeatherData(projectInfo.coordinates);
+  const { consultationStatus, shareWithTeam, addResponse } = useTeamSharing();
+
+  // Référence pour Google Maps
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [marker, setMarker] = useState<google.maps.Marker | null>(null);
+
+  // Initialisation Google Maps
+  useEffect(() => {
+    if (isGoogleMapsLoaded && mapRef.current && !map) {
+      const mapInstance = new google.maps.Map(mapRef.current, {
+        center: { lat: 45.5017, lng: -73.5673 }, // Montréal par défaut
+        zoom: 10,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      });
+
+      mapInstance.addListener('click', (e: google.maps.MapMouseEvent) => {
+        if (e.latLng) {
+          const lat = e.latLng.lat();
+          const lng = e.latLng.lng();
+          
+          setProjectInfo(prev => ({
+            ...prev,
+            coordinates: { lat, lng }
+          }));
+
+          if (marker) {
+            marker.setPosition(e.latLng);
+          } else {
+            const newMarker = new google.maps.Marker({
+              position: e.latLng,
+              map: mapInstance,
+              title: 'Lieu du travail'
+            });
+            setMarker(newMarker);
+          }
+
+          // Géocodage inverse pour obtenir l'adresse
+          const geocoder = new google.maps.Geocoder();
+          geocoder.geocode({ location: e.latLng }, (results, status) => {
+            if (status === 'OK' && results?.[0]) {
+              setProjectInfo(prev => ({
+                ...prev,
+                location: results[0].formatted_address
+              }));
+            }
+          });
+        }
+      });
+
+      setMap(mapInstance);
+    }
+  }, [isGoogleMapsLoaded, map, marker]);
+
+  // Auto-sélection des dangers par type de travail
+  useEffect(() => {
+    if (projectInfo.workType) {
+      const workTypeData = workTypes.find(wt => wt.id === projectInfo.workType);
+      if (workTypeData?.baseHazards) {
+        const autoSelectedHazards = workTypeData.baseHazards.map(hazardId => ({
+          hazardId,
+          severity: 3,
+          probability: 3,
+          notes: '',
+          controlMeasures: []
+        }));
+        setSelectedHazards(autoSelectedHazards);
+      }
+    }
+  }, [projectInfo.workType]);
+
+  // Fonctions de navigation
+  const nextStep = () => {
+    if (currentStep < 8) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const goToStep = (step: number) => {
+    setCurrentStep(step);
+  };
+
+  // Calculs de progression et statistiques
+  const completionStats = {
+    projectInfo: projectInfo.projectName && projectInfo.location && projectInfo.workType ? 100 : 50,
+    equipment: selectedEquipment.length > 0 ? 100 : 0,
+    hazards: selectedHazards.length > 0 ? 100 : 0,
+    permits: workPermits.length > 0 ? 100 : 0
+  };
+
+  const overallProgress = Math.round(
+    (completionStats.projectInfo + completionStats.equipment + completionStats.hazards + completionStats.permits) / 4
+  );
+
+  const riskLevel = calculateRiskLevel(selectedHazards);
+  const complianceCheck = validateComplianceRequirements(selectedHazards, selectedEquipment);
+
+  // Rendu des étapes
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
         return (
-          <div 
-            key={hazard.id} 
-            className={`hazard-item ${hazard.riskLevel} ${hazard.isSelected ? (hasControls ? 'selected has-controls' : 'selected no-controls') : ''}`}
-            onClick={() => toggleHazard(hazard.id)}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-              <CustomCheckbox
-                checked={hazard.isSelected}
-                onChange={() => {}}
-                label=""
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span style={{ 
-                    background: 'rgba(100, 116, 139, 0.3)',
-                    color: '#94a3b8',
-                    fontSize: '10px',
-                    padding: '2px 6px',
-                    borderRadius: '3px',
-                    fontFamily: 'monospace'
-                  }}>
-                    {hazard.code}
-                  </span>
-                  <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0' }}>
-                    {hazard.title}
-                  </h4>
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <FileText className="w-5 h-5 mr-2 text-blue-600" />
+                {translations[language].projectInfo}
+              </h3>
+              
+              {/* Informations de base */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {translations[language].projectName} *
+                  </label>
+                  <input
+                    type="text"
+                    value={projectInfo.projectName}
+                    onChange={(e) => setProjectInfo(prev => ({ ...prev, projectName: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder={language === 'fr' ? 'Ex: Installation transformateur' : 'Ex: Transformer installation'}
+                  />
                 </div>
-                <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0' }}>
-                  {hazard.description}
-                </p>
-              </div>
-              <div style={{
-                padding: '4px 8px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: '600',
-                background: hazard.riskLevel === 'critical' ? 'rgba(220, 38, 38, 0.2)' :
-                           hazard.riskLevel === 'high' ? 'rgba(245, 158, 11, 0.2)' :
-                           hazard.riskLevel === 'medium' ? 'rgba(234, 179, 8, 0.2)' :
-                           'rgba(34, 197, 94, 0.2)',
-                color: hazard.riskLevel === 'critical' ? '#dc2626' :
-                       hazard.riskLevel === 'high' ? '#f59e0b' :
-                       hazard.riskLevel === 'medium' ? '#eab308' :
-                       '#22c55e'
-              }}>
-                {t.hazards.levels[hazard.riskLevel]}
-              </div>
-            </div>
 
-            {/* Statut des moyens de contrôle */}
-            {showControlsRequired && (
-              <div className="hazard-controls-required">
-                {t.hazards.controlsRequired}
-              </div>
-            )}
-            
-            {showControlsVigilance && (
-              <div className="hazard-controls-vigilance">
-                {t.hazards.controlsInPlace}
-              </div>
-            )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Type de travail *
+                  </label>
+                  <select
+                    value={projectInfo.workType}
+                    onChange={(e) => setProjectInfo(prev => ({ ...prev, workType: e.target.value as any }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    {workTypes.map(type => (
+                      <option key={type.id} value={type.id}>
+                        {getWorkTypeIcon(type.id)} {type.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Section moyens de contrôle - utilise la nouvelle base complète */}
-            {hazard.isSelected && hazard.showControls && (
-              <div className="control-measures-section" onClick={(e) => e.stopPropagation()}>
-                <h5 style={{ color: '#3b82f6', fontSize: '14px', fontWeight: '600', margin: '0 0 12px 0' }}>
-                  {t.hazards.controlMeasures} (Hiérarchie CSA)
-                </h5>
-                
-                {hazard.controlMeasures.map((control) => (
-                  <div key={control.id} className="control-measure-item">
-                    <CustomCheckbox
-                      checked={control.isSelected}
-                      onChange={() => toggleControlMeasure(hazard.id, control.id)}
-                      label=""
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <span style={{ color: 'white', fontSize: '13px', fontWeight: '500' }}>
-                          {control.measure}
-                        </span>
-                        <span style={{
-                          padding: '2px 6px',
-                          borderRadius: '3px',
-                          fontSize: '9px',
-                          fontWeight: '600',
-                          background: control.type === 'elimination' ? 'rgba(34, 197, 94, 0.2)' :
-                                     control.type === 'substitution' ? 'rgba(16, 185, 129, 0.2)' :
-                                     control.type === 'engineering' ? 'rgba(59, 130, 246, 0.2)' :
-                                     control.type === 'administrative' ? 'rgba(245, 158, 11, 0.2)' :
-                                     'rgba(239, 68, 68, 0.2)',
-                          color: control.type === 'elimination' ? '#22c55e' :
-                                 control.type === 'substitution' ? '#10b981' :
-                                 control.type === 'engineering' ? '#3b82f6' :
-                                 control.type === 'administrative' ? '#f59e0b' :
-                                 '#ef4444'
-                        }}>
-                          {t.hazards.categories[control.type]}
-                        </span>
-                        <span style={{
-                          fontSize: '9px',
-                          color: '#94a3b8',
-                          background: 'rgba(100, 116, 139, 0.2)',
-                          padding: '1px 4px',
-                          borderRadius: '2px'
-                        }}>
-                          {control.effectiveness}% efficacité
-                        </span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Client *
+                  </label>
+                  <select
+                    value={projectInfo.client}
+                    onChange={(e) => setProjectInfo(prev => ({ ...prev, client: e.target.value as any }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    {clientConfigurations.map(client => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Superviseur *
+                  </label>
+                  <input
+                    type="text"
+                    value={projectInfo.supervisor}
+                    onChange={(e) => setProjectInfo(prev => ({ ...prev, supervisor: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nom du superviseur"
+                  />
+                </div>
+              </div>
+
+              {/* Sélection de lieu avec Google Maps */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Lieu du travail *
+                </label>
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    value={projectInfo.location}
+                    onChange={(e) => setProjectInfo(prev => ({ ...prev, location: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Adresse du projet ou cliquez sur la carte"
+                  />
+                  
+                  {isGoogleMapsLoaded && (
+                    <div className="relative">
+                      <div 
+                        ref={mapRef} 
+                        className="w-full h-64 rounded-lg border border-gray-300"
+                      />
+                      <div className="absolute top-2 left-2 bg-white px-3 py-2 rounded-lg shadow-md text-sm">
+                        📍 Cliquez pour sélectionner le lieu exact
                       </div>
-                      <p style={{ color: '#94a3b8', fontSize: '12px', margin: '2px 0 4px 0' }}>
-                        {control.description}
-                      </p>
+                      {projectInfo.coordinates.lat !== 0 && (
+                        <div className="absolute bottom-2 right-2 bg-white px-3 py-2 rounded-lg shadow-md text-sm">
+                          {projectInfo.coordinates.lat.toFixed(6)}, {projectInfo.coordinates.lng.toFixed(6)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Dates et équipe */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date de début *
+                  </label>
+                  <input
+                    type="date"
+                    value={projectInfo.startDate}
+                    onChange={(e) => setProjectInfo(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Durée estimée
+                  </label>
+                  <input
+                    type="text"
+                    value={projectInfo.duration}
+                    onChange={(e) => setProjectInfo(prev => ({ ...prev, duration: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ex: 4 heures, 2 jours"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Taille de l'équipe
+                  </label>
+                  <input
+                    type="number"
+                    value={projectInfo.teamSize}
+                    onChange={(e) => setProjectInfo(prev => ({ ...prev, teamSize: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nombre de personnes"
+                    min="1"
+                  />
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description du travail
+                </label>
+                <textarea
+                  value={projectInfo.description}
+                  onChange={(e) => setProjectInfo(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={3}
+                  placeholder="Décrivez brièvement les tâches à effectuer..."
+                />
+              </div>
+
+              {/* Contacts d'urgence */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Contact principal
+                  </label>
+                  <input
+                    type="text"
+                    value={projectInfo.contact}
+                    onChange={(e) => setProjectInfo(prev => ({ ...prev, contact: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nom et téléphone"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Contact d'urgence
+                  </label>
+                  <input
+                    type="text"
+                    value={projectInfo.emergencyContact}
+                    onChange={(e) => setProjectInfo(prev => ({ ...prev, emergencyContact: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Contact d'urgence"
+                  />
+                </div>
+              </div>
+
+              {/* Message d'urgence spécifique au client */}
+              {projectInfo.client && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center mb-2">
+                    <Shield className="w-5 h-5 text-red-600 mr-2" />
+                    <span className="font-semibold text-red-800">Procédure d'urgence</span>
+                  </div>
+                  <p className="text-red-700">
+                    {emergencyMessages[projectInfo.client]?.[language] || emergencyMessages.other[language]}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <Shield className="w-5 h-5 mr-2 text-green-600" />
+                {translations[language].safetyEquipment}
+              </h3>
+
+              {/* Filtre par catégorie */}
+              <div className="mb-6">
+                <div className="flex flex-wrap gap-2">
+                  {['all', ...new Set(equipmentDatabase.map(e => e.category))].map(category => (
+                    <button
+                      key={category}
+                      className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                      onClick={() => {
+                        // Logique de filtrage (à implémenter si nécessaire)
+                      }}
+                    >
+                      {category === 'all' ? 'Tous' : translations[language].equipmentCategories?.[category] || category}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Liste des équipements */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {equipmentDatabase.map(equipment => {
+                  const isSelected = selectedEquipment.some(e => e.equipmentId === equipment.id);
+                  const selectedEquip = selectedEquipment.find(e => e.equipmentId === equipment.id);
+
+                  return (
+                    <div
+                      key={equipment.id}
+                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        isSelected 
+                          ? 'border-green-500 bg-green-50' 
+                          : 'border-gray-200 hover:border-green-300'
+                      }`}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedEquipment(prev => prev.filter(e => e.equipmentId !== equipment.id));
+                        } else {
+                          setSelectedEquipment(prev => [...prev, {
+                            equipmentId: equipment.id,
+                            quantity: 1,
+                            inspectionDate: '',
+                            condition: 'good'
+                          }]);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="font-semibold text-gray-800">{equipment.name}</h4>
+                        {isSelected && <CheckCircle className="w-5 h-5 text-green-600" />}
+                      </div>
                       
-                      {/* Détails de mise en œuvre */}
-                      {control.isSelected && (
-                        <div style={{
-                          background: 'rgba(15, 23, 42, 0.6)',
-                          borderRadius: '4px',
-                          padding: '8px',
-                          marginTop: '6px',
-                          fontSize: '11px'
-                        }}>
-                          <div style={{ color: '#94a3b8', marginBottom: '4px' }}>
-                            📋 Mise en œuvre: {control.implementation}
+                      <p className="text-sm text-gray-600 mb-2">{equipment.description}</p>
+                      
+                      <div className="text-xs text-gray-500 space-y-1">
+                        <p><strong>Certification:</strong> {equipment.certification}</p>
+                        <p><strong>Fournisseur:</strong> {equipment.supplier}</p>
+                        <p><strong>Coût:</strong> ${equipment.cost}</p>
+                        <p><strong>Inspection:</strong> {equipment.inspectionFrequency}</p>
+                      </div>
+
+                      {isSelected && (
+                        <div className="mt-4 space-y-2" onClick={e => e.stopPropagation()}>
+                          <div className="flex gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              value={selectedEquip?.quantity || 1}
+                              onChange={(e) => {
+                                const quantity = parseInt(e.target.value);
+                                setSelectedEquipment(prev => prev.map(eq => 
+                                  eq.equipmentId === equipment.id 
+                                    ? { ...eq, quantity }
+                                    : eq
+                                ));
+                              }}
+                              className="w-20 px-2 py-1 text-sm border border-gray-300 rounded"
+                              placeholder="Qté"
+                            />
+                            <select
+                              value={selectedEquip?.condition || 'good'}
+                              onChange={(e) => {
+                                setSelectedEquipment(prev => prev.map(eq => 
+                                  eq.equipmentId === equipment.id 
+                                    ? { ...eq, condition: e.target.value as any }
+                                    : eq
+                                ));
+                              }}
+                              className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+                            >
+                              <option value="excellent">Excellent</option>
+                              <option value="good">Bon</option>
+                              <option value="fair">Acceptable</option>
+                              <option value="poor">Mauvais</option>
+                            </select>
                           </div>
-                          <div style={{ color: '#94a3b8', marginBottom: '4px' }}>
-                            👤 Responsable: {control.responsible} | ⏰ {control.timeline}
-                          </div>
-                          <div style={{ color: '#94a3b8', marginBottom: '6px' }}>
-                            📜 Conformité: {control.compliance.join(', ')}
-                          </div>
+                          
                           <input
-                            type="text"
-                            className="input-premium"
-                            style={{ fontSize: '11px' }}
-                            placeholder="Notes spécifiques pour cette mesure..."
-                            value={control.notes}
-                            onChange={(e) => updateControlNotes(hazard.id, control.id, e.target.value)}
+                            type="date"
+                            value={selectedEquip?.inspectionDate || ''}
+                            onChange={(e) => {
+                              setSelectedEquipment(prev => prev.map(eq => 
+                                eq.equipmentId === equipment.id 
+                                  ? { ...eq, inspectionDate: e.target.value }
+                                  : eq
+                              ));
+                            }}
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            placeholder="Date d'inspection"
                           />
                         </div>
                       )}
                     </div>
+                  );
+                })}
+              </div>
+
+              {/* Résumé des équipements sélectionnés */}
+              {selectedEquipment.length > 0 && (
+                <div className="mt-6 p-4 bg-green-100 rounded-lg">
+                  <h4 className="font-semibold text-green-800 mb-2">
+                    Équipements sélectionnés ({selectedEquipment.length})
+                  </h4>
+                  <div className="space-y-1">
+                    {selectedEquipment.map(equip => {
+                      const equipData = equipmentDatabase.find(e => e.id === equip.equipmentId);
+                      return (
+                        <div key={equip.equipmentId} className="flex justify-between text-sm">
+                          <span>{equipData?.name} (x{equip.quantity})</span>
+                          <span className="text-green-700">${((equipData?.cost || 0) * equip.quantity).toFixed(2)}</span>
+                        </div>
+                      );
+                    })}
+                    <div className="border-t border-green-300 pt-2 font-semibold">
+                      <div className="flex justify-between">
+                        <span>Total estimé:</span>
+                        <span>${selectedEquipment.reduce((total, equip) => {
+                          const equipData = equipmentDatabase.find(e => e.id === equip.equipmentId);
+                          return total + ((equipData?.cost || 0) * equip.quantity);
+                        }, 0).toFixed(2)}</span>
+                      </div>
+                    </div>
                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-xl border border-yellow-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <Zap className="w-5 h-5 mr-2 text-yellow-600" />
+                {translations[language].hazardIdentification}
+              </h3>
+
+              {/* Filtre par type de danger */}
+              <div className="mb-6">
+                <div className="flex flex-wrap gap-2">
+                  {['all', 'electrical', 'gas', 'physical', 'biological', 'ergonomic', 'environmental'].map(type => (
+                    <button
+                      key={type}
+                      className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                      onClick={() => {
+                        // Logique de filtrage par type
+                      }}
+                    >
+                      {type === 'all' ? 'Tous' : type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Liste des dangers */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {hazardsDatabase.map(hazard => {
+                  const isSelected = selectedHazards.some(h => h.hazardId === hazard.id);
+                  const selectedHazard = selectedHazards.find(h => h.hazardId === hazard.id);
+
+                  return (
+                    <div
+                      key={hazard.id}
+                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        isSelected 
+                          ? 'border-yellow-500 bg-yellow-50' 
+                          : 'border-gray-200 hover:border-yellow-300'
+                      }`}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedHazards(prev => prev.filter(h => h.hazardId !== hazard.id));
+                        } else {
+                          setSelectedHazards(prev => [...prev, {
+                            hazardId: hazard.id,
+                            severity: 3,
+                            probability: 3,
+                            notes: '',
+                            controlMeasures: []
+                          }]);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h4 className="font-semibold text-gray-800">{hazard.name}</h4>
+                          <p className="text-xs text-gray-500">{hazard.code}</p>
+                        </div>
+                        {isSelected && <CheckCircle className="w-5 h-5 text-yellow-600" />}
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 mb-2">{hazard.description}</p>
+                      
+                      {hazard.regulations && (
+                        <div className="text-xs text-blue-600 mb-2">
+                          📋 {hazard.regulations.join(', ')}
+                        </div>
+                      )}
+
+                      {isSelected && (
+                        <div className="mt-4 space-y-3" onClick={e => e.stopPropagation()}>
+                          {/* Évaluation de risque */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Sévérité (1-5)
+                              </label>
+                              <select
+                                value={selectedHazard?.severity || 3}
+                                onChange={(e) => {
+                                  const severity = parseInt(e.target.value);
+                                  setSelectedHazards(prev => prev.map(h => 
+                                    h.hazardId === hazard.id 
+                                      ? { ...h, severity }
+                                      : h
+                                  ));
+                                }}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              >
+                                <option value={1}>1 - Négligeable</option>
+                                <option value={2}>2 - Mineur</option>
+                                <option value={3}>3 - Modéré</option>
+                                <option value={4}>4 - Majeur</option>
+                                <option value={5}>5 - Catastrophique</option>
+                              </select>
+                            </div>
+                            
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Probabilité (1-5)
+                              </label>
+                              <select
+                                value={selectedHazard?.probability || 3}
+                                onChange={(e) => {
+                                  const probability = parseInt(e.target.value);
+                                  setSelectedHazards(prev => prev.map(h => 
+                                    h.hazardId === hazard.id 
+                                      ? { ...h, probability }
+                                      : h
+                                  ));
+                                }}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              >
+                                <option value={1}>1 - Très rare</option>
+                                <option value={2}>2 - Peu probable</option>
+                                <option value={3}>3 - Possible</option>
+                                <option value={4}>4 - Probable</option>
+                                <option value={5}>5 - Très probable</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Indicateur de risque */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium">Niveau de risque:</span>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              (selectedHazard?.severity || 3) * (selectedHazard?.probability || 3) >= 15 ? 'bg-red-100 text-red-800' :
+                              (selectedHazard?.severity || 3) * (selectedHazard?.probability || 3) >= 10 ? 'bg-orange-100 text-orange-800' :
+                              (selectedHazard?.severity || 3) * (selectedHazard?.probability || 3) >= 5 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {(selectedHazard?.severity || 3) * (selectedHazard?.probability || 3) >= 15 ? 'CRITIQUE' :
+                               (selectedHazard?.severity || 3) * (selectedHazard?.probability || 3) >= 10 ? 'ÉLEVÉ' :
+                               (selectedHazard?.severity || 3) * (selectedHazard?.probability || 3) >= 5 ? 'MOYEN' : 'FAIBLE'}
+                            </span>
+                          </div>
+
+                          {/* Notes */}
+                          <textarea
+                            value={selectedHazard?.notes || ''}
+                            onChange={(e) => {
+                              setSelectedHazards(prev => prev.map(h => 
+                                h.hazardId === hazard.id 
+                                  ? { ...h, notes: e.target.value }
+                                  : h
+                              ));
+                            }}
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            rows={2}
+                            placeholder="Notes additionnelles..."
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Résumé des dangers */}
+              {selectedHazards.length > 0 && (
+                <div className="mt-6 p-4 bg-yellow-100 rounded-lg">
+                  <h4 className="font-semibold text-yellow-800 mb-2">
+                    Analyse de risque ({selectedHazards.length} dangers identifiés)
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                    <div className="bg-green-100 p-3 rounded">
+                      <div className="text-2xl font-bold text-green-800">
+                        {selectedHazards.filter(h => h.severity * h.probability < 5).length}
+                      </div>
+                      <div className="text-sm text-green-700">Risques faibles</div>
+                    </div>
+                    <div className="bg-yellow-100 p-3 rounded">
+                      <div className="text-2xl font-bold text-yellow-800">
+                        {selectedHazards.filter(h => h.severity * h.probability >= 5 && h.severity * h.probability < 10).length}
+                      </div>
+                      <div className="text-sm text-yellow-700">Risques moyens</div>
+                    </div>
+                    <div className="bg-orange-100 p-3 rounded">
+                      <div className="text-2xl font-bold text-orange-800">
+                        {selectedHazards.filter(h => h.severity * h.probability >= 10 && h.severity * h.probability < 15).length}
+                      </div>
+                      <div className="text-sm text-orange-700">Risques élevés</div>
+                    </div>
+                    <div className="bg-red-100 p-3 rounded">
+                      <div className="text-2xl font-bold text-red-800">
+                        {selectedHazards.filter(h => h.severity * h.probability >= 15).length}
+                      </div>
+                      <div className="text-sm text-red-700">Risques critiques</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-xl border border-purple-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <Settings className="w-5 h-5 mr-2 text-purple-600" />
+                Mesures de contrôle
+              </h3>
+
+              {selectedHazards.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Zap className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <p>Aucun danger identifié.</p>
+                  <p className="text-sm">Retournez à l'étape précédente pour identifier les dangers.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {selectedHazards.map((selectedHazard, index) => {
+                    const hazardData = hazardsDatabase.find(h => h.id === selectedHazard.hazardId);
+                    if (!hazardData) return null;
+
+                    const relevantControls = controlMeasuresDatabase.filter(cm => 
+                      cm.applicableHazards.includes(selectedHazard.hazardId)
+                    );
+
+                    return (
+                      <div key={selectedHazard.hazardId} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-semibold text-gray-800">{hazardData.name}</h4>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            selectedHazard.severity * selectedHazard.probability >= 15 ? 'bg-red-100 text-red-800' :
+                            selectedHazard.severity * selectedHazard.probability >= 10 ? 'bg-orange-100 text-orange-800' :
+                            selectedHazard.severity * selectedHazard.probability >= 5 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            Risque initial: {selectedHazard.severity * selectedHazard.probability}/25
+                          </span>
+                        </div>
+
+                        {/* Hiérarchie des contrôles */}
+                        <div className="space-y-4">
+                          {['elimination', 'substitution', 'engineering', 'administrative', 'ppe'].map(hierarchy => {
+                            const controlsInHierarchy = relevantControls.filter(cm => cm.hierarchy === hierarchy);
+                            if (controlsInHierarchy.length === 0) return null;
+
+                            return (
+                              <div key={hierarchy} className="border border-gray-100 rounded p-3">
+                                <h5 className="font-medium text-gray-700 mb-2 capitalize">
+                                  {hierarchy === 'elimination' ? '🚫 Élimination' :
+                                   hierarchy === 'substitution' ? '🔄 Substitution' :
+                                   hierarchy === 'engineering' ? '⚙️ Contrôles techniques' :
+                                   hierarchy === 'administrative' ? '📋 Contrôles administratifs' :
+                                   '🦺 Équipements de protection'}
+                                </h5>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                  {controlsInHierarchy.map(control => {
+                                    const isSelected = selectedHazard.controlMeasures?.some(cm => cm.id === control.id);
+                                    
+                                    return (
+                                      <div
+                                        key={control.id}
+                                        className={`p-3 rounded border cursor-pointer transition-all ${
+                                          isSelected ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'
+                                        }`}
+                                        onClick={() => {
+                                          setSelectedHazards(prev => prev.map(h => {
+                                            if (h.hazardId === selectedHazard.hazardId) {
+                                              const currentMeasures = h.controlMeasures || [];
+                                              if (isSelected) {
+                                                return {
+                                                  ...h,
+                                                  controlMeasures: currentMeasures.filter(cm => cm.id !== control.id)
+                                                };
+                                              } else {
+                                                return {
+                                                  ...h,
+                                                  controlMeasures: [...currentMeasures, { id: control.id, implemented: false }]
+                                                };
+                                              }
+                                            }
+                                            return h;
+                                          }));
+                                        }}
+                                      >
+                                        <div className="flex items-start justify-between">
+                                          <div className="flex-1">
+                                            <h6 className="font-medium text-sm">{control.name}</h6>
+                                            <p className="text-xs text-gray-600">{control.description}</p>
+                                            <div className="text-xs text-gray-500 mt-1">
+                                              <span>Efficacité: {control.effectiveness}%</span>
+                                              <span className="ml-2">Coût: ${control.cost}</span>
+                                            </div>
+                                            {control.regulations && (
+                                              <div className="text-xs text-blue-600 mt-1">
+                                                📋 {control.regulations.join(', ')}
+                                              </div>
+                                            )}
+                                          </div>
+                                          {isSelected && <CheckCircle className="w-4 h-4 text-purple-600 mt-1" />}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Risque résiduel */}
+                        {selectedHazard.controlMeasures && selectedHazard.controlMeasures.length > 0 && (
+                          <div className="mt-4 p-3 bg-gray-50 rounded">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Risque résiduel estimé:</span>
+                              <span className={`px-2 py-1 rounded text-sm font-medium ${
+                                calculateResidualRisk(selectedHazard) >= 15 ? 'bg-red-100 text-red-800' :
+                                calculateResidualRisk(selectedHazard) >= 10 ? 'bg-orange-100 text-orange-800' :
+                                calculateResidualRisk(selectedHazard) >= 5 ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {calculateResidualRisk(selectedHazard)}/25
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-600 mt-1">
+                              Réduction de {((1 - calculateResidualRisk(selectedHazard) / (selectedHazard.severity * selectedHazard.probability)) * 100).toFixed(1)}%
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      default:
+        return <div>Étape non implémentée</div>;
+    }
+  };
+
+  // Rendu principal (partie 1)
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* En-tête fixe */}
+      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-2 rounded-lg">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  AST Ultra Premium
+                </h1>
+                <p className="text-sm text-gray-600">Analyse de Sécurité du Travail - {tenant}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              {/* Sélecteur de langue */}
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as 'fr' | 'en')}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="fr">🇫🇷 Français</option>
+                <option value="en">🇬🇧 English</option>
+              </select>
+
+              {/* Widget météo */}
+              {weather && (
+                <div className="flex items-center space-x-2 px-3 py-1 bg-blue-50 rounded-lg">
+                  <span className="text-lg">
+                    {weather.condition === 'ensoleillé' ? '☀️' :
+                     weather.condition === 'nuageux' ? '☁️' :
+                     weather.condition === 'pluvieux' ? '🌧️' : '❄️'}
+                  </span>
+                  <span className="text-sm font-medium">{weather.temperature}°C</span>
+                  {weather.alerts.length > 0 && (
+                    <span className="text-xs text-red-600">⚠️</span>
+                  )}
+                </div>
+              )}
+
+              {/* Bouton sidebar */}
+              <button
+                onClick={() => setShowSidebar(!showSidebar)}
+                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Barre de progression */}
+          <div className="pb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">
+                Étape {currentStep} sur 8
+              </span>
+              <span className="text-sm font-medium text-gray-600">
+                {overallProgress}% complété
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(currentStep / 8) * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex gap-8">
+          {/* Contenu principal */}
+          <div className="flex-1">
+            {renderStep()}
+
+            {/* Navigation */}
+            <div className="mt-8 flex items-center justify-between">
+              <button
+                onClick={prevStep}
+                disabled={currentStep === 1}
+                className="flex items-center px-6 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Précédent
+              </button>
+
+              <div className="flex space-x-2">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(step => (
+                  <button
+                    key={step}
+                    onClick={() => goToStep(step)}
+                    className={`w-10 h-10 rounded-full font-medium transition-all ${
+                      step === currentStep
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white'
+                        : step < currentStep
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    {step}
+                  </button>
                 ))}
-                
-                <textarea
-                  className="input-premium"
-                  style={{ fontSize: '12px', marginTop: '12px', minHeight: '60px' }}
-                  placeholder="Notes supplémentaires pour ce danger..."
-                  value={hazard.additionalNotes || ''}
-                  onChange={(e) => updateHazardNotes(hazard.id, e.target.value)}
-                />
+              </div>
+
+              <button
+                onClick={nextStep}
+                disabled={currentStep === 8}
+                className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg hover:from-blue-600 hover:to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Suivant
+                <ChevronLeft className="w-4 h-4 ml-2 rotate-180" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+// =================== AST SECTION 7/8 - ÉTAPES 5-8 & FINALISATION ===================
+
+// Continuation du renderStep() pour les étapes 5-8
+const renderStepContinuation = () => {
+  switch (currentStep) {
+    case 5:
+      return (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-200">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <FileText className="w-5 h-5 mr-2 text-indigo-600" />
+              Permis et autorisations
+            </h3>
+
+            {/* Formulaire d'ajout de permis */}
+            <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
+              <h4 className="font-semibold text-gray-800 mb-3">Ajouter un permis</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Type de permis
+                  </label>
+                  <select
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        const newPermit: WorkPermit = {
+                          id: `permit-${Date.now()}`,
+                          type: e.target.value,
+                          number: '',
+                          issuedBy: '',
+                          issueDate: '',
+                          expiryDate: '',
+                          status: 'pending',
+                          conditions: []
+                        };
+                        setWorkPermits(prev => [...prev, newPermit]);
+                        e.target.value = '';
+                      }
+                    }}
+                  >
+                    <option value="">Sélectionner un type...</option>
+                    <option value="electrical">Permis électrique</option>
+                    <option value="excavation">Permis d'excavation</option>
+                    <option value="hot-work">Permis de travail à chaud</option>
+                    <option value="confined-space">Permis espace confiné</option>
+                    <option value="height-work">Permis travail en hauteur</option>
+                    <option value="road-work">Permis travaux routiers</option>
+                    <option value="environmental">Permis environnemental</option>
+                    <option value="municipal">Permis municipal</option>
+                    <option value="other">Autre</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Liste des permis */}
+            <div className="space-y-4">
+              {workPermits.map((permit, index) => (
+                <div key={permit.id} className="bg-white rounded-lg border border-gray-200 p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-semibold text-gray-800 capitalize">
+                      {permit.type.replace('-', ' ')}
+                    </h4>
+                    <button
+                      onClick={() => setWorkPermits(prev => prev.filter(p => p.id !== permit.id))}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Numéro de permis
+                      </label>
+                      <input
+                        type="text"
+                        value={permit.number}
+                        onChange={(e) => {
+                          setWorkPermits(prev => prev.map(p => 
+                            p.id === permit.id ? { ...p, number: e.target.value } : p
+                          ));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        placeholder="Ex: PE-2024-001"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Émis par
+                      </label>
+                      <input
+                        type="text"
+                        value={permit.issuedBy}
+                        onChange={(e) => {
+                          setWorkPermits(prev => prev.map(p => 
+                            p.id === permit.id ? { ...p, issuedBy: e.target.value } : p
+                          ));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        placeholder="Organisme émetteur"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date d'émission
+                      </label>
+                      <input
+                        type="date"
+                        value={permit.issueDate}
+                        onChange={(e) => {
+                          setWorkPermits(prev => prev.map(p => 
+                            p.id === permit.id ? { ...p, issueDate: e.target.value } : p
+                          ));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date d'expiration
+                      </label>
+                      <input
+                        type="date"
+                        value={permit.expiryDate}
+                        onChange={(e) => {
+                          setWorkPermits(prev => prev.map(p => 
+                            p.id === permit.id ? { ...p, expiryDate: e.target.value } : p
+                          ));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Statut
+                    </label>
+                    <select
+                      value={permit.status}
+                      onChange={(e) => {
+                        setWorkPermits(prev => prev.map(p => 
+                          p.id === permit.id ? { ...p, status: e.target.value as any } : p
+                        ));
+                      }}
+                      className="w-full md:w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      <option value="pending">En attente</option>
+                      <option value="approved">Approuvé</option>
+                      <option value="expired">Expiré</option>
+                      <option value="rejected">Rejeté</option>
+                    </select>
+                  </div>
+
+                  {/* Indicateur d'expiration */}
+                  {permit.expiryDate && (
+                    <div className="mt-2">
+                      {new Date(permit.expiryDate) < new Date() ? (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-100 text-red-800">
+                          ⚠️ Permis expiré
+                        </span>
+                      ) : new Date(permit.expiryDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) ? (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-800">
+                          ⚠️ Expire bientôt
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                          ✅ Valide
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {workPermits.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <p>Aucun permis ajouté.</p>
+                <p className="text-sm">Utilisez le menu déroulant ci-dessus pour ajouter des permis.</p>
               </div>
             )}
           </div>
-        );
-      })}
-    </div>
+        </div>
+      );
 
-    {filteredHazards.length === 0 && (
-      <div style={{
-        textAlign: 'center',
-        padding: '60px',
-        background: 'rgba(30, 41, 59, 0.6)',
-        border: '2px dashed rgba(100, 116, 139, 0.3)',
-        borderRadius: '12px',
-        color: '#64748b'
-      }}>
-        <AlertTriangle style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-        <p style={{ fontSize: '16px', margin: '0' }}>Aucun danger trouvé pour ces critères</p>
-      </div>
-    )}
-  </div>
-)}
+    case 6:
+      return (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 rounded-xl border border-emerald-200">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <CheckCircle className="w-5 h-5 mr-2 text-emerald-600" />
+              Validation et conformité
+            </h3>
 
-// =================== EXPORT DES NOUVELLES DONNÉES ===================
-export { 
-  requiredSafetyEquipmentComplete,
-  getCategoryIcon
+            {/* Résumé du projet */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-800 mb-3">Informations du projet</h4>
+                <div className="space-y-2 text-sm">
+                  <div><strong>Projet:</strong> {projectInfo.projectName || 'Non spécifié'}</div>
+                  <div><strong>Lieu:</strong> {projectInfo.location || 'Non spécifié'}</div>
+                  <div><strong>Type:</strong> {workTypes.find(w => w.id === projectInfo.workType)?.name || 'Non spécifié'}</div>
+                  <div><strong>Client:</strong> {clientConfigurations.find(c => c.id === projectInfo.client)?.name || 'Non spécifié'}</div>
+                  <div><strong>Date:</strong> {projectInfo.startDate || 'Non spécifiée'}</div>
+                  <div><strong>Équipe:</strong> {projectInfo.teamSize || 'Non spécifiée'} personne(s)</div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-800 mb-3">Statistiques de sécurité</h4>
+                <div className="space-y-2 text-sm">
+                  <div><strong>Dangers identifiés:</strong> {selectedHazards.length}</div>
+                  <div><strong>Équipements sélectionnés:</strong> {selectedEquipment.length}</div>
+                  <div><strong>Permis requis:</strong> {workPermits.length}</div>
+                  <div><strong>Niveau de risque:</strong> 
+                    <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                      riskLevel === 'CRITICAL' ? 'bg-red-100 text-red-800' :
+                      riskLevel === 'HIGH' ? 'bg-orange-100 text-orange-800' :
+                      riskLevel === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {riskLevel}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Vérification de conformité */}
+            <div className="bg-white rounded-lg p-4 border border-gray-200 mb-6">
+              <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                <Shield className="w-5 h-5 mr-2 text-blue-600" />
+                Vérification de conformité
+              </h4>
+
+              <div className={`p-4 rounded-lg ${complianceCheck.isCompliant ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                <div className="flex items-center mb-3">
+                  {complianceCheck.isCompliant ? (
+                    <>
+                      <CheckCircle className="w-6 h-6 text-green-600 mr-2" />
+                      <span className="font-semibold text-green-800">Conforme aux exigences</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-6 h-6 text-red-600 mr-2" />
+                      <span className="font-semibold text-red-800">Non-conformités détectées</span>
+                    </>
+                  )}
+                </div>
+
+                {complianceCheck.violations.length > 0 && (
+                  <div className="mb-4">
+                    <h5 className="font-medium text-red-800 mb-2">Violations à corriger:</h5>
+                    <ul className="space-y-1">
+                      {complianceCheck.violations.map((violation, index) => (
+                        <li key={index} className="text-sm text-red-700 flex items-start">
+                          <span className="mr-2">•</span>
+                          <span>{violation}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {complianceCheck.recommendations.length > 0 && (
+                  <div>
+                    <h5 className="font-medium text-gray-800 mb-2">Recommandations:</h5>
+                    <ul className="space-y-1">
+                      {complianceCheck.recommendations.map((recommendation, index) => (
+                        <li key={index} className="text-sm text-gray-700 flex items-start">
+                          <span className="mr-2">•</span>
+                          <span>{recommendation}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Matrice de risque visuelle */}
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <h4 className="font-semibold text-gray-800 mb-3">Matrice de risque</h4>
+              <div className="grid grid-cols-6 gap-1 text-xs">
+                <div></div>
+                <div className="text-center font-medium">1</div>
+                <div className="text-center font-medium">2</div>
+                <div className="text-center font-medium">3</div>
+                <div className="text-center font-medium">4</div>
+                <div className="text-center font-medium">5</div>
+                
+                {[5, 4, 3, 2, 1].map(severity => (
+                  <React.Fragment key={severity}>
+                    <div className="text-center font-medium">{severity}</div>
+                    {[1, 2, 3, 4, 5].map(probability => {
+                      const riskScore = severity * probability;
+                      const count = selectedHazards.filter(h => h.severity === severity && h.probability === probability).length;
+                      return (
+                        <div
+                          key={`${severity}-${probability}`}
+                          className={`aspect-square flex items-center justify-center border text-xs font-medium ${
+                            riskScore >= 15 ? 'bg-red-500 text-white' :
+                            riskScore >= 10 ? 'bg-orange-400 text-white' :
+                            riskScore >= 5 ? 'bg-yellow-400 text-black' :
+                            'bg-green-400 text-black'
+                          }`}
+                        >
+                          {count > 0 ? count : ''}
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
+                ))}
+              </div>
+              <div className="mt-2 text-xs text-gray-600">
+                <span className="mr-4">Axe X: Probabilité</span>
+                <span>Axe Y: Sévérité</span>
+              </div>
+            </div>
+
+            {/* Conditions météo */}
+            {weather && (
+              <div className="bg-white rounded-lg p-4 border border-gray-200 mt-6">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                  🌤️ Conditions météorologiques
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Température:</span>
+                    <span className="ml-2 font-medium">{weather.temperature}°C</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Condition:</span>
+                    <span className="ml-2 font-medium capitalize">{weather.condition}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Vent:</span>
+                    <span className="ml-2 font-medium">{weather.windSpeed} km/h</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Visibilité:</span>
+                    <span className="ml-2 font-medium">{weather.visibility} km</span>
+                  </div>
+                </div>
+                
+                {weather.alerts.length > 0 && (
+                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                    <h5 className="font-medium text-yellow-800 mb-1">⚠️ Alertes météo:</h5>
+                    {weather.alerts.map((alert, index) => (
+                      <p key={index} className="text-sm text-yellow-700">{alert}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+
+    case 7:
+      return (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-xl border border-blue-200">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <Users className="w-5 h-5 mr-2 text-blue-600" />
+              Consultation équipe
+            </h3>
+
+            {/* Formulaire de partage */}
+            <div className="bg-white rounded-lg p-4 border border-gray-200 mb-6">
+              <h4 className="font-semibold text-gray-800 mb-3">Partager avec l'équipe</h4>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Membres de l'équipe (emails ou téléphones)
+                  </label>
+                  <textarea
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="jean.dupont@entreprise.com, 514-555-0123, marie.martin@entreprise.com"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <button
+                    onClick={() => {
+                      const members = ['jean.dupont@entreprise.com', 'marie.martin@entreprise.com'];
+                      shareWithTeam(members, 'email', { projectInfo, selectedHazards, selectedEquipment });
+                    }}
+                    className="flex items-center justify-center px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    <MessageSquare className="w-5 h-5 mr-2" />
+                    Partager par Email
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const members = ['514-555-0123', '438-555-0456'];
+                      shareWithTeam(members, 'sms', { projectInfo, selectedHazards, selectedEquipment });
+                    }}
+                    className="flex items-center justify-center px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                  >
+                    📱 Partager par SMS
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const members = ['514-555-0123', '438-555-0456'];
+                      shareWithTeam(members, 'whatsapp', { projectInfo, selectedHazards, selectedEquipment });
+                    }}
+                    className="flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    📱 Partager par WhatsApp
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Statut de consultation */}
+            {consultationStatus.isActive && (
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-800 mb-3">Statut de la consultation</h4>
+                
+                <div className="mb-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Partagé avec {consultationStatus.sharedWith.length} membre(s)</span>
+                    <span>Expire le: {consultationStatus.expiresAt?.toLocaleDateString('fr-CA')}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full"
+                      style={{ 
+                        width: `${(consultationStatus.responses.length / consultationStatus.sharedWith.length) * 100}%` 
+                      }}
+                    />
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">
+                    {consultationStatus.responses.length} sur {consultationStatus.sharedWith.length} réponses reçues
+                  </div>
+                </div>
+
+                {/* Réponses reçues */}
+                <div className="space-y-3">
+                  <h5 className="font-medium text-gray-800">Réponses reçues:</h5>
+                  {consultationStatus.responses.map((response, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                      <div>
+                        <span className="font-medium">{response.member}</span>
+                        <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
+                          response.approved ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {response.approved ? 'Approuvé' : 'Rejeté'}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-600">
+                        {new Date(response.timestamp).toLocaleString('fr-CA')}
+                      </span>
+                    </div>
+                  ))}
+                  
+                  {consultationStatus.responses.length === 0 && (
+                    <p className="text-gray-500 text-sm">Aucune réponse reçue pour le moment.</p>
+                  )}
+                </div>
+
+                {/* Lien de consultation */}
+                <div className="mt-4 p-3 bg-blue-50 rounded">
+                  <h5 className="font-medium text-blue-800 mb-2">Lien de consultation:</h5>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={`${window.location.origin}/consultation/ast-${Date.now()}`}
+                      readOnly
+                      className="flex-1 px-3 py-2 bg-white border border-blue-200 rounded text-sm"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/consultation/ast-${Date.now()}`);
+                      }}
+                      className="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                    >
+                      Copier
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Discussions d'équipe prédéfinies */}
+            <div className="bg-white rounded-lg p-4 border border-gray-200 mt-6">
+              <h4 className="font-semibold text-gray-800 mb-3">Discussions d'équipe suggérées</h4>
+              <div className="space-y-3">
+                {teamDiscussions.map(discussion => (
+                  <div key={discussion.id} className="p-3 border border-gray-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="font-medium text-gray-800">{discussion.topic}</h5>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        discussion.priority === 'high' ? 'bg-red-100 text-red-800' :
+                        discussion.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {discussion.priority === 'high' ? 'Priorité haute' :
+                         discussion.priority === 'medium' ? 'Priorité moyenne' : 'Priorité faible'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2">{discussion.description}</p>
+                    <div className="text-xs text-gray-500">
+                      <strong>Questions clés:</strong>
+                      <ul className="list-disc list-inside mt-1">
+                        {discussion.keyQuestions.map((question, qIndex) => (
+                          <li key={qIndex}>{question}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 8:
+      return (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <CheckCircle className="w-5 h-5 mr-2 text-green-600" />
+              Finalisation et génération
+            </h3>
+
+            {/* Résumé final */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-800 mb-3">Résumé final</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span>Informations projet</span>
+                    <span className={`px-2 py-1 rounded text-sm ${completionStats.projectInfo === 100 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {completionStats.projectInfo}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Équipements de sécurité</span>
+                    <span className={`px-2 py-1 rounded text-sm ${completionStats.equipment === 100 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {completionStats.equipment}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Identification des dangers</span>
+                    <span className={`px-2 py-1 rounded text-sm ${completionStats.hazards === 100 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {completionStats.hazards}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Permis et autorisations</span>
+                    <span className={`px-2 py-1 rounded text-sm ${completionStats.permits === 100 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {completionStats.permits}%
+                    </span>
+                  </div>
+                  <div className="border-t pt-3 flex justify-between items-center font-semibold">
+                    <span>Progression globale</span>
+                    <span className={`px-3 py-1 rounded ${overallProgress === 100 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {overallProgress}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-800 mb-3">Indicateurs de sécurité</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span>Niveau de risque global</span>
+                    <span className={`px-3 py-1 rounded font-medium ${
+                      riskLevel === 'CRITICAL' ? 'bg-red-100 text-red-800' :
+                      riskLevel === 'HIGH' ? 'bg-orange-100 text-orange-800' :
+                      riskLevel === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {riskLevel}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Conformité réglementaire</span>
+                    <span className={`px-3 py-1 rounded font-medium ${
+                      complianceCheck.isCompliant ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {complianceCheck.isCompliant ? 'Conforme' : 'Non conforme'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Équipements validés</span>
+                    <span className="px-3 py-1 rounded bg-blue-100 text-blue-800 font-medium">
+                      {selectedEquipment.filter(e => e.inspectionDate).length}/{selectedEquipment.length}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Consultation équipe</span>
+                    <span className={`px-3 py-1 rounded font-medium ${
+                      consultationStatus.isActive ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {consultationStatus.isActive ? 'Active' : 'Non démarrée'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions finales */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <button
+                onClick={() => {
+                  setIsGeneratingDocument(true);
+                  setTimeout(() => {
+                    const astDoc = generateASTDocument({ projectInfo, selectedHazards, selectedEquipment, consultationStatus });
+                    console.log('Document AST généré:', astDoc);
+                    setIsGeneratingDocument(false);
+                  }, 2000);
+                }}
+                disabled={isGeneratingDocument}
+                className="flex items-center justify-center px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors"
+              >
+                {isGeneratingDocument ? (
+                  <>
+                    <div className="animate-spin w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full" />
+                    Génération...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-5 h-5 mr-2" />
+                    Générer PDF
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  const astData = {
+                    projectInfo,
+                    selectedHazards,
+                    selectedEquipment,
+                    workPermits,
+                    consultationStatus,
+                    riskLevel,
+                    complianceCheck
+                  };
+                  const blob = new Blob([JSON.stringify(astData, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `ast-${projectInfo.projectName || 'projet'}-${new Date().toISOString().split('T')[0]}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="flex items-center justify-center px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                💾 Sauvegarder
+              </button>
+
+              <button
+                onClick={() => {
+                  const mailtoLink = `mailto:?subject=AST - ${projectInfo.projectName}&body=Veuillez trouver ci-joint l'Analyse de Sécurité du Travail pour le projet ${projectInfo.projectName}.`;
+                  window.location.href = mailtoLink;
+                }}
+                className="flex items-center justify-center px-4 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+              >
+                <MessageSquare className="w-5 h-5 mr-2" />
+                Envoyer
+              </button>
+
+              <button
+                onClick={() => {
+                  window.print();
+                }}
+                className="flex items-center justify-center px-4 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                🖨️ Imprimer
+              </button>
+            </div>
+
+            {/* Message de succès */}
+            {overallProgress === 100 && complianceCheck.isCompliant && (
+              <div className="mt-6 p-4 bg-green-100 border border-green-200 rounded-lg">
+                <div className="flex items-center mb-2">
+                  <CheckCircle className="w-6 h-6 text-green-600 mr-2" />
+                  <span className="font-semibold text-green-800">AST Complétée avec succès!</span>
+                </div>
+                <p className="text-green-700 text-sm">
+                  Votre Analyse de Sécurité du Travail est complète et conforme aux exigences réglementaires. 
+                  Vous pouvez maintenant procéder aux travaux en toute sécurité.
+                </p>
+              </div>
+            )}
+
+            {/* Avertissements si incomplet */}
+            {(overallProgress < 100 || !complianceCheck.isCompliant) && (
+              <div className="mt-6 p-4 bg-yellow-100 border border-yellow-200 rounded-lg">
+                <div className="flex items-center mb-2">
+                  <Zap className="w-6 h-6 text-yellow-600 mr-2" />
+                  <span className="font-semibold text-yellow-800">Attention - AST incomplète</span>
+                </div>
+                <p className="text-yellow-700 text-sm mb-2">
+                  Votre AST nécessite des corrections avant d'être utilisable:
+                </p>
+                <ul className="text-yellow-700 text-sm space-y-1">
+                  {overallProgress < 100 && <li>• Compléter toutes les sections manquantes</li>}
+                  {!complianceCheck.isCompliant && <li>• Corriger les non-conformités identifiées</li>}
+                  {selectedHazards.filter(h => h.severity * h.probability >= 15).length > 0 && 
+                    <li>• Révision superviseur requise pour les risques critiques</li>}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+
+    default:
+      return <div>Étape non trouvée</div>;
+  }
 };
-export { LocationPicker };
+
+// Ajout du panneau latéral avec statistiques
+const renderSidebar = () => {
+  if (!showSidebar) return null;
+
+  return (
+    <div className="fixed inset-y-0 right-0 w-80 bg-white shadow-xl border-l border-gray-200 z-50 overflow-y-auto">
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-gray-800">Tableau de bord</h3>
+          <button
+            onClick={() => setShowSidebar(false)}
+            className="p-1 rounded hover:bg-gray-100"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Statistiques rapides */}
+        <div className="space-y-4">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h4 className="font-medium text-blue-800 mb-2">Progression</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Global</span>
+                <span>{overallProgress}%</span>
+              </div>
+              <div className="w-full bg-blue-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-500 h-2 rounded-full transition-all"
+                  style={{ width: `${overallProgress}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h4 className="font-medium text-yellow-800 mb-2">Risques</h4>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-700">
+                  {selectedHazards.filter(h => h.severity * h.probability < 5).length}
+                </div>
+                <div>Faibles</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-yellow-700">
+                  {selectedHazards.filter(h => h.severity * h.probability >= 5 && h.severity * h.probability < 10).length}
+                </div>
+                <div>Moyens</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-orange-700">
+                  {selectedHazards.filter(h => h.severity * h.probability >= 10 && h.severity * h.probability < 15).length}
+                </div>
+                <div>Élevés</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-red-700">
+                  {selectedHazards.filter(h => h.severity * h.probability >= 15).length}
+                </div>
+                <div>Critiques</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h4 className="font-medium text-green-800 mb-2">Équipements</h4>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Sélectionnés</span>
+                <span>{selectedEquipment.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Inspectés</span>
+                <span>{selectedEquipment.filter(e => e.inspectionDate).length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Coût total</span>
+                <span>
+                  ${selectedEquipment.reduce((total, equip) => {
+                    const equipData = equipmentDatabase.find(e => e.id === equip.equipmentId);
+                    return total + ((equipData?.cost || 0) * equip.quantity);
+                  }, 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {weather && (
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <h4 className="font-medium text-purple-800 mb-2">Météo</h4>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span>Température</span>
+                  <span>{weather.temperature}°C</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Vent</span>
+                  <span>{weather.windSpeed} km/h</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Visibilité</span>
+                  <span>{weather.visibility} km</span>
+                </div>
+                {weather.alerts.length > 0 && (
+                  <div className="mt-2 text-xs text-red-600">
+                    ⚠️ {weather.alerts.length} alerte(s)
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Intégration dans le rendu principal (ajout à la fin)
+// Remplacer le renderStep() existant par renderStepContinuation() pour les étapes 5-8
+// Ajouter {renderSidebar()} avant la fermeture du div principal
+
+export default ASTFormUltraPremium;
