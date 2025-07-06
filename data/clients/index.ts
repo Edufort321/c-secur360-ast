@@ -108,4 +108,41 @@ export const clientsDatabase: Client[] = [
   }
 ];
 
+// =================== EXPORTS ADDITIONNELS ===================
+
+// Export pour compatibilité avec les imports existants
+export const allClients = clientsDatabase;
+
+// Fonctions utilitaires
+export const getClientById = (id: string): Client | undefined => {
+  return clientsDatabase.find(client => client.id === id);
+};
+
+export const getClientByName = (name: string): Client | undefined => {
+  return clientsDatabase.find(client => 
+    client.name.toLowerCase().includes(name.toLowerCase())
+  );
+};
+
+export const getClientsForIndustry = (industry: string): Client[] => {
+  const industryMapping: Record<string, string[]> = {
+    'electrical': ['hydro-quebec'],
+    'gas': ['energir'],
+    'telecom': ['bell', 'rogers', 'videotron'],
+    'demo': ['demo']
+  };
+  
+  const clientIds = industryMapping[industry] || [];
+  return clientsDatabase.filter(client => clientIds.includes(client.id));
+};
+
+export const getAllClientIds = (): string[] => {
+  return clientsDatabase.map(client => client.id);
+};
+
+export const getAllClientNames = (): string[] => {
+  return clientsDatabase.map(client => client.name);
+};
+
+// Export par défaut
 export default clientsDatabase;
