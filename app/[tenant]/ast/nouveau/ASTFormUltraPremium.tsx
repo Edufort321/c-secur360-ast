@@ -2640,8 +2640,13 @@ export default function ASTFormUltraPremium({ tenant }: ASTFormProps) {
 // =================== AST SECTION 5/5 FINALE - JSX INTERFACE COMPLÈTE ===================
 // Section 5: Interface utilisateur complète avec toutes les fonctionnalités
 
-// Continuation du return du composant principal...
-return (
+  // ========== CALCULS POUR COMPTEURS ==========
+  const approvedMembersCount = formData.team.members.filter(m => m.validationStatus === 'approved').length;
+  const approvalRate = formData.team.members.length > 0 ? 
+    Math.round((approvedMembersCount / formData.team.members.length) * 100) : 0;
+
+  // ========== RETOUR JSX PRINCIPAL ==========
+  return (
     <div className="form-container">
       {/* INDICATEUR DE SAUVEGARDE */}
       {saveStatus !== 'idle' && (
@@ -3728,28 +3733,30 @@ return (
           )}
         </div>
 
-{/* NAVIGATION MOBILE OPTIMISÉE */}
-<div className={`mobile-nav ${currentStep === steps.length - 1 ? 'content-with-mobile-nav' : ''}`}>
-  <button
-    onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
-    className="btn-secondary"
-    disabled={currentStep === 0}
-  >
-    <ChevronLeft style={{ width: '16px', height: '16px' }} />
-    <span style={{ display: 'none' }}>{t.buttons.previous}</span>
-  </button>
-  
-  <div style={{ color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>
-    <div>{steps[currentStep].key}</div>
-    <div>{currentStep + 1}/{steps.length}</div>
-  </div>
-  
-  <button
-    onClick={() => setCurrentStep(prev => Math.min(steps.length - 1, prev + 1))}
-    className="btn-premium"
-    disabled={currentStep === steps.length - 1}
-  >
-    <span style={{ display: 'none' }}>{t.buttons.next}</span>
-    <ChevronRight style={{ width: '16px', height: '16px' }} />
-  </button>
-</div>
+        {/* NAVIGATION MOBILE OPTIMISÉE */}
+        <div className="mobile-nav">
+          <button
+            onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
+            className="btn-secondary"
+            disabled={currentStep === 0}
+          >
+            <ChevronLeft style={{ width: '16px', height: '16px' }} />
+          </button>
+          
+          <div style={{ color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>
+            <div>{t.steps[steps[currentStep].key]}</div>
+            <div>{currentStep + 1}/{steps.length}</div>
+          </div>
+          
+          <button
+            onClick={() => setCurrentStep(prev => Math.min(steps.length - 1, prev + 1))}
+            className="btn-premium"
+            disabled={currentStep === steps.length - 1}
+          >
+            <ChevronRight style={{ width: '16px', height: '16px' }} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
