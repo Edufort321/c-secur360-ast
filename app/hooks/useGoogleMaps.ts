@@ -45,7 +45,7 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
       if (document.querySelector('script[src*="maps.googleapis.com"]')) {
         return;
       }
-test
+
       setIsLoading(true);
       setError(null);
 
