@@ -603,7 +603,7 @@ export function calculateTenantRiskStatistics(tenantASTs: AST[]) {
     const identifiedHazards = (ast as any).identifiedHazards || [];
     identifiedHazards.forEach((hazard: any) => {
       const riskLevel = hazard.residualRiskLevel || RiskLevel.MEDIUM;
-      riskDistribution[riskLevel]++;
+      riskDistribution[riskLevel as RiskLevel]++;
       totalRiskScore += (Number(hazard.severityLevel) || 3) * (Number(hazard.probabilityLevel) || 3);
       totalHazards++;
     });
