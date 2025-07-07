@@ -201,7 +201,7 @@ export const getInspectionSchedule = () => {
   return allEquipment.map(equipment => ({
     equipment,
     inspectionStatus: getEquipmentInspectionStatus(equipment),
-    lifespan: calculateEquipmentLifespan(equipment.createdDate, (equipment as any).lifespanMonths || 12)
+    lifespan: calculateEquipmentLifespan(equipment.createdDate || new Date().toISOString(), (equipment as any).lifespanMonths || 12)
   })).sort((a, b) => 
     a.inspectionStatus.daysUntilInspection - b.inspectionStatus.daysUntilInspection
   );
