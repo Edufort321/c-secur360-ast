@@ -27,7 +27,7 @@ const createNewHazard = (base: Partial<Hazard>): Hazard => {
 export const cuttingInjuries: Hazard = createNewHazard({
   id: 'cutting_lacerations',
   name: 'Coupures et lacérations',
-  category: 'mechanical',
+  category: 'MECHANICAL' as any,
   subcategory: 'cutting',
   description: 'Blessures par objets tranchants, lames, métal',
   severity: 'high',
