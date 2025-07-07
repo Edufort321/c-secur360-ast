@@ -451,7 +451,7 @@ function calculateIndividualControlReduction(control: any): number {
 
   const hierarchyLevel = control.hierarchyLevel || HierarchyLevel.PPE;
   const effectiveness = (control.effectivenessRating || 3) / 5;
-  return hierarchyFactors[hierarchyLevel] * effectiveness;
+  return hierarchyFactors[hierarchyLevel as HierarchyLevel] * effectiveness;
 }
 
 function estimateImplementationCost(control: any): number {
@@ -465,7 +465,7 @@ function estimateImplementationCost(control: any): number {
   };
 
   const hierarchyLevel = control.hierarchyLevel || HierarchyLevel.PPE;
-  return baseCosts[hierarchyLevel];
+  return baseCosts[hierarchyLevel as HierarchyLevel];
 }
 
 function estimateMaintenanceCost(control: any): number {
@@ -479,7 +479,7 @@ function estimateMaintenanceCost(control: any): number {
   };
 
   const hierarchyLevel = control.hierarchyLevel || HierarchyLevel.PPE;
-  return estimateImplementationCost(control) * maintenanceRates[hierarchyLevel];
+  return estimateImplementationCost(control) * maintenanceRates[hierarchyLevel as HierarchyLevel];
 }
 
 function calculateReliabilityFactor(control: any): number {
@@ -493,7 +493,7 @@ function calculateReliabilityFactor(control: any): number {
   };
 
   const hierarchyLevel = control.hierarchyLevel || HierarchyLevel.PPE;
-  return reliabilityFactors[hierarchyLevel];
+  return reliabilityFactors[hierarchyLevel as HierarchyLevel];
 }
 
 function generateBasicRecommendations(riskLevel: RiskLevel, score: number): string[] {
