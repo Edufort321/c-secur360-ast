@@ -508,7 +508,6 @@ export type {
 export type {
   WorkType,
   WorkCategory,
-  SkillLevel,
   Task,
   WorkPlan,
   WorkSession,
