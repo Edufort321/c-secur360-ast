@@ -24,104 +24,157 @@ const createNewHazard = (base: Partial<Hazard>): Hazard => {
 
 // =================== DANGERS ENVIRONNEMENTAUX ===================
 
-export const weatherExposure: Hazard = createNewHazard({
-  id: 'severe_weather_exposure',
+export const extremeWeather: Hazard = createNewHazard({
+  id: 'extreme_weather_conditions',
   name: 'Conditions météorologiques extrêmes',
   category: 'ENVIRONMENTAL' as any,
   subcategory: 'weather',
-  description: 'Exposition aux intempéries, foudre, vents violents',
+  displayName: {
+    fr: 'Météo extrême',
+    en: 'Extreme weather conditions'
+  },
+  description: 'Risques liés aux conditions météorologiques dangereuses',
   severity: 'high',
   likelihood: 'medium',
   riskLevel: 'medium',
   
+  eliminationMethods: [
+    'Report des travaux extérieurs',
+    'Travail en intérieur sécurisé',
+    'Suspension activités dangereuses'
+  ],
+  
+  engineeringControls: [
+    'Abris météorologiques',
+    'Systèmes d\'alerte précoce',
+    'Protection contre la foudre',
+    'Drainage des eaux de surface'
+  ],
+  
+  administrativeControls: [
+    'Surveillance météorologique continue',
+    'Procédures d\'urgence météo',
+    'Formation conditions extrêmes',
+    'Planification selon prévisions'
+  ],
+  
   controlMeasures: [
     'Surveillance météorologique continue',
-    'Abris temporaires',
-    'Arrêt des travaux si conditions dangereuses',
-    'Équipement de protection intempéries'
+    'Équipements de protection adaptés',
+    'Abris d\'urgence disponibles',
+    'Communication d\'urgence maintenue'
   ],
   
   requiredEquipment: [
-    'insulated_winter_boots',
-    'weather_resistant_clothing',
-    'emergency_shelter',
-    'weather_monitoring_device'
+    'weather_radio_emergency',
+    'waterproof_protective_clothing',
+    'emergency_shelter_portable',
+    'lightning_detection_system'
   ],
+  
+  emergencyProcedures: [
+    'Évacuation vers abris sécurisés',
+    'Communication équipes terrain',
+    'Surveillance santé travailleurs',
+    'Arrêt travaux si nécessaire'
+  ] as any,
   
   regulatoryReferences: [
     'RSST - Travail extérieur',
     'Environnement Canada - Alertes météo'
   ],
   
-  workTypes: ['emergency_response', 'construction_general', 'outdoor_work'],
+  workTypes: ['outdoor_construction', 'utilities_maintenance', 'emergency_response'],
   
   isActive: true
 });
 
 export const uvRadiation: Hazard = createNewHazard({
-  id: 'ultraviolet_radiation',
+  id: 'ultraviolet_radiation_exposure',
   name: 'Rayonnement ultraviolet',
-  category: 'environmental',
+  category: 'ENVIRONMENTAL' as any,
   subcategory: 'radiation',
-  description: 'Exposition prolongée aux rayons UV solaires',
+  displayName: {
+    fr: 'Exposition aux UV',
+    en: 'UV radiation exposure'
+  },
+  description: 'Risque de cancer de la peau et lésions oculaires par exposition solaire',
   severity: 'medium',
   likelihood: 'high',
   riskLevel: 'medium',
   
   controlMeasures: [
-    'Protection solaire (crème FPS 30+)',
-    'Vêtements couvrants',
-    'Rotation du personnel',
-    'Travail aux heures moins ensoleillées'
+    'Protection solaire intégrale',
+    'Planification éviter heures pics',
+    'Abris contre rayonnement',
+    'Vêtements protection UV'
   ],
   
   requiredEquipment: [
-    'uv_protective_clothing',
-    'wide_brim_hat',
-    'uv_safety_glasses',
-    'sunscreen_spf30'
+    'uv_protective_clothing_upf50',
+    'wide_brim_hat_uv_protection',
+    'sunglasses_uv_400_protection',
+    'sunscreen_spf_30_plus'
   ],
+  
+  emergencyProcedures: [
+    'Traitement coups de soleil',
+    'Hydratation d\'urgence',
+    'Refroidissement corporel',
+    'Consultation dermatologique'
+  ] as any,
   
   regulatoryReferences: [
     'Santé Canada - Protection solaire',
-    'OMS - Indice UV'
+    'RSST - Rayonnement non ionisant'
   ],
   
-  workTypes: ['construction_general', 'outdoor_work'],
+  workTypes: ['outdoor_work', 'roofing', 'landscaping'],
   
   isActive: true
 });
 
 export const wildlifeEncounter: Hazard = createNewHazard({
-  id: 'wildlife_encounter',
+  id: 'wildlife_animal_encounter',
   name: 'Rencontre avec faune sauvage',
-  category: 'environmental',
+  category: 'ENVIRONMENTAL' as any,
   subcategory: 'wildlife',
+  displayName: {
+    fr: 'Faune sauvage dangereuse',
+    en: 'Dangerous wildlife encounter'
+  },
   description: 'Risque d\'attaque ou morsure par animaux sauvages',
   severity: 'high',
   likelihood: 'low',
   riskLevel: 'medium',
   
   controlMeasures: [
-    'Formation reconnaissance faune locale',
-    'Moyens de dissuasion (bruit, éclairage)',
-    'Trousse premiers secours spécialisée',
-    'Communication d\'urgence'
+    'Formation identification faune',
+    'Procédures de dissuasion',
+    'Équipements de protection',
+    'Communication localisation'
   ],
   
   requiredEquipment: [
-    'wildlife_deterrent_device',
-    'emergency_communication_radio',
-    'first_aid_kit_wilderness',
-    'bear_spray'
+    'bear_spray_deterrent',
+    'noise_makers_warning',
+    'first_aid_kit_animal_bite',
+    'satellite_communication_device'
   ],
+  
+  emergencyProcedures: [
+    'Soins morsures d\'urgence',
+    'Évacuation médicale rapide',
+    'Vaccination antirabique',
+    'Signalement incident faune'
+  ] as any,
   
   regulatoryReferences: [
-    'Faune Québec - Cohabitation',
-    'Parcs Canada - Sécurité faune'
+    'Ministère Forêts, Faune et Parcs',
+    'RSST - Travail en forêt'
   ],
   
-  workTypes: ['environmental_cleanup', 'outdoor_work', 'emergency_response'],
+  workTypes: ['forestry', 'surveying', 'outdoor_maintenance'],
   
   isActive: true
 });
@@ -129,40 +182,51 @@ export const wildlifeEncounter: Hazard = createNewHazard({
 export const floodRisk: Hazard = createNewHazard({
   id: 'flooding_water_hazard',
   name: 'Risque d\'inondation',
-  category: 'environmental',
+  category: 'ENVIRONMENTAL' as any,
   subcategory: 'water',
-  description: 'Montée rapide des eaux, courants dangereux',
+  displayName: {
+    fr: 'Inondation et crue',
+    en: 'Flooding and water hazard'
+  },
+  description: 'Risque de noyade et contamination par montée des eaux',
   severity: 'critical',
   likelihood: 'low',
   riskLevel: 'medium',
   
   controlMeasures: [
     'Surveillance niveaux d\'eau',
-    'Équipement de flottaison',
-    'Plan d\'évacuation d\'urgence',
-    'Formation sauvetage aquatique'
+    'Évacuation préventive',
+    'Équipements de flottaison',
+    'Voies d\'évacuation sécurisées'
   ],
   
   requiredEquipment: [
     'personal_flotation_device',
-    'waterproof_communication',
-    'emergency_beacon',
-    'rescue_rope'
+    'waterproof_communication_radio',
+    'emergency_beacon_locator',
+    'water_rescue_equipment'
   ],
+  
+  emergencyProcedures: [
+    'Évacuation immédiate zone inondée',
+    'Secours aquatique spécialisé',
+    'Décontamination post-exposition',
+    'Surveillance maladies hydriques'
+  ] as any,
   
   regulatoryReferences: [
-    'Sécurité publique Québec',
-    'Transport Canada - Sécurité nautique'
+    'Sécurité publique Canada - Inondations',
+    'Plan mesures d\'urgence municipal'
   ],
   
-  workTypes: ['emergency_response', 'water_work', 'environmental_cleanup'],
+  workTypes: ['emergency_response', 'infrastructure_inspection', 'cleanup_operations'],
   
   isActive: true
 });
 
 // =================== EXPORT DANGERS ENVIRONNEMENTAUX ===================
 export const environmentalHazards = [
-  weatherExposure,
+  extremeWeather,
   uvRadiation,
   wildlifeEncounter,
   floodRisk
