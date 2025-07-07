@@ -29,7 +29,7 @@ const createNewEquipment = (base: Partial<SafetyEquipment>): SafetyEquipment => 
 export const gasDetector4Gas: SafetyEquipment = createNewEquipment({
   id: 'gas_detector_4_gas',
   name: 'Détecteur de gaz 4 gaz',
-  category: 'detection-equipment',
+  category: 'DETECTION-EQUIPMENT' as any,
   subcategory: 'gas_detector',
   description: 'Détecteur portatif 4 gaz pour espaces confinés',
   
