@@ -27,7 +27,7 @@ const createNewHazard = (base: Partial<Hazard>): Hazard => {
 export const slipsTripsFalls: Hazard = createNewHazard({
   id: 'slips_trips_falls_same_level',
   name: 'Glissades, trébuchements, chutes de plain-pied',
-  category: 'workplace',
+  category: 'WORKPLACE' as any,
   subcategory: 'surface_hazards',
   description: 'Chutes au même niveau par surfaces glissantes, obstacles',
   severity: 'medium',
