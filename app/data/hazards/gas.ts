@@ -27,7 +27,7 @@ const createNewHazard = (base: Partial<Hazard>): Hazard => {
 export const gasLeak: Hazard = createNewHazard({
   id: 'natural_gas_leak',
   name: 'Fuite de gaz naturel',
-  category: 'GAS' as any,
+  category: 'GAS' as any,  // ✅ Déjà correct
   subcategory: 'natural_gas',
   description: 'Risque d\'explosion, asphyxie par fuite de gaz',
   severity: 'critical',
@@ -62,7 +62,7 @@ export const gasLeak: Hazard = createNewHazard({
 export const hydrogenSulfide: Hazard = createNewHazard({
   id: 'hydrogen_sulfide_exposure',
   name: 'Sulfure d\'hydrogène (H₂S)',
-  category: 'gas',
+  category: 'GAS' as any,  // ⭐ CORRIGÉ : 'gas' → 'GAS' as any
   subcategory: 'toxic_gas',
   description: 'Gaz toxique mortel à faible concentration',
   severity: 'critical',
@@ -97,7 +97,7 @@ export const hydrogenSulfide: Hazard = createNewHazard({
 export const carbonMonoxide: Hazard = createNewHazard({
   id: 'carbon_monoxide_poisoning',
   name: 'Monoxyde de carbone (CO)',
-  category: 'gas',
+  category: 'GAS' as any,  // ⭐ CORRIGÉ : 'gas' → 'GAS' as any
   subcategory: 'toxic_gas',
   description: 'Intoxication par CO, gaz inodore et mortel',
   severity: 'critical',
@@ -132,7 +132,7 @@ export const carbonMonoxide: Hazard = createNewHazard({
 export const oxygenDeficiency: Hazard = createNewHazard({
   id: 'oxygen_deficient_atmosphere',
   name: 'Déficience en oxygène',
-  category: 'gas',
+  category: 'GAS' as any,  // ⭐ CORRIGÉ : 'gas' → 'GAS' as any
   subcategory: 'atmosphere',
   description: 'Atmosphère avec moins de 19.5% d\'oxygène',
   severity: 'critical',
