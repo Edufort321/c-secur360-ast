@@ -27,7 +27,7 @@ const createNewHazard = (base: Partial<Hazard>): Hazard => {
 export const gasLeak: Hazard = createNewHazard({
   id: 'natural_gas_leak',
   name: 'Fuite de gaz naturel',
-  category: 'gas',
+  category: 'GAS' as any,
   subcategory: 'natural_gas',
   description: 'Risque d\'explosion, asphyxie par fuite de gaz',
   severity: 'critical',
