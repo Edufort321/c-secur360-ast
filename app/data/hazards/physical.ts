@@ -233,7 +233,7 @@ export const physicalHazards = [
 ];
 
 export const physicalHazardsById = physicalHazards.reduce((acc, hazard) => {
-  acc[hazard.id] = hazard;
+  acc[(hazard as any).id] = hazard;
   return acc;
 }, {} as Record<string, Hazard>);
 
