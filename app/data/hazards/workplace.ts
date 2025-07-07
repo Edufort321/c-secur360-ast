@@ -271,5 +271,4 @@ export const workplaceHazards = [
   vehiclePedestrianTraffic
 ];
 
-export { workplaceHazards };
 export default workplaceHazards;
