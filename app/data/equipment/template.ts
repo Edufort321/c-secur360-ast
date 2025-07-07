@@ -1,239 +1,311 @@
 // app/data/equipment/template.ts
+// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
+import { SafetyEquipment } from '../../types/equipment';
 
-// =================== TEMPLATE & TYPES ÉQUIPEMENTS ===================
-export interface SafetyEquipment {
-  id: string;
-  name: string;
-  displayName?: { fr: string; en: string };
-  category: EquipmentCategory;
-  subcategory?: string;
-  description: string;
-  
-  // Spécifications techniques
-  specifications: {
-    model?: string;
-    manufacturer?: string;
-    partNumber?: string;
-    size?: string;
-    weight?: string;
-    material?: string;
-    color?: string;
-  };
-  
-  // Certifications et normes
-  certifications: {
-    csa: string[];
-    ansi: string[];
-    en: string[];      // Normes européennes
-    iso: string[];     // Normes ISO
-    other: string[];   // Autres certifications
-  };
-  
-  // Protection fournie
-  protectionLevel: ProtectionLevel;
-  protectedBodyParts: BodyPart[];
-  hazardsProtectedAgainst: string[]; // IDs des dangers
-  
-  // Utilisation
-  usageInstructions: {
-    fr: string[];
-    en: string[];
-  };
-  limitationsUse: string[];
-  compatibility: string[]; // IDs équipements compatibles
-  incompatibility: string[]; // IDs équipements incompatibles
-  
-  // Inspection et maintenance
-  inspectionFrequency: InspectionFrequency;
-  inspectionCriteria: string[];
-  maintenanceInstructions: string[];
-  storageInstructions: string[];
-  
-  // Durée de vie
-  lifespanMonths?: number;
-  replacementCriteria: string[];
-  expirationWarning?: number; // Mois avant expiration
-  
-  // Conditions d'utilisation
-  temperatureRange?: { min: number; max: number; unit: string };
-  humidityRange?: { min: number; max: number; unit: string };
-  weatherLimitations: string[];
-  
-  // Coûts et disponibilité
-  estimatedCost?: {
-    amount: number;
-    currency: string;
-    unit: 'per_item' | 'per_set' | 'per_pair';
-  };
-  suppliers: string[];
-  availability: 'common' | 'specialized' | 'rare';
-  
-  // Formation requise
-  trainingRequired: boolean;
-  trainingType?: string[];
-  certificationRequired: boolean;
-  
-  // Métadonnées
-  isActive: boolean;
-  isMandatory: boolean; // Obligatoire par réglementation
-  createdAt: string;
-  updatedAt: string;
-  tags: string[];
-}
-
-export type EquipmentCategory = 
-  | 'ppe_head'
-  | 'ppe_eyes_face'
-  | 'ppe_respiratory'
-  | 'ppe_hearing'
-  | 'ppe_hands'
-  | 'ppe_feet'
-  | 'ppe_body'
-  | 'ppe_fall_protection'
-  | 'electrical_safety'
-  | 'mechanical_safety'
-  | 'chemical_safety'
-  | 'monitoring_detection'
-  | 'rescue_emergency'
-  | 'tools_equipment'
-  | 'communication'
-  | 'lighting';
-
-export type ProtectionLevel = 
-  | 'basic'      // Protection de base
-  | 'standard'   // Protection standard industrie
-  | 'enhanced'   // Protection renforcée
-  | 'specialized' // Protection spécialisée
-  | 'maximum';   // Protection maximale
-
-export type BodyPart = 
-  | 'head'
-  | 'eyes'
-  | 'face'
-  | 'ears'
-  | 'respiratory_system'
-  | 'neck'
-  | 'shoulders'
-  | 'arms'
-  | 'hands'
-  | 'fingers'
-  | 'torso'
-  | 'back'
-  | 'legs'
-  | 'knees'
-  | 'feet'
-  | 'whole_body';
-
-export type InspectionFrequency = 
-  | 'before_each_use'
-  | 'daily'
-  | 'weekly' 
-  | 'monthly'
-  | 'quarterly'
-  | 'annually'
-  | 'as_needed';
-
-// =================== HELPER FUNCTIONS ===================
-export function getProtectionLevelColor(level: ProtectionLevel): string {
-  const colors = {
-    basic: '#10b981',      // Vert
-    standard: '#3b82f6',   // Bleu
-    enhanced: '#f59e0b',   // Orange
-    specialized: '#8b5cf6', // Violet
-    maximum: '#ef4444'     // Rouge
-  };
-  return colors[level];
-}
-
-export function getProtectionLevelLabel(level: ProtectionLevel): { fr: string; en: string } {
-  const labels = {
-    basic: { fr: 'Base', en: 'Basic' },
-    standard: { fr: 'Standard', en: 'Standard' },
-    enhanced: { fr: 'Renforcée', en: 'Enhanced' },
-    specialized: { fr: 'Spécialisée', en: 'Specialized' },
-    maximum: { fr: 'Maximale', en: 'Maximum' }
-  };
-  return labels[level];
-}
-
-export function calculateEquipmentCost(equipment: SafetyEquipment[], quantity: number = 1): number {
-  return equipment.reduce((total, eq) => {
-    if (eq.estimatedCost) {
-      return total + (eq.estimatedCost.amount * quantity);
-    }
-    return total;
-  }, 0);
-}
-
-export function validateEquipmentCompatibility(equipmentIds: string[]): {
-  isCompatible: boolean;
-  conflicts: string[];
-  recommendations: string[];
-} {
-  // Cette fonction sera étendue avec la logique de compatibilité
+// =================== FONCTION HELPER ===================
+export const createNewEquipment = (base: any): SafetyEquipment => {
   return {
-    isCompatible: true,
-    conflicts: [],
-    recommendations: []
-  };
-}
-
-export function getExpiringEquipment(equipmentList: SafetyEquipment[], daysAhead: number = 30): SafetyEquipment[] {
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() + daysAhead);
-  
-  return equipmentList.filter(equipment => {
-    if (!equipment.lifespanMonths) return false;
-    
-    const purchaseDate = new Date(equipment.createdAt);
-    const expirationDate = new Date(purchaseDate);
-    expirationDate.setMonth(expirationDate.getMonth() + equipment.lifespanMonths);
-    
-    return expirationDate <= cutoffDate;
-  });
-}
-
-// =================== TEMPLATE DE BASE ===================
-export const equipmentTemplate: Omit<SafetyEquipment, 'id' | 'name' | 'category'> = {
-  description: '',
-  specifications: {},
-  certifications: {
-    csa: [],
-    ansi: [],
-    en: [],
-    iso: [],
-    other: []
-  },
-  protectionLevel: 'standard',
-  protectedBodyParts: [],
-  hazardsProtectedAgainst: [],
-  usageInstructions: {
-    fr: [],
-    en: []
-  },
-  limitationsUse: [],
-  compatibility: [],
-  incompatibility: [],
-  inspectionFrequency: 'before_each_use',
-  inspectionCriteria: [],
-  maintenanceInstructions: [],
-  storageInstructions: [],
-  replacementCriteria: [],
-  weatherLimitations: [],
-  suppliers: [],
-  availability: 'common',
-  trainingRequired: false,
-  certificationRequired: false,
-  isActive: true,
-  isMandatory: false,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  tags: []
+    // Valeurs par défaut
+    category: 'GENERAL' as any,
+    certifications: [] as any,
+    standards: [] as any,
+    isActive: true,
+    createdDate: new Date().toISOString(),
+    lastUpdated: new Date().toISOString(),
+    version: '1.0',
+    workTypes: [] as any,
+    hazardTypes: [] as any,
+    supplier: 'Supplier TBD',
+    cost: 0,
+    currency: 'CAD',
+    lifespan: '1 year',
+    inspectionFrequency: 'monthly',
+    // Merge avec les propriétés passées
+    ...base
+  } as SafetyEquipment;
 };
 
-export function createNewEquipment(overrides: Partial<SafetyEquipment> & Pick<SafetyEquipment, 'id' | 'name' | 'category'>): SafetyEquipment {
+// =================== FONCTIONS UTILITAIRES ===================
+
+export const getEquipmentCategoryColor = (category: string): string => {
+  switch (category) {
+    case 'HEAD_PROTECTION': return 'text-blue-600';
+    case 'EYE_PROTECTION': return 'text-green-600';
+    case 'HEARING_PROTECTION': return 'text-purple-600';
+    case 'RESPIRATORY_PROTECTION': return 'text-red-600';
+    case 'HAND_PROTECTION': return 'text-yellow-600';
+    case 'FOOT_PROTECTION': return 'text-indigo-600';
+    case 'BODY_PROTECTION': return 'text-orange-600';
+    case 'FALL_PROTECTION': return 'text-pink-600';
+    case 'ELECTRICAL': return 'text-cyan-600';
+    case 'EMERGENCY': return 'text-red-700';
+    case 'TOOLS': return 'text-gray-600';
+    case 'DETECTION': return 'text-emerald-600';
+    default: return 'text-gray-600';
+  }
+};
+
+export const getEquipmentCategoryLabel = (category: string): string => {
+  switch (category) {
+    case 'HEAD_PROTECTION': return 'Protection de la tête';
+    case 'EYE_PROTECTION': return 'Protection oculaire';
+    case 'HEARING_PROTECTION': return 'Protection auditive';
+    case 'RESPIRATORY_PROTECTION': return 'Protection respiratoire';
+    case 'HAND_PROTECTION': return 'Protection des mains';
+    case 'FOOT_PROTECTION': return 'Protection des pieds';
+    case 'BODY_PROTECTION': return 'Protection du corps';
+    case 'FALL_PROTECTION': return 'Protection antichute';
+    case 'ELECTRICAL': return 'Équipement électrique';
+    case 'EMERGENCY': return 'Équipement d\'urgence';
+    case 'TOOLS': return 'Outils et équipements';
+    case 'DETECTION': return 'Détection et mesure';
+    default: return 'Général';
+  }
+};
+
+export const calculateEquipmentLifespan = (purchaseDate: string, lifespanMonths: number): {
+  remainingMonths: number;
+  expirationDate: string;
+  isExpired: boolean;
+  warningLevel: 'none' | 'warning' | 'critical';
+} => {
+  const purchase = new Date(purchaseDate);
+  const expiration = new Date(purchase);
+  expiration.setMonth(expiration.getMonth() + lifespanMonths);
+  
+  const now = new Date();
+  const diffTime = expiration.getTime() - now.getTime();
+  const diffMonths = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30));
+  
+  let warningLevel: 'none' | 'warning' | 'critical' = 'none';
+  if (diffMonths <= 0) {
+    warningLevel = 'critical';
+  } else if (diffMonths <= 2) {
+    warningLevel = 'warning';
+  }
+  
   return {
-    ...equipmentTemplate,
-    ...overrides
+    remainingMonths: Math.max(0, diffMonths),
+    expirationDate: expiration.toISOString(),
+    isExpired: diffMonths <= 0,
+    warningLevel
   };
+};
+
+export const validateEquipmentData = (equipment: Partial<SafetyEquipment>): {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+} => {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  // Validation obligatoire
+  if (!equipment.id) errors.push('ID est requis');
+  if (!equipment.name) errors.push('Nom est requis');
+  if (!equipment.category) errors.push('Catégorie est requise');
+  if (!equipment.description) errors.push('Description est requise');
+  
+  // Validation recommandée
+  if (!equipment.supplier || equipment.supplier === 'Supplier TBD') {
+    warnings.push('Fournisseur non spécifié');
+  }
+  if (!equipment.cost || equipment.cost === 0) {
+    warnings.push('Coût non spécifié');
+  }
+  if (!equipment.certifications || equipment.certifications.length === 0) {
+    warnings.push('Aucune certification spécifiée');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  };
+};
+
+export const getEquipmentInspectionStatus = (equipment: SafetyEquipment): {
+  status: 'current' | 'due' | 'overdue';
+  nextInspectionDate: string;
+  daysUntilInspection: number;
+} => {
+  const lastInspection = new Date(equipment.lastUpdated);
+  const frequency = equipment.inspectionFrequency;
+  
+  let intervalDays = 30; // par défaut mensuel
+  switch (frequency) {
+    case 'daily': intervalDays = 1; break;
+    case 'weekly': intervalDays = 7; break;
+    case 'monthly': intervalDays = 30; break;
+    case 'quarterly': intervalDays = 90; break;
+    case 'annually': intervalDays = 365; break;
+    case 'before each use': intervalDays = 0; break;
+  }
+  
+  const nextInspection = new Date(lastInspection);
+  nextInspection.setDate(nextInspection.getDate() + intervalDays);
+  
+  const now = new Date();
+  const diffTime = nextInspection.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  let status: 'current' | 'due' | 'overdue' = 'current';
+  if (diffDays <= 0) {
+    status = 'overdue';
+  } else if (diffDays <= 7) {
+    status = 'due';
+  }
+  
+  return {
+    status,
+    nextInspectionDate: nextInspection.toISOString(),
+    daysUntilInspection: diffDays
+  };
+};
+
+export const filterEquipmentByWorkType = (
+  equipment: SafetyEquipment[], 
+  workType: string
+): SafetyEquipment[] => {
+  return equipment.filter(item => 
+    item.workTypes && (item.workTypes as any).includes(workType)
+  );
+};
+
+export const filterEquipmentByHazard = (
+  equipment: SafetyEquipment[], 
+  hazardType: string
+): SafetyEquipment[] => {
+  return equipment.filter(item => 
+    item.hazardTypes && (item.hazardTypes as any).includes(hazardType)
+  );
+};
+
+export const searchEquipment = (
+  equipment: SafetyEquipment[], 
+  searchTerm: string
+): SafetyEquipment[] => {
+  const term = searchTerm.toLowerCase();
+  return equipment.filter(item => 
+    item.name.toLowerCase().includes(term) ||
+    item.description.toLowerCase().includes(term) ||
+    (item.subcategory && item.subcategory.toLowerCase().includes(term)) ||
+    (item.supplier && item.supplier.toLowerCase().includes(term))
+  );
+};
+
+export const sortEquipmentByCost = (
+  equipment: SafetyEquipment[], 
+  direction: 'asc' | 'desc' = 'asc'
+): SafetyEquipment[] => {
+  return [...equipment].sort((a, b) => {
+    const costA = a.cost || 0;
+    const costB = b.cost || 0;
+    return direction === 'asc' ? costA - costB : costB - costA;
+  });
+};
+
+export const groupEquipmentByCategory = (
+  equipment: SafetyEquipment[]
+): Record<string, SafetyEquipment[]> => {
+  return equipment.reduce((groups, item) => {
+    const category = item.category as string;
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+    groups[category].push(item);
+    return groups;
+  }, {} as Record<string, SafetyEquipment[]>);
+};
+
+export const calculateTotalEquipmentCost = (equipment: SafetyEquipment[]): {
+  totalCost: number;
+  currency: string;
+  breakdown: Record<string, number>;
+} => {
+  const breakdown: Record<string, number> = {};
+  let totalCost = 0;
+  let currency = 'CAD';
+  
+  equipment.forEach(item => {
+    const category = item.category as string;
+    const cost = item.cost || 0;
+    
+    if (!breakdown[category]) {
+      breakdown[category] = 0;
+    }
+    breakdown[category] += cost;
+    totalCost += cost;
+    
+    if (item.currency) {
+      currency = item.currency;
+    }
+  });
+  
+  return { totalCost, currency, breakdown };
+};
+
+// =================== TYPES POUR COMPATIBILITÉ ===================
+
+export interface EquipmentValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
 }
+
+export interface EquipmentInspectionStatus {
+  status: 'current' | 'due' | 'overdue';
+  nextInspectionDate: string;
+  daysUntilInspection: number;
+}
+
+export interface EquipmentLifespanInfo {
+  remainingMonths: number;
+  expirationDate: string;
+  isExpired: boolean;
+  warningLevel: 'none' | 'warning' | 'critical';
+}
+
+export interface EquipmentCostBreakdown {
+  totalCost: number;
+  currency: string;
+  breakdown: Record<string, number>;
+}
+
+// =================== CONSTANTES UTILITAIRES ===================
+
+export const EQUIPMENT_CATEGORIES = [
+  'HEAD_PROTECTION',
+  'EYE_PROTECTION', 
+  'HEARING_PROTECTION',
+  'RESPIRATORY_PROTECTION',
+  'HAND_PROTECTION',
+  'FOOT_PROTECTION',
+  'BODY_PROTECTION',
+  'FALL_PROTECTION',
+  'ELECTRICAL',
+  'EMERGENCY',
+  'TOOLS',
+  'DETECTION'
+] as const;
+
+export const INSPECTION_FREQUENCIES = [
+  'before each use',
+  'daily',
+  'weekly', 
+  'monthly',
+  'quarterly',
+  'annually'
+] as const;
+
+export const EQUIPMENT_STATUSES = [
+  'active',
+  'inactive',
+  'maintenance',
+  'retired',
+  'damaged'
+] as const;
+
+// =================== EXPORTS ===================
+
+export type { SafetyEquipment } from '../../types/equipment';
