@@ -386,7 +386,36 @@ export type InspectionResult = MaintenanceRecord['results'];
 
 // ⭐ COMPATIBILITÉ AVEC LES AUTRES FICHIERS
 export interface Equipment extends SafetyEquipment {}
+
 export interface EquipmentSpecifications {
+  model?: string;
+  manufacturer?: string;
+  partNumber?: string;
+  size?: string;
+  weight?: number;
+  dimensions?: {
+    length?: number;
+    width?: number;
+    height?: number;
+    units: 'mm' | 'cm' | 'm';
+  };
+  material?: string;
+  color?: string;
+  backgroundMaterial?: string;
+  retroreflectiveTape?: string;
+  colors?: string;
+  voltage?: string;
+  current?: string;
+  resistance?: string;
+  detectionRange?: string;
+  accuracy?: string;
+  calibrationDate?: string;
+  breakingStrength?: string;
+  elongation?: string;
+  webbing?: string;
+  [key: string]: any;
+}
+
 export interface SelectedEquipment {
   equipmentId: string;
   equipment: Equipment;
