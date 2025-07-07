@@ -1,490 +1,207 @@
 // app/data/equipment/eye-protection.ts
-import { SafetyEquipment, createNewEquipment } from './template';
+// ⭐ IMPORT CORRIGÉ - Utilise la nouvelle interface
+import { SafetyEquipment } from '../../types/equipment';
 
-// =================== PROTECTION DES YEUX ET DU VISAGE ===================
+// Fonction helper pour créer un équipement
+const createNewEquipment = (base: Partial<SafetyEquipment>): SafetyEquipment => {
+  return {
+    // Valeurs par défaut
+    certifications: [],
+    standards: [],
+    isActive: true,
+    createdDate: new Date().toISOString(),
+    lastUpdated: new Date().toISOString(),
+    version: '1.0',
+    workTypes: [],
+    hazardTypes: [],
+    supplier: 'Supplier TBD',
+    cost: 0,
+    currency: 'CAD',
+    lifespan: '1 year',
+    inspectionFrequency: 'monthly',
+    // Merge avec les propriétés passées
+    ...base
+  } as SafetyEquipment;
+};
 
-export const safetyGlassesBasic: SafetyEquipment = createNewEquipment({
-  id: 'safety_glasses_z94_3',
-  name: 'Lunettes de sécurité CSA Z94.3',
-  category: 'ppe_eyes_face',
+// =================== PROTECTION OCULAIRE ===================
+
+export const safetyGlasses: SafetyEquipment = createNewEquipment({
+  id: 'safety_glasses_wraparound',
+  name: 'Lunettes de sécurité enveloppantes',
+  category: 'eye-protection',
   subcategory: 'safety_glasses',
-  displayName: {
-    fr: 'Lunettes de protection CSA Z94.3',
-    en: 'CSA Z94.3 safety glasses'
-  },
-  description: 'Lunettes de protection contre projections et impacts légers',
+  description: 'Protection oculaire de base polyvalente',
   
   specifications: {
-    model: 'CSA Z94.3',
-    material: 'Polycarbonate anti-rayures',
-    weight: '25-35g',
-    uvProtection: '99.9% UV-A et UV-B'
+    lensType: 'Polycarbonate clair',
+    impactRating: 'ANSI Z87.1+ haute vélocité',
+    uvProtection: '99.9% UV-A/UV-B',
+    coatings: 'Anti-rayures, anti-buée',
+    sideShields: 'Protection latérale intégrée',
+    nosebridge: 'Pont nasal ajustable',
+    temples: 'Branches réglables',
+    weight: '25 grammes'
   },
   
-  certifications: {
-    csa: ['CSA Z94.3'],
-    ansi: ['ANSI Z87.1'],
-    en: ['EN 166'],
-    iso: ['ISO 12312-1'],
-    other: []
-  },
+  certifications: ['CSA Z94.3', 'ANSI Z87.1+'],
+  standards: ['CSA Z94.3', 'ANSI Z87.1'],
   
-  protectionLevel: 'standard',
-  protectedBodyParts: ['eyes'],
-  hazardsProtectedAgainst: [
-    'flying_particles',
-    'dust_particles',
-    'uv_radiation',
-    'wind_debris'
-  ],
+  supplier: '3M',
+  cost: 8,
+  currency: 'CAD',
+  lifespan: '1 year',
+  lifespanMonths: 12,
+  inspectionFrequency: 'before each use',
   
-  usageInstructions: {
-    fr: [
-      'Ajuster branches confortablement derrière oreilles',
-      'Vérifier couverture complète champ visuel',
-      'Nettoyer avec eau savonneuse tiède',
-      'Sécher avec tissu doux non abrasif'
-    ],
-    en: [
-      'Adjust temples comfortably behind ears',
-      'Ensure complete visual field coverage',
-      'Clean with warm soapy water',
-      'Dry with soft non-abrasive cloth'
-    ]
-  },
+  workTypes: ['construction_general', 'excavation'],
+  hazardTypes: ['flying_particles', 'dust', 'chemical_splash'],
   
-  limitationsUse: [
-    'Ne protège pas contre projections chimiques',
-    'Protection latérale limitée',
-    'Remplacer si rayures importantes',
-    'Ne convient pas pour soudage'
-  ],
-  
-  compatibility: [
-    'safety_helmet_class_e',
-    'hearing_protection_coquilles'
-  ],
-  
-  incompatibility: [
-    'welding_helmet_auto_darkening'
-  ],
-  
-  inspectionFrequency: 'before_each_use',
-  inspectionCriteria: [
-    'Verres sans rayures obstruant vision',
-    'Monture non déformée ou cassée',
-    'Branches bien fixées',
-    'Plaquettes nasales en bon état',
-    'Absence de fissures dans verres'
-  ],
-  
-  maintenanceInstructions: [
-    'Nettoyer quotidiennement si utilisé',
-    'Utiliser produits nettoyants non abrasifs',
-    'Ranger dans étui protecteur',
-    'Éviter contact avec solvants'
-  ],
-  
-  storageInstructions: [
-    'Ranger dans étui rigide',
-    'Éviter exposition chaleur excessive',
-    'Stocker verres vers le haut'
-  ],
-  
-  lifespanMonths: 24,
-  replacementCriteria: [
-    'Rayures importantes dans champ vision',
-    'Monture cassée ou déformée',
-    'Perte d\'ajustement',
-    'Verres fissurés ou ébréchés'
-  ],
-  
-  estimatedCost: {
-    amount: 15,
-    currency: 'CAD',
-    unit: 'per_item'
-  },
-  
-  suppliers: ['3M', 'Uvex', 'Honeywell', 'MCR Safety', 'Pyramex'],
-  availability: 'common',
-  
-  tags: ['lunettes', 'projections', 'uv', 'polycarbonate', 'standard']
+  isActive: true
 });
 
-export const chemicalGoggles: SafetyEquipment = createNewEquipment({
-  id: 'chemical_safety_goggles',
-  name: 'Lunettes étanches chimiques',
-  category: 'ppe_eyes_face',
+export const safetyGoggles: SafetyEquipment = createNewEquipment({
+  id: 'safety_goggles_chemical',
+  name: 'Lunettes étanches protection chimique',
+  category: 'eye-protection',
   subcategory: 'chemical_goggles',
-  displayName: {
-    fr: 'Lunettes de protection chimique étanches',
-    en: 'Chemical splash safety goggles'
-  },
-  description: 'Protection étanche contre éclaboussures de produits chimiques',
+  description: 'Protection hermétique contre vapeurs chimiques',
   
   specifications: {
-    model: 'CSA Z94.3 Type indirect vent',
-    material: 'Polycarbonate + joints étanches',
-    weight: '80-120g',
-    ventilation: 'Indirecte avec filtres'
+    sealType: 'Joint néoprène hermétique',
+    lensType: 'Polycarbonate résistant chimique',
+    ventilation: 'Valves anti-buée indirectes',
+    chemicalResistance: 'Acides, bases, solvants',
+    fogResistance: 'Traitement anti-buée',
+    headstrap: 'Sangle élastique ajustable',
+    overGlasses: 'Compatible lunettes prescription',
+    cleanability: 'Nettoyage facile'
   },
   
-  certifications: {
-    csa: ['CSA Z94.3'],
-    ansi: ['ANSI Z87.1'],
-    en: ['EN 166', 'EN 172'],
-    iso: [],
-    other: []
-  },
+  certifications: ['CSA Z94.3', 'ANSI Z87.1', 'EN 166'],
+  standards: ['CSA Z94.3', 'EN 166'],
   
-  protectionLevel: 'enhanced',
-  protectedBodyParts: ['eyes', 'area_around_eyes'],
-  hazardsProtectedAgainst: [
-    'hazardous_chemical_exposure',
-    'chemical_splash',
-    'corrosive_acids_bases',
-    'organic_solvents_vapors'
-  ],
+  supplier: 'Uvex',
+  cost: 18,
+  currency: 'CAD',
+  lifespan: '2 years',
+  lifespanMonths: 24,
+  inspectionFrequency: 'before each use',
   
-  usageInstructions: {
-    fr: [
-      'Ajuster sangle élastique confortablement',
-      'Vérifier étanchéité complète périmètre',
-      'Ajuster ventilation selon environnement',
-      'Nettoyer immédiatement après exposition chimique'
-    ],
-    en: [
-      'Adjust elastic strap comfortably',
-      'Ensure complete perimeter seal',
-      'Adjust ventilation per environment',
-      'Clean immediately after chemical exposure'
-    ]
-  },
+  workTypes: ['environmental_cleanup', 'confined_space'],
+  hazardTypes: ['toxic_exposure', 'chemical_burns', 'vapors'],
   
-  limitationsUse: [
-    'Ventilation réduite peut causer buée',
-    'Port prolongé peut être inconfortable',
-    'Champ visuel réduit vs lunettes',
-    'Compatibilité limitée avec autres EPI'
-  ],
-  
-  compatibility: [
-    'chemical_resistant_gloves',
-    'chemical_suit'
-  ],
-  
-  incompatibility: [
-    'safety_helmet_class_e',
-    'hearing_protection_coquilles'
-  ],
-  
-  inspectionFrequency: 'before_each_use',
-  inspectionCriteria: [
-    'Joints d\'étanchéité intacts',
-    'Sangle élastique fonctionnelle',
-    'Ventilation non obstruée',
-    'Verres propres et sans dommage',
-    'Absence de fissures matériau'
-  ],
-  
-  maintenanceInstructions: [
-    'Rincer abondamment après usage chimique',
-    'Désinfecter selon produits exposés',
-    'Sécher complètement avant rangement',
-    'Remplacer joints si dégradés'
-  ],
-  
-  lifespanMonths: 18,
-  
-  temperatureRange: { min: -10, max: 60, unit: '°C' },
-  
-  estimatedCost: {
-    amount: 35,
-    currency: 'CAD',
-    unit: 'per_item'
-  },
-  
-  suppliers: ['Uvex', '3M', 'Honeywell', 'MSA'],
-  availability: 'specialized',
-  
-  trainingRequired: true,
-  trainingType: [
-    'Ajustement correct pour étanchéité',
-    'Procédures décontamination',
-    'Limitations et incompatibilités'
-  ],
-  
-  tags: ['chimiques', 'étanches', 'éclaboussures', 'ventilation_indirecte']
+  isActive: true
 });
 
-export const weldingShade: SafetyEquipment = createNewEquipment({
-  id: 'welding_shade_glasses',
-  name: 'Lunettes de soudage teintées',
-  category: 'ppe_eyes_face',
-  subcategory: 'welding_glasses',
-  displayName: {
-    fr: 'Lunettes de protection soudage',
-    en: 'Welding shade safety glasses'
-  },
-  description: 'Protection contre radiations de soudage léger et meulage',
+export const weldingGoggles: SafetyEquipment = createNewEquipment({
+  id: 'welding_goggles_shade5',
+  name: 'Lunettes de soudage teinte 5',
+  category: 'eye-protection',
+  subcategory: 'welding_goggles',
+  description: 'Protection soudage/oxycoupage léger',
   
   specifications: {
-    model: 'Shade 3-5',
-    material: 'Verres filtrants IR/UV',
-    weight: '40-60g',
-    shadeRange: 'Shade 3, 5 disponibles'
+    shadeLevel: 'DIN 5 fixe',
+    lensType: 'Verre teinté résistant impact',
+    application: 'Soudage gaz, brasage, oxycoupage',
+    sideShields: 'Protection latérale renforcée',
+    headstrap: 'Sangle élastique confortable',
+    ventilation: 'Évents latéraux filtrés',
+    replacement: 'Verres de rechange disponibles',
+    comfort: 'Coussinets mousse'
   },
   
-  certifications: {
-    csa: ['CSA Z94.3', 'CSA W117.2'],
-    ansi: ['ANSI Z87.1', 'ANSI Z49.1'],
-    en: ['EN 166', 'EN 169'],
-    iso: [],
-    other: []
-  },
+  certifications: ['CSA Z94.3', 'ANSI Z87.1', 'EN 175'],
+  standards: ['CSA Z94.3', 'EN 175'],
   
-  protectionLevel: 'specialized',
-  protectedBodyParts: ['eyes'],
-  hazardsProtectedAgainst: [
-    'welding_radiation',
-    'infrared_radiation',
-    'uv_radiation',
-    'grinding_sparks'
-  ],
-  
-  usageInstructions: {
-    fr: [
-      'Choisir teinte selon procédé soudage',
-      'Shade 3: meulage, coupage oxygène léger',
-      'Shade 5: soudage gaz, brasage',
-      'Ne pas utiliser pour soudage arc électrique'
-    ],
-    en: [
-      'Select shade per welding process',
-      'Shade 3: grinding, light oxy cutting',
-      'Shade 5: gas welding, brazing',
-      'Do not use for electric arc welding'
-    ]
-  },
-  
-  limitationsUse: [
-    'NE PAS utiliser pour soudage >50A',
-    'Ne protège pas contre projections métalliques',
-    'Vision réduite en faible luminosité',
-    'Ne remplace pas casque de soudage complet'
-  ],
-  
-  inspectionFrequency: 'before_each_use',
-  
+  supplier: 'Jackson Safety',
+  cost: 25,
+  currency: 'CAD',
+  lifespan: '3 years',
   lifespanMonths: 36,
+  inspectionFrequency: 'before each use',
   
-  estimatedCost: {
-    amount: 25,
-    currency: 'CAD',
-    unit: 'per_item'
-  },
+  workTypes: ['welding', 'cutting_torch'],
+  hazardTypes: ['welding_radiation', 'infrared_radiation', 'sparks'],
   
-  availability: 'specialized',
-  
-  trainingRequired: true,
-  trainingType: [
-    'Sélection teinte appropriée',
-    'Limitations selon procédés'
-  ],
-  
-  tags: ['soudage', 'teintées', 'shade', 'radiations', 'meulage']
+  isActive: true
 });
 
-export const faceShieldPolycarbonate: SafetyEquipment = createNewEquipment({
+export const faceShield: SafetyEquipment = createNewEquipment({
   id: 'face_shield_polycarbonate',
   name: 'Écran facial polycarbonate',
-  category: 'ppe_eyes_face',
+  category: 'eye-protection',
   subcategory: 'face_shield',
-  displayName: {
-    fr: 'Écran de protection facial',
-    en: 'Polycarbonate face shield'
-  },
-  description: 'Protection complète du visage contre projections et impacts',
+  description: 'Protection faciale complète',
   
   specifications: {
-    model: 'CSA Z94.3',
     material: 'Polycarbonate 1.0mm',
-    weight: '150-200g',
-    coverage: 'Front et côtés partiels'
+    coverage: 'Protection frontale complète',
+    opticalClass: 'Classe 1 - Distorsion minimale',
+    thickness: '1.0mm résistant impact',
+    headgear: 'Serre-tête réglable',
+    flipUp: 'Relevable pour visibilité',
+    replacement: 'Écrans remplaçables',
+    compatibility: 'Compatible lunettes dessous'
   },
   
-  certifications: {
-    csa: ['CSA Z94.3'],
-    ansi: ['ANSI Z87.1'],
-    en: ['EN 166'],
-    iso: [],
-    other: []
-  },
+  certifications: ['CSA Z94.3', 'ANSI Z87.1+'],
+  standards: ['CSA Z94.3', 'ANSI Z87.1'],
   
-  protectionLevel: 'enhanced',
-  protectedBodyParts: ['face', 'eyes', 'forehead', 'chin'],
-  hazardsProtectedAgainst: [
-    'chemical_splash',
-    'metal_splatter',
-    'flying_particles',
-    'grinding_sparks',
-    'biological_droplets'
-  ],
+  supplier: 'Honeywell',
+  cost: 35,
+  currency: 'CAD',
+  lifespan: '2 years',
+  lifespanMonths: 24,
+  inspectionFrequency: 'before each use',
   
-  usageInstructions: {
-    fr: [
-      'Ajuster bandeau ou fixer sur casque',
-      'Positionner à 2-3cm du visage',
-      'Utiliser AVEC lunettes de sécurité',
-      'Incliner légèrement vers arrière'
-    ],
-    en: [
-      'Adjust headgear or mount on helmet',
-      'Position 2-3cm from face',
-      'Use WITH safety glasses',
-      'Tilt slightly backward'
-    ]
-  },
+  workTypes: ['grinding', 'chemical_handling'],
+  hazardTypes: ['flying_particles', 'chemical_splash', 'sparks'],
   
-  limitationsUse: [
-    'NE REMPLACE PAS les lunettes de sécurité',
-    'Protection latérale limitée',
-    'Peut créer reflets par éclairage',
-    'Ventilation réduite'
-  ],
-  
-  compatibility: [
-    'safety_helmet_class_e',
-    'safety_glasses_z94_3',
-    'chemical_safety_goggles'
-  ],
-  
-  inspectionFrequency: 'before_each_use',
-  inspectionCriteria: [
-    'Écran sans rayures importantes',
-    'Fixation solide bandeau/casque',
-    'Absence de fissures',
-    'Mécanisme d\'ajustement fonctionnel'
-  ],
-  
-  maintenanceInstructions: [
-    'Nettoyer avec détergent doux',
-    'Éviter produits abrasifs',
-    'Sécher avec tissu antistatique',
-    'Désinfecter si exposition biologique'
-  ],
-  
-  lifespanMonths: 30,
-  replacementCriteria: [
-    'Rayures obstruant vision',
-    'Fissures dans matériau',
-    'Déformation permanente',
-    'Perte de transparence'
-  ],
-  
-  estimatedCost: {
-    amount: 20,
-    currency: 'CAD',
-    unit: 'per_item'
-  },
-  
-  suppliers: ['3M', 'Honeywell', 'Jackson Safety', 'MCR Safety'],
-  availability: 'common',
-  
-  tags: ['écran_facial', 'projections', 'complémentaire', 'polycarbonate']
+  isActive: true
 });
 
 export const laserSafetyGlasses: SafetyEquipment = createNewEquipment({
-  id: 'laser_safety_glasses_nd_yag',
-  name: 'Lunettes protection laser',
-  category: 'ppe_eyes_face',
-  subcategory: 'laser_glasses',
-  displayName: {
-    fr: 'Lunettes de protection laser Nd:YAG',
-    en: 'Nd:YAG laser safety glasses'
-  },
-  description: 'Protection spécialisée contre rayonnements laser spécifiques',
+  id: 'laser_safety_glasses_1064nm',
+  name: 'Lunettes protection laser 1064nm',
+  category: 'eye-protection',
+  subcategory: 'laser_safety',
+  description: 'Protection spécialisée contre lasers',
   
   specifications: {
-    model: 'OD4+ @ 1064nm',
-    material: 'Verre filtrant laser',
-    weight: '45-65g',
-    wavelength: '1064nm (Nd:YAG)'
+    wavelength: '1064nm (Nd:YAG)',
+    opticalDensity: 'OD 7+ à 1064nm',
+    laserType: 'Classe 4 Nd:YAG',
+    transmission: '20% lumière visible',
+    material: 'Polycarbonate filtrant',
+    sideProtection: 'Coques latérales étanches',
+    certification: 'Marquage CE laser',
+    testStandard: 'EN 207'
   },
   
-  certifications: {
-    csa: [],
-    ansi: ['ANSI Z136.1'],
-    en: ['EN 207', 'EN 208'],
-    iso: ['ISO 12254'],
-    other: ['FDA 21CFR1040']
-  },
+  certifications: ['EN 207', 'FDA Laser Safety'],
+  standards: ['EN 207', 'IEC 60825-1'],
   
-  protectionLevel: 'specialized',
-  protectedBodyParts: ['eyes', 'retina'],
-  hazardsProtectedAgainst: [
-    'laser_radiation_1064nm',
-    'infrared_radiation'
-  ],
-  
-  usageInstructions: {
-    fr: [
-      'Vérifier longueur d\'onde laser avant usage',
-      'Porter en permanence en zone laser',
-      'Vérifier densité optique requise',
-      'Ne jamais regarder directement faisceau'
-    ],
-    en: [
-      'Verify laser wavelength before use',
-      'Wear continuously in laser area',
-      'Check required optical density',
-      'Never look directly at beam'
-    ]
-  },
-  
-  limitationsUse: [
-    'SPÉCIFIQUE à longueur d\'onde indiquée',
-    'Ne protège pas autres longueurs d\'onde',
-    'Vision des couleurs altérée',
-    'Transmission lumière réduite'
-  ],
-  
-  inspectionFrequency: 'before_each_use',
-  inspectionCriteria: [
-    'Verres intacts sans dommage',
-    'Marquage longueur d\'onde lisible',
-    'Densité optique confirmée',
-    'Ajustement sécuritaire'
-  ],
-  
+  supplier: 'Laservision',
+  cost: 285,
+  currency: 'CAD',
+  lifespan: '5 years',
   lifespanMonths: 60,
+  inspectionFrequency: 'before each use',
   
-  estimatedCost: {
-    amount: 150,
-    currency: 'CAD',
-    unit: 'per_item'
-  },
+  workTypes: ['laser_operations', 'research'],
+  hazardTypes: ['laser_radiation', 'eye_damage', 'retinal_burns'],
   
-  suppliers: ['Thorlabs', 'Edmund Optics', 'Newport', 'Laser Safety Industries'],
-  availability: 'specialized',
-  
-  trainingRequired: true,
-  trainingType: [
-    'Sécurité laser niveaux 3B/4',
-    'Sélection EPI laser approprié',
-    'Procédures urgence laser'
-  ],
-  certificationRequired: true,
-  
-  tags: ['laser', 'nd_yag', '1064nm', 'spécialisé', 'od4']
+  isActive: true
 });
 
-// =================== EXPORT PROTECTION YEUX ===================
+// =================== EXPORT PROTECTION OCULAIRE ===================
 export const eyeProtectionEquipment = [
-  safetyGlassesBasic,
-  chemicalGoggles,
-  weldingShade,
-  faceShieldPolycarbonate,
+  safetyGlasses,
+  safetyGoggles,
+  weldingGoggles,
+  faceShield,
   laserSafetyGlasses
 ];
 
