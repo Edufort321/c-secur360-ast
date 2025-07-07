@@ -7,6 +7,21 @@ import {
   SeverityLevel 
 } from './index';
 
+// =================== MATRICE DE RISQUE ===================
+export interface RiskMatrixData {
+  severity: RiskLevel;
+  likelihood: RiskLevel;
+  resultingRisk: RiskLevel;
+  mitigationRequired: boolean;
+  acceptableRisk: boolean;
+  matrixPosition?: {
+    row: number;
+    column: number;
+  };
+  riskScore?: number;
+  notes?: string;
+}
+
 // =================== TYPES AST PRINCIPAUX ===================
 export interface AST extends BaseEntity {
   // Informations de base
@@ -60,6 +75,15 @@ export interface AST extends BaseEntity {
   // Configuration
   template?: ASTTemplate;
   customFields?: CustomField[];
+}
+
+export interface CustomField {
+  id: string;
+  name: string;
+  type: 'text' | 'number' | 'boolean' | 'date' | 'select';
+  value: any;
+  required?: boolean;
+  options?: string[];
 }
 
 export interface ProjectInfo {
@@ -304,6 +328,15 @@ export interface ASTStep {
   blockers?: StepBlocker[];
 }
 
+export interface StepBlocker {
+  id: string;
+  description: string;
+  type: 'dependency' | 'resource' | 'approval' | 'external';
+  severity: 'minor' | 'major' | 'critical';
+  estimatedResolution?: string;
+  owner?: string;
+}
+
 export type StepData = 
   | ProjectInfoData
   | ParticipantsData
@@ -367,6 +400,122 @@ export interface ReviewValidationData {
   reviewComments: ReviewComment[];
   validationChecklist: ValidationChecklist;
   finalRecommendations?: string[];
+}
+
+// =================== INTERFACES AUXILIAIRES POUR STEP DATA ===================
+
+export interface ControlMeasureImplementation {
+  id: string;
+  hazardId: string;
+  type: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
+  description: string;
+  effectiveness: 'low' | 'medium' | 'high';
+  implementation: 'immediate' | 'short_term' | 'long_term';
+  responsible: string;
+  status: 'planned' | 'in_progress' | 'implemented' | 'verified';
+}
+
+export interface HierarchyCompliance {
+  eliminationScore: number;
+  substitutionScore: number;
+  engineeringScore: number;
+  administrativeScore: number;
+  ppeScore: number;
+  overallCompliance: 'poor' | 'fair' | 'good' | 'excellent';
+}
+
+export interface ControlEffectiveness {
+  controlId: string;
+  effectiveness: number; // 0-100%
+  verificationMethod: string;
+  verifiedBy: string;
+  verificationDate: string;
+  notes?: string;
+}
+
+export interface StepRiskAssessment {
+  id: string;
+  hazardId: string;
+  initialRisk: RiskLevel;
+  controlMeasures: string[];
+  residualRisk: RiskLevel;
+  acceptable: boolean;
+  justification?: string;
+}
+
+export interface ResidualRisk {
+  hazardId: string;
+  riskLevel: RiskLevel;
+  acceptanceRationale: string;
+  additionalControls?: string[];
+  monitoringRequired: boolean;
+  reviewDate?: string;
+}
+
+export interface RiskAcceptanceCriteria {
+  lowRisk: string;
+  mediumRisk: string;
+  highRisk: string;
+  criticalRisk: string;
+  alarpPrinciple: boolean;
+}
+
+export interface EmergencyProcedure {
+  id: string;
+  type: 'medical' | 'fire' | 'evacuation' | 'chemical_spill' | 'equipment_failure';
+  description: string;
+  steps: string[];
+  contacts: string[];
+  equipment?: string[];
+}
+
+export interface EvacuationPlan {
+  primaryRoute: string;
+  alternativeRoutes: string[];
+  assemblyPoint: string;
+  responsibilities: EvacuationResponsibility[];
+}
+
+export interface EvacuationResponsibility {
+  role: string;
+  responsibility: string;
+  person?: string;
+}
+
+export interface EmergencyContact {
+  name: string;
+  role: string;
+  phone: string;
+  alternatePhone?: string;
+  availability: string;
+}
+
+export interface ReviewComment {
+  id: string;
+  stepNumber?: number;
+  comment: string;
+  type: 'suggestion' | 'concern' | 'improvement' | 'compliment';
+  priority: 'low' | 'medium' | 'high';
+  author: string;
+  timestamp: string;
+  resolved: boolean;
+  response?: string;
+}
+
+export interface ValidationChecklist {
+  items: ValidationChecklistItem[];
+  completionPercentage: number;
+  overallStatus: 'incomplete' | 'complete' | 'needs_attention';
+}
+
+export interface ValidationChecklistItem {
+  id: string;
+  description: string;
+  isChecked: boolean;
+  isRequired: boolean;
+  notes?: string;
+  verifiedBy?: string;
+  verificationDate?: string;
 }
 
 // =================== VALIDATION ET APPROBATION ===================
