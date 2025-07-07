@@ -1,8 +1,6 @@
 // app/data/hazards/electrical.ts
-// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
 import { Hazard } from '../../types/hazards';
 
-// Fonction helper pour créer un danger
 const createNewHazard = (base: any): Hazard => {
   return {
     category: 'ELECTRICAL' as any,
@@ -16,12 +14,9 @@ const createNewHazard = (base: any): Hazard => {
     isActive: true,
     createdDate: new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
-    // Merge avec les propriétés passées
     ...base
   } as Hazard;
 };
-
-// =================== DANGERS ÉLECTRIQUES ===================
 
 export const electricalShock: Hazard = createNewHazard({
   id: 'electrical_shock_electrocution',
@@ -224,17 +219,11 @@ export const staticElectricity: Hazard = createNewHazard({
   isActive: true
 });
 
-// =================== EXPORT DANGERS ÉLECTRIQUES ===================
 export const electricalHazards = [
   electricalShock,
   arcFlash,
   electricalFire,
   staticElectricity
 ];
-
-export const electricalHazardsById = electricalHazards.reduce((acc, hazard) => {
-  acc[(hazard as any).id] = hazard;
-  return acc;
-}, {} as Record<string, Hazard>);
 
 export default electricalHazards;
