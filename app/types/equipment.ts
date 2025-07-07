@@ -1,426 +1,451 @@
 // app/types/equipment.ts
-
 // =================== TYPES ÉQUIPEMENTS DE SÉCURITÉ ===================
-export interface SafetyEquipment {
+
+// =================== ENUMS ===================
+export enum EquipmentCategory {
+  HEAD_PROTECTION = 'HEAD_PROTECTION',
+  EYE_PROTECTION = 'EYE_PROTECTION',
+  HEARING_PROTECTION = 'HEARING_PROTECTION',
+  RESPIRATORY_PROTECTION = 'RESPIRATORY_PROTECTION',
+  HAND_PROTECTION = 'HAND_PROTECTION',
+  FOOT_PROTECTION = 'FOOT_PROTECTION',
+  BODY_PROTECTION = 'BODY_PROTECTION',
+  FALL_PROTECTION = 'FALL_PROTECTION',
+  DETECTION_MONITORING = 'DETECTION_MONITORING',
+  COMMUNICATION = 'COMMUNICATION',
+  EMERGENCY = 'EMERGENCY',
+  TOOLS = 'TOOLS'
+}
+
+export enum EquipmentStatus {
+  AVAILABLE = 'AVAILABLE',
+  IN_USE = 'IN_USE',
+  MAINTENANCE = 'MAINTENANCE',
+  OUT_OF_SERVICE = 'OUT_OF_SERVICE',
+  EXPIRED = 'EXPIRED'
+}
+
+export enum CertificationStandard {
+  CSA = 'CSA',
+  ANSI = 'ANSI',
+  NIOSH = 'NIOSH',
+  CE = 'CE',
+  ISO = 'ISO',
+  OSHA = 'OSHA'
+}
+
+// =================== INTERFACES DE BASE ===================
+export interface MultiLanguageText {
+  fr: string;
+  en: string;
+}
+
+export interface BaseEntity {
   id: string;
   name: string;
-  displayName?: { fr: string; en: string };
+  displayName?: MultiLanguageText;
   description: string;
-  category: EquipmentCategory;
-  subcategory?: string;
-  
-  // Spécifications techniques ÉTENDUES
-  specifications: {
-    model?: string;
-    manufacturer?: string;
-    partNumber?: string;
-    size?: string;
-    weight?: number; // kg
-    dimensions?: {
-      length?: number;
-      width?: number;
-      height?: number;
-      units: 'mm' | 'cm' | 'm';
-    };
-    material?: string;
-    color?: string;
-    
-    // ⭐ AJOUTS pour compatibilité avec body-protection.ts
-    backgroundMaterial?: string;
-    retroreflectiveTape?: string;
-    colors?: string;
-    
-    // Propriétés spécifiques aux équipements électriques
-    voltage?: string;
-    current?: string;
-    resistance?: string;
-    
-    // Propriétés spécifiques aux détecteurs
-    detectionRange?: string;
-    accuracy?: string;
-    calibrationDate?: string;
-    
-    // Propriétés spécifiques aux équipements de hauteur
-    breakingStrength?: string;
-    elongation?: string;
-    webbing?: string;
-    
-    // Index signature pour flexibilité future
-    [key: string]: any;
-  };
-  
-  // Certifications et standards
-  certifications: string[];
-  standards: string[];
-  testingStandards?: string[];
-  
-  // Protection et performance
-  protectionLevel?: string;
-  performanceRating?: string;
-  resistanceProperties?: ResistanceProperties;
-  
-  // Informations commerciales
-  supplier: string;
-  alternativeSuppliers?: string[];
-  cost: number;
-  currency: 'CAD' | 'USD';
-  costLastUpdated?: string;
-  
-  // Cycle de vie
-  lifespan: string;
-  lifespanMonths?: number;
-  inspectionFrequency: string;
-  inspectionIntervalDays?: number;
-  maintenanceRequirements?: string[];
-  
-  // Stockage et manipulation
-  storageRequirements?: string[];
-  handlingInstructions?: string[];
-  transportRestrictions?: string[];
-  
-  // Compatibilité
-  compatibleWith?: string[]; // IDs d'autres équipements
-  incompatibleWith?: string[]; // IDs d'équipements incompatibles
-  workTypes: string[]; // Types de travaux où cet équipement est utilisé
-  hazardTypes: string[]; // Types de dangers contre lesquels il protège
-  
-  // Documentation
-  manualUrl?: string;
-  videoUrl?: string;
-  imageUrl?: string;
-  dataSheetUrl?: string;
-  
-  // État et disponibilité
-  isActive: boolean;
-  isDiscontinued?: boolean;
-  replacementId?: string; // ID de l'équipement de remplacement
-  
-  // Métadonnées
-  createdDate: string;
-  lastUpdated: string;
-  version: string;
+  isActive?: boolean;
+  createdDate?: string;
+  lastUpdated?: string;
 }
 
-export interface ResistanceProperties {
-  electrical?: {
-    voltage?: number; // Volts
-    current?: number; // Ampères
-    resistance?: number; // Ohms
-    testVoltage?: number;
-  };
-  chemical?: {
-    acids?: boolean;
-    bases?: boolean;
-    solvents?: boolean;
-    oils?: boolean;
-    specificChemicals?: string[];
-  };
-  thermal?: {
-    minTemperature?: number; // °C
-    maxTemperature?: number; // °C
-    flameResistant?: boolean;
-    heatResistant?: boolean;
-  };
-  mechanical?: {
-    cutResistance?: string; // Niveau ANSI
-    punctureResistance?: boolean;
-    tearResistance?: boolean;
-    abrasionResistance?: string;
-    impactResistance?: boolean;
-  };
-  environmental?: {
-    waterproof?: boolean;
-    weatherResistant?: boolean;
-    uvResistant?: boolean;
-    corrosionResistant?: boolean;
-  };
-}
-
-export type EquipmentCategory = 
-  | 'head-protection'
-  | 'eye-protection' 
-  | 'respiratory-protection'
-  | 'hand-protection'
-  | 'foot-protection'
-  | 'body-protection'
-  | 'fall-protection'
-  | 'electrical-protection'
-  | 'detection-equipment'
-  | 'communication'
-  | 'first-aid'
-  | 'emergency-equipment'
-  | 'tools'
-  | 'other';
-
-// =================== TYPES SPÉCIALISÉS PAR CATÉGORIE ===================
-export interface HeadProtection extends SafetyEquipment {
-  headData: {
-    type: 'hard-hat' | 'bump-cap' | 'helmet';
-    electricalClass?: 'G' | 'E' | 'C'; // General, Electrical, Conductive
-    suspensionType?: 'ratchet' | 'pin-lock' | 'slip-ratchet';
-    ventilation?: boolean;
-    accessories?: string[]; // chin strap, face shield, etc.
-  };
-}
-
-export interface EyeProtection extends SafetyEquipment {
-  eyeData: {
-    type: 'glasses' | 'goggles' | 'face-shield' | 'welding-helmet';
-    lensType: 'clear' | 'tinted' | 'photochromic' | 'prescription';
-    sideProtection?: boolean;
-    antifogging?: boolean;
-    scratchResistant?: boolean;
-    uvProtection?: boolean;
-    impactRating?: string; // ANSI Z87.1
-    opticalClass?: number;
-  };
-}
-
-export interface RespiratoryProtection extends SafetyEquipment {
-  respiratoryData: {
-    type: 'disposable' | 'half-face' | 'full-face' | 'scba' | 'supplied-air';
-    filterType?: 'N95' | 'N99' | 'N100' | 'P95' | 'P99' | 'P100' | 'organic-vapor' | 'acid-gas';
-    cartridgeType?: string[];
-    protectionFactor?: number;
-    approvalNumber?: string; // NIOSH approval
-    usageTime?: number; // hours
-  };
-}
-
-export interface HandProtection extends SafetyEquipment {
-  handData: {
-    type: 'gloves' | 'mittens' | 'gauntlets';
-    coating?: string;
-    lining?: string;
-    cuffLength?: 'wrist' | 'mid-forearm' | 'elbow';
-    grip?: 'smooth' | 'textured' | 'dotted' | 'crinkle';
-    dexterity?: 1 | 2 | 3 | 4 | 5; // 1 = best dexterity
-    sizes?: string[];
-  };
-}
-
-export interface FootProtection extends SafetyEquipment {
-  footData: {
-    type: 'shoes' | 'boots' | 'overshoes' | 'gaiters';
-    toeProtection?: 'steel' | 'composite' | 'aluminum' | 'none';
-    soleType: 'rubber' | 'pu' | 'leather' | 'composite';
-    punctureResistant?: boolean;
-    metatarsalProtection?: boolean;
-    ankleHeight?: 'low' | 'mid' | 'high';
-    sizes?: string[];
-    widths?: string[];
-  };
-}
-
-export interface FallProtection extends SafetyEquipment {
-  fallData: {
-    type: 'harness' | 'lanyard' | 'anchor' | 'lifeline' | 'net';
-    attachmentPoints?: number;
-    shockAbsorbing?: boolean;
-    workPositioning?: boolean;
-    retrieval?: boolean;
-    maxUserWeight?: number; // kg
-    workingLoad?: number; // kg
-    breakingStrength?: number; // kN
-  };
-}
-
-export interface DetectionEquipment extends SafetyEquipment {
-  detectionData: {
-    type: 'gas-detector' | 'noise-meter' | 'radiation-detector' | 'air-quality-monitor';
-    detectedSubstances?: string[];
-    range?: {
-      min: number;
-      max: number;
-      units: string;
-    };
-    accuracy?: string;
-    responseTime?: number; // seconds
-    batteryLife?: number; // hours
-    calibrationFrequency?: string;
-    alarmTypes?: ('visual' | 'audible' | 'vibration')[];
-  };
-}
-
-// =================== GESTION D'INVENTAIRE ===================
-export interface EquipmentInventory {
-  equipmentId: string;
-  location: string;
-  quantity: {
-    total: number;
-    available: number;
-    inUse: number;
-    maintenance: number;
-    damaged: number;
-    expired: number;
-  };
-  stockLevels: {
-    minimum: number;
-    maximum: number;
-    reorderPoint: number;
-    economicOrderQuantity?: number;
-  };
-  tracking: InventoryTracking[];
-  lastInventoryDate: string;
-  nextInventoryDate: string;
-}
-
-export interface InventoryTracking {
-  id: string;
-  equipmentId: string;
-  serialNumber?: string;
-  batchNumber?: string;
-  purchaseDate: string;
-  expiryDate?: string;
-  condition: EquipmentCondition;
-  location: string;
-  assignedTo?: string;
-  lastInspection?: string;
-  nextInspection?: string;
-  maintenanceHistory: MaintenanceRecord[];
-  notes?: string;
-}
-
-export interface MaintenanceRecord {
-  id: string;
-  date: string;
-  type: 'inspection' | 'cleaning' | 'repair' | 'calibration' | 'replacement';
-  performedBy: string;
-  results: 'pass' | 'fail' | 'conditional';
-  issues?: string[];
-  actionsPerformed?: string[];
-  nextMaintenanceDate?: string;
-  cost?: number;
-  downtime?: number; // hours
-}
-
-export type EquipmentCondition = 
-  | 'excellent'
-  | 'good' 
-  | 'fair'
-  | 'poor'
-  | 'damaged'
-  | 'expired'
-  | 'out-of-service'
-  | 'recalled';
-
-// =================== SÉLECTION ET UTILISATION ===================
-export interface EquipmentSelection {
-  equipmentId: string;
-  quantity: number;
-  requiredBy: string; // Date
-  assignedTo?: string[];
-  condition: EquipmentCondition;
-  inspectionDate?: string;
-  inspector?: string;
-  notes?: string;
-  alternatives?: string[]; // IDs d'équipments alternatifs
-  cost?: number;
-  rental?: boolean;
-}
-
-export interface EquipmentRequirement {
-  workTypeId: string;
-  hazardId?: string;
-  equipmentCategory: EquipmentCategory;
-  required: boolean;
-  minimumSpecifications?: Record<string, any>;
-  alternatives?: string[];
-  quantity?: number;
-  reason?: string;
-}
-
-export interface EquipmentCompatibility {
-  equipmentId: string;
-  compatibleWith: string[];
-  incompatibleWith: string[];
-  conflictReasons?: Record<string, string>;
-  recommendations?: string[];
-}
-
-// =================== SERVICES ET UTILITAIRES ===================
-export interface EquipmentService {
-  getById: (id: string) => SafetyEquipment | null;
-  getAll: () => SafetyEquipment[];
-  getByCategory: (category: EquipmentCategory) => SafetyEquipment[];
-  getByWorkType: (workTypeId: string) => SafetyEquipment[];
-  getByHazard: (hazardId: string) => SafetyEquipment[];
-  search: (query: string) => SafetyEquipment[];
-  findAlternatives: (equipmentId: string) => SafetyEquipment[];
-  checkCompatibility: (equipmentIds: string[]) => EquipmentCompatibility[];
-  validateSelection: (selection: EquipmentSelection[]) => EquipmentValidation;
-  calculateCost: (selection: EquipmentSelection[]) => number;
-}
-
-export interface EquipmentValidation {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-  missing: string[]; // Équipements requis manquants
-  conflicts: string[]; // Équipements incompatibles
-  suggestions: string[];
-  alternatives: Record<string, string[]>; // equipmentId -> alternatives
-}
-
-export interface EquipmentRegistry {
-  [equipmentId: string]: SafetyEquipment;
-}
-
-export interface EquipmentStatistics {
-  totalEquipment: number;
-  byCategory: Record<EquipmentCategory, number>;
-  mostUsed: Array<{ id: string; name: string; usage: number }>;
-  expiringSoon: Array<{ id: string; name: string; expiryDate: string }>;
-  needingMaintenance: Array<{ id: string; name: string; dueDate: string }>;
-  costAnalysis: {
-    totalValue: number;
-    averageCost: number;
-    mostExpensive: Array<{ id: string; name: string; cost: number }>;
-  };
-}
-
-// =================== EXPORTS UTILITAIRES ===================
-export type EquipmentId = string;
-export type EquipmentType = SafetyEquipment['category'];
-export type InspectionResult = MaintenanceRecord['results'];
-
-// ⭐ COMPATIBILITÉ AVEC LES AUTRES FICHIERS
-export interface Equipment extends SafetyEquipment {}
-
+// =================== INTERFACES SPÉCIALISÉES ===================
 export interface EquipmentSpecifications {
   model?: string;
   manufacturer?: string;
   partNumber?: string;
   size?: string;
   weight?: number;
-  dimensions?: {
-    length?: number;
-    width?: number;
-    height?: number;
-    units: 'mm' | 'cm' | 'm';
-  };
   material?: string;
   color?: string;
   backgroundMaterial?: string;
   retroreflectiveTape?: string;
   colors?: string;
-  voltage?: string;
-  current?: string;
-  resistance?: string;
-  detectionRange?: string;
-  accuracy?: string;
-  calibrationDate?: string;
-  breakingStrength?: string;
-  elongation?: string;
-  webbing?: string;
+  voltage?: number;
+  frequency?: number;
+  operatingTemperature?: {
+    min: number;
+    max: number;
+  };
+  storageTemperature?: {
+    min: number;
+    max: number;
+  };
+  batteryLife?: number;
+  waterproofRating?: string;
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+  };
   [key: string]: any;
 }
+
+export interface MaintenanceInfo {
+  lastMaintenance?: string;
+  nextMaintenance?: string;
+  maintenanceInterval: number; // en jours
+  maintenanceNotes?: string;
+  serviceProvider?: string;
+  warrantyExpiry?: string;
+}
+
+export interface CertificationInfo {
+  standard: CertificationStandard;
+  certificationNumber?: string;
+  issuedBy?: string;
+  issuedDate?: string;
+  expiryDate?: string;
+  documentUrl?: string;
+}
+
+export interface InspectionRecord {
+  id: string;
+  date: string;
+  inspector: string;
+  result: 'PASS' | 'FAIL' | 'CONDITIONAL';
+  notes?: string;
+  defectsFound?: string[];
+  correctiveActions?: string[];
+  nextInspectionDate?: string;
+}
+
+// =================== INTERFACE PRINCIPALE ===================
+export interface SafetyEquipment extends BaseEntity {
+  category: EquipmentCategory;
+  subcategory?: string;
+  
+  // Informations de base
+  manufacturer?: string;
+  model?: string;
+  partNumber?: string;
+  serialNumber?: string;
+  
+  // Spécifications techniques
+  specifications: EquipmentSpecifications;
+  
+  // Certification et conformité
+  certifications: CertificationInfo[];
+  complianceStandards: string[];
+  
+  // Statut et disponibilité
+  status: EquipmentStatus;
+  quantity: number;
+  availableQuantity: number;
+  
+  // Localisation
+  location?: string;
+  assignedTo?: string;
+  
+  // Dates importantes
+  purchaseDate?: string;
+  warrantyExpiry?: string;
+  lastInspection?: string;
+  nextInspection?: string;
+  
+  // Maintenance
+  maintenanceInfo: MaintenanceInfo;
+  inspectionHistory: InspectionRecord[];
+  
+  // Utilisation
+  usageInstructions: string[];
+  limitations: string[];
+  compatibleWith?: string[]; // IDs d'autres équipements
+  incompatibleWith?: string[]; // IDs d'équipements incompatibles
+  
+  // Images et documentation
+  imageUrl?: string;
+  images?: string[];
+  manualUrl?: string;
+  documents?: {
+    name: string;
+    url: string;
+    type: string;
+  }[];
+  
+  // Coût et approvisionnement
+  unitCost?: number;
+  supplier?: string;
+  reorderLevel?: number;
+  replacementRecommendation?: string;
+}
+
+// =================== TYPES UTILITAIRES ===================
+export interface EquipmentFilter {
+  category?: EquipmentCategory[];
+  status?: EquipmentStatus[];
+  location?: string[];
+  manufacturer?: string[];
+  availability?: boolean;
+  certificationRequired?: CertificationStandard[];
+}
+
+export interface EquipmentSearchOptions {
+  query?: string;
+  filters?: EquipmentFilter;
+  sortBy?: 'name' | 'category' | 'status' | 'nextInspection' | 'quantity';
+  sortOrder?: 'asc' | 'desc';
+  limit?: number;
+  offset?: number;
+}
+
+export interface EquipmentAssignment {
+  equipmentId: string;
+  assignedTo: string;
+  assignedDate: string;
+  expectedReturnDate?: string;
+  actualReturnDate?: string;
+  condition?: string;
+  notes?: string;
+}
+
+export interface EquipmentRequest {
+  id: string;
+  requestedBy: string;
+  requestDate: string;
+  equipmentId: string;
+  quantity: number;
+  requiredDate: string;
+  purpose: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'FULFILLED';
+  approvedBy?: string;
+  approvalDate?: string;
+  notes?: string;
+}
+
+export interface EquipmentInventory {
+  equipment: SafetyEquipment;
+  totalStock: number;
+  availableStock: number;
+  reservedStock: number;
+  minimumStock: number;
+  needsReorder: boolean;
+  lastStockUpdate: string;
+}
+
+// =================== DONNÉES STATIQUES ===================
+export const EQUIPMENT_CATEGORIES = [
+  { value: EquipmentCategory.HEAD_PROTECTION, label: { fr: 'Protection de la tête', en: 'Head Protection' } },
+  { value: EquipmentCategory.EYE_PROTECTION, label: { fr: 'Protection des yeux', en: 'Eye Protection' } },
+  { value: EquipmentCategory.HEARING_PROTECTION, label: { fr: 'Protection auditive', en: 'Hearing Protection' } },
+  { value: EquipmentCategory.RESPIRATORY_PROTECTION, label: { fr: 'Protection respiratoire', en: 'Respiratory Protection' } },
+  { value: EquipmentCategory.HAND_PROTECTION, label: { fr: 'Protection des mains', en: 'Hand Protection' } },
+  { value: EquipmentCategory.FOOT_PROTECTION, label: { fr: 'Protection des pieds', en: 'Foot Protection' } },
+  { value: EquipmentCategory.BODY_PROTECTION, label: { fr: 'Protection du corps', en: 'Body Protection' } },
+  { value: EquipmentCategory.FALL_PROTECTION, label: { fr: 'Protection contre les chutes', en: 'Fall Protection' } },
+  { value: EquipmentCategory.DETECTION_MONITORING, label: { fr: 'Détection et surveillance', en: 'Detection & Monitoring' } },
+  { value: EquipmentCategory.COMMUNICATION, label: { fr: 'Communication', en: 'Communication' } },
+  { value: EquipmentCategory.EMERGENCY, label: { fr: 'Urgence', en: 'Emergency' } },
+  { value: EquipmentCategory.TOOLS, label: { fr: 'Outils', en: 'Tools' } }
+];
+
+export const EQUIPMENT_STATUS_OPTIONS = [
+  { value: EquipmentStatus.AVAILABLE, label: { fr: 'Disponible', en: 'Available' }, color: 'green' },
+  { value: EquipmentStatus.IN_USE, label: { fr: 'En usage', en: 'In Use' }, color: 'blue' },
+  { value: EquipmentStatus.MAINTENANCE, label: { fr: 'Maintenance', en: 'Maintenance' }, color: 'yellow' },
+  { value: EquipmentStatus.OUT_OF_SERVICE, label: { fr: 'Hors service', en: 'Out of Service' }, color: 'red' },
+  { value: EquipmentStatus.EXPIRED, label: { fr: 'Expiré', en: 'Expired' }, color: 'gray' }
+];
+
+export const CERTIFICATION_STANDARDS = [
+  { value: CertificationStandard.CSA, label: 'CSA' },
+  { value: CertificationStandard.ANSI, label: 'ANSI' },
+  { value: CertificationStandard.NIOSH, label: 'NIOSH' },
+  { value: CertificationStandard.CE, label: 'CE' },
+  { value: CertificationStandard.ISO, label: 'ISO' },
+  { value: CertificationStandard.OSHA, label: 'OSHA' }
+];
+
+// =================== FONCTIONS UTILITAIRES ===================
+export const getEquipmentByCategory = (equipment: SafetyEquipment[], category: EquipmentCategory): SafetyEquipment[] => {
+  return equipment.filter(eq => eq.category === category);
+};
+
+export const getAvailableEquipment = (equipment: SafetyEquipment[]): SafetyEquipment[] => {
+  return equipment.filter(eq => eq.status === EquipmentStatus.AVAILABLE && eq.availableQuantity > 0);
+};
+
+export const getEquipmentNeedingInspection = (equipment: SafetyEquipment[], daysAhead: number = 30): SafetyEquipment[] => {
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + daysAhead);
+  
+  return equipment.filter(eq => {
+    if (!eq.nextInspection) return false;
+    const inspectionDate = new Date(eq.nextInspection);
+    return inspectionDate <= targetDate;
+  });
+};
+
+export const getEquipmentNeedingMaintenance = (equipment: SafetyEquipment[], daysAhead: number = 30): SafetyEquipment[] => {
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + daysAhead);
+  
+  return equipment.filter(eq => {
+    if (!eq.maintenanceInfo.nextMaintenance) return false;
+    const maintenanceDate = new Date(eq.maintenanceInfo.nextMaintenance);
+    return maintenanceDate <= targetDate;
+  });
+};
+
+export const searchEquipment = (equipment: SafetyEquipment[], options: EquipmentSearchOptions): SafetyEquipment[] => {
+  let filtered = [...equipment];
+  
+  // Recherche textuelle
+  if (options.query) {
+    const query = options.query.toLowerCase();
+    filtered = filtered.filter(eq => 
+      eq.name.toLowerCase().includes(query) ||
+      eq.description.toLowerCase().includes(query) ||
+      eq.manufacturer?.toLowerCase().includes(query) ||
+      eq.model?.toLowerCase().includes(query)
+    );
+  }
+  
+  // Filtres
+  if (options.filters) {
+    const { category, status, location, manufacturer, availability, certificationRequired } = options.filters;
+    
+    if (category && category.length > 0) {
+      filtered = filtered.filter(eq => category.includes(eq.category));
+    }
+    
+    if (status && status.length > 0) {
+      filtered = filtered.filter(eq => status.includes(eq.status));
+    }
+    
+    if (location && location.length > 0) {
+      filtered = filtered.filter(eq => eq.location && location.includes(eq.location));
+    }
+    
+    if (manufacturer && manufacturer.length > 0) {
+      filtered = filtered.filter(eq => eq.manufacturer && manufacturer.includes(eq.manufacturer));
+    }
+    
+    if (availability !== undefined) {
+      filtered = filtered.filter(eq => 
+        availability ? (eq.status === EquipmentStatus.AVAILABLE && eq.availableQuantity > 0) : true
+      );
+    }
+    
+    if (certificationRequired && certificationRequired.length > 0) {
+      filtered = filtered.filter(eq => 
+        certificationRequired.some(cert => 
+          eq.certifications.some(c => c.standard === cert)
+        )
+      );
+    }
+  }
+  
+  // Tri
+  if (options.sortBy) {
+    filtered.sort((a, b) => {
+      let aValue: any, bValue: any;
+      
+      switch (options.sortBy) {
+        case 'name':
+          aValue = a.name;
+          bValue = b.name;
+          break;
+        case 'category':
+          aValue = a.category;
+          bValue = b.category;
+          break;
+        case 'status':
+          aValue = a.status;
+          bValue = b.status;
+          break;
+        case 'nextInspection':
+          aValue = a.nextInspection ? new Date(a.nextInspection) : new Date('9999-12-31');
+          bValue = b.nextInspection ? new Date(b.nextInspection) : new Date('9999-12-31');
+          break;
+        case 'quantity':
+          aValue = a.availableQuantity;
+          bValue = b.availableQuantity;
+          break;
+        default:
+          return 0;
+      }
+      
+      if (aValue < bValue) return options.sortOrder === 'desc' ? 1 : -1;
+      if (aValue > bValue) return options.sortOrder === 'desc' ? -1 : 1;
+      return 0;
+    });
+  }
+  
+  // Pagination
+  if (options.offset !== undefined || options.limit !== undefined) {
+    const start = options.offset || 0;
+    const end = options.limit ? start + options.limit : undefined;
+    filtered = filtered.slice(start, end);
+  }
+  
+  return filtered;
+};
+
+export const validateEquipment = (equipment: Partial<SafetyEquipment>): string[] => {
+  const errors: string[] = [];
+  
+  if (!equipment.id) errors.push('ID est requis');
+  if (!equipment.name) errors.push('Nom est requis');
+  if (!equipment.description) errors.push('Description est requise');
+  if (!equipment.category) errors.push('Catégorie est requise');
+  if (!equipment.status) errors.push('Statut est requis');
+  if (equipment.quantity !== undefined && equipment.quantity < 0) {
+    errors.push('Quantité ne peut pas être négative');
+  }
+  if (equipment.availableQuantity !== undefined && equipment.availableQuantity < 0) {
+    errors.push('Quantité disponible ne peut pas être négative');
+  }
+  if (equipment.quantity !== undefined && equipment.availableQuantity !== undefined) {
+    if (equipment.availableQuantity > equipment.quantity) {
+      errors.push('Quantité disponible ne peut pas dépasser la quantité totale');
+    }
+  }
+  
+  return errors;
+};
+
+export const calculateMaintenanceDue = (equipment: SafetyEquipment): number => {
+  if (!equipment.maintenanceInfo.nextMaintenance) return Infinity;
+  
+  const nextMaintenance = new Date(equipment.maintenanceInfo.nextMaintenance);
+  const today = new Date();
+  const diffTime = nextMaintenance.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  return diffDays;
+};
+
+export const calculateInspectionDue = (equipment: SafetyEquipment): number => {
+  if (!equipment.nextInspection) return Infinity;
+  
+  const nextInspection = new Date(equipment.nextInspection);
+  const today = new Date();
+  const diffTime = nextInspection.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  return diffDays;
+};
+
+// =================== EXPORTS UTILITAIRES ===================
+export interface Equipment extends SafetyEquipment {}
 
 export interface SelectedEquipment {
   equipmentId: string;
   equipment: Equipment;
   isRequired: boolean;
+  quantity: number;
   notes?: string;
-  checkedAt?: string;
-  checkedBy?: string;
 }
+
+export interface EquipmentUsage {
+  equipmentId: string;
+  equipment: Equipment;
+  usageContext: string;
+  effectivenessRating?: number;
+  userFeedback?: string;
+}
+
+// Export par défaut
+export default SafetyEquipment;
