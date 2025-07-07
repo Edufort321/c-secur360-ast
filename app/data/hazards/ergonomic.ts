@@ -232,7 +232,7 @@ export const ergonomicHazards = [
 ];
 
 export const ergonomicHazardsById = ergonomicHazards.reduce((acc, hazard) => {
-  acc[hazard.id] = hazard;
+  acc[(hazard as any).id] = hazard;
   return acc;
 }, {} as Record<string, Hazard>);
 
