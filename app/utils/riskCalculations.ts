@@ -1,567 +1,798 @@
-// utils/riskCalculations.ts - Calculs de risque avancés
+// app/utils/translations.ts - Système de traduction multilingue
 
-import { 
-  RiskLevel, 
-  SeverityLevel, 
-  ProbabilityLevel, 
-  HierarchyLevel,
-  EffectivenessRating 
-} from '@/types/index';
-import { AST, HazardAssessment, ControlMeasureAssignment } from '@/types/ast';
-import { ExposureFrequency } from '@/types/hazards';
+import { MultiLanguageText } from '../types/index';
 
-// =================== INTERFACES DE CALCUL ===================
-export interface RiskCalculationResult {
-  initialRisk: RiskLevel;
-  residualRisk: RiskLevel;
-  riskReduction: number; // Pourcentage de réduction
-  riskScore: number; // Score numérique 1-25
-  controlEffectiveness: number; // Efficacité des mesures 0-100%
-  acceptabilityLevel: RiskAcceptability;
-  recommendations: string[];
+// =================== INTERFACES DE TRADUCTION ===================
+export interface TranslationConfig {
+  defaultLanguage: 'fr' | 'en';
+  supportedLanguages: ('fr' | 'en')[];
+  fallbackLanguage: 'fr' | 'en';
+  autoDetectBrowser: boolean;
 }
 
-export interface DetailedRiskAssessment {
-  hazardId: string;
-  hazardName: string;
-  calculation: RiskCalculationResult;
-  exposureAnalysis: ExposureAnalysis;
-  controlMeasureAnalysis: ControlMeasureAnalysis[];
-  costBenefitAnalysis?: CostBenefitAnalysis;
-  uncertaintyFactors: UncertaintyFactor[];
+export interface TranslationKey {
+  key: string;
+  namespace: string;
+  defaultValue?: string;
+  interpolations?: Record<string, string | number>;
 }
 
-export interface ExposureAnalysis {
-  frequency: ExposureFrequency;
-  duration: number; // heures par exposition
-  numberOfPersons: number;
-  exposureIndex: number; // Index calculé 0-100
-  populationAtRisk: PopulationRisk;
+export interface TranslationResource {
+  [key: string]: string | TranslationResource;
 }
 
-export interface ControlMeasureAnalysis {
-  measureId: string;
-  hierarchyLevel: HierarchyLevel;
-  effectivenessRating: EffectivenessRating;
-  riskReductionFactor: number; // 0-1
-  implementationCost: number;
-  maintenanceCost: number;
-  reliabilityFactor: number; // 0-1
+export interface LanguageResources {
+  fr: TranslationResource;
+  en: TranslationResource;
 }
 
-export interface CostBenefitAnalysis {
-  implementationCost: number;
-  annualSavings: number;
-  paybackPeriod: number; // années
-  netPresentValue: number;
-  costPerRiskPoint: number;
-}
-
-export interface UncertaintyFactor {
-  factor: string;
-  impact: 'increase' | 'decrease' | 'variable';
-  magnitude: number; // Facteur multiplicateur
-  confidence: 'low' | 'medium' | 'high';
-}
-
-export enum RiskAcceptability {
-  ACCEPTABLE = 'acceptable',
-  TOLERABLE = 'tolerable',
-  UNACCEPTABLE = 'unacceptable',
-  REVIEW_REQUIRED = 'review_required'
-}
-
-export enum PopulationRisk {
-  INDIVIDUAL = 'individual',      // 1 personne
-  SMALL_GROUP = 'small_group',    // 2-5 personnes
-  MEDIUM_GROUP = 'medium_group',  // 6-15 personnes
-  LARGE_GROUP = 'large_group',    // 16+ personnes
-  PUBLIC = 'public'               // Population générale
-}
-
-// =================== MATRICES DE RISQUE ===================
-
-/**
- * Matrice de risque 5x5 standard
- */
-export const STANDARD_RISK_MATRIX: RiskLevel[][] = [
-  [RiskLevel.VERY_LOW, RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL],
-  [RiskLevel.VERY_LOW, RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL],
-  [RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.HIGH, RiskLevel.CRITICAL],
-  [RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.HIGH, RiskLevel.CRITICAL, RiskLevel.CRITICAL],
-  [RiskLevel.HIGH, RiskLevel.HIGH, RiskLevel.CRITICAL, RiskLevel.CRITICAL, RiskLevel.CRITICAL]
-];
-
-/**
- * Matrice de risque avec facteur d'exposition
- */
-export const EXPOSURE_ADJUSTED_MATRIX: Record<ExposureFrequency, number[][]> = {
-  [ExposureFrequency.CONTINUOUS]: [
-    [2, 4, 6, 8, 10],
-    [4, 6, 8, 10, 12],
-    [6, 8, 10, 12, 15],
-    [8, 10, 12, 15, 20],
-    [10, 12, 15, 20, 25]
-  ],
-  [ExposureFrequency.FREQUENT]: [
-    [1, 3, 5, 7, 9],
-    [3, 5, 7, 9, 11],
-    [5, 7, 9, 11, 13],
-    [7, 9, 11, 13, 16],
-    [9, 11, 13, 16, 20]
-  ],
-  [ExposureFrequency.OCCASIONAL]: [
-    [1, 2, 4, 6, 8],
-    [2, 4, 6, 8, 10],
-    [4, 6, 8, 10, 12],
-    [6, 8, 10, 12, 15],
-    [8, 10, 12, 15, 18]
-  ],
-  [ExposureFrequency.INFREQUENT]: [
-    [1, 2, 3, 5, 7],
-    [2, 3, 5, 7, 9],
-    [3, 5, 7, 9, 11],
-    [5, 7, 9, 11, 13],
-    [7, 9, 11, 13, 16]
-  ],
-  [ExposureFrequency.RARE]: [
-    [1, 1, 2, 4, 6],
-    [1, 2, 4, 6, 8],
-    [2, 4, 6, 8, 10],
-    [4, 6, 8, 10, 12],
-    [6, 8, 10, 12, 15]
-  ]
+// =================== DICTIONNAIRE DE TRADUCTIONS ===================
+export const TRANSLATIONS: LanguageResources = {
+  fr: {
+    // Navigation et interface
+    nav: {
+      dashboard: 'Tableau de bord',
+      ast: 'AST',
+      hazards: 'Dangers',
+      equipment: 'Équipements',
+      reports: 'Rapports',
+      settings: 'Paramètres',
+      logout: 'Déconnexion'
+    },
+    
+    // Actions communes
+    actions: {
+      save: 'Enregistrer',
+      cancel: 'Annuler',
+      delete: 'Supprimer',
+      edit: 'Modifier',
+      view: 'Voir',
+      add: 'Ajouter',
+      create: 'Créer',
+      update: 'Mettre à jour',
+      search: 'Rechercher',
+      filter: 'Filtrer',
+      export: 'Exporter',
+      import: 'Importer',
+      print: 'Imprimer',
+      download: 'Télécharger',
+      upload: 'Téléverser',
+      submit: 'Soumettre',
+      approve: 'Approuver',
+      reject: 'Rejeter',
+      close: 'Fermer',
+      open: 'Ouvrir'
+    },
+    
+    // Statuts
+    status: {
+      draft: 'Brouillon',
+      pending: 'En attente',
+      approved: 'Approuvé',
+      rejected: 'Rejeté',
+      active: 'Actif',
+      inactive: 'Inactif',
+      completed: 'Terminé',
+      cancelled: 'Annulé',
+      overdue: 'En retard'
+    },
+    
+    // Niveaux de risque
+    risk: {
+      low: 'Faible',
+      medium: 'Moyen',
+      high: 'Élevé',
+      critical: 'Critique',
+      acceptable: 'Acceptable',
+      tolerable: 'Tolérable',
+      unacceptable: 'Inacceptable'
+    },
+    
+    // Priorités
+    priority: {
+      low: 'Faible',
+      medium: 'Moyenne',
+      high: 'Élevée',
+      urgent: 'Urgente',
+      critical: 'Critique'
+    },
+    
+    // AST spécifique
+    ast: {
+      title: 'Analyse Sécuritaire de Tâches',
+      shortTitle: 'AST',
+      steps: 'Étapes',
+      hazards: 'Dangers identifiés',
+      controls: 'Mesures de contrôle',
+      equipment: 'Équipements requis',
+      team: 'Équipe',
+      duration: 'Durée estimée',
+      startDate: 'Date de début',
+      endDate: 'Date de fin',
+      location: 'Lieu',
+      project: 'Projet',
+      client: 'Client',
+      supervisor: 'Superviseur',
+      approval: 'Approbation',
+      validation: 'Validation',
+      revision: 'Révision'
+    },
+    
+    // Dangers
+    hazards: {
+      title: 'Dangers',
+      category: 'Catégorie',
+      biological: 'Biologique',
+      chemical: 'Chimique',
+      electrical: 'Électrique',
+      environmental: 'Environnemental',
+      ergonomic: 'Ergonomique',
+      gas: 'Gaz',
+      mechanical: 'Mécanique',
+      physical: 'Physique',
+      workplace: 'Milieu de travail',
+      severity: 'Gravité',
+      likelihood: 'Probabilité',
+      exposure: 'Exposition',
+      consequences: 'Conséquences',
+      prevention: 'Prévention'
+    },
+    
+    // Équipements
+    equipment: {
+      title: 'Équipements de sécurité',
+      ppe: 'EPI',
+      category: 'Catégorie',
+      bodyProtection: 'Protection corporelle',
+      eyeProtection: 'Protection oculaire',
+      headProtection: 'Protection de la tête',
+      handProtection: 'Protection des mains',
+      footProtection: 'Protection des pieds',
+      hearingProtection: 'Protection auditive',
+      fallProtection: 'Protection antichute',
+      respiratory: 'Protection respiratoire',
+      electrical: 'Électrique',
+      detection: 'Détection',
+      emergency: 'Urgence',
+      tools: 'Outils',
+      certification: 'Certification',
+      expiry: 'Expiration',
+      inspection: 'Inspection',
+      maintenance: 'Entretien'
+    },
+    
+    // Conformité
+    compliance: {
+      title: 'Conformité réglementaire',
+      score: 'Score de conformité',
+      standards: 'Normes applicables',
+      requirements: 'Exigences',
+      gaps: 'Lacunes',
+      actions: 'Actions requises',
+      deadline: 'Échéance',
+      responsible: 'Responsable',
+      status: 'Statut',
+      evidence: 'Preuves',
+      audit: 'Audit',
+      certification: 'Certification'
+    },
+    
+    // Rapports
+    reports: {
+      title: 'Rapports',
+      generate: 'Générer un rapport',
+      summary: 'Résumé',
+      detailed: 'Détaillé',
+      dashboard: 'Tableau de bord',
+      statistics: 'Statistiques',
+      trends: 'Tendances',
+      analysis: 'Analyse',
+      recommendations: 'Recommandations',
+      period: 'Période',
+      dateRange: 'Plage de dates',
+      from: 'Du',
+      to: 'Au'
+    },
+    
+    // Messages
+    messages: {
+      success: {
+        saved: 'Enregistré avec succès',
+        updated: 'Mis à jour avec succès',
+        deleted: 'Supprimé avec succès',
+        created: 'Créé avec succès',
+        approved: 'Approuvé avec succès',
+        rejected: 'Rejeté avec succès'
+      },
+      error: {
+        general: 'Une erreur est survenue',
+        notFound: 'Élément non trouvé',
+        unauthorized: 'Non autorisé',
+        validation: 'Erreur de validation',
+        network: 'Erreur de réseau',
+        server: 'Erreur serveur'
+      },
+      warning: {
+        unsavedChanges: 'Modifications non sauvegardées',
+        deleteConfirm: 'Êtes-vous sûr de vouloir supprimer ?',
+        highRisk: 'Attention : Risque élevé détecté',
+        expiringSoon: 'Expire bientôt',
+        incompleteData: 'Données incomplètes'
+      },
+      info: {
+        loading: 'Chargement...',
+        noData: 'Aucune donnée disponible',
+        emptyList: 'Liste vide',
+        selectItem: 'Sélectionnez un élément',
+        helpText: 'Cliquez sur ? pour obtenir de l\'aide'
+      }
+    },
+    
+    // Validation
+    validation: {
+      required: 'Ce champ est requis',
+      email: 'Format d\'email invalide',
+      minLength: 'Longueur minimale: {{min}} caractères',
+      maxLength: 'Longueur maximale: {{max}} caractères',
+      numeric: 'Doit être un nombre',
+      positive: 'Doit être positif',
+      date: 'Format de date invalide',
+      phone: 'Format de téléphone invalide',
+      url: 'Format d\'URL invalide'
+    },
+    
+    // Dates et temps
+    time: {
+      today: 'Aujourd\'hui',
+      yesterday: 'Hier',
+      tomorrow: 'Demain',
+      thisWeek: 'Cette semaine',
+      thisMonth: 'Ce mois',
+      thisYear: 'Cette année',
+      minutes: 'minutes',
+      hours: 'heures',
+      days: 'jours',
+      weeks: 'semaines',
+      months: 'mois',
+      years: 'années',
+      ago: 'il y a',
+      in: 'dans',
+      duration: 'Durée'
+    },
+    
+    // Unités
+    units: {
+      meters: 'mètres',
+      kilometers: 'kilomètres',
+      kilograms: 'kilogrammes',
+      tons: 'tonnes',
+      liters: 'litres',
+      degrees: 'degrés',
+      percent: 'pourcent',
+      currency: 'CAD',
+      ppm: 'ppm',
+      decibels: 'dB'
+    }
+  },
+  
+  en: {
+    // Navigation and interface
+    nav: {
+      dashboard: 'Dashboard',
+      ast: 'JSA',
+      hazards: 'Hazards',
+      equipment: 'Equipment',
+      reports: 'Reports',
+      settings: 'Settings',
+      logout: 'Logout'
+    },
+    
+    // Common actions
+    actions: {
+      save: 'Save',
+      cancel: 'Cancel',
+      delete: 'Delete',
+      edit: 'Edit',
+      view: 'View',
+      add: 'Add',
+      create: 'Create',
+      update: 'Update',
+      search: 'Search',
+      filter: 'Filter',
+      export: 'Export',
+      import: 'Import',
+      print: 'Print',
+      download: 'Download',
+      upload: 'Upload',
+      submit: 'Submit',
+      approve: 'Approve',
+      reject: 'Reject',
+      close: 'Close',
+      open: 'Open'
+    },
+    
+    // Status
+    status: {
+      draft: 'Draft',
+      pending: 'Pending',
+      approved: 'Approved',
+      rejected: 'Rejected',
+      active: 'Active',
+      inactive: 'Inactive',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+      overdue: 'Overdue'
+    },
+    
+    // Risk levels
+    risk: {
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High',
+      critical: 'Critical',
+      acceptable: 'Acceptable',
+      tolerable: 'Tolerable',
+      unacceptable: 'Unacceptable'
+    },
+    
+    // Priorities
+    priority: {
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High',
+      urgent: 'Urgent',
+      critical: 'Critical'
+    },
+    
+    // AST specific
+    ast: {
+      title: 'Job Safety Analysis',
+      shortTitle: 'JSA',
+      steps: 'Steps',
+      hazards: 'Identified hazards',
+      controls: 'Control measures',
+      equipment: 'Required equipment',
+      team: 'Team',
+      duration: 'Estimated duration',
+      startDate: 'Start date',
+      endDate: 'End date',
+      location: 'Location',
+      project: 'Project',
+      client: 'Client',
+      supervisor: 'Supervisor',
+      approval: 'Approval',
+      validation: 'Validation',
+      revision: 'Revision'
+    },
+    
+    // Hazards
+    hazards: {
+      title: 'Hazards',
+      category: 'Category',
+      biological: 'Biological',
+      chemical: 'Chemical',
+      electrical: 'Electrical',
+      environmental: 'Environmental',
+      ergonomic: 'Ergonomic',
+      gas: 'Gas',
+      mechanical: 'Mechanical',
+      physical: 'Physical',
+      workplace: 'Workplace',
+      severity: 'Severity',
+      likelihood: 'Likelihood',
+      exposure: 'Exposure',
+      consequences: 'Consequences',
+      prevention: 'Prevention'
+    },
+    
+    // Equipment
+    equipment: {
+      title: 'Safety equipment',
+      ppe: 'PPE',
+      category: 'Category',
+      bodyProtection: 'Body protection',
+      eyeProtection: 'Eye protection',
+      headProtection: 'Head protection',
+      handProtection: 'Hand protection',
+      footProtection: 'Foot protection',
+      hearingProtection: 'Hearing protection',
+      fallProtection: 'Fall protection',
+      respiratory: 'Respiratory protection',
+      electrical: 'Electrical',
+      detection: 'Detection',
+      emergency: 'Emergency',
+      tools: 'Tools',
+      certification: 'Certification',
+      expiry: 'Expiry',
+      inspection: 'Inspection',
+      maintenance: 'Maintenance'
+    },
+    
+    // Compliance
+    compliance: {
+      title: 'Regulatory compliance',
+      score: 'Compliance score',
+      standards: 'Applicable standards',
+      requirements: 'Requirements',
+      gaps: 'Gaps',
+      actions: 'Required actions',
+      deadline: 'Deadline',
+      responsible: 'Responsible',
+      status: 'Status',
+      evidence: 'Evidence',
+      audit: 'Audit',
+      certification: 'Certification'
+    },
+    
+    // Reports
+    reports: {
+      title: 'Reports',
+      generate: 'Generate report',
+      summary: 'Summary',
+      detailed: 'Detailed',
+      dashboard: 'Dashboard',
+      statistics: 'Statistics',
+      trends: 'Trends',
+      analysis: 'Analysis',
+      recommendations: 'Recommendations',
+      period: 'Period',
+      dateRange: 'Date range',
+      from: 'From',
+      to: 'To'
+    },
+    
+    // Messages
+    messages: {
+      success: {
+        saved: 'Successfully saved',
+        updated: 'Successfully updated',
+        deleted: 'Successfully deleted',
+        created: 'Successfully created',
+        approved: 'Successfully approved',
+        rejected: 'Successfully rejected'
+      },
+      error: {
+        general: 'An error occurred',
+        notFound: 'Item not found',
+        unauthorized: 'Unauthorized',
+        validation: 'Validation error',
+        network: 'Network error',
+        server: 'Server error'
+      },
+      warning: {
+        unsavedChanges: 'Unsaved changes',
+        deleteConfirm: 'Are you sure you want to delete?',
+        highRisk: 'Warning: High risk detected',
+        expiringSoon: 'Expires soon',
+        incompleteData: 'Incomplete data'
+      },
+      info: {
+        loading: 'Loading...',
+        noData: 'No data available',
+        emptyList: 'Empty list',
+        selectItem: 'Select an item',
+        helpText: 'Click ? for help'
+      }
+    },
+    
+    // Validation
+    validation: {
+      required: 'This field is required',
+      email: 'Invalid email format',
+      minLength: 'Minimum length: {{min}} characters',
+      maxLength: 'Maximum length: {{max}} characters',
+      numeric: 'Must be a number',
+      positive: 'Must be positive',
+      date: 'Invalid date format',
+      phone: 'Invalid phone format',
+      url: 'Invalid URL format'
+    },
+    
+    // Time and dates
+    time: {
+      today: 'Today',
+      yesterday: 'Yesterday',
+      tomorrow: 'Tomorrow',
+      thisWeek: 'This week',
+      thisMonth: 'This month',
+      thisYear: 'This year',
+      minutes: 'minutes',
+      hours: 'hours',
+      days: 'days',
+      weeks: 'weeks',
+      months: 'months',
+      years: 'years',
+      ago: 'ago',
+      in: 'in',
+      duration: 'Duration'
+    },
+    
+    // Units
+    units: {
+      meters: 'meters',
+      kilometers: 'kilometers',
+      kilograms: 'kilograms',
+      tons: 'tons',
+      liters: 'liters',
+      degrees: 'degrees',
+      percent: 'percent',
+      currency: 'CAD',
+      ppm: 'ppm',
+      decibels: 'dB'
+    }
+  }
 };
 
-// =================== FONCTIONS PRINCIPALES ===================
+// =================== CONFIGURATION PAR DÉFAUT ===================
+export const DEFAULT_CONFIG: TranslationConfig = {
+  defaultLanguage: 'fr',
+  supportedLanguages: ['fr', 'en'],
+  fallbackLanguage: 'fr',
+  autoDetectBrowser: true
+};
 
-/**
- * Calcul de risque basique (Sévérité × Probabilité)
- */
-export function calculateBasicRisk(
-  severity: SeverityLevel,
-  probability: ProbabilityLevel
-): RiskLevel {
-  const severityIndex = severity - 1;
-  const probabilityIndex = probability - 1;
-  
-  return STANDARD_RISK_MATRIX[probabilityIndex][severityIndex];
-}
+// =================== CLASSE DE TRADUCTION ===================
+export class TranslationService {
+  private currentLanguage: 'fr' | 'en';
+  private config: TranslationConfig;
+  private translations: LanguageResources;
 
-/**
- * Calcul de risque avec facteur d'exposition
- */
-export function calculateRiskWithExposure(
-  severity: SeverityLevel,
-  probability: ProbabilityLevel,
-  exposure: ExposureFrequency,
-  numberOfPersons: number = 1
-): RiskCalculationResult {
-  const severityIndex = severity - 1;
-  const probabilityIndex = probability - 1;
-  
-  // Score de base avec exposition
-  const baseScore = EXPOSURE_ADJUSTED_MATRIX[exposure][probabilityIndex][severityIndex];
-  
-  // Facteur population
-  const populationFactor = calculatePopulationFactor(numberOfPersons);
-  const adjustedScore = Math.round(baseScore * populationFactor);
-  
-  // Conversion en niveau de risque
-  const initialRisk = scoreToRiskLevel(adjustedScore);
-  
-  return {
-    initialRisk,
-    residualRisk: initialRisk, // Pas de contrôles appliqués
-    riskReduction: 0,
-    riskScore: adjustedScore,
-    controlEffectiveness: 0,
-    acceptabilityLevel: determineAcceptability(adjustedScore),
-    recommendations: generateBasicRecommendations(initialRisk, adjustedScore)
-  };
-}
-
-/**
- * Calcul de risque résiduel après application des mesures de contrôle
- */
-export function calculateResidualRisk(
-  hazardAssessment: HazardAssessment,
-  controlMeasures: ControlMeasureAssignment[],
-  exposureData?: ExposureAnalysis
-): RiskCalculationResult {
-  // Calcul du risque initial
-  const initialResult = exposureData ? 
-    calculateRiskWithExposure(
-      hazardAssessment.severityLevel,
-      hazardAssessment.probabilityLevel,
-      exposureData.frequency,
-      exposureData.numberOfPersons
-    ) :
-    {
-      initialRisk: calculateBasicRisk(
-        hazardAssessment.severityLevel,
-        hazardAssessment.probabilityLevel
-      ),
-      riskScore: (hazardAssessment.severityLevel * hazardAssessment.probabilityLevel),
-      controlEffectiveness: 0,
-      riskReduction: 0,
-      residualRisk: calculateBasicRisk(
-        hazardAssessment.severityLevel,
-        hazardAssessment.probabilityLevel
-      ),
-      acceptabilityLevel: RiskAcceptability.REVIEW_REQUIRED,
-      recommendations: []
-    };
-
-  // Calcul de l'efficacité des mesures de contrôle
-  const controlEffectiveness = calculateControlEffectiveness(controlMeasures);
-  
-  // Application de la réduction de risque
-  const riskReductionFactor = controlEffectiveness / 100;
-  const residualScore = Math.max(1, Math.round(initialResult.riskScore * (1 - riskReductionFactor)));
-  const residualRisk = scoreToRiskLevel(residualScore);
-  
-  const riskReduction = ((initialResult.riskScore - residualScore) / initialResult.riskScore) * 100;
-
-  return {
-    initialRisk: initialResult.initialRisk,
-    residualRisk,
-    riskReduction: Math.round(riskReduction),
-    riskScore: residualScore,
-    controlEffectiveness: Math.round(controlEffectiveness),
-    acceptabilityLevel: determineAcceptability(residualScore),
-    recommendations: generateDetailedRecommendations(
-      initialResult.initialRisk,
-      residualRisk,
-      controlEffectiveness,
-      controlMeasures
-    )
-  };
-}
-
-/**
- * Calcule l'efficacité globale des mesures de contrôle selon la hiérarchie
- */
-export function calculateControlEffectiveness(
-  controlMeasures: ControlMeasureAssignment[]
-): number {
-  if (controlMeasures.length === 0) return 0;
-
-  let totalEffectiveness = 0;
-  let weightedSum = 0;
-
-  // Poids selon la hiérarchie des contrôles (plus haut = plus efficace)
-  const hierarchyWeights: Record<HierarchyLevel, number> = {
-    [HierarchyLevel.ELIMINATION]: 0.95,     // 95% efficacité max
-    [HierarchyLevel.SUBSTITUTION]: 0.85,   // 85% efficacité max
-    [HierarchyLevel.ENGINEERING]: 0.75,    // 75% efficacité max
-    [HierarchyLevel.ADMINISTRATIVE]: 0.50, // 50% efficacité max
-    [HierarchyLevel.PPE]: 0.30             // 30% efficacité max
-  };
-
-  for (const measure of controlMeasures) {
-    const hierarchyWeight = hierarchyWeights[measure.hierarchyLevel];
-    const effectivenessRating = measure.effectivenessRating || EffectivenessRating.MODERATELY_EFFECTIVE;
+  constructor(config: Partial<TranslationConfig> = {}) {
+    this.config = { ...DEFAULT_CONFIG, ...config };
+    this.currentLanguage = this.config.defaultLanguage;
+    this.translations = TRANSLATIONS;
     
-    // Convertir l'évaluation en pourcentage
-    const measureEffectiveness = (effectivenessRating / 5) * hierarchyWeight * 100;
-    
-    // Pondération selon le niveau hiérarchique
-    const weight = 6 - measure.hierarchyLevel; // Élimination = 5, PPE = 1
-    
-    totalEffectiveness += measureEffectiveness * weight;
-    weightedSum += weight;
+    if (this.config.autoDetectBrowser && typeof navigator !== 'undefined') {
+      this.detectBrowserLanguage();
+    }
   }
 
-  // Efficacité moyenne pondérée avec facteur de complémentarité
-  const averageEffectiveness = totalEffectiveness / weightedSum;
-  
-  // Bonus pour diversité des mesures (défense en profondeur)
-  const uniqueHierarchyLevels = new Set(controlMeasures.map(cm => cm.hierarchyLevel)).size;
-  const diversityBonus = Math.min(10, uniqueHierarchyLevels * 2); // Max 10% bonus
-  
-  return Math.min(95, averageEffectiveness + diversityBonus);
-}
+  /**
+   * Détecte la langue du navigateur
+   */
+  private detectBrowserLanguage(): void {
+    const browserLang = navigator.language.slice(0, 2) as 'fr' | 'en';
+    if (this.config.supportedLanguages.includes(browserLang)) {
+      this.currentLanguage = browserLang;
+    }
+  }
 
-/**
- * Analyse complète du risque pour un AST
- */
-export function analyzeASTRisk(ast: AST): DetailedRiskAssessment[] {
-  return ast.identifiedHazards.map(hazard => {
-    // Trouver les mesures de contrôle pour ce danger
-    const relevantControls = ast.controlMeasures.filter(cm => 
-      hazard.appliedControlMeasures.includes(cm.controlMeasureId)
-    );
+  /**
+   * Change la langue courante
+   */
+  setLanguage(language: 'fr' | 'en'): void {
+    if (this.config.supportedLanguages.includes(language)) {
+      this.currentLanguage = language;
+    }
+  }
 
-    // Calcul du risque
-    const calculation = calculateResidualRisk(hazard, relevantControls);
+  /**
+   * Obtient la langue courante
+   */
+  getCurrentLanguage(): 'fr' | 'en' {
+    return this.currentLanguage;
+  }
 
-    // Analyse d'exposition (données simulées - à adapter selon votre système)
-    const exposureAnalysis: ExposureAnalysis = {
-      frequency: ExposureFrequency.FREQUENT, // À déterminer selon les données réelles
-      duration: ast.estimatedDuration,
-      numberOfPersons: ast.teamMembers.length + 1, // +1 pour le chef d'équipe
-      exposureIndex: calculateExposureIndex(ast.estimatedDuration, ast.teamMembers.length + 1),
-      populationAtRisk: determinePopulationRisk(ast.teamMembers.length + 1)
-    };
-
-    // Analyse des mesures de contrôle
-    const controlMeasureAnalysis: ControlMeasureAnalysis[] = relevantControls.map(cm => ({
-      measureId: cm.controlMeasureId,
-      hierarchyLevel: cm.hierarchyLevel,
-      effectivenessRating: cm.effectivenessRating || EffectivenessRating.MODERATELY_EFFECTIVE,
-      riskReductionFactor: calculateIndividualControlReduction(cm),
-      implementationCost: estimateImplementationCost(cm),
-      maintenanceCost: estimateMaintenanceCost(cm),
-      reliabilityFactor: calculateReliabilityFactor(cm)
-    }));
-
-    // Facteurs d'incertitude
-    const uncertaintyFactors: UncertaintyFactor[] = [
-      {
-        factor: 'Variabilité des conditions météo',
-        impact: 'variable',
-        magnitude: 1.2,
-        confidence: 'medium'
-      },
-      {
-        factor: 'Expérience de l\'équipe',
-        impact: 'decrease',
-        magnitude: 0.9,
-        confidence: 'low'
+  /**
+   * Traduit une clé
+   */
+  t(key: string, interpolations?: Record<string, string | number>): string {
+    const translation = this.getTranslation(key, this.currentLanguage);
+    
+    if (!translation) {
+      // Fallback sur la langue par défaut
+      const fallbackTranslation = this.getTranslation(key, this.config.fallbackLanguage);
+      if (fallbackTranslation) {
+        return this.interpolate(fallbackTranslation, interpolations);
       }
-    ];
+      // Retourne la clé si aucune traduction trouvée
+      return key;
+    }
+    
+    return this.interpolate(translation, interpolations);
+  }
 
+  /**
+   * Obtient une traduction pour une langue spécifique
+   */
+  private getTranslation(key: string, language: 'fr' | 'en'): string | null {
+    const keys = key.split('.');
+    let current: any = this.translations[language];
+    
+    for (const k of keys) {
+      if (current && typeof current === 'object' && k in current) {
+        current = current[k];
+      } else {
+        return null;
+      }
+    }
+    
+    return typeof current === 'string' ? current : null;
+  }
+
+  /**
+   * Interpole les variables dans une traduction
+   */
+  private interpolate(
+    text: string, 
+    interpolations?: Record<string, string | number>
+  ): string {
+    if (!interpolations) return text;
+    
+    return text.replace(/{{(\w+)}}/g, (match, key) => {
+      return interpolations[key]?.toString() || match;
+    });
+  }
+
+  /**
+   * Traduit un objet MultiLanguageText
+   */
+  translateMultiLang(multiLangText: MultiLanguageText): string {
+    return multiLangText[this.currentLanguage] || 
+           multiLangText[this.config.fallbackLanguage] || 
+           Object.values(multiLangText)[0] || '';
+  }
+
+  /**
+   * Créer un objet MultiLanguageText à partir d'une clé
+   */
+  createMultiLang(key: string): MultiLanguageText {
     return {
-      hazardId: hazard.hazardId,
-      hazardName: hazard.hazardId, // À remplacer par le nom réel du danger
-      calculation,
-      exposureAnalysis,
-      controlMeasureAnalysis,
-      uncertaintyFactors
+      fr: this.getTranslation(key, 'fr') || key,
+      en: this.getTranslation(key, 'en') || key
     };
-  });
+  }
+
+  /**
+   * Formate une date selon la langue courante
+   */
+  formatDate(date: Date | string, options?: Intl.DateTimeFormatOptions): string {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const locale = this.currentLanguage === 'fr' ? 'fr-CA' : 'en-CA';
+    
+    const defaultOptions: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    };
+    
+    return dateObj.toLocaleDateString(locale, { ...defaultOptions, ...options });
+  }
+
+  /**
+   * Formate un nombre selon la langue courante
+   */
+  formatNumber(
+    number: number, 
+    options?: Intl.NumberFormatOptions
+  ): string {
+    const locale = this.currentLanguage === 'fr' ? 'fr-CA' : 'en-CA';
+    return number.toLocaleString(locale, options);
+  }
+
+  /**
+   * Formate une devise
+   */
+  formatCurrency(amount: number): string {
+    return this.formatNumber(amount, {
+      style: 'currency',
+      currency: 'CAD'
+    });
+  }
+
+  /**
+   * Formate un pourcentage
+   */
+  formatPercent(value: number): string {
+    return this.formatNumber(value / 100, {
+      style: 'percent',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1
+    });
+  }
+
+  /**
+   * Obtient la liste des langues supportées
+   */
+  getSupportedLanguages(): Array<{ code: 'fr' | 'en'; name: string }> {
+    return [
+      { code: 'fr', name: 'Français' },
+      { code: 'en', name: 'English' }
+    ];
+  }
 }
+
+// =================== INSTANCE GLOBALE ===================
+export const translationService = new TranslationService();
 
 // =================== FONCTIONS UTILITAIRES ===================
 
-function calculatePopulationFactor(numberOfPersons: number): number {
-  if (numberOfPersons <= 1) return 1.0;
-  if (numberOfPersons <= 5) return 1.2;
-  if (numberOfPersons <= 15) return 1.5;
-  if (numberOfPersons <= 50) return 2.0;
-  return 2.5;
-}
-
-function scoreToRiskLevel(score: number): RiskLevel {
-  if (score <= 3) return RiskLevel.VERY_LOW;
-  if (score <= 6) return RiskLevel.LOW;
-  if (score <= 12) return RiskLevel.MEDIUM;
-  if (score <= 18) return RiskLevel.HIGH;
-  return RiskLevel.CRITICAL;
-}
-
-function determineAcceptability(score: number): RiskAcceptability {
-  if (score <= 3) return RiskAcceptability.ACCEPTABLE;
-  if (score <= 8) return RiskAcceptability.TOLERABLE;
-  if (score <= 15) return RiskAcceptability.REVIEW_REQUIRED;
-  return RiskAcceptability.UNACCEPTABLE;
-}
-
-function calculateExposureIndex(duration: number, numberOfPersons: number): number {
-  return Math.min(100, (duration * numberOfPersons) / 2);
-}
-
-function determinePopulationRisk(numberOfPersons: number): PopulationRisk {
-  if (numberOfPersons <= 1) return PopulationRisk.INDIVIDUAL;
-  if (numberOfPersons <= 5) return PopulationRisk.SMALL_GROUP;
-  if (numberOfPersons <= 15) return PopulationRisk.MEDIUM_GROUP;
-  if (numberOfPersons <= 50) return PopulationRisk.LARGE_GROUP;
-  return PopulationRisk.PUBLIC;
-}
-
-function calculateIndividualControlReduction(control: ControlMeasureAssignment): number {
-  const hierarchyFactors: Record<HierarchyLevel, number> = {
-    [HierarchyLevel.ELIMINATION]: 0.95,
-    [HierarchyLevel.SUBSTITUTION]: 0.80,
-    [HierarchyLevel.ENGINEERING]: 0.65,
-    [HierarchyLevel.ADMINISTRATIVE]: 0.40,
-    [HierarchyLevel.PPE]: 0.25
-  };
-
-  const effectiveness = (control.effectivenessRating || 3) / 5;
-  return hierarchyFactors[control.hierarchyLevel] * effectiveness;
-}
-
-function estimateImplementationCost(control: ControlMeasureAssignment): number {
-  // Coûts estimés selon le niveau hiérarchique (en $CAD)
-  const baseCosts: Record<HierarchyLevel, number> = {
-    [HierarchyLevel.ELIMINATION]: 10000,
-    [HierarchyLevel.SUBSTITUTION]: 5000,
-    [HierarchyLevel.ENGINEERING]: 3000,
-    [HierarchyLevel.ADMINISTRATIVE]: 500,
-    [HierarchyLevel.PPE]: 200
-  };
-
-  return baseCosts[control.hierarchyLevel];
-}
-
-function estimateMaintenanceCost(control: ControlMeasureAssignment): number {
-  // Coût de maintenance annuel (% du coût d'implémentation)
-  const maintenanceRates: Record<HierarchyLevel, number> = {
-    [HierarchyLevel.ELIMINATION]: 0.02,
-    [HierarchyLevel.SUBSTITUTION]: 0.05,
-    [HierarchyLevel.ENGINEERING]: 0.10,
-    [HierarchyLevel.ADMINISTRATIVE]: 0.20,
-    [HierarchyLevel.PPE]: 0.50
-  };
-
-  return estimateImplementationCost(control) * maintenanceRates[control.hierarchyLevel];
-}
-
-function calculateReliabilityFactor(control: ControlMeasureAssignment): number {
-  // Facteur de fiabilité selon le niveau hiérarchique
-  const reliabilityFactors: Record<HierarchyLevel, number> = {
-    [HierarchyLevel.ELIMINATION]: 0.98,
-    [HierarchyLevel.SUBSTITUTION]: 0.95,
-    [HierarchyLevel.ENGINEERING]: 0.90,
-    [HierarchyLevel.ADMINISTRATIVE]: 0.70,
-    [HierarchyLevel.PPE]: 0.60
-  };
-
-  return reliabilityFactors[control.hierarchyLevel];
-}
-
-function generateBasicRecommendations(riskLevel: RiskLevel, score: number): string[] {
-  const recommendations: string[] = [];
-
-  switch (riskLevel) {
-    case RiskLevel.CRITICAL:
-      recommendations.push(
-        "🚨 ARRÊT IMMÉDIAT - Risque critique inacceptable",
-        "📋 Révision complète de l'analyse requise",
-        "👥 Consultation d'experts en sécurité obligatoire",
-        "🔒 Mise en place de mesures d'élimination prioritaires"
-      );
-      break;
-    
-    case RiskLevel.HIGH:
-      recommendations.push(
-        "⚠️ Mesures de contrôle renforcées requises",
-        "📝 Plan d'action détaillé à élaborer",
-        "👨‍💼 Approbation supervision nécessaire",
-        "🔍 Surveillance continue pendant l'exécution"
-      );
-      break;
-    
-    case RiskLevel.MEDIUM:
-      recommendations.push(
-        "📋 Mesures de contrôle à implémenter avant début",
-        "🔄 Révision périodique pendant l'exécution",
-        "📊 Documentation des mesures prises"
-      );
-      break;
-    
-    case RiskLevel.LOW:
-      recommendations.push(
-        "✅ Risque acceptable avec précautions standard",
-        "📝 Application des bonnes pratiques",
-        "🔍 Surveillance de routine"
-      );
-      break;
-    
-    default:
-      recommendations.push(
-        "✅ Risque très faible",
-        "📋 Maintenir les bonnes pratiques"
-      );
-  }
-
-  return recommendations;
-}
-
-function generateDetailedRecommendations(
-  initialRisk: RiskLevel,
-  residualRisk: RiskLevel,
-  controlEffectiveness: number,
-  controlMeasures: ControlMeasureAssignment[]
-): string[] {
-  const recommendations = generateBasicRecommendations(residualRisk, 0);
-
-  // Recommandations basées sur l'efficacité des contrôles
-  if (controlEffectiveness < 50) {
-    recommendations.unshift(
-      "⚡ Efficacité des contrôles insuffisante (<50%)",
-      "🔄 Révision des mesures de contrôle nécessaire",
-      "⬆️ Privilégier les mesures de niveau hiérarchique supérieur"
-    );
-  } else if (controlEffectiveness < 75) {
-    recommendations.push(
-      "📈 Possibilité d'amélioration des contrôles",
-      "🔍 Évaluer l'ajout de mesures complémentaires"
-    );
-  } else {
-    recommendations.push(
-      "✅ Excellente efficacité des contrôles",
-      "🔄 Maintenir l'efficacité par formation et maintenance"
-    );
-  }
-
-  // Recommandations basées sur la diversité des contrôles
-  const hierarchyLevels = new Set(controlMeasures.map(cm => cm.hierarchyLevel));
-  if (hierarchyLevels.size < 2) {
-    recommendations.push(
-      "🛡️ Envisager la défense en profondeur",
-      "🔄 Ajouter des mesures de niveaux hiérarchiques différents"
-    );
-  }
-
-  return recommendations;
-}
-
-// =================== FONCTIONS MULTI-TENANT ===================
+/**
+ * Fonction de traduction rapide
+ */
+export const t = (key: string, interpolations?: Record<string, string | number>): string => {
+  return translationService.t(key, interpolations);
+};
 
 /**
- * Calcule les statistiques de risque pour un tenant
+ * Change la langue globale
  */
-export function calculateTenantRiskStatistics(tenantASTs: AST[]) {
-  const riskDistribution: Record<RiskLevel, number> = {
-    [RiskLevel.VERY_LOW]: 0,
-    [RiskLevel.LOW]: 0,
-    [RiskLevel.MEDIUM]: 0,
-    [RiskLevel.HIGH]: 0,
-    [RiskLevel.CRITICAL]: 0
-  };
+export const setLanguage = (language: 'fr' | 'en'): void => {
+  translationService.setLanguage(language);
+};
 
-  let totalRiskScore = 0;
-  let totalHazards = 0;
+/**
+ * Obtient la langue courante
+ */
+export const getCurrentLanguage = (): 'fr' | 'en' => {
+  return translationService.getCurrentLanguage();
+};
 
-  tenantASTs.forEach(ast => {
-    ast.identifiedHazards.forEach(hazard => {
-      riskDistribution[hazard.residualRiskLevel]++;
-      totalRiskScore += (hazard.severityLevel * hazard.probabilityLevel);
-      totalHazards++;
-    });
-  });
+/**
+ * Traduit un objet MultiLanguageText
+ */
+export const translateMultiLang = (multiLangText: MultiLanguageText): string => {
+  return translationService.translateMultiLang(multiLangText);
+};
 
+/**
+ * Formate une date
+ */
+export const formatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions): string => {
+  return translationService.formatDate(date, options);
+};
+
+/**
+ * Formate un nombre
+ */
+export const formatNumber = (number: number, options?: Intl.NumberFormatOptions): string => {
+  return translationService.formatNumber(number, options);
+};
+
+/**
+ * Formate une devise
+ */
+export const formatCurrency = (amount: number): string => {
+  return translationService.formatCurrency(amount);
+};
+
+/**
+ * Formate un pourcentage
+ */
+export const formatPercent = (value: number): string => {
+  return translationService.formatPercent(value);
+};
+
+// =================== HOOKS REACT (SI UTILISÉ AVEC REACT) ===================
+
+/**
+ * Hook pour utiliser les traductions dans les composants React
+ */
+export const useTranslation = () => {
   return {
-    riskDistribution,
-    averageRiskScore: totalHazards > 0 ? totalRiskScore / totalHazards : 0,
-    totalHazards,
-    criticalCount: riskDistribution[RiskLevel.CRITICAL],
-    highRiskCount: riskDistribution[RiskLevel.HIGH],
-    acceptableRiskPercentage: totalHazards > 0 ? 
-      ((riskDistribution[RiskLevel.VERY_LOW] + riskDistribution[RiskLevel.LOW]) / totalHazards) * 100 : 0
+    t,
+    setLanguage,
+    currentLanguage: getCurrentLanguage(),
+    formatDate,
+    formatNumber,
+    formatCurrency,
+    formatPercent,
+    translateMultiLang
   };
-}
+};
 
 export default {
-  calculateBasicRisk,
-  calculateRiskWithExposure,
-  calculateResidualRisk,
-  calculateControlEffectiveness,
-  analyzeASTRisk,
-  calculateTenantRiskStatistics,
-  STANDARD_RISK_MATRIX,
-  EXPOSURE_ADJUSTED_MATRIX
+  TranslationService,
+  translationService,
+  t,
+  setLanguage,
+  getCurrentLanguage,
+  translateMultiLang,
+  formatDate,
+  formatNumber,
+  formatCurrency,
+  formatPercent,
+  useTranslation,
+  TRANSLATIONS,
+  DEFAULT_CONFIG
 };
