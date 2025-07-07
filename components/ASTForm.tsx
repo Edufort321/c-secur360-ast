@@ -40,6 +40,10 @@ interface FormData {
   finalization?: any;
 }
 
+interface ValidationErrors {
+  [key: string]: string | string[] | ValidationErrors;
+}
+
 const stepConfig = [
   {
     id: 1,
@@ -103,6 +107,7 @@ export default function ASTForm({ tenant }: ASTFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [language, setLanguage] = useState<'fr' | 'en'>('fr');
   const [formData, setFormData] = useState<FormData>({});
+  const [errors, setErrors] = useState<ValidationErrors>({});
   const [isLoading, setIsLoading] = useState(false);
 
   // Fonction pour mettre à jour les données
@@ -111,11 +116,47 @@ export default function ASTForm({ tenant }: ASTFormProps) {
       ...prev,
       [section]: data
     }));
+
+    // Nettoyer les erreurs pour cette section
+    if (errors[section]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[section];
+        return newErrors;
+      });
+    }
+  };
+
+  // Fonction pour valider un step
+  const validateCurrentStep = (): boolean => {
+    const newErrors: ValidationErrors = {};
+
+    switch (currentStep) {
+      case 1:
+        if (!formData.projectInfo?.name) {
+          newErrors.projectInfo = { name: 'Le nom du projet est requis' };
+        }
+        break;
+      case 2:
+        if (!formData.equipment || formData.equipment.length === 0) {
+          newErrors.equipment = 'Au moins un équipement doit être sélectionné';
+        }
+        break;
+      case 3:
+        if (!formData.hazards || formData.hazards.length === 0) {
+          newErrors.hazards = 'Au moins un danger doit être identifié';
+        }
+        break;
+      // Ajouter d'autres validations selon vos besoins
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   // Navigation
   const nextStep = () => {
-    if (currentStep < 8) {
+    if (validateCurrentStep() && currentStep < 8) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -152,6 +193,7 @@ export default function ASTForm({ tenant }: ASTFormProps) {
             onDataChange={handleDataChange}
             language={language}
             tenant={tenant}
+            errors={errors}
           />
         );
       case 2:
@@ -161,6 +203,7 @@ export default function ASTForm({ tenant }: ASTFormProps) {
             onDataChange={handleDataChange}
             language={language}
             tenant={tenant}
+            errors={errors}
           />
         );
       case 3:
@@ -170,6 +213,7 @@ export default function ASTForm({ tenant }: ASTFormProps) {
             onDataChange={handleDataChange}
             language={language}
             tenant={tenant}
+            errors={errors}
           />
         );
       case 4:
@@ -179,6 +223,7 @@ export default function ASTForm({ tenant }: ASTFormProps) {
             onDataChange={handleDataChange}
             language={language}
             tenant={tenant}
+            errors={errors}
           />
         );
       case 5:
@@ -188,6 +233,7 @@ export default function ASTForm({ tenant }: ASTFormProps) {
             onDataChange={handleDataChange}
             language={language}
             tenant={tenant}
+            errors={errors}
           />
         );
       case 6:
@@ -197,6 +243,7 @@ export default function ASTForm({ tenant }: ASTFormProps) {
             onDataChange={handleDataChange}
             language={language}
             tenant={tenant}
+            errors={errors}
           />
         );
       case 7:
@@ -206,6 +253,7 @@ export default function ASTForm({ tenant }: ASTFormProps) {
             onDataChange={handleDataChange}
             language={language}
             tenant={tenant}
+            errors={errors}
           />
         );
       case 8:
@@ -215,6 +263,7 @@ export default function ASTForm({ tenant }: ASTFormProps) {
             onDataChange={handleDataChange}
             language={language}
             tenant={tenant}
+            errors={errors}
           />
         );
       default:
@@ -290,6 +339,7 @@ export default function ASTForm({ tenant }: ASTFormProps) {
                   const Icon = step.icon;
                   const isCompleted = currentStep > step.id;
                   const isCurrent = currentStep === step.id;
+                  const hasError = errors[step.id.toString()] || false;
                   
                   return (
                     <button
@@ -300,6 +350,8 @@ export default function ASTForm({ tenant }: ASTFormProps) {
                           ? 'bg-blue-500/20 border border-blue-400/30 text-blue-300'
                           : isCompleted
                           ? 'bg-green-500/10 border border-green-400/20 text-green-300 hover:bg-green-500/20'
+                          : hasError
+                          ? 'bg-red-500/10 border border-red-400/20 text-red-300 hover:bg-red-500/20'
                           : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
                       }`}
                     >
@@ -308,6 +360,8 @@ export default function ASTForm({ tenant }: ASTFormProps) {
                           ? 'bg-blue-500/30'
                           : isCompleted
                           ? 'bg-green-500/30'
+                          : hasError
+                          ? 'bg-red-500/30'
                           : 'bg-white/10'
                       }`}>
                         <Icon className="w-4 h-4" />
@@ -320,6 +374,13 @@ export default function ASTForm({ tenant }: ASTFormProps) {
                         <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                           <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                      {hasError && !isCompleted && (
+                        <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                           </svg>
                         </div>
                       )}
@@ -353,6 +414,12 @@ export default function ASTForm({ tenant }: ASTFormProps) {
                     <span className="text-green-400 font-medium">{(formData.equipment as any[]).length}</span>
                   </div>
                 )}
+                {Object.keys(errors).length > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-300">Erreurs</span>
+                    <span className="text-red-400 font-medium">{Object.keys(errors).length}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -362,6 +429,16 @@ export default function ASTForm({ tenant }: ASTFormProps) {
             <div className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 p-8">
               {renderCurrentStep()}
             </div>
+
+            {/* Affichage des erreurs globales */}
+            {Object.keys(errors).length > 0 && (
+              <div className="mt-4 p-4 bg-red-500/10 border border-red-400/20 rounded-lg">
+                <div className="flex items-center space-x-2 text-red-300 text-sm">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Veuillez corriger les erreurs avant de continuer</span>
+                </div>
+              </div>
+            )}
 
             {/* Navigation */}
             <div className="mt-6 flex items-center justify-between">
@@ -394,7 +471,7 @@ export default function ASTForm({ tenant }: ASTFormProps) {
 
               <button
                 onClick={nextStep}
-                disabled={currentStep === 8}
+                disabled={currentStep === 8 || (Object.keys(errors).length > 0)}
                 className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {currentStep === 8 ? 'Finaliser' : 'Suivant'}
