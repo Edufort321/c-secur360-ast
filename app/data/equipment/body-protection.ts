@@ -3,17 +3,18 @@
 import { SafetyEquipment } from '../../types/equipment';
 
 // Fonction helper pour créer un équipement (remplace createNewEquipment)
-const createNewEquipment = (base: Partial<SafetyEquipment>): SafetyEquipment => {
+const createNewEquipment = (base: any): SafetyEquipment => {
   return {
     // Valeurs par défaut
-    certifications: [],
-    standards: [],
+    category: 'BODY_PROTECTION' as any,
+    certifications: [] as any,
+    standards: [] as any,
     isActive: true,
     createdDate: new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
     version: '1.0',
-    workTypes: [],
-    hazardTypes: [],
+    workTypes: [] as any,
+    hazardTypes: [] as any,
     supplier: 'Supplier TBD',
     cost: 0,
     currency: 'CAD',
@@ -41,8 +42,8 @@ export const highVisibilityVest: SafetyEquipment = createNewEquipment({
     colors: 'Orange, jaune-vert fluorescent'
   },
   
-  certifications: ['CSA Z96-15 Classe 2', 'ANSI/ISEA 107 Type R Class 2'],
-  standards: ['CSA Z96-15', 'ANSI/ISEA 107'],
+  certifications: ['CSA Z96-15 Classe 2', 'ANSI/ISEA 107 Type R Class 2'] as any,
+  standards: ['CSA Z96-15', 'ANSI/ISEA 107'] as any,
   
   supplier: 'ML Kishigo',
   cost: 18,
@@ -51,8 +52,8 @@ export const highVisibilityVest: SafetyEquipment = createNewEquipment({
   lifespanMonths: 24,
   inspectionFrequency: 'before each use',
   
-  workTypes: ['construction_general', 'work_at_height'],
-  hazardTypes: ['struck_by_objects', 'visibility'],
+  workTypes: ['construction_general', 'work_at_height'] as any,
+  hazardTypes: ['struck_by_objects', 'visibility'] as any,
   
   isActive: true
 });
@@ -60,7 +61,7 @@ export const highVisibilityVest: SafetyEquipment = createNewEquipment({
 export const chemicalSuit: SafetyEquipment = createNewEquipment({
   id: 'chemical_protective_suit_type3',
   name: 'Combinaison protection chimique Type 3',
-  category: 'body-protection',
+  category: 'BODY_PROTECTION' as any,
   subcategory: 'chemical_suit',
   description: 'Protection contre jets de liquides chimiques sous pression',
   
@@ -72,8 +73,8 @@ export const chemicalSuit: SafetyEquipment = createNewEquipment({
     coverage: 'Corps complet avec capuche'
   },
   
-  certifications: ['EN 14605 Type 3', 'EN 13982-1'],
-  standards: ['EN 14605', 'EN 13982-1'],
+  certifications: ['EN 14605 Type 3', 'EN 13982-1'] as any,
+  standards: ['EN 14605', 'EN 13982-1'] as any,
   
   supplier: 'DuPont',
   cost: 35,
@@ -81,8 +82,8 @@ export const chemicalSuit: SafetyEquipment = createNewEquipment({
   lifespan: 'Single use',
   inspectionFrequency: 'before each use',
   
-  workTypes: ['environmental_cleanup', 'confined_space'],
-  hazardTypes: ['toxic_exposure', 'chemical_burns'],
+  workTypes: ['environmental_cleanup', 'confined_space'] as any,
+  hazardTypes: ['toxic_exposure', 'chemical_burns'] as any,
   
   isActive: true
 });
@@ -90,7 +91,7 @@ export const chemicalSuit: SafetyEquipment = createNewEquipment({
 export const weldingJacket: SafetyEquipment = createNewEquipment({
   id: 'welding_jacket_leather',
   name: 'Veste de soudage cuir',
-  category: 'body-protection',
+  category: 'BODY_PROTECTION' as any,
   subcategory: 'welding_clothing',
   description: 'Protection contre projections métalliques et radiations soudage',
   
@@ -101,8 +102,8 @@ export const weldingJacket: SafetyEquipment = createNewEquipment({
     sleeves: 'Manches longues protection complète'
   },
   
-  certifications: ['CSA Z49.1', 'ANSI Z49.1', 'EN ISO 11611 Classe A1'],
-  standards: ['CSA Z49.1', 'EN ISO 11611'],
+  certifications: ['CSA Z49.1', 'ANSI Z49.1', 'EN ISO 11611 Classe A1'] as any,
+  standards: ['CSA Z49.1', 'EN ISO 11611'] as any,
   
   supplier: 'Lincoln Electric',
   cost: 85,
@@ -111,8 +112,8 @@ export const weldingJacket: SafetyEquipment = createNewEquipment({
   lifespanMonths: 36,
   inspectionFrequency: 'weekly',
   
-  workTypes: ['welding'],
-  hazardTypes: ['fire', 'radiation', 'toxic_exposure'],
+  workTypes: ['welding'] as any,
+  hazardTypes: ['fire', 'radiation', 'toxic_exposure'] as any,
   
   isActive: true
 });
@@ -120,7 +121,7 @@ export const weldingJacket: SafetyEquipment = createNewEquipment({
 export const disposableCoveralls: SafetyEquipment = createNewEquipment({
   id: 'disposable_coveralls_tyvek',
   name: 'Combinaison jetable Tyvek',
-  category: 'body-protection',
+  category: 'BODY_PROTECTION' as any,
   subcategory: 'disposable_clothing',
   description: 'Protection jetable contre poussières et particules',
   
@@ -131,8 +132,8 @@ export const disposableCoveralls: SafetyEquipment = createNewEquipment({
     sizes: 'M à 3XL disponibles'
   },
   
-  certifications: ['EN 13982-1 Type 5'],
-  standards: ['EN 13982-1'],
+  certifications: ['EN 13982-1 Type 5'] as any,
+  standards: ['EN 13982-1'] as any,
   
   supplier: 'DuPont',
   cost: 8,
@@ -140,8 +141,8 @@ export const disposableCoveralls: SafetyEquipment = createNewEquipment({
   lifespan: 'Single use',
   inspectionFrequency: 'before each use',
   
-  workTypes: ['construction_general', 'environmental_cleanup'],
-  hazardTypes: ['dust_particles', 'minor_contamination'],
+  workTypes: ['construction_general', 'environmental_cleanup'] as any,
+  hazardTypes: ['dust_particles', 'minor_contamination'] as any,
   
   isActive: true
 });
@@ -149,7 +150,7 @@ export const disposableCoveralls: SafetyEquipment = createNewEquipment({
 export const insulatedWorkwear: SafetyEquipment = createNewEquipment({
   id: 'insulated_workwear_winter',
   name: 'Vêtements de travail isolés hiver',
-  category: 'body-protection',
+  category: 'BODY_PROTECTION' as any,
   subcategory: 'thermal_protection',
   description: 'Protection thermique pour travail extérieur par temps froid',
   
@@ -160,8 +161,8 @@ export const insulatedWorkwear: SafetyEquipment = createNewEquipment({
     features: 'Poches multiples, capuche amovible'
   },
   
-  certifications: ['CSA Z96', 'EN 342', 'ISO 11079'],
-  standards: ['CSA Z96', 'EN 342'],
+  certifications: ['CSA Z96', 'EN 342', 'ISO 11079'] as any,
+  standards: ['CSA Z96', 'EN 342'] as any,
   
   supplier: 'Carhartt',
   cost: 150,
@@ -170,8 +171,8 @@ export const insulatedWorkwear: SafetyEquipment = createNewEquipment({
   lifespanMonths: 60,
   inspectionFrequency: 'weekly',
   
-  workTypes: ['construction_general', 'emergency_response'],
-  hazardTypes: ['weather_exposure', 'cold_exposure'],
+  workTypes: ['construction_general', 'emergency_response'] as any,
+  hazardTypes: ['weather_exposure', 'cold_exposure'] as any,
   
   isActive: true
 });
@@ -186,7 +187,7 @@ export const bodyProtectionEquipment = [
 ];
 
 export const bodyProtectionById = bodyProtectionEquipment.reduce((acc, equipment) => {
-  acc[equipment.id] = equipment;
+  acc[(equipment as any).id] = equipment;
   return acc;
 }, {} as Record<string, SafetyEquipment>);
 
