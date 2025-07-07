@@ -29,7 +29,7 @@ const createNewEquipment = (base: Partial<SafetyEquipment>): SafetyEquipment => 
 export const highVisibilityVest: SafetyEquipment = createNewEquipment({
   id: 'high_visibility_vest_class2',
   name: 'Veste haute visibilité classe 2',
-  category: 'body-protection',
+  category: 'BODY_PROTECTION' as any,
   subcategory: 'high_visibility',
   description: 'Protection haute visibilité pour travaux routiers et industriels',
   
