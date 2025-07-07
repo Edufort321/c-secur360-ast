@@ -1,8 +1,6 @@
 // app/data/hazards/chemical.ts
-// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
 import { Hazard } from '../../types/hazards';
 
-// Fonction helper pour créer un danger
 const createNewHazard = (base: any): Hazard => {
   return {
     category: 'CHEMICAL' as any,
@@ -16,12 +14,9 @@ const createNewHazard = (base: any): Hazard => {
     isActive: true,
     createdDate: new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
-    // Merge avec les propriétés passées
     ...base
   } as Hazard;
 };
-
-// =================== DANGERS CHIMIQUES ===================
 
 export const toxicGases: Hazard = createNewHazard({
   id: 'toxic_gas_exposure',
@@ -224,17 +219,11 @@ export const carcinogenicSubstances: Hazard = createNewHazard({
   isActive: true
 });
 
-// =================== EXPORT DANGERS CHIMIQUES ===================
 export const chemicalHazards = [
   toxicGases,
   corrosiveSubstances,
   volatileOrganicCompounds,
   carcinogenicSubstances
 ];
-
-export const chemicalHazardsById = chemicalHazards.reduce((acc, hazard) => {
-  acc[(hazard as any).id] = hazard;
-  return acc;
-}, {} as Record<string, Hazard>);
 
 export default chemicalHazards;
