@@ -42,7 +42,7 @@ export const steelToeBoots: SafetyEquipment = createNewEquipment({
     waterproof: 'Non étanche',
     sizes: '7-13 (US)',
     widths: 'M, W, EW',
-    weight: '2.1 kg (la paire)'
+    weight: 2.1  // ⭐ CORRIGÉ : 2.1 kg (la paire)
   },
   
   certifications: ['CSA Z195 Grade 1', 'ASTM F2413'],
@@ -77,7 +77,8 @@ export const electricalBoots: SafetyEquipment = createNewEquipment({
     hardware: 'Œillets non-métalliques',
     sizes: '7-13 (US)',
     testVoltage: '18,000 V pendant 1 minute',
-    leakage: 'Max 3.0 mA'
+    leakage: 'Max 3.0 mA',
+    weight: 2.3  // ⭐ CORRIGÉ : ~2.3 kg (la paire)
   },
   
   certifications: ['CSA Z195 ESR', 'ASTM F2413 EH'],
@@ -112,7 +113,8 @@ export const chemicalBoots: SafetyEquipment = createNewEquipment({
     cleanability: 'Lavage facile',
     sizes: '7-13 (US)',
     temperature: '-40°C à +60°C',
-    steelToe: 'Embout acier optionnel'
+    steelToe: 'Embout acier optionnel',
+    weight: 1.8  // ⭐ CORRIGÉ : ~1.8 kg (la paire)
   },
   
   certifications: ['CSA Z195', 'ASTM F2413'],
@@ -146,7 +148,7 @@ export const metatarsalBoots: SafetyEquipment = createNewEquipment({
     sole: 'Semelle Vibram antidérapante',
     punctureResistance: 'Semelle kevlar',
     sizes: '6-14 (US)',
-    weight: '2.5 kg (la paire)',
+    weight: 2.5,  // ⭐ CORRIGÉ : 2.5 kg (la paire)
     comfort: 'Semelle intérieure amovible'
   },
   
@@ -182,7 +184,8 @@ export const insulatedBoots: SafetyEquipment = createNewEquipment({
     waterproof: 'Membrane étanche',
     toeProtection: 'Embout composite isolé',
     sizes: '7-13 (US)',
-    traction: 'Crampons intégrés'
+    traction: 'Crampons intégrés',
+    weight: 2.8  // ⭐ CORRIGÉ : ~2.8 kg (la paire)
   },
   
   certifications: ['CSA Z195', 'ASTM F2413'],
