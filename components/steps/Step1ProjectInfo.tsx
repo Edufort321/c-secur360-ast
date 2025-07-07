@@ -22,7 +22,7 @@ import { allWorkTypes } from '@/data/workTypes';
 import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 
 // Import des types
-import { ContactInfo, Address } from '@/types';
+import { ContactInfo, Address } from '../../types';
 
 // =================== INTERFACES ===================
 interface Step1ProjectInfoProps {
