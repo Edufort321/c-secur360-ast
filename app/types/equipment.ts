@@ -9,7 +9,7 @@ export interface SafetyEquipment {
   category: EquipmentCategory;
   subcategory?: string;
   
-  // Spécifications techniques
+  // Spécifications techniques ÉTENDUES
   specifications: {
     model?: string;
     manufacturer?: string;
@@ -24,6 +24,29 @@ export interface SafetyEquipment {
     };
     material?: string;
     color?: string;
+    
+    // ⭐ AJOUTS pour compatibilité avec body-protection.ts
+    backgroundMaterial?: string;
+    retroreflectiveTape?: string;
+    colors?: string;
+    
+    // Propriétés spécifiques aux équipements électriques
+    voltage?: string;
+    current?: string;
+    resistance?: string;
+    
+    // Propriétés spécifiques aux détecteurs
+    detectionRange?: string;
+    accuracy?: string;
+    calibrationDate?: string;
+    
+    // Propriétés spécifiques aux équipements de hauteur
+    breakingStrength?: string;
+    elongation?: string;
+    webbing?: string;
+    
+    // Index signature pour flexibilité future
+    [key: string]: any;
   };
   
   // Certifications et standards
@@ -291,7 +314,7 @@ export interface EquipmentSelection {
   inspectionDate?: string;
   inspector?: string;
   notes?: string;
-  alternatives?: string[]; // IDs d'équipements alternatifs
+  alternatives?: string[]; // IDs d'équipments alternatifs
   cost?: number;
   rental?: boolean;
 }
@@ -360,3 +383,15 @@ export interface EquipmentStatistics {
 export type EquipmentId = string;
 export type EquipmentType = SafetyEquipment['category'];
 export type InspectionResult = MaintenanceRecord['results'];
+
+// ⭐ COMPATIBILITÉ AVEC LES AUTRES FICHIERS
+export interface Equipment extends SafetyEquipment {}
+export interface EquipmentSpecifications extends SafetyEquipment['specifications'] {}
+export interface SelectedEquipment {
+  equipmentId: string;
+  equipment: Equipment;
+  isRequired: boolean;
+  notes?: string;
+  checkedAt?: string;
+  checkedBy?: string;
+}
