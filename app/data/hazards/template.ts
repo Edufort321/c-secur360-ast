@@ -1,13 +1,13 @@
 // app/data/hazards/template.ts
-// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
 import { Hazard } from '../../types/hazards';
 
 // =================== FONCTION HELPER ===================
 export const createNewHazard = (base: any): Hazard => {
   return {
+    // Valeurs par défaut
     category: 'GENERAL' as any,
     severity: 'medium',
-    likelihood: 'medium', 
+    likelihood: 'medium',
     riskLevel: 'medium',
     controlMeasures: [],
     requiredEquipment: [],
@@ -54,7 +54,7 @@ export const calculateRiskLevel = (severity: string, likelihood: string): string
   return 'critical';
 };
 
-export const validateHazardData = (hazard: Partial<Hazard>): boolean => {
+export const validateHazardData = (hazard: any): boolean => {
   return !!(
     hazard.id &&
     hazard.name &&
