@@ -1,314 +1,687 @@
 // app/types/ast.ts
 
-// =================== TYPES DE BASE AST ===================
-export interface ASTFormProps {
+import { 
+  BaseEntity, 
+  MultiLanguageText, 
+  RiskLevel, 
+  SeverityLevel 
+} from './index';
+
+// =================== TYPES AST PRINCIPAUX ===================
+export interface AST extends BaseEntity {
+  // Informations de base
+  name: string;
+  description: string;
+  version: string;
+  
+  // Informations projet
+  projectInfo: ProjectInfo;
+  
+  // Participants
+  participants: Participant[];
+  
+  // Étapes de l'AST
+  steps: ASTStep[];
+  currentStep: number;
+  completedSteps: number[];
+  
+  // État et statut
+  status: ASTStatus;
+  priority: ASTPriority;
+  
+  // Évaluation globale
+  overallRiskLevel: RiskLevel;
+  riskMatrix?: RiskMatrixData;
+  
+  // Validation et approbation
+  validations: StepValidation[];
+  finalApproval?: FinalApproval;
+  
+  // Métadonnées
   tenant: string;
+  organizationId?: string;
+  createdBy: string;
+  lastModifiedBy: string;
+  
+  // Planification
+  scheduledDate?: string;
+  completedDate?: string;
+  reviewDate?: string;
+  expiryDate?: string;
+  
+  // Documentation
+  attachments?: Attachment[];
+  photos?: Photo[];
+  
+  // Historique et révisions
+  revisionHistory: ASTRevision[];
+  parentASTId?: string; // Pour les révisions
+  
+  // Configuration
+  template?: ASTTemplate;
+  customFields?: CustomField[];
 }
 
 export interface ProjectInfo {
-  id?: string;
-  astNumber?: string;
-  projectName: string;
-  location: string;
-  coordinates: { lat: number; lng: number };
-  description: string;
-  startDate: string;
-  endDate?: string;
-  duration: string;
-  teamSize: string;
-  workType: string; // ID du type de travail
-  client: string; // ID du client
-  supervisor: string;
-  contact: string;
-  emergencyContact: string;
-  permits: string[];
-  createdAt?: string;
-  updatedAt?: string;
-  status: 'draft' | 'in-progress' | 'completed' | 'archived';
+  workType: string;
+  workTypeDetails?: WorkTypeDetails;
+  location: Location;
+  estimatedDuration: string;
+  actualDuration?: string;
+  equipmentRequired: string[];
+  
+  // Contexte environnemental
+  environmentalConditions?: EnvironmentalConditions;
+  
+  // Contraintes et considérations spéciales
+  specialConsiderations?: string[];
+  regulatoryRequirements?: string[];
+  
+  // Coordination avec autres travaux
+  concurrentWork?: ConcurrentWork[];
+  dependencies?: WorkDependency[];
 }
 
-export interface TeamMember {
+export interface WorkTypeDetails {
+  category: string;
+  subcategory?: string;
+  complexity: 'simple' | 'moderate' | 'complex' | 'highly_complex';
+  frequency: 'routine' | 'periodic' | 'occasional' | 'rare';
+  criticality: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface Location {
+  site: string;
+  building?: string;
+  floor?: string;
+  room?: string;
+  specificArea?: string;
+  coordinates?: Coordinates;
+  accessRestrictions?: string[];
+  emergencyExits?: string[];
+}
+
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+  elevation?: number;
+}
+
+export interface EnvironmentalConditions {
+  temperature?: TemperatureRange;
+  humidity?: number;
+  lighting?: LightingConditions;
+  noise?: NoiseLevel;
+  airQuality?: AirQualityData;
+  weather?: WeatherConditions;
+}
+
+export interface TemperatureRange {
+  min: number;
+  max: number;
+  units: 'celsius' | 'fahrenheit';
+}
+
+export interface LightingConditions {
+  type: 'natural' | 'artificial' | 'mixed' | 'poor';
+  adequacy: 'excellent' | 'good' | 'adequate' | 'poor';
+  requiresSupplemental: boolean;
+}
+
+export interface NoiseLevel {
+  level: number; // dB
+  source?: string;
+  requiresProtection: boolean;
+}
+
+export interface AirQualityData {
+  quality: 'excellent' | 'good' | 'moderate' | 'poor' | 'hazardous';
+  contaminants?: string[];
+  requiresVentilation: boolean;
+  requiresRespiratory: boolean;
+}
+
+export interface WeatherConditions {
+  condition: 'clear' | 'cloudy' | 'rainy' | 'snowy' | 'windy' | 'extreme';
+  impactsWork: boolean;
+  mitigation?: string[];
+}
+
+export interface ConcurrentWork {
+  id: string;
+  description: string;
+  team: string;
+  timeOverlap: TimeOverlap;
+  interferenceRisk: RiskLevel;
+  coordinationRequired: boolean;
+  communicationPlan?: string;
+}
+
+export interface TimeOverlap {
+  start: string;
+  end: string;
+  duration: string;
+}
+
+export interface WorkDependency {
+  id: string;
+  description: string;
+  type: 'predecessor' | 'successor' | 'concurrent';
+  criticalPath: boolean;
+  buffer?: string;
+}
+
+// =================== PARTICIPANTS ===================
+export interface Participant {
   id: string;
   name: string;
-  employeeId: string;
-  department: string;
-  position: string;
-  qualification: string;
+  role: ParticipantRole;
+  experience: ExperienceLevel;
+  competencies: Competency[];
+  
+  // Formation et certifications
+  training: TrainingRecord[];
+  certifications: Certification[];
+  
+  // Responsabilités spécifiques
+  responsibilities: string[];
+  authorizations: Authorization[];
+  
+  // Contact et disponibilité
+  contactInfo?: ContactInfo;
+  availability?: Availability;
+  
+  // Signature et validation
+  signature?: ParticipantSignature;
+  participationDate?: string;
+}
+
+export interface ContactInfo {
   phone?: string;
   email?: string;
-  certifications: string[];
-  hasAcknowledged: boolean;
-  acknowledgmentTime?: string;
-  signature?: string;
-  joinedAt: string;
-  validationStatus: 'pending' | 'approved' | 'rejected';
-  validationComments?: string;
+  radio?: string;
+  emergencyContact?: string;
 }
 
-export interface SelectedEquipment {
-  equipmentId: string;
-  quantity: number;
-  inspectionDate: string;
-  condition: 'excellent' | 'good' | 'fair' | 'poor' | 'out-of-service';
-  inspector?: string;
-  notes?: string;
-  serialNumbers?: string[];
-  expiryDate?: string;
+export interface Availability {
+  startTime: string;
+  endTime: string;
+  breaks?: string[];
+  restrictions?: string[];
 }
 
-export interface SelectedHazard {
-  hazardId: string;
-  severity: number; // 1-5
-  probability: number; // 1-5
-  riskScore?: number; // Calculé automatiquement
-  notes: string;
-  controlMeasures?: ControlMeasureSelection[];
-  residualRisk?: number;
-  isAcceptable?: boolean;
-  reviewedBy?: string;
-  reviewDate?: string;
+export interface ParticipantSignature {
+  signature: string; // Base64 encoded
+  timestamp: string;
+  ipAddress?: string;
+  deviceInfo?: string;
 }
 
-export interface ControlMeasureSelection {
+export type ParticipantRole = 
+  | 'team_leader'
+  | 'safety_officer'
+  | 'worker'
+  | 'observer'
+  | 'specialist'
+  | 'supervisor'
+  | 'client_representative'
+  | 'safety_representative';
+
+export type ExperienceLevel = 
+  | 'entry'
+  | 'intermediate' 
+  | 'experienced'
+  | 'expert'
+  | 'specialist';
+
+export interface Competency {
   id: string;
-  implemented: boolean;
-  implementationDate?: string;
-  responsiblePerson?: string;
-  effectiveness?: number; // 1-100%
-  cost?: number;
-  notes?: string;
+  name: string;
+  level: CompetencyLevel;
+  lastAssessed?: string;
+  expiryDate?: string;
+  evidence?: string[];
 }
 
-export interface WorkPermit {
+export type CompetencyLevel = 'basic' | 'intermediate' | 'advanced' | 'expert';
+
+export interface TrainingRecord {
+  id: string;
+  name: string;
+  provider: string;
+  completedDate: string;
+  expiryDate?: string;
+  certificateUrl?: string;
+  score?: number;
+}
+
+export interface Certification {
+  id: string;
+  name: string;
+  issuingBody: string;
+  issueDate: string;
+  expiryDate?: string;
+  certificateNumber?: string;
+  status: 'valid' | 'expired' | 'suspended' | 'revoked';
+}
+
+export interface Authorization {
   id: string;
   type: string;
-  number: string;
-  issuedBy: string;
-  issueDate: string;
-  expiryDate: string;
-  status: 'pending' | 'approved' | 'expired' | 'rejected' | 'cancelled';
-  conditions: string[];
-  attachments?: string[];
-  reviewer?: string;
-  reviewDate?: string;
+  description: string;
+  grantedBy: string;
+  grantedDate: string;
+  expiryDate?: string;
+  restrictions?: string[];
+}
+
+// =================== ÉTAPES AST ===================
+export interface ASTStep {
+  stepNumber: number;
+  name: string;
+  description: string;
+  isRequired: boolean;
+  isCompleted: boolean;
+  
+  // Données spécifiques à l'étape
+  data: StepData;
+  
+  // Validation
+  validation?: StepValidation;
+  
+  // Timing
+  startedAt?: string;
+  completedAt?: string;
+  estimatedDuration?: string;
+  actualDuration?: string;
+  
+  // Responsable
+  assignedTo?: string;
+  completedBy?: string;
+  
+  // Dépendances
+  dependencies?: number[]; // Numéros d'étapes prérequises
+  blockers?: StepBlocker[];
+}
+
+export type StepData = 
+  | ProjectInfoData
+  | ParticipantsData
+  | EquipmentData
+  | HazardsData
+  | ControlMeasuresData
+  | RiskAssessmentData
+  | EmergencyProceduresData
+  | ReviewValidationData;
+
+export interface ProjectInfoData {
+  stepType: 'project_info';
+  projectInfo: ProjectInfo;
+  additionalNotes?: string;
+}
+
+export interface ParticipantsData {
+  stepType: 'participants';
+  participants: Participant[];
+  teamDynamics?: TeamDynamics;
+  communicationPlan?: CommunicationPlan;
+}
+
+export interface EquipmentData {
+  stepType: 'equipment';
+  requiredEquipment: EquipmentSelection[];
+  equipmentInspections: EquipmentInspection[];
+  equipmentLayout?: EquipmentLayout;
+}
+
+export interface HazardsData {
+  stepType: 'hazards';
+  identifiedHazards: HazardIdentification[];
+  hazardInteractions?: HazardInteraction[];
+  hazardPriority?: HazardPriorityMatrix;
+}
+
+export interface ControlMeasuresData {
+  stepType: 'control_measures';
+  controlMeasures: ControlMeasureImplementation[];
+  hierarchyCompliance?: HierarchyCompliance;
+  effectiveness?: ControlEffectiveness[];
+}
+
+export interface RiskAssessmentData {
+  stepType: 'risk_assessment';
+  riskAssessments: StepRiskAssessment[];
+  residualRisks: ResidualRisk[];
+  acceptanceCriteria?: RiskAcceptanceCriteria;
+}
+
+export interface EmergencyProceduresData {
+  stepType: 'emergency_procedures';
+  procedures: EmergencyProcedure[];
+  evacuationPlan?: EvacuationPlan;
+  emergencyContacts: EmergencyContact[];
+}
+
+export interface ReviewValidationData {
+  stepType: 'review_validation';
+  reviewComments: ReviewComment[];
+  validationChecklist: ValidationChecklist;
+  finalRecommendations?: string[];
+}
+
+// =================== VALIDATION ET APPROBATION ===================
+export interface StepValidation {
+  stepNumber: number;
+  isValid: boolean;
+  validatedBy: string;
+  validatedAt: string;
+  
+  // Critères de validation
+  criteria: ValidationCriteria[];
+  
+  // Résultats
+  score?: number;
+  grade?: ValidationGrade;
+  
+  // Commentaires et recommandations
+  comments?: string;
+  recommendations?: string[];
+  
+  // Actions requises
+  requiredActions?: ValidationAction[];
+  
+  // Re-validation
+  requiresRevalidation: boolean;
+  revalidationReason?: string;
+  nextValidationDate?: string;
+}
+
+export interface ValidationCriteria {
+  id: string;
+  name: string;
+  description: string;
+  weight: number; // 0-100
+  result: ValidationResult;
+  evidence?: string[];
   notes?: string;
 }
+
+export type ValidationResult = 'pass' | 'fail' | 'conditional' | 'not_applicable';
+export type ValidationGrade = 'A' | 'B' | 'C' | 'D' | 'F';
+
+export interface ValidationAction {
+  id: string;
+  description: string;
+  assignedTo: string;
+  dueDate: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: 'pending' | 'in_progress' | 'completed' | 'overdue';
+  completedDate?: string;
+  notes?: string;
+}
+
+export interface FinalApproval {
+  approvedBy: string;
+  approvedAt: string;
+  approvalLevel: ApprovalLevel;
+  conditions?: string[];
+  validity: ApprovalValidity;
+  signature: string; // Base64 encoded
+}
+
+export type ApprovalLevel = 'conditional' | 'standard' | 'full' | 'emergency';
+
+export interface ApprovalValidity {
+  validFrom: string;
+  validUntil?: string;
+  restrictions?: string[];
+  reviewRequired?: boolean;
+}
+
+// =================== TYPES AUXILIAIRES ===================
+export interface TeamDynamics {
+  communicationEffectiveness: 'poor' | 'fair' | 'good' | 'excellent';
+  experienceMix: 'unbalanced' | 'adequate' | 'well_balanced' | 'optimal';
+  leadershipClarity: boolean;
+  conflictResolution?: string;
+}
+
+export interface CommunicationPlan {
+  primaryMethod: 'verbal' | 'radio' | 'hand_signals' | 'digital';
+  backupMethods: string[];
+  checkInFrequency: string;
+  emergencySignals: EmergencySignal[];
+}
+
+export interface EmergencySignal {
+  type: 'stop_work' | 'evacuation' | 'medical_emergency' | 'equipment_failure';
+  signal: string;
+  response: string;
+}
+
+export interface EquipmentSelection {
+  equipmentId: string;
+  quantity: number;
+  purpose: string;
+  isRequired: boolean;
+  alternatives?: string[];
+  inspectionRequired: boolean;
+  notes?: string;
+}
+
+export interface EquipmentInspection {
+  equipmentId: string;
+  inspectedBy: string;
+  inspectionDate: string;
+  result: 'pass' | 'fail' | 'conditional';
+  issues?: InspectionIssue[];
+  nextInspectionDate?: string;
+}
+
+export interface InspectionIssue {
+  severity: 'minor' | 'major' | 'critical';
+  description: string;
+  action: 'repair' | 'replace' | 'monitor' | 'remove_from_service';
+  dueDate?: string;
+}
+
+export interface EquipmentLayout {
+  description: string;
+  diagram?: string; // URL ou base64
+  safetyZones?: SafetyZone[];
+}
+
+export interface SafetyZone {
+  name: string;
+  purpose: string;
+  boundaries: string;
+  restrictions?: string[];
+}
+
+export interface HazardIdentification {
+  hazardId: string;
+  customDescription?: string;
+  location: string;
+  identifiedBy: string;
+  identificationMethod: IdentificationMethod;
+  severity: SeverityLevel;
+  likelihood: string;
+  consequences: string[];
+  notes?: string;
+}
+
+export type IdentificationMethod = 
+  | 'observation'
+  | 'experience'
+  | 'checklist'
+  | 'what_if'
+  | 'job_safety_analysis'
+  | 'hazop'
+  | 'fmea';
+
+export interface HazardInteraction {
+  hazardIds: string[];
+  interactionType: 'amplification' | 'masking' | 'triggering' | 'cumulative';
+  combinedEffect: RiskLevel;
+  description: string;
+}
+
+export interface HazardPriorityMatrix {
+  criteria: PriorityCriteria[];
+  rankings: HazardRanking[];
+}
+
+export interface PriorityCriteria {
+  name: string;
+  weight: number;
+  description: string;
+}
+
+export interface HazardRanking {
+  hazardId: string;
+  rank: number;
+  score: number;
+  justification?: string;
+}
+
+// =================== STATUS ET PRIORITÉ ===================
+export type ASTStatus = 
+  | 'draft'
+  | 'in_progress'
+  | 'under_review'
+  | 'approved'
+  | 'active'
+  | 'completed'
+  | 'suspended'
+  | 'cancelled'
+  | 'expired'
+  | 'archived';
+
+export type ASTPriority = 'low' | 'medium' | 'high' | 'urgent' | 'critical';
+
+// =================== RÉVISIONS ET HISTORIQUE ===================
+export interface ASTRevision {
+  revisionNumber: string;
+  reason: RevisionReason;
+  description: string;
+  changes: ChangeRecord[];
+  createdBy: string;
+  createdAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+}
+
+export type RevisionReason = 
+  | 'periodic_review'
+  | 'incident_driven'
+  | 'process_change'
+  | 'regulatory_update'
+  | 'equipment_change'
+  | 'personnel_change'
+  | 'correction'
+  | 'improvement';
+
+export interface ChangeRecord {
+  field: string;
+  previousValue: any;
+  newValue: any;
+  reason?: string;
+  impact?: string;
+}
+
+// =================== TEMPLATES ET CONFIGURATION ===================
+export interface ASTTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  workTypes: string[];
+  steps: ASTStepTemplate[];
+  defaultSettings: ASTSettings;
+  isPublic: boolean;
+  organizationId?: string;
+}
+
+export interface ASTStepTemplate {
+  stepNumber: number;
+  name: string;
+  description: string;
+  isRequired: boolean;
+  estimatedDuration?: string;
+  instructions?: string;
+  checklistItems?: ChecklistItem[];
+  requiredRoles?: ParticipantRole[];
+}
+
+export interface ChecklistItem {
+  id: string;
+  description: string;
+  isRequired: boolean;
+  category?: string;
+  notes?: string;
+}
+
+export interface ASTSettings {
+  autoSave: boolean;
+  requiredApprovals: number;
+  validityPeriod?: string; // ISO 8601 duration
+  reminderSettings: ReminderSettings;
+  notificationSettings: NotificationSettings;
+}
+
+export interface ReminderSettings {
+  enabled: boolean;
+  intervals: string[]; // ISO 8601 durations
+  recipients: string[];
+}
+
+export interface NotificationSettings {
+  statusChanges: boolean;
+  stepCompletions: boolean;
+  approvals: boolean;
+  expirations: boolean;
+  incidents: boolean;
+}
+
+// =================== ATTACHMENTS ET DOCUMENTATION ===================
+export interface Attachment {
+  id: string;
+  name: string;
+  type: AttachmentType;
+  fileUrl: string;
+  fileSize: number;
+  mimeType: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  description?: string;
+  category?: string;
+}
+
+export type AttachmentType = 
+  | 'document'
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'drawing'
+  | 'certificate'
+  | 'permit'
+  | 'procedure'
+  | 'checklist';
 
 export interface Photo {
   id: string;
-  name: string;
-  url?: string;
-  data?: string; // Base64 pour stockage local
-  description: string;
-  timestamp: string;
-  category: 'site' | 'equipment' | 'hazard' | 'team' | 'before' | 'after' | 'incident' | 'other';
-  gpsLocation?: { lat: number; lng: number };
-  takenBy?: string;
-  metadata?: {
-    camera?: string;
-    settings?: string;
-    weather?: string;
-  };
-}
-
-export interface IsolationPoint {
-  id: string;
-  name: string;
-  type: 'electrical' | 'mechanical' | 'pneumatic' | 'hydraulic' | 'chemical' | 'thermal' | 'gas';
-  location: string;
-  description: string;
-  energyLevel: string;
-  isolationMethod: string;
-  lockoutDevice: string;
-  isActive: boolean;
-  isolatedBy?: string;
-  isolationTime?: string;
-  verifiedBy?: string;
-  verificationTime?: string;
-  photos: Photo[];
-  checklist: {
-    energyIsolated: boolean;
-    lockoutApplied: boolean;
-    energyVerified: boolean;
-    signagePosted: boolean;
-    teamNotified: boolean;
-  };
-}
-
-export interface EmergencyProcedure {
-  id: string;
-  type: 'medical' | 'fire' | 'evacuation' | 'spill' | 'electrical' | 'gas-leak' | 'confined-space' | 'other';
   title: string;
-  procedure: string;
-  responsiblePerson: string;
-  contactInfo: string;
-  equipment?: string[];
-  isVerified: boolean;
-  lastReview?: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
+  description?: string;
+  imageUrl: string;
+  thumbnailUrl?: string;
+  location?: string;
+  takenBy: string;
+  takenAt: string;
+  tags?: string[];
+  hazardIds?: string[];
+  equipmentIds?: string[];
 }
 
-export interface WeatherData {
-  temperature: number;
-  condition: 'ensoleillé' | 'nuageux' | 'pluvieux' | 'neigeux' | 'orageux' | 'brouillard';
-  humidity: number;
-  windSpeed: number;
-  windDirection?: string;
-  visibility: number;
-  uvIndex: number;
-  pressure?: number;
-  alerts: string[];
-  timestamp: string;
-  impact: 'none' | 'low' | 'medium' | 'high' | 'severe';
-}
-
-export interface TeamConsultation {
-  id: string;
-  sharedWith: string[]; // IDs des membres
-  sharedBy: string;
-  shareDate: string;
-  method: 'email' | 'sms' | 'whatsapp' | 'teams' | 'slack';
-  message?: string;
-  expiryDate: string;
-  responses: TeamResponse[];
-  isActive: boolean;
-  remindersSent: number;
-}
-
-export interface TeamResponse {
-  memberId: string;
-  memberName: string;
-  approved: boolean;
-  comments: string;
-  concerns?: string[];
-  timestamp: string;
-  ipAddress?: string;
-  location?: { lat: number; lng: number };
-}
-
-export interface RiskAssessment {
-  id: string;
-  hazardId: string;
-  initialRisk: number;
-  controlMeasures: string[];
-  residualRisk: number;
-  riskReduction: number; // Pourcentage
-  isAcceptable: boolean;
-  additionalMeasures?: string[];
-  reviewRequired: boolean;
-  reviewDate?: string;
-  assessedBy: string;
-  assessmentDate: string;
-}
-
-export interface ValidationStep {
-  id: string;
-  name: string;
-  description: string;
-  required: boolean;
-  completed: boolean;
-  completedBy?: string;
-  completedDate?: string;
-  signature?: string;
-  comments?: string;
-  attachments?: string[];
-}
-
-export interface ASTDocument {
-  id: string;
-  astNumber: string;
-  version: number;
-  status: 'draft' | 'review' | 'approved' | 'active' | 'completed' | 'archived';
-  
-  // Sections principales
-  projectInfo: ProjectInfo;
-  team: TeamMember[];
-  equipment: SelectedEquipment[];
-  hazards: SelectedHazard[];
-  permits: WorkPermit[];
-  isolationPoints: IsolationPoint[];
-  emergencyProcedures: EmergencyProcedure[];
-  riskAssessments: RiskAssessment[];
-  consultation: TeamConsultation;
-  
-  // Documentation
-  photos: Photo[];
-  attachments: string[];
-  
-  // Validation
-  validationSteps: ValidationStep[];
-  
-  // Métadonnées
-  createdBy: string;
-  createdDate: string;
-  lastModifiedBy?: string;
-  lastModifiedDate?: string;
-  language: 'fr' | 'en';
-  tenant: string;
-  
-  // Historique
-  revisions?: ASTRevision[];
-  
-  // Données calculées
-  overallRiskLevel: 'low' | 'medium' | 'high' | 'critical';
-  completionPercentage: number;
-  complianceScore: number;
-}
-
-export interface ASTRevision {
-  version: number;
-  changes: string[];
-  changedBy: string;
-  changeDate: string;
-  reason: string;
-  previousData?: Partial<ASTDocument>;
-}
-
-// =================== TYPES D'ÉTAT DE L'APPLICATION ===================
-export interface ASTFormState {
-  currentStep: number;
-  totalSteps: number;
-  isLoading: boolean;
-  isSaving: boolean;
-  hasUnsavedChanges: boolean;
-  errors: Record<string, string>;
-  warnings: Record<string, string>;
-  language: 'fr' | 'en';
-  showSidebar: boolean;
-  autoSave: boolean;
-  lastSaved?: string;
-}
-
-export interface FormValidation {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-  requiredFields: string[];
-  completedFields: string[];
-  completionPercentage: number;
-}
-
-// =================== TYPES D'ACTIONS ===================
-export type ASTAction = 
-  | { type: 'SET_PROJECT_INFO'; payload: Partial<ProjectInfo> }
-  | { type: 'ADD_TEAM_MEMBER'; payload: TeamMember }
-  | { type: 'REMOVE_TEAM_MEMBER'; payload: string }
-  | { type: 'UPDATE_TEAM_MEMBER'; payload: { id: string; data: Partial<TeamMember> } }
-  | { type: 'ADD_EQUIPMENT'; payload: SelectedEquipment }
-  | { type: 'REMOVE_EQUIPMENT'; payload: string }
-  | { type: 'UPDATE_EQUIPMENT'; payload: { id: string; data: Partial<SelectedEquipment> } }
-  | { type: 'ADD_HAZARD'; payload: SelectedHazard }
-  | { type: 'REMOVE_HAZARD'; payload: string }
-  | { type: 'UPDATE_HAZARD'; payload: { id: string; data: Partial<SelectedHazard> } }
-  | { type: 'SET_CURRENT_STEP'; payload: number }
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: { field: string; message: string } }
-  | { type: 'CLEAR_ERROR'; payload: string }
-  | { type: 'SAVE_SUCCESS'; payload: string }
-  | { type: 'RESET_FORM' };
-
-// =================== EXPORT TYPES UTILITAIRES ===================
-export type ASTStatus = ASTDocument['status'];
-export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
-export type Language = 'fr' | 'en';
-export type FormStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+// =================== TYPES EXPORTS ===================
+export type ASTId = string;
+export type StepId = number;
+export type ParticipantId = string;
