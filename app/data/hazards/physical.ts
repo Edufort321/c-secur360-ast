@@ -29,100 +29,153 @@ export const fallsFromHeight: Hazard = createNewHazard({
   name: 'Chutes de hauteur',
   category: 'PHYSICAL' as any,
   subcategory: 'falls',
-  description: 'Risque de chute de plus de 3 mètres',
+  displayName: {
+    fr: 'Chutes de hauteur',
+    en: 'Falls from height'
+  },
+  description: 'Risque de chute depuis une surface élevée pouvant causer blessures graves',
   severity: 'critical',
   likelihood: 'medium',
   riskLevel: 'high',
   
+  eliminationMethods: [
+    'Élimination du travail en hauteur',
+    'Conception sans accès en hauteur',
+    'Automatisation des tâches'
+  ],
+  
+  engineeringControls: [
+    'Garde-corps permanents',
+    'Plateformes de travail sécurisées',
+    'Systèmes de protection collective',
+    'Filets de sécurité'
+  ],
+  
+  administrativeControls: [
+    'Formation travail en hauteur',
+    'Procédures de sécurité strictes',
+    'Inspection équipements quotidienne',
+    'Plan de sauvetage d\'urgence'
+  ],
+  
   controlMeasures: [
     'Système d\'arrêt de chute',
-    'Garde-corps temporaires',
-    'Filets de sécurité',
-    'Formation travail en hauteur'
+    'Harnais de sécurité complet',
+    'Points d\'ancrage certifiés',
+    'Inspection quotidienne équipements'
   ],
   
   requiredEquipment: [
-    'full_body_harness_3d',
-    'shock_absorbing_lanyard_6ft',
-    'temporary_anchor_point_beam',
-    'climbing_helmet_mountaineering'
+    'full_body_harness_3_point',
+    'shock_absorbing_lanyard',
+    'temporary_anchor_point',
+    'fall_arrest_system'
   ],
+  
+  emergencyProcedures: [
+    'Secours en espace suspendu',
+    'Stabilisation victimes chute',
+    'Transport médical spécialisé',
+    'Évaluation traumatisme rachidien'
+  ] as any,
   
   regulatoryReferences: [
-    'RSST Art. 347-378',
-    'CSA Z259 série',
-    'ANSI Z359 série'
+    'RSST - Travail en hauteur',
+    'CSA Z259 - Équipements protection chutes',
+    'Code de sécurité pour travaux de construction'
   ],
   
-  workTypes: ['work_at_height', 'construction_general'],
+  workTypes: ['construction', 'maintenance', 'roofing', 'tower_work'],
   
   isActive: true
 });
 
-export const struckByObjects: Hazard = createNewHazard({
-  id: 'struck_by_falling_objects',
+export const fallingObjects: Hazard = createNewHazard({
+  id: 'falling_objects_impact',
   name: 'Objets qui tombent',
-  category: 'physical',
-  subcategory: 'struck_by',
-  description: 'Impact par objets qui chutent ou sont projetés',
+  category: 'PHYSICAL' as any,
+  subcategory: 'falling_objects',
+  displayName: {
+    fr: 'Chute d\'objets',
+    en: 'Falling objects'
+  },
+  description: 'Risque de blessures par impact d\'objets tombant d\'une hauteur',
   severity: 'high',
   likelihood: 'medium',
   riskLevel: 'medium',
   
   controlMeasures: [
-    'Casque de sécurité obligatoire',
-    'Périmètre de sécurité',
-    'Filets de protection',
-    'Signalisation des zones dangereuses'
+    'Filets de protection anti-chute',
+    'Zones d\'exclusion délimitées',
+    'Casques de protection obligatoires',
+    'Arrimage sécuritaire des matériaux'
   ],
   
   requiredEquipment: [
-    'hard_hat_standard_csa',
-    'safety_glasses_wraparound',
-    'high_visibility_vest_class2'
+    'hard_hat_class_e_electrical',
+    'debris_nets_construction',
+    'tool_tethering_system',
+    'barricade_warning_tape'
   ],
+  
+  emergencyProcedures: [
+    'Évacuation zone d\'impact',
+    'Traitement traumatisme crânien',
+    'Immobilisation victimes',
+    'Transport médical d\'urgence'
+  ] as any,
   
   regulatoryReferences: [
-    'RSST Art. 2.10',
-    'CSA Z94.1',
-    'ANSI Z89.1'
+    'Code de sécurité construction',
+    'RSST - Protection individuelle'
   ],
   
-  workTypes: ['construction_general', 'excavation'],
+  workTypes: ['construction', 'demolition', 'material_handling'],
   
   isActive: true
 });
 
 export const noiseExposure: Hazard = createNewHazard({
-  id: 'excessive_noise_exposure',
+  id: 'occupational_noise_exposure',
   name: 'Exposition au bruit',
-  category: 'physical',
+  category: 'PHYSICAL' as any,
   subcategory: 'noise',
-  description: 'Exposition à des niveaux sonores supérieurs à 85 dBA',
+  displayName: {
+    fr: 'Bruit excessif en milieu de travail',
+    en: 'Occupational noise exposure'
+  },
+  description: 'Risque de perte auditive par exposition à des niveaux sonores élevés',
   severity: 'medium',
   likelihood: 'high',
   riskLevel: 'medium',
   
   controlMeasures: [
-    'Protection auditive obligatoire',
-    'Rotation du personnel',
-    'Réduction à la source',
-    'Audiométrie périodique'
+    'Réduction du bruit à la source',
+    'Isolation acoustique',
+    'Protection auditive individuelle',
+    'Rotation des travailleurs exposés'
   ],
   
   requiredEquipment: [
-    'hearing_protection_plugs',
-    'noise_level_meter',
-    'sound_dampening_barriers'
+    'hearing_protection_earplugs',
+    'noise_cancelling_earmuffs',
+    'sound_level_meter',
+    'audiometric_testing_equipment'
   ],
+  
+  emergencyProcedures: [
+    'Retrait immédiat zone bruyante',
+    'Évaluation auditive d\'urgence',
+    'Consultation audiologique',
+    'Surveillance médicale renforcée'
+  ] as any,
   
   regulatoryReferences: [
-    'RSST Art. 130-141',
-    'CSA Z107.56',
-    'ISO 1999'
+    'RSST - Bruit en milieu de travail',
+    'Règlement sur la santé et sécurité du travail'
   ],
   
-  workTypes: ['construction_general', 'welding', 'excavation'],
+  workTypes: ['manufacturing', 'construction', 'airport_operations'],
   
   isActive: true
 });
@@ -130,33 +183,44 @@ export const noiseExposure: Hazard = createNewHazard({
 export const extremeTemperatures: Hazard = createNewHazard({
   id: 'extreme_temperature_exposure',
   name: 'Températures extrêmes',
-  category: 'physical',
+  category: 'PHYSICAL' as any,
   subcategory: 'temperature',
-  description: 'Exposition au froid extrême ou à la chaleur excessive',
+  displayName: {
+    fr: 'Exposition températures extrêmes',
+    en: 'Extreme temperature exposure'
+  },
+  description: 'Risque de stress thermique par exposition à chaleur ou froid extrêmes',
   severity: 'medium',
   likelihood: 'medium',
   riskLevel: 'medium',
   
   controlMeasures: [
-    'Vêtements appropriés',
-    'Rotation fréquente',
-    'Hydratation/réchauffement',
-    'Surveillance des signes vitaux'
+    'Contrôle climatisation/chauffage',
+    'Vêtements adaptés aux conditions',
+    'Pauses fréquentes en zone tempérée',
+    'Hydratation régulière'
   ],
   
   requiredEquipment: [
-    'insulated_winter_boots',
-    'thermal_workwear',
-    'cooling_vest_summer'
+    'cooling_vest_evaporative',
+    'insulated_winter_clothing',
+    'temperature_monitoring_device',
+    'heated_shelter_portable'
   ],
+  
+  emergencyProcedures: [
+    'Refroidissement/réchauffement graduel',
+    'Surveillance signes vitaux',
+    'Hydratation contrôlée',
+    'Transport médical si nécessaire'
+  ] as any,
   
   regulatoryReferences: [
-    'RSST Art. 121-129',
-    'ACGIH TLV',
-    'ISO 7730'
+    'ACGIH - Stress thermique',
+    'RSST - Conditions de température'
   ],
   
-  workTypes: ['emergency_response', 'outdoor_work'],
+  workTypes: ['outdoor_work', 'foundry_operations', 'cold_storage'],
   
   isActive: true
 });
@@ -164,7 +228,7 @@ export const extremeTemperatures: Hazard = createNewHazard({
 // =================== EXPORT DANGERS PHYSIQUES ===================
 export const physicalHazards = [
   fallsFromHeight,
-  struckByObjects,
+  fallingObjects,
   noiseExposure,
   extremeTemperatures
 ];
