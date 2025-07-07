@@ -26,184 +26,256 @@ const createNewHazard = (base: Partial<Hazard>): Hazard => {
 
 export const slipsTripsFalls: Hazard = createNewHazard({
   id: 'slips_trips_falls_same_level',
-  name: 'Glissades, trébuchements, chutes de plain-pied',
+  name: 'Glissades, trébuchements, chutes',
   category: 'WORKPLACE' as any,
-  subcategory: 'surface_hazards',
-  description: 'Chutes au même niveau par surfaces glissantes, obstacles',
+  subcategory: 'walking_surfaces',
+  displayName: {
+    fr: 'Chutes de plain-pied',
+    en: 'Slips, trips and falls'
+  },
+  description: 'Risque de chute sur surfaces glissantes ou encombrées',
   severity: 'medium',
   likelihood: 'high',
   riskLevel: 'medium',
   
+  eliminationMethods: [
+    'Conception surfaces antidérapantes',
+    'Élimination obstacles permanents',
+    'Drainage automatique des liquides'
+  ],
+  
+  engineeringControls: [
+    'Revêtements antidérapants',
+    'Systèmes de drainage efficaces',
+    'Éclairage adéquat des passages',
+    'Rampes et mains courantes'
+  ],
+  
+  administrativeControls: [
+    'Entretien ménager régulier',
+    'Signalisation zones dangereuses',
+    'Procédures nettoyage immédiat',
+    'Inspection quotidienne des lieux'
+  ],
+  
   controlMeasures: [
-    'Maintien propreté surfaces',
-    'Signalisation dangers temporaires',
+    'Entretien ménager rigoureux',
     'Chaussures antidérapantes',
-    'Éclairage adéquat'
+    'Signalisation sol mouillé',
+    'Éclairage adéquat des passages'
   ],
   
   requiredEquipment: [
-    'slip_resistant_footwear',
-    'warning_signs_wet_floor',
-    'adequate_lighting',
-    'non_slip_mats'
+    'non_slip_safety_footwear',
+    'wet_floor_warning_signs',
+    'anti_slip_floor_treatments',
+    'adequate_lighting_systems'
   ],
+  
+  emergencyProcedures: [
+    'Évaluation blessures avant déplacement',
+    'Immobilisation si douleur dorsale',
+    'Nettoyage immédiat zone dangereuse',
+    'Rapport incident détaillé'
+  ] as any,
   
   regulatoryReferences: [
-    'RSST Art. 12-19',
-    'CSA Z195 - Chaussures sécurité',
-    'Guide CNESST - Glissades'
+    'RSST - Entretien ménager',
+    'Code du bâtiment - Surfaces de marche'
   ],
   
-  workTypes: ['construction_general', 'maintenance', 'cleaning'],
+  workTypes: ['general_workplace', 'food_service', 'cleaning_operations'],
   
   isActive: true
 });
 
 export const poorHousekeeping: Hazard = createNewHazard({
-  id: 'poor_workplace_housekeeping',
+  id: 'poor_housekeeping_clutter',
   name: 'Mauvais entretien ménager',
-  category: 'workplace',
+  category: 'WORKPLACE' as any,
   subcategory: 'housekeeping',
-  description: 'Désordre, déchets, matériaux mal rangés',
+  displayName: {
+    fr: 'Encombrement et désordre',
+    en: 'Poor housekeeping and clutter'
+  },
+  description: 'Risque d\'accidents par encombrement et désorganisation',
   severity: 'medium',
   likelihood: 'medium',
   riskLevel: 'medium',
   
   controlMeasures: [
-    'Programme 5S/entretien ménager',
-    'Zones désignées matériaux',
-    'Nettoyage régulier planifié',
-    'Responsabilisation équipes'
+    'Programme 5S (Sort, Set, Shine, Standardize, Sustain)',
+    'Rangement systématique quotidien',
+    'Élimination objets inutiles',
+    'Zones de stockage délimitées'
   ],
   
   requiredEquipment: [
-    'storage_containers',
-    'cleaning_supplies',
+    'storage_containers_labeled',
     'waste_disposal_bins',
-    'material_handling_equipment'
+    'cleaning_supplies_accessible',
+    'organization_systems'
   ],
+  
+  emergencyProcedures: [
+    'Dégagement voies d\'évacuation',
+    'Nettoyage immédiat déversements',
+    'Signalement obstacles dangereux',
+    'Inspection sécuritaire urgente'
+  ] as any,
   
   regulatoryReferences: [
-    'RSST Art. 10-11',
-    'Guide CNESST - Entretien ménager'
+    'RSST - Organisation du travail',
+    'Code de prévention des incendies'
   ],
   
-  workTypes: ['construction_general', 'manufacturing', 'warehouse'],
+  workTypes: ['manufacturing', 'warehousing', 'office_environments'],
   
   isActive: true
 });
 
 export const inadequateLighting: Hazard = createNewHazard({
-  id: 'insufficient_workplace_lighting',
+  id: 'inadequate_workplace_lighting',
   name: 'Éclairage insuffisant',
-  category: 'workplace',
+  category: 'WORKPLACE' as any,
   subcategory: 'lighting',
-  description: 'Éclairage inadéquat causant erreurs, accidents',
+  displayName: {
+    fr: 'Mauvais éclairage',
+    en: 'Inadequate lighting'
+  },
+  description: 'Risque d\'accidents par visibilité réduite',
   severity: 'medium',
   likelihood: 'medium',
   riskLevel: 'medium',
   
   controlMeasures: [
-    'Mesure niveaux éclairage',
-    'Éclairage supplémentaire portable',
+    'Éclairage minimum requis respecté',
+    'Éclairage d\'appoint aux postes',
     'Maintenance régulière luminaires',
-    'Réflecteurs et miroirs'
+    'Éclairage d\'urgence fonctionnel'
   ],
   
   requiredEquipment: [
-    'portable_work_lights',
-    'light_level_meter',
-    'reflective_surfaces',
-    'emergency_lighting'
+    'adequate_overhead_lighting',
+    'task_specific_lighting',
+    'emergency_lighting_system',
+    'light_meter_measurement'
   ],
+  
+  emergencyProcedures: [
+    'Éclairage d\'urgence automatique',
+    'Évacuation sécuritaire guidée',
+    'Réparation éclairage prioritaire',
+    'Éclairage temporaire si nécessaire'
+  ] as any,
   
   regulatoryReferences: [
-    'RSST Art. 103-110',
-    'IESNA RP-7 - Éclairage industriel',
-    'CSA C22.2'
+    'RSST - Éclairage des lieux de travail',
+    'Code du bâtiment - Éclairage'
   ],
   
-  workTypes: ['construction_general', 'maintenance', 'precision_work'],
+  workTypes: ['indoor_work', 'precision_tasks', 'night_shift_operations'],
   
   isActive: true
 });
 
-export const workspaceConfinement: Hazard = createNewHazard({
-  id: 'cramped_workspace_conditions',
+export const confinedWorkspaces: Hazard = createNewHazard({
+  id: 'confined_restricted_workspaces',
   name: 'Espaces de travail restreints',
-  category: 'workplace',
-  subcategory: 'space',
-  description: 'Manque d\'espace causant postures contraignantes',
+  category: 'WORKPLACE' as any,
+  subcategory: 'space_constraints',
+  displayName: {
+    fr: 'Espaces restreints',
+    en: 'Confined workspaces'
+  },
+  description: 'Risque d\'accidents par manque d\'espace de manœuvre',
   severity: 'medium',
-  likelihood: 'high',
+  likelihood: 'medium',
   riskLevel: 'medium',
   
   controlMeasures: [
-    'Aménagement optimal espaces',
-    'Outils adaptés espaces restreints',
-    'Rotation fréquente personnel',
-    'Supports ergonomiques'
+    'Aménagement optimisé de l\'espace',
+    'Procédures d\'entrée sécuritaires',
+    'Équipements adaptés à l\'espace',
+    'Surveillance continue des travailleurs'
   ],
   
   requiredEquipment: [
-    'compact_ergonomic_tools',
-    'kneeling_pads',
-    'adjustable_work_supports',
-    'personal_lighting_systems'
+    'compact_safety_equipment',
+    'communication_devices_portable',
+    'personal_monitoring_systems',
+    'emergency_evacuation_equipment'
   ],
+  
+  emergencyProcedures: [
+    'Évacuation rapide espace confiné',
+    'Secours spécialisé espace restreint',
+    'Communication d\'urgence maintenue',
+    'Surveillance médicale post-exposition'
+  ] as any,
   
   regulatoryReferences: [
-    'RSST - Aménagement postes',
-    'CSA Z412 - Ergonomie'
+    'CSA Z1611 - Espaces confinés',
+    'RSST - Espaces clos'
   ],
   
-  workTypes: ['confined_space', 'maintenance', 'repair_work'],
+  workTypes: ['confined_space_entry', 'maintenance_work', 'underground_operations'],
   
   isActive: true
 });
 
-export const vehicleTraffic: Hazard = createNewHazard({
+export const vehiclePedestrianTraffic: Hazard = createNewHazard({
   id: 'vehicle_pedestrian_interaction',
   name: 'Circulation véhicules/piétons',
-  category: 'workplace',
-  subcategory: 'traffic',
-  description: 'Collision entre véhicules et travailleurs à pied',
+  category: 'WORKPLACE' as any,
+  subcategory: 'traffic_control',
+  displayName: {
+    fr: 'Trafic mixte véhicules-piétons',
+    en: 'Vehicle-pedestrian traffic'
+  },
+  description: 'Risque de collision entre véhicules et piétons',
   severity: 'critical',
   likelihood: 'medium',
   riskLevel: 'high',
   
   controlMeasures: [
-    'Séparation voies circulation',
-    'Signalisation visible',
+    'Séparation voies véhicules/piétons',
+    'Signalisation claire et visible',
     'Vêtements haute visibilité',
-    'Communication radio'
+    'Zones de circulation délimitées'
   ],
   
   requiredEquipment: [
-    'high_visibility_vest_class2',
-    'traffic_cones_barriers',
-    'vehicle_warning_devices',
-    'two_way_radio_communication'
+    'high_visibility_safety_vests',
+    'traffic_control_devices',
+    'pedestrian_crossing_signals',
+    'vehicle_warning_systems'
   ],
+  
+  emergencyProcedures: [
+    'Arrêt circulation immédiat',
+    'Premiers soins traumatisme',
+    'Transport médical d\'urgence',
+    'Enquête accident détaillée'
+  ] as any,
   
   regulatoryReferences: [
-    'RSST Art. 2.20',
-    'CSA Z96 - Haute visibilité',
-    'Manuel signalisation chantier'
+    'Code de la sécurité routière',
+    'RSST - Circulation en milieu de travail'
   ],
   
-  workTypes: ['construction_general', 'warehouse', 'road_work'],
+  workTypes: ['warehouse_operations', 'construction_sites', 'loading_dock_operations'],
   
   isActive: true
 });
 
-// =================== EXPORT DANGERS MILIEU TRAVAIL ===================
+// =================== EXPORT DANGERS MILIEU DE TRAVAIL ===================
 export const workplaceHazards = [
   slipsTripsFalls,
   poorHousekeeping,
   inadequateLighting,
-  workspaceConfinement,
-  vehicleTraffic
+  confinedWorkspaces,
+  vehiclePedestrianTraffic
 ];
 
 export const workplaceHazardsById = workplaceHazards.reduce((acc, hazard) => {
