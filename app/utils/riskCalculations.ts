@@ -187,8 +187,8 @@ export function calculateBasicRisk(
   severity: SeverityLevel,
   probability: ProbabilityLevel
 ): RiskLevel {
-  const severityIndex = Math.min(4, Math.max(0, severity - 1));
-  const probabilityIndex = Math.min(4, Math.max(0, probability - 1));
+  const severityIndex = Math.min(4, Math.max(0, Number(severity) - 1));
+  const probabilityIndex = Math.min(4, Math.max(0, Number(probability) - 1));
   
   return STANDARD_RISK_MATRIX[probabilityIndex][severityIndex];
 }
@@ -202,8 +202,8 @@ export function calculateRiskWithExposure(
   exposure: ExposureFrequency,
   numberOfPersons: number = 1
 ): RiskCalculationResult {
-  const severityIndex = Math.min(4, Math.max(0, severity - 1));
-  const probabilityIndex = Math.min(4, Math.max(0, probability - 1));
+  const severityIndex = Math.min(4, Math.max(0, Number(severity) - 1));
+  const probabilityIndex = Math.min(4, Math.max(0, Number(probability) - 1));
   
   // Score de base avec exposition
   const baseScore = EXPOSURE_ADJUSTED_MATRIX[exposure][probabilityIndex][severityIndex];
@@ -247,7 +247,7 @@ export function calculateResidualRisk(
         hazardAssessment.severityLevel,
         hazardAssessment.probabilityLevel
       ),
-      riskScore: (hazardAssessment.severityLevel * hazardAssessment.probabilityLevel),
+      riskScore: (Number(hazardAssessment.severityLevel) * Number(hazardAssessment.probabilityLevel)),
       controlEffectiveness: 0,
       riskReduction: 0,
       residualRisk: calculateBasicRisk(
@@ -604,7 +604,7 @@ export function calculateTenantRiskStatistics(tenantASTs: AST[]) {
     identifiedHazards.forEach((hazard: any) => {
       const riskLevel = hazard.residualRiskLevel || RiskLevel.MEDIUM;
       riskDistribution[riskLevel]++;
-      totalRiskScore += (hazard.severityLevel || 3) * (hazard.probabilityLevel || 3);
+      totalRiskScore += (Number(hazard.severityLevel) || 3) * (Number(hazard.probabilityLevel) || 3);
       totalHazards++;
     });
   });
