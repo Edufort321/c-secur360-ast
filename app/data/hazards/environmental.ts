@@ -27,7 +27,7 @@ const createNewHazard = (base: Partial<Hazard>): Hazard => {
 export const weatherExposure: Hazard = createNewHazard({
   id: 'severe_weather_exposure',
   name: 'Conditions météorologiques extrêmes',
-  category: 'environmental',
+  category: 'ENVIRONMENTAL' as any,
   subcategory: 'weather',
   description: 'Exposition aux intempéries, foudre, vents violents',
   severity: 'high',
