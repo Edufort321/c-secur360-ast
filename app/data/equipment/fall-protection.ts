@@ -41,7 +41,8 @@ export const fullBodyHarness: SafetyEquipment = createNewEquipment({
     capacity: 'Utilisateur 140kg max',
     sizes: 'S/M/L/XL/XXL',
     adjustability: 'Réglages multiples',
-    webbing: 'Sangles 44mm largeur'
+    webbing: 'Sangles 44mm largeur',
+    weight: 1.2  // ⭐ CORRIGÉ : ~1.2 kg
   },
   
   certifications: ['CSA Z259.10', 'ANSI Z359.11', 'EN 361'],
@@ -75,7 +76,8 @@ export const shockAbsorbingLanyard: SafetyEquipment = createNewEquipment({
     connectors: 'Mousquetons verrouillables',
     capacity: 'Utilisateur 140kg max',
     deployment: 'Déploiement max 1.2m',
-    indicators: 'Indicateur d\'impact'
+    indicators: 'Indicateur d\'impact',
+    weight: 0.8  // ⭐ CORRIGÉ : ~800g = 0.8 kg
   },
   
   certifications: ['CSA Z259.11', 'ANSI Z359.13', 'EN 355'],
@@ -107,7 +109,7 @@ export const anchorPoint: SafetyEquipment = createNewEquipment({
     capacity: '23kN (5000 lbs)',
     installation: 'Sans perçage ni soudure',
     certification: 'Point unique/multiple',
-    weight: '2.3 kg',
+    weight: 2.3,  // ⭐ CORRIGÉ : 2.3 kg
     corrosion: 'Galvanisation à chaud',
     markings: 'Marquage capacité permanent'
   },
@@ -143,7 +145,8 @@ export const verticalLifeline: SafetyEquipment = createNewEquipment({
     swivel: 'Émerillon anti-torsion',
     housing: 'Boîtier aluminium étanche',
     capacity: 'Utilisateur 140kg max',
-    indicators: 'Témoin de chute'
+    indicators: 'Témoin de chute',
+    weight: 4.5  // ⭐ CORRIGÉ : ~4.5 kg
   },
   
   certifications: ['CSA Z259.2.2', 'ANSI Z359.14', 'EN 360'],
@@ -177,7 +180,8 @@ export const rescueKit: SafetyEquipment = createNewEquipment({
     controls: 'Vitesse contrôlée descente',
     storage: 'Sac de transport étanche',
     components: 'Mousquetons, poulies, sangles',
-    training: 'Formation requise'
+    training: 'Formation requise',
+    weight: 8.5  // ⭐ CORRIGÉ : ~8.5 kg (kit complet)
   },
   
   certifications: ['CSA Z259.1', 'NFPA 1983', 'EN 341 Classe A'],
