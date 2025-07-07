@@ -3,10 +3,9 @@
 import { Hazard } from '../../types/hazards';
 
 // Fonction helper pour créer un danger
-const createNewHazard = (base: Partial<Hazard>): Hazard => {
+const createNewHazard = (base: any): Hazard => {
   return {
-    // Valeurs par défaut
-    category: 'GAS' as any,
+    category: 'GASL' as any,
     severity: 'medium',
     likelihood: 'medium',
     riskLevel: 'medium',
