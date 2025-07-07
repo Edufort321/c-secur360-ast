@@ -27,7 +27,7 @@ const createNewHazard = (base: Partial<Hazard>): Hazard => {
 export const infectiousAgents: Hazard = createNewHazard({
   id: 'infectious_biological_agents',
   name: 'Agents infectieux',
-  category: 'biological',
+  category: 'BIOLOGICAL' as any,
   subcategory: 'infectious',
   displayName: {
     fr: 'Agents biologiques infectieux',
