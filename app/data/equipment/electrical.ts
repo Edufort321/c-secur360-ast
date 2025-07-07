@@ -110,7 +110,7 @@ export const arcFlashSuit: SafetyEquipment = createNewEquipment({
     breathability: 'Membrane respirante',
     visibility: 'Bandes réfléchissantes',
     sizes: 'S à 4XL',
-    weight: '2.8 kg ensemble'
+    weight: 2.8  // ⭐ CORRIGÉ : Number au lieu de string
   },
   
   certifications: ['CSA Z462', 'NFPA 70E', 'ASTM F1959'],
