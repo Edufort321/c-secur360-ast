@@ -29,7 +29,7 @@ const createNewEquipment = (base: Partial<SafetyEquipment>): SafetyEquipment => 
 export const safetyGlasses: SafetyEquipment = createNewEquipment({
   id: 'safety_glasses_wraparound',
   name: 'Lunettes de sécurité enveloppantes',
-  category: 'eye-protection',
+  category: 'EYE_PROTECTION' as any,
   subcategory: 'safety_glasses',
   description: 'Protection oculaire de base polyvalente',
   
