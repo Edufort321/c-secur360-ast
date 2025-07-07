@@ -386,7 +386,7 @@ export type InspectionResult = MaintenanceRecord['results'];
 
 // ⭐ COMPATIBILITÉ AVEC LES AUTRES FICHIERS
 export interface Equipment extends SafetyEquipment {}
-export interface EquipmentSpecifications extends SafetyEquipment['specifications'] {}
+export interface EquipmentSpecifications {
 export interface SelectedEquipment {
   equipmentId: string;
   equipment: Equipment;
