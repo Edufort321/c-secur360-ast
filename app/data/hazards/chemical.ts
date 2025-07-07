@@ -233,7 +233,7 @@ export const chemicalHazards = [
 ];
 
 export const chemicalHazardsById = chemicalHazards.reduce((acc, hazard) => {
-  acc[hazard.id] = hazard;
+  acc[(hazard as any).id] = hazard;
   return acc;
 }, {} as Record<string, Hazard>);
 
