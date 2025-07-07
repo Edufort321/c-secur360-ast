@@ -1,19 +1,20 @@
 // app/data/equipment/fall-protection.ts
-// ⭐ IMPORT CORRIGÉ - Utilise la nouvelle interface
+// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
 import { SafetyEquipment } from '../../types/equipment';
 
 // Fonction helper pour créer un équipement
-const createNewEquipment = (base: Partial<SafetyEquipment>): SafetyEquipment => {
+const createNewEquipment = (base: any): SafetyEquipment => {
   return {
     // Valeurs par défaut
-    certifications: [],
-    standards: [],
+    category: 'FALL_PROTECTION' as any,
+    certifications: [] as any,
+    standards: [] as any,
     isActive: true,
     createdDate: new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
     version: '1.0',
-    workTypes: [],
-    hazardTypes: [],
+    workTypes: [] as any,
+    hazardTypes: [] as any,
     supplier: 'Supplier TBD',
     cost: 0,
     currency: 'CAD',
@@ -24,193 +25,340 @@ const createNewEquipment = (base: Partial<SafetyEquipment>): SafetyEquipment => 
   } as SafetyEquipment;
 };
 
-// =================== PROTECTION CONTRE LES CHUTES ===================
+// =================== HARNAIS COMPLET ===================
 
-export const fullBodyHarness: SafetyEquipment = createNewEquipment({
-  id: 'full_body_harness_3d',
-  name: 'Harnais complet 3 points d\'ancrage',
+export const fullBodyHarness = createNewEquipment({
+  id: 'full_body_harness_class_a',
+  name: 'Harnais complet Classe A',
   category: 'FALL_PROTECTION' as any,
-  subcategory: 'body_harness',
-  description: 'Harnais polyvalent arrêt/positionnement',
+  subcategory: 'harnesses',
+  description: 'Harnais de sécurité corps entier pour travail en hauteur',
   
-  specifications: {
-    attachmentPoints: '3 points D (dorsal, sternal, latéraux)',
-    material: 'Polyester résistant UV',
-    buckles: 'Boucles auto-verrouillantes',
-    padding: 'Rembourrage épaules et cuisses',
-    capacity: 'Utilisateur 140kg max',
-    sizes: 'S/M/L/XL/XXL',
-    adjustability: 'Réglages multiples',
-    webbing: 'Sangles 44mm largeur',
-    weight: 1.2  // ⭐ CORRIGÉ : ~1.2 kg
+  displayName: {
+    fr: 'Harnais complet Classe A',
+    en: 'Class A Full Body Harness'
   },
+
+  specifications: {
+    model: 'ExoFit NEX',
+    manufacturer: '3M DBI-SALA',
+    partNumber: '1113122',
+    weightCapacity: 140, // kg
+    material: 'Polyester résistant',
+    buckleType: 'Boucles à passage rapide',
+    dorsal: 'Point d\'ancrage dorsal',
+    frontal: 'Point d\'ancrage frontal',
+    sizes: 'S à 3XL'
+  },
+
+  safetyFeatures: [
+    'Points d\'ancrage multiples certifiés',
+    'Sangles rembourrées confort',
+    'Boucles autobloquantes',
+    'Indicateurs d\'usure visuels',
+    'Anneaux en acier forgé',
+    'Résistant aux UV et abrasion'
+  ] as any,
+
+  maintenanceRequirements: [
+    'Inspection complète avant chaque usage',
+    'Nettoyage après exposition à contaminants',
+    'Vérification des coutures et sangles',
+    'Test des boucles et anneaux',
+    'Retrait immédiat si chute subie'
+  ] as any,
+
+  compatibleWith: [
+    'shock_absorbing_lanyard',
+    'self_retracting_lifeline',
+    'hard_hat_chin_strap',
+    'safety_boots_work'
+  ] as any,
+
+  certifications: ['CSA Z259.10-M90', 'ANSI Z359.11', 'CE EN 361'] as any,
+  standards: ['CSA Z259.10', 'ANSI Z359.11'] as any,
   
-  certifications: ['CSA Z259.10', 'ANSI Z359.11', 'EN 361'],
-  standards: ['CSA Z259.10', 'EN 361'],
+  usageInstructions: [
+    'Ajuster toutes les sangles correctement',
+    'Vérifier tous les points de connexion',
+    'Connecter à un point d\'ancrage certifié',
+    'Maintenir les anneaux libres d\'obstacles',
+    'Respecter la limite de poids'
+  ] as any,
+
+  storageConditions: 'Lieu sec, suspendu, à l\'abri des UV',
   
-  supplier: '3M DBI-SALA',
-  cost: 165,
+  inspectionCriteria: [
+    'Intégrité de toutes les sangles',
+    'État des coutures et surpiqûres',
+    'Fonctionnement des boucles',
+    'Absence de déformation des anneaux',
+    'Usure des points de frottement'
+  ] as any,
+
+  supplier: '3M Fall Protection',
+  cost: 185,
   currency: 'CAD',
   lifespan: '5 years',
   lifespanMonths: 60,
   inspectionFrequency: 'before each use',
-  
-  workTypes: ['work_at_height', 'construction_general'],
-  hazardTypes: ['falls', 'suspension_trauma'],
-  
-  isActive: true
+  workTypes: ['work_at_height', 'roofing', 'construction'] as any,
+  hazardTypes: ['falls_from_height', 'swing_fall'] as any
 });
 
-export const shockAbsorbingLanyard: SafetyEquipment = createNewEquipment({
-  id: 'shock_absorbing_lanyard_6ft',
-  name: 'Longe avec absorbeur de choc 6 pieds',
-  category: 'fall-protection',
-  subcategory: 'shock_lanyard',
-  description: 'Arrêt de chute avec réduction forces',
-  
-  specifications: {
-    length: '6 pieds (1.8m)',
-    shockAbsorber: 'Déchirure contrôlée tissu',
-    arresting: 'Force max 8kN (1800 lbs)',
-    webbing: 'Polyester 25mm haute ténacité',
-    connectors: 'Mousquetons verrouillables',
-    capacity: 'Utilisateur 140kg max',
-    deployment: 'Déploiement max 1.2m',
-    indicators: 'Indicateur d\'impact',
-    weight: 0.8  // ⭐ CORRIGÉ : ~800g = 0.8 kg
-  },
-  
-  certifications: ['CSA Z259.11', 'ANSI Z359.13', 'EN 355'],
-  standards: ['CSA Z259.11', 'EN 355'],
-  
-  supplier: 'Miller',
-  cost: 85,
-  currency: 'CAD',
-  lifespan: '5 years',
-  lifespanMonths: 60,
-  inspectionFrequency: 'before each use',
-  
-  workTypes: ['work_at_height', 'tower_climbing'],
-  hazardTypes: ['falls', 'impact_forces'],
-  
-  isActive: true
-});
+// =================== LONGE AVEC ABSORBEUR ===================
 
-export const anchorPoint: SafetyEquipment = createNewEquipment({
-  id: 'temporary_anchor_point_beam',
-  name: 'Point d\'ancrage temporaire poutre',
-  category: 'fall-protection',
-  subcategory: 'anchor_point',
-  description: 'Ancrage réutilisable pour poutrelles',
+export const shockAbsorbingLanyard = createNewEquipment({
+  id: 'shock_absorbing_lanyard_2m',
+  name: 'Longe avec absorbeur d\'énergie 2m',
+  category: 'FALL_PROTECTION' as any,
+  subcategory: 'lanyards',
+  description: 'Longe de sécurité avec absorbeur d\'énergie intégré',
   
-  specifications: {
-    beamRange: 'Poutrelles 76-305mm',
-    material: 'Acier galvanisé',
-    capacity: '23kN (5000 lbs)',
-    installation: 'Sans perçage ni soudure',
-    certification: 'Point unique/multiple',
-    weight: 2.3,  // ⭐ CORRIGÉ : 2.3 kg
-    corrosion: 'Galvanisation à chaud',
-    markings: 'Marquage capacité permanent'
+  displayName: {
+    fr: 'Longe avec absorbeur d\'énergie 2m',
+    en: '2m Shock Absorbing Lanyard'
   },
+
+  specifications: {
+    model: 'ShockWave2',
+    manufacturer: 'Miller',
+    partNumber: 'M1020045',
+    length: 2.0, // mètres
+    weightCapacity: 140, // kg
+    material: 'Polyester tressé',
+    absorberType: 'Déchirement contrôlé',
+    connectors: 'Mousquetons acier forgé',
+    fallDistance: 6.0 // mètres maximum
+  },
+
+  safetyFeatures: [
+    'Absorbeur d\'énergie certifié',
+    'Mousquetons autoverrouillants',
+    'Étiquette d\'inspection permanente',
+    'Résistance 22 kN minimum',
+    'Indicateur visuel d\'activation',
+    'Protection contre la corrosion'
+  ] as any,
+
+  maintenanceRequirements: [
+    'Inspection visuelle avant usage',
+    'Vérification des mousquetons',
+    'Contrôle de l\'absorbeur d\'énergie',
+    'Nettoyage si contaminé',
+    'Retrait si absorbeur activé'
+  ] as any,
+
+  compatibleWith: [
+    'full_body_harness_class_a',
+    'permanent_anchor_points',
+    'temporary_anchor_systems'
+  ] as any,
+
+  certifications: ['CSA Z259.11-M90', 'ANSI Z359.13', 'CE EN 355'] as any,
+  standards: ['CSA Z259.11', 'ANSI Z359.13'] as any,
   
-  certifications: ['CSA Z259.15', 'ANSI Z359.18', 'EN 795 Classe B'],
-  standards: ['CSA Z259.15', 'EN 795'],
+  usageInstructions: [
+    'Connecter aux points d\'ancrage certifiés',
+    'Maintenir longueur minimale chute libre',
+    'Éviter les arêtes vives',
+    'Inspecter l\'absorbeur avant usage',
+    'Remplacer après toute chute'
+  ] as any,
+
+  storageConditions: 'Enroulé sans nœud, lieu sec et propre',
   
-  supplier: 'Guardian Fall',
-  cost: 245,
+  inspectionCriteria: [
+    'Intégrité de la longe textile',
+    'État des épissures et coutures',
+    'Fonctionnement des mousquetons',
+    'Condition de l\'absorbeur d\'énergie',
+    'Lisibilité de l\'étiquette'
+  ] as any,
+
+  supplier: 'Honeywell Miller',
+  cost: 95,
   currency: 'CAD',
   lifespan: '10 years',
   lifespanMonths: 120,
   inspectionFrequency: 'before each use',
-  
-  workTypes: ['work_at_height', 'construction_general'],
-  hazardTypes: ['falls', 'anchor_failure'],
-  
-  isActive: true
+  workTypes: ['work_at_height', 'tower_climbing'] as any,
+  hazardTypes: ['falls_from_height', 'arrest_forces'] as any
 });
 
-export const verticalLifeline: SafetyEquipment = createNewEquipment({
-  id: 'vertical_lifeline_30ft',
-  name: 'Ligne de vie verticale 30 pieds',
-  category: 'fall-protection',
-  subcategory: 'lifeline_system',
-  description: 'Système ligne de vie auto-rétractable',
+// =================== LIGNE DE VIE AUTORÉTRACTABLE ===================
+
+export const selfRetractingLifeline = createNewEquipment({
+  id: 'self_retracting_lifeline_20m',
+  name: 'Ligne de vie autorétractable 20m',
+  category: 'FALL_PROTECTION' as any,
+  subcategory: 'srl_devices',
+  description: 'Système autorétractable avec câble acier 20 mètres',
   
-  specifications: {
-    cableLength: '30 pieds (9m)',
-    cableType: 'Câble acier galvanisé 3.2mm',
-    mechanism: 'Enrouleur centrifuge',
-    arrestingDistance: 'Max 0.6m en chute',
-    swivel: 'Émerillon anti-torsion',
-    housing: 'Boîtier aluminium étanche',
-    capacity: 'Utilisateur 140kg max',
-    indicators: 'Témoin de chute',
-    weight: 4.5  // ⭐ CORRIGÉ : ~4.5 kg
+  displayName: {
+    fr: 'Ligne de vie autorétractable 20m',
+    en: '20m Self-Retracting Lifeline'
   },
+
+  specifications: {
+    model: 'Talon',
+    manufacturer: '3M DBI-SALA',
+    partNumber: '3102000',
+    cableLength: 20.0, // mètres
+    cableType: 'Acier galvanisé 3.2mm',
+    weightCapacity: 140, // kg
+    housing: 'Aluminium moulé',
+    brakingDistance: 1.0, // mètre
+    weight: 8.5 // kg
+  },
+
+  safetyFeatures: [
+    'Freinage automatique instantané',
+    'Mécanisme de rappel constant',
+    'Boîtier étanche IP65',
+    'Indicateur de chute intégré',
+    'Point de fixation pivotant',
+    'Inspection facilitée'
+  ] as any,
+
+  maintenanceRequirements: [
+    'Inspection complète annuelle par technicien',
+    'Vérification du mécanisme de freinage',
+    'Contrôle de l\'état du câble',
+    'Lubrification selon manuel',
+    'Test fonctionnel mensuel'
+  ] as any,
+
+  compatibleWith: [
+    'full_body_harness_dorsal',
+    'overhead_anchor_points',
+    'crane_hooks',
+    'structural_steel'
+  ] as any,
+
+  certifications: ['CSA Z259.2.2', 'ANSI Z359.14', 'CE EN 360'] as any,
+  standards: ['CSA Z259.2.2', 'ANSI Z359.14'] as any,
   
-  certifications: ['CSA Z259.2.2', 'ANSI Z359.14', 'EN 360'],
-  standards: ['CSA Z259.2.2', 'EN 360'],
+  usageInstructions: [
+    'Fixer au point d\'ancrage au-dessus',
+    'Connecter au point dorsal du harnais',
+    'Vérifier le rappel automatique',
+    'Éviter les obstacles sur le trajet',
+    'Respecter l\'angle de travail maximal'
+  ] as any,
+
+  storageConditions: 'Position verticale, mécanisme protégé',
   
-  supplier: 'Protecta',
+  inspectionCriteria: [
+    'Fonctionnement du mécanisme de rappel',
+    'État du câble (corrosion, torons)',
+    'Test du système de freinage',
+    'Intégrité du boîtier',
+    'Fonctionnement des indicateurs'
+  ] as any,
+
+  supplier: '3M Fall Protection',
   cost: 485,
-  currency: 'CAD',
-  lifespan: '10 years',
-  lifespanMonths: 120,
-  inspectionFrequency: 'monthly',
-  
-  workTypes: ['work_at_height', 'tower_climbing'],
-  hazardTypes: ['falls', 'pendulum_swing'],
-  
-  isActive: true
-});
-
-export const rescueKit: SafetyEquipment = createNewEquipment({
-  id: 'fall_rescue_kit_descent',
-  name: 'Trousse de sauvetage descente',
-  category: 'fall-protection',
-  subcategory: 'rescue_equipment',
-  description: 'Équipement évacuation travailleur suspendu',
-  
-  specifications: {
-    descendingDevice: 'Descendeur auto-freiné',
-    rope: 'Corde statique 11mm x 60m',
-    capacity: 'Charge 280kg (2 personnes)',
-    deployment: 'Déploiement rapide urgence',
-    controls: 'Vitesse contrôlée descente',
-    storage: 'Sac de transport étanche',
-    components: 'Mousquetons, poulies, sangles',
-    training: 'Formation requise',
-    weight: 8.5  // ⭐ CORRIGÉ : ~8.5 kg (kit complet)
-  },
-  
-  certifications: ['CSA Z259.1', 'NFPA 1983', 'EN 341 Classe A'],
-  standards: ['CSA Z259.1', 'NFPA 1983'],
-  
-  supplier: 'Petzl',
-  cost: 850,
   currency: 'CAD',
   lifespan: '15 years',
   lifespanMonths: 180,
-  inspectionFrequency: 'annually',
-  
-  workTypes: ['work_at_height', 'emergency_response'],
-  hazardTypes: ['falls', 'suspension_trauma', 'rescue_delays'],
-  
-  isActive: true
+  inspectionFrequency: 'monthly',
+  workTypes: ['work_at_height', 'confined_space'] as any,
+  hazardTypes: ['falls_from_height', 'pendulum_effect'] as any
 });
 
-// =================== EXPORT PROTECTION CHUTES ===================
+// =================== SYSTÈME D'ANCRAGE TEMPORAIRE ===================
+
+export const temporaryAnchorSystem = createNewEquipment({
+  id: 'temporary_anchor_system_roof',
+  name: 'Système d\'ancrage temporaire toiture',
+  category: 'FALL_PROTECTION' as any,
+  subcategory: 'anchor_systems',
+  description: 'Point d\'ancrage temporaire pour toitures et structures',
+  
+  displayName: {
+    fr: 'Système d\'ancrage temporaire toiture',
+    en: 'Temporary Roof Anchor System'
+  },
+
+  specifications: {
+    model: 'SSRA1',
+    manufacturer: 'Guardian Fall Protection',
+    partNumber: '00815',
+    capacity: 2270, // kg (5000 lbs)
+    material: 'Acier galvanisé',
+    roofThickness: '6-51mm compatible',
+    baseSize: '203 x 203mm',
+    height: '76mm',
+    weight: 4.1 // kg
+  },
+
+  safetyFeatures: [
+    'Ancrage certifié 22.2 kN',
+    'Installation sans perçage',
+    'Répartition de charge optimisée',
+    'Résistant à la corrosion',
+    'Point de connexion 360°',
+    'Marquage permanent capacité'
+  ] as any,
+
+  maintenanceRequirements: [
+    'Inspection avant chaque installation',
+    'Vérification de l\'état de surface',
+    'Contrôle des boulons de serrage',
+    'Nettoyage après utilisation',
+    'Stockage dans emballage d\'origine'
+  ] as any,
+
+  compatibleWith: [
+    'various_roof_types',
+    'fall_protection_systems',
+    'temporary_installations',
+    'maintenance_work'
+  ] as any,
+
+  certifications: ['CSA Z259.15', 'ANSI Z359.18', 'OSHA 1926.502'] as any,
+  standards: ['CSA Z259.15', 'ANSI Z359.18'] as any,
+  
+  usageInstructions: [
+    'Vérifier la compatibilité avec la toiture',
+    'Positionner selon les instructions',
+    'Serrer à la force spécifiée',
+    'Limiter à 2 utilisateurs maximum',
+    'Retirer après utilisation'
+  ] as any,
+
+  storageConditions: 'Lieu sec, emballage de protection',
+  
+  inspectionCriteria: [
+    'Intégrité de la structure métallique',
+    'État des surfaces de contact',
+    'Fonctionnement des boulons',
+    'Absence de déformation',
+    'Lisibilité du marquage'
+  ] as any,
+
+  supplier: 'Guardian Fall Protection',
+  cost: 275,
+  currency: 'CAD',
+  lifespan: '20 years',
+  lifespanMonths: 240,
+  inspectionFrequency: 'before each use',
+  workTypes: ['roofing', 'maintenance', 'construction'] as any,
+  hazardTypes: ['falls_from_height', 'anchor_failure'] as any
+});
+
+// =================== EXPORT DES ÉQUIPEMENTS ANTICHUTE ===================
+
 export const fallProtectionEquipment = [
   fullBodyHarness,
   shockAbsorbingLanyard,
-  anchorPoint,
-  verticalLifeline,
-  rescueKit
+  selfRetractingLifeline,
+  temporaryAnchorSystem
 ];
 
 export const fallProtectionById = fallProtectionEquipment.reduce((acc, equipment) => {
-  acc[equipment.id] = equipment;
+  acc[(equipment as any).id] = equipment;
   return acc;
 }, {} as Record<string, SafetyEquipment>);
 
