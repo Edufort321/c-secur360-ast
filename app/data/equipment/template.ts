@@ -92,7 +92,7 @@ export const calculateEquipmentLifespan = (purchaseDate: string, lifespanMonths:
   };
 };
 
-export const validateEquipmentData = (equipment: Partial<SafetyEquipment>): {
+export const validateEquipmentData = (equipment: any): {
   isValid: boolean;
   errors: string[];
   warnings: string[];
@@ -124,7 +124,7 @@ export const validateEquipmentData = (equipment: Partial<SafetyEquipment>): {
   };
 };
 
-export const getEquipmentInspectionStatus = (equipment: SafetyEquipment): {
+export const getEquipmentInspectionStatus = (equipment: any): {
   status: 'current' | 'due' | 'overdue';
   nextInspectionDate: string;
   daysUntilInspection: number;
@@ -218,7 +218,7 @@ export const groupEquipmentByCategory = (
   }, {} as Record<string, SafetyEquipment[]>);
 };
 
-export const calculateTotalEquipmentCost = (equipment: SafetyEquipment[]): {
+export const calculateTotalEquipmentCost = (equipment: any[]): {
   totalCost: number;
   currency: string;
   breakdown: Record<string, number>;
