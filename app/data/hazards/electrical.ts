@@ -27,7 +27,7 @@ const createNewHazard = (base: Partial<Hazard>): Hazard => {
 export const electricalShock: Hazard = createNewHazard({
   id: 'electrical_shock_hazard',
   name: 'Choc électrique',
-  category: 'electrical',
+  category: 'ELECTRICAL' as any,
   subcategory: 'shock',
   description: 'Risque d\'électrocution par contact direct ou indirect',
   severity: 'critical',
