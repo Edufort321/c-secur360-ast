@@ -1,318 +1,137 @@
 // app/data/hazards/electrical.ts
-import { Hazard, createNewHazard } from './template';
+// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
+import { Hazard } from '../../types/hazards';
+
+// Fonction helper pour créer un danger
+const createNewHazard = (base: Partial<Hazard>): Hazard => {
+  return {
+    // Valeurs par défaut
+    category: 'electrical',
+    severity: 'medium',
+    likelihood: 'medium',
+    riskLevel: 'medium',
+    controlMeasures: [],
+    requiredEquipment: [],
+    regulatoryReferences: [],
+    workTypes: [],
+    isActive: true,
+    createdDate: new Date().toISOString(),
+    lastUpdated: new Date().toISOString(),
+    // Merge avec les propriétés passées
+    ...base
+  } as Hazard;
+};
 
 // =================== DANGERS ÉLECTRIQUES ===================
 
-export const electricShock: Hazard = createNewHazard({
-  id: 'electrical_shock',
+export const electricalShock: Hazard = createNewHazard({
+  id: 'electrical_shock_hazard',
   name: 'Choc électrique',
   category: 'electrical',
-  subcategory: 'direct_contact',
-  displayName: {
-    fr: 'Choc électrique',
-    en: 'Electric shock'
-  },
-  description: 'Risque de choc électrique par contact direct ou indirect avec des parties sous tension',
-  severity: 5,
-  probability: 3,
+  subcategory: 'shock',
+  description: 'Risque d\'électrocution par contact direct ou indirect',
+  severity: 'critical',
+  likelihood: 'medium',
+  riskLevel: 'high',
   
-  eliminationMethods: [
-    'Mise hors tension complète',
-    'Consignation LOTO',
-    'Vérification absence de tension'
-  ],
-  
-  substitutionOptions: [
-    'Utilisation d\'outils isolés',
-    'Équipements basse tension (<50V)',
-    'Systèmes pneumatiques ou hydrauliques'
-  ],
-  
-  engineeringControls: [
-    'Barrières physiques',
-    'Garde-corps isolants',
-    'Écrans de protection',
-    'Dispositifs différentiels (DDR)',
-    'Disjoncteurs de protection'
-  ],
-  
-  administrativeControls: [
-    'Procédures de consignation',
-    'Permis de travail électrique',
-    'Formation qualification électrique',
-    'Supervision par personne qualifiée',
-    'Vérification des équipements'
-  ],
-  
-  ppeRequirements: [
-    'Gants isolants classe appropriée',
-    'Chaussures de sécurité isolantes',
-    'Casque isolant',
-    'Vêtements ignifuges',
-    'Écran facial arc électrique'
+  controlMeasures: [
+    'Cadenassage/étiquetage (LOTO)',
+    'Test absence de tension',
+    'Équipement de protection électrique',
+    'Formation sécurité électrique'
   ],
   
   requiredEquipment: [
-    'ppe_electrical_gloves',
-    'ppe_insulated_shoes',
-    'ppe_arc_flash_suit',
-    'electrical_tester',
-    'lockout_kit'
+    'electrical_insulating_gloves_class2',
+    'non_contact_voltage_detector',
+    'electrical_insulating_mat',
+    'lockout_tagout_kit'
   ],
   
-  recommendedEquipment: [
-    'insulated_tools',
-    'grounding_equipment',
-    'electrical_mats'
+  regulatoryReferences: [
+    'CSA Z462 - Sécurité électrique',
+    'Code électrique du Québec',
+    'RSST Art. 185-222'
   ],
   
-  regulations: {
-    csa: ['CSA Z462', 'CSA Z432'],
-    rsst: ['Section V - Électricité', 'Art. 185-196'],
-    other: ['Code électrique canadien', 'IEEE 1584']
-  },
+  workTypes: ['electrical_maintenance', 'electrical_installation'],
   
-  weatherRestrictions: [
-    {
-      condition: 'precipitation',
-      operator: '>',
-      value: 0,
-      unit: 'mm/h',
-      description: 'Interdiction par temps humide'
-    },
-    {
-      condition: 'humidity',
-      operator: '>',
-      value: 85,
-      unit: '%',
-      description: 'Humidité excessive'
-    }
-  ],
-  
-  requiredTraining: [
-    'Qualification électrique',
-    'Sécurité électrique CSA Z462',
-    'Premiers secours RCR'
-  ],
-  
-  certificationRequired: true,
-  monitoringRequired: true,
-  inspectionFrequency: 'Avant chaque intervention',
-  
-  emergencyProcedures: [
-    'Couper alimentation immédiatement',
-    'Ne pas toucher la victime si sous tension',
-    'Appeler 911',
-    'RCR si nécessaire',
-    'Position latérale de sécurité'
-  ],
-  
-  firstAidMeasures: [
-    'Évaluer conscience et respiration',
-    'Traiter les brûlures',
-    'Surveiller signes de choc',
-    'Évacuation médicale si contact HT'
-  ],
-  
-  tags: ['haute_tension', 'basse_tension', 'qualification_requise', 'loto']
+  isActive: true
 });
 
 export const arcFlash: Hazard = createNewHazard({
-  id: 'arc_flash',
+  id: 'arc_flash_hazard',
   name: 'Arc électrique',
   category: 'electrical',
   subcategory: 'arc_flash',
-  displayName: {
-    fr: 'Arc électrique / Arc flash',
-    en: 'Arc flash'
-  },
-  description: 'Risque d\'arc électrique avec libération d\'énergie thermique et lumineuse intense',
-  severity: 5,
-  probability: 2,
+  description: 'Explosion d\'arc électrique causant brûlures graves',
+  severity: 'critical',
+  likelihood: 'low',
+  riskLevel: 'high',
   
-  eliminationMethods: [
-    'Mise hors tension',
-    'Consignation complète',
-    'Travail sur installation froide'
-  ],
-  
-  engineeringControls: [
-    'Équipements arc-résistants',
-    'Dispositifs de protection rapide',
-    'Relais de protection différentielle',
-    'Limiteurs de courant'
-  ],
-  
-  administrativeControls: [
-    'Étude d\'arc flash',
-    'Calcul énergie incidente',
-    'Détermination catégorie EPI',
+  controlMeasures: [
+    'Analyse d\'arc électrique',
+    'Équipement protection arc',
     'Distance de sécurité',
-    'Procédures spécifiques'
-  ],
-  
-  ppeRequirements: [
-    'Costume arc électrique complet',
-    'Cagoule arc flash',
-    'Gants isolants + surgants',
-    'Chaussures cuir pleine fleur'
+    'Procédures de travail sécuritaires'
   ],
   
   requiredEquipment: [
-    'ppe_arc_flash_suit_cat4',
-    'ppe_arc_hood',
-    'ppe_electrical_gloves_class4',
-    'arc_flash_calculator'
+    'arc_flash_protection_suit',
+    'digital_multimeter_cat3',
+    'electrical_safety_helmet'
   ],
   
-  regulations: {
-    csa: ['CSA Z462', 'CSA Z463'],
-    rsst: ['Section V'],
-    other: ['NFPA 70E', 'IEEE 1584']
-  },
-  
-  weatherRestrictions: [
-    {
-      condition: 'wind',
-      operator: '>',
-      value: 25,
-      unit: 'km/h',
-      description: 'Vent fort - risque propagation'
-    }
+  regulatoryReferences: [
+    'CSA Z462',
+    'NFPA 70E',
+    'IEEE 1584'
   ],
   
-  requiredTraining: [
-    'Formation arc électrique CSA Z462',
-    'Qualification électrique avancée',
-    'Analyse des risques'
-  ],
+  workTypes: ['electrical_maintenance', 'electrical_installation'],
   
-  certificationRequired: true,
-  monitoringRequired: true,
-  
-  emergencyProcedures: [
-    'Évacuer zone immédiatement',
-    'Couper alimentation si possible',
-    'Appeler pompiers et ambulance',
-    'Refroidir brûlures avec eau',
-    'Ne pas retirer vêtements collés'
-  ],
-  
-  tags: ['arc_flash', 'haute_energie', 'brulures', 'qualification_avancee']
+  isActive: true
 });
 
-export const liveWork: Hazard = createNewHazard({
-  id: 'live_electrical_work',
-  name: 'Travail sous tension',
+export const electricalFire: Hazard = createNewHazard({
+  id: 'electrical_fire_hazard',
+  name: 'Incendie électrique',
   category: 'electrical',
-  subcategory: 'live_work',
-  displayName: {
-    fr: 'Travail sous tension',
-    en: 'Live electrical work'
-  },
-  description: 'Travaux sur équipements électriques restant sous tension',
-  severity: 5,
-  probability: 4,
+  subcategory: 'fire',
+  description: 'Risque d\'incendie causé par défaillance électrique',
+  severity: 'high',
+  likelihood: 'medium',
+  riskLevel: 'high',
   
-  eliminationMethods: [
-    'Planifier arrêt programmé',
-    'Consignation complète',
-    'Reports des travaux'
-  ],
-  
-  substitutionOptions: [
-    'Méthodes à distance',
-    'Outils isolés longue portée',
-    'Robotique'
-  ],
-  
-  engineeringControls: [
-    'Perches isolantes',
-    'Plateformes isolées',
-    'Barrières de protection',
-    'Équipements spécialisés TST'
-  ],
-  
-  administrativeControls: [
-    'Justification écrite obligatoire',
-    'Autorisation direction',
-    'Plan de travail détaillé',
-    'Équipe qualifiée TST',
-    'Surveillance continue'
-  ],
-  
-  ppeRequirements: [
-    'Équipement TST complet',
-    'Gants isolants testés',
-    'Vêtements isolants',
-    'Casque classe E',
-    'Chaussures isolantes testées'
+  controlMeasures: [
+    'Inspection régulière des installations',
+    'Extincteurs classe C',
+    'Détection précoce',
+    'Coupure d\'urgence'
   ],
   
   requiredEquipment: [
-    'live_work_tools',
-    'insulation_tester',
-    'ppe_live_work_kit',
-    'grounding_equipment'
+    'class_c_fire_extinguisher',
+    'thermal_imaging_camera',
+    'emergency_power_cutoff'
   ],
   
-  regulations: {
-    csa: ['CSA Z462 - Annexe O'],
-    rsst: ['Art. 189-191'],
-    other: ['Norme TST entreprise']
-  },
-  
-  weatherRestrictions: [
-    {
-      condition: 'precipitation',
-      operator: '>',
-      value: 0,
-      unit: 'mm',
-      description: 'Aucune précipitation tolérée'
-    },
-    {
-      condition: 'wind',
-      operator: '>',
-      value: 20,
-      unit: 'km/h',
-      description: 'Limite vent pour TST extérieur'
-    }
+  regulatoryReferences: [
+    'Code de prévention incendie',
+    'NFPA 70',
+    'ULC-S524'
   ],
   
-  timeRestrictions: {
-    startTime: '08:00',
-    endTime: '16:00',
-    days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-    reason: 'Support médical et technique disponible'
-  },
+  workTypes: ['electrical_maintenance', 'fire_prevention'],
   
-  requiredTraining: [
-    'Certification TST',
-    'Formation spécialisée métier',
-    'Mise à jour annuelle',
-    'Simulation pratique'
-  ],
-  
-  certificationRequired: true,
-  monitoringRequired: true,
-  inspectionFrequency: 'Continue pendant travaux',
-  
-  emergencyProcedures: [
-    'Signal d\'arrêt immédiat',
-    'Évacuation zone sécurisée',
-    'Coupure alimentation si possible',
-    'Intervention équipe secours'
-  ],
-  
-  tags: ['tst', 'haute_qualification', 'autorisation_speciale', 'surveillance_continue']
+  isActive: true
 });
 
 // =================== EXPORT DANGERS ÉLECTRIQUES ===================
 export const electricalHazards = [
-  electricShock,
+  electricalShock,
   arcFlash,
-  liveWork,
-  // Plus de dangers électriques peuvent être ajoutés ici
+  electricalFire
 ];
 
 export const electricalHazardsById = electricalHazards.reduce((acc, hazard) => {
