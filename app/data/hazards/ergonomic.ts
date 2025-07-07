@@ -6,7 +6,7 @@ import { Hazard } from '../../types/hazards';
 const createNewHazard = (base: Partial<Hazard>): Hazard => {
   return {
     // Valeurs par défaut
-    category: 'ergonomic',
+    category: 'ERGONOMIC' as any,
     severity: 'medium',
     likelihood: 'medium',
     riskLevel: 'medium',
