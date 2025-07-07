@@ -139,13 +139,13 @@ export const getEquipmentByHazard = (hazardType: string): SafetyEquipment[] => {
 
 export const getEquipmentBySupplier = (supplier: string): SafetyEquipment[] => {
   return allEquipment.filter(equipment => 
-    equipment.supplier?.toLowerCase().includes(supplier.toLowerCase())
+    (equipment as any).supplier?.toLowerCase().includes(supplier.toLowerCase())
   );
 };
 
 export const getEquipmentByCostRange = (minCost: number, maxCost: number): SafetyEquipment[] => {
   return allEquipment.filter(equipment => {
-    const cost = equipment.cost || 0;
+    const cost = (equipment as any).cost || 0;
     return cost >= minCost && cost <= maxCost;
   });
 };
@@ -162,7 +162,7 @@ export const getEquipmentStatistics = () => {
   const costBreakdown = calculateTotalEquipmentCost(allEquipment);
   
   const supplierStats = allEquipment.reduce((acc, equipment) => {
-    const supplier = equipment.supplier || 'Unknown';
+    const supplier = (equipment as any).supplier || 'Unknown';
     acc[supplier] = (acc[supplier] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -188,10 +188,10 @@ export const getEquipmentStatistics = () => {
       ...costBreakdown,
       averageCost: Math.round(costBreakdown.totalCost / totalEquipment),
       mostExpensive: allEquipment.reduce((max, equipment) => 
-        (equipment.cost || 0) > (max.cost || 0) ? equipment : max
+        ((equipment as any).cost || 0) > ((max as any).cost || 0) ? equipment : max
       ),
       leastExpensive: allEquipment.reduce((min, equipment) => 
-        (equipment.cost || 0) < (min.cost || 0) && (equipment.cost || 0) > 0 ? equipment : min
+        ((equipment as any).cost || 0) < ((min as any).cost || 0) && ((equipment as any).cost || 0) > 0 ? equipment : min
       )
     }
   };
@@ -201,7 +201,7 @@ export const getInspectionSchedule = () => {
   return allEquipment.map(equipment => ({
     equipment,
     inspectionStatus: getEquipmentInspectionStatus(equipment),
-    lifespan: calculateEquipmentLifespan(equipment.createdDate, equipment.lifespanMonths || 12)
+    lifespan: calculateEquipmentLifespan(equipment.createdDate, (equipment as any).lifespanMonths || 12)
   })).sort((a, b) => 
     a.inspectionStatus.daysUntilInspection - b.inspectionStatus.daysUntilInspection
   );
