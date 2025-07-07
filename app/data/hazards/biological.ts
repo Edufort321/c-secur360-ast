@@ -1,8 +1,6 @@
 // app/data/hazards/biological.ts
-// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
 import { Hazard } from '../../types/hazards';
 
-// Fonction helper pour créer un danger
 const createNewHazard = (base: any): Hazard => {
   return {
     category: 'BIOLOGICAL' as any,
@@ -16,12 +14,9 @@ const createNewHazard = (base: any): Hazard => {
     isActive: true,
     createdDate: new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
-    // Merge avec les propriétés passées
     ...base
   } as Hazard;
 };
-
-// =================== DANGERS BIOLOGIQUES ===================
 
 export const infectiousAgents: Hazard = createNewHazard({
   id: 'infectious_biological_agents',
@@ -223,17 +218,11 @@ export const animalExposure: Hazard = createNewHazard({
   isActive: true
 });
 
-// =================== EXPORT DANGERS BIOLOGIQUES ===================
 export const biologicalHazards = [
   infectiousAgents,
   bloodbornePathogens,
   mold,
   animalExposure
 ];
-
-export const biologicalHazardsById = biologicalHazards.reduce((acc, hazard) => {
-  acc[(hazard as any).id] = hazard;
-  return acc;
-}, {} as Record<string, Hazard>);
 
 export default biologicalHazards;
