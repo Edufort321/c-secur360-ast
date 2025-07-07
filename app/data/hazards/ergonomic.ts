@@ -24,150 +24,210 @@ const createNewHazard = (base: Partial<Hazard>): Hazard => {
 
 // =================== DANGERS ERGONOMIQUES ===================
 
-export const repetitiveStrain: Hazard = createNewHazard({
-  id: 'repetitive_strain_injury',
-  name: 'Troubles musculo-squelettiques',
+export const musculoskeletalDisorders: Hazard = createNewHazard({
+  id: 'musculoskeletal_disorders_tms',
+  name: 'Troubles musculo-squelettiques (TMS)',
   category: 'ERGONOMIC' as any,
-  subcategory: 'repetitive_motion',
-  description: 'Lésions par mouvements répétitifs, postures contraignantes',
+  subcategory: 'repetitive_strain',
+  displayName: {
+    fr: 'TMS et blessures répétitives',
+    en: 'Musculoskeletal disorders (MSDs)'
+  },
+  description: 'Risque de blessures par mouvements répétitifs et mauvaises postures',
+  severity: 'medium',
+  likelihood: 'high',
+  riskLevel: 'medium',
+  
+  eliminationMethods: [
+    'Automatisation des tâches répétitives',
+    'Réorganisation des processus de travail',
+    'Élimination des mouvements forcés'
+  ],
+  
+  engineeringControls: [
+    'Équipements ergonomiques adaptés',
+    'Tables de travail ajustables',
+    'Outils à prise ergonomique',
+    'Systèmes de manutention assistée'
+  ],
+  
+  administrativeControls: [
+    'Rotation des tâches répétitives',
+    'Pauses fréquentes programmées',
+    'Formation gestes et postures',
+    'Échauffement avant travail'
+  ],
+  
+  controlMeasures: [
+    'Aménagement postes ergonomiques',
+    'Formation techniques de levage',
+    'Rotation des tâches répétitives',
+    'Pauses et étirements réguliers'
+  ],
+  
+  requiredEquipment: [
+    'ergonomic_lifting_belt',
+    'adjustable_workstation_table',
+    'anti_fatigue_floor_mats',
+    'ergonomic_hand_tools'
+  ],
+  
+  emergencyProcedures: [
+    'Arrêt immédiat activité douloureuse',
+    'Application glace inflammation',
+    'Consultation médicale rapide',
+    'Évaluation ergonomique poste'
+  ] as any,
+  
+  regulatoryReferences: [
+    'RSST - Troubles musculo-squelettiques',
+    'Guide CSST - Ergonomie'
+  ],
+  
+  workTypes: ['assembly_line', 'data_entry', 'material_handling'],
+  
+  isActive: true
+});
+
+export const manualHandling: Hazard = createNewHazard({
+  id: 'manual_material_handling',
+  name: 'Manutention manuelle',
+  category: 'ERGONOMIC' as any,
+  subcategory: 'lifting',
+  displayName: {
+    fr: 'Levage et transport manuel',
+    en: 'Manual material handling'
+  },
+  description: 'Risque de blessures au dos par levage et transport de charges',
   severity: 'medium',
   likelihood: 'high',
   riskLevel: 'medium',
   
   controlMeasures: [
-    'Rotation des tâches',
-    'Pauses fréquentes',
-    'Équipement ergonomique',
-    'Formation postures de travail'
-  ],
-  
-  requiredEquipment: [
-    'ergonomic_support_belt',
-    'anti_vibration_gloves',
-    'knee_protection_pads',
-    'ergonomic_tools'
-  ],
-  
-  regulatoryReferences: [
-    'RSST Art. 166-184',
-    'CSA Z412 - Ergonomie bureau',
-    'IRSST - Prévention TMS'
-  ],
-  
-  workTypes: ['construction_general', 'assembly_work', 'office_work'],
-  
-  isActive: true
-});
-
-export const heavyLifting: Hazard = createNewHazard({
-  id: 'manual_handling_heavy_loads',
-  name: 'Manutention manuelle',
-  category: 'ergonomic',
-  subcategory: 'lifting',
-  description: 'Soulèvement, transport de charges lourdes',
-  severity: 'high',
-  likelihood: 'high',
-  riskLevel: 'high',
-  
-  controlMeasures: [
     'Techniques de levage sécuritaires',
-    'Équipement de manutention mécanique',
-    'Travail en équipe',
-    'Limitation poids maximal'
+    'Limitation poids maximal',
+    'Équipements d\'aide au levage',
+    'Travail en équipe pour charges lourdes'
   ],
   
   requiredEquipment: [
-    'lifting_belt_support',
-    'mechanical_lifting_aid',
-    'dolly_cart',
-    'safety_boots_steel'
+    'mechanical_lifting_device',
+    'back_support_belt_ergonomic',
+    'lifting_team_coordination_signals',
+    'load_weight_limit_signs'
   ],
+  
+  emergencyProcedures: [
+    'Immobilisation en cas douleur dorsale',
+    'Évacuation sans mouvement brusque',
+    'Évaluation neurologique d\'urgence',
+    'Transport médical spécialisé'
+  ] as any,
   
   regulatoryReferences: [
-    'RSST Art. 166-184',
-    'Guide CNESST - Manutention',
-    'CSA Z365 - Manutention'
+    'RSST - Manutention manuelle',
+    'Guide prévention mal de dos CSST'
   ],
   
-  workTypes: ['construction_general', 'warehouse_work', 'moving'],
+  workTypes: ['warehousing', 'construction', 'healthcare'],
   
   isActive: true
 });
 
 export const awkwardPostures: Hazard = createNewHazard({
-  id: 'awkward_working_postures',
+  id: 'awkward_work_postures',
   name: 'Postures contraignantes',
-  category: 'ergonomic',
+  category: 'ERGONOMIC' as any,
   subcategory: 'posture',
-  description: 'Travail en position inconfortable prolongée',
+  displayName: {
+    fr: 'Postures de travail difficiles',
+    en: 'Awkward work postures'
+  },
+  description: 'Risque de fatigue musculaire par postures de travail inadéquates',
   severity: 'medium',
   likelihood: 'high',
   riskLevel: 'medium',
   
   controlMeasures: [
-    'Aménagement postes de travail',
-    'Supports et appuis',
-    'Changements fréquents de position',
-    'Étirements réguliers'
+    'Aménagement ergonomique des postes',
+    'Supports et appuis appropriés',
+    'Alternance positions travail',
+    'Exercices d\'étirement réguliers'
   ],
   
   requiredEquipment: [
-    'kneeling_pads',
-    'adjustable_work_platform',
-    'lumbar_support',
-    'ergonomic_cushions'
+    'ergonomic_chair_adjustable',
+    'footrest_adjustable_height',
+    'document_holder_adjustable',
+    'lumbar_support_cushion'
   ],
+  
+  emergencyProcedures: [
+    'Changement position immédiat',
+    'Étirements doux progressifs',
+    'Massage zones tendues',
+    'Consultation ergothérapeute'
+  ] as any,
   
   regulatoryReferences: [
-    'RSST - Postes de travail',
-    'IRSST - Ergonomie',
-    'ISO 11226 - Postures'
+    'RSST - Ergonomie des postes',
+    'CSA Z412 - Ergonomie bureau'
   ],
   
-  workTypes: ['construction_general', 'confined_space', 'maintenance'],
+  workTypes: ['office_work', 'precision_assembly', 'confined_space_work'],
   
   isActive: true
 });
 
 export const vibrationExposure: Hazard = createNewHazard({
-  id: 'hand_arm_vibration',
+  id: 'hand_arm_vibration_syndrome',
   name: 'Exposition aux vibrations',
-  category: 'ergonomic',
+  category: 'ERGONOMIC' as any,
   subcategory: 'vibration',
-  description: 'Vibrations main-bras par outils mécaniques',
+  displayName: {
+    fr: 'Vibrations main-bras',
+    en: 'Hand-arm vibration exposure'
+  },
+  description: 'Risque de syndrome vibratoire par utilisation d\'outils vibrants',
   severity: 'medium',
   likelihood: 'medium',
   riskLevel: 'medium',
   
   controlMeasures: [
-    'Outils anti-vibration',
     'Limitation temps d\'exposition',
-    'Gants anti-vibration',
-    'Maintenance outils'
+    'Outils anti-vibrations',
+    'Pauses fréquentes',
+    'Maintien des mains au chaud'
   ],
   
   requiredEquipment: [
     'anti_vibration_gloves',
     'vibration_dampening_tools',
-    'vibration_meter',
-    'ergonomic_tool_handles'
+    'vibration_measurement_meter',
+    'heated_work_gloves'
   ],
+  
+  emergencyProcedures: [
+    'Arrêt utilisation outils vibrants',
+    'Réchauffement mains progressif',
+    'Consultation médicale spécialisée',
+    'Tests circulation sanguine'
+  ] as any,
   
   regulatoryReferences: [
-    'RSST Art. 206',
-    'ISO 5349 - Vibrations',
-    'ACGIH TLV - Vibrations'
+    'ACGIH - Vibrations main-bras',
+    'RSST - Exposition vibrations'
   ],
   
-  workTypes: ['construction_general', 'excavation', 'demolition'],
+  workTypes: ['power_tool_operation', 'construction', 'forestry'],
   
   isActive: true
 });
 
 // =================== EXPORT DANGERS ERGONOMIQUES ===================
 export const ergonomicHazards = [
-  repetitiveStrain,
-  heavyLifting,
+  musculoskeletalDisorders,
+  manualHandling,
   awkwardPostures,
   vibrationExposure
 ];
