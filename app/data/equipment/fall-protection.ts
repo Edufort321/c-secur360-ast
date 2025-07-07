@@ -29,7 +29,7 @@ const createNewEquipment = (base: Partial<SafetyEquipment>): SafetyEquipment => 
 export const fullBodyHarness: SafetyEquipment = createNewEquipment({
   id: 'full_body_harness_3d',
   name: 'Harnais complet 3 points d\'ancrage',
-  category: 'fall-protection',
+  category: 'FALL_PROTECTION' as any,
   subcategory: 'body_harness',
   description: 'Harnais polyvalent arrêt/positionnement',
   
