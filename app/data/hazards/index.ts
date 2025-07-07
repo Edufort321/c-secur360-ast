@@ -1,5 +1,4 @@
 // app/data/hazards/index.ts
-// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
 import { Hazard } from '../../types/hazards';
 
 // Imports de tous les dangers
@@ -30,7 +29,7 @@ export const allHazards: Hazard[] = [
 
 // Index par ID pour recherche rapide
 export const hazardsById = allHazards.reduce((acc, hazard) => {
-  acc[hazard.id] = hazard;
+  acc[(hazard as any).id] = hazard;
   return acc;
 }, {} as Record<string, Hazard>);
 
@@ -55,9 +54,9 @@ export const hazardsByCategory = {
 export const searchHazards = (query: string): Hazard[] => {
   const lowerQuery = query.toLowerCase();
   return allHazards.filter(hazard => 
-    hazard.name.toLowerCase().includes(lowerQuery) ||
-    hazard.description.toLowerCase().includes(lowerQuery) ||
-    hazard.subcategory?.toLowerCase().includes(lowerQuery)
+    (hazard as any).name.toLowerCase().includes(lowerQuery) ||
+    (hazard as any).description.toLowerCase().includes(lowerQuery) ||
+    (hazard as any).subcategory?.toLowerCase().includes(lowerQuery)
   );
 };
 
@@ -65,7 +64,7 @@ export const searchHazards = (query: string): Hazard[] => {
  * Filtre dangers par catégorie
  */
 export const getHazardsByCategory = (category: string): Hazard[] => {
-  return allHazards.filter(hazard => hazard.category === category);
+  return allHazards.filter(hazard => (hazard as any).category === category);
 };
 
 /**
@@ -73,7 +72,7 @@ export const getHazardsByCategory = (category: string): Hazard[] => {
  */
 export const getHazardsByWorkType = (workType: string): Hazard[] => {
   return allHazards.filter(hazard => 
-    hazard.workTypes?.includes(workType)
+    (hazard as any).workTypes?.includes(workType)
   );
 };
 
@@ -81,21 +80,21 @@ export const getHazardsByWorkType = (workType: string): Hazard[] => {
  * Filtre dangers par niveau de sévérité
  */
 export const getHazardsBySeverity = (severity: string): Hazard[] => {
-  return allHazards.filter(hazard => hazard.severity === severity);
+  return allHazards.filter(hazard => (hazard as any).severity === severity);
 };
 
 /**
  * Filtre dangers par niveau de risque
  */
 export const getHazardsByRiskLevel = (riskLevel: string): Hazard[] => {
-  return allHazards.filter(hazard => hazard.riskLevel === riskLevel);
+  return allHazards.filter(hazard => (hazard as any).riskLevel === riskLevel);
 };
 
 /**
  * Obtient dangers actifs seulement
  */
 export const getActiveHazards = (): Hazard[] => {
-  return allHazards.filter(hazard => hazard.isActive);
+  return allHazards.filter(hazard => (hazard as any).isActive);
 };
 
 /**
@@ -105,7 +104,7 @@ export const getHazardCategoryDistribution = () => {
   const distribution: Record<string, number> = {};
   
   allHazards.forEach(hazard => {
-    const category = hazard.category as string;
+    const category = (hazard as any).category as string;
     distribution[category] = (distribution[category] || 0) + 1;
   });
   
@@ -117,7 +116,7 @@ export const getHazardCategoryDistribution = () => {
  */
 export const getCriticalHazards = (): Hazard[] => {
   return allHazards.filter(hazard => 
-    hazard.severity === 'critical' || hazard.riskLevel === 'critical'
+    (hazard as any).severity === 'critical' || (hazard as any).riskLevel === 'critical'
   );
 };
 
@@ -129,8 +128,8 @@ export const getRequiredEquipmentForHazards = (hazardIds: string[]): string[] =>
   
   hazardIds.forEach(hazardId => {
     const hazard = hazardsById[hazardId];
-    if (hazard && hazard.requiredEquipment) {
-      hazard.requiredEquipment.forEach(eq => equipment.add(eq));
+    if (hazard && (hazard as any).requiredEquipment) {
+      (hazard as any).requiredEquipment.forEach((eq: string) => equipment.add(eq));
     }
   });
   
@@ -152,8 +151,8 @@ export const getControlMeasuresForHazards = (hazardIds: string[]): string[] => {
   
   hazardIds.forEach(hazardId => {
     const hazard = hazardsById[hazardId];
-    if (hazard && hazard.controlMeasures) {
-      hazard.controlMeasures.forEach(measure => measures.add(measure));
+    if (hazard && (hazard as any).controlMeasures) {
+      (hazard as any).controlMeasures.forEach((measure: string) => measures.add(measure));
     }
   });
   
@@ -168,8 +167,8 @@ export const getRegulatoryReferencesForHazards = (hazardIds: string[]): string[]
   
   hazardIds.forEach(hazardId => {
     const hazard = hazardsById[hazardId];
-    if (hazard && hazard.regulatoryReferences) {
-      hazard.regulatoryReferences.forEach(ref => references.add(ref));
+    if (hazard && (hazard as any).regulatoryReferences) {
+      (hazard as any).regulatoryReferences.forEach((ref: string) => references.add(ref));
     }
   });
   
