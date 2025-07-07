@@ -27,7 +27,7 @@ const createNewHazard = (base: Partial<Hazard>): Hazard => {
 export const repetitiveStrain: Hazard = createNewHazard({
   id: 'repetitive_strain_injury',
   name: 'Troubles musculo-squelettiques',
-  category: 'ergonomic',
+  category: 'ERGONOMIC' as any,
   subcategory: 'repetitive_motion',
   description: 'Lésions par mouvements répétitifs, postures contraignantes',
   severity: 'medium',
