@@ -1,324 +1,175 @@
 // app/data/hazards/mechanical.ts
-import { Hazard, createNewHazard } from './template';
+// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
+import { Hazard } from '../../types/hazards';
+
+// Fonction helper pour créer un danger
+const createNewHazard = (base: Partial<Hazard>): Hazard => {
+  return {
+    // Valeurs par défaut
+    category: 'mechanical',
+    severity: 'medium',
+    likelihood: 'medium',
+    riskLevel: 'medium',
+    controlMeasures: [],
+    requiredEquipment: [],
+    regulatoryReferences: [],
+    workTypes: [],
+    isActive: true,
+    createdDate: new Date().toISOString(),
+    lastUpdated: new Date().toISOString(),
+    // Merge avec les propriétés passées
+    ...base
+  } as Hazard;
+};
 
 // =================== DANGERS MÉCANIQUES ===================
 
-export const movingParts: Hazard = createNewHazard({
-  id: 'moving_mechanical_parts',
-  name: 'Pièces mobiles',
+export const cuttingInjuries: Hazard = createNewHazard({
+  id: 'cutting_lacerations',
+  name: 'Coupures et lacérations',
   category: 'mechanical',
-  subcategory: 'moving_parts',
-  displayName: {
-    fr: 'Pièces mobiles en mouvement',
-    en: 'Moving mechanical parts'
-  },
-  description: 'Risque de happement, écrasement ou coupure par des pièces mobiles en mouvement',
-  severity: 4,
-  probability: 3,
+  subcategory: 'cutting',
+  description: 'Blessures par objets tranchants, lames, métal',
+  severity: 'high',
+  likelihood: 'medium',
+  riskLevel: 'medium',
   
-  eliminationMethods: [
-    'Arrêt complet de l\'équipement',
-    'Consignation LOTO',
-    'Blocage mécanique'
-  ],
-  
-  substitutionOptions: [
-    'Outils à distance',
-    'Maintenance prédictive',
-    'Équipements sans pièces mobiles exposées'
-  ],
-  
-  engineeringControls: [
-    'Protecteurs fixes',
-    'Protecteurs mobiles verrouillés',
-    'Dispositifs de protection sensibles',
-    'Barrières lumineuses',
-    'Arrêts d\'urgence accessibles'
-  ],
-  
-  administrativeControls: [
-    'Procédures LOTO strictes',
-    'Formation sécurité machine',
-    'Inspection pré-utilisation',
-    'Signalisation de danger',
-    'Supervision des travaux'
-  ],
-  
-  ppeRequirements: [
-    'Gants résistants à la coupure',
-    'Vêtements ajustés',
-    'Chaussures de sécurité',
-    'Lunettes de protection'
+  controlMeasures: [
+    'Gants anti-coupure',
+    'Protection des lames',
+    'Formation manipulation sécuritaire',
+    'Élimination sécurisée objets tranchants'
   ],
   
   requiredEquipment: [
-    'lockout_kit',
-    'ppe_cut_resistant_gloves',
-    'safety_harness',
-    'emergency_stop_device'
+    'cut_resistant_gloves_level5',
+    'safety_glasses_wraparound',
+    'blade_guards',
+    'sharps_disposal_container'
   ],
   
-  recommendedEquipment: [
-    'portable_guards',
-    'warning_signs',
-    'communication_device'
+  regulatoryReferences: [
+    'RSST Art. 51-70',
+    'CSA Z142 - Gants protection',
+    'ANSI/ISEA 105 - Résistance coupure'
   ],
   
-  regulations: {
-    csa: ['CSA Z432', 'CSA Z434'],
-    rsst: ['Section IX - Machines', 'Art. 173-184'],
-    other: ['ISO 12100', 'ISO 13849']
-  },
+  workTypes: ['construction_general', 'sheet_metal', 'glass_handling'],
   
-  requiredTraining: [
-    'Sécurité machines',
-    'Procédures LOTO',
-    'Reconnaissance des dangers'
-  ],
-  
-  certificationRequired: false,
-  monitoringRequired: true,
-  inspectionFrequency: 'Avant chaque utilisation',
-  
-  emergencyProcedures: [
-    'Activation arrêt d\'urgence',
-    'Couper alimentation principale',
-    'Appeler premiers secours',
-    'Libérer personne coincée si sécuritaire',
-    'Sécuriser la zone'
-  ],
-  
-  firstAidMeasures: [
-    'Évaluer gravité blessures',
-    'Contrôler saignements',
-    'Immobiliser fractures',
-    'Surveiller état de choc'
-  ],
-  
-  tags: ['loto', 'machines', 'formation_obligatoire']
+  isActive: true
 });
 
-export const hydraulicSystems: Hazard = createNewHazard({
-  id: 'hydraulic_pressure',
-  name: 'Systèmes hydrauliques',
+export const crushedByMachinery: Hazard = createNewHazard({
+  id: 'crushing_by_equipment',
+  name: 'Écrasement par machinerie',
   category: 'mechanical',
-  subcategory: 'pressure_systems',
-  displayName: {
-    fr: 'Systèmes hydrauliques sous pression',
-    en: 'Hydraulic pressure systems'
-  },
-  description: 'Risque de projection de fluide hydraulique sous haute pression',
-  severity: 4,
-  probability: 2,
+  subcategory: 'crushing',
+  description: 'Écrasement par équipement lourd, pièces mobiles',
+  severity: 'critical',
+  likelihood: 'low',
+  riskLevel: 'high',
   
-  eliminationMethods: [
-    'Dépressurisation complète',
-    'Purge du système',
-    'Consignation hydraulique'
+  controlMeasures: [
+    'Cadenassage/étiquetage obligatoire',
+    'Protecteurs de machines',
+    'Formation sécurité machinerie',
+    'Procédures de travail sécuritaires'
   ],
   
-  engineeringControls: [
+  requiredEquipment: [
+    'lockout_tagout_kit',
+    'machine_guards',
+    'proximity_sensors',
+    'emergency_stop_devices'
+  ],
+  
+  regulatoryReferences: [
+    'RSST Art. 182-205',
+    'CSA Z432 - Sécurité machines',
+    'CSA Z460 - Cadenassage'
+  ],
+  
+  workTypes: ['heavy_machinery', 'manufacturing', 'maintenance'],
+  
+  isActive: true
+});
+
+export const pincingTrapping: Hazard = createNewHazard({
+  id: 'pinning_trapping_hazard',
+  name: 'Pincement et coincement',
+  category: 'mechanical',
+  subcategory: 'pinching',
+  description: 'Coincement de membres dans mécanismes',
+  severity: 'high',
+  likelihood: 'medium',
+  riskLevel: 'medium',
+  
+  controlMeasures: [
+    'Protecteurs anti-pincement',
+    'Dispositifs de sécurité',
+    'Formation identification risques',
+    'Vêtements ajustés'
+  ],
+  
+  requiredEquipment: [
+    'pinch_point_guards',
+    'proximity_safety_devices',
+    'fitted_work_clothing',
+    'safety_awareness_training'
+  ],
+  
+  regulatoryReferences: [
+    'RSST - Sécurité machines',
+    'CSA Z432',
+    'ISO 13849 - Sécurité machines'
+  ],
+  
+  workTypes: ['manufacturing', 'assembly_work', 'conveyor_systems'],
+  
+  isActive: true
+});
+
+export const flyingDebris: Hazard = createNewHazard({
+  id: 'flying_particles_debris',
+  name: 'Projections et éclats',
+  category: 'mechanical',
+  subcategory: 'projectiles',
+  description: 'Projection de particules, copeaux, étincelles',
+  severity: 'medium',
+  likelihood: 'high',
+  riskLevel: 'medium',
+  
+  controlMeasures: [
+    'Protection oculaire obligatoire',
     'Écrans de protection',
-    'Limiteurs de pression',
-    'Soupapes de sécurité',
-    'Raccords haute pression certifiés'
-  ],
-  
-  administrativeControls: [
-    'Procédures de dépressurisation',
-    'Inspection des flexibles',
-    'Test de pression régulier',
-    'Marquage des zones à risque'
-  ],
-  
-  ppeRequirements: [
-    'Lunettes étanches',
-    'Gants résistants à l\'huile',
-    'Vêtements résistants chimiques',
-    'Chaussures antidérapantes'
+    'Nettoyage régulier zones travail',
+    'Formation port EPI'
   ],
   
   requiredEquipment: [
-    'pressure_gauge',
-    'hydraulic_tools',
-    'spill_kit',
-    'pressure_relief_valve'
+    'safety_glasses_wraparound',
+    'face_shield_polycarbonate',
+    'protective_screens',
+    'dust_collection_system'
   ],
   
-  regulations: {
-    csa: ['CSA B51'],
-    rsst: ['Section XI - Appareils sous pression'],
-    other: ['ASME Section VIII']
-  },
-  
-  requiredTraining: [
-    'Systèmes hydrauliques',
-    'Sécurité fluides sous pression',
-    'Premiers secours chimiques'
+  regulatoryReferences: [
+    'RSST Art. 45-50',
+    'CSA Z94.3 - Protection oculaire',
+    'ANSI Z87.1'
   ],
   
-  emergencyProcedures: [
-    'Arrêt pompe hydraulique',
-    'Évacuer zone de projection',
-    'Rinçage abondant si contact',
-    'Appeler secours si blessure grave'
-  ],
+  workTypes: ['grinding', 'welding', 'cutting', 'drilling'],
   
-  tags: ['haute_pression', 'fluides', 'formation_technique']
-});
-
-export const liftingEquipment: Hazard = createNewHazard({
-  id: 'lifting_dropping_loads',
-  name: 'Équipements de levage',
-  category: 'mechanical',
-  subcategory: 'lifting',
-  displayName: {
-    fr: 'Chute de charges / Équipements de levage',
-    en: 'Lifting equipment / Dropping loads'
-  },
-  description: 'Risque de chute de charges ou défaillance d\'équipements de levage',
-  severity: 5,
-  probability: 2,
-  
-  eliminationMethods: [
-    'Éliminer besoin de levage',
-    'Conception sans levage',
-    'Transport au sol'
-  ],
-  
-  substitutionOptions: [
-    'Équipements plus légers',
-    'Systèmes de convoyage',
-    'Levage assisté mécaniquement'
-  ],
-  
-  engineeringControls: [
-    'Dispositifs anti-chute',
-    'Limiteurs de charge',
-    'Signalisation sonore/visuelle',
-    'Zones d\'exclusion marquées'
-  ],
-  
-  administrativeControls: [
-    'Plan de levage détaillé',
-    'Inspection équipements certifiée',
-    'Formation grutier/élingueur',
-    'Signaleur qualifié',
-    'Permis de levage'
-  ],
-  
-  ppeRequirements: [
-    'Casque de sécurité',
-    'Chaussures de sécurité',
-    'Gants de manutention',
-    'Gilet haute visibilité'
-  ],
-  
-  requiredEquipment: [
-    'certified_crane',
-    'load_block',
-    'slings_certified',
-    'communication_radio'
-  ],
-  
-  recommendedEquipment: [
-    'load_monitoring_system',
-    'taglines',
-    'lifting_plan_chart'
-  ],
-  
-  regulations: {
-    csa: ['CSA B167', 'CSA Z150'],
-    rsst: ['Section XII - Appareils de levage'],
-    other: ['CSA A344', 'ASME B30']
-  },
-  
-  requiredTraining: [
-    'Conduite grue/palan',
-    'Élingage sécuritaire',
-    'Signalisation levage',
-    'Inspection équipements'
-  ],
-  
-  certificationRequired: true,
-  monitoringRequired: true,
-  inspectionFrequency: 'Quotidienne',
-  
-  emergencyProcedures: [
-    'Évacuer zone de danger',
-    'Arrêter opération levage',
-    'Sécuriser charge si possible',
-    'Appeler secours si accident'
-  ],
-  
-  tags: ['levage', 'certification_operateur', 'inspection_quotidienne']
-});
-
-export const compressedAir: Hazard = createNewHazard({
-  id: 'compressed_air_systems',
-  name: 'Air comprimé',
-  category: 'mechanical',
-  subcategory: 'pressure_systems',
-  displayName: {
-    fr: 'Systèmes d\'air comprimé',
-    en: 'Compressed air systems'
-  },
-  description: 'Risque de blessures par projection d\'air comprimé ou éclatement',
-  severity: 3,
-  probability: 3,
-  
-  eliminationMethods: [
-    'Dépressurisation avant intervention',
-    'Isolation complète circuit'
-  ],
-  
-  engineeringControls: [
-    'Régulateurs de pression',
-    'Soupapes de décharge',
-    'Flexibles renforcés',
-    'Raccords sécurisés'
-  ],
-  
-  administrativeControls: [
-    'Pression limitée selon usage',
-    'Interdiction nettoyage corporel',
-    'Inspection des flexibles',
-    'Formation utilisation sécuritaire'
-  ],
-  
-  ppeRequirements: [
-    'Lunettes de sécurité',
-    'Protection auditive',
-    'Gants antidérapants'
-  ],
-  
-  requiredEquipment: [
-    'pressure_regulator',
-    'safety_nozzles',
-    'pressure_gauge'
-  ],
-  
-  regulations: {
-    csa: ['CSA B51'],
-    rsst: ['Section XI'],
-    other: ['OSHA 1910.95']
-  },
-  
-  emergencyProcedures: [
-    'Fermer alimentation air',
-    'Évacuer si blessure grave',
-    'Premiers secours si projection débris'
-  ],
-  
-  tags: ['air_comprime', 'pression', 'formation_usage']
+  isActive: true
 });
 
 // =================== EXPORT DANGERS MÉCANIQUES ===================
 export const mechanicalHazards = [
-  movingParts,
-  hydraulicSystems,
-  liftingEquipment,
-  compressedAir
+  cuttingInjuries,
+  crushedByMachinery,
+  pincingTrapping,
+  flyingDebris
 ];
 
 export const mechanicalHazardsById = mechanicalHazards.reduce((acc, hazard) => {
