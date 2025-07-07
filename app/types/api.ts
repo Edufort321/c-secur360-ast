@@ -1,7 +1,23 @@
 // types/api.ts - Types pour les API
 
 import { ASTStatus, RiskLevel } from './ast';
-import { PaginationOptions, SearchFilters, SortOptions } from './index';
+
+// =================== TYPES DE BASE ===================
+
+export interface PaginationOptions {
+  page?: number;
+  limit?: number;
+}
+
+export interface SearchFilters {
+  query?: string;
+  [key: string]: any;
+}
+
+export interface SortOptions {
+  field: string;
+  direction: 'asc' | 'desc';
+}
 
 // =================== TYPES RÉPONSE API GÉNÉRIQUES ===================
 
