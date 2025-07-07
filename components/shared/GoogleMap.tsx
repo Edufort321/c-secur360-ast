@@ -16,6 +16,13 @@ import {
   Loader
 } from 'lucide-react';
 
+// =================== DÉCLARATIONS GLOBALES ===================
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 // =================== INTERFACES ===================
 interface GoogleMapsProps {
   apiKey?: string;
@@ -186,9 +193,9 @@ const GoogleMaps: React.FC<GoogleMapsProps> = ({
   errorMessage
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+  const autocompleteRef = useRef<any>(null);
   const [searchValue, setSearchValue] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [currentMapType, setCurrentMapType] = useState<string>(mapTypeId);
@@ -202,10 +209,10 @@ const GoogleMaps: React.FC<GoogleMapsProps> = ({
   const initializeMap = useCallback(() => {
     if (!mapRef.current || !window.google) return;
 
-    const mapOptions: google.maps.MapOptions = {
+    const mapOptions: any = {
       center,
       zoom,
-      mapTypeId: currentMapType as google.maps.MapTypeId,
+      mapTypeId: currentMapType,
       disableDefaultUI: !enableMapControls,
       zoomControl: enableMapControls,
       streetViewControl: enableMapControls,
@@ -215,18 +222,18 @@ const GoogleMaps: React.FC<GoogleMapsProps> = ({
       clickableIcons: false
     };
 
-    const map = new google.maps.Map(mapRef.current, mapOptions);
+    const map = new window.google.maps.Map(mapRef.current, mapOptions);
     mapInstanceRef.current = map;
 
     // Traffic layer
     if (showTrafficLayer) {
-      const trafficLayer = new google.maps.TrafficLayer();
+      const trafficLayer = new window.google.maps.TrafficLayer();
       trafficLayer.setMap(map);
     }
 
     // Click listener pour sélection de lieu
     if (enableLocationPicker) {
-      map.addListener('click', async (event: google.maps.MapMouseEvent) => {
+      map.addListener('click', async (event: any) => {
         if (event.latLng) {
           const lat = event.latLng.lat();
           const lng = event.latLng.lng();
@@ -234,7 +241,7 @@ const GoogleMaps: React.FC<GoogleMapsProps> = ({
           setSelectedLocation({ lat, lng });
           
           // Géocodage inverse pour obtenir l'adresse
-          const geocoder = new google.maps.Geocoder();
+          const geocoder = new window.google.maps.Geocoder();
           try {
             const result = await geocoder.geocode({ location: { lat, lng } });
             const address = result.results[0]?.formatted_address || '';
@@ -258,25 +265,25 @@ const GoogleMaps: React.FC<GoogleMapsProps> = ({
   }, [center, zoom, currentMapType, enableMapControls, enableLocationPicker, showTrafficLayer, onLocationSelect]);
 
   // =================== GESTION DES MARQUEURS ===================
-  const addMarkers = useCallback((map: google.maps.Map) => {
+  const addMarkers = useCallback((map: any) => {
     // Supprimer les anciens marqueurs
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
 
     // Ajouter les nouveaux marqueurs
     markers.forEach(markerData => {
-      const marker = new google.maps.Marker({
+      const marker = new window.google.maps.Marker({
         position: markerData.position,
         map,
         title: markerData.title,
         icon: {
           url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(createMarkerSVG(markerData.type || 'custom'))}`,
-          scaledSize: new google.maps.Size(32, 32)
+          scaledSize: new window.google.maps.Size(32, 32)
         }
       });
 
       if (markerData.title || markerData.description) {
-        const infoWindow = new google.maps.InfoWindow({
+        const infoWindow = new window.google.maps.InfoWindow({
           content: `
             <div style="padding: 8px;">
               <h4 style="margin: 0 0 4px 0; color: #333;">${markerData.title || 'Marqueur'}</h4>
@@ -298,12 +305,12 @@ const GoogleMaps: React.FC<GoogleMapsProps> = ({
 
     // Marqueur de sélection
     if (selectedLocation) {
-      const selectionMarker = new google.maps.Marker({
+      const selectionMarker = new window.google.maps.Marker({
         position: selectedLocation,
         map,
         icon: {
           url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(createMarkerSVG('custom', '#ff4444'))}`,
-          scaledSize: new google.maps.Size(32, 32)
+          scaledSize: new window.google.maps.Size(32, 32)
         },
         title: t.locationSelected
       });
@@ -326,7 +333,7 @@ const GoogleMaps: React.FC<GoogleMapsProps> = ({
     if (!searchValue.trim() || !window.google) return;
 
     setIsSearching(true);
-    const service = new google.maps.places.PlacesService(mapInstanceRef.current!);
+    const service = new window.google.maps.places.PlacesService(mapInstanceRef.current!);
     
     const request = {
       query: searchValue,
@@ -334,9 +341,9 @@ const GoogleMaps: React.FC<GoogleMapsProps> = ({
       locationBias: mapInstanceRef.current!.getCenter()
     };
 
-    service.textSearch(request, (results, status) => {
+    service.textSearch(request, (results: any, status: any) => {
       setIsSearching(false);
-      if (status === google.maps.places.PlacesServiceStatus.OK && results && results[0]) {
+      if (status === window.google.maps.places.PlacesServiceStatus.OK && results && results[0]) {
         const place = results[0];
         const location = place.geometry!.location!;
         const lat = location.lat();
