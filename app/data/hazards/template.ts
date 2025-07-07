@@ -3,10 +3,9 @@
 import { Hazard } from '../../types/hazards';
 
 // =================== FONCTION HELPER ===================
-export const createNewHazard = (base: Partial<Hazard>): Hazard => {
+export const createNewHazard = (base: any): Hazard => {
   return {
-    // Valeurs par défaut
-    category: 'GENERAL' as any,  // ⭐ CORRIGÉ avec "as any"
+    category: 'GENERAL' as any,
     severity: 'medium',
     likelihood: 'medium', 
     riskLevel: 'medium',
