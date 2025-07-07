@@ -34,7 +34,7 @@ export const infectiousAgents: Hazard = createNewHazard({
     en: 'Infectious biological agents'
   },
   description: 'Risque d\'infection par exposition à des micro-organismes pathogènes',
-  severity: 4,
+  severity: 'critical',
   probability: 3,
   
   eliminationMethods: [
