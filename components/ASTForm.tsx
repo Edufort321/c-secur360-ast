@@ -34,7 +34,7 @@ interface FormData {
   equipment?: any[];
   hazards?: any[];
   controls?: any[];
-  permits?: any[];
+  permits?: any; // Changé de any[] à any pour plus de flexibilité
   validation?: any;
   teamShare?: any;
   finalization?: any;
@@ -229,7 +229,7 @@ export default function ASTForm({ tenant }: ASTFormProps) {
       case 5:
         return (
           <Step5Permits
-            formData={formData}
+            formData={formData as any}
             onDataChange={handleDataChange}
             language={language}
             tenant={tenant}
