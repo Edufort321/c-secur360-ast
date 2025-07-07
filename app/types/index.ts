@@ -507,7 +507,7 @@ export type {
 // Work types
 export type {
   WorkType,
-  WorkTypeCategory,
+  WorkCategory,
   SkillLevel,
   Task,
   WorkPlan,
