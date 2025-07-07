@@ -1,5 +1,26 @@
 // app/data/hazards/biological.ts
-import { Hazard, createNewHazard } from './template';
+// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
+import { Hazard } from '../../types/hazards';
+
+// Fonction helper pour créer un danger
+const createNewHazard = (base: Partial<Hazard>): Hazard => {
+  return {
+    // Valeurs par défaut
+    category: 'biological',
+    severity: 'medium',
+    likelihood: 'medium',
+    riskLevel: 'medium',
+    controlMeasures: [],
+    requiredEquipment: [],
+    regulatoryReferences: [],
+    workTypes: [],
+    isActive: true,
+    createdDate: new Date().toISOString(),
+    lastUpdated: new Date().toISOString(),
+    // Merge avec les propriétés passées
+    ...base
+  } as Hazard;
+};
 
 // =================== DANGERS BIOLOGIQUES ===================
 
