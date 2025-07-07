@@ -29,7 +29,7 @@ const createNewEquipment = (base: Partial<SafetyEquipment>): SafetyEquipment => 
 export const mechanicalGloves: SafetyEquipment = createNewEquipment({
   id: 'mechanical_work_gloves_leather',
   name: 'Gants de travail mécaniques cuir',
-  category: 'hand-protection',
+  category: 'HAND_PROTECTION' as any,
   subcategory: 'mechanical_gloves',
   description: 'Protection mécanique générale en cuir',
   
