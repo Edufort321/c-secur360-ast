@@ -27,7 +27,7 @@ const createNewHazard = (base: Partial<Hazard>): Hazard => {
 export const toxicGases: Hazard = createNewHazard({
   id: 'toxic_gas_exposure',
   name: 'Gaz toxiques',
-  category: 'chemical',
+  category: 'CHEMICAL' as any,
   subcategory: 'toxic_gases',
   description: 'Exposition à des gaz toxiques (CO, H2S, etc.)',
   severity: 'critical',
