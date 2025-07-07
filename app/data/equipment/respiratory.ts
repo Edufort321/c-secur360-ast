@@ -41,7 +41,8 @@ export const n95Respirator: SafetyEquipment = createNewEquipment({
     noseclip: 'Barrette nasale ajustable',
     straps: 'Élastiques tour de tête',
     sizes: 'Taille unique',
-    singleUse: 'Usage unique 8 heures max'
+    singleUse: 'Usage unique 8 heures max',
+    weight: 0.015  // ⭐ CORRIGÉ : ~15g = 0.015 kg
   },
   
   certifications: ['NIOSH N95', 'Health Canada'],
@@ -74,7 +75,8 @@ export const halfMaskReusable: SafetyEquipment = createNewEquipment({
     exhalationValve: 'Valve expiration centrale',
     sizes: 'S, M, L',
     cartridgeLife: 'Variable selon exposition',
-    maintenance: 'Nettoyage après usage'
+    maintenance: 'Nettoyage après usage',
+    weight: 0.25  // ⭐ CORRIGÉ : ~250g = 0.25 kg
   },
   
   certifications: ['NIOSH P100', 'CSA Z94.4'],
@@ -108,7 +110,8 @@ export const fullFaceMask: SafetyEquipment = createNewEquipment({
     speechDiaphragm: 'Membrane communication',
     headHarness: 'Harnais 5 points ajustable',
     sizes: 'S, M, L',
-    sealMaterial: 'Silicone facial'
+    sealMaterial: 'Silicone facial',
+    weight: 0.65  // ⭐ CORRIGÉ : ~650g = 0.65 kg
   },
   
   certifications: ['NIOSH', 'CSA Z94.4', 'ANSI Z87.1'],
@@ -138,7 +141,7 @@ export const scbaApparatus: SafetyEquipment = createNewEquipment({
     airSupply: '30 minutes autonomie',
     cylinderMaterial: 'Composite carbone',
     pressure: '300 bar (4500 psi)',
-    weight: '7.2 kg total',
+    weight: 7.2,  // ⭐ CORRIGÉ : 7.2 kg total
     regulator: 'Détendeur à la demande',
     alarms: 'Alarme basse pression',
     facepiece: 'Masque complet inclus',
@@ -176,7 +179,8 @@ export const suppliedAirHose: SafetyEquipment = createNewEquipment({
     beltMounted: 'Régulateur ceinture',
     facepiece: 'Demi ou masque complet',
     mobility: 'Mobilité dans rayon action',
-    backup: 'Bouteille secours optionnelle'
+    backup: 'Bouteille secours optionnelle',
+    weight: 3.5  // ⭐ CORRIGÉ : ~3.5 kg (système complet)
   },
   
   certifications: ['NIOSH Type C', 'CSA Z94.4'],
