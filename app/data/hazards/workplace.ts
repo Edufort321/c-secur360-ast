@@ -1,9 +1,9 @@
-// app/data/hazards/gas.ts
+// app/data/hazards/workplace.ts
 import { Hazard } from '../../types/hazards';
 
 const createNewHazard = (base: any): Hazard => {
   return {
-    category: 'GAS' as any,
+    category: 'WORKPLACE' as any,
     severity: 'medium',
     likelihood: 'medium',
     riskLevel: 'medium',
@@ -18,275 +18,258 @@ const createNewHazard = (base: any): Hazard => {
   } as Hazard;
 };
 
-export const gasLeak: Hazard = createNewHazard({
-  id: 'natural_gas_leak',
-  name: 'Fuite de gaz naturel',
-  category: 'GAS' as any,
-  subcategory: 'natural_gas',
+export const slipsTripsFalls: Hazard = createNewHazard({
+  id: 'slips_trips_falls_same_level',
+  name: 'Glissades, trébuchements, chutes',
+  category: 'WORKPLACE' as any,
+  subcategory: 'walking_surfaces',
   displayName: {
-    fr: 'Fuite de gaz naturel',
-    en: 'Natural gas leak'
+    fr: 'Chutes de plain-pied',
+    en: 'Slips, trips and falls'
   },
-  description: 'Risque d\'explosion, asphyxie par fuite de gaz',
-  severity: 'critical',
-  likelihood: 'medium',
-  riskLevel: 'high',
-  
-  eliminationMethods: [
-    'Élimination des sources de gaz',
-    'Systèmes de détection précoce',
-    'Isolation automatique des fuites'
-  ],
-  
-  engineeringControls: [
-    'Détection automatique de gaz',
-    'Ventilation forcée continue',
-    'Vannes d\'arrêt automatiques',
-    'Systèmes d\'alarme intégrés'
-  ],
-  
-  administrativeControls: [
-    'Procédures d\'urgence gaz',
-    'Formation détection de fuites',
-    'Inspection régulière équipements',
-    'Plan d\'évacuation d\'urgence'
-  ],
-  
-  controlMeasures: [
-    'Détection continue de gaz',
-    'Ventilation forcée',
-    'Élimination sources d\'ignition',
-    'Évacuation d\'urgence'
-  ],
-  
-  requiredEquipment: [
-    'gas_detector_4_gas',
-    'explosion_proof_lighting',
-    'emergency_gas_shutoff',
-    'scba_30_minute_carbon'
-  ],
-  
-  emergencyProcedures: [
-    'Coupure alimentation gaz immédiate',
-    'Évacuation zone dangereuse',
-    'Élimination sources d\'ignition',
-    'Ventilation forcée de la zone'
-  ] as any,
-  
-  regulatoryReferences: [
-    'CSA Z662 - Réseaux gaziers',
-    'Règlement gazier provincial',
-    'RSST Art. 280-300'
-  ],
-  
-  workTypes: ['gas_maintenance', 'pipeline_inspection', 'excavation'],
-  
-  isActive: true
-});
-
-export const hydrogenSulfide: Hazard = createNewHazard({
-  id: 'hydrogen_sulfide_exposure',
-  name: 'Sulfure d\'hydrogène (H₂S)',
-  category: 'GAS' as any,
-  subcategory: 'toxic_gas',
-  displayName: {
-    fr: 'Exposition au sulfure d\'hydrogène',
-    en: 'Hydrogen sulfide exposure'
-  },
-  description: 'Gaz toxique mortel à faible concentration',
-  severity: 'critical',
-  likelihood: 'medium',
-  riskLevel: 'critical',
-  
-  eliminationMethods: [
-    'Élimination sources H₂S',
-    'Processus sans production H₂S',
-    'Confinement total des sources'
-  ],
-  
-  engineeringControls: [
-    'Détection H₂S automatique',
-    'Ventilation d\'extraction locale',
-    'Systèmes d\'alarme multi-niveaux',
-    'Neutralisation automatique'
-  ],
-  
-  administrativeControls: [
-    'Formation spécialisée H₂S',
-    'Procédures d\'urgence strictes',
-    'Surveillance atmosphérique',
-    'Plan de sauvetage d\'urgence'
-  ],
-  
-  controlMeasures: [
-    'Détection H₂S obligatoire',
-    'Appareil respiratoire autonome',
-    'Procédures d\'urgence H₂S',
-    'Formation spécialisée'
-  ],
-  
-  requiredEquipment: [
-    'h2s_detector_personal',
-    'scba_escape_respirator',
-    'h2s_antidote_kit',
-    'emergency_rescue_equipment'
-  ],
-  
-  emergencyProcedures: [
-    'Évacuation immédiate zone H₂S',
-    'Réanimation avec oxygène pur',
-    'Transport médical d\'urgence',
-    'Surveillance neurologique continue'
-  ] as any,
-  
-  regulatoryReferences: [
-    'RSST - Gaz toxiques',
-    'ACGIH TLV - H₂S',
-    'API RP 55 - H₂S'
-  ],
-  
-  workTypes: ['confined_space', 'environmental_cleanup', 'gas_maintenance'],
-  
-  isActive: true
-});
-
-export const carbonMonoxide: Hazard = createNewHazard({
-  id: 'carbon_monoxide_poisoning',
-  name: 'Monoxyde de carbone (CO)',
-  category: 'GAS' as any,
-  subcategory: 'toxic_gas',
-  displayName: {
-    fr: 'Intoxication au monoxyde de carbone',
-    en: 'Carbon monoxide poisoning'
-  },
-  description: 'Intoxication par CO, gaz inodore et mortel',
-  severity: 'critical',
-  likelihood: 'medium',
-  riskLevel: 'high',
-  
-  eliminationMethods: [
-    'Élimination combustion incomplète',
-    'Équipements électriques purs',
-    'Processus sans combustion'
-  ],
-  
-  engineeringControls: [
-    'Détection CO automatique',
-    'Ventilation d\'extraction forcée',
-    'Entretien préventif équipements',
-    'Isolation zones combustion'
-  ],
-  
-  administrativeControls: [
-    'Formation reconnaissance CO',
-    'Procédures entretien équipements',
-    'Surveillance atmosphérique',
-    'Protocoles d\'urgence CO'
-  ],
-  
-  controlMeasures: [
-    'Détection CO continue',
-    'Ventilation adéquate',
-    'Entretien équipements combustion',
-    'Formation reconnaissance symptômes'
-  ],
-  
-  requiredEquipment: [
-    'co_detector_personal',
-    'forced_ventilation_system',
-    'co_antidote_oxygen',
-    'emergency_evacuation_alarm'
-  ],
-  
-  emergencyProcedures: [
-    'Évacuation vers air frais',
-    'Oxygénothérapie immédiate',
-    'Transport centre hyperbare',
-    'Surveillance cardiaque continue'
-  ] as any,
-  
-  regulatoryReferences: [
-    'RSST - Atmosphères dangereuses',
-    'ACGIH TLV - CO',
-    'CSA B149 - Combustibles gazeux'
-  ],
-  
-  workTypes: ['confined_space', 'welding', 'heating_systems'],
-  
-  isActive: true
-});
-
-export const oxygenDeficiency: Hazard = createNewHazard({
-  id: 'oxygen_deficient_atmosphere',
-  name: 'Déficience en oxygène',
-  category: 'GAS' as any,
-  subcategory: 'atmosphere',
-  displayName: {
-    fr: 'Atmosphère déficiente en oxygène',
-    en: 'Oxygen deficient atmosphere'
-  },
-  description: 'Atmosphère avec moins de 19.5% d\'oxygène',
-  severity: 'critical',
+  description: 'Risque de chute sur surfaces glissantes ou encombrées',
+  severity: 'medium',
   likelihood: 'high',
-  riskLevel: 'critical',
+  riskLevel: 'medium',
   
   eliminationMethods: [
-    'Éviter espaces confinés',
-    'Ventilation naturelle continue',
-    'Élimination gaz inertes'
+    'Conception surfaces antidérapantes',
+    'Élimination obstacles permanents',
+    'Drainage automatique des liquides'
   ],
   
   engineeringControls: [
-    'Surveillance O₂ automatique',
-    'Ventilation forcée continue',
-    'Alarmes déficience oxygène',
-    'Injection oxygène automatique'
+    'Revêtements antidérapants',
+    'Systèmes de drainage efficaces',
+    'Éclairage adéquat des passages',
+    'Rampes et mains courantes'
   ],
   
   administrativeControls: [
-    'Procédures espaces confinés',
-    'Tests atmosphériques obligatoires',
-    'Surveillance continue personnel',
-    'Formation sauvetage d\'urgence'
+    'Entretien ménager régulier',
+    'Signalisation zones dangereuses',
+    'Procédures nettoyage immédiat',
+    'Inspection quotidienne des lieux'
   ],
   
   controlMeasures: [
-    'Test atmosphérique obligatoire',
-    'Ventilation forcée continue',
-    'Surveillance constante O₂',
-    'Appareil respiratoire autonome'
+    'Entretien ménager rigoureux',
+    'Chaussures antidérapantes',
+    'Signalisation sol mouillé',
+    'Éclairage adéquat des passages'
   ],
   
   requiredEquipment: [
-    'oxygen_meter_calibrated',
-    'supplied_air_respirator_hose',
-    'emergency_oxygen_supply',
-    'atmospheric_monitoring_system'
+    'non_slip_safety_footwear',
+    'wet_floor_warning_signs',
+    'anti_slip_floor_treatments',
+    'adequate_lighting_systems'
   ],
   
   emergencyProcedures: [
-    'Évacuation immédiate',
-    'Oxygénation d\'urgence',
-    'Réanimation si nécessaire',
-    'Surveillance médicale prolongée'
+    'Évaluation blessures avant déplacement',
+    'Immobilisation si douleur dorsale',
+    'Nettoyage immédiat zone dangereuse',
+    'Rapport incident détaillé'
+  ] as any,
+  
+  regulatoryReferences: [
+    'RSST - Entretien ménager',
+    'Code du bâtiment - Surfaces de marche'
+  ],
+  
+  workTypes: ['general_workplace', 'food_service', 'cleaning_operations'],
+  
+  isActive: true
+});
+
+export const poorHousekeeping: Hazard = createNewHazard({
+  id: 'poor_housekeeping_clutter',
+  name: 'Mauvais entretien ménager',
+  category: 'WORKPLACE' as any,
+  subcategory: 'housekeeping',
+  displayName: {
+    fr: 'Encombrement et désordre',
+    en: 'Poor housekeeping and clutter'
+  },
+  description: 'Risque d\'accidents par encombrement et désorganisation',
+  severity: 'medium',
+  likelihood: 'medium',
+  riskLevel: 'medium',
+  
+  controlMeasures: [
+    'Programme 5S (Sort, Set, Shine, Standardize, Sustain)',
+    'Rangement systématique quotidien',
+    'Élimination objets inutiles',
+    'Zones de stockage délimitées'
+  ],
+  
+  requiredEquipment: [
+    'storage_containers_labeled',
+    'waste_disposal_bins',
+    'cleaning_supplies_accessible',
+    'organization_systems'
+  ],
+  
+  emergencyProcedures: [
+    'Dégagement voies d\'évacuation',
+    'Nettoyage immédiat déversements',
+    'Signalement obstacles dangereux',
+    'Inspection sécuritaire urgente'
+  ] as any,
+  
+  regulatoryReferences: [
+    'RSST - Organisation du travail',
+    'Code de prévention des incendies'
+  ],
+  
+  workTypes: ['manufacturing', 'warehousing', 'office_environments'],
+  
+  isActive: true
+});
+
+export const inadequateLighting: Hazard = createNewHazard({
+  id: 'inadequate_workplace_lighting',
+  name: 'Éclairage insuffisant',
+  category: 'WORKPLACE' as any,
+  subcategory: 'lighting',
+  displayName: {
+    fr: 'Mauvais éclairage',
+    en: 'Inadequate lighting'
+  },
+  description: 'Risque d\'accidents par visibilité réduite',
+  severity: 'medium',
+  likelihood: 'medium',
+  riskLevel: 'medium',
+  
+  controlMeasures: [
+    'Éclairage minimum requis respecté',
+    'Éclairage d\'appoint aux postes',
+    'Maintenance régulière luminaires',
+    'Éclairage d\'urgence fonctionnel'
+  ],
+  
+  requiredEquipment: [
+    'adequate_overhead_lighting',
+    'task_specific_lighting',
+    'emergency_lighting_system',
+    'light_meter_measurement'
+  ],
+  
+  emergencyProcedures: [
+    'Éclairage d\'urgence automatique',
+    'Évacuation sécuritaire guidée',
+    'Réparation éclairage prioritaire',
+    'Éclairage temporaire si nécessaire'
+  ] as any,
+  
+  regulatoryReferences: [
+    'RSST - Éclairage des lieux de travail',
+    'Code du bâtiment - Éclairage'
+  ],
+  
+  workTypes: ['indoor_work', 'precision_tasks', 'night_shift_operations'],
+  
+  isActive: true
+});
+
+export const confinedWorkspaces: Hazard = createNewHazard({
+  id: 'confined_restricted_workspaces',
+  name: 'Espaces de travail restreints',
+  category: 'WORKPLACE' as any,
+  subcategory: 'space_constraints',
+  displayName: {
+    fr: 'Espaces restreints',
+    en: 'Confined workspaces'
+  },
+  description: 'Risque d\'accidents par manque d\'espace de manœuvre',
+  severity: 'medium',
+  likelihood: 'medium',
+  riskLevel: 'medium',
+  
+  controlMeasures: [
+    'Aménagement optimisé de l\'espace',
+    'Procédures d\'entrée sécuritaires',
+    'Équipements adaptés à l\'espace',
+    'Surveillance continue des travailleurs'
+  ],
+  
+  requiredEquipment: [
+    'compact_safety_equipment',
+    'communication_devices_portable',
+    'personal_monitoring_systems',
+    'emergency_evacuation_equipment'
+  ],
+  
+  emergencyProcedures: [
+    'Évacuation rapide espace confiné',
+    'Secours spécialisé espace restreint',
+    'Communication d\'urgence maintenue',
+    'Surveillance médicale post-exposition'
   ] as any,
   
   regulatoryReferences: [
     'CSA Z1611 - Espaces confinés',
-    'RSST - Atmosphères dangereuses',
-    'OSHA 1910.146'
+    'RSST - Espaces clos'
   ],
   
-  workTypes: ['confined_space', 'underground_work', 'tank_cleaning'],
+  workTypes: ['confined_space_entry', 'maintenance_work', 'underground_operations'],
   
   isActive: true
 });
 
-export const gasHazards = [
-  gasLeak,
-  hydrogenSulfide,
-  carbonMonoxide,
-  oxygenDeficiency
+export const vehiclePedestrianTraffic: Hazard = createNewHazard({
+  id: 'vehicle_pedestrian_interaction',
+  name: 'Circulation véhicules/piétons',
+  category: 'WORKPLACE' as any,
+  subcategory: 'traffic_control',
+  displayName: {
+    fr: 'Trafic mixte véhicules-piétons',
+    en: 'Vehicle-pedestrian traffic'
+  },
+  description: 'Risque de collision entre véhicules et piétons',
+  severity: 'critical',
+  likelihood: 'medium',
+  riskLevel: 'high',
+  
+  controlMeasures: [
+    'Séparation voies véhicules/piétons',
+    'Signalisation claire et visible',
+    'Vêtements haute visibilité',
+    'Zones de circulation délimitées'
+  ],
+  
+  requiredEquipment: [
+    'high_visibility_safety_vests',
+    'traffic_control_devices',
+    'pedestrian_crossing_signals',
+    'vehicle_warning_systems'
+  ],
+  
+  emergencyProcedures: [
+    'Arrêt circulation immédiat',
+    'Premiers soins traumatisme',
+    'Transport médical d\'urgence',
+    'Enquête accident détaillée'
+  ] as any,
+  
+  regulatoryReferences: [
+    'Code de la sécurité routière',
+    'RSST - Circulation en milieu de travail'
+  ],
+  
+  workTypes: ['warehouse_operations', 'construction_sites', 'loading_dock_operations'],
+  
+  isActive: true
+});
+
+export const workplaceHazards = [
+  slipsTripsFalls,
+  poorHousekeeping,
+  inadequateLighting,
+  confinedWorkspaces,
+  vehiclePedestrianTraffic
 ];
 
-export default gasHazards;
+export { workplaceHazards };
+export default workplaceHazards;
