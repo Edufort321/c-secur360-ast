@@ -29,7 +29,7 @@ const createNewEquipment = (base: Partial<SafetyEquipment>): SafetyEquipment => 
 export const hardHatStandard: SafetyEquipment = createNewEquipment({
   id: 'hard_hat_standard_csa',
   name: 'Casque de sécurité standard CSA',
-  category: 'head-protection',
+  category: 'HEAD_PROTECTION' as any,
   subcategory: 'hard_hat',
   description: 'Casque de protection contre les chocs et impacts',
   
