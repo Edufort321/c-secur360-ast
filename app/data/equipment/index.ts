@@ -1,355 +1,305 @@
 // app/data/equipment/index.ts
+// =================== IMPORTS DE TOUS LES ÉQUIPEMENTS ===================
 
-// ⭐ IMPORT UNIFIÉ - Utilise la même interface que tous les autres fichiers
-import { SafetyEquipment, EquipmentCategory } from '../../types/equipment';
+// Protection de la tête
+import { headProtectionEquipment } from './head-protection';
 
-// =================== IMPORTS DES ÉQUIPEMENTS ===================
-import { headProtectionEquipment, headProtectionById } from './head-protection';
-import { eyeProtectionEquipment, eyeProtectionById } from './eye-protection';
-import { handProtectionEquipment, handProtectionById } from './hand-protection';
-import { footProtectionEquipment, footProtectionById } from './foot-protection';
-import { respiratoryEquipment, respiratoryById } from './respiratory';
-import { fallProtectionEquipment, fallProtectionById } from './fall-protection';
-import { electricalEquipment, electricalEquipmentById } from './electrical';
-import { detectionEquipment, detectionEquipmentById } from './detection';
-import { bodyProtectionEquipment, bodyProtectionById } from './body-protection';
+// Protection oculaire  
+import { eyeProtectionEquipment } from './eye-protection';
 
-// Export des types
-export type { SafetyEquipment, EquipmentCategory };
+// Protection auditive
+import { hearingProtectionEquipment } from './hearing-protection';
 
-// =================== FONCTIONS UTILITAIRES ===================
-export function getProtectionLevelColor(level: string): string {
-  switch (level) {
-    case 'basic': return 'text-green-600';
-    case 'standard': return 'text-blue-600';
-    case 'enhanced': return 'text-yellow-600';
-    case 'specialized': return 'text-orange-600';
-    case 'critical': return 'text-red-600';
-    default: return 'text-gray-600';
-  }
-}
+// Protection respiratoire
+import { respiratoryEquipment } from './respiratory';
 
-export function getProtectionLevelLabel(level: string): string {
-  switch (level) {
-    case 'basic': return 'Basique';
-    case 'standard': return 'Standard';
-    case 'enhanced': return 'Renforcé';
-    case 'specialized': return 'Spécialisé';
-    case 'critical': return 'Critique';
-    default: return 'Non défini';
-  }
-}
+// Protection des mains
+import { handProtectionEquipment } from './hand-protection';
 
-export function calculateEquipmentCost(equipment: SafetyEquipment, quantity: number = 1): number {
-  return equipment.cost * quantity;
-}
+// Protection des pieds
+import { footProtectionEquipment } from './foot-protection';
 
-export function validateEquipmentCompatibility(equipmentIds: string[]): boolean {
-  // Logique de validation basique - peut être étendue
-  return equipmentIds.length > 0;
-}
+// Protection du corps
+import { bodyProtectionEquipment } from './body-protection';
 
-export function getExpiringEquipment(equipmentList: SafetyEquipment[], daysAhead: number = 30): SafetyEquipment[] {
-  const now = new Date();
-  const futureDate = new Date(now.getTime() + (daysAhead * 24 * 60 * 60 * 1000));
-  
-  return equipmentList.filter(equipment => {
-    if (!equipment.lifespanMonths) return false;
-    
-    const createdDate = new Date(equipment.createdDate);
-    const expirationDate = new Date(createdDate.getTime() + (equipment.lifespanMonths * 30 * 24 * 60 * 60 * 1000));
-    
-    return expirationDate <= futureDate;
-  });
-}
+// Protection antichute
+import { fallProtectionEquipment } from './fall-protection';
 
-// =================== REGISTRY COMPLET DES ÉQUIPEMENTS ===================
+// Équipements électriques
+import { electricalEquipment } from './electrical';
+
+// Équipements d'urgence
+import { emergencyEquipment } from './emergency';
+
+// Outils et équipements
+import { toolsEquipment } from './tools';
+
+// Détection et mesure
+import { detectionEquipment } from './detection';
+
+// Fonctions utilitaires
+import { 
+  createNewEquipment,
+  getEquipmentCategoryColor,
+  getEquipmentCategoryLabel,
+  calculateEquipmentLifespan,
+  validateEquipmentData,
+  getEquipmentInspectionStatus,
+  filterEquipmentByWorkType,
+  filterEquipmentByHazard,
+  searchEquipment,
+  sortEquipmentByCost,
+  groupEquipmentByCategory,
+  calculateTotalEquipmentCost,
+  EQUIPMENT_CATEGORIES,
+  INSPECTION_FREQUENCIES,
+  EQUIPMENT_STATUSES
+} from './template';
+
+// Types
+import type { SafetyEquipment } from '../../types/equipment';
+
+// =================== REGISTRY PRINCIPAL DE TOUS LES ÉQUIPEMENTS ===================
+
 export const allEquipment: SafetyEquipment[] = [
+  // Protection de la tête (4 équipements)
   ...headProtectionEquipment,
+  
+  // Protection oculaire (4 équipements)
   ...eyeProtectionEquipment,
-  ...handProtectionEquipment,
-  ...footProtectionEquipment,
+  
+  // Protection auditive (4 équipements)
+  ...hearingProtectionEquipment,
+  
+  // Protection respiratoire (4 équipements)
   ...respiratoryEquipment,
+  
+  // Protection des mains (4 équipements)
+  ...handProtectionEquipment,
+  
+  // Protection des pieds (4 équipements)
+  ...footProtectionEquipment,
+  
+  // Protection du corps (5 équipements)
+  ...bodyProtectionEquipment,
+  
+  // Protection antichute (4 équipements)
   ...fallProtectionEquipment,
+  
+  // Équipements électriques (4 équipements)
   ...electricalEquipment,
-  ...detectionEquipment,
-  ...bodyProtectionEquipment
+  
+  // Équipements d'urgence (4 équipements)
+  ...emergencyEquipment,
+  
+  // Outils et équipements (4 équipements)
+  ...toolsEquipment,
+  
+  // Détection et mesure (4 équipements)
+  ...detectionEquipment
 ];
 
-export const equipmentById: Record<string, SafetyEquipment> = {
-  ...headProtectionById,
-  ...eyeProtectionById,
-  ...handProtectionById,
-  ...footProtectionById,
-  ...respiratoryById,
-  ...fallProtectionById,
-  ...electricalEquipmentById,
-  ...detectionEquipmentById,
-  ...bodyProtectionById
+// =================== INDEX PAR ID POUR RECHERCHE RAPIDE ===================
+
+export const equipmentById = allEquipment.reduce((acc, equipment) => {
+  acc[(equipment as any).id] = equipment;
+  return acc;
+}, {} as Record<string, SafetyEquipment>);
+
+// =================== INDEX PAR CATÉGORIE ===================
+
+export const equipmentByCategory = {
+  HEAD_PROTECTION: headProtectionEquipment,
+  EYE_PROTECTION: eyeProtectionEquipment,
+  HEARING_PROTECTION: hearingProtectionEquipment,
+  RESPIRATORY_PROTECTION: respiratoryEquipment,
+  HAND_PROTECTION: handProtectionEquipment,
+  FOOT_PROTECTION: footProtectionEquipment,
+  BODY_PROTECTION: bodyProtectionEquipment,
+  FALL_PROTECTION: fallProtectionEquipment,
+  ELECTRICAL: electricalEquipment,
+  EMERGENCY: emergencyEquipment,
+  TOOLS: toolsEquipment,
+  DETECTION: detectionEquipment
 };
 
-export const equipmentByCategory: Partial<Record<EquipmentCategory, SafetyEquipment[]>> = {
-  'head-protection': headProtectionEquipment,
-  'eye-protection': eyeProtectionEquipment,
-  'hand-protection': handProtectionEquipment,
-  'foot-protection': footProtectionEquipment,
-  'respiratory-protection': respiratoryEquipment,
-  'fall-protection': fallProtectionEquipment,
-  'electrical-protection': electricalEquipment,
-  'detection-equipment': detectionEquipment,
-  'body-protection': bodyProtectionEquipment
+// =================== FONCTIONS DE RECHERCHE ET FILTRAGE ===================
+
+export const getEquipmentByCategory = (category: string): SafetyEquipment[] => {
+  return allEquipment.filter(equipment => equipment.category === category);
 };
 
-// =================== FONCTIONS DE RECHERCHE ===================
-export function getEquipmentById(id: string): SafetyEquipment | undefined {
-  return equipmentById[id];
-}
+export const getEquipmentByWorkType = (workType: string): SafetyEquipment[] => {
+  return filterEquipmentByWorkType(allEquipment, workType);
+};
 
-export function getEquipmentByCategory(category: EquipmentCategory): SafetyEquipment[] {
-  return equipmentByCategory[category] || [];
-}
+export const getEquipmentByHazard = (hazardType: string): SafetyEquipment[] => {
+  return filterEquipmentByHazard(allEquipment, hazardType);
+};
 
-export function getEquipmentByWorkType(workTypeId: string): SafetyEquipment[] {
+export const getEquipmentBySupplier = (supplier: string): SafetyEquipment[] => {
   return allEquipment.filter(equipment => 
-    equipment.workTypes.includes(workTypeId)
+    equipment.supplier?.toLowerCase().includes(supplier.toLowerCase())
   );
-}
+};
 
-export function getEquipmentByHazard(hazardId: string): SafetyEquipment[] {
-  return allEquipment.filter(equipment => 
-    equipment.hazardTypes.includes(hazardId)
-  );
-}
-
-export function searchEquipment(query: string): SafetyEquipment[] {
-  const searchTerm = query.toLowerCase();
-  return allEquipment.filter(equipment => 
-    equipment.name.toLowerCase().includes(searchTerm) ||
-    equipment.description.toLowerCase().includes(searchTerm) ||
-    equipment.category.toLowerCase().includes(searchTerm) ||
-    (equipment.subcategory && equipment.subcategory.toLowerCase().includes(searchTerm))
-  );
-}
-
-export function getMandatoryEquipment(): SafetyEquipment[] {
-  return allEquipment.filter(equipment => equipment.isActive);
-}
-
-export function getEquipmentRequiringTraining(): SafetyEquipment[] {
-  // Filtrer selon les certifications ou standards spéciaux
-  return allEquipment.filter(equipment => 
-    equipment.standards.some(standard => 
-      standard.includes('training') || standard.includes('certification')
-    )
-  );
-}
-
-export function getEquipmentRequiringCertification(): SafetyEquipment[] {
-  return allEquipment.filter(equipment => 
-    equipment.certifications.length > 0
-  );
-}
-
-// =================== FONCTIONS DE COMPATIBILITÉ ===================
-export function checkEquipmentCompatibility(equipmentIds: string[]): {
-  compatible: string[][];
-  incompatible: string[][];
-  recommendations: string[];
-} {
-  const equipments = equipmentIds.map(id => getEquipmentById(id)).filter(Boolean) as SafetyEquipment[];
-  const compatible: string[][] = [];
-  const incompatible: string[][] = [];
-  const recommendations: string[] = [];
-
-  // Logique de base - peut être étendue selon vos besoins
-  for (let i = 0; i < equipments.length; i++) {
-    for (let j = i + 1; j < equipments.length; j++) {
-      const eq1 = equipments[i];
-      const eq2 = equipments[j];
-      
-      // Compatible si même fournisseur ou standards similaires
-      if (eq1.supplier === eq2.supplier || 
-          eq1.standards.some(std => eq2.standards.includes(std))) {
-        compatible.push([eq1.id, eq2.id]);
-      }
-      
-      // Incompatible si même catégorie mais différents standards
-      if (eq1.category === eq2.category && 
-          !eq1.standards.some(std => eq2.standards.includes(std))) {
-        incompatible.push([eq1.id, eq2.id]);
-      }
-    }
-  }
-
-  // Recommandations basées sur les dangers couverts
-  const allHazards = new Set<string>();
-  equipments.forEach(eq => {
-    eq.hazardTypes.forEach(hazard => allHazards.add(hazard));
+export const getEquipmentByCostRange = (minCost: number, maxCost: number): SafetyEquipment[] => {
+  return allEquipment.filter(equipment => {
+    const cost = equipment.cost || 0;
+    return cost >= minCost && cost <= maxCost;
   });
+};
 
-  return { compatible, incompatible, recommendations };
-}
+export const searchAllEquipment = (searchTerm: string): SafetyEquipment[] => {
+  return searchEquipment(allEquipment, searchTerm);
+};
 
-// =================== FONCTIONS DE GESTION ===================
-export function getEquipmentMaintenanceSchedule(equipmentIds: string[]): {
-  daily: SafetyEquipment[];
-  weekly: SafetyEquipment[];
-  monthly: SafetyEquipment[];
-  quarterly: SafetyEquipment[];
-  annually: SafetyEquipment[];
-} {
-  const equipments = equipmentIds.map(id => getEquipmentById(id)).filter(Boolean) as SafetyEquipment[];
+// =================== FONCTIONS D'ANALYSE ===================
+
+export const getEquipmentStatistics = () => {
+  const totalEquipment = allEquipment.length;
+  const categoryStats = groupEquipmentByCategory(allEquipment);
+  const costBreakdown = calculateTotalEquipmentCost(allEquipment);
+  
+  const supplierStats = allEquipment.reduce((acc, equipment) => {
+    const supplier = equipment.supplier || 'Unknown';
+    acc[supplier] = (acc[supplier] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const activeEquipment = allEquipment.filter(equipment => equipment.isActive).length;
+  const inactiveEquipment = totalEquipment - activeEquipment;
   
   return {
-    daily: equipments.filter(eq => eq.inspectionFrequency === 'before each use' || eq.inspectionFrequency === 'daily'),
-    weekly: equipments.filter(eq => eq.inspectionFrequency === 'weekly'),
-    monthly: equipments.filter(eq => eq.inspectionFrequency === 'monthly'),
-    quarterly: equipments.filter(eq => eq.inspectionFrequency === 'quarterly'),
-    annually: equipments.filter(eq => eq.inspectionFrequency === 'annually')
-  };
-}
-
-export function calculateProjectEquipmentCost(equipmentSelection: {
-  equipmentId: string;
-  quantity: number;
-}[]): {
-  totalCost: number;
-  breakdown: Array<{
-    equipment: SafetyEquipment;
-    quantity: number;
-    unitCost: number;
-    totalCost: number;
-  }>;
-} {
-  const breakdown = equipmentSelection.map(selection => {
-    const equipment = getEquipmentById(selection.equipmentId);
-    if (!equipment) {
-      return null;
+    total: totalEquipment,
+    active: activeEquipment,
+    inactive: inactiveEquipment,
+    byCategory: Object.keys(categoryStats).map(category => ({
+      category,
+      count: categoryStats[category].length,
+      percentage: Math.round((categoryStats[category].length / totalEquipment) * 100)
+    })),
+    bySupplier: Object.keys(supplierStats).map(supplier => ({
+      supplier,
+      count: supplierStats[supplier],
+      percentage: Math.round((supplierStats[supplier] / totalEquipment) * 100)
+    })),
+    costAnalysis: {
+      ...costBreakdown,
+      averageCost: Math.round(costBreakdown.totalCost / totalEquipment),
+      mostExpensive: allEquipment.reduce((max, equipment) => 
+        (equipment.cost || 0) > (max.cost || 0) ? equipment : max
+      ),
+      leastExpensive: allEquipment.reduce((min, equipment) => 
+        (equipment.cost || 0) < (min.cost || 0) && (equipment.cost || 0) > 0 ? equipment : min
+      )
     }
-    
-    const unitCost = equipment.cost;
-    const totalCost = unitCost * selection.quantity;
-    
-    return {
-      equipment,
-      quantity: selection.quantity,
-      unitCost,
-      totalCost
-    };
-  }).filter(Boolean) as Array<{
-    equipment: SafetyEquipment;
-    quantity: number;
-    unitCost: number;
-    totalCost: number;
-  }>;
-
-  const totalCost = breakdown.reduce((sum, item) => sum + item.totalCost, 0);
-
-  return { totalCost, breakdown };
-}
-
-// =================== STATISTIQUES DES ÉQUIPEMENTS ===================
-export function getEquipmentStats() {
-  const stats = {
-    total: allEquipment.length,
-    byCategory: {} as Record<string, number>,
-    active: 0,
-    inactive: 0,
-    averageCost: 0,
-    totalEstimatedValue: 0
   };
+};
 
-  let totalCostSum = 0;
+export const getInspectionSchedule = () => {
+  return allEquipment.map(equipment => ({
+    equipment,
+    inspectionStatus: getEquipmentInspectionStatus(equipment),
+    lifespan: calculateEquipmentLifespan(equipment.createdDate, equipment.lifespanMonths || 12)
+  })).sort((a, b) => 
+    a.inspectionStatus.daysUntilInspection - b.inspectionStatus.daysUntilInspection
+  );
+};
 
-  allEquipment.forEach(equipment => {
-    // Stats par catégorie
-    stats.byCategory[equipment.category] = (stats.byCategory[equipment.category] || 0) + 1;
-    
-    // Stats status
-    if (equipment.isActive) {
-      stats.active++;
-    } else {
-      stats.inactive++;
-    }
-    
-    // Stats coûts
-    totalCostSum += equipment.cost;
-  });
-
-  stats.averageCost = allEquipment.length > 0 ? totalCostSum / allEquipment.length : 0;
-  stats.totalEstimatedValue = totalCostSum;
-
-  return stats;
-}
-
-// =================== VALIDATION ET CONFORMITÉ ===================
-export function validateEquipmentSelection(
-  selectedEquipmentIds: string[],
-  requiredHazards: string[]
-): {
-  isCompliant: boolean;
-  coveredHazards: string[];
-  missingHazards: string[];
-  redundantEquipment: string[];
-  recommendations: string[];
-} {
-  const selectedEquipment = selectedEquipmentIds.map(id => getEquipmentById(id)).filter(Boolean) as SafetyEquipment[];
+export const getEquipmentRequiringAttention = () => {
+  const schedule = getInspectionSchedule();
   
-  const coveredHazards = new Set<string>();
-  selectedEquipment.forEach(equipment => {
-    equipment.hazardTypes.forEach(hazard => coveredHazards.add(hazard));
-  });
-
-  const missingHazards = requiredHazards.filter(hazard => !coveredHazards.has(hazard));
-  const redundantEquipment: string[] = [];
-  const recommendations: string[] = [];
-
-  // Identifier équipements redondants
-  for (let i = 0; i < selectedEquipment.length; i++) {
-    for (let j = i + 1; j < selectedEquipment.length; j++) {
-      const eq1 = selectedEquipment[i];
-      const eq2 = selectedEquipment[j];
-      
-      const commonHazards = eq1.hazardTypes.filter(hazard => 
-        eq2.hazardTypes.includes(hazard)
-      );
-      
-      if (commonHazards.length > 0 && eq1.category === eq2.category) {
-        redundantEquipment.push(eq2.id);
-      }
-    }
-  }
-
-  // Recommandations pour hazards manquants
-  missingHazards.forEach(hazard => {
-    const suitableEquipment = getEquipmentByHazard(hazard);
-    if (suitableEquipment.length > 0) {
-      recommendations.push(
-        `Pour le danger "${hazard}", ajouter: ${suitableEquipment[0].name}`
-      );
-    }
-  });
-
   return {
-    isCompliant: missingHazards.length === 0,
-    coveredHazards: Array.from(coveredHazards),
-    missingHazards,
-    redundantEquipment: [...new Set(redundantEquipment)],
-    recommendations
+    overdueInspections: schedule.filter(item => item.inspectionStatus.status === 'overdue'),
+    dueInspections: schedule.filter(item => item.inspectionStatus.status === 'due'),
+    expiredEquipment: schedule.filter(item => item.lifespan.isExpired),
+    warningEquipment: schedule.filter(item => item.lifespan.warningLevel === 'warning'),
+    criticalEquipment: schedule.filter(item => item.lifespan.warningLevel === 'critical')
   };
-}
+};
 
-// =================== EXPORTS PRINCIPAUX ===================
-export default allEquipment;
+// =================== FONCTIONS DE VALIDATION ===================
+
+export const validateAllEquipment = () => {
+  const results = allEquipment.map(equipment => ({
+    equipment,
+    validation: validateEquipmentData(equipment)
+  }));
+  
+  const invalidEquipment = results.filter(result => !result.validation.isValid);
+  const equipmentWithWarnings = results.filter(result => result.validation.warnings.length > 0);
+  
+  return {
+    totalValidated: allEquipment.length,
+    valid: results.length - invalidEquipment.length,
+    invalid: invalidEquipment.length,
+    withWarnings: equipmentWithWarnings.length,
+    invalidEquipment,
+    equipmentWithWarnings,
+    allResults: results
+  };
+};
+
+// =================== EXPORTS INDIVIDUELS POUR COMPATIBILITÉ ===================
 
 export {
+  // Équipements par catégorie
   headProtectionEquipment,
   eyeProtectionEquipment,
+  hearingProtectionEquipment,
+  respiratoryEquipment,
   handProtectionEquipment,
   footProtectionEquipment,
-  respiratoryEquipment,
+  bodyProtectionEquipment,
   fallProtectionEquipment,
   electricalEquipment,
+  emergencyEquipment,
+  toolsEquipment,
   detectionEquipment,
-  bodyProtectionEquipment
+  
+  // Fonctions utilitaires
+  createNewEquipment,
+  getEquipmentCategoryColor,
+  getEquipmentCategoryLabel,
+  calculateEquipmentLifespan,
+  validateEquipmentData,
+  getEquipmentInspectionStatus,
+  filterEquipmentByWorkType,
+  filterEquipmentByHazard,
+  searchEquipment,
+  sortEquipmentByCost,
+  groupEquipmentByCategory,
+  calculateTotalEquipmentCost,
+  
+  // Constantes
+  EQUIPMENT_CATEGORIES,
+  INSPECTION_FREQUENCIES,
+  EQUIPMENT_STATUSES
+};
+
+// =================== EXPORTS DE TYPES ===================
+
+export type { SafetyEquipment } from '../../types/equipment';
+export type {
+  EquipmentValidationResult,
+  EquipmentInspectionStatus,
+  EquipmentLifespanInfo,
+  EquipmentCostBreakdown
+} from './template';
+
+// =================== EXPORT PAR DÉFAUT ===================
+
+export default {
+  allEquipment,
+  equipmentById,
+  equipmentByCategory,
+  getEquipmentByCategory,
+  getEquipmentByWorkType,
+  getEquipmentByHazard,
+  searchAllEquipment,
+  getEquipmentStatistics,
+  getInspectionSchedule,
+  getEquipmentRequiringAttention,
+  validateAllEquipment
 };
