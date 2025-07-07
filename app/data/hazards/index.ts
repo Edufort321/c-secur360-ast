@@ -1,216 +1,111 @@
-export default allHazards;
+// app/data/hazards/index.ts
+// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
+import { Hazard } from '../../types/hazards';
 
-export {
-  electricalHazards,
-  mechanicalHazards,
-  physicalHazards,
-  chemicalHazards,
-  biologicalHazards,
-  environmentalHazards,
-  workplaceHazards,
-  ergonomicHazards
-};// app/data/hazards/index.ts
-
-// =================== IMPORTS DES DANGERS ===================
-import { Hazard, HazardCategory, calculateRiskLevel, getRiskColor, getRiskLabel } from './template';
-import { electricalHazards, electricalHazardsById } from './electrical';
-import { mechanicalHazards, mechanicalHazardsById } from './mechanical';
-import { physicalHazards, physicalHazardsById } from './physical';
-import { chemicalHazards, chemicalHazardsById } from './chemical';
-import { biologicalHazards, biologicalHazardsById } from './biological';
-import { environmentalHazards, environmentalHazardsById } from './environmental';
-import { workplaceHazards, workplaceHazardsById } from './workplace';
-import { ergonomicHazards, ergonomicHazardsById } from './ergonomic';
-
-// Export des types
-export type { Hazard, HazardCategory };
-export { calculateRiskLevel, getRiskColor, getRiskLabel };
+// Imports de tous les dangers
+import { biologicalHazards } from './biological';
+import { chemicalHazards } from './chemical';
+import { electricalHazards } from './electrical';
+import { environmentalHazards } from './environmental';
+import { ergonomicHazards } from './ergonomic';
+import { gasHazards } from './gas';
+import { mechanicalHazards } from './mechanical';
+import { physicalHazards } from './physical';
+import { workplaceHazards } from './workplace';
 
 // =================== REGISTRY COMPLET DES DANGERS ===================
 export const allHazards: Hazard[] = [
+  ...biologicalHazards,
+  ...chemicalHazards,
   ...electricalHazards,
+  ...environmentalHazards,
+  ...ergonomicHazards,
+  ...gasHazards,
   ...mechanicalHazards,
   ...physicalHazards,
-  ...chemicalHazards,
-  ...biologicalHazards,
-  ...environmentalHazards,
-  ...workplaceHazards,
-  ...ergonomicHazards
+  ...workplaceHazards
 ];
 
-export const hazardsById: Record<string, Hazard> = {
-  ...electricalHazardsById,
-  ...mechanicalHazardsById,
-  ...physicalHazardsById,
-  ...chemicalHazardsById,
-  ...biologicalHazardsById,
-  ...environmentalHazardsById,
-  ...workplaceHazardsById,
-  ...ergonomicHazardsById
-};
-
-export const hazardsByCategory: Record<HazardCategory, Hazard[]> = {
+// =================== REGISTRY PAR CATÉGORIE ===================
+export const hazardsByCategory = {
+  biological: biologicalHazards,
+  chemical: chemicalHazards,
   electrical: electricalHazards,
+  environmental: environmentalHazards,
+  ergonomic: ergonomicHazards,
+  gas: gasHazards,
   mechanical: mechanicalHazards,
   physical: physicalHazards,
-  chemical: chemicalHazards,
-  biological: biologicalHazards,
-  environmental: environmentalHazards,
-  workplace: [...workplaceHazards, ...ergonomicHazards], // Ergonomie fait partie workplace
-  transportation: [], // À ajouter si nécessaire
-  fire_explosion: [], // À ajouter si nécessaire
-  confined_space: allHazards.filter(h => h.subcategory === 'confined_space')
+  workplace: workplaceHazards
 };
 
-// =================== FONCTIONS DE RECHERCHE ===================
-export function getHazardById(id: string): Hazard | undefined {
+// =================== REGISTRY PAR ID ===================
+export const hazardsById = allHazards.reduce((acc, hazard) => {
+  acc[hazard.id] = hazard;
+  return acc;
+}, {} as Record<string, Hazard>);
+
+// =================== FONCTIONS UTILITAIRES ===================
+export const getHazardById = (id: string): Hazard | undefined => {
   return hazardsById[id];
-}
+};
 
-export function getHazardsByCategory(category: HazardCategory): Hazard[] {
-  return hazardsByCategory[category] || [];
-}
+export const getHazardsByCategory = (category: string): Hazard[] => {
+  return allHazards.filter(hazard => hazard.category === category);
+};
 
-export function getHazardsByWorkType(workTypeId: string): Hazard[] {
-  // Cette fonction sera étendue quand nous intégrerons avec workTypes
-  const workTypeHazardMapping: Record<string, string[]> = {
-    'electrical_maintenance': [
-      'electrical_shock',
-      'arc_flash',
-      'working_at_height'
-    ],
-    'gas_maintenance': [
-      'confined_space_entry',
-      'chemical_exposure',
-      'fire_explosion_risk'
-    ],
-    'construction_general': [
-      'working_at_height',
-      'moving_mechanical_parts',
-      'lifting_dropping_loads'
-    ],
-    'telecom_installation': [
-      'working_at_height',
-      'electrical_shock',
-      'moving_mechanical_parts'
-    ]
-  };
+export const getHazardsByWorkType = (workTypeId: string): Hazard[] => {
+  return allHazards.filter(hazard => 
+    hazard.workTypes && hazard.workTypes.includes(workTypeId)
+  );
+};
 
-  const hazardIds = workTypeHazardMapping[workTypeId] || [];
-  return hazardIds.map(id => getHazardById(id)).filter(Boolean) as Hazard[];
-}
+export const getHazardsBySeverity = (severity: string): Hazard[] => {
+  return allHazards.filter(hazard => hazard.severity === severity);
+};
 
-export function searchHazards(query: string): Hazard[] {
+export const searchHazards = (query: string): Hazard[] => {
   const searchTerm = query.toLowerCase();
   return allHazards.filter(hazard => 
     hazard.name.toLowerCase().includes(searchTerm) ||
     hazard.description.toLowerCase().includes(searchTerm) ||
-    hazard.tags.some(tag => tag.toLowerCase().includes(searchTerm)) ||
-    hazard.category.toLowerCase().includes(searchTerm)
+    hazard.category.toLowerCase().includes(searchTerm) ||
+    hazard.subcategory?.toLowerCase().includes(searchTerm)
   );
-}
+};
 
-export function getHighRiskHazards(): Hazard[] {
-  return allHazards.filter(hazard => hazard.riskLevel >= 4);
-}
+// =================== STATISTIQUES ===================
+export const getHazardStats = () => {
+  const totalHazards = allHazards.length;
+  const byCategory = Object.entries(hazardsByCategory).reduce((acc, [category, hazards]) => {
+    acc[category] = hazards.length;
+    return acc;
+  }, {} as Record<string, number>);
 
-export function getHazardsByRiskLevel(riskLevel: number): Hazard[] {
-  return allHazards.filter(hazard => hazard.riskLevel === riskLevel);
-}
-
-// =================== STATISTIQUES DES DANGERS ===================
-export function getHazardStats() {
-  const stats = {
-    total: allHazards.length,
-    byCategory: {} as Record<HazardCategory, number>,
-    byRiskLevel: {} as Record<number, number>,
-    withCertificationRequired: 0,
-    withMonitoringRequired: 0,
-    withWeatherRestrictions: 0
-  };
-
-  allHazards.forEach(hazard => {
-    // Stats par catégorie
-    stats.byCategory[hazard.category] = (stats.byCategory[hazard.category] || 0) + 1;
-    
-    // Stats par niveau de risque
-    stats.byRiskLevel[hazard.riskLevel] = (stats.byRiskLevel[hazard.riskLevel] || 0) + 1;
-    
-    // Stats spéciales
-    if (hazard.certificationRequired) stats.withCertificationRequired++;
-    if (hazard.monitoringRequired) stats.withMonitoringRequired++;
-    if (hazard.weatherRestrictions.length > 0) stats.withWeatherRestrictions++;
-  });
-
-  return stats;
-}
-
-// =================== VALIDATION ET CONFORMITÉ ===================
-export function validateHazardCompliance(selectedHazards: string[]): {
-  isCompliant: boolean;
-  missingRequirements: string[];
-  recommendations: string[];
-} {
-  const hazards = selectedHazards.map(id => getHazardById(id)).filter(Boolean) as Hazard[];
-  
-  const allRequiredEquipment = new Set<string>();
-  const allRequiredTraining = new Set<string>();
-  const allRegulations = new Set<string>();
-  
-  hazards.forEach(hazard => {
-    hazard.requiredEquipment.forEach(eq => allRequiredEquipment.add(eq));
-    hazard.requiredTraining.forEach(tr => allRequiredTraining.add(tr));
-    hazard.regulations.csa.forEach(reg => allRegulations.add(reg));
-    hazard.regulations.rsst.forEach(reg => allRegulations.add(reg));
-  });
+  const activeCount = allHazards.filter(h => h.isActive).length;
+  const inactiveCount = allHazards.filter(h => !h.isActive).length;
 
   return {
-    isCompliant: true, // Logique de validation à implémenter
-    missingRequirements: [],
-    recommendations: [
-      `Équipements requis: ${Array.from(allRequiredEquipment).join(', ')}`,
-      `Formations requises: ${Array.from(allRequiredTraining).join(', ')}`,
-      `Réglementations: ${Array.from(allRegulations).join(', ')}`
-    ]
+    total: totalHazards,
+    active: activeCount,
+    inactive: inactiveCount,
+    byCategory,
+    categories: Object.keys(hazardsByCategory)
   };
-}
+};
 
-// =================== MATRICE DE RISQUE ===================
-export function generateRiskMatrix(): Array<Array<{
-  severity: number;
-  probability: number;
-  riskLevel: number;
-  color: string;
-  hazards: Hazard[];
-}>> {
-  const matrix: any[][] = [];
-  
-  for (let severity = 1; severity <= 5; severity++) {
-    matrix[severity - 1] = [];
-    for (let probability = 1; probability <= 5; probability++) {
-      const riskLevel = calculateRiskLevel(severity as any, probability as any);
-      const cellHazards = allHazards.filter(h => 
-        h.severity === severity && h.probability === probability
-      );
-      
-      matrix[severity - 1][probability - 1] = {
-        severity,
-        probability,
-        riskLevel,
-        color: getRiskColor(riskLevel),
-        hazards: cellHazards
-      };
-    }
-  }
-  
-  return matrix;
-}
-
-// =================== EXPORTS PRINCIPAUX ===================
+// =================== EXPORTS PAR DÉFAUT ===================
 export default allHazards;
 
+// Exports nommés pour compatibilité
 export {
+  biologicalHazards,
+  chemicalHazards,
   electricalHazards,
+  environmentalHazards,
+  ergonomicHazards,
+  gasHazards,
   mechanicalHazards,
-  physicalHazards
+  physicalHazards,
+  workplaceHazards
 };
