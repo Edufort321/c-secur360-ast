@@ -1,8 +1,6 @@
 // app/data/hazards/mechanical.ts
-// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
 import { Hazard } from '../../types/hazards';
 
-// Fonction helper pour créer un danger
 const createNewHazard = (base: any): Hazard => {
   return {
     category: 'MECHANICAL' as any,
@@ -16,12 +14,9 @@ const createNewHazard = (base: any): Hazard => {
     isActive: true,
     createdDate: new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
-    // Merge avec les propriétés passées
     ...base
   } as Hazard;
 };
-
-// =================== DANGERS MÉCANIQUES ===================
 
 export const cuttingLacerations: Hazard = createNewHazard({
   id: 'cutting_laceration_injuries',
@@ -223,17 +218,11 @@ export const flyingDebris: Hazard = createNewHazard({
   isActive: true
 });
 
-// =================== EXPORT DANGERS MÉCANIQUES ===================
 export const mechanicalHazards = [
   cuttingLacerations,
   machineCrushing,
   caughtInBetween,
   flyingDebris
 ];
-
-export const mechanicalHazardsById = mechanicalHazards.reduce((acc, hazard) => {
-  acc[(hazard as any).id] = hazard;
-  return acc;
-}, {} as Record<string, Hazard>);
 
 export default mechanicalHazards;
