@@ -1,6 +1,5 @@
-import ASTFormUltraPremium from './ASTFormUltraPremium'
+import ASTForm from '@/components/ASTForm'
 
 export default function NouveauASTPage({ params }: { params: { tenant: string } }) {
-  // ASTFormUltraPremium attend une string, pas un objet
-  return <ASTFormUltraPremium tenant={params.tenant} />
+  return <ASTForm tenant={params.tenant} />
 }
