@@ -1,8 +1,6 @@
 // app/data/hazards/physical.ts
-// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
 import { Hazard } from '../../types/hazards';
 
-// Fonction helper pour créer un danger
 const createNewHazard = (base: any): Hazard => {
   return {
     category: 'PHYSICAL' as any,
@@ -16,12 +14,9 @@ const createNewHazard = (base: any): Hazard => {
     isActive: true,
     createdDate: new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
-    // Merge avec les propriétés passées
     ...base
   } as Hazard;
 };
-
-// =================== DANGERS PHYSIQUES ===================
 
 export const fallsFromHeight: Hazard = createNewHazard({
   id: 'falls_from_height',
@@ -224,17 +219,11 @@ export const extremeTemperatures: Hazard = createNewHazard({
   isActive: true
 });
 
-// =================== EXPORT DANGERS PHYSIQUES ===================
 export const physicalHazards = [
   fallsFromHeight,
   fallingObjects,
   noiseExposure,
   extremeTemperatures
 ];
-
-export const physicalHazardsById = physicalHazards.reduce((acc, hazard) => {
-  acc[(hazard as any).id] = hazard;
-  return acc;
-}, {} as Record<string, Hazard>);
 
 export default physicalHazards;
