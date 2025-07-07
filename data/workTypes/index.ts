@@ -197,4 +197,7 @@ export const getAllCategories = (): string[] => {
   return [...new Set(workTypesDatabase.map(workType => workType.category))];
 };
 
+// ⭐ LIGNE CLÉE AJOUTÉE - Export pour compatibilité avec les composants
+export const allWorkTypes = workTypesDatabase;
+
 export default workTypesDatabase;
