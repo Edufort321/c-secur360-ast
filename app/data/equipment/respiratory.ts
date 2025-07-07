@@ -29,7 +29,7 @@ const createNewEquipment = (base: Partial<SafetyEquipment>): SafetyEquipment => 
 export const n95Respirator: SafetyEquipment = createNewEquipment({
   id: 'n95_filtering_facepiece',
   name: 'Masque filtrant N95 jetable',
-  category: 'respiratory-protection',
+  category: 'RESPIRATORY_PROTECTION' as any,
   subcategory: 'disposable_respirator',
   description: 'Protection contre particules non huileuses',
   
