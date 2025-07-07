@@ -27,7 +27,7 @@ const createNewHazard = (base: Partial<Hazard>): Hazard => {
 export const fallsFromHeight: Hazard = createNewHazard({
   id: 'falls_from_height',
   name: 'Chutes de hauteur',
-  category: 'physical',
+  category: 'PHYSICAL' as any,
   subcategory: 'falls',
   description: 'Risque de chute de plus de 3 mètres',
   severity: 'critical',
