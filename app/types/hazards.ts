@@ -402,5 +402,10 @@ export type HazardId = string;
 export type AssessmentId = string;
 export type IncidentId = string;
 
-// Alias pour compatibilité
-export type { RiskLevel, SeverityLevel, LikelihoodLevel } from './index';
+// =================== EXPORTS POUR COMPATIBILITÉ ===================
+
+export type { Hazard as HazardEntity };
+export type { HazardCategory as Category };
+
+// ✅ SUPPRIMÉ LES EXPORTS CIRCULAIRES - Les types sont déjà définis dans index.ts
+// Les autres fichiers peuvent importer RiskLevel, SeverityLevel depuis './index' directement
