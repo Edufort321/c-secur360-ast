@@ -29,7 +29,7 @@ const createNewEquipment = (base: Partial<SafetyEquipment>): SafetyEquipment => 
 export const digitalMultimeter: SafetyEquipment = createNewEquipment({
   id: 'digital_multimeter_cat3',
   name: 'Multimètre numérique CAT III',
-  category: 'electrical-protection',
+  category: 'ELECTRICAL-PROTECTION' as any,
   subcategory: 'test_equipment',
   description: 'Mesure tension, courant, résistance sécurisée',
   
