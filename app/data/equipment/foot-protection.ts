@@ -29,7 +29,7 @@ const createNewEquipment = (base: Partial<SafetyEquipment>): SafetyEquipment => 
 export const steelToeBoots: SafetyEquipment = createNewEquipment({
   id: 'steel_toe_work_boots',
   name: 'Bottes de sécurité bout d\'acier',
-  category: 'foot-protection',
+  category: 'FOOT_PROTECTION' as any,
   subcategory: 'safety_boots',
   description: 'Protection standard avec embout acier',
   
