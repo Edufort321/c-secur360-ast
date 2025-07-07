@@ -504,18 +504,10 @@ export type {
   IncidentId
 } from './hazards';
 
-// Work types
+// Work types - Export seulement ce qui existe vraiment
 export type {
   WorkType,
-  WorkCategory,
-  Task,
-  WorkPlan,
-  WorkSession,
-  WorkTypeFilters,
-  WorkTypeEntity,
-  TaskEntity,
-  WorkPlanEntity,
-  WorkSessionEntity
+  WorkCategory
 } from './workTypes';
 
 // Form types
@@ -524,21 +516,10 @@ export type {
   FormField,
   FormSection,
   FormData,
-  FormSubmission,
-  Form,
-  Field,
-  Section,
-  Data,
-  Submission
+  FormSubmission
 } from './forms';
 
 // API types
 export type {
-  ApiResponse as APIResponse,
-  PaginatedResponse as PagedResponse,
-  PaginationOptions as Pagination,
-  SearchFilters as Filters,
-  Response,
-  Error,
-  PagedResponse
+  ApiResponse as APIResponse
 } from './api';
