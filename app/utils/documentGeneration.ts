@@ -1,8 +1,8 @@
-// utils/notifications.ts - Système de notifications multi-canal
+// app/utils/documentGeneration.ts - Système de génération de documents
 
-import { AST, ASTStatus } from '@/types/ast';
+import { AST, ASTStatus } from '../types/ast';
 import { ComplianceReport } from './compliance';
-import { RiskLevel } from '@/types/index';
+import { RiskLevel } from '../types/index';
 
 // =================== INTERFACES NOTIFICATIONS ===================
 export interface NotificationTemplate {
@@ -101,6 +101,12 @@ export interface TemplateVariable {
   description: string;
   required: boolean;
   defaultValue?: any;
+}
+
+export interface TriggerCondition {
+  field: string;
+  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains';
+  value: any;
 }
 
 // =================== ÉNUMÉRATIONS ===================
@@ -513,7 +519,7 @@ export async function sendASTNotification(
         template.id,
         recipients,
         variables,
-        ast.clientId // tenantId
+        (ast as any).clientId || ast.id // tenantId
       );
       results.push(result);
     } catch (error) {
@@ -574,18 +580,24 @@ export async function scheduleReminders(
   tenantId: string
 ): Promise<void> {
   for (const ast of asts) {
+    // Vérifier si les propriétés existent
+    const plannedStartDate = (ast as any).plannedStartDate;
+    const teamLeader = (ast as any).teamLeader || ast.participants?.[0];
+    
+    if (!plannedStartDate || !teamLeader) continue;
+    
     // Rappel 7 jours avant l'échéance
-    const sevenDaysBefore = new Date(ast.plannedStartDate);
+    const sevenDaysBefore = new Date(plannedStartDate);
     sevenDaysBefore.setDate(sevenDaysBefore.getDate() - 7);
     
     if (sevenDaysBefore > new Date()) {
       await scheduleNotification(
         'AST_DEADLINE_REMINDER',
         [{ 
-          id: ast.teamLeader.email || '',
+          id: teamLeader.email || teamLeader.id || '',
           type: RecipientType.EMAIL,
-          value: ast.teamLeader.email || '',
-          name: ast.teamLeader.name
+          value: teamLeader.email || teamLeader.id || '',
+          name: teamLeader.name || 'Chef d\'équipe'
         }],
         prepareASTVariables(ast, { daysRemaining: 7 }),
         tenantId,
@@ -594,17 +606,17 @@ export async function scheduleReminders(
     }
     
     // Rappel 1 jour avant l'échéance
-    const oneDayBefore = new Date(ast.plannedStartDate);
+    const oneDayBefore = new Date(plannedStartDate);
     oneDayBefore.setDate(oneDayBefore.getDate() - 1);
     
     if (oneDayBefore > new Date()) {
       await scheduleNotification(
         'AST_DEADLINE_REMINDER',
         [{ 
-          id: ast.teamLeader.email || '',
+          id: teamLeader.email || teamLeader.id || '',
           type: RecipientType.EMAIL,
-          value: ast.teamLeader.email || '',
-          name: ast.teamLeader.name
+          value: teamLeader.email || teamLeader.id || '',
+          name: teamLeader.name || 'Chef d\'équipe'
         }],
         prepareASTVariables(ast, { daysRemaining: 1 }),
         tenantId,
@@ -624,8 +636,6 @@ async function sendToChannel(
   config: ChannelConfig,
   tenantId: string
 ): Promise<ChannelResult> {
-  const startTime = Date.now();
-  
   try {
     switch (channelType) {
       case ChannelType.EMAIL:
@@ -780,22 +790,24 @@ function interpolateTemplate(template: string, variables: Record<string, any>): 
 }
 
 function prepareASTVariables(ast: AST, additionalData?: Record<string, any>): Record<string, any> {
+  const astAny = ast as any;
+  
   return {
-    astNumber: ast.astNumber,
-    astTitle: ast.title,
-    projectName: ast.projectName,
-    clientName: ast.clientId, // À remplacer par le vrai nom du client
-    teamLeader: ast.teamLeader.name,
-    plannedStartDate: ast.plannedStartDate,
-    plannedEndDate: ast.plannedEndDate,
-    status: ast.status,
-    astUrl: `${process.env.BASE_URL}/ast/${ast.id}`,
+    astNumber: astAny.astNumber || astAny.id || 'N/A',
+    astTitle: astAny.title || ast.name || 'AST sans titre',
+    projectName: astAny.projectName || astAny.project?.name || 'Projet sans nom',
+    clientName: astAny.clientId || astAny.client?.name || 'Client inconnu',
+    teamLeader: astAny.teamLeader?.name || ast.participants?.[0]?.name || 'Chef d\'équipe',
+    plannedStartDate: astAny.plannedStartDate || new Date().toISOString(),
+    plannedEndDate: astAny.plannedEndDate || new Date().toISOString(),
+    status: ast.status || 'DRAFT',
+    astUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/ast/${ast.id}`,
     ...additionalData
   };
 }
 
 function checkTriggerConditions(
-  conditions: any[],
+  conditions: TriggerCondition[],
   data: any
 ): boolean {
   return conditions.every(condition => {
