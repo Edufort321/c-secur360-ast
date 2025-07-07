@@ -34,347 +34,202 @@ export const infectiousAgents: Hazard = createNewHazard({
     en: 'Infectious biological agents'
   },
   description: 'Risque d\'infection par exposition à des micro-organismes pathogènes',
-  severity: 'critical',
-  probability: 3,
+  severity: 'high',
+  likelihood: 'medium',
+  riskLevel: 'high',
   
   eliminationMethods: [
-    'Éviter zones contaminées',
-    'Décontamination préalable',
-    'Méthodes à distance'
-  ],
-  
-  substitutionOptions: [
-    'Échantillonnage vs contact direct',
-    'Analyses in-situ',
-    'Détection à distance'
+    'Élimination de la source de contamination',
+    'Substitution par des agents moins dangereux'
   ],
   
   engineeringControls: [
-    'Ventilation avec filtration HEPA',
-    'Enceintes de biosécurité',
-    'Systèmes de décontamination',
-    'UV-C stérilisation',
-    'Pressure négative'
+    'Enceintes de confinement biologique',
+    'Système de ventilation HEPA',
+    'Surfaces facilement décontaminables',
+    'Équipements de stérilisation'
   ],
   
   administrativeControls: [
-    'Évaluation risque biologique',
-    'Vaccination appropriée',
-    'Surveillance médicale',
-    'Protocoles décontamination',
-    'Formation biosécurité'
+    'Procédures de biosécurité strictes',
+    'Formation sur les risques biologiques',
+    'Surveillance médicale des travailleurs',
+    'Protocoles de décontamination'
   ],
   
-  ppeRequirements: [
-    'Combinaison étanche ou respirateur',
-    'Gants nitrile doubles',
-    'Protection oculaire étanche',
-    'Couvre-chaussures jetables'
+  controlMeasures: [
+    'Utilisation d\'équipements de protection individuelle',
+    'Vaccination préventive si disponible',
+    'Décontamination régulière des surfaces',
+    'Élimination sécuritaire des déchets biologiques'
   ],
   
   requiredEquipment: [
-    'biological_safety_suit',
-    'hepa_respirator',
-    'disinfection_kit',
-    'biohazard_containers'
+    'full_face_respirator_p100',
+    'disposable_coveralls_tyvek',
+    'nitrile_gloves_double_layer',
+    'eye_protection_chemical_splash'
   ],
-  
-  recommendedEquipment: [
-    'uv_sterilizer',
-    'biological_indicator_tests',
-    'autoclave_portable'
-  ],
-  
-  regulations: {
-    csa: ['CSA Z317.10'],
-    rsst: ['Règlement agents biologiques'],
-    other: ['Loi sur la quarantaine', 'Agence de santé publique Canada']
-  },
-  
-  weatherRestrictions: [
-    {
-      condition: 'wind',
-      operator: '>',
-      value: 20,
-      unit: 'km/h',
-      description: 'Dispersion aérosols biologiques'
-    },
-    {
-      condition: 'temperature',
-      operator: '>',
-      value: 35,
-      unit: '°C',
-      description: 'Stress thermique avec EPI complet'
-    }
-  ],
-  
-  requiredTraining: [
-    'Biosécurité niveau approprié',
-    'Procédures décontamination',
-    'Gestion déchets biomédicaux',
-    'Premiers secours infectieux'
-  ],
-  
-  certificationRequired: true,
-  monitoringRequired: true,
-  inspectionFrequency: 'Avant chaque exposition',
   
   emergencyProcedures: [
     'Décontamination immédiate',
     'Isolement personne exposée',
     'Notification autorités sanitaires',
-    'Surveillance médicale prolongée',
-    'Traitement prophylactique si indiqué'
+    'Surveillance médicale prolongée'
+  ] as any,
+  
+  regulatoryReferences: [
+    'RSST - Agents biologiques',
+    'Loi sur la santé et sécurité du travail',
+    'Règlement sur la qualité de l\'environnement de travail'
   ],
   
-  firstAidMeasures: [
-    'Décontamination externe complète',
-    'Rinçage abondant plaies',
-    'Surveillance signes infection',
-    'Prélèvements pour analyses'
-  ],
+  workTypes: ['laboratory_work', 'healthcare', 'waste_management', 'emergency_response'],
   
-  tags: ['biosecurite', 'vaccination', 'decontamination', 'surveillance_medicale']
+  isActive: true
 });
 
-export const moldFungalSpores: Hazard = createNewHazard({
-  id: 'mold_fungal_contamination',
-  name: 'Moisissures et spores',
-  category: 'biological',
-  subcategory: 'fungal',
+export const bloodbornePathogens: Hazard = createNewHazard({
+  id: 'bloodborne_pathogens_exposure',
+  name: 'Agents pathogènes à transmission sanguine',
+  category: 'BIOLOGICAL' as any,
+  subcategory: 'bloodborne',
   displayName: {
-    fr: 'Contamination moisissures et spores',
-    en: 'Mold and fungal spore contamination'
+    fr: 'Pathogènes transmissibles par le sang',
+    en: 'Bloodborne pathogens'
   },
-  description: 'Risque d\'allergies, asthme ou infections par inhalation de spores',
-  severity: 3,
-  probability: 4,
+  description: 'Risque de transmission d\'infections par contact avec le sang ou fluides corporels',
+  severity: 'high',
+  likelihood: 'medium',
+  riskLevel: 'high',
   
-  eliminationMethods: [
-    'Décontamination préalable',
-    'Assèchement complet',
-    'Évitement zones humides'
-  ],
-  
-  substitutionOptions: [
-    'Méthodes sèches vs humides',
-    'Biocides appropriés',
-    'Encapsulation vs enlèvement'
-  ],
-  
-  engineeringControls: [
-    'Ventilation d\'extraction',
-    'Contrôle humidité <60%',
-    'Filtration air HEPA',
-    'Enceintes sous pression négative'
-  ],
-  
-  administrativeControls: [
-    'Évaluation contamination préalable',
-    'Limitation temps exposition',
-    'Surveillance symptômes',
-    'Rotation personnel sensible'
-  ],
-  
-  ppeRequirements: [
-    'Respirateur N95 minimum',
-    'Gants jetables',
-    'Vêtements jetables',
-    'Protection oculaire'
+  controlMeasures: [
+    'Précautions universelles',
+    'Utilisation d\'équipements de protection',
+    'Élimination sécuritaire des objets tranchants',
+    'Décontamination immédiate des surfaces'
   ],
   
   requiredEquipment: [
-    'n95_respirator',
-    'moisture_meter',
-    'hepa_vacuum',
-    'mold_test_kit'
+    'nitrile_gloves_medical_grade',
+    'face_shield_disposable',
+    'protective_gown_fluid_resistant',
+    'sharps_disposal_container'
   ],
   
-  regulations: {
-    csa: ['CSA Z317.13'],
-    rsst: ['Qualité air intérieur'],
-    other: ['Guidelines santé Canada']
+  emergencyProcedures: [
+    'Lavage immédiat en cas d\'exposition',
+    'Notification superviseur immédiate',
+    'Consultation médicale urgente',
+    'Tests de dépistage appropriés'
+  ] as any,
+  
+  regulatoryReferences: [
+    'CSST - Agents biologiques',
+    'Règlement sur la santé et sécurité dans les établissements de santé'
+  ],
+  
+  workTypes: ['healthcare', 'emergency_response', 'laboratory_work'],
+  
+  isActive: true
+});
+
+export const mold: Hazard = createNewHazard({
+  id: 'mold_spores_exposure',
+  name: 'Exposition aux moisissures',
+  category: 'BIOLOGICAL' as any,
+  subcategory: 'fungal',
+  displayName: {
+    fr: 'Moisissures et spores fongiques',
+    en: 'Mold and fungal spores'
   },
+  description: 'Risque d\'allergies respiratoires et infections par inhalation de spores',
+  severity: 'medium',
+  likelihood: 'high',
+  riskLevel: 'medium',
   
-  weatherRestrictions: [
-    {
-      condition: 'humidity',
-      operator: '>',
-      value: 70,
-      unit: '%',
-      description: 'Favorise croissance moisissures'
-    }
+  controlMeasures: [
+    'Contrôle de l\'humidité',
+    'Ventilation adéquate',
+    'Élimination des sources d\'humidité',
+    'Nettoyage avec produits antifongiques'
   ],
   
-  requiredTraining: [
-    'Reconnaissance moisissures',
-    'Techniques décontamination',
-    'Protection respiratoire'
+  requiredEquipment: [
+    'n95_respirator_disposable',
+    'safety_goggles_vented',
+    'disposable_gloves_nitrile',
+    'protective_coveralls_disposable'
   ],
   
   emergencyProcedures: [
     'Évacuation zone contaminée',
-    'Décontamination personnelle',
-    'Surveillance détresse respiratoire'
+    'Décontamination équipements',
+    'Consultation médicale si symptômes',
+    'Nettoyage professionnel requis'
+  ] as any,
+  
+  regulatoryReferences: [
+    'Guides INSPQ - Moisissures',
+    'RSST - Qualité de l\'air intérieur'
   ],
   
-  tags: ['moisissures', 'allergies', 'humidite', 'n95_minimum']
+  workTypes: ['construction', 'maintenance', 'environmental_cleanup'],
+  
+  isActive: true
 });
 
-export const animalWaste: Hazard = createNewHazard({
-  id: 'animal_waste_pathogens',
-  name: 'Déjections animales',
-  category: 'biological',
-  subcategory: 'animal_derived',
+export const animalExposure: Hazard = createNewHazard({
+  id: 'animal_exposure_zoonotic',
+  name: 'Exposition aux animaux (zoonoses)',
+  category: 'BIOLOGICAL' as any,
+  subcategory: 'zoonotic',
   displayName: {
-    fr: 'Pathogènes déjections animales',
-    en: 'Animal waste pathogens'
+    fr: 'Maladies zoonotiques',
+    en: 'Zoonotic diseases'
   },
-  description: 'Risque d\'infections gastro-intestinales et parasitaires',
-  severity: 3,
-  probability: 3,
+  description: 'Risque de transmission de maladies animales à l\'humain',
+  severity: 'medium',
+  likelihood: 'medium',
+  riskLevel: 'medium',
   
-  eliminationMethods: [
-    'Nettoyage préalable zones',
-    'Évitement contact direct',
-    'Désinfection professionnelle'
-  ],
-  
-  engineeringControls: [
-    'Ventilation zones confinées',
-    'Barrières physiques',
-    'Systèmes de lavage'
-  ],
-  
-  administrativeControls: [
-    'Vaccination hépatite A/B',
-    'Hygiène stricte',
-    'Surveillance médicale',
-    'Protocoles décontamination'
-  ],
-  
-  ppeRequirements: [
-    'Gants nitrile résistants',
-    'Combinaison jetable',
-    'Bottes étanches',
-    'Protection respiratoire'
+  controlMeasures: [
+    'Vaccination des animaux',
+    'Équipements de protection lors manipulation',
+    'Hygiène des mains rigoureuse',
+    'Surveillance santé des animaux'
   ],
   
   requiredEquipment: [
-    'waterproof_gloves',
-    'disposable_coveralls',
-    'rubber_boots',
-    'disinfectant_solution'
-  ],
-  
-  regulations: {
-    csa: ['CSA Z317.10'],
-    rsst: ['Hygiène workplace'],
-    other: ['Santé publique provinciale']
-  },
-  
-  requiredTraining: [
-    'Hygiène et assainissement',
-    'Prévention infections',
-    'Premiers secours gastro'
+    'leather_gloves_animal_handling',
+    'protective_clothing_washable',
+    'eye_protection_impact_resistant',
+    'first_aid_kit_animal_bite'
   ],
   
   emergencyProcedures: [
-    'Décontamination immédiate',
-    'Lavage antiseptique prolongé',
-    'Surveillance symptômes gastro'
+    'Nettoyage immédiat des morsures',
+    'Consultation médicale urgente',
+    'Signalement incident animal',
+    'Quarantaine animal si nécessaire'
+  ] as any,
+  
+  regulatoryReferences: [
+    'Loi sur la protection sanitaire des animaux',
+    'MAPAQ - Réglementation vétérinaire'
   ],
   
-  tags: ['dejections', 'gastro', 'vaccination', 'hygiene_stricte']
-});
-
-export const bloodBornePathogens: Hazard = createNewHazard({
-  id: 'bloodborne_pathogen_exposure',
-  name: 'Pathogènes sanguins',
-  category: 'biological',
-  subcategory: 'bloodborne',
-  displayName: {
-    fr: 'Exposition pathogènes sanguins',
-    en: 'Bloodborne pathogen exposure'
-  },
-  description: 'Risque de transmission VIH, hépatites B/C par contact sanguin',
-  severity: 5,
-  probability: 2,
+  workTypes: ['veterinary_work', 'agriculture', 'animal_research'],
   
-  eliminationMethods: [
-    'Éviter zones contaminées',
-    'Nettoyage professionnel préalable',
-    'Méthodes sans contact'
-  ],
-  
-  engineeringControls: [
-    'Dispositifs sécurisés piquants',
-    'Contenants objets tranchants',
-    'Systèmes sans aiguilles',
-    'Barrières protection'
-  ],
-  
-  administrativeControls: [
-    'Vaccination hépatite B obligatoire',
-    'Protocoles exposition',
-    'Surveillance médicale post-exposition',
-    'Formation pathogènes sanguins'
-  ],
-  
-  ppeRequirements: [
-    'Gants résistants perforation',
-    'Protection oculaire étanche',
-    'Masque chirurgical minimum',
-    'Vêtements imperméables'
-  ],
-  
-  requiredEquipment: [
-    'puncture_resistant_gloves',
-    'sharps_container',
-    'cpr_face_shield',
-    'bloodborne_spill_kit'
-  ],
-  
-  regulations: {
-    csa: ['CSA Z317.10'],
-    rsst: ['Exposition sang/liquides'],
-    other: ['Santé Canada - Pathogènes sanguins']
-  },
-  
-  requiredTraining: [
-    'Pathogènes sanguins',
-    'Précautions universelles',
-    'Gestion expositions',
-    'Décontamination urgente'
-  ],
-  
-  certificationRequired: true,
-  monitoringRequired: true,
-  
-  emergencyProcedures: [
-    'Premiers soins plaie immédiat',
-    'Lavage antiseptique prolongé',
-    'Notification médicale urgente',
-    'Prophylaxie post-exposition',
-    'Suivi sérologique 6-12 mois'
-  ],
-  
-  firstAidMeasures: [
-    'Saignement plaie favorisé',
-    'Lavage savon 10+ minutes',
-    'Rinçage oculaire si contact',
-    'Prélèvement source si possible'
-  ],
-  
-  tags: ['pathogenes_sanguins', 'vih_hepatites', 'vaccination_obligatoire', 'suivi_medical']
+  isActive: true
 });
 
 // =================== EXPORT DANGERS BIOLOGIQUES ===================
 export const biologicalHazards = [
   infectiousAgents,
-  moldFungalSpores,
-  animalWaste,
-  bloodBornePathogens
+  bloodbornePathogens,
+  mold,
+  animalExposure
 ];
 
 export const biologicalHazardsById = biologicalHazards.reduce((acc, hazard) => {
