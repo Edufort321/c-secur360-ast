@@ -41,7 +41,7 @@ export const safetyGlasses: SafetyEquipment = createNewEquipment({
     sideShields: 'Protection latérale intégrée',
     nosebridge: 'Pont nasal ajustable',
     temples: 'Branches réglables',
-    weight: '25 grammes'
+    weight: 0.025  // ⭐ CORRIGÉ : 25 grammes = 0.025 kg
   },
   
   certifications: ['CSA Z94.3', 'ANSI Z87.1+'],
@@ -75,7 +75,8 @@ export const safetyGoggles: SafetyEquipment = createNewEquipment({
     fogResistance: 'Traitement anti-buée',
     headstrap: 'Sangle élastique ajustable',
     overGlasses: 'Compatible lunettes prescription',
-    cleanability: 'Nettoyage facile'
+    cleanability: 'Nettoyage facile',
+    weight: 0.085  // ⭐ CORRIGÉ : ~85 grammes = 0.085 kg
   },
   
   certifications: ['CSA Z94.3', 'ANSI Z87.1', 'EN 166'],
@@ -109,7 +110,8 @@ export const weldingGoggles: SafetyEquipment = createNewEquipment({
     headstrap: 'Sangle élastique confortable',
     ventilation: 'Évents latéraux filtrés',
     replacement: 'Verres de rechange disponibles',
-    comfort: 'Coussinets mousse'
+    comfort: 'Coussinets mousse',
+    weight: 0.12  // ⭐ CORRIGÉ : ~120 grammes = 0.12 kg
   },
   
   certifications: ['CSA Z94.3', 'ANSI Z87.1', 'EN 175'],
@@ -143,7 +145,8 @@ export const faceShield: SafetyEquipment = createNewEquipment({
     headgear: 'Serre-tête réglable',
     flipUp: 'Relevable pour visibilité',
     replacement: 'Écrans remplaçables',
-    compatibility: 'Compatible lunettes dessous'
+    compatibility: 'Compatible lunettes dessous',
+    weight: 0.15  // ⭐ CORRIGÉ : ~150 grammes = 0.15 kg
   },
   
   certifications: ['CSA Z94.3', 'ANSI Z87.1+'],
@@ -177,7 +180,8 @@ export const laserSafetyGlasses: SafetyEquipment = createNewEquipment({
     material: 'Polycarbonate filtrant',
     sideProtection: 'Coques latérales étanches',
     certification: 'Marquage CE laser',
-    testStandard: 'EN 207'
+    testStandard: 'EN 207',
+    weight: 0.045  // ⭐ CORRIGÉ : ~45 grammes = 0.045 kg
   },
   
   certifications: ['EN 207', 'FDA Laser Safety'],
