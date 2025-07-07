@@ -185,45 +185,39 @@ export default function ASTForm({ tenant }: ASTFormProps) {
 
   // Rendu du step actuel
   const renderCurrentStep = () => {
+    const baseProps = {
+      formData,
+      onDataChange: handleDataChange,
+      language,
+      tenant
+    };
+
     switch (currentStep) {
       case 1:
         return (
           <Step1ProjectInfo
-            formData={formData}
-            onDataChange={handleDataChange}
-            language={language}
-            tenant={tenant}
+            {...baseProps}
             errors={errors}
           />
         );
       case 2:
         return (
           <Step2Equipment
-            formData={formData}
-            onDataChange={handleDataChange}
-            language={language}
-            tenant={tenant}
+            {...baseProps}
             errors={errors}
           />
         );
       case 3:
         return (
           <Step3Hazards
-            formData={formData}
-            onDataChange={handleDataChange}
-            language={language}
-            tenant={tenant}
+            {...baseProps}
             errors={errors}
           />
         );
       case 4:
         return (
           <Step4Controls
-            formData={formData}
-            onDataChange={handleDataChange}
-            language={language}
-            tenant={tenant}
-            errors={errors}
+            {...baseProps}
           />
         );
       case 5:
@@ -233,37 +227,24 @@ export default function ASTForm({ tenant }: ASTFormProps) {
             onDataChange={handleDataChange}
             language={language}
             tenant={tenant}
-            errors={errors}
           />
         );
       case 6:
         return (
           <Step6Validation
-            formData={formData}
-            onDataChange={handleDataChange}
-            language={language}
-            tenant={tenant}
-            errors={errors}
+            {...baseProps}
           />
         );
       case 7:
         return (
           <Step7TeamShare
-            formData={formData}
-            onDataChange={handleDataChange}
-            language={language}
-            tenant={tenant}
-            errors={errors}
+            {...baseProps}
           />
         );
       case 8:
         return (
           <Step8Finalization
-            formData={formData}
-            onDataChange={handleDataChange}
-            language={language}
-            tenant={tenant}
-            errors={errors}
+            {...baseProps}
           />
         );
       default:
