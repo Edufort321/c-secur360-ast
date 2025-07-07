@@ -40,7 +40,8 @@ export const hardHatStandard: SafetyEquipment = createNewEquipment({
     suspensionType: 'Suspension à crémaillère',
     ventilation: 'Non ventilé',
     chinStrap: 'Compatible',
-    colors: 'Blanc, jaune, orange, bleu'
+    colors: 'Blanc, jaune, orange, bleu',
+    weight: 0.35  // ⭐ CORRIGÉ : ~350g = 0.35 kg
   },
   
   certifications: ['CSA Z94.1', 'ANSI Z89.1 Type I Class G'],
@@ -73,7 +74,8 @@ export const hardHatElectrical: SafetyEquipment = createNewEquipment({
     material: 'Thermodurcissable isolant',
     suspensionType: 'Suspension isolante',
     testVoltage: '30,000 V',
-    leakageCurrent: 'Max 9.0 mA'
+    leakageCurrent: 'Max 9.0 mA',
+    weight: 0.42  // ⭐ CORRIGÉ : ~420g = 0.42 kg
   },
   
   certifications: ['CSA Z94.1 Classe E', 'ANSI Z89.1 Type I Class E'],
@@ -102,7 +104,7 @@ export const bumpCap: SafetyEquipment = createNewEquipment({
   specifications: {
     type: 'Casquette anti-choc',
     material: 'ABS léger',
-    weight: '85 grammes',
+    weight: 0.085,  // ⭐ CORRIGÉ : 85 grammes = 0.085 kg
     ventilation: 'Ventilation intégrée',
     adjustment: 'Tour de tête ajustable',
     style: 'Style casquette baseball',
@@ -139,7 +141,8 @@ export const weldingHelmet: SafetyEquipment = createNewEquipment({
     lightToShade: 'DIN 4',
     batteryLife: '3000 heures',
     sensors: '2 capteurs d\'arc',
-    viewingArea: '100 x 50 mm'
+    viewingArea: '100 x 50 mm',
+    weight: 0.65  // ⭐ CORRIGÉ : ~650g = 0.65 kg
   },
   
   certifications: ['CSA Z94.3', 'ANSI Z87.1', 'EN 379'],
@@ -168,7 +171,7 @@ export const climberHelmet: SafetyEquipment = createNewEquipment({
   specifications: {
     type: 'Multi-impact MIPS',
     material: 'Polycarbonate + EPS',
-    weight: '350 grammes',
+    weight: 0.35,  // ⭐ CORRIGÉ : 350 grammes = 0.35 kg
     ventilation: '14 évents aération',
     headlamp: 'Clips frontaux et latéraux',
     chinStrap: 'Sangle mentonnière ajustable',
