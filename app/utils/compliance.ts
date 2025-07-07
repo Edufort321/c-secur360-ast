@@ -1,7 +1,7 @@
 // app/utils/compliance.ts - Utilitaires de conformité réglementaire
 
-import { RegulatoryStandard } from '@/types';
-import { AST, ASTStatus } from '@/types/ast';
+import { RegulatoryStandard } from '../types/hazards';
+import { AST, ASTStatus } from '../types/ast';
 
 // =================== INTERFACES CONFORMITÉ ===================
 export interface ComplianceCheck {
