@@ -1,8 +1,6 @@
 // app/data/hazards/ergonomic.ts
-// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
 import { Hazard } from '../../types/hazards';
 
-// Fonction helper pour créer un danger
 const createNewHazard = (base: any): Hazard => {
   return {
     category: 'ERGONOMIC' as any,
@@ -16,12 +14,9 @@ const createNewHazard = (base: any): Hazard => {
     isActive: true,
     createdDate: new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
-    // Merge avec les propriétés passées
     ...base
   } as Hazard;
 };
-
-// =================== DANGERS ERGONOMIQUES ===================
 
 export const musculoskeletalDisorders: Hazard = createNewHazard({
   id: 'musculoskeletal_disorders_tms',
@@ -223,17 +218,11 @@ export const vibrationExposure: Hazard = createNewHazard({
   isActive: true
 });
 
-// =================== EXPORT DANGERS ERGONOMIQUES ===================
 export const ergonomicHazards = [
   musculoskeletalDisorders,
   manualHandling,
   awkwardPostures,
   vibrationExposure
 ];
-
-export const ergonomicHazardsById = ergonomicHazards.reduce((acc, hazard) => {
-  acc[(hazard as any).id] = hazard;
-  return acc;
-}, {} as Record<string, Hazard>);
 
 export default ergonomicHazards;
