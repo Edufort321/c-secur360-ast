@@ -164,27 +164,27 @@ export const getEquipmentInspectionStatus = (equipment: any): {
 };
 
 export const filterEquipmentByWorkType = (
-  equipment: SafetyEquipment[], 
+  equipment: any[], 
   workType: string
-): SafetyEquipment[] => {
+): any[] => {
   return equipment.filter(item => 
     item.workTypes && (item.workTypes as any).includes(workType)
   );
 };
 
 export const filterEquipmentByHazard = (
-  equipment: SafetyEquipment[], 
+  equipment: any[], 
   hazardType: string
-): SafetyEquipment[] => {
+): any[] => {
   return equipment.filter(item => 
     item.hazardTypes && (item.hazardTypes as any).includes(hazardType)
   );
 };
 
 export const searchEquipment = (
-  equipment: SafetyEquipment[], 
+  equipment: any[], 
   searchTerm: string
-): SafetyEquipment[] => {
+): any[] => {
   const term = searchTerm.toLowerCase();
   return equipment.filter(item => 
     item.name.toLowerCase().includes(term) ||
@@ -195,9 +195,9 @@ export const searchEquipment = (
 };
 
 export const sortEquipmentByCost = (
-  equipment: SafetyEquipment[], 
+  equipment: any[], 
   direction: 'asc' | 'desc' = 'asc'
-): SafetyEquipment[] => {
+): any[] => {
   return [...equipment].sort((a, b) => {
     const costA = a.cost || 0;
     const costB = b.cost || 0;
@@ -206,8 +206,8 @@ export const sortEquipmentByCost = (
 };
 
 export const groupEquipmentByCategory = (
-  equipment: SafetyEquipment[]
-): Record<string, SafetyEquipment[]> => {
+  equipment: any[]
+): Record<string, any[]> => {
   return equipment.reduce((groups, item) => {
     const category = item.category as string;
     if (!groups[category]) {
@@ -215,7 +215,7 @@ export const groupEquipmentByCategory = (
     }
     groups[category].push(item);
     return groups;
-  }, {} as Record<string, SafetyEquipment[]>);
+  }, {} as Record<string, any[]>);
 };
 
 export const calculateTotalEquipmentCost = (equipment: any[]): {
