@@ -8,6 +8,33 @@ import {
   LikelihoodLevel 
 } from './index';
 
+// =================== ENUM STANDARDS RÉGLEMENTAIRES ===================
+export enum RegulatoryStandard {
+  // Standards québécois - RSST
+  RSST_ARTICLE_2_9_1 = 'RSST_ARTICLE_2_9_1',
+  RSST_ARTICLE_2_10 = 'RSST_ARTICLE_2_10', 
+  RSST_ARTICLE_2_11 = 'RSST_ARTICLE_2_11',
+  SIMDUT_2015 = 'SIMDUT_2015',
+  
+  // Standards canadiens - CSA
+  CSA_Z462 = 'CSA_Z462',
+  CSA_Z94_3 = 'CSA_Z94_3',
+  CSA_Z259 = 'CSA_Z259',
+  CSA_Z96 = 'CSA_Z96',
+  
+  // Standards américains - OSHA
+  OSHA_1910_146 = 'OSHA_1910_146',
+  OSHA_1926_501 = 'OSHA_1926_501',
+  
+  // Standards ANSI
+  ANSI_Z87_1 = 'ANSI_Z87_1',
+  ANSI_Z89_1 = 'ANSI_Z89_1',
+  
+  // Standards internationaux - ISO
+  ISO_45001 = 'ISO_45001',
+  ISO_14001 = 'ISO_14001'
+}
+
 // =================== TYPES DANGERS ===================
 export interface Hazard extends BaseEntity {
   name: string;
@@ -15,231 +42,243 @@ export interface Hazard extends BaseEntity {
   description: string;
   category: HazardCategory;
   subcategory?: string;
-  
-  // Évaluation des risques
+  riskLevel: RiskLevel;
   severity: SeverityLevel;
   likelihood: LikelihoodLevel;
-  riskLevel: RiskLevel;
   
-  // Méthodes de contrôle hiérarchiques
-  eliminationMethods?: string[];
-  engineeringControls?: string[];
-  administrativeControls?: string[];
-  controlMeasures: string[];
+  // Caractéristiques spécifiques
+  characteristics: {
+    isVisibleWarning: boolean;
+    requiresSpecialTraining: boolean;
+    hasImmediateEffect: boolean;
+    canCauseFatality: boolean;
+    affectsMultiplePeople: boolean;
+    isEnvironmentalHazard: boolean;
+  };
   
-  // Équipements requis
-  requiredEquipment: string[];
+  // Sources et causes
+  commonSources: string[];
+  triggerConditions: string[];
   
-  // Procédures d'urgence
-  emergencyProcedures?: string[];
+  // Effets potentiels
+  potentialInjuries: string[];
+  healthEffects: string[];
+  environmentalImpact?: string[];
   
-  // Références réglementaires
-  regulatoryReferences: string[];
+  // Prévention et contrôle
+  preventiveMeasures: string[];
+  requiredPPE: string[];
+  emergencyProcedures: string[];
   
-  // Association avec types de travail
-  workTypes: string[];
+  // Réglementation
+  applicableStandards: RegulatoryStandard[];
+  complianceRequirements: string[];
   
   // Métadonnées
-  version?: string;
-  tags?: string[];
+  tags: string[];
+  keywords: string[];
+  relatedHazards: string[];
+  
+  // Documentation
+  references: string[];
+  images?: string[];
+  videos?: string[];
+  
+  // Validation
+  isValidated: boolean;
+  validatedBy?: string;
+  validatedDate?: string;
+  reviewDate?: string;
 }
 
-export type HazardCategory = 
-  | 'BIOLOGICAL'
-  | 'CHEMICAL'
-  | 'ELECTRICAL'
-  | 'ENVIRONMENTAL'
-  | 'ERGONOMIC'
-  | 'GAS'
-  | 'MECHANICAL'
-  | 'PHYSICAL'
-  | 'WORKPLACE'
-  | 'RADIOLOGICAL'
-  | 'THERMAL'
-  | 'PSYCHOSOCIAL'
-  | 'OTHER';
+export enum HazardCategory {
+  BIOLOGICAL = 'BIOLOGICAL',
+  CHEMICAL = 'CHEMICAL', 
+  ELECTRICAL = 'ELECTRICAL',
+  ENVIRONMENTAL = 'ENVIRONMENTAL',
+  ERGONOMIC = 'ERGONOMIC',
+  GAS = 'GAS',
+  MECHANICAL = 'MECHANICAL',
+  PHYSICAL = 'PHYSICAL',
+  WORKPLACE = 'WORKPLACE'
+}
 
 // =================== ÉVALUATION DES RISQUES ===================
-export interface RiskAssessment {
-  id: string;
+export interface RiskAssessment extends BaseEntity {
   hazardId: string;
   assessorId: string;
   assessmentDate: string;
   
   // Évaluation
-  severity: SeverityLevel;
-  likelihood: LikelihoodLevel;
-  riskLevel: RiskLevel;
+  inherentRisk: RiskLevel;
+  residualRisk: RiskLevel;
+  riskScore: number;
   
-  // Justifications
-  severityJustification?: string;
-  likelihoodJustification?: string;
+  // Matrice de risque
+  riskMatrix: RiskMatrix;
   
-  // Mesures de contrôle évaluées
-  controlMeasuresEffectiveness: ControlEffectiveness[];
+  // Analyse
+  exposureFrequency: 'RARE' | 'OCCASIONAL' | 'FREQUENT' | 'CONTINUOUS';
+  numberOfPeopleExposed: number;
+  durationOfExposure: string;
   
-  // Risque résiduel après contrôles
-  residualRisk: {
-    severity: SeverityLevel;
-    likelihood: LikelihoodLevel;
-    riskLevel: RiskLevel;
-  };
+  // Contrôles existants
+  existingControls: string[];
+  controlEffectiveness: ControlEffectiveness;
   
   // Recommandations
-  recommendations?: string[];
-  nextReviewDate?: string;
+  recommendedActions: string[];
+  additionalControls: string[];
+  monitoringRequirements: string[];
   
   // Validation
   isApproved: boolean;
   approvedBy?: string;
-  approvedDate?: string;
+  approvalDate?: string;
+  nextReviewDate: string;
+  
+  // Commentaires
+  comments?: string;
+  assumptions?: string[];
+  limitations?: string[];
+}
+
+export interface RiskMatrix {
+  severity: MatrixLevel;
+  likelihood: MatrixLevel;
+  riskScore: number;
+  riskLevel: MatrixRiskLevel;
+  calculationMethod: string;
+  customFactors?: Record<string, number>;
+}
+
+export enum MatrixLevel {
+  VERY_LOW = 1,
+  LOW = 2,
+  MEDIUM = 3,
+  HIGH = 4,
+  VERY_HIGH = 5
+}
+
+export enum MatrixRiskLevel {
+  NEGLIGIBLE = 'NEGLIGIBLE',
+  LOW = 'LOW',
+  MODERATE = 'MODERATE', 
+  HIGH = 'HIGH',
+  EXTREME = 'EXTREME'
 }
 
 export interface ControlEffectiveness {
-  controlMeasure: string;
-  effectiveness: 'none' | 'low' | 'medium' | 'high' | 'complete';
+  engineering: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
+  administrative: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
+  ppe: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
+  overall: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
   notes?: string;
-  costEstimate?: number;
-  implementationDifficulty?: 'easy' | 'medium' | 'hard' | 'very_hard';
 }
 
-// =================== MATRICE DE RISQUES ===================
-export interface RiskMatrix {
-  id: string;
-  name: string;
-  description?: string;
-  
-  // Configuration de la matrice
-  severityLevels: MatrixLevel[];
-  likelihoodLevels: MatrixLevel[];
-  riskLevels: MatrixRiskLevel[];
-  
-  // Règles de calcul
-  riskCalculationRules: RiskCalculationRule[];
-  
-  // Métadonnées
-  isDefault: boolean;
-  organizationId?: string;
-  createdBy: string;
-  createdDate: string;
-}
-
-export interface MatrixLevel {
-  value: number;
-  label: string;
-  description: string;
-  color?: string;
-}
-
-export interface MatrixRiskLevel {
-  level: RiskLevel;
-  label: string;
-  color: string;
-  actionRequired: string;
-  timeframe?: string;
-}
-
-export interface RiskCalculationRule {
-  severityValue: number;
-  likelihoodValue: number;
-  resultingRiskLevel: RiskLevel;
-}
-
-// =================== CATALOGUES DE DANGERS ===================
+// =================== CATALOGUE DE DANGERS ===================
 export interface HazardCatalog {
   id: string;
   name: string;
-  description?: string;
+  description: string;
   version: string;
+  lastUpdated: string;
   
-  // Organisation des dangers
+  // Organisation
   categories: HazardCategoryInfo[];
   hazards: Hazard[];
   
-  // Configuration
-  isPublic: boolean;
-  organizationId?: string;
-  industry?: string;
-  region?: string;
-  
   // Métadonnées
-  publishedDate: string;
-  lastReviewDate?: string;
-  nextReviewDate?: string;
-  maintainerIds: string[];
+  applicableIndustries: string[];
+  applicableRegions: string[];
+  complianceFrameworks: RegulatoryStandard[];
+  
+  // Statistiques
+  totalHazards: number;
+  mostCommonHazards: string[];
+  highestRiskHazards: string[];
 }
 
 export interface HazardCategoryInfo {
   category: HazardCategory;
   name: MultiLanguageText;
   description: MultiLanguageText;
-  icon?: string;
-  color?: string;
-  subcategories?: HazardSubcategoryInfo[];
+  subcategories: HazardSubcategoryInfo[];
+  hazardCount: number;
+  averageRiskLevel: RiskLevel;
+  requiredTraining: string[];
+  commonPPE: string[];
 }
 
 export interface HazardSubcategoryInfo {
   id: string;
-  name: string;
-  description?: string;
+  name: MultiLanguageText;
+  description: MultiLanguageText;
   parentCategory: HazardCategory;
+  hazardIds: string[];
+  specificConsiderations: string[];
 }
 
-// =================== RELATIONS ET DÉPENDANCES ===================
+// =================== RELATIONS ET INTERACTIONS ===================
 export interface HazardRelationship {
   id: string;
   primaryHazardId: string;
   relatedHazardId: string;
   relationshipType: HazardRelationshipType;
-  strength: 'weak' | 'medium' | 'strong';
-  description?: string;
-  bidirectional: boolean;
+  interactionEffect: 'AMPLIFIES' | 'REDUCES' | 'NEUTRALIZES' | 'CREATES_NEW';
+  description: string;
+  combinedRiskLevel?: RiskLevel;
+  additionalPrecautions: string[];
 }
 
-export type HazardRelationshipType = 
-  | 'amplifies'        // Un danger amplifie l'autre
-  | 'triggers'         // Un danger déclenche l'autre
-  | 'masks'           // Un danger cache l'autre
-  | 'competes'        // Les dangers sont en compétition
-  | 'synergistic'     // Effet synergique
-  | 'mutually_exclusive'; // Mutuellement exclusifs
+export enum HazardRelationshipType {
+  COMPOUND = 'COMPOUND',
+  SEQUENTIAL = 'SEQUENTIAL',
+  SIMULTANEOUS = 'SIMULTANEOUS',
+  CONDITIONAL = 'CONDITIONAL',
+  MUTUALLY_EXCLUSIVE = 'MUTUALLY_EXCLUSIVE'
+}
 
-// =================== INCIDENTS ET HISTORIQUE ===================
-export interface HazardIncident {
-  id: string;
-  hazardIds: string[];
-  incidentDate: string;
+// =================== INCIDENTS ET ÉVÉNEMENTS ===================
+export interface HazardIncident extends BaseEntity {
+  hazardId: string;
+  incidentType: 'NEAR_MISS' | 'MINOR_INJURY' | 'MAJOR_INJURY' | 'FATALITY' | 'PROPERTY_DAMAGE';
+  
+  // Détails de l'incident
+  dateOccurred: string;
   location: string;
-  
-  // Description
   description: string;
-  severity: 'minor' | 'moderate' | 'major' | 'catastrophic';
-  actualConsequences: string[];
-  potentialConsequences: string[];
-  
-  // Causes
-  rootCauses: string[];
-  contributingFactors: string[];
-  controlFailures: string[];
+  immediateConsequences: string[];
   
   // Personnes impliquées
   peopleInvolved: IncidentPerson[];
-  witnessAccounts?: string[];
+  witnesses: IncidentPerson[];
+  
+  // Analyse
+  rootCauses: string[];
+  contributingFactors: string[];
+  failedControls: string[];
   
   // Actions
   immediateActions: string[];
   correctiveActions: CorrectiveAction[];
   preventiveActions: PreventiveAction[];
   
-  // Suivi
-  status: IncidentStatus;
-  investigationCompleted: boolean;
-  lessonsLearned?: string[];
+  // Investigation
+  investigatedBy: string;
+  investigationDate: string;
+  investigationStatus: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CLOSED';
   
-  // Coûts
-  directCosts?: number;
-  indirectCosts?: number;
-  lostTime?: number; // heures
+  // Coûts et impacts
+  estimatedCost?: number;
+  workDaysLost?: number;
+  regulatoryReporting: boolean;
+  reportingDate?: string;
+  
+  // Documentation
+  photos?: string[];
+  documents?: string[];
+  externalReports?: string[];
 }
 
 export interface IncidentPerson {
@@ -247,165 +286,233 @@ export interface IncidentPerson {
   name: string;
   role: string;
   injuryType?: string;
-  injurySeverity?: 'none' | 'first_aid' | 'medical' | 'lost_time' | 'fatality';
-  experienceLevel?: string;
-  trainingStatus?: string;
+  injurySeverity?: 'MINOR' | 'MODERATE' | 'SEVERE' | 'FATAL';
+  medicalTreatment?: string;
+  timeOffWork?: number;
 }
 
 export interface CorrectiveAction {
   id: string;
   description: string;
-  assignedTo: string;
+  responsiblePerson: string;
   dueDate: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  status: ActionStatus;
-  completedDate?: string;
-  notes?: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  status: 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE';
+  completionDate?: string;
+  effectiveness?: 'NOT_EFFECTIVE' | 'PARTIALLY_EFFECTIVE' | 'FULLY_EFFECTIVE';
+  cost?: number;
 }
 
 export interface PreventiveAction {
   id: string;
   description: string;
-  hazardIds: string[];
-  assignedTo: string;
-  dueDate: string;
-  estimatedCost?: number;
-  expectedBenefit: string;
-  status: ActionStatus;
+  targetHazards: string[];
+  implementationPlan: string;
+  responsiblePerson: string;
+  expectedCompletion: string;
+  monitoringMethod: string;
+  successCriteria: string[];
 }
 
-export type IncidentStatus = 
-  | 'reported'
-  | 'under_investigation'
-  | 'investigation_complete'
-  | 'actions_pending'
-  | 'closed';
-
-export type ActionStatus = 
-  | 'planned'
-  | 'in_progress'
-  | 'completed'
-  | 'overdue'
-  | 'cancelled';
-
-// =================== ANALYSES ET STATISTIQUES ===================
+// =================== ANALYTIQUES ET REPORTING ===================
 export interface HazardAnalytics {
-  totalHazards: number;
-  byCategory: Record<HazardCategory, number>;
-  byRiskLevel: Record<RiskLevel, number>;
-  bySeverity: Record<SeverityLevel, number>;
+  timeframeStart: string;
+  timeframeEnd: string;
   
-  // Tendances
-  trends: {
-    newHazardsThisMonth: number;
+  // Statistiques générales
+  totalHazardsIdentified: number;
+  newHazardsAdded: number;
+  hazardsResolved: number;
+  
+  // Distribution par catégorie
+  hazardDistribution: Record<HazardCategory, number>;
+  
+  // Tendances de risque
+  riskTrends: {
+    period: string;
+    averageRiskLevel: number;
+    highRiskCount: number;
     riskLevelChanges: RiskLevelChange[];
-    mostCommonCategories: CategoryFrequency[];
-  };
+  }[];
   
-  // Incidents
-  incidentStats: {
-    totalIncidents: number;
-    incidentsByHazard: Array<{
-      hazardId: string;
-      hazardName: string;
-      incidentCount: number;
-      avgSeverity: number;
-    }>;
-    incidentTrends: MonthlyIncidentData[];
-  };
+  // Fréquence des incidents
+  incidentFrequency: {
+    category: HazardCategory;
+    incidentCount: number;
+    severity: string;
+    trend: 'INCREASING' | 'STABLE' | 'DECREASING';
+  }[];
   
-  // Efficacité des contrôles
+  // Performance des contrôles
   controlEffectiveness: {
-    avgEffectiveness: number;
-    byControlType: Record<string, number>;
-    improvementOpportunities: string[];
+    hazardId: string;
+    controlType: string;
+    effectivenessScore: number;
+    incidentReduction: number;
+  }[];
+  
+  // Coûts
+  costAnalysis: {
+    preventiveCosts: number;
+    incidentCosts: number;
+    totalCosts: number;
+    costPerHazard: number;
+    roi: number;
   };
+  
+  // Recommandations
+  recommendations: string[];
+  priorityActions: string[];
 }
 
 export interface RiskLevelChange {
   hazardId: string;
-  hazardName: string;
   previousLevel: RiskLevel;
   currentLevel: RiskLevel;
   changeDate: string;
-  reason?: string;
+  changeReason: string;
 }
 
-export interface CategoryFrequency {
-  category: HazardCategory;
-  count: number;
-  percentage: number;
+// =================== SERVICES ET UTILITAIRES ===================
+export interface HazardService {
+  // Recherche et filtrage
+  searchHazards: (criteria: SearchCriteria) => Promise<Hazard[]>;
+  getHazardsByCategory: (category: HazardCategory) => Promise<Hazard[]>;
+  getHighRiskHazards: (threshold: RiskLevel) => Promise<Hazard[]>;
+  
+  // Évaluation des risques
+  calculateRiskScore: (severity: SeverityLevel, likelihood: LikelihoodLevel) => number;
+  assessHazardRisk: (hazardId: string, context: AssessmentContext) => Promise<RiskAssessment>;
+  updateRiskAssessment: (assessmentId: string, updates: Partial<RiskAssessment>) => Promise<RiskAssessment>;
+  
+  // Gestion des incidents
+  recordIncident: (incident: Omit<HazardIncident, 'id' | 'createdDate' | 'lastUpdated'>) => Promise<HazardIncident>;
+  analyzeIncidentTrends: (timeframe: DateRange) => Promise<IncidentAnalysis>;
+  
+  // Rapports
+  generateHazardReport: (options: HazardReportOptions) => Promise<HazardReport>;
+  exportHazardData: (format: 'CSV' | 'EXCEL' | 'PDF') => Promise<string>;
+  
+  // Validation et conformité
+  validateHazardData: (hazard: Hazard) => ValidationResult;
+  checkCompliance: (hazards: Hazard[], standards: RegulatoryStandard[]) => ComplianceReport;
+}
+
+export interface SearchCriteria {
+  searchTerm?: string;
+  categories?: HazardCategory[];
+  riskLevels?: RiskLevel[];
+  keywords?: string[];
+  dateRange?: DateRange;
+  validationStatus?: boolean;
+}
+
+export interface AssessmentContext {
+  workEnvironment: string;
+  equipmentUsed: string[];
+  numberOfWorkers: number;
+  experienceLevel: 'NOVICE' | 'INTERMEDIATE' | 'EXPERT';
+  safetyMeasures: string[];
+}
+
+export interface DateRange {
+  start: string;
+  end: string;
+}
+
+export interface IncidentAnalysis {
+  totalIncidents: number;
+  incidentsByCategory: Record<HazardCategory, number>;
+  severityDistribution: Record<string, number>;
+  monthlyTrends: MonthlyIncidentData[];
+  topHazards: string[];
+  commonCauses: string[];
 }
 
 export interface MonthlyIncidentData {
   month: string;
   incidentCount: number;
-  avgSeverity: number;
-  totalCost: number;
-}
-
-// =================== SERVICES ET UTILITAIRES ===================
-export interface HazardService {
-  // CRUD opérations
-  getById: (id: string) => Promise<Hazard | null>;
-  getAll: () => Promise<Hazard[]>;
-  create: (hazard: Omit<Hazard, 'id' | 'createdDate' | 'lastUpdated'>) => Promise<Hazard>;
-  update: (id: string, updates: Partial<Hazard>) => Promise<Hazard>;
-  delete: (id: string) => Promise<boolean>;
-  
-  // Recherche et filtrage
-  search: (query: string) => Promise<Hazard[]>;
-  getByCategory: (category: HazardCategory) => Promise<Hazard[]>;
-  getByWorkType: (workTypeId: string) => Promise<Hazard[]>;
-  getByRiskLevel: (riskLevel: RiskLevel) => Promise<Hazard[]>;
-  
-  // Évaluation des risques
-  assessRisk: (hazardId: string, assessment: Omit<RiskAssessment, 'id'>) => Promise<RiskAssessment>;
-  getAssessments: (hazardId: string) => Promise<RiskAssessment[]>;
-  
-  // Relations
-  getRelatedHazards: (hazardId: string) => Promise<Hazard[]>;
-  createRelationship: (relationship: Omit<HazardRelationship, 'id'>) => Promise<HazardRelationship>;
-  
-  // Analytiques
-  getAnalytics: (timeframe?: string) => Promise<HazardAnalytics>;
-  generateReport: (options: HazardReportOptions) => Promise<HazardReport>;
-}
-
-export interface HazardReportOptions {
-  categories?: HazardCategory[];
-  riskLevels?: RiskLevel[];
-  workTypes?: string[];
-  dateRange?: {
-    start: string;
-    end: string;
-  };
-  includeIncidents?: boolean;
-  includeControls?: boolean;
-  format: 'pdf' | 'excel' | 'csv';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH';
+  category: HazardCategory;
 }
 
 export interface HazardReport {
   id: string;
+  title: string;
   generatedDate: string;
-  options: HazardReportOptions;
-  data: {
-    hazards: Hazard[];
-    summary: HazardAnalytics;
-    recommendations?: string[];
-  };
-  downloadUrl?: string;
+  generatedBy: string;
+  
+  // Contenu
+  summary: string;
+  hazardCount: number;
+  categoricalBreakdown: Record<HazardCategory, CategoryFrequency>;
+  riskDistribution: Record<RiskLevel, number>;
+  
+  // Analyses
+  topRisks: Hazard[];
+  emergingHazards: Hazard[];
+  controlGaps: string[];
+  
+  // Recommandations
+  priorityActions: string[];
+  budgetEstimates: Record<string, number>;
+  timelineEstimates: Record<string, string>;
+  
+  // Métadonnées
+  reportType: 'SUMMARY' | 'DETAILED' | 'COMPLIANCE' | 'INCIDENT';
+  confidentialityLevel: 'PUBLIC' | 'INTERNAL' | 'CONFIDENTIAL';
+  distributionList: string[];
 }
 
-// =================== TYPES EXPORTS ===================
+export interface CategoryFrequency {
+  count: number;
+  percentage: number;
+  trend: 'INCREASING' | 'STABLE' | 'DECREASING';
+  averageRiskLevel: RiskLevel;
+}
+
+export interface HazardReportOptions {
+  includeIncidents: boolean;
+  includeAnalytics: boolean;
+  timeframe: DateRange;
+  categories?: HazardCategory[];
+  riskThreshold?: RiskLevel;
+  format: 'PDF' | 'EXCEL' | 'HTML';
+  language: 'fr' | 'en';
+}
+
+export interface ComplianceReport {
+  overallCompliance: number;
+  standardsAssessed: RegulatoryStandard[];
+  complianceByStandard: Record<RegulatoryStandard, number>;
+  nonComplianceIssues: string[];
+  recommendedActions: string[];
+  nextAuditDate: string;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  score: number;
+}
+
+// =================== RÈGLES DE CALCUL ===================
+export interface RiskCalculationRule {
+  id: string;
+  name: string;
+  description: string;
+  formula: string;
+  parameters: Record<string, number>;
+  applicableCategories: HazardCategory[];
+  isDefault: boolean;
+}
+
+// =================== TYPES UTILITAIRES ===================
 export type HazardId = string;
 export type AssessmentId = string;
 export type IncidentId = string;
 
 // =================== EXPORTS POUR COMPATIBILITÉ ===================
-
 export type { Hazard as HazardEntity };
 export type { HazardCategory as Category };
-
-// ✅ SUPPRIMÉ LES EXPORTS CIRCULAIRES - Les types sont déjà définis dans index.ts
-// Les autres fichiers peuvent importer RiskLevel, SeverityLevel depuis './index' directement
