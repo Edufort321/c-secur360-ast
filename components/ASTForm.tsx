@@ -9,39 +9,13 @@ import {
   Droplets, Flame, Activity, Search, Filter, Hand
 } from 'lucide-react';
 
-// Import des composants Steps - NOUVEAUX NOMS DE FICHIERS
+// Import des composants Steps - CORRECTION STEP 5
 import Step1ProjectInfo from './steps/Step1ProjectInfo';
 import Step2Equipment from './steps/Step2Equipment';
 import Step3Hazards from './steps/Step3Hazards';
 import Step4Permits from './steps/Step4Permits';
+import Step5Validation from './steps/Step5Validation';  // ← IMPORT RÉEL AU LIEU DU PLACEHOLDER
 import Step6Finalization from './steps/Step6Finalization';
-
-// Placeholder temporaire pour Step5 en attendant sa création
-const Step5Validation = ({ formData, onDataChange, language, tenant, errors }: any) => (
-  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
-    <Users size={64} color="#06b6d4" style={{ marginBottom: '24px' }} />
-    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
-      ✍️ Step 5: Validation Équipe
-    </h3>
-    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
-      Signatures digitales, validation collaborative, procès-verbal de réunion,
-      feedback équipe et approbations hiérarchiques.
-    </p>
-    <div style={{
-      background: 'rgba(6, 182, 212, 0.1)',
-      border: '1px solid rgba(6, 182, 212, 0.3)',
-      borderRadius: '12px',
-      padding: '20px',
-      color: '#06b6d4',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '8px'
-    }}>
-      <Settings size={20} className="pulse-animation" />
-      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
-    </div>
-  </div>
-);
 
 // =================== INTERFACES ENTERPRISE ===================
 interface ASTFormProps {
@@ -316,18 +290,34 @@ interface RegulatoryCompliance {
   specialConditions: string[];
 }
 
+// =================== INTERFACE VALIDATION CORRIGÉE ===================
 interface ValidationData {
-  teamMembers: TeamMember[];
-  discussionPoints: DiscussionPoint[];
-  meetingMinutes: MeetingMinutes;
-  approvals: TeamApproval[];
-  concerns: string[];
-  improvements: string[];
-  finalValidation: FinalValidation;
+  // Compatible avec Step5Validation
   reviewers: TeamMember[];
   approvalRequired: boolean;
   minimumReviewers: number;
-  validationCriteria: string[];
+  reviewDeadline?: string;
+  validationCriteria: {
+    hazardIdentification: boolean;
+    controlMeasures: boolean;
+    equipmentSelection: boolean;
+    procedural: boolean;
+    regulatory: boolean;
+  };
+  finalApproval?: {
+    approvedBy: string;
+    approvedAt: string;
+    signature: string;
+    conditions?: string;
+  };
+  
+  // Données étendues pour entreprise
+  teamMembers?: TeamMember[];
+  discussionPoints?: DiscussionPoint[];
+  meetingMinutes?: MeetingMinutes;
+  approvals?: TeamApproval[];
+  concerns?: string[];
+  improvements?: string[];
 }
 
 interface TeamMember {
@@ -336,10 +326,10 @@ interface TeamMember {
   role: string;
   email: string;
   department: string;
-  experience: string;
-  certifications: string[];
+  experience?: string;
+  certifications?: string[];
   phoneNumber?: string;
-  hasParticipated: boolean;
+  hasParticipated?: boolean;
   signature?: string;
   signatureDate?: string;
   feedback?: string;
@@ -401,7 +391,7 @@ interface FinalValidation {
   validationDate: string;
   validationSignature: string;
 }
-
+// =================== INTERFACES FINALIZATION ===================
 interface FinalizationData {
   // Données fusionnées de TeamShare + Finalization
   workers: Worker[];
@@ -577,18 +567,26 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
         specialConditions: []
       }
     },
+    // =================== VALIDATION CORRIGÉE ===================
     validation: {
+      reviewers: [],
+      approvalRequired: true,
+      minimumReviewers: 2,
+      reviewDeadline: '',
+      validationCriteria: {
+        hazardIdentification: false,
+        controlMeasures: false,
+        equipmentSelection: false,
+        procedural: false,
+        regulatory: false
+      },
+      // Données étendues optionnelles
       teamMembers: [],
       discussionPoints: [],
       meetingMinutes: {} as MeetingMinutes,
       approvals: [],
       concerns: [],
-      improvements: [],
-      finalValidation: {} as FinalValidation,
-      reviewers: [],
-      approvalRequired: true,
-      minimumReviewers: 2,
-      validationCriteria: []
+      improvements: []
     },
     finalization: {
       workers: [],
@@ -724,7 +722,8 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     }
   }, [updateASTData]);
 
-  const handleStep5DataChange = useCallback((section: string, data: any) => {
+  // =================== HANDLER STEP 5 CORRIGÉ ===================
+  const handleStep5DataChange = useCallback((section: string, data: ValidationData) => {
     if (section === 'validation') {
       updateASTData('validation', data);
     }
@@ -837,7 +836,6 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       mobileOptimized: true
     }
   ];
-
   // =================== STATUS BADGE ===================
   const getStatusBadge = () => {
     const statusConfig = {
@@ -1261,7 +1259,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
             </p>
           </div>
 
-          {/* Contenu spécifique à chaque étape */}
+          {/* =================== CONTENU SPÉCIFIQUE À CHAQUE ÉTAPE =================== */}
           <div style={{ minHeight: '400px' }}>
             {/* ÉTAPE 1: Informations Projet + Verrouillage */}
             {currentStep === 1 && (
@@ -1307,14 +1305,13 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
               />
             )}
 
-            {/* ÉTAPE 5: Validation Équipe */}
+            {/* =================== ÉTAPE 5: VALIDATION ÉQUIPE CORRIGÉE =================== */}
             {currentStep === 5 && (
               <Step5Validation
                 formData={astData}
                 onDataChange={handleStep5DataChange}
                 language={language}
                 tenant={tenant}
-                errors={{}}
               />
             )}
 
