@@ -44,8 +44,8 @@ export const useFormValidation = (
     revalidateOnSubmit = true
   } = options;
 
-  const [values, setValues] = useState(initialValues);
   const [values, setFormValues] = useState(initialValues);
+  const [validationState, setValidationState] = useState<FormValidationState>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -157,7 +157,7 @@ export const useFormValidation = (
 
   // Fonction pour mettre à jour une valeur
   const setValue = useCallback((fieldName: string, value: any) => {
-    setValues(prev => {
+    setFormValues(prev => {
       const newValues = { ...prev, [fieldName]: value };
       
       // Validation en temps réel si activée
@@ -175,8 +175,8 @@ export const useFormValidation = (
   }, [validateOnChange, validateField]);
 
   // Fonction pour mettre à jour plusieurs valeurs
-  const setValues = useCallback((newValues: Record<string, any>) => {
-    setValues(prev => {
+  const setMultipleValues = useCallback((newValues: Record<string, any>) => {
+    setFormValues(prev => {
       const updatedValues = { ...prev, ...newValues };
       
       if (validateOnChange) {
@@ -217,7 +217,7 @@ export const useFormValidation = (
 
   // Fonction pour réinitialiser complètement le formulaire
   const resetForm = useCallback((newInitialValues?: Record<string, any>) => {
-    setValues(newInitialValues || initialValues);
+    setFormValues(newInitialValues || initialValues);
     resetValidation();
   }, [initialValues, resetValidation]);
 
@@ -312,7 +312,7 @@ export const useFormValidation = (
     isSubmitted,
     isDirty,
     setValue,
-    setValues,
+    setValues: setMultipleValues,
     setFieldTouched,
     resetValidation,
     resetForm,
