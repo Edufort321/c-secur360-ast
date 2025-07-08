@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useState, useMemo } from 'react';
 import { 
@@ -318,207 +318,6 @@ const permitsDatabase: Permit[] = [
       'Structures temporaires'
     ],
     legislation: 'Code national du bâtiment, Règlements municipaux',
-    selected: false,
-    status: 'pending'
-  },
-  {
-    id: 'demolition-permit',
-    name: 'Permis de démolition',
-    category: 'Construction',
-    description: 'Autorisation pour travaux de démolition',
-    authority: 'Municipal',
-    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-    required: true,
-    priority: 'high',
-    duration: '30-90 jours',
-    cost: '500$ - 5000$',
-    processingTime: '10-20 jours',
-    renewalRequired: false,
-    requiredDocuments: [
-      'Plans de démolition',
-      'Gestion déchets',
-      'Contrôle poussière',
-      'Protection bâtiments adjacents',
-      'Déconnexion services'
-    ],
-    applicableFor: [
-      'Démolition complète',
-      'Démolition partielle',
-      'Décontamination',
-      'Abattage structures',
-      'Récupération matériaux'
-    ],
-    legislation: 'Règlements municipaux, Code environnement',
-    selected: false,
-    status: 'pending'
-  },
-
-  // ENVIRONNEMENT
-  {
-    id: 'environmental-permit',
-    name: 'Autorisation environnementale',
-    category: 'Environnement',
-    description: 'Permis pour activités avec impact environnemental',
-    authority: 'Provincial/Fédéral',
-    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-    required: true,
-    priority: 'critical',
-    duration: '5-20 ans',
-    cost: '1000$ - 100,000$',
-    processingTime: '90-365 jours',
-    renewalRequired: true,
-    renewalPeriod: 'Selon autorisation',
-    requiredDocuments: [
-      'Étude d\'impact',
-      'Plan de surveillance',
-      'Consultations publiques',
-      'Mesures atténuation',
-      'Garanties financières'
-    ],
-    applicableFor: [
-      'Projets industriels',
-      'Traitement déchets',
-      'Rejets atmosphériques',
-      'Rejets hydriques',
-      'Sites contaminés'
-    ],
-    legislation: 'Loi qualité environnement (QC), LCPE (Fédéral), Lois provinciales',
-    selected: false,
-    status: 'pending'
-  },
-
-  // TRANSPORT ET CIRCULATION
-  {
-    id: 'road-occupation-permit',
-    name: 'Permis d\'occupation de voirie',
-    category: 'Transport',
-    description: 'Autorisation pour travaux affectant la circulation',
-    authority: 'Municipal/Provincial',
-    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-    required: true,
-    priority: 'high',
-    duration: 'Durée des travaux',
-    cost: '100$ - 5000$ + cautionnement',
-    processingTime: '5-15 jours',
-    renewalRequired: false,
-    requiredDocuments: [
-      'Plan de circulation',
-      'Signalisation temporaire',
-      'Plan de détour',
-      'Assurance responsabilité',
-      'Personnel certifié signalisation'
-    ],
-    applicableFor: [
-      'Travaux de rue',
-      'Installation échafaudages',
-      'Livraisons spéciales',
-      'Événements temporaires',
-      'Services publics'
-    ],
-    legislation: 'Code sécurité routière, Règlements municipaux MTQ',
-    selected: false,
-    status: 'pending'
-  },
-
-  // SÉCURITÉ PUBLIQUE
-  {
-    id: 'site-security-permit',
-    name: 'Permis de sécurité de chantier',
-    category: 'Sécurité',
-    description: 'Plan de sécurité et prévention pour chantiers',
-    authority: 'CNESST/Provincial',
-    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-    required: true,
-    priority: 'critical',
-    duration: 'Durée du projet',
-    cost: 'Inclus dans cotisations',
-    processingTime: '10 jours avant début',
-    renewalRequired: false,
-    requiredDocuments: [
-      'Programme de prévention',
-      'Analyse des risques',
-      'Plan d\'urgence',
-      'Formation des travailleurs',
-      'Coordination SST'
-    ],
-    applicableFor: [
-      'Chantiers construction',
-      'Projets industriels',
-      'Maintenance majeure',
-      'Travaux publics',
-      'Sites à risques'
-    ],
-    legislation: 'LSST, RSST, Codes provinciaux SST',
-    contactInfo: {
-      website: 'https://www.cnesst.gouv.qc.ca/'
-    },
-    selected: false,
-    status: 'pending'
-  },
-
-  // SUBSTANCES DANGEREUSES
-  {
-    id: 'hazmat-permit',
-    name: 'Permis matières dangereuses',
-    category: 'Substances dangereuses',
-    description: 'Autorisation stockage et manipulation produits chimiques',
-    authority: 'Transports Canada/Provincial',
-    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-    required: true,
-    priority: 'critical',
-    duration: '1-5 ans',
-    cost: '500$ - 10,000$',
-    processingTime: '30-90 jours',
-    renewalRequired: true,
-    renewalPeriod: 'Selon produit',
-    requiredDocuments: [
-      'Fiches sécurité (SDS)',
-      'Plan d\'urgence',
-      'Formation SIMDUT',
-      'Équipements sécurité',
-      'Surveillance environnementale'
-    ],
-    applicableFor: [
-      'Produits chimiques',
-      'Combustibles',
-      'Gaz comprimés',
-      'Matières corrosives',
-      'Explosifs civils'
-    ],
-    legislation: 'Loi transport marchandises dangereuses, SIMDUT 2015',
-    selected: false,
-    status: 'pending'
-  },
-
-  // ÉLECTRICITÉ ET ÉNERGIE
-  {
-    id: 'electrical-permit',
-    name: 'Permis de travaux électriques',
-    category: 'Électricité',
-    description: 'Autorisation pour installations et modifications électriques',
-    authority: 'Régie du bâtiment/Municipal',
-    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-    required: true,
-    priority: 'high',
-    duration: '6 mois - 1 an',
-    cost: '100$ - 2000$',
-    processingTime: '5-15 jours',
-    renewalRequired: false,
-    requiredDocuments: [
-      'Plans électriques',
-      'Maître électricien',
-      'Conformité code',
-      'Inspection obligatoire',
-      'Certificat de conformité'
-    ],
-    applicableFor: [
-      'Nouvelles installations',
-      'Modifications majeures',
-      'Raccordements',
-      'Systèmes d\'urgence',
-      'Équipements industriels'
-    ],
-    legislation: 'Code électrique canadien, Règlements provinciaux',
     selected: false,
     status: 'pending'
   }
@@ -920,7 +719,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               <option value="all">{t.allCategories}</option>
               {categories.map(category => (
                 <option key={category} value={category}>
-                  {getCategoryIcon(category)} {t.categories[category] || category}
+                  {getCategoryIcon(category)} {(t.categories as any)[category] || category}
                 </option>
               ))}
             </select>
@@ -932,7 +731,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               <option value="all">{t.allProvinces}</option>
               {provinces.map(province => (
                 <option key={province} value={province}>
-                  {t.provinces[province] || province}
+                  {(t.provinces as any)[province] || province}
                 </option>
               ))}
             </select>
@@ -954,7 +753,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                   <div className="permit-icon">{getCategoryIcon(permit.category)}</div>
                   <div className="permit-content">
                     <h3 className="permit-name">{permit.name}</h3>
-                    <div className="permit-category">{t.categories[permit.category] || permit.category}</div>
+                    <div className="permit-category">{(t.categories as any)[permit.category] || permit.category}</div>
                     <div className="permit-description">{permit.description}</div>
                     <div className="permit-authority">{permit.authority}</div>
                   </div>
@@ -967,12 +766,12 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                 <div className="permit-meta">
                   <div className="meta-item">
                     <span className={`priority-badge priority-${permit.priority}`}>
-                      {t.priorities[permit.priority]}
+                      {(t.priorities as any)[permit.priority]}
                     </span>
                   </div>
                   <div className="meta-item">
                     <span className={`status-badge status-${permit.status}`}>
-                      {t.statuses[permit.status]}
+                      {(t.statuses as any)[permit.status]}
                     </span>
                   </div>
                   <div className="meta-item">
@@ -1071,11 +870,11 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                         className="permit-select"
                         onClick={e => e.stopPropagation()}
                       >
-                        <option value="pending">{t.statuses.pending}</option>
-                        <option value="submitted">{t.statuses.submitted}</option>
-                        <option value="approved">{t.statuses.approved}</option>
-                        <option value="rejected">{t.statuses.rejected}</option>
-                        <option value="expired">{t.statuses.expired}</option>
+                        <option value="pending">{(t.statuses as any).pending}</option>
+                        <option value="submitted">{(t.statuses as any).submitted}</option>
+                        <option value="approved">{(t.statuses as any).approved}</option>
+                        <option value="rejected">{(t.statuses as any).rejected}</option>
+                        <option value="expired">{(t.statuses as any).expired}</option>
                       </select>
                       <input
                         type="text"
