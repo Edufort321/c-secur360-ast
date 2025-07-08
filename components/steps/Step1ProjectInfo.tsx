@@ -1,38 +1,20 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { 
   FileText, 
+  Building, 
+  Phone, 
   MapPin, 
-  Users, 
   Calendar, 
   Clock, 
-  Phone, 
-  Mail,
-  Globe,
-  AlertTriangle,
-  Info
+  Users, 
+  User, 
+  Briefcase,
+  Copy,
+  Check,
+  AlertTriangle
 } from 'lucide-react';
-
-// =================== INTERFACES LOCALES ===================
-interface ContactInfo {
-  name: string;
-  email?: string;
-  phone?: string;
-  position?: string;
-}
-
-interface Address {
-  street: string;
-  city: string;
-  province: string;
-  postalCode?: string;
-  country?: string;
-  coordinates?: {
-    lat: number;
-    lng: number;
-  };
-}
 
 interface Step1ProjectInfoProps {
   formData: any;
@@ -42,716 +24,662 @@ interface Step1ProjectInfoProps {
   errors: any;
 }
 
-interface ProjectInfoData {
-  title: string;
-  description: string;
-  clientId: string;
-  projectName: string;
-  workTypeId: string;
-  workLocation: Address;
-  teamLeader: ContactInfo;
-  teamMembers: ContactInfo[];
-  estimatedDuration: number;
-  plannedStartDate: string;
-  plannedEndDate: string;
-}
-
-// =================== DONNÉES MOCK ===================
-const allClients = [
-  {
-    id: 'hydro-quebec',
-    name: 'Hydro-Québec',
-    industry: 'Électricité',
-    emergencyContact: '1-800-790-2424',
-    dispatchContact: 'dispatch@hydroquebec.com'
-  },
-  {
-    id: 'energir',
-    name: 'Énergir',
-    industry: 'Gaz naturel',
-    emergencyContact: '1-800-361-8003',
-    dispatchContact: 'dispatch@energir.com'
-  },
-  {
-    id: 'bell',
-    name: 'Bell Canada',
-    industry: 'Télécommunications',
-    emergencyContact: '1-800-667-0123',
-    dispatchContact: 'urgence@bell.ca'
-  },
-  {
-    id: 'cogeco',
-    name: 'Cogeco',
-    industry: 'Télécommunications',
-    emergencyContact: '1-800-267-9000',
-    dispatchContact: 'support@cogeco.ca'
-  }
-];
-
-const allWorkTypes = [
-  {
-    id: 'electrical-maintenance',
-    name: 'Maintenance électrique',
-    category: 'Électricité'
-  },
-  {
-    id: 'gas-installation',
-    name: 'Installation de gaz',
-    category: 'Gaz naturel'
-  },
-  {
-    id: 'telecom-repair',
-    name: 'Réparation télécoms',
-    category: 'Télécommunications'
-  },
-  {
-    id: 'construction',
-    name: 'Construction',
-    category: 'Génie civil'
-  },
-  {
-    id: 'inspection',
-    name: 'Inspection',
-    category: 'Contrôle qualité'
-  }
-];
-
-// =================== MESSAGES D'URGENCE ===================
-const EMERGENCY_MESSAGES = {
-  'hydro-quebec': {
-    fr: "🚨 URGENCE ÉLECTRIQUE - Composez le 911 et Hydro-Québec au 1-800-790-2424",
-    en: "🚨 ELECTRICAL EMERGENCY - Call 911 and Hydro-Québec at 1-800-790-2424"
-  },
-  'energir': {
-    fr: "🚨 URGENCE GAZ - Composez le 911 et Énergir au 1-800-361-8003",
-    en: "🚨 GAS EMERGENCY - Call 911 and Énergir at 1-800-361-8003"
-  },
-  'bell': {
-    fr: "🚨 URGENCE TÉLÉCOMS - Composez le 911 et Bell au 1-800-667-0123",
-    en: "🚨 TELECOM EMERGENCY - Call 911 and Bell at 1-800-667-0123"
-  },
-  'default': {
-    fr: "🚨 URGENCE - Composez le 911 et contactez votre superviseur immédiatement",
-    en: "🚨 EMERGENCY - Call 911 and contact your supervisor immediately"
-  }
+// Générateur de numéro AST
+const generateASTNumber = (): string => {
+  const year = new Date().getFullYear();
+  const month = String(new Date().getMonth() + 1).padStart(2, '0');
+  const day = String(new Date().getDate()).padStart(2, '0');
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
+  return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
 
-// =================== TRADUCTIONS ===================
-const translations = {
-  fr: {
-    title: 'Informations du projet',
-    subtitle: 'Détails généraux et localisation du travail',
-    projectTitle: 'Titre du projet',
-    projectTitlePlaceholder: 'Ex: Maintenance transformateur - Poste Nord',
-    projectDescription: 'Description du travail',
-    projectDescriptionPlaceholder: 'Décrivez brièvement les tâches à effectuer...',
-    client: 'Client',
-    selectClient: 'Sélectionner un client',
-    workType: 'Type de travail',
-    selectWorkType: 'Sélectionner le type de travail',
-    workLocation: 'Lieu du travail',
-    workLocationPlaceholder: 'Adresse complète du site de travail',
-    coordinates: 'Coordonnées GPS',
-    teamLeader: 'Chef d\'équipe',
-    teamLeaderName: 'Nom complet',
-    teamLeaderPosition: 'Poste/Titre',
-    teamLeaderPhone: 'Téléphone',
-    teamLeaderEmail: 'Email',
-    plannedStartDate: 'Date de début prévue',
-    plannedEndDate: 'Date de fin prévue',
-    estimatedDuration: 'Durée estimée (heures)',
-    emergencyProtocol: 'Procédure d\'urgence',
-    requiredField: 'Champ obligatoire',
-    autoDetectLocation: 'Détecter ma position',
-    searchAddress: 'Rechercher une adresse',
-    mapClickInstructions: 'Cliquez sur la carte pour sélectionner le lieu exact'
-  },
-  en: {
-    title: 'Project Information',
-    subtitle: 'General details and work location',
-    projectTitle: 'Project Title',
-    projectTitlePlaceholder: 'Ex: Transformer Maintenance - North Station',
-    projectDescription: 'Work Description',
-    projectDescriptionPlaceholder: 'Briefly describe the tasks to be performed...',
-    client: 'Client',
-    selectClient: 'Select a client',
-    workType: 'Work Type',
-    selectWorkType: 'Select work type',
-    workLocation: 'Work Location',
-    workLocationPlaceholder: 'Complete address of work site',
-    coordinates: 'GPS Coordinates',
-    teamLeader: 'Team Leader',
-    teamLeaderName: 'Full Name',
-    teamLeaderPosition: 'Position/Title',
-    teamLeaderPhone: 'Phone',
-    teamLeaderEmail: 'Email',
-    plannedStartDate: 'Planned Start Date',
-    plannedEndDate: 'Planned End Date',
-    estimatedDuration: 'Estimated Duration (hours)',
-    emergencyProtocol: 'Emergency Procedure',
-    requiredField: 'Required field',
-    autoDetectLocation: 'Detect my location',
-    searchAddress: 'Search address',
-    mapClickInstructions: 'Click on map to select exact location'
-  }
-};
+export default function Step1ProjectInfo({ 
+  formData, 
+  onDataChange, 
+  language, 
+  tenant, 
+  errors 
+}: Step1ProjectInfoProps) {
+  const [astNumber, setAstNumber] = useState(formData?.astNumber || generateASTNumber());
+  const [copied, setCopied] = useState(false);
 
-// =================== HOOKS MOCK ===================
-const useGoogleMaps = () => {
-  const getCurrentLocation = async (): Promise<{ lat: number; lng: number } | null> => {
-    return new Promise((resolve) => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            resolve({
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            });
-          },
-          () => resolve(null)
-        );
-      } else {
-        resolve(null);
-      }
+  const projectInfo = formData?.projectInfo || {};
+
+  const updateProjectInfo = (field: string, value: any) => {
+    onDataChange('projectInfo', {
+      ...projectInfo,
+      [field]: value
     });
   };
 
-  const geocodeAddress = async (location: { lat: number; lng: number }): Promise<Address | null> => {
-    // Mock geocoding - en production, utiliser l'API Google
-    return {
-      street: `${Math.round(location.lat * 1000)} Rue Example`,
-      city: 'Sherbrooke',
-      province: 'QC',
-      postalCode: 'J1H 1A1',
-      country: 'Canada'
-    };
-  };
-
-  const searchAddresses = async (query: string): Promise<string[]> => {
-    // Mock search - en production, utiliser l'API Google Places
-    const mockAddresses = [
-      `${query} - 123 Rue King, Sherbrooke, QC`,
-      `${query} - 456 Avenue University, Sherbrooke, QC`,
-      `${query} - 789 Boulevard Portland, Sherbrooke, QC`
-    ];
-    return mockAddresses.slice(0, 3);
-  };
-
-  return { getCurrentLocation, geocodeAddress, searchAddresses };
-};
-
-// =================== COMPOSANT PRINCIPAL ===================
-const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
-  formData,
-  onDataChange,
-  language,
-  tenant,
-  errors
-}) => {
-  const t = translations[language];
-  
-  // Initialisation des données avec valeurs par défaut
-  const projectInfo: ProjectInfoData = formData.projectInfo || {
-    title: '',
-    description: '',
-    clientId: '',
-    projectName: '',
-    workTypeId: '',
-    workLocation: {
-      street: '',
-      city: 'Sherbrooke',
-      province: 'QC',
-      postalCode: '',
-      country: 'Canada'
-    },
-    teamLeader: {
-      name: '',
-      email: '',
-      phone: '',
-      position: ''
-    },
-    teamMembers: [],
-    estimatedDuration: 8,
-    plannedStartDate: new Date().toISOString().split('T')[0],
-    plannedEndDate: ''
-  };
-  
-  // États locaux
-  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
-  const [showMap, setShowMap] = useState(false);
-  
-  // Hooks
-  const { getCurrentLocation, geocodeAddress, searchAddresses } = useGoogleMaps();
-  
-  // Référence pour la carte
-  const mapRef = useRef<HTMLDivElement>(null);
-
-  // =================== HANDLERS ===================
-  const handleProjectInfoChange = (field: keyof ProjectInfoData, value: any) => {
-    const updatedProjectInfo = {
-      ...projectInfo,
-      [field]: value
-    };
-    onDataChange('projectInfo', updatedProjectInfo);
-  };
-
-  const handleLocationChange = (field: keyof Address, value: any) => {
-    const updatedLocation = {
-      ...projectInfo.workLocation,
-      [field]: value
-    };
-    handleProjectInfoChange('workLocation', updatedLocation);
-  };
-
-  const handleTeamLeaderChange = (field: keyof ContactInfo, value: any) => {
-    const updatedTeamLeader = {
-      ...projectInfo.teamLeader,
-      [field]: value
-    };
-    handleProjectInfoChange('teamLeader', updatedTeamLeader);
-  };
-
-  const handleAutoDetectLocation = async () => {
-    setIsLoadingLocation(true);
+  const copyASTNumber = async () => {
     try {
-      const location = await getCurrentLocation();
-      if (location) {
-        handleLocationChange('coordinates', location);
-        
-        // Géocodage inverse pour obtenir l'adresse
-        const address = await geocodeAddress(location);
-        if (address) {
-          handleLocationChange('street', address.street || '');
-          handleLocationChange('city', address.city || '');
-          handleLocationChange('province', address.province || '');
-          handleLocationChange('postalCode', address.postalCode || '');
-        }
-      }
-    } catch (error) {
-      console.error('Erreur de géolocalisation:', error);
-    } finally {
-      setIsLoadingLocation(false);
+      await navigator.clipboard.writeText(astNumber);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Erreur copie:', err);
     }
   };
 
-  const handleAddressSearch = async (query: string) => {
-    if (query.length > 3) {
-      try {
-        const suggestions = await searchAddresses(query);
-        setAddressSuggestions(suggestions.slice(0, 5)); // Limiter à 5 suggestions
-      } catch (error) {
-        console.error('Erreur recherche adresse:', error);
-        setAddressSuggestions([]);
-      }
-    } else {
-      setAddressSuggestions([]);
-    }
+  const regenerateASTNumber = () => {
+    const newNumber = generateASTNumber();
+    setAstNumber(newNumber);
+    onDataChange('astNumber', newNumber);
   };
 
-  // Calcul automatique de la date de fin
-  useEffect(() => {
-    if (projectInfo.plannedStartDate && projectInfo.estimatedDuration) {
-      const startDate = new Date(projectInfo.plannedStartDate);
-      const durationDays = Math.ceil(projectInfo.estimatedDuration / 8); // 8h par jour
-      const endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + durationDays);
-      
-      const endDateString = endDate.toISOString().split('T')[0];
-      if (endDateString !== projectInfo.plannedEndDate) {
-        handleProjectInfoChange('plannedEndDate', endDateString);
-      }
-    }
-  }, [projectInfo.plannedStartDate, projectInfo.estimatedDuration]);
-
-  // Client sélectionné
-  const selectedClient = allClients.find(c => c.id === projectInfo.clientId);
-  const selectedWorkType = allWorkTypes.find(w => w.id === projectInfo.workTypeId);
-
-  // =================== RENDU ===================
   return (
-    <div className="space-y-8">
-      {/* En-tête de l'étape */}
-      <div className="text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-          <FileText className="w-8 h-8 text-blue-600" />
+    <>
+      {/* CSS Premium pour Step 1 */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .step1-container {
+            padding: 0;
+          }
+
+          .premium-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+          }
+
+          .form-section {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 20px;
+            padding: 24px;
+            transition: all 0.3s ease;
+          }
+
+          .form-section:hover {
+            transform: translateY(-4px);
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+          }
+
+          .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+          }
+
+          .section-icon {
+            width: 24px;
+            height: 24px;
+            color: #3b82f6;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+          }
+
+          .section-title {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+          }
+
+          .form-field {
+            margin-bottom: 20px;
+          }
+
+          .field-label {
+            display: block;
+            color: #e2e8f0;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .field-label .required {
+            color: #ef4444;
+            font-weight: 700;
+          }
+
+          .premium-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+          }
+
+          .premium-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            background: rgba(15, 23, 42, 0.9);
+          }
+
+          .premium-input::placeholder {
+            color: #64748b;
+            font-weight: 400;
+          }
+
+          .premium-select {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+          }
+
+          .premium-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          }
+
+          .premium-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 14px 16px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 500;
+            resize: vertical;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            font-family: inherit;
+          }
+
+          .premium-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          }
+
+          .premium-textarea::placeholder {
+            color: #64748b;
+            font-weight: 400;
+          }
+
+          .ast-number-card {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+            border: 2px solid #22c55e;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
+          }
+
+          .ast-number-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.1), transparent);
+            animation: shine 3s ease-in-out infinite;
+          }
+
+          @keyframes shine {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+          }
+
+          .ast-number-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+          }
+
+          .ast-number-title {
+            color: #22c55e;
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .ast-number-value {
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 24px;
+            font-weight: 800;
+            color: #22c55e;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 12px;
+          }
+
+          .ast-actions {
+            display: flex;
+            gap: 12px;
+          }
+
+          .btn-icon {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid #22c55e;
+            color: #22c55e;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .btn-icon:hover {
+            background: rgba(34, 197, 94, 0.2);
+            transform: translateY(-2px);
+          }
+
+          .btn-icon.copied {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+          }
+
+          .field-help {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 6px;
+            font-style: italic;
+          }
+
+          .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+          }
+
+          .span-full {
+            grid-column: 1 / -1;
+          }
+
+          .required-indicator {
+            color: #ef4444;
+            margin-left: 4px;
+          }
+
+          /* Mobile Responsive */
+          @media (max-width: 768px) {
+            .premium-grid {
+              grid-template-columns: 1fr;
+              gap: 16px;
+            }
+
+            .form-section {
+              padding: 16px;
+            }
+
+            .two-column {
+              grid-template-columns: 1fr;
+              gap: 12px;
+            }
+
+            .ast-number-value {
+              font-size: 18px;
+            }
+
+            .section-title {
+              font-size: 16px;
+            }
+
+            .premium-input,
+            .premium-select,
+            .premium-textarea {
+              font-size: 16px; /* Évite zoom iOS */
+            }
+          }
+
+          @media (max-width: 480px) {
+            .form-section {
+              padding: 12px;
+            }
+
+            .ast-number-card {
+              padding: 16px;
+            }
+
+            .ast-actions {
+              flex-direction: column;
+            }
+          }
+        `
+      }} />
+
+      <div className="step1-container">
+        {/* Carte Numéro AST Premium */}
+        <div className="ast-number-card">
+          <div className="ast-number-header">
+            <div className="ast-number-title">
+              <FileText style={{ width: '20px', height: '20px' }} />
+              🔢 Numéro AST Unique
+            </div>
+            <div className="ast-actions">
+              <button 
+                className={`btn-icon ${copied ? 'copied' : ''}`}
+                onClick={copyASTNumber}
+                title="Copier le numéro"
+              >
+                {copied ? (
+                  <Check style={{ width: '16px', height: '16px' }} />
+                ) : (
+                  <Copy style={{ width: '16px', height: '16px' }} />
+                )}
+              </button>
+              <button 
+                className="btn-icon"
+                onClick={regenerateASTNumber}
+                title="Générer un nouveau numéro"
+              >
+                <FileText style={{ width: '16px', height: '16px' }} />
+              </button>
+            </div>
+          </div>
+          
+          <div className="ast-number-value">
+            {astNumber}
+          </div>
+          
+          <div className="field-help">
+            Numéro généré automatiquement - Usage unique pour cette AST
+          </div>
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">{t.title}</h2>
-        <p className="text-gray-300">{t.subtitle}</p>
-      </div>
 
-      {/* Formulaire principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Colonne gauche - Informations de base */}
-        <div className="space-y-6">
-          <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
-            <h3 className="text-lg font-semibold text-white mb-4">
-              Informations générales
-            </h3>
+        {/* Grille Premium des Sections */}
+        <div className="premium-grid">
+          
+          {/* Section Client */}
+          <div className="form-section">
+            <div className="section-header">
+              <Building className="section-icon" />
+              <h3 className="section-title">🏢 Informations Client</h3>
+            </div>
 
-            {/* Titre du projet */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-200 mb-2">
-                {t.projectTitle} <span className="text-red-400">*</span>
+            <div className="form-field">
+              <label className="field-label">
+                <Building style={{ width: '16px', height: '16px' }} />
+                Nom du Client
+                <span className="required-indicator">*</span>
               </label>
               <input
                 type="text"
-                value={projectInfo.title}
-                onChange={(e) => handleProjectInfoChange('title', e.target.value)}
-                className={`w-full px-4 py-3 bg-white/10 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-colors text-white placeholder-gray-400 ${
-                  errors?.projectInfo?.title ? 'border-red-400' : 'border-white/30'
-                }`}
-                placeholder={t.projectTitlePlaceholder}
+                className="premium-input"
+                placeholder="Ex: Hydro-Québec, Bell Canada..."
+                value={projectInfo.client || ''}
+                onChange={(e) => updateProjectInfo('client', e.target.value)}
               />
-              {errors?.projectInfo?.title && (
-                <p className="mt-1 text-sm text-red-400 flex items-center">
-                  <AlertTriangle className="w-4 h-4 mr-1" />
-                  {errors.projectInfo.title}
-                </p>
-              )}
             </div>
 
-            {/* Client */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-200 mb-2">
-                {t.client} <span className="text-red-400">*</span>
+            <div className="form-field">
+              <label className="field-label">
+                <Phone style={{ width: '16px', height: '16px' }} />
+                Téléphone Client
               </label>
-              <select
-                value={projectInfo.clientId}
-                onChange={(e) => handleProjectInfoChange('clientId', e.target.value)}
-                className={`w-full px-4 py-3 bg-white/10 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-colors text-white ${
-                  errors?.projectInfo?.clientId ? 'border-red-400' : 'border-white/30'
-                }`}
-              >
-                <option value="" className="text-gray-800">{t.selectClient}</option>
-                {allClients.map(client => (
-                  <option key={client.id} value={client.id} className="text-gray-800">
-                    {client.name} - {client.industry}
-                  </option>
-                ))}
-              </select>
+              <input
+                type="tel"
+                className="premium-input"
+                placeholder="Ex: (514) 555-0123"
+                value={projectInfo.clientPhone || ''}
+                onChange={(e) => updateProjectInfo('clientPhone', e.target.value)}
+              />
             </div>
 
-            {/* Type de travail */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-200 mb-2">
-                {t.workType} <span className="text-red-400">*</span>
+            <div className="form-field">
+              <label className="field-label">
+                <User style={{ width: '16px', height: '16px' }} />
+                Représentant Client
               </label>
-              <select
-                value={projectInfo.workTypeId}
-                onChange={(e) => handleProjectInfoChange('workTypeId', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-colors text-white"
-              >
-                <option value="" className="text-gray-800">{t.selectWorkType}</option>
-                {allWorkTypes.map(workType => (
-                  <option key={workType.id} value={workType.id} className="text-gray-800">
-                    {workType.name} - {workType.category}
-                  </option>
-                ))}
-              </select>
+              <input
+                type="text"
+                className="premium-input"
+                placeholder="Nom du responsable projet"
+                value={projectInfo.clientRepresentative || ''}
+                onChange={(e) => updateProjectInfo('clientRepresentative', e.target.value)}
+              />
             </div>
 
-            {/* Description */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-200 mb-2">
-                {t.projectDescription}
+            <div className="form-field">
+              <label className="field-label">
+                <Phone style={{ width: '16px', height: '16px' }} />
+                Téléphone Représentant
               </label>
-              <textarea
-                value={projectInfo.description}
-                onChange={(e) => handleProjectInfoChange('description', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-colors text-white placeholder-gray-400"
-                rows={4}
-                placeholder={t.projectDescriptionPlaceholder}
+              <input
+                type="tel"
+                className="premium-input"
+                placeholder="Ex: (514) 555-0456"
+                value={projectInfo.clientRepresentativePhone || ''}
+                onChange={(e) => updateProjectInfo('clientRepresentativePhone', e.target.value)}
               />
             </div>
           </div>
 
-          {/* Planification */}
-          <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-              <Calendar className="w-5 h-5 mr-2 text-green-400" />
-              Planification
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Date de début */}
-              <div>
-                <label className="block text-sm font-medium text-gray-200 mb-2">
-                  {t.plannedStartDate} <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={projectInfo.plannedStartDate}
-                  onChange={(e) => handleProjectInfoChange('plannedStartDate', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-colors text-white"
-                  min={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-
-              {/* Durée estimée */}
-              <div>
-                <label className="block text-sm font-medium text-gray-200 mb-2">
-                  {t.estimatedDuration}
-                </label>
-                <input
-                  type="number"
-                  value={projectInfo.estimatedDuration}
-                  onChange={(e) => handleProjectInfoChange('estimatedDuration', parseInt(e.target.value) || 0)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-colors text-white placeholder-gray-400"
-                  min="1"
-                  max="720"
-                  placeholder="8"
-                />
-              </div>
-
-              {/* Date de fin (calculée automatiquement) */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-200 mb-2">
-                  {t.plannedEndDate}
-                </label>
-                <input
-                  type="date"
-                  value={projectInfo.plannedEndDate}
-                  onChange={(e) => handleProjectInfoChange('plannedEndDate', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white"
-                  readOnly
-                />
-                <p className="mt-1 text-xs text-gray-400">
-                  <Info className="w-3 h-3 inline mr-1" />
-                  Calculée automatiquement selon la durée estimée
-                </p>
-              </div>
+          {/* Section Projet */}
+          <div className="form-section">
+            <div className="section-header">
+              <Briefcase className="section-icon" />
+              <h3 className="section-title">📋 Détails du Projet</h3>
             </div>
-          </div>
-        </div>
 
-        {/* Colonne droite - Localisation et équipe */}
-        <div className="space-y-6">
-          {/* Localisation */}
-          <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-              <MapPin className="w-5 h-5 mr-2 text-purple-400" />
-              Localisation
-            </h3>
-
-            {/* Adresse */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-200 mb-2">
-                {t.workLocation} <span className="text-red-400">*</span>
+            <div className="form-field">
+              <label className="field-label">
+                <Briefcase style={{ width: '16px', height: '16px' }} />
+                Numéro de Projet
+                <span className="required-indicator">*</span>
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={projectInfo.workLocation.street}
-                  onChange={(e) => {
-                    handleLocationChange('street', e.target.value);
-                    handleAddressSearch(e.target.value);
-                  }}
-                  className="flex-1 px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-colors text-white placeholder-gray-400"
-                  placeholder={t.workLocationPlaceholder}
-                />
-                <button
-                  type="button"
-                  onClick={handleAutoDetectLocation}
-                  disabled={isLoadingLocation}
-                  className="px-4 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
-                  title={t.autoDetectLocation}
-                >
-                  {isLoadingLocation ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Globe className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-
-              {/* Suggestions d'adresses */}
-              {addressSuggestions.length > 0 && (
-                <div className="mt-2 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm shadow-lg">
-                  {addressSuggestions.map((suggestion, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => {
-                        handleLocationChange('street', suggestion);
-                        setAddressSuggestions([]);
-                      }}
-                      className="w-full text-left px-4 py-2 text-white hover:bg-white/10 transition-colors border-b border-white/10 last:border-b-0"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <input
+                type="text"
+                className="premium-input"
+                placeholder="Ex: PRJ-2025-001"
+                value={projectInfo.projectNumber || ''}
+                onChange={(e) => updateProjectInfo('projectNumber', e.target.value)}
+              />
             </div>
 
-            {/* Détails de l'adresse */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-200 mb-1">Ville</label>
-                <input
-                  type="text"
-                  value={projectInfo.workLocation.city}
-                  onChange={(e) => handleLocationChange('city', e.target.value)}
-                  className="w-full px-3 py-2 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400"
-                  placeholder="Sherbrooke"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-200 mb-1">Province</label>
-                <input
-                  type="text"
-                  value={projectInfo.workLocation.province}
-                  onChange={(e) => handleLocationChange('province', e.target.value)}
-                  className="w-full px-3 py-2 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400"
-                  placeholder="QC"
-                />
+            <div className="form-field">
+              <label className="field-label">
+                <FileText style={{ width: '16px', height: '16px' }} />
+                # AST Client (Optionnel)
+              </label>
+              <input
+                type="text"
+                className="premium-input"
+                placeholder="Numéro fourni par le client"
+                value={projectInfo.astClientNumber || ''}
+                onChange={(e) => updateProjectInfo('astClientNumber', e.target.value)}
+              />
+              <div className="field-help">
+                Numéro de référence du client (si applicable)
               </div>
             </div>
 
-            {/* Coordonnées GPS */}
-            {projectInfo.workLocation.coordinates && (
-              <div className="bg-white/10 p-3 rounded-lg border border-white/20">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-200">{t.coordinates}:</span>
-                  <span className="text-sm text-gray-300 font-mono">
-                    {projectInfo.workLocation.coordinates.lat?.toFixed(6)}, {projectInfo.workLocation.coordinates.lng?.toFixed(6)}
-                  </span>
-                </div>
+            <div className="two-column">
+              <div className="form-field">
+                <label className="field-label">
+                  <Calendar style={{ width: '16px', height: '16px' }} />
+                  Date
+                </label>
+                <input
+                  type="date"
+                  className="premium-input"
+                  value={projectInfo.date || new Date().toISOString().split('T')[0]}
+                  onChange={(e) => updateProjectInfo('date', e.target.value)}
+                />
               </div>
-            )}
+
+              <div className="form-field">
+                <label className="field-label">
+                  <Clock style={{ width: '16px', height: '16px' }} />
+                  Heure
+                </label>
+                <input
+                  type="time"
+                  className="premium-input"
+                  value={projectInfo.time || new Date().toTimeString().substring(0, 5)}
+                  onChange={(e) => updateProjectInfo('time', e.target.value)}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Chef d'équipe */}
-          <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-              <Users className="w-5 h-5 mr-2 text-orange-400" />
-              {t.teamLeader}
-            </h3>
+          {/* Section Localisation */}
+          <div className="form-section">
+            <div className="section-header">
+              <MapPin className="section-icon" />
+              <h3 className="section-title">📍 Localisation</h3>
+            </div>
 
-            <div className="space-y-4">
-              {/* Nom */}
-              <div>
-                <label className="block text-sm font-medium text-gray-200 mb-2">
-                  {t.teamLeaderName} <span className="text-red-400">*</span>
+            <div className="form-field">
+              <label className="field-label">
+                <MapPin style={{ width: '16px', height: '16px' }} />
+                Lieu des Travaux
+                <span className="required-indicator">*</span>
+              </label>
+              <input
+                type="text"
+                className="premium-input"
+                placeholder="Adresse complète du site de travail"
+                value={projectInfo.workLocation || ''}
+                onChange={(e) => updateProjectInfo('workLocation', e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                Type d'Industrie
+              </label>
+              <select
+                className="premium-select"
+                value={projectInfo.industry || 'electrical'}
+                onChange={(e) => updateProjectInfo('industry', e.target.value)}
+              >
+                <option value="electrical">⚡ Électrique</option>
+                <option value="construction">🏗️ Construction</option>
+                <option value="industrial">🏭 Industriel</option>
+                <option value="manufacturing">⚙️ Manufacturier</option>
+                <option value="office">🏢 Bureau/Administratif</option>
+                <option value="other">🔧 Autre</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Section Équipe */}
+          <div className="form-section">
+            <div className="section-header">
+              <Users className="section-icon" />
+              <h3 className="section-title">👥 Équipe de Travail</h3>
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Users style={{ width: '16px', height: '16px' }} />
+                Nombre de Personnes
+                <span className="required-indicator">*</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                className="premium-input"
+                placeholder="Ex: 5"
+                value={projectInfo.workerCount || 1}
+                onChange={(e) => updateProjectInfo('workerCount', parseInt(e.target.value) || 1)}
+              />
+              <div className="field-help">
+                Ce nombre sera comparé aux approbations d'équipe
+              </div>
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Clock style={{ width: '16px', height: '16px' }} />
+                Durée Estimée
+              </label>
+              <input
+                type="text"
+                className="premium-input"
+                placeholder="Ex: 4 heures, 2 jours, 1 semaine"
+                value={projectInfo.estimatedDuration || ''}
+                onChange={(e) => updateProjectInfo('estimatedDuration', e.target.value)}
+              />
+            </div>
+
+            <div className="two-column">
+              <div className="form-field">
+                <label className="field-label">
+                  <AlertTriangle style={{ width: '16px', height: '16px' }} />
+                  Contact d'Urgence
                 </label>
                 <input
                   type="text"
-                  value={projectInfo.teamLeader.name}
-                  onChange={(e) => handleTeamLeaderChange('name', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-colors text-white placeholder-gray-400"
-                  placeholder="Jean Tremblay"
+                  className="premium-input"
+                  placeholder="Nom du contact"
+                  value={projectInfo.emergencyContact || ''}
+                  onChange={(e) => updateProjectInfo('emergencyContact', e.target.value)}
                 />
               </div>
 
-              {/* Poste */}
-              <div>
-                <label className="block text-sm font-medium text-gray-200 mb-2">
-                  {t.teamLeaderPosition}
+              <div className="form-field">
+                <label className="field-label">
+                  <Phone style={{ width: '16px', height: '16px' }} />
+                  # Urgence
                 </label>
                 <input
-                  type="text"
-                  value={projectInfo.teamLeader.position}
-                  onChange={(e) => handleTeamLeaderChange('position', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-colors text-white placeholder-gray-400"
-                  placeholder="Superviseur électrique"
+                  type="tel"
+                  className="premium-input"
+                  placeholder="911 ou autre"
+                  value={projectInfo.emergencyPhone || ''}
+                  onChange={(e) => updateProjectInfo('emergencyPhone', e.target.value)}
                 />
               </div>
+            </div>
+          </div>
+        </div>
 
-              {/* Contact */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-200 mb-2">
-                    {t.teamLeaderPhone}
-                  </label>
-                  <input
-                    type="tel"
-                    value={projectInfo.teamLeader.phone}
-                    onChange={(e) => handleTeamLeaderChange('phone', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-colors text-white placeholder-gray-400"
-                    placeholder="(819) 555-0123"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-200 mb-2">
-                    {t.teamLeaderEmail}
-                  </label>
-                  <input
-                    type="email"
-                    value={projectInfo.teamLeader.email}
-                    onChange={(e) => handleTeamLeaderChange('email', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-colors text-white placeholder-gray-400"
-                    placeholder="jean.tremblay@entreprise.com"
-                  />
-                </div>
-              </div>
+        {/* Section Description - Pleine largeur */}
+        <div className="form-section">
+          <div className="section-header">
+            <FileText className="section-icon" />
+            <h3 className="section-title">📝 Description Détaillée des Travaux</h3>
+          </div>
+
+          <div className="form-field">
+            <label className="field-label">
+              <FileText style={{ width: '16px', height: '16px' }} />
+              Description Complète
+              <span className="required-indicator">*</span>
+            </label>
+            <textarea
+              className="premium-textarea"
+              placeholder="Décrivez en détail les travaux à effectuer, les méthodes utilisées, les équipements impliqués, les zones d'intervention..."
+              value={projectInfo.workDescription || ''}
+              onChange={(e) => updateProjectInfo('workDescription', e.target.value)}
+            />
+            <div className="field-help">
+              Plus la description est détaillée, plus l'analyse de sécurité sera précise
             </div>
           </div>
         </div>
       </div>
-
-      {/* Message d'urgence du client */}
-      {selectedClient && (
-        <div className="bg-red-500/20 border border-red-400/30 rounded-xl p-6 backdrop-blur-sm">
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-red-500/30 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-red-400" />
-              </div>
-            </div>
-            <div className="flex-1">
-              <h4 className="text-lg font-semibold text-red-300 mb-2">
-                {t.emergencyProtocol} - {selectedClient.name}
-              </h4>
-              <p className="text-red-200">
-                {EMERGENCY_MESSAGES[selectedClient.id as keyof typeof EMERGENCY_MESSAGES]?.[language] || 
-                 EMERGENCY_MESSAGES.default[language]}
-              </p>
-              {selectedClient.emergencyContact && (
-                <div className="mt-3 flex items-center space-x-4 text-sm text-red-300">
-                  <div className="flex items-center space-x-1">
-                    <Phone className="w-4 h-4" />
-                    <span>{selectedClient.emergencyContact}</span>
-                  </div>
-                  {selectedClient.dispatchContact && (
-                    <div className="flex items-center space-x-1">
-                      <Mail className="w-4 h-4" />
-                      <span>{selectedClient.dispatchContact}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Résumé de validation */}
-      <div className="bg-white/5 border border-white/20 rounded-xl p-6 backdrop-blur-sm">
-        <h4 className="text-lg font-semibold text-white mb-4">Résumé de l'étape</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center">
-            <div className={`text-2xl font-bold ${projectInfo.title && projectInfo.clientId ? 'text-green-400' : 'text-gray-500'}`}>
-              {projectInfo.title && projectInfo.clientId ? '✓' : '○'}
-            </div>
-            <div className="text-sm text-gray-300">Informations de base</div>
-          </div>
-          <div className="text-center">
-            <div className={`text-2xl font-bold ${projectInfo.workLocation.street ? 'text-green-400' : 'text-gray-500'}`}>
-              {projectInfo.workLocation.street ? '✓' : '○'}
-            </div>
-            <div className="text-sm text-gray-300">Localisation</div>
-          </div>
-          <div className="text-center">
-            <div className={`text-2xl font-bold ${projectInfo.teamLeader.name ? 'text-green-400' : 'text-gray-500'}`}>
-              {projectInfo.teamLeader.name ? '✓' : '○'}
-            </div>
-            <div className="text-sm text-gray-300">Chef d'équipe</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </>
   );
-};
-
-export default Step1ProjectInfo;
+}
