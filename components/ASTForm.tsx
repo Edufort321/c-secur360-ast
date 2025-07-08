@@ -6,7 +6,7 @@ import {
   AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building, 
   Phone, User, Briefcase, Copy, Check, Camera, HardHat, Zap, Settings,
   Plus, Trash2, Edit, Star, Wifi, WifiOff, Upload, Bell, Wrench, Wind,
-  Droplets, Flame, Activity, Search, Filter, Eye as EyeIcon, Hand
+  Droplets, Flame, Activity, Search, Filter, Hand
 } from 'lucide-react';
 
 // Import des composants Steps
@@ -67,41 +67,15 @@ const Step5Validation = ({ formData, onDataChange, language, tenant, errors }: a
   </div>
 );
 
-const Step6TeamShare = ({ formData, onDataChange, language, tenant, errors }: any) => (
-  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
-    <Users size={64} color="#84cc16" style={{ marginBottom: '24px' }} />
-    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
-      📢 Step 6: Partage Équipe
-    </h3>
-    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
-      Plan de communication, procédures d'urgence, formation équipe,
-      distribution multi-canal et accessibilité universelle.
-    </p>
-    <div style={{
-      background: 'rgba(132, 204, 22, 0.1)',
-      border: '1px solid rgba(132, 204, 22, 0.3)',
-      borderRadius: '12px',
-      padding: '20px',
-      color: '#84cc16',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '8px'
-    }}>
-      <Settings size={20} className="pulse-animation" />
-      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
-    </div>
-  </div>
-);
-
-const Step7Finalization = ({ formData, onDataChange, language, tenant, errors }: any) => (
+const Step6Finalization = ({ formData, onDataChange, language, tenant, errors }: any) => (
   <div style={{ textAlign: 'center', padding: '60px 40px' }}>
     <CheckCircle size={64} color="#059669" style={{ marginBottom: '24px' }} />
     <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
-      🏁 Step 7: Finalisation
+      🏁 Step 6: Finalisation
     </h3>
     <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
-      Contrôle qualité automatique, validation finale, archivage sécurisé,
-      distribution multi-canal et plan de surveillance continue.
+      Validation finale, partage équipe, formation et archivage sécurisé.
+      Communication multi-canal et plan de surveillance continue.
     </p>
     <div style={{
       background: 'rgba(5, 150, 105, 0.1)',
@@ -138,14 +112,12 @@ interface ASTData {
   updatedAt: string;
   verificationDeadline?: string;
   
-  // Étapes de l'AST
+  // Étapes de l'AST (6 steps maintenant)
   projectInfo: ProjectInfo;
   equipment: EquipmentData;
   hazards: HazardData;
-  controls: ControlData;
   permits: PermitData;
   validation: ValidationData;
-  teamShare: TeamShareData;
   finalization: FinalizationData;
   
   // Workflow
@@ -277,28 +249,6 @@ interface ControlMeasure {
   responsible?: string;
   deadline?: string;
   notes?: string;
-}
-
-interface ControlData {
-  controlMeasures: ControlMeasure[];
-  hierarchyCompliance: {
-    elimination: number;
-    substitution: number;
-    engineering: number;
-    administrative: number;
-    ppe: number;
-  };
-  overallEffectiveness: number;
-  implementationPlan: ImplementationStep[];
-}
-
-interface ImplementationStep {
-  id: string;
-  description: string;
-  responsible: string;
-  deadline: string;
-  status: 'pending' | 'in_progress' | 'completed';
-  dependencies?: string[];
 }
 
 interface PermitData {
@@ -491,12 +441,21 @@ interface FinalValidation {
   validationSignature: string;
 }
 
-interface TeamShareData {
+interface FinalizationData {
+  // Partage équipe
   communicationPlan: CommunicationPlan;
   emergencyProcedures: EmergencyProcedure[];
   training: TrainingRecord[];
   distribution: DistributionRecord[];
   accessibility: AccessibilityFeatures;
+  
+  // Finalisation
+  qualityReview: QualityReview;
+  complianceCheck: ComplianceCheck;
+  finalApproval: FinalApproval;
+  archiving: ArchivingInfo;
+  finalDistribution: FinalDistribution;
+  monitoring: MonitoringPlan;
 }
 
 interface CommunicationPlan {
@@ -561,15 +520,6 @@ interface AccessibilityFeatures {
   audioSupport: boolean;
   simplifiedVersion: boolean;
   largeText: boolean;
-}
-
-interface FinalizationData {
-  qualityReview: QualityReview;
-  complianceCheck: ComplianceCheck;
-  finalApproval: FinalApproval;
-  archiving: ArchivingInfo;
-  distribution: FinalDistribution;
-  monitoring: MonitoringPlan;
 }
 
 interface QualityReview {
@@ -725,18 +675,6 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
         categories: {}
       }
     },
-    controls: {
-      controlMeasures: [],
-      hierarchyCompliance: {
-        elimination: 0,
-        substitution: 0,
-        engineering: 0,
-        administrative: 0,
-        ppe: 0
-      },
-      overallEffectiveness: 0,
-      implementationPlan: []
-    },
     permits: {
       permits: [],
       authorities: [],
@@ -760,7 +698,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       improvements: [],
       finalValidation: {} as FinalValidation
     },
-    teamShare: {
+    finalization: {
       communicationPlan: {
         channels: [],
         frequencies: [],
@@ -778,9 +716,27 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
         audioSupport: false,
         simplifiedVersion: false,
         largeText: false
-      }
+      },
+      qualityReview: {} as QualityReview,
+      complianceCheck: {
+        rsst: false,
+        cnesst: false,
+        internal: false,
+        client: false,
+        regulatory: false,
+        certifications: [],
+        gaps: []
+      },
+      finalApproval: {} as FinalApproval,
+      archiving: {} as ArchivingInfo,
+      finalDistribution: {
+        recipients: [],
+        distributionMethod: 'email',
+        trackingEnabled: false,
+        confirmationRequired: false
+      },
+      monitoring: {} as MonitoringPlan
     },
-    finalization: {} as FinalizationData,
     signatures: [],
     approvals: [],
     notifications: []
@@ -873,12 +829,6 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
   }, [updateASTData]);
 
   const handleStep6DataChange = useCallback((section: string, data: any) => {
-    if (section === 'teamShare') {
-      updateASTData('teamShare', data);
-    }
-  }, [updateASTData]);
-
-  const handleStep7DataChange = useCallback((section: string, data: any) => {
     if (section === 'finalization') {
       updateASTData('finalization', data);
     }
@@ -928,7 +878,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     }));
   }, []);
 
-  // =================== CONFIGURATION STEPS ===================
+  // =================== CONFIGURATION STEPS (6 STEPS) ===================
   const steps = [
     { 
       id: 1, 
@@ -977,17 +927,8 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     },
     { 
       id: 6, 
-      title: 'Partage Équipe', 
-      subtitle: 'Communication & Formation',
-      icon: Users, 
-      color: '#84cc16',
-      required: false,
-      mobileOptimized: true
-    },
-    { 
-      id: 7, 
       title: 'Finalisation', 
-      subtitle: 'Validation finale & Archive',
+      subtitle: 'Partage, Formation & Archive',
       icon: CheckCircle, 
       color: '#059669',
       required: true,
@@ -1442,7 +1383,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
               />
             )}
 
-            {/* ÉTAPE 3: Dangers & Risques */}
+            {/* ÉTAPE 3: Dangers & Risques + Moyens de Contrôle */}
             {currentStep === 3 && (
               <Step3Hazards
                 formData={astData}
@@ -1475,22 +1416,11 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
               />
             )}
 
-            {/* ÉTAPE 6: Partage Équipe */}
+            {/* ÉTAPE 6: Finalisation (Partage + Archive) */}
             {currentStep === 6 && (
-              <Step6TeamShare
+              <Step6Finalization
                 formData={astData}
                 onDataChange={handleStep6DataChange}
-                language={language}
-                tenant={tenant}
-                errors={{}}
-              />
-            )}
-
-            {/* ÉTAPE 7: Finalisation */}
-            {currentStep === 7 && (
-              <Step7Finalization
-                formData={astData}
-                onDataChange={handleStep7DataChange}
                 language={language}
                 tenant={tenant}
                 errors={{}}
