@@ -1,1545 +1,1532 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  BarChart3, 
-  TrendingUp, 
-  AlertTriangle, 
-  Calendar, 
-  FileText, 
-  Users, 
-  Shield, 
-  Target,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Eye,
-  Download,
-  Filter,
-  Search,
-  Bell,
-  MapPin,
-  ChevronRight,
-  Activity,
-  Award,
-  Zap,
-  Play,
-  Archive,
-  FolderOpen,
-  History,
-  Bookmark,
-  Database,
-  ChevronDown,
-  Camera,
-  Timer,
-  PieChart,
-  LineChart
-} from 'lucide-react'
+  FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle, 
+  AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building, 
+  Phone, User, Briefcase, Copy, Check, Camera, HardHat, Zap, Settings,
+  Plus, Trash2, Edit, Star, Wifi, WifiOff, Upload, Bell, Wrench, Wind,
+  Droplets, Flame, Activity, Search, Filter, Hand
+} from 'lucide-react';
 
-interface DashboardData {
-  // KPI Fonctionnels
-  totalAST: number
-  astThisMonth: number
-  astCompleted: number
-  astMonthly: number[]
-  
-  incidents: number
-  nearMiss: number
-  incidentsTrend: number
-  incidentsByType: { type: string; count: number; color: string }[]
-  
-  hoursWorked: number
-  safeHours: number
-  safetyRate: number
-  
-  photosCount: number
-  photosThisWeek: number
-  
-  // Données graphiques
-  monthlyData: { month: string; ast: number; incidents: number; safety: number }[]
-  performanceTrend: number[]
+// Import des composants Steps - CORRECTION STEP 5
+import Step1ProjectInfo from './steps/Step1ProjectInfo';
+import Step2Equipment from './steps/Step2Equipment';
+import Step3Hazards from './steps/Step3Hazards';
+import Step4Permits from './steps/Step4Permits';
+import Step5Validation from './steps/Step5Validation';  // ← IMPORT RÉEL AU LIEU DU PLACEHOLDER
+import Step6Finalization from './steps/Step6Finalization';
+
+// =================== INTERFACES ENTERPRISE ===================
+interface ASTFormProps {
+  tenant: string;
+  language: 'fr' | 'en';
+  userId?: string;
+  userRole?: 'worker' | 'supervisor' | 'manager' | 'admin';
 }
 
-interface Tenant {
-  id: string
-  subdomain: string
-  companyName: string
+interface ASTData {
+  // Métadonnées
+  id: string;
+  astNumber: string;
+  tenant: string;
+  status: 'draft' | 'pending_verification' | 'approved' | 'auto_approved' | 'rejected';
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  verificationDeadline?: string;
+  
+  // Étapes de l'AST (6 steps maintenant)
+  projectInfo: ProjectInfo;
+  equipment: EquipmentData;
+  hazards: HazardData;
+  permits: PermitData;
+  validation: ValidationData;
+  finalization: FinalizationData;
+  
+  // Workflow
+  signatures: Signature[];
+  approvals: Approval[];
+  notifications: NotificationData[];
 }
 
-// Données fonctionnelles réalistes
-const getFunctionalData = (isDemo: boolean): DashboardData => {
-  if (isDemo) {
-    // Données simulées pour démo
-    return {
-      totalAST: 347,
-      astThisMonth: 28,
-      astCompleted: 325,
-      astMonthly: [15, 22, 28, 31, 25, 29, 28],
-      
-      incidents: 2,
-      nearMiss: 8,
-      incidentsTrend: -25,
-      incidentsByType: [
-        { type: 'Électrique', count: 3, color: '#ef4444' },
-        { type: 'Chute', count: 2, color: '#f97316' },
-        { type: 'Équipement', count: 2, color: '#eab308' },
-        { type: 'Ergonomique', count: 1, color: '#22c55e' }
-      ],
-      
-      hoursWorked: 12480,
-      safeHours: 12456,
-      safetyRate: 99.8,
-      
-      photosCount: 156,
-      photosThisWeek: 12,
-      
-      monthlyData: [
-        { month: 'Jan', ast: 15, incidents: 3, safety: 98.2 },
-        { month: 'Fév', ast: 22, incidents: 2, safety: 98.8 },
-        { month: 'Mar', ast: 28, incidents: 1, safety: 99.1 },
-        { month: 'Avr', ast: 31, incidents: 2, safety: 98.9 },
-        { month: 'Mai', ast: 25, incidents: 1, safety: 99.3 },
-        { month: 'Jun', ast: 29, incidents: 0, safety: 99.8 },
-        { month: 'Jul', ast: 28, incidents: 1, safety: 99.5 }
-      ],
-      performanceTrend: [95, 96, 97, 98, 97, 99, 98, 99, 100]
-    }
-  } else {
-    // Données réelles client (à connecter à la DB)
-    return {
-      totalAST: 89,
-      astThisMonth: 12,
-      astCompleted: 84,
-      astMonthly: [8, 12, 15, 11, 9, 14, 12],
-      
-      incidents: 0,
-      nearMiss: 3,
-      incidentsTrend: -100,
-      incidentsByType: [
-        { type: 'Électrique', count: 1, color: '#ef4444' },
-        { type: 'Équipement', count: 2, color: '#eab308' }
-      ],
-      
-      hoursWorked: 3240,
-      safeHours: 3240,
-      safetyRate: 100,
-      
-      photosCount: 67,
-      photosThisWeek: 8,
-      
-      monthlyData: [
-        { month: 'Jan', ast: 8, incidents: 1, safety: 99.1 },
-        { month: 'Fév', ast: 12, incidents: 0, safety: 100 },
-        { month: 'Mar', ast: 15, incidents: 0, safety: 100 },
-        { month: 'Avr', ast: 11, incidents: 0, safety: 100 },
-        { month: 'Mai', ast: 9, incidents: 1, safety: 99.2 },
-        { month: 'Jun', ast: 14, incidents: 0, safety: 100 },
-        { month: 'Jul', ast: 12, incidents: 0, safety: 100 }
-      ],
-      performanceTrend: [98, 99, 100, 100, 99, 100, 100, 100, 100]
-    }
-  }
+interface ProjectInfo {
+  // Client et localisation
+  client: string;
+  clientPhone?: string;
+  clientRepresentative?: string;
+  clientRepresentativePhone?: string;
+  workLocation: string;
+  gpsCoordinates?: string;
+  industry: string;
+  
+  // Projet
+  projectNumber: string;
+  astClientNumber?: string;
+  date: string;
+  time: string;
+  workDescription: string;
+  workerCount: number;
+  estimatedDuration?: string;
+  
+  // Contacts d'urgence
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  
+  // Verrouillage/Cadenassage
+  lockoutPoints?: LockoutPoint[];
+  lockoutPhotos?: LockoutPhoto[];
 }
 
-// Composant Graphique Simple
-const SimpleChart = ({ data, type = 'line' }: { data: any[], type?: 'line' | 'bar' | 'pie' }) => {
-  if (type === 'pie') {
-    const total = data.reduce((sum, item) => sum + item.count, 0)
-    let currentAngle = 0
-    
-    return (
-      <div style={{ width: '200px', height: '200px', position: 'relative', margin: '0 auto' }}>
-        <svg width="200" height="200" viewBox="0 0 200 200">
-          {data.map((item, index) => {
-            const percentage = (item.count / total) * 100
-            const angle = (percentage / 100) * 360
-            const startAngle = currentAngle
-            currentAngle += angle
-            
-            const startX = 100 + 80 * Math.cos((startAngle - 90) * Math.PI / 180)
-            const startY = 100 + 80 * Math.sin((startAngle - 90) * Math.PI / 180)
-            const endX = 100 + 80 * Math.cos((currentAngle - 90) * Math.PI / 180)
-            const endY = 100 + 80 * Math.sin((currentAngle - 90) * Math.PI / 180)
-            
-            const largeArcFlag = angle > 180 ? 1 : 0
-            const pathData = `M 100 100 L ${startX} ${startY} A 80 80 0 ${largeArcFlag} 1 ${endX} ${endY} Z`
-            
-            return (
-              <path
-                key={index}
-                d={pathData}
-                fill={item.color}
-                opacity={0.8}
-                stroke="rgba(255,255,255,0.2)"
-                strokeWidth="2"
-              />
-            )
-          })}
-        </svg>
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-          <div style={{ color: 'white', fontSize: '24px', fontWeight: 'bold' }}>{total}</div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Total</div>
-        </div>
-      </div>
-    )
-  }
-  
-  if (type === 'line') {
-    const maxValue = Math.max(...data.map(d => d.ast))
-    const width = 300
-    const height = 150
-    const padding = 20
-    
-    return (
-      <svg width={width} height={height} style={{ overflow: 'visible' }}>
-        {/* Ligne de performance */}
-        <polyline
-          fill="none"
-          stroke="#22c55e"
-          strokeWidth="3"
-          points={data.map((d, i) => 
-            `${padding + (i * (width - 2 * padding) / (data.length - 1))},${height - padding - (d.ast / maxValue) * (height - 2 * padding)}`
-          ).join(' ')}
-        />
-        {/* Points */}
-        {data.map((d, i) => (
-          <circle
-            key={i}
-            cx={padding + (i * (width - 2 * padding) / (data.length - 1))}
-            cy={height - padding - (d.ast / maxValue) * (height - 2 * padding)}
-            r="4"
-            fill="#22c55e"
-            stroke="white"
-            strokeWidth="2"
-          />
-        ))}
-      </svg>
-    )
-  }
-  
-  return <div>Graphique en développement</div>
+interface LockoutPoint {
+  id: string;
+  energyType: 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'chemical' | 'thermal' | 'gravity';
+  equipmentName: string;
+  location: string;
+  lockType: string;
+  tagNumber: string;
+  isLocked: boolean;
+  verifiedBy: string;
+  verificationTime: string;
+  photos: string[];
+  notes: string;
+  completedProcedures: number[];
 }
 
-export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo', companyName: 'Demo Company' } }: { tenant?: Tenant }) {
-  const [timeFilter, setTimeFilter] = useState('30d')
-  const [isVisible, setIsVisible] = useState(false)
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
-  const [showArchiveMenu, setShowArchiveMenu] = useState(false)
-  
-  const isDemo = tenant.subdomain === 'demo'
-  const data = getFunctionalData(isDemo)
+interface LockoutPhoto {
+  id: string;
+  url: string;
+  caption: string;
+  category: 'before_lockout' | 'during_lockout' | 'lockout_device' | 'client_form' | 'verification';
+  timestamp: string;
+  lockoutPointId?: string;
+}
 
-  // Animation d'entrée
+interface EquipmentData {
+  list: Equipment[];
+  selected: Equipment[];
+  totalCost: number;
+  inspectionStatus: {
+    total: number;
+    verified: number;
+    available: number;
+    verificationRate: number;
+    availabilityRate: number;
+  };
+}
+
+interface Equipment {
+  id: string;
+  name: string;
+  category: string;
+  required: boolean;
+  available: boolean;
+  verified: boolean;
+  notes?: string;
+  certification?: string;
+  inspectionDate?: string;
+  inspectedBy?: string;
+  condition?: 'excellent' | 'good' | 'fair' | 'poor';
+  cost?: number;
+  supplier?: string;
+  photos?: EquipmentPhoto[];
+  priority?: 'high' | 'medium' | 'low';
+  mandatoryFor?: string[];
+}
+
+interface EquipmentPhoto {
+  id: string;
+  url: string;
+  caption: string;
+  timestamp: string;
+  category: 'inspection' | 'condition' | 'certification' | 'use';
+}
+
+interface HazardData {
+  list: Hazard[];
+  selected: Hazard[];
+  stats: {
+    totalHazards: number;
+    categories: Record<string, number>;
+  };
+}
+
+interface Hazard {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  legislation: string;
+  icon: string;
+  selected: boolean;
+  controlMeasures: ControlMeasure[];
+}
+
+interface ControlMeasure {
+  id: string;
+  name: string;
+  category: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
+  description: string;
+  priority: number;
+  implemented: boolean;
+  responsible?: string;
+  deadline?: string;
+  notes?: string;
+}
+
+interface PermitData {
+  permits: WorkPermit[];
+  authorities: Authority[];
+  generalRequirements: GeneralRequirement[];
+  timeline: TimelineItem[];
+  notifications: NotificationItem[];
+  hotWorkPermit?: HotWorkPermit;
+  confinedSpacePermit?: ConfinedSpacePermit;
+  heightWorkPermit?: HeightWorkPermit;
+  electricalPermit?: ElectricalPermit;
+  regulatory: RegulatoryCompliance;
+}
+
+interface Authority {
+  id: string;
+  name: string;
+  type: string;
+  contactInfo: string;
+  jurisdiction: string;
+  requirements: string[];
+  isRequired: boolean;
+}
+
+interface GeneralRequirement {
+  id: string;
+  category: string;
+  description: string;
+  isRequired: boolean;
+  deadline?: string;
+  responsible?: string;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
+interface TimelineItem {
+  id: string;
+  date: string;
+  activity: string;
+  responsible: string;
+  status: 'pending' | 'completed' | 'overdue';
+  dependencies?: string[];
+}
+
+interface NotificationItem {
+  id: string;
+  recipient: string;
+  type: string;
+  message: string;
+  scheduledDate: string;
+  sent: boolean;
+  acknowledged: boolean;
+}
+
+interface WorkPermit {
+  id: string;
+  type: string;
+  number: string;
+  issuedBy: string;
+  validFrom: string;
+  validTo: string;
+  conditions: string[];
+  isRequired: boolean;
+  isObtained: boolean;
+  documents?: PermitDocument[];
+}
+
+interface PermitDocument {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  timestamp: string;
+}
+
+interface HotWorkPermit {
+  fireWatchRequired: boolean;
+  fireWatchName?: string;
+  extinguisherLocation: string;
+  hotWorkType: string[];
+  precautions: string[];
+  validityHours: number;
+}
+
+interface ConfinedSpacePermit {
+  spaceType: string;
+  entryProcedure: string[];
+  gasMonitoring: boolean;
+  attendantName?: string;
+  ventilationRequired: boolean;
+  emergencyProcedures: string[];
+}
+
+interface HeightWorkPermit {
+  workHeight: number;
+  fallProtectionType: string[];
+  anchoragePoints: string[];
+  weatherRestrictions: string[];
+  rescuePlan: string;
+}
+
+interface ElectricalPermit {
+  voltageLevel: string;
+  lockoutRequired: boolean;
+  qualifiedPersonnel: string[];
+  testingRequired: boolean;
+  isolationVerified: boolean;
+}
+
+interface RegulatoryCompliance {
+  rsst: boolean;
+  cnesst: boolean;
+  municipalPermits: string[];
+  environmentalConsiderations: string[];
+  specialConditions: string[];
+}
+
+// =================== INTERFACE VALIDATION CORRIGÉE ===================
+interface ValidationData {
+  // Compatible avec Step5Validation
+  reviewers: TeamMember[];
+  approvalRequired: boolean;
+  minimumReviewers: number;
+  reviewDeadline?: string;
+  validationCriteria: {
+    hazardIdentification: boolean;
+    controlMeasures: boolean;
+    equipmentSelection: boolean;
+    procedural: boolean;
+    regulatory: boolean;
+  };
+  finalApproval?: {
+    approvedBy: string;
+    approvedAt: string;
+    signature: string;
+    conditions?: string;
+  };
+  
+  // Données étendues pour entreprise
+  teamMembers?: TeamMember[];
+  discussionPoints?: DiscussionPoint[];
+  meetingMinutes?: MeetingMinutes;
+  approvals?: TeamApproval[];
+  concerns?: string[];
+  improvements?: string[];
+}
+
+interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  email: string;
+  department: string;
+  experience?: string;
+  certifications?: string[];
+  phoneNumber?: string;
+  hasParticipated?: boolean;
+  signature?: string;
+  signatureDate?: string;
+  feedback?: string;
+  certification?: string;
+  status: 'approved' | 'pending' | 'rejected' | 'reviewing';
+  comments?: string;
+  rating?: number;
+  validatedAt?: string;
+}
+
+interface DiscussionPoint {
+  id: string;
+  category: 'safety' | 'procedure' | 'equipment' | 'environment' | 'emergency';
+  title: string;
+  description: string;
+  raisedBy: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  resolution?: string;
+  isResolved: boolean;
+  timestamp: string;
+}
+
+interface MeetingMinutes {
+  date: string;
+  duration: number;
+  location: string;
+  facilitator: string;
+  participants: string[];
+  keyPoints: string[];
+  decisions: string[];
+  actionItems: ActionItem[];
+}
+
+interface ActionItem {
+  id: string;
+  description: string;
+  assignedTo: string;
+  deadline: string;
+  status: 'open' | 'in_progress' | 'completed';
+  priority: 'low' | 'medium' | 'high';
+}
+
+interface TeamApproval {
+  memberId: string;
+  memberName: string;
+  role: string;
+  approved: boolean;
+  signature?: string;
+  timestamp?: string;
+  conditions?: string;
+  digitalSignature?: string;
+}
+
+interface FinalValidation {
+  allMembersParticipated: boolean;
+  allConcernsAddressed: boolean;
+  consensusReached: boolean;
+  validatorName: string;
+  validationDate: string;
+  validationSignature: string;
+}
+// =================== INTERFACES FINALIZATION ===================
+interface FinalizationData {
+  // Données fusionnées de TeamShare + Finalization
+  workers: Worker[];
+  photos: Photo[];
+  finalComments: string;
+  documentGeneration: DocumentGeneration;
+  distribution: Distribution;
+  completionStatus: {
+    projectInfo: boolean;
+    equipment: boolean;
+    hazards: boolean;
+    permits: boolean;
+    validation: boolean;
+  };
+  supervisorSignature?: {
+    signedBy: string;
+    signedAt: string;
+    signature: string;
+    title: string;
+  };
+  metadata: {
+    createdAt: string;
+    completedAt?: string;
+    version: string;
+    lastModified: string;
+    totalDuration?: number;
+  };
+  shareLink?: string;
+  qrCode?: string;
+}
+
+interface Worker {
+  id: string;
+  name: string;
+  position: string;
+  employeeId?: string;
+  company: string;
+  phone?: string;
+  email?: string;
+  certifications: string[];
+  experience: string;
+  hasConsented: boolean;
+  consentDate?: string;
+  consentTime?: string;
+  signature?: string;
+  digitalSignature?: boolean;
+}
+
+interface Photo {
+  id: string;
+  url: string;
+  caption: string;
+  type: 'before' | 'during' | 'after' | 'equipment' | 'hazard' | 'general';
+  timestamp: string;
+  location?: {
+    lat: number;
+    lng: number;
+  };
+  tags: string[];
+}
+
+interface DocumentGeneration {
+  format: 'pdf' | 'word' | 'excel' | 'html';
+  template: 'standard' | 'detailed' | 'summary' | 'regulatory';
+  language: 'fr' | 'en' | 'both';
+  includePhotos: boolean;
+  includeSignatures: boolean;
+  includeQRCode: boolean;
+  branding: boolean;
+  watermark: boolean;
+}
+
+interface Distribution {
+  email: {
+    enabled: boolean;
+    recipients: string[];
+    subject: string;
+    message: string;
+  };
+  portal: {
+    enabled: boolean;
+    publish: boolean;
+    category: string;
+  };
+  archive: {
+    enabled: boolean;
+    retention: number;
+    location: 'local' | 'cloud' | 'both';
+  };
+  compliance: {
+    enabled: boolean;
+    authorities: string[];
+    submissionDate?: string;
+  };
+}
+
+interface Signature {
+  id: string;
+  signerId: string;
+  signerName: string;
+  signerRole: string;
+  signatureData: string;
+  timestamp: string;
+  ipAddress?: string;
+  deviceInfo?: string;
+}
+
+interface Approval {
+  id: string;
+  approverId: string;
+  approverName: string;
+  approverRole: string;
+  approved: boolean;
+  comments?: string;
+  timestamp: string;
+  conditions?: string[];
+}
+
+interface NotificationData {
+  id: string;
+  recipientId: string;
+  recipientName: string;
+  type: 'signature_request' | 'approval_request' | 'status_change' | 'reminder';
+  message: string;
+  sent: boolean;
+  sentAt?: string;
+  readAt?: string;
+}
+
+// =================== COMPOSANT PRINCIPAL ===================
+export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'worker' }: ASTFormProps) {
+  // =================== ÉTAT PRINCIPAL ===================
+  const [astData, setAstData] = useState<ASTData>({
+    id: '',
+    astNumber: '',
+    tenant,
+    status: 'draft',
+    createdBy: userId || '',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    projectInfo: {} as ProjectInfo,
+    equipment: {
+      list: [],
+      selected: [],
+      totalCost: 0,
+      inspectionStatus: {
+        total: 0,
+        verified: 0,
+        available: 0,
+        verificationRate: 0,
+        availabilityRate: 0
+      }
+    },
+    hazards: {
+      list: [],
+      selected: [],
+      stats: {
+        totalHazards: 0,
+        categories: {}
+      }
+    },
+    permits: {
+      permits: [],
+      authorities: [],
+      generalRequirements: [],
+      timeline: [],
+      notifications: [],
+      regulatory: {
+        rsst: false,
+        cnesst: false,
+        municipalPermits: [],
+        environmentalConsiderations: [],
+        specialConditions: []
+      }
+    },
+    // =================== VALIDATION CORRIGÉE ===================
+    validation: {
+      reviewers: [],
+      approvalRequired: true,
+      minimumReviewers: 2,
+      reviewDeadline: '',
+      validationCriteria: {
+        hazardIdentification: false,
+        controlMeasures: false,
+        equipmentSelection: false,
+        procedural: false,
+        regulatory: false
+      },
+      // Données étendues optionnelles
+      teamMembers: [],
+      discussionPoints: [],
+      meetingMinutes: {} as MeetingMinutes,
+      approvals: [],
+      concerns: [],
+      improvements: []
+    },
+    finalization: {
+      workers: [],
+      photos: [],
+      finalComments: '',
+      documentGeneration: {
+        format: 'pdf',
+        template: 'standard',
+        language: 'fr',
+        includePhotos: true,
+        includeSignatures: true,
+        includeQRCode: true,
+        branding: true,
+        watermark: true
+      },
+      distribution: {
+        email: {
+          enabled: true,
+          recipients: [],
+          subject: '',
+          message: ''
+        },
+        portal: {
+          enabled: true,
+          publish: false,
+          category: 'safety'
+        },
+        archive: {
+          enabled: true,
+          retention: 7,
+          location: 'cloud'
+        },
+        compliance: {
+          enabled: false,
+          authorities: []
+        }
+      },
+      completionStatus: {
+        projectInfo: false,
+        equipment: false,
+        hazards: false,
+        permits: false,
+        validation: false
+      },
+      metadata: {
+        createdAt: new Date().toISOString(),
+        version: '1.0',
+        lastModified: new Date().toISOString()
+      }
+    },
+    signatures: [],
+    approvals: [],
+    notifications: []
+  });
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // =================== GÉNÉRATION NUMÉRO AST ===================
+  const generateASTNumber = useCallback(() => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const random = Math.random().toString(36).substr(2, 8).toUpperCase();
+    return `AST-${year}${month}${day}-${random}`;
+  }, []);
+
+  // =================== INITIALISATION ===================
   useEffect(() => {
-    setIsVisible(true)
-    
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY })
-    }
-    
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [])
+    const astNumber = generateASTNumber();
+    setAstData(prev => ({
+      ...prev,
+      id: astNumber,
+      astNumber
+    }));
 
+    // Détection en ligne/hors ligne
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [generateASTNumber]);
+
+  // =================== GESTION DES DONNÉES ===================
+  const updateASTData = useCallback((section: keyof ASTData, data: any) => {
+    setAstData(prev => ({
+      ...prev,
+      [section]: data,
+      updatedAt: new Date().toISOString()
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  // =================== HANDLERS POUR CHAQUE STEP ===================
+  const handleStep1DataChange = useCallback((section: string, data: any) => {
+    if (section === 'projectInfo') {
+      updateASTData('projectInfo', data);
+    } else if (section === 'astNumber') {
+      setAstData(prev => ({
+        ...prev,
+        astNumber: data,
+        updatedAt: new Date().toISOString()
+      }));
+      setHasUnsavedChanges(true);
+    }
+  }, [updateASTData]);
+
+  const handleStep2DataChange = useCallback((section: string, data: any) => {
+    if (section === 'equipment') {
+      updateASTData('equipment', data);
+    }
+  }, [updateASTData]);
+
+  const handleStep3DataChange = useCallback((section: string, data: any) => {
+    if (section === 'hazards') {
+      updateASTData('hazards', data);
+    }
+  }, [updateASTData]);
+
+  const handleStep4DataChange = useCallback((section: string, data: any) => {
+    if (section === 'permits') {
+      updateASTData('permits', data);
+    }
+  }, [updateASTData]);
+
+  // =================== HANDLER STEP 5 CORRIGÉ ===================
+  const handleStep5DataChange = useCallback((section: string, data: ValidationData) => {
+    if (section === 'validation') {
+      updateASTData('validation', data);
+    }
+  }, [updateASTData]);
+
+  const handleStep6DataChange = useCallback((section: string, data: any) => {
+    if (section === 'finalization') {
+      updateASTData('finalization', data);
+    }
+  }, [updateASTData]);
+
+  // =================== SAUVEGARDE AUTOMATIQUE ===================
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+
+    const saveTimer = setTimeout(async () => {
+      if (isOnline) {
+        try {
+          setIsLoading(true);
+          // TODO: Sauvegarder vers Supabase
+          console.log('Sauvegarde automatique:', astData);
+          setHasUnsavedChanges(false);
+        } catch (error) {
+          console.error('Erreur sauvegarde:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        // Sauvegarde locale si hors ligne
+        localStorage.setItem(`ast_draft_${astData.id}`, JSON.stringify(astData));
+      }
+    }, 2000);
+
+    return () => clearTimeout(saveTimer);
+  }, [astData, hasUnsavedChanges, isOnline]);
+
+  // =================== COPIE NUMÉRO AST ===================
+  const handleCopyAST = useCallback(() => {
+    navigator.clipboard.writeText(astData.astNumber);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [astData.astNumber]);
+
+  // =================== WORKFLOW MANAGEMENT ===================
+  const changeStatus = useCallback((newStatus: ASTData['status']) => {
+    setAstData(prev => ({
+      ...prev,
+      status: newStatus,
+      updatedAt: new Date().toISOString(),
+      verificationDeadline: newStatus === 'pending_verification' 
+        ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h deadline
+        : prev.verificationDeadline
+    }));
+  }, []);
+
+  // =================== CONFIGURATION STEPS (6 STEPS) ===================
+  const steps = [
+    { 
+      id: 1, 
+      title: 'Informations Projet', 
+      subtitle: 'Identification & Verrouillage',
+      icon: FileText, 
+      color: '#3b82f6',
+      required: true,
+      mobileOptimized: true
+    },
+    { 
+      id: 2, 
+      title: 'Équipements', 
+      subtitle: 'EPI et équipements sécurité',
+      icon: Shield, 
+      color: '#f59e0b',
+      required: true,
+      mobileOptimized: true
+    },
+    { 
+      id: 3, 
+      title: 'Dangers & Contrôles', 
+      subtitle: 'Risques + Moyens contrôle',
+      icon: AlertTriangle, 
+      color: '#ef4444',
+      required: true,
+      mobileOptimized: true
+    },
+    { 
+      id: 4, 
+      title: 'Permis & Autorisations', 
+      subtitle: 'Conformité réglementaire',
+      icon: FileText, 
+      color: '#10b981',
+      required: true,
+      mobileOptimized: true
+    },
+    { 
+      id: 5, 
+      title: 'Validation Équipe', 
+      subtitle: 'Signatures & Approbations',
+      icon: Users, 
+      color: '#06b6d4',
+      required: true,
+      mobileOptimized: true
+    },
+    { 
+      id: 6, 
+      title: 'Finalisation', 
+      subtitle: 'Consentement & Archive',
+      icon: CheckCircle, 
+      color: '#059669',
+      required: true,
+      mobileOptimized: true
+    }
+  ];
+  // =================== STATUS BADGE ===================
+  const getStatusBadge = () => {
+    const statusConfig = {
+      'draft': { color: '#64748b', text: 'Brouillon', icon: Edit },
+      'pending_verification': { color: '#f59e0b', text: 'En attente', icon: Clock },
+      'approved': { color: '#10b981', text: 'Approuvé', icon: CheckCircle },
+      'auto_approved': { color: '#059669', text: 'Auto-approuvé', icon: CheckCircle },
+      'rejected': { color: '#ef4444', text: 'Rejeté', icon: AlertTriangle }
+    };
+
+    const config = statusConfig[astData.status];
+    const Icon = config.icon;
+
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '8px 16px',
+        background: `${config.color}20`,
+        border: `1px solid ${config.color}40`,
+        borderRadius: '20px',
+        color: config.color,
+        fontSize: '14px',
+        fontWeight: '500'
+      }}>
+        <Icon size={16} />
+        {config.text}
+      </div>
+    );
+  };
+
+  // =================== RENDU PRINCIPAL ===================
   return (
-    <>
-      {/* CSS Animations Global */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes gradientShift {
-            0%, 100% { 
-              background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%);
-              background-size: 400% 400%;
-              background-position: 0% 50%;
-            }
-            50% { 
-              background-position: 100% 50%;
-            }
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%)',
+      color: '#ffffff',
+      position: 'relative'
+    }}>
+      
+      {/* =================== STYLES CSS =================== */}
+      <style jsx>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-10px) rotate(1deg); }
+        }
+        
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        
+        @keyframes shine {
+          0% { background-position: -200px 0; }
+          100% { background-position: 200px 0; }
+        }
+        
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes glow {
+          0%, 100% { 
+            box-shadow: 0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15);
           }
-          
-          @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            33% { transform: translateY(-10px) rotate(1deg); }
-            66% { transform: translateY(-5px) rotate(-1deg); }
+          50% { 
+            box-shadow: 0 0 70px rgba(245, 158, 11, 0.8), inset 0 0 40px rgba(245, 158, 11, 0.25);
           }
-          
-          @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        
+        @keyframes logoGlow {
+          0%, 100% { 
+            filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 15px rgba(245, 158, 11, 0.4));
           }
-          
-          @keyframes slideInUp {
-            from { 
-              opacity: 0; 
-              transform: translateY(60px) scale(0.95); 
-            }
-            to { 
-              opacity: 1; 
-              transform: translateY(0) scale(1); 
-            }
+          50% { 
+            filter: brightness(1.5) contrast(1.3) drop-shadow(0 0 25px rgba(245, 158, 11, 0.7));
           }
-          
-          @keyframes slideInRight {
-            from { 
-              opacity: 0; 
-              transform: translateX(-60px); 
-            }
-            to { 
-              opacity: 1; 
-              transform: translateX(0); 
-            }
-          }
-          
-          @keyframes glow {
-            0%, 100% { 
-              box-shadow: 0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15);
-            }
-            50% { 
-              box-shadow: 0 0 70px rgba(245, 158, 11, 0.8), inset 0 0 40px rgba(245, 158, 11, 0.25);
-            }
-          }
-          
-          @keyframes shine {
-            0% { left: -100%; }
-            50% { left: 100%; }
-            100% { left: 100%; }
-          }
-          
-          @keyframes progressFill {
-            from { width: 0%; }
-            to { width: var(--progress, 0%); }
-          }
-          
-          @keyframes logoGlow {
-            0%, 100% { 
-              filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 15px rgba(245, 158, 11, 0.4));
-            }
-            50% { 
-              filter: brightness(1.5) contrast(1.3) drop-shadow(0 0 25px rgba(245, 158, 11, 0.7));
-            }
-          }
-          
-          .dashboard-container {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%);
-            background-size: 400% 400%;
-            animation: gradientShift 20s ease infinite;
-            min-height: 100vh;
-            position: relative;
-            overflow-x: hidden;
-          }
-          
-          .float-animation { 
-            animation: float 6s ease-in-out infinite; 
-          }
-          
-          .pulse-animation { 
-            animation: pulse 3s ease-in-out infinite; 
-          }
-          
-          .slide-in-up { 
-            animation: slideInUp 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-          }
-          
-          .slide-in-right { 
-            animation: slideInRight 0.6s ease-out; 
-          }
-          
-          .glow-effect {
-            animation: glow 4s ease-in-out infinite;
-          }
-          
-          .logo-glow {
-            animation: logoGlow 3s ease-in-out infinite;
-          }
-          
-          .card-hover {
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            cursor: pointer;
-          }
-          
-          .card-hover:hover {
-            transform: translateY(-12px) scale(1.03);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 30px rgba(251, 191, 36, 0.3);
-          }
-          
-          .progress-bar {
-            animation: progressFill 2s ease-out;
+        }
+        
+        .float-animation { animation: float 6s ease-in-out infinite; }
+        .pulse-animation { animation: pulse 4s ease-in-out infinite; }
+        .slide-in { animation: slideIn 0.5s ease-out; }
+        .slide-in-right { animation: slideIn 0.6s ease-out; }
+        .glow-effect { animation: glow 4s ease-in-out infinite; }
+        .logo-glow { animation: logoGlow 3s ease-in-out infinite; }
+        
+        .shine-effect {
+          background: linear-gradient(90deg, transparent 30%, rgba(245, 158, 11, 0.3) 50%, transparent 70%);
+          background-size: 200px 100%;
+          animation: shine 2.5s infinite;
+        }
+        
+        .glass-effect {
+          background: rgba(15, 23, 42, 0.7);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          border-radius: 20px;
+        }
+        
+        .mobile-touch {
+          min-height: 44px;
+          padding: 12px 16px;
+          font-size: 16px;
+        }
+        
+        .text-gradient {
+          background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        
+        .btn-premium {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%);
+          background-size: 200% 200%;
+          border: none;
+          border-radius: 16px;
+          padding: 14px 28px;
+          color: white;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
+        }
+        
+        .btn-premium:hover {
+          transform: translateY(-2px);
+          background-position: 100% 0;
+          box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4);
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+          .step-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
           }
           
           .glass-effect {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            padding: 20px !important;
+            margin: 12px !important;
+            border-radius: 16px !important;
           }
           
-          .text-gradient {
-            background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+          .mobile-touch {
+            min-height: 48px !important;
+            font-size: 16px !important;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .step-grid {
+            grid-template-columns: 1fr !important;
           }
           
-          .btn-premium {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%);
-            background-size: 200% 200%;
-            border: none;
-            border-radius: 16px;
-            padding: 14px 28px;
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
+          .glass-effect {
+            padding: 16px !important;
+            margin: 8px !important;
           }
-          
-          .btn-premium:hover {
-            transform: translateY(-2px);
-            background-position: 100% 0;
-            box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4);
-          }
-          
-          .dropdown-menu {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            min-width: 280px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            overflow: hidden;
-          }
-          
-          .dropdown-item {
-            padding: 16px 20px;
-            color: white;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: all 0.2s ease;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-          }
-          
-          .dropdown-item:hover {
-            background: rgba(245, 158, 11, 0.1);
-            color: #f59e0b;
-            transform: translateX(8px);
-          }
-          
-          .interactive-bg {
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(251, 191, 36, 0.1) 0%, transparent 70%);
-            pointer-events: none;
-            transition: all 0.3s ease;
-            z-index: 0;
-          }
-          
-          @media (max-width: 768px) {
-            .slide-in-up { animation-delay: 0.1s; }
-            .dashboard-container { padding: 12px; }
-            
-            .mobile-grid {
-              grid-template-columns: 1fr !important;
-              gap: 16px !important;
-            }
-            
-            .mobile-padding {
-              padding: 16px !important;
-            }
-            
-            .mobile-text {
-              font-size: 14px !important;
-            }
-            
-            .mobile-title {
-              font-size: 24px !important;
-            }
-            
-            .mobile-kpi {
-              font-size: 28px !important;
-            }
-          }
-          
-          @media (max-width: 480px) {
-            .dashboard-container { padding: 8px; }
-            
-            .ultra-mobile-grid {
-              grid-template-columns: 1fr !important;
-              gap: 12px !important;
-            }
-            
-            .ultra-mobile-padding {
-              padding: 12px !important;
-            }
-          }
-          
-          @media (min-width: 769px) and (max-width: 1024px) {
-            .tablet-grid {
-              grid-template-columns: repeat(2, 1fr) !important;
-            }
-          }
-          
-          @media (min-width: 1025px) {
-            .desktop-grid {
-              grid-template-columns: repeat(3, 1fr) !important;
-            }
-            
-            .desktop-kpi-grid {
-              grid-template-columns: repeat(4, 1fr) !important;
-            }
-          }
-        `
-      }} />
+        }
+      `}</style>
 
-      <div className="dashboard-container">
-        {/* Fond interactif qui suit la souris */}
-        <div 
-          className="interactive-bg"
-          style={{
-            left: mousePosition.x - 150,
-            top: mousePosition.y - 150,
-          }}
-        />
-
-        {/* Pattern overlay pour texture */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          opacity: 0.03,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          pointerEvents: 'none',
-          zIndex: 1
-        }} />
-
-        {/* Header Ultra Premium avec Logo Ultra Grossi */}
-        <header style={{
-          background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(251, 191, 36, 0.3)',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3), 0 0 50px rgba(251, 191, 36, 0.1)',
-          position: 'relative',
-          zIndex: 10
-        }}>
-          <div style={{ 
-            maxWidth: '1400px', 
-            margin: '0 auto', 
-            padding: '24px 20px',
-            opacity: isVisible ? 1 : 0,
-            transform: isVisible ? 'translateY(0)' : 'translateY(-20px)',
-            transition: 'all 0.8s ease'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '20px'
-            }}>
-              
-              {/* Logo Premium Ultra Grossi */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-                <div 
-                  className="float-animation glow-effect"
-                  style={{
-                    background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
-                    padding: '32px',
-                    borderRadius: '32px',
-                    border: '4px solid #f59e0b',
-                    boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}
-                >
-                  <div style={{
-                    width: '96px',
-                    height: '96px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    zIndex: 1
-                  }}>
-                    <img 
-                      src="/c-secur360-logo.png" 
-                      alt="C-Secur360"
-                      className="logo-glow"
-                      style={{ 
-                        width: '200px', 
-                        height: '200px', 
-                        objectFit: 'contain'
-                      }}
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                        if (fallback) fallback.style.display = 'block';
-                      }}
-                    />
-                    <BarChart3 style={{ 
-                      width: '64px', 
-                      height: '64px', 
-                      display: 'none',
-                      color: '#f59e0b'
-                    }} />
-                  </div>
-                  
-                  {/* Effet brillance animé renforcé */}
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: '-100%',
-                    width: '100%',
-                    height: '100%',
-                    background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
-                    animation: 'shine 2.5s ease-in-out infinite'
-                  }} />
-                  
-                  {/* Effet de pulse en arrière-plan */}
-                  <div style={{
-                    position: 'absolute',
-                    inset: '-10px',
-                    border: '2px solid rgba(245, 158, 11, 0.3)',
-                    borderRadius: '40px',
-                    animation: 'pulse 3s ease-in-out infinite'
-                  }} />
-                </div>
-                
-                <div className="slide-in-right">
-                  <h1 className="text-gradient" style={{
-                    fontSize: '40px',
-                    margin: 0,
-                    lineHeight: 1.2,
-                    fontWeight: '900',
-                    letterSpacing: '-0.025em'
-                  }}>
-                    🛡️ C-Secur360
-                  </h1>
-                  <p style={{
-                    color: 'rgba(251, 191, 36, 0.9)',
-                    fontSize: '20px',
-                    margin: 0,
-                    fontWeight: '600'
-                  }}>
-                    Dashboard Gestionnaire SST • {tenant.companyName}
-                  </p>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginTop: '12px'
-                  }}>
-                    <div style={{
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '50%',
-                      background: '#22c55e'
-                    }} className="pulse-animation" />
-                    <span style={{
-                      color: '#22c55e',
-                      fontSize: '16px',
-                      fontWeight: '600'
-                    }}>
-                      Système opérationnel
-                    </span>
-                    {isDemo && (
-                      <span style={{
-                        background: 'rgba(245, 158, 11, 0.2)',
-                        color: '#f59e0b',
-                        padding: '4px 12px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        marginLeft: '8px'
-                      }}>
-                        VERSION DÉMO
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Contrôles premium */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '20px',
-                flexWrap: 'wrap'
-              }}>
-                <select 
-                  value={timeFilter} 
-                  onChange={(e) => setTimeFilter(e.target.value)}
-                  style={{
-                    background: 'rgba(30, 41, 59, 0.8)',
-                    color: 'white',
-                    border: '1px solid rgba(251, 191, 36, 0.3)',
-                    borderRadius: '12px',
-                    padding: '12px 16px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    backdropFilter: 'blur(10px)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  <option value="7d">7 derniers jours</option>
-                  <option value="30d">30 derniers jours</option>
-                  <option value="90d">3 derniers mois</option>
-                  <option value="1y">Dernière année</option>
-                </select>
-                
-                <button className="btn-premium">
-                  <Download style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-                  Rapport Exécutif
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-
-                  {/* Container principal */}
+      {/* =================== HEADER PREMIUM IDENTIQUE DASHBOARD =================== */}
+      <header style={{
+        background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
+        backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(251, 191, 36, 0.3)',
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3), 0 0 50px rgba(251, 191, 36, 0.1)',
+        padding: '24px 20px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50
+      }}>
         <div style={{ 
           maxWidth: '1400px', 
           margin: '0 auto', 
-          padding: '32px 20px', 
-          position: 'relative',
-          zIndex: 5
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          flexWrap: 'wrap', 
+          gap: '20px' 
         }}>
-
-          {/* Actions Rapides EN HAUT - Responsive */}
-          <div 
-            className="slide-in-up mobile-grid tablet-grid desktop-grid"
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-              gap: '24px',
-              marginBottom: '48px'
-            }}
-          >
-            {[
-              { 
-                href: `/${tenant.subdomain}/ast/nouveau`, 
-                icon: FileText, 
-                title: 'Nouveau AST', 
-                desc: 'Créer une analyse complète', 
-                color: '#3b82f6',
-                gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                priority: true
-              },
-              { 
-                href: `/${tenant.subdomain}/near-miss/nouveau`, 
-                icon: AlertTriangle, 
-                title: 'Passé Proche', 
-                desc: 'Signaler un incident/accident', 
-                color: '#f97316',
-                gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                priority: true
-              },
-              { 
-                href: `/${tenant.subdomain}/improvements/nouveau`, 
-                icon: Target, 
-                title: 'Amélioration', 
-                desc: 'Suggérer une amélioration', 
-                color: '#22c55e',
-                gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                priority: true
-              }
-            ].map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <Link key={index} href={action.href} style={{ textDecoration: 'none' }}>
-                  <div 
-                    className="glass-effect card-hover mobile-padding"
-                    style={{
-                      padding: '32px 24px',
-                      textAlign: 'center',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      border: `2px solid rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.4)`,
-                      minHeight: '180px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      alignItems: 'center'
-                    }}
-                  >
-                    {/* Barre colorée en haut */}
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '6px',
-                      background: action.gradient,
-                      opacity: 0.9
-                    }} />
-                    
-                    {/* Badge priorité */}
-                    <div className="mobile-text" style={{
-                      position: 'absolute',
-                      top: '16px',
-                      right: '16px',
-                      background: action.gradient,
-                      color: 'white',
-                      padding: '4px 8px',
-                      borderRadius: '8px',
-                      fontSize: '10px',
-                      fontWeight: '700',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
-                    }}>
-                      Priorité
-                    </div>
-                    
-                    {/* Icône principale */}
-                    <div 
-                      className="float-animation"
-                      style={{
-                        width: '64px',
-                        height: '64px',
-                        margin: '0 auto 16px auto',
-                        background: action.gradient,
-                        borderRadius: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: `0 8px 32px rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.4)`,
-                        position: 'relative'
-                      }}
-                    >
-                      <Icon style={{ width: '32px', height: '32px', color: 'white' }} />
-                    </div>
-                    
-                    {/* Titre */}
-                    <h3 className="text-gradient mobile-text" style={{ 
-                      fontSize: '18px', 
-                      fontWeight: '700', 
-                      margin: '0 0 8px 0',
-                      textAlign: 'center'
-                    }}>
-                      {action.title}
-                    </h3>
-                    
-                    {/* Description */}
-                    <p className="mobile-text" style={{ 
-                      color: '#94a3b8', 
-                      fontSize: '13px', 
-                      margin: '0 0 16px 0',
-                      fontWeight: '500',
-                      textAlign: 'center',
-                      lineHeight: 1.4
-                    }}>
-                      {action.desc}
-                    </p>
-                    
-                    {/* Call to action */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      color: action.color,
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      background: `rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.1)`,
-                      padding: '8px 16px',
-                      borderRadius: '12px',
-                      border: `1px solid rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.2)`
-                    }}>
-                      <Play style={{ width: '12px', height: '12px' }} />
-                      Commencer
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
           
-          {/* KPI Cards Fonctionnels */}
-          <div 
-            className="slide-in-up" 
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-              gap: '20px',
-              marginBottom: '40px'
-            }}
-          >
+          {/* Logo Premium Ultra Grossi - IDENTIQUE DASHBOARD */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+            <div 
+              className="float-animation glow-effect"
+              style={{
+                background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
+                padding: '32px',
+                borderRadius: '32px',
+                border: '4px solid #f59e0b',
+                boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              <div style={{
+                width: '96px',
+                height: '96px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                zIndex: 1
+              }}>
+                <img 
+                  src="/c-secur360-logo.png" 
+                  alt="C-Secur360"
+                  className="logo-glow"
+                  style={{ 
+                    width: '200px', 
+                    height: '200px', 
+                    objectFit: 'contain'
+                  }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'block';
+                  }}
+                />
+                <span style={{ 
+                  display: 'none',
+                  color: '#f59e0b', 
+                  fontSize: '48px', 
+                  fontWeight: '900' 
+                }}>
+                  C🛡️
+                </span>
+              </div>
+              
+              {/* Effet brillance animé renforcé */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: '-100%',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
+                animation: 'shine 2.5s ease-in-out infinite'
+              }} />
+              
+              {/* Effet de pulse en arrière-plan */}
+              <div style={{
+                position: 'absolute',
+                inset: '-10px',
+                border: '2px solid rgba(245, 158, 11, 0.3)',
+                borderRadius: '40px',
+                animation: 'pulse 3s ease-in-out infinite'
+              }} />
+            </div>
             
-            {/* AST Complétés - FONCTIONNEL */}
-            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ 
-                position: 'absolute', 
-                top: '-50%', 
-                right: '-50%', 
-                width: '200%', 
-                height: '200%', 
-                background: 'radial-gradient(circle, rgba(34, 197, 94, 0.15) 0%, transparent 70%)', 
-                pointerEvents: 'none' 
-              }} />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ 
-                    color: 'rgba(34, 197, 94, 0.9)', 
-                    fontSize: '12px', 
-                    fontWeight: '600', 
-                    margin: '0 0 8px 0', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.1em' 
-                  }}>
-                    AST Complétés
-                  </p>
-                  <p style={{ 
-                    color: 'white', 
-                    fontSize: '32px', 
-                    fontWeight: '900', 
-                    margin: '0 0 6px 0', 
-                    lineHeight: 1,
-                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                  }}>
-                    {data.astCompleted.toLocaleString()}
-                  </p>
-                  <p style={{ 
-                    color: 'rgba(34, 197, 94, 0.8)', 
-                    fontSize: '12px', 
-                    margin: 0, 
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <TrendingUp style={{ width: '12px', height: '12px' }} />
-                    +{data.astThisMonth} ce mois
-                  </p>
-                  <div style={{
-                    marginTop: '10px',
-                    height: '3px',
-                    background: 'rgba(34, 197, 94, 0.2)',
-                    borderRadius: '2px',
-                    overflow: 'hidden'
-                  }}>
-                    <div className="progress-bar" style={{
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #22c55e, #16a34a)',
-                      borderRadius: '2px',
-                      '--progress': `${Math.min((data.astCompleted / data.totalAST) * 100, 100)}%`
-                    } as any} />
-                  </div>
-                </div>
-                <div 
-                  className="pulse-animation"
-                  style={{
-                    background: 'rgba(34, 197, 94, 0.2)',
-                    padding: '16px',
-                    borderRadius: '16px',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(34, 197, 94, 0.3)'
-                  }}
-                >
-                  <CheckCircle style={{ width: '28px', height: '28px', color: '#22c55e' }} />
-                </div>
-              </div>
-            </div>
-
-            {/* AST Mensuels - REMPLACE Conformité */}
-            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ 
-                position: 'absolute', 
-                top: '-50%', 
-                right: '-50%', 
-                width: '200%', 
-                height: '200%', 
-                background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)', 
-                pointerEvents: 'none' 
-              }} />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ 
-                    color: 'rgba(59, 130, 246, 0.9)', 
-                    fontSize: '12px', 
-                    fontWeight: '600', 
-                    margin: '0 0 8px 0', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.1em' 
-                  }}>
-                    AST Mensuels
-                  </p>
-                  <p style={{ 
-                    color: 'white', 
-                    fontSize: '32px', 
-                    fontWeight: '900', 
-                    margin: '0 0 6px 0', 
-                    lineHeight: 1,
-                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                  }}>
-                    {data.astThisMonth}
-                  </p>
-                  <p style={{ 
-                    color: 'rgba(59, 130, 246, 0.8)', 
-                    fontSize: '12px', 
-                    margin: 0, 
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <Calendar style={{ width: '12px', height: '12px' }} />
-                    Objectif: {Math.round(data.totalAST / 12)}/mois
-                  </p>
-                  <div style={{
-                    marginTop: '10px',
-                    height: '3px',
-                    background: 'rgba(59, 130, 246, 0.2)',
-                    borderRadius: '2px',
-                    overflow: 'hidden'
-                  }}>
-                    <div className="progress-bar" style={{
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #3b82f6, #2563eb)',
-                      borderRadius: '2px',
-                      '--progress': `${Math.min((data.astThisMonth / (data.totalAST / 12)) * 100, 100)}%`
-                    } as any} />
-                  </div>
-                </div>
-                <div 
-                  className="pulse-animation"
-                  style={{
-                    background: 'rgba(59, 130, 246, 0.2)',
-                    padding: '16px',
-                    borderRadius: '16px',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)'
-                  }}
-                >
-                  <Calendar style={{ width: '28px', height: '28px', color: '#3b82f6' }} />
-                </div>
-              </div>
-            </div>
-
-            {/* Incidents - FONCTIONNEL */}
-            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ 
-                position: 'absolute', 
-                top: '-50%', 
-                right: '-50%', 
-                width: '200%', 
-                height: '200%', 
-                background: 'radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 70%)', 
-                pointerEvents: 'none' 
-              }} />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ 
-                    color: 'rgba(245, 158, 11, 0.9)', 
-                    fontSize: '12px', 
-                    fontWeight: '600', 
-                    margin: '0 0 8px 0', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.1em' 
-                  }}>
-                    Incidents
-                  </p>
-                  <p style={{ 
-                    color: 'white', 
-                    fontSize: '32px', 
-                    fontWeight: '900', 
-                    margin: '0 0 6px 0', 
-                    lineHeight: 1,
-                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                  }}>
-                    {data.incidents}
-                  </p>
-                  <p style={{ 
-                    color: 'rgba(245, 158, 11, 0.8)', 
-                    fontSize: '12px', 
-                    margin: 0, 
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <TrendingUp style={{ width: '12px', height: '12px' }} />
-                    {Math.abs(data.incidentsTrend)}% {data.incidentsTrend < 0 ? 'réduction' : 'augmentation'}
-                  </p>
-                  <div style={{
-                    marginTop: '10px',
-                    height: '3px',
-                    background: 'rgba(245, 158, 11, 0.2)',
-                    borderRadius: '2px',
-                    overflow: 'hidden'
-                  }}>
-                    <div className="progress-bar" style={{
-                      height: '100%',
-                      background: data.incidents === 0 ? 'linear-gradient(90deg, #22c55e, #16a34a)' : 'linear-gradient(90deg, #f59e0b, #d97706)',
-                      borderRadius: '2px',
-                      '--progress': `${data.incidents === 0 ? 100 : Math.max(100 - (data.incidents * 20), 20)}%`
-                    } as any} />
-                  </div>
-                </div>
-                <div 
-                  className="pulse-animation"
-                  style={{
-                    background: data.incidents === 0 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                    padding: '16px',
-                    borderRadius: '16px',
-                    backdropFilter: 'blur(10px)',
-                    border: `1px solid ${data.incidents === 0 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
-                  }}
-                >
-                  {data.incidents === 0 ? 
-                    <CheckCircle style={{ width: '28px', height: '28px', color: '#22c55e' }} /> :
-                    <AlertTriangle style={{ width: '28px', height: '28px', color: '#f59e0b' }} />
-                  }
-                </div>
-              </div>
-            </div>
-
-            {/* Heures Sécuritaires - REMPLACE Économies */}
-            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ 
-                position: 'absolute', 
-                top: '-50%', 
-                right: '-50%', 
-                width: '200%', 
-                height: '200%', 
-                background: 'radial-gradient(circle, rgba(147, 51, 234, 0.15) 0%, transparent 70%)', 
-                pointerEvents: 'none' 
-              }} />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ 
-                    color: 'rgba(147, 51, 234, 0.9)', 
-                    fontSize: '12px', 
-                    fontWeight: '600', 
-                    margin: '0 0 8px 0', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.1em' 
-                  }}>
-                    Heures Sécuritaires
-                  </p>
-                  <p style={{ 
-                    color: 'white', 
-                    fontSize: '32px', 
-                    fontWeight: '900', 
-                    margin: '0 0 6px 0', 
-                    lineHeight: 1,
-                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                  }}>
-                    {(data.safeHours / 1000).toFixed(1)}K
-                  </p>
-                  <p style={{ 
-                    color: 'rgba(147, 51, 234, 0.8)', 
-                    fontSize: '12px', 
-                    margin: 0, 
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <Timer style={{ width: '12px', height: '12px' }} />
-                    {data.safetyRate}% taux sécurité
-                  </p>
-                  <div style={{
-                    marginTop: '10px',
-                    height: '3px',
-                    background: 'rgba(147, 51, 234, 0.2)',
-                    borderRadius: '2px',
-                    overflow: 'hidden'
-                  }}>
-                    <div className="progress-bar" style={{
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #9333ea, #7c3aed)',
-                      borderRadius: '2px',
-                      '--progress': `${data.safetyRate}%`
-                    } as any} />
-                  </div>
-                </div>
-                <div 
-                  className="pulse-animation"
-                  style={{
-                    background: 'rgba(147, 51, 234, 0.2)',
-                    padding: '16px',
-                    borderRadius: '16px',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(147, 51, 234, 0.3)'
-                  }}
-                >
-                  <Timer style={{ width: '28px', height: '28px', color: '#9333ea' }} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Graphiques de Performance - REMPLACE Alertes Prioritaires */}
-          <div 
-            className="glass-effect slide-in-up"
-            style={{
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)',
-              borderColor: 'rgba(59, 130, 246, 0.2)',
-              padding: '32px',
-              marginBottom: '40px',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-          >
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '4px',
-              background: 'linear-gradient(90deg, #3b82f6, #9333ea, #22c55e)',
-              opacity: 0.6
-            }} />
-            
-            <h2 className="text-gradient" style={{
-              fontSize: '28px',
-              margin: '0 0 32px 0',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              fontWeight: '700'
-            }}>
-              <BarChart3 className="pulse-animation" style={{ width: '28px', height: '28px', color: '#3b82f6' }} />
-              Graphiques de Performance
-              {isDemo && (
+            {/* Titre et status - MISE À JOUR */}
+            <div className="slide-in-right">
+              <h1 className="text-gradient" style={{
+                fontSize: '40px',
+                margin: 0,
+                lineHeight: 1.2,
+                fontWeight: '900',
+                letterSpacing: '-0.025em'
+              }}>
+                🛡️ C-Secur360
+              </h1>
+              <p style={{
+                color: 'rgba(251, 191, 36, 0.9)',
+                fontSize: '20px',
+                margin: 0,
+                fontWeight: '600'
+              }}>
+                Analyse Sécuritaire de Travail • {tenant}
+              </p>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginTop: '12px'
+              }}>
+                <div style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  background: '#22c55e'
+                }} className="pulse-animation" />
                 <span style={{
-                  background: 'rgba(245, 158, 11, 0.2)',
-                  color: '#f59e0b',
-                  padding: '4px 12px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
+                  color: '#22c55e',
+                  fontSize: '16px',
                   fontWeight: '600'
                 }}>
-                  Données simulées
+                  Système opérationnel
                 </span>
-              )}
-            </h2>
-            
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', 
-              gap: '32px' 
-            }}>
-              
-              {/* Évolution AST par mois */}
-              <div style={{
-                background: 'rgba(15, 23, 42, 0.4)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: '20px',
-                padding: '24px',
-                backdropFilter: 'blur(10px)'
-              }}>
-                <h3 style={{ 
-                  color: '#3b82f6', 
-                  fontSize: '18px', 
-                  fontWeight: '700', 
-                  margin: '0 0 20px 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
+                <p style={{ 
+                  fontSize: '14px', 
+                  color: '#94a3b8', 
+                  margin: 0,
+                  fontWeight: '500'
                 }}>
-                  <LineChart style={{ width: '20px', height: '20px' }} />
-                  Évolution AST
-                </h3>
-                <SimpleChart data={data.monthlyData} type="line" />
-                <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8' }}>
-                  <span>Jan</span>
-                  <span>Mar</span>
-                  <span>Mai</span>
-                  <span>Jul</span>
-                </div>
-              </div>
-
-              {/* Types d'incidents (Camembert) */}
-              <div style={{
-                background: 'rgba(15, 23, 42, 0.4)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
-                borderRadius: '20px',
-                padding: '24px',
-                backdropFilter: 'blur(10px)'
-              }}>
-                <h3 style={{ 
-                  color: '#f59e0b', 
-                  fontSize: '18px', 
-                  fontWeight: '700', 
-                  margin: '0 0 20px 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <PieChart style={{ width: '20px', height: '20px' }} />
-                  Types d'Incidents
-                </h3>
-                <SimpleChart data={data.incidentsByType} type="pie" />
-                <div style={{ marginTop: '16px' }}>
-                  {data.incidentsByType.map((item, index) => (
-                    <div key={index} style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px', 
-                      marginBottom: '8px',
-                      fontSize: '12px'
-                    }}>
-                      <div style={{ 
-                        width: '12px', 
-                        height: '12px', 
-                        borderRadius: '50%', 
-                        background: item.color 
-                      }} />
-                      <span style={{ color: 'white', flex: 1 }}>{item.type}</span>
-                      <span style={{ color: '#94a3b8' }}>{item.count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Photos AST */}
-              <div style={{
-                background: 'rgba(15, 23, 42, 0.4)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
-                borderRadius: '20px',
-                padding: '24px',
-                backdropFilter: 'blur(10px)'
-              }}>
-                <h3 style={{ 
-                  color: '#22c55e', 
-                  fontSize: '18px', 
-                  fontWeight: '700', 
-                  margin: '0 0 20px 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <Camera style={{ width: '20px', height: '20px' }} />
-                  Photos Documentation
-                </h3>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ 
-                    color: 'white', 
-                    fontSize: '48px', 
-                    fontWeight: '900', 
-                    margin: '20px 0 8px 0',
-                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                  }}>
-                    {data.photosCount}
-                  </div>
-                  <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600' }}>
-                    Photos totales
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '8px' }}>
-                    +{data.photosThisWeek} cette semaine
-                  </div>
-                  
-                  <div style={{
-                    marginTop: '20px',
-                    height: '6px',
-                    background: 'rgba(34, 197, 94, 0.2)',
-                    borderRadius: '3px',
-                    overflow: 'hidden'
-                  }}>
-                    <div style={{
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #22c55e, #16a34a)',
-                      borderRadius: '3px',
-                      width: `${Math.min((data.photosCount / (data.astCompleted * 3)) * 100, 100)}%`,
-                      transition: 'width 2s ease'
-                    }} />
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '8px' }}>
-                    Objectif: 3 photos/AST
-                  </div>
-                </div>
+                  AST • Étape {currentStep} sur {steps.length}
+                </p>
+                {getStatusBadge()}
               </div>
             </div>
           </div>
 
-          {/* Actions Secondaires */}
-          <div 
-            className="slide-in-up"
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-              gap: '20px',
-              marginBottom: '40px'
-            }}
-          >
-            {[
-              { 
-                href: `/${tenant.subdomain}/reports`, 
-                icon: BarChart3, 
-                title: 'Rapports Analytics', 
-                desc: 'Graphiques détaillés', 
-                color: '#9333ea',
-                gradient: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)'
-              },
-              { 
-                href: `/${tenant.subdomain}/photos`, 
-                icon: Camera, 
-                title: 'Photos AST', 
-                desc: 'Galerie documentation', 
-                color: '#22c55e',
-                gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
-              },
-              { 
-                href: `/${tenant.subdomain}/archives`, 
-                icon: Archive, 
-                title: 'Archives', 
-                desc: 'Historique des données', 
-                color: '#f59e0b',
-                gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-              }
-            ].map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <Link key={index} href={action.href} style={{ textDecoration: 'none' }}>
-                  <div 
-                    className="glass-effect card-hover"
+          {/* Numéro AST et actions - MISE À JOUR */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            
+            {/* Numéro AST */}
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.8)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <Shield size={16} color="#3b82f6" />
+              <div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px' }}>
+                  NUMÉRO AST
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  fontWeight: '600', 
+                  color: '#ffffff',
+                  fontFamily: 'monospace',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  {astData.astNumber}
+                  <button
+                    onClick={handleCopyAST}
                     style={{
-                      padding: '20px',
-                      textAlign: 'center',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      border: `1px solid rgba(${action.color === '#9333ea' ? '147, 51, 234' : action.color === '#22c55e' ? '34, 197, 94' : '245, 158, 11'}, 0.3)`,
-                      minHeight: '140px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      alignItems: 'center'
+                      background: 'none',
+                      border: 'none',
+                      color: copied ? '#10b981' : '#94a3b8',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      borderRadius: '4px',
+                      transition: 'color 0.2s'
                     }}
                   >
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '3px',
-                      background: action.gradient,
-                      opacity: 0.8
-                    }} />
-                    
-                    <div 
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        margin: '0 auto 12px auto',
-                        background: action.gradient,
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: `0 6px 20px rgba(${action.color === '#9333ea' ? '147, 51, 234' : action.color === '#22c55e' ? '34, 197, 94' : '245, 158, 11'}, 0.3)`
-                      }}
-                    >
-                      <Icon style={{ width: '24px', height: '24px', color: 'white' }} />
-                    </div>
-                    
-                    <h3 className="text-gradient" style={{ 
-                      fontSize: '16px', 
-                      fontWeight: '600', 
-                      margin: '0 0 6px 0' 
-                    }}>
-                      {action.title}
-                    </h3>
-                    <p style={{ 
-                      color: '#94a3b8', 
-                      fontSize: '12px', 
-                      margin: 0,
-                      fontWeight: '500'
-                    }}>
-                      {action.desc}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
+                    {copied ? <Check size={12} /> : <Copy size={12} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Indicateur en ligne/hors ligne */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {isOnline ? <Wifi size={14} color="#10b981" /> : <WifiOff size={14} color="#ef4444" />}
+              <span style={{ fontSize: '12px', color: isOnline ? '#10b981' : '#ef4444' }}>
+                {isOnline ? 'En ligne' : 'Hors ligne'}
+              </span>
+            </div>
+
+            {/* Actions rapides */}
+            {userRole === 'supervisor' || userRole === 'manager' ? (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => changeStatus('pending_verification')}
+                  disabled={astData.status !== 'draft'}
+                  className="btn-premium"
+                  style={{
+                    opacity: astData.status === 'draft' ? 1 : 0.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '8px 12px',
+                    fontSize: '12px'
+                  }}
+                >
+                  <Bell size={12} />
+                  Soumettre
+                </button>
+                
+                <button
+                  onClick={() => changeStatus('approved')}
+                  disabled={astData.status !== 'pending_verification'}
+                  className="btn-premium"
+                  style={{
+                    opacity: astData.status === 'pending_verification' ? 1 : 0.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '8px 12px',
+                    fontSize: '12px',
+                    background: 'linear-gradient(135deg, #10b981, #059669)'
+                  }}
+                >
+                  <CheckCircle size={12} />
+                  Approuver
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </header>
+
+      {/* =================== CONTENU PRINCIPAL =================== */}
+      <main style={{ padding: '20px 16px', maxWidth: '1200px', margin: '0 auto' }}>
+        
+        {/* Progress bar et navigation steps */}
+        <div className="glass-effect slide-in" style={{ padding: '24px', marginBottom: '24px' }}>
+          
+          {/* Barre de progression */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#ffffff', margin: 0 }}>
+                Progression AST
+              </h2>
+              <span style={{ fontSize: '14px', color: '#94a3b8' }}>
+                {Math.round((currentStep / steps.length) * 100)}% complété
+              </span>
+            </div>
+            
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.5)',
+              borderRadius: '12px',
+              height: '8px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                background: `linear-gradient(90deg, ${steps[0]?.color || '#3b82f6'}, ${steps[Math.min(currentStep - 1, steps.length - 1)]?.color || '#10b981'})`,
+                height: '100%',
+                width: `${(currentStep / steps.length) * 100}%`,
+                transition: 'width 0.5s ease',
+                borderRadius: '12px'
+              }} />
+            </div>
+          </div>
+
+          {/* Navigation steps - Mobile optimized */}
+          <div className="step-grid" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            gap: '16px'
+          }}>
+            {steps.map((step) => (
+              <div
+                key={step.id}
+                onClick={() => setCurrentStep(step.id)}
+                style={{
+                  background: currentStep === step.id 
+                    ? `linear-gradient(135deg, ${step.color}25, ${step.color}15)`
+                    : 'rgba(30, 41, 59, 0.5)',
+                  border: currentStep === step.id 
+                    ? `2px solid ${step.color}` 
+                    : '1px solid rgba(148, 163, 184, 0.2)',
+                  borderRadius: '16px',
+                  padding: '16px 12px',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  position: 'relative',
+                  transition: 'all 0.3s ease',
+                  minHeight: '120px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+                className="mobile-touch"
+              >
+                {step.required && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    width: '6px',
+                    height: '6px',
+                    background: '#ef4444',
+                    borderRadius: '50%'
+                  }} />
+                )}
+                
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  background: currentStep === step.id ? step.color : 'rgba(148, 163, 184, 0.2)',
+                  borderRadius: '12px',
+                  margin: '0 auto 8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <step.icon size={20} color={currentStep === step.id ? '#ffffff' : '#94a3b8'} />
+                </div>
+                
+                <h3 style={{
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: currentStep === step.id ? '#ffffff' : '#94a3b8',
+                  margin: '0 0 4px',
+                  lineHeight: '1.2'
+                }}>
+                  {step.title}
+                </h3>
+                
+                <p style={{
+                  fontSize: '11px',
+                  color: '#64748b',
+                  margin: 0,
+                  lineHeight: '1.3'
+                }}>
+                  {step.subtitle}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Footer Ultra Premium */}
-        <footer style={{
-          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
-          backdropFilter: 'blur(20px)',
-          borderTop: '1px solid rgba(100, 116, 139, 0.2)',
-          marginTop: '60px',
-          position: 'relative',
-          zIndex: 10
-        }}>
-          <div style={{ 
-            maxWidth: '1400px', 
-            margin: '0 auto', 
-            padding: '32px 20px' 
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              flexWrap: 'wrap', 
-              gap: '20px' 
+        {/* Contenu de l'étape */}
+        <div className="glass-effect slide-in" style={{ padding: '32px 24px', marginBottom: '24px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <h2 style={{ 
+              fontSize: '28px', 
+              fontWeight: '700', 
+              color: '#ffffff',
+              marginBottom: '8px',
+              background: `linear-gradient(135deg, ${steps[currentStep - 1]?.color}, ${steps[currentStep - 1]?.color}CC)`,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
             }}>
-              <div>
-                <p style={{ 
-                  color: '#94a3b8', 
-                  fontSize: '14px', 
-                  margin: '0 0 8px 0',
-                  fontWeight: '500'
-                }}>
-                  🏛️ Conforme CNESST • CSA Z1000 • C-Secur360 © 2024
-                </p>
-                <p style={{ 
-                  color: '#64748b', 
-                  fontSize: '12px', 
-                  margin: 0 
-                }}>
-                  {isDemo ? 'Plateforme de démonstration avec données simulées' : 'Plateforme certifiée pour la sécurité au travail'}
-                </p>
-              </div>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '20px', 
-                fontSize: '14px', 
-                color: '#94a3b8',
-                flexWrap: 'wrap'
-              }}>
-                <span>Dernière mise à jour: {new Date().toLocaleDateString('fr-CA')}</span>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px',
-                  color: '#22c55e'
-                }}>
-                  <div style={{ 
-                    width: '10px', 
-                    height: '10px', 
-                    borderRadius: '50%', 
-                    background: '#22c55e' 
-                  }} className="pulse-animation" />
-                  Système opérationnel
-                </div>
-                {isDemo && (
-                  <span style={{ color: '#f59e0b', fontWeight: '600' }}>
-                    MODE DÉMONSTRATION
-                  </span>
-                )}
-              </div>
-            </div>
+              {steps[currentStep - 1]?.title}
+            </h2>
+            <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>
+              {steps[currentStep - 1]?.subtitle}
+            </p>
           </div>
-        </footer>
-      </div>
-    </>
-  )
+
+          {/* =================== CONTENU SPÉCIFIQUE À CHAQUE ÉTAPE =================== */}
+          <div style={{ minHeight: '400px' }}>
+            {/* ÉTAPE 1: Informations Projet + Verrouillage */}
+            {currentStep === 1 && (
+              <Step1ProjectInfo
+                formData={astData}
+                onDataChange={handleStep1DataChange}
+                language={language}
+                tenant={tenant}
+                errors={{}}
+              />
+            )}
+
+            {/* ÉTAPE 2: Équipements de Protection */}
+            {currentStep === 2 && (
+              <Step2Equipment
+                formData={astData}
+                onDataChange={handleStep2DataChange}
+                language={language}
+                tenant={tenant}
+                errors={{}}
+              />
+            )}
+
+            {/* ÉTAPE 3: Dangers & Risques + Moyens de Contrôle */}
+            {currentStep === 3 && (
+              <Step3Hazards
+                formData={astData}
+                onDataChange={handleStep3DataChange}
+                language={language}
+                tenant={tenant}
+                errors={{}}
+              />
+            )}
+
+            {/* ÉTAPE 4: Permis & Autorisations */}
+            {currentStep === 4 && (
+              <Step4Permits
+                formData={astData}
+                onDataChange={handleStep4DataChange}
+                language={language}
+                tenant={tenant}
+                errors={{}}
+              />
+            )}
+
+            {/* =================== ÉTAPE 5: VALIDATION ÉQUIPE CORRIGÉE =================== */}
+            {currentStep === 5 && (
+              <Step5Validation
+                formData={astData}
+                onDataChange={handleStep5DataChange}
+                language={language}
+                tenant={tenant}
+              />
+            )}
+
+            {/* ÉTAPE 6: Finalisation (Consentement Travailleurs + Archive) */}
+            {currentStep === 6 && (
+              <Step6Finalization
+                formData={astData}
+                onDataChange={handleStep6DataChange}
+                language={language}
+                tenant={tenant}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Navigation footer */}
+        <div className="glass-effect" style={{ 
+          padding: '20px 24px', 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          position: 'sticky',
+          bottom: '16px',
+          flexWrap: 'wrap',
+          gap: '16px'
+        }}>
+          <button
+            onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+            disabled={currentStep === 1}
+            className="mobile-touch"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '14px 20px',
+              background: currentStep === 1 ? 'rgba(75, 85, 99, 0.3)' : 'rgba(59, 130, 246, 0.2)',
+              border: currentStep === 1 ? '1px solid rgba(75, 85, 99, 0.5)' : '1px solid rgba(59, 130, 246, 0.5)',
+              borderRadius: '12px',
+              color: currentStep === 1 ? '#9ca3af' : '#ffffff',
+              fontSize: '16px',
+              fontWeight: '500',
+              cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <ArrowLeft size={18} />
+            Précédent
+          </button>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            color: '#94a3b8',
+            fontSize: '14px',
+            flexWrap: 'wrap',
+            justifyContent: 'center'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Save size={14} />
+              <span>Sauvegarde auto</span>
+            </div>
+            <div style={{
+              width: '6px',
+              height: '6px',
+              background: hasUnsavedChanges ? '#f59e0b' : '#10b981',
+              borderRadius: '50%',
+              animation: hasUnsavedChanges ? 'pulse 2s infinite' : 'none'
+            }} />
+            <span style={{ fontSize: '12px', color: hasUnsavedChanges ? '#f59e0b' : '#10b981' }}>
+              {hasUnsavedChanges ? 'Modification...' : 'Sauvegardé'}
+            </span>
+          </div>
+
+          <button
+            onClick={() => setCurrentStep(Math.min(steps.length, currentStep + 1))}
+            disabled={currentStep === steps.length}
+            className="mobile-touch"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '14px 20px',
+              background: currentStep === steps.length 
+                ? 'rgba(75, 85, 99, 0.3)' 
+                : `linear-gradient(135deg, ${steps[currentStep]?.color || '#10b981'}, ${steps[currentStep]?.color || '#059669'}CC)`,
+              border: `1px solid ${steps[currentStep]?.color || '#10b981'}80`,
+              borderRadius: '12px',
+              color: '#ffffff',
+              fontSize: '16px',
+              fontWeight: '500',
+              cursor: currentStep === steps.length ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Suivant
+            <ArrowRight size={18} />
+          </button>
+        </div>
+
+      </main>
+    </div>
+  );
 }
