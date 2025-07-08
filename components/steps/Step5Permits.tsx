@@ -868,7 +868,7 @@ export default function Step5Permits({
                 className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
               />
               <span className="text-sm font-medium text-gray-700">
-                {t[key as keyof typeof t] || key}
+                {typeof t[key as keyof typeof t] === 'string' ? t[key as keyof typeof t] : key}
               </span>
               {value && <CheckCircle className="w-4 h-4 text-green-500" />}
             </label>
