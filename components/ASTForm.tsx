@@ -149,7 +149,8 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
       formData,
       onDataChange: handleDataChange,
       language,
-      tenant
+      tenant,
+      errors: {} // Ajout de la prop errors manquante
     };
 
     switch (currentStep) {
