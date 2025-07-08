@@ -1,21 +1,29 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
-  Shield, 
-  ChevronLeft, 
-  ChevronRight, 
-  Settings,
-  FileText,
-  HardHat,
+  FileText, 
+  ArrowLeft, 
+  ArrowRight, 
+  Save, 
+  Eye, 
+  Download,
+  CheckCircle,
   AlertTriangle,
+  Clock,
+  Shield,
   Users,
-  FileCheck,
-  Share2,
-  Award
+  MapPin,
+  Calendar,
+  BarChart3,
+  Settings,
+  Zap,
+  Award,
+  Target
 } from 'lucide-react';
 
-// Import de tous vos steps
+// Import des steps
 import Step1ProjectInfo from './steps/Step1ProjectInfo';
 import Step2Equipment from './steps/Step2Equipment';
 import Step3Hazards from './steps/Step3Hazards';
@@ -27,136 +35,105 @@ import Step8Finalization from './steps/Step8Finalization';
 
 interface ASTFormProps {
   tenant: string;
+  language: 'fr' | 'en';
 }
 
-interface FormData {
-  projectInfo?: any;
-  equipment?: any[];
-  hazards?: any[];
-  controls?: any[];
-  permits?: any; // Changé de any[] à any pour plus de flexibilité
-  validation?: any;
-  teamShare?: any;
-  finalization?: any;
-}
-
-interface ValidationErrors {
-  [key: string]: string | string[] | ValidationErrors;
-}
-
-const stepConfig = [
-  {
-    id: 1,
-    title: 'Informations Projet',
-    icon: FileText,
-    description: 'Détails du projet et localisation',
-    color: 'blue'
+const steps = [
+  { 
+    id: 1, 
+    icon: FileText, 
+    title: 'Informations Projet', 
+    subtitle: 'Détails du projet et localisation',
+    color: '#3b82f6',
+    gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
   },
-  {
-    id: 2,
-    title: 'Équipements',
-    icon: HardHat,
-    description: 'Équipements de sécurité requis',
-    color: 'green'
+  { 
+    id: 2, 
+    icon: Shield, 
+    title: 'Équipements', 
+    subtitle: 'Équipements de sécurité requis',
+    color: '#22c55e',
+    gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
   },
-  {
-    id: 3,
-    title: 'Dangers',
-    icon: AlertTriangle,
-    description: 'Identification des risques',
-    color: 'yellow'
+  { 
+    id: 3, 
+    icon: AlertTriangle, 
+    title: 'Dangers', 
+    subtitle: 'Identification des risques',
+    color: '#f97316',
+    gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)'
   },
-  {
-    id: 4,
-    title: 'Contrôles',
-    icon: Shield,
-    description: 'Mesures de protection',
-    color: 'purple'
+  { 
+    id: 4, 
+    icon: Target, 
+    title: 'Contrôles', 
+    subtitle: 'Mesures de protection',
+    color: '#8b5cf6',
+    gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
   },
-  {
-    id: 5,
-    title: 'Permis',
-    icon: FileCheck,
-    description: 'Autorisations requises',
-    color: 'orange'
+  { 
+    id: 5, 
+    icon: FileText, 
+    title: 'Permis', 
+    subtitle: 'Autorisations requises',
+    color: '#f59e0b',
+    gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
   },
-  {
-    id: 6,
-    title: 'Validation',
-    icon: Users,
-    description: 'Approbation équipe',
-    color: 'indigo'
+  { 
+    id: 6, 
+    icon: CheckCircle, 
+    title: 'Validation', 
+    subtitle: 'Approbation équipe',
+    color: '#10b981',
+    gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
   },
-  {
-    id: 7,
-    title: 'Partage',
-    icon: Share2,
-    description: 'Partage avec équipe',
-    color: 'cyan'
+  { 
+    id: 7, 
+    icon: Users, 
+    title: 'Partage', 
+    subtitle: 'Partage avec équipe',
+    color: '#6366f1',
+    gradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'
   },
-  {
-    id: 8,
-    title: 'Finalisation',
-    icon: Award,
-    description: 'Publication finale',
-    color: 'emerald'
+  { 
+    id: 8, 
+    icon: Award, 
+    title: 'Finalisation', 
+    subtitle: 'Publication finale',
+    color: '#ec4899',
+    gradient: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)'
   }
 ];
 
-export default function ASTForm({ tenant }: ASTFormProps) {
+export default function ASTForm({ tenant, language }: ASTFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
-  const [language, setLanguage] = useState<'fr' | 'en'>('fr');
-  const [formData, setFormData] = useState<FormData>({});
-  const [errors, setErrors] = useState<ValidationErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({});
+  const [isVisible, setIsVisible] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter();
 
-  // Fonction pour mettre à jour les données
+  // Animation d'entrée et suivi de souris
+  useEffect(() => {
+    setIsVisible(true);
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
   const handleDataChange = (section: string, data: any) => {
     setFormData(prev => ({
       ...prev,
       [section]: data
     }));
-
-    // Nettoyer les erreurs pour cette section
-    if (errors[section]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[section];
-        return newErrors;
-      });
-    }
   };
 
-  // Fonction pour valider un step
-  const validateCurrentStep = (): boolean => {
-    const newErrors: ValidationErrors = {};
-
-    switch (currentStep) {
-      case 1:
-        if (!formData.projectInfo?.name) {
-          newErrors.projectInfo = { name: 'Le nom du projet est requis' };
-        }
-        break;
-      case 2:
-        if (!formData.equipment || formData.equipment.length === 0) {
-          newErrors.equipment = 'Au moins un équipement doit être sélectionné';
-        }
-        break;
-      case 3:
-        if (!formData.hazards || formData.hazards.length === 0) {
-          newErrors.hazards = 'Au moins un danger doit être identifié';
-        }
-        break;
-      // Ajouter d'autres validations selon vos besoins
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // Navigation
   const nextStep = () => {
-    if (validateCurrentStep() && currentStep < 8) {
+    if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -167,25 +144,8 @@ export default function ASTForm({ tenant }: ASTFormProps) {
     }
   };
 
-  const goToStep = (step: number) => {
-    setCurrentStep(step);
-  };
-
-  // Calcul de progression
-  const calculateProgress = () => {
-    const sections = Object.keys(formData);
-    const completedSections = sections.filter(section => {
-      const data = formData[section as keyof FormData];
-      return data && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0);
-    });
-    return Math.round((completedSections.length / 8) * 100);
-  };
-
-  const progress = calculateProgress();
-
-  // Rendu du step actuel
-  const renderCurrentStep = () => {
-    const baseProps = {
+  const getCurrentStepComponent = () => {
+    const stepProps = {
       formData,
       onDataChange: handleDataChange,
       language,
@@ -193,275 +153,765 @@ export default function ASTForm({ tenant }: ASTFormProps) {
     };
 
     switch (currentStep) {
-      case 1:
-        return (
-          <Step1ProjectInfo
-            {...baseProps}
-            errors={errors}
-          />
-        );
-      case 2:
-        return (
-          <Step2Equipment
-            {...baseProps}
-            errors={errors}
-          />
-        );
-      case 3:
-        return (
-          <Step3Hazards
-            {...baseProps}
-            errors={errors}
-          />
-        );
-      case 4:
-        return (
-          <Step4Controls
-            {...baseProps}
-          />
-        );
-      case 5:
-        return (
-          <Step5Permits
-            formData={formData as any}
-            onDataChange={handleDataChange}
-            language={language}
-            tenant={tenant}
-          />
-        );
-      case 6:
-        return (
-          <Step6Validation
-            {...baseProps}
-          />
-        );
-      case 7:
-        return (
-          <Step7TeamShare
-            {...baseProps}
-          />
-        );
-      case 8:
-        return (
-          <Step8Finalization
-            {...baseProps}
-          />
-        );
-      default:
-        return null;
+      case 1: return <Step1ProjectInfo {...stepProps} />;
+      case 2: return <Step2Equipment {...stepProps} />;
+      case 3: return <Step3Hazards {...stepProps} />;
+      case 4: return <Step4Controls {...stepProps} />;
+      case 5: return <Step5Permits {...stepProps} />;
+      case 6: return <Step6Validation {...stepProps} />;
+      case 7: return <Step7TeamShare {...stepProps} />;
+      case 8: return <Step8Finalization {...stepProps} />;
+      default: return null;
     }
   };
 
-  const currentStepConfig = stepConfig.find(s => s.id === currentStep);
+  const saveAST = async () => {
+    setIsSaving(true);
+    // Simulation de sauvegarde
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setIsSaving(false);
+  };
+
+  const currentStepData = steps[currentStep - 1];
+  const progressPercentage = ((currentStep - 1) / (steps.length - 1)) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-black/20 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-lg">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">
-                  CSécur360 AST
-                </h1>
-                <p className="text-sm text-gray-300">Tenant: {tenant}</p>
-              </div>
-            </div>
+    <>
+      {/* CSS Animations Global - IDENTIQUE AU DASHBOARD */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes gradientShift {
+            0%, 100% { 
+              background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%);
+              background-size: 400% 400%;
+              background-position: 0% 50%;
+            }
+            50% { 
+              background-position: 100% 50%;
+            }
+          }
+          
+          @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-10px) rotate(1deg); }
+            66% { transform: translateY(-5px) rotate(-1deg); }
+          }
+          
+          @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+          }
+          
+          @keyframes slideInUp {
+            from { 
+              opacity: 0; 
+              transform: translateY(60px) scale(0.95); 
+            }
+            to { 
+              opacity: 1; 
+              transform: translateY(0) scale(1); 
+            }
+          }
+          
+          @keyframes slideInRight {
+            from { 
+              opacity: 0; 
+              transform: translateX(-60px); 
+            }
+            to { 
+              opacity: 1; 
+              transform: translateX(0); 
+            }
+          }
+          
+          @keyframes glow {
+            0%, 100% { 
+              box-shadow: 0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15);
+            }
+            50% { 
+              box-shadow: 0 0 70px rgba(245, 158, 11, 0.8), inset 0 0 40px rgba(245, 158, 11, 0.25);
+            }
+          }
+          
+          @keyframes shine {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+          }
+          
+          @keyframes progressFill {
+            from { width: 0%; }
+            to { width: var(--progress, 0%); }
+          }
+          
+          @keyframes logoGlow {
+            0%, 100% { 
+              filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 15px rgba(245, 158, 11, 0.4));
+            }
+            50% { 
+              filter: brightness(1.5) contrast(1.3) drop-shadow(0 0 25px rgba(245, 158, 11, 0.7));
+            }
+          }
+          
+          .ast-container {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 20s ease infinite;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+          }
+          
+          .float-animation { 
+            animation: float 6s ease-in-out infinite; 
+          }
+          
+          .pulse-animation { 
+            animation: pulse 3s ease-in-out infinite; 
+          }
+          
+          .slide-in-up { 
+            animation: slideInUp 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+          }
+          
+          .slide-in-right { 
+            animation: slideInRight 0.6s ease-out; 
+          }
+          
+          .glow-effect {
+            animation: glow 4s ease-in-out infinite;
+          }
+          
+          .logo-glow {
+            animation: logoGlow 3s ease-in-out infinite;
+          }
+          
+          .card-hover {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+          }
+          
+          .card-hover:hover {
+            transform: translateY(-12px) scale(1.03);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 30px rgba(251, 191, 36, 0.3);
+          }
+          
+          .progress-bar {
+            animation: progressFill 2s ease-out;
+          }
+          
+          .glass-effect {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+          }
+          
+          .text-gradient {
+            background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+          }
+          
+          .btn-premium {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%);
+            background-size: 200% 200%;
+            border: none;
+            border-radius: 16px;
+            padding: 14px 28px;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
+          }
+          
+          .btn-premium:hover {
+            transform: translateY(-2px);
+            background-position: 100% 0;
+            box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4);
+          }
+          
+          .btn-secondary {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 14px 28px;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          
+          .btn-secondary:hover {
+            transform: translateY(-2px);
+            background: rgba(51, 65, 85, 0.9);
+            border-color: rgba(255, 255, 255, 0.2);
+          }
+          
+          .interactive-bg {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 0;
+          }
+          
+          .step-indicator {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          }
+          
+          .step-indicator.active {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+          }
+          
+          .step-indicator.completed {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+          }
+          
+          @media (max-width: 768px) {
+            .ast-container { padding: 12px; }
+            .mobile-hidden { display: none !important; }
+            .mobile-full { width: 100% !important; }
+            .mobile-text { font-size: 14px !important; }
+            .mobile-title { font-size: 24px !important; }
+          }
+        `
+      }} />
 
-            <div className="flex items-center space-x-4">
-              {/* Sélecteur de langue */}
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value as 'fr' | 'en')}
-                className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-sm backdrop-blur-sm"
-              >
-                <option value="fr">🇫🇷 Français</option>
-                <option value="en">🇬🇧 English</option>
-              </select>
+      <div className="ast-container">
+        {/* Fond interactif qui suit la souris */}
+        <div 
+          className="interactive-bg"
+          style={{
+            left: mousePosition.x - 150,
+            top: mousePosition.y - 150,
+          }}
+        />
 
-              <button className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
-                <Settings className="w-5 h-5 text-white" />
-              </button>
+        {/* Pattern overlay pour texture */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          opacity: 0.03,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          pointerEvents: 'none',
+          zIndex: 1
+        }} />
+
+        {/* Header Ultra Premium IDENTIQUE - Style C-Secur360 */}
+        <header style={{
+          background: 'linear-gradient(135deg, #1e2a3a 0%, #2d3748 50%, #1a202c 100%)',
+          borderBottom: '4px solid transparent',
+          borderImage: 'linear-gradient(90deg, #3b82f6, #f59e0b, #22c55e) 1',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+          position: 'relative',
+          zIndex: 10,
+          padding: '20px 0'
+        }}>
+          <div style={{ 
+            maxWidth: '1400px', 
+            margin: '0 auto', 
+            padding: '0 20px',
+            opacity: isVisible ? 1 : 0,
+            transform: isVisible ? 'translateY(0)' : 'translateY(-20px)',
+            transition: 'all 0.8s ease'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '20px'
+            }}>
+              
+              {/* Logo C-Secur360 IDENTIQUE */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                {/* Logo Container avec effet glow orange */}
+                <div 
+                  className="float-animation glow-effect"
+                  style={{
+                    background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%)',
+                    padding: '16px',
+                    borderRadius: '24px',
+                    border: '4px solid #f59e0b',
+                    boxShadow: '0 0 40px rgba(245, 158, 11, 0.6), inset 0 0 20px rgba(245, 158, 11, 0.1)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    width: '80px',
+                    height: '80px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {/* Logo C-Secur360 */}
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    background: 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%)',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    zIndex: 1,
+                    fontWeight: '900',
+                    fontSize: '20px',
+                    color: '#1e293b',
+                    fontFamily: 'Arial, sans-serif'
+                  }}>
+                    C🛡️
+                  </div>
+                  
+                  {/* Effet brillance animé RENFORCÉ */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '-100%',
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.6), transparent)',
+                    animation: 'shine 2s ease-in-out infinite'
+                  }} />
+                  
+                  {/* Pulse Border Effect */}
+                  <div style={{
+                    position: 'absolute',
+                    inset: '-8px',
+                    border: '2px solid rgba(245, 158, 11, 0.4)',
+                    borderRadius: '32px',
+                    animation: 'pulse 3s ease-in-out infinite'
+                  }} />
+                </div>
+                
+                {/* Texte Header */}
+                <div className="slide-in-right">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+                    <h1 style={{
+                      color: 'white',
+                      fontSize: '28px',
+                      margin: 0,
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      <span style={{ fontSize: '24px' }}>🛡️</span>
+                      C-Secur360
+                    </h1>
+                  </div>
+                  <p style={{
+                    color: '#f59e0b',
+                    fontSize: '16px',
+                    margin: '0 0 4px 0',
+                    fontWeight: '600'
+                  }}>
+                    Analyse Sécuritaire du Travail • Étape {currentStep} sur {steps.length}
+                  </p>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    fontSize: '14px'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: '#22c55e'
+                    }}>
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        background: '#22c55e'
+                      }} className="pulse-animation" />
+                      <span style={{ fontWeight: '600' }}>Système opérationnel</span>
+                    </div>
+                    <span style={{
+                      background: 'rgba(245, 158, 11, 0.2)',
+                      color: '#f59e0b',
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
+                      VERSION AST
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Contrôles Premium */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '16px',
+                flexWrap: 'wrap'
+              }}>
+                {/* Sélecteur de temps stylé */}
+                <select 
+                  style={{
+                    background: 'rgba(30, 41, 59, 0.8)',
+                    color: 'white',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    backdropFilter: 'blur(10px)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    minWidth: '180px'
+                  }}
+                >
+                  <option>Étape courante</option>
+                  <option>Toutes les étapes</option>
+                  <option>Étapes complétées</option>
+                </select>
+                
+                {/* Bouton Sauvegarder */}
+                <button 
+                  onClick={saveAST}
+                  disabled={isSaving}
+                  style={{
+                    background: 'rgba(30, 41, 59, 0.8)',
+                    color: 'white',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
+                    padding: '12px 20px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    backdropFilter: 'blur(10px)',
+                    opacity: isSaving ? 0.6 : 1
+                  }}
+                >
+                  {isSaving ? (
+                    <Clock style={{ width: '16px', height: '16px' }} />
+                  ) : (
+                    <Save style={{ width: '16px', height: '16px' }} />
+                  )}
+                  {isSaving ? 'Sauvegarde...' : 'Sauvegarder'}
+                </button>
+                
+                {/* Bouton Rapport Exécutif */}
+                <button 
+                  className="btn-premium"
+                  style={{
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%)',
+                    backgroundSize: '200% 200%',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '12px 20px',
+                    color: 'white',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    boxShadow: '0 8px 20px rgba(245, 158, 11, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <Download style={{ width: '16px', height: '16px' }} />
+                  Rapport AST
+                </button>
+              </div>
             </div>
           </div>
+        </header>
 
-          {/* Barre de progression */}
-          <div className="pb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-300">
-                Étape {currentStep} sur 8 - {currentStepConfig?.title}
-              </span>
-              <span className="text-sm font-medium text-gray-300">
-                {progress}% complété
-              </span>
-            </div>
-            <div className="w-full bg-white/10 rounded-full h-2">
+        {/* Container principal */}
+        <div style={{ 
+          maxWidth: '1400px', 
+          margin: '0 auto', 
+          padding: '32px 20px', 
+          position: 'relative',
+          zIndex: 5
+        }}>
+
+          {/* Indicateur de progression stylé */}
+          <div className="glass-effect slide-in-up" style={{ 
+            padding: '32px', 
+            marginBottom: '40px',
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)',
+            borderColor: 'rgba(59, 130, 246, 0.2)'
+          }}>
+            {/* Barre de progression */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '4px',
+              background: 'rgba(59, 130, 246, 0.2)',
+              borderRadius: '4px 4px 0 0'
+            }}>
               <div 
-                className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${(currentStep / 8) * 100}%` }}
+                className="progress-bar"
+                style={{
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #3b82f6, #9333ea, #22c55e)',
+                  borderRadius: '4px 4px 0 0',
+                  '--progress': `${progressPercentage}%`
+                } as any}
               />
             </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
-          {/* Sidebar avec navigation */}
-          <div className="w-80 space-y-4">
-            <div className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Étapes</h3>
-              <div className="space-y-2">
-                {stepConfig.map((step) => {
-                  const Icon = step.icon;
-                  const isCompleted = currentStep > step.id;
-                  const isCurrent = currentStep === step.id;
-                  const hasError = errors[step.id.toString()] || false;
-                  
-                  return (
-                    <button
-                      key={step.id}
-                      onClick={() => goToStep(step.id)}
-                      className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all ${
-                        isCurrent
-                          ? 'bg-blue-500/20 border border-blue-400/30 text-blue-300'
-                          : isCompleted
-                          ? 'bg-green-500/10 border border-green-400/20 text-green-300 hover:bg-green-500/20'
-                          : hasError
-                          ? 'bg-red-500/10 border border-red-400/20 text-red-300 hover:bg-red-500/20'
-                          : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
-                      }`}
-                    >
-                      <div className={`p-2 rounded-lg ${
-                        isCurrent
-                          ? 'bg-blue-500/30'
-                          : isCompleted
-                          ? 'bg-green-500/30'
-                          : hasError
-                          ? 'bg-red-500/30'
-                          : 'bg-white/10'
-                      }`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1 text-left">
-                        <div className="font-medium text-sm">{step.title}</div>
-                        <div className="text-xs opacity-75">{step.description}</div>
-                      </div>
-                      {isCompleted && (
-                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      )}
-                      {hasError && !isCompleted && (
-                        <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <h2 className="text-gradient" style={{
+              fontSize: '28px',
+              margin: '0 0 24px 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              fontWeight: '700'
+            }}>
+              <currentStepData.icon 
+                className="pulse-animation" 
+                style={{ 
+                  width: '32px', 
+                  height: '32px', 
+                  color: currentStepData.color 
+                }} 
+              />
+              {currentStepData.title}
+              <span style={{
+                background: currentStepData.gradient,
+                color: 'white',
+                padding: '4px 12px',
+                borderRadius: '12px',
+                fontSize: '12px',
+                fontWeight: '600'
+              }}>
+                Étape {currentStep}/{steps.length}
+              </span>
+            </h2>
 
-            {/* Statistiques */}
-            <div className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Progression</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-300">Sections complétées</span>
-                  <span className="text-white font-medium">{Object.keys(formData).length}/8</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-300">Progression globale</span>
-                  <span className="text-white font-medium">{progress}%</span>
-                </div>
-                {formData.hazards && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-300">Dangers identifiés</span>
-                    <span className="text-yellow-400 font-medium">{(formData.hazards as any[]).length}</span>
-                  </div>
-                )}
-                {formData.equipment && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-300">Équipements</span>
-                    <span className="text-green-400 font-medium">{(formData.equipment as any[]).length}</span>
-                  </div>
-                )}
-                {Object.keys(errors).length > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-300">Erreurs</span>
-                    <span className="text-red-400 font-medium">{Object.keys(errors).length}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+            <p style={{
+              color: '#94a3b8',
+              fontSize: '16px',
+              margin: '0 0 32px 0',
+              fontWeight: '500'
+            }}>
+              {currentStepData.subtitle}
+            </p>
 
-          {/* Contenu principal */}
-          <div className="flex-1">
-            <div className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 p-8">
-              {renderCurrentStep()}
-            </div>
-
-            {/* Affichage des erreurs globales */}
-            {Object.keys(errors).length > 0 && (
-              <div className="mt-4 p-4 bg-red-500/10 border border-red-400/20 rounded-lg">
-                <div className="flex items-center space-x-2 text-red-300 text-sm">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>Veuillez corriger les erreurs avant de continuer</span>
-                </div>
-              </div>
-            )}
-
-            {/* Navigation */}
-            <div className="mt-6 flex items-center justify-between">
-              <button
-                onClick={prevStep}
-                disabled={currentStep === 1}
-                className="flex items-center px-6 py-3 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4 mr-2" />
-                Précédent
-              </button>
-
-              <div className="flex space-x-2">
-                {stepConfig.map((step) => (
-                  <button
+            {/* Steps navigation */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: '12px',
+              marginBottom: '24px'
+            }}>
+              {steps.map((step, index) => {
+                const StepIcon = step.icon;
+                const isActive = step.id === currentStep;
+                const isCompleted = step.id < currentStep;
+                
+                return (
+                  <div
                     key={step.id}
-                    onClick={() => goToStep(step.id)}
-                    className={`w-10 h-10 rounded-full font-medium transition-all ${
-                      step.id === currentStep
-                        ? 'bg-blue-500 text-white'
-                        : step.id < currentStep
-                        ? 'bg-green-500 text-white'
-                        : 'bg-white/10 text-gray-400 hover:bg-white/20'
-                    }`}
+                    className={`step-indicator ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
+                    style={{
+                      padding: '16px 12px',
+                      background: isActive ? step.gradient : 
+                                 isCompleted ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' :
+                                 'rgba(30, 41, 59, 0.5)',
+                      border: `2px solid ${isActive ? step.color : 
+                                          isCompleted ? '#22c55e' : 
+                                          'rgba(255, 255, 255, 0.1)'}`,
+                      borderRadius: '16px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      backdropFilter: 'blur(10px)'
+                    }}
+                    onClick={() => setCurrentStep(step.id)}
                   >
-                    {step.id}
-                  </button>
-                ))}
-              </div>
+                    <StepIcon style={{
+                      width: '24px',
+                      height: '24px',
+                      margin: '0 auto 8px auto',
+                      color: isActive || isCompleted ? 'white' : '#94a3b8'
+                    }} />
+                    <div style={{
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: isActive || isCompleted ? 'white' : '#94a3b8',
+                      lineHeight: 1.3
+                    }}>
+                      {step.title}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-              <button
-                onClick={nextStep}
-                disabled={currentStep === 8 || (Object.keys(errors).length > 0)}
-                className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {currentStep === 8 ? 'Finaliser' : 'Suivant'}
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </button>
+            {/* Progression textuelle */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '14px',
+              color: '#94a3b8'
+            }}>
+              <span>Progression: {Math.round(progressPercentage)}%</span>
+              <span>{currentStep - 1} sur {steps.length} étapes complétées</span>
             </div>
           </div>
+
+          {/* Contenu de l'étape courante */}
+          <div className="glass-effect slide-in-up" style={{
+            padding: '40px',
+            marginBottom: '40px',
+            minHeight: '600px'
+          }}>
+            {getCurrentStepComponent()}
+          </div>
+
+          {/* Navigation */}
+          <div className="glass-effect" style={{
+            padding: '24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '16px'
+          }}>
+            <button
+              onClick={prevStep}
+              disabled={currentStep === 1}
+              className="btn-secondary"
+              style={{
+                opacity: currentStep === 1 ? 0.4 : 1,
+                cursor: currentStep === 1 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <ArrowLeft style={{ width: '16px', height: '16px' }} />
+              Précédent
+            </button>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              color: '#94a3b8',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}>
+              <Clock style={{ width: '16px', height: '16px' }} />
+              Sauvegarde automatique activée
+            </div>
+
+            <button
+              onClick={nextStep}
+              disabled={currentStep === steps.length}
+              className="btn-premium"
+              style={{
+                opacity: currentStep === steps.length ? 0.4 : 1,
+                cursor: currentStep === steps.length ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {currentStep === steps.length ? 'Terminé' : 'Suivant'}
+              <ArrowRight style={{ width: '16px', height: '16px', marginLeft: '8px' }} />
+            </button>
+          </div>
         </div>
+
+        {/* Footer Premium */}
+        <footer style={{
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
+          backdropFilter: 'blur(20px)',
+          borderTop: '1px solid rgba(100, 116, 139, 0.2)',
+          marginTop: '60px',
+          position: 'relative',
+          zIndex: 10
+        }}>
+          <div style={{ 
+            maxWidth: '1400px', 
+            margin: '0 auto', 
+            padding: '24px 20px' 
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              flexWrap: 'wrap', 
+              gap: '16px' 
+            }}>
+              <div>
+                <p style={{ 
+                  color: '#94a3b8', 
+                  fontSize: '14px', 
+                  margin: '0 0 4px 0',
+                  fontWeight: '500'
+                }}>
+                  🏛️ Conforme CNESST • CSA Z1000 • C-Secur360 © 2024
+                </p>
+                <p style={{ 
+                  color: '#64748b', 
+                  fontSize: '12px', 
+                  margin: 0 
+                }}>
+                  Plateforme certifiée pour la sécurité au travail
+                </p>
+              </div>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '16px', 
+                fontSize: '14px', 
+                color: '#94a3b8',
+                flexWrap: 'wrap'
+              }}>
+                <span className="mobile-hidden">AST en cours • {tenant}</span>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  color: '#22c55e'
+                }}>
+                  <div style={{ 
+                    width: '8px', 
+                    height: '8px', 
+                    borderRadius: '50%', 
+                    background: '#22c55e' 
+                  }} className="pulse-animation" />
+                  Système opérationnel
+                </div>
+              </div>
+            </div>
+          </div>
+        </footer>
       </div>
-    </div>
+    </>
   );
 }
