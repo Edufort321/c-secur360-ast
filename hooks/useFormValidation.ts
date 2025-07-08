@@ -45,7 +45,7 @@ export const useFormValidation = (
   } = options;
 
   const [values, setValues] = useState(initialValues);
-  const [validationState, setValidationState] = useState<FormValidationState>({});
+  const [values, setFormValues] = useState(initialValues);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
