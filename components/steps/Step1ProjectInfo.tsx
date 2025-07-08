@@ -669,8 +669,8 @@ export default function Step1ProjectInfo({
             </div>
           </div>
 
-          {/* Section Description - Pleine largeur avec textarea agrandi */}
-          <div className="form-section">
+          {/* Section Description - PLEINE LARGEUR OPTIMISÉE */}
+          <div className="form-section full-width-section">
             <div className="section-header">
               <FileText className="section-icon" />
               <h3 className="section-title">📝 Description Détaillée des Travaux</h3>
@@ -684,6 +684,12 @@ export default function Step1ProjectInfo({
               </label>
               <textarea
                 className="premium-textarea"
+                style={{
+                  width: '100%',
+                  minHeight: '200px',
+                  maxWidth: 'none',
+                  resize: 'vertical'
+                }}
                 placeholder="Décrivez en détail les travaux à effectuer :&#10;&#10;• Méthodes utilisées&#10;• Équipements impliqués&#10;• Zones d'intervention&#10;• Procédures spéciales&#10;• Conditions particulières&#10;&#10;Plus la description est détaillée, plus l'analyse de sécurité sera précise."
                 value={projectInfo.workDescription || ''}
                 onChange={(e) => updateProjectInfo('workDescription', e.target.value)}
