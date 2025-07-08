@@ -573,9 +573,23 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
             text-shadow: 0 1px 2px rgba(0,0,0,0.3);
           }
 
-          @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(1.05); }
+          @keyframes logoGlow {
+            0%, 100% { 
+              filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 15px rgba(245, 158, 11, 0.4));
+            }
+            50% { 
+              filter: brightness(1.5) contrast(1.3) drop-shadow(0 0 25px rgba(245, 158, 11, 0.7));
+            }
+          }
+
+          @keyframes shine {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+          }
+
+          .logo-glow {
+            animation: logoGlow 3s ease-in-out infinite;
           }
 
           /* Mobile Responsive */
@@ -694,42 +708,83 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
         <div className="glass-effect">
           {/* Header avec compteurs */}
           <div className="header-counters">
-            <div className="company-info">
-              <div className="company-logo">
-                <img 
-                  src="/c-secur360-logo.png" 
-                  alt="C-Secur360"
-                  style={{ 
-                    width: '48px', 
-                    height: '48px', 
-                    objectFit: 'contain',
-                    filter: 'brightness(1.1) contrast(1.1)'
+              {/* Logo Premium Ultra Grossi - IDENTIQUE AU DASHBOARD */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                <div 
+                  className="float-animation glow-effect"
+                  style={{
+                    background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
+                    padding: '32px',
+                    borderRadius: '32px',
+                    border: '4px solid #f59e0b',
+                    boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
+                    position: 'relative',
+                    overflow: 'hidden'
                   }}
-                  onError={(e) => {
-                    // Fallback si l'image ne charge pas
-                    e.currentTarget.style.display = 'none';
-                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                    if (fallback) fallback.style.display = 'flex';
-                  }}
-                />
-                {/* Fallback logo en cas d'erreur */}
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  background: 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%)',
-                  borderRadius: '12px',
-                  display: 'none',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '900',
-                  fontSize: '20px',
-                  color: '#1e293b',
-                  fontFamily: 'Arial, sans-serif'
-                }}>
-                  C🛡️
+                >
+                  <div style={{
+                    width: '96px',
+                    height: '96px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    zIndex: 1
+                  }}>
+                    <img 
+                      src="/c-secur360-logo.png" 
+                      alt="C-Secur360"
+                      className="logo-glow"
+                      style={{ 
+                        width: '80px', 
+                        height: '80px', 
+                        objectFit: 'contain',
+                        filter: 'brightness(1.2) contrast(1.1) drop-shadow(0 0 15px rgba(245, 158, 11, 0.4))'
+                      }}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                    />
+                    {/* Fallback identique au dashboard */}
+                    <div style={{
+                      width: '80px',
+                      height: '80px',
+                      background: 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%)',
+                      borderRadius: '20px',
+                      display: 'none',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '900',
+                      fontSize: '32px',
+                      color: '#f59e0b',
+                      fontFamily: 'Arial, sans-serif'
+                    }}>
+                      C🛡️
+                    </div>
+                  </div>
+                  
+                  {/* Effet brillance animé renforcé - IDENTIQUE DASHBOARD */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '-100%',
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
+                    animation: 'shine 2.5s ease-in-out infinite'
+                  }} />
+                  
+                  {/* Effet de pulse en arrière-plan - IDENTIQUE DASHBOARD */}
+                  <div style={{
+                    position: 'absolute',
+                    inset: '-10px',
+                    border: '2px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '40px',
+                    animation: 'pulse 3s ease-in-out infinite'
+                  }} />
                 </div>
-              </div>
-              <div>
                 <h1 style={{ color: 'white', fontSize: '32px', fontWeight: '800', margin: '0', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
                   🛡️ Analyse Sécuritaire du Travail
                 </h1>
