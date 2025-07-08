@@ -778,7 +778,7 @@ export default function Step8Finalization({
                   className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
                 />
                 <span className="text-sm font-medium text-gray-700">
-                  {t[option as keyof typeof t] || option}
+                  {String(t[option as keyof typeof t] || option)}
                 </span>
               </label>
             ))}
