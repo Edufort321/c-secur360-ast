@@ -51,6 +51,7 @@ interface LockoutPoint {
   verificationTime: string;
   photos: string[];
   notes: string;
+  completedProcedures: number[];
 }
 
 interface LockoutPhoto {
@@ -83,7 +84,8 @@ const ENERGY_TYPES = {
       'Couper l\'alimentation électrique', 
       'Verrouiller le disjoncteur',
       'Tester l\'absence de tension',
-      'Poser les étiquettes de sécurité'
+      'Poser les étiquettes de sécurité',
+      'Installation des mises à la terre'
     ]
   },
   mechanical: { 
@@ -95,7 +97,8 @@ const ENERGY_TYPES = {
       'Bloquer les parties mobiles',
       'Verrouiller les commandes',
       'Vérifier l\'immobilisation',
-      'Signaler la zone'
+      'Signaler la zone',
+      'Installer les dispositifs de blocage'
     ]
   },
   hydraulic: { 
@@ -107,7 +110,8 @@ const ENERGY_TYPES = {
       'Purger la pression résiduelle',
       'Verrouiller les vannes',
       'Vérifier la dépressurisation',
-      'Installer des bouchons de sécurité'
+      'Installer des bouchons de sécurité',
+      'Tester l\'étanchéité du système'
     ]
   },
   pneumatic: { 
@@ -119,7 +123,8 @@ const ENERGY_TYPES = {
       'Purger les réservoirs d\'air',
       'Verrouiller les vannes',
       'Vérifier la dépressurisation',
-      'Isoler les circuits'
+      'Isoler les circuits',
+      'Contrôler l\'absence de pression'
     ]
   },
   chemical: { 
@@ -131,7 +136,8 @@ const ENERGY_TYPES = {
       'Purger les conduites',
       'Neutraliser les résidus',
       'Verrouiller les accès',
-      'Installer la signalisation'
+      'Installer la signalisation',
+      'Vérifier l\'absence de vapeurs'
     ]
   },
   thermal: { 
@@ -143,7 +149,8 @@ const ENERGY_TYPES = {
       'Laisser refroidir les équipements',
       'Isoler les sources de chaleur',
       'Vérifier la température',
-      'Signaler les zones chaudes'
+      'Signaler les zones chaudes',
+      'Installer les protections thermiques'
     ]
   },
   gravity: { 
@@ -155,7 +162,8 @@ const ENERGY_TYPES = {
       'Bloquer les mécanismes de levage',
       'Installer des supports de sécurité',
       'Vérifier la stabilité',
-      'Baliser la zone'
+      'Baliser la zone',
+      'Contrôler les points d\'ancrage'
     ]
   }
 };
@@ -273,7 +281,8 @@ export default function Step1ProjectInfo({
       verifiedBy: '',
       verificationTime: '',
       photos: [],
-      notes: ''
+      notes: '',
+      completedProcedures: []
     };
 
     const updatedPoints = [...lockoutPoints, newPoint];
@@ -285,6 +294,29 @@ export default function Step1ProjectInfo({
       point.id === pointId ? { ...point, [field]: value } : point
     );
     updateProjectInfo('lockoutPoints', updatedPoints);
+  };
+
+  const toggleProcedureComplete = (pointId: string, procedureIndex: number) => {
+    const point = lockoutPoints.find((p: LockoutPoint) => p.id === pointId);
+    if (!point) return;
+
+    const completedProcedures = point.completedProcedures || [];
+    const isCompleted = completedProcedures.includes(procedureIndex);
+    
+    const updatedCompleted = isCompleted 
+      ? completedProcedures.filter((index: number) => index !== procedureIndex)
+      : [...completedProcedures, procedureIndex];
+
+    updateLockoutPoint(pointId, 'completedProcedures', updatedCompleted);
+  };
+
+  const getProcedureProgress = (point: LockoutPoint): { completed: number; total: number; percentage: number } => {
+    const energyType = ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES];
+    const total = energyType?.procedures.length || 0;
+    const completed = (point.completedProcedures || []).length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    
+    return { completed, total, percentage };
   };
 
   const deleteLockoutPoint = (pointId: string) => {
@@ -1055,16 +1087,94 @@ export default function Step1ProjectInfo({
             margin: 0 0 12px 0;
           }
 
-          .procedures-list ol {
+          .procedures-checklist {
             margin: 0;
-            padding-left: 20px;
+            padding: 0;
+            list-style: none;
+          }
+
+          .procedure-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+          }
+
+          .procedure-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+          }
+
+          .procedure-item.completed {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+          }
+
+          .procedure-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(100, 116, 139, 0.5);
+            border-radius: 4px;
+            background: rgba(15, 23, 42, 0.8);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+            margin-top: 2px;
+          }
+
+          .procedure-checkbox.checked {
+            background: #22c55e;
+            border-color: #22c55e;
+            color: white;
+          }
+
+          .procedure-checkbox:hover {
+            border-color: #3b82f6;
+            transform: scale(1.05);
+          }
+
+          .procedure-text {
             color: #94a3b8;
             font-size: 13px;
             line-height: 1.5;
+            flex: 1;
           }
 
-          .procedures-list li {
-            margin-bottom: 6px;
+          .procedure-item.completed .procedure-text {
+            color: #a7f3d0;
+          }
+
+          .procedures-progress {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(100, 116, 139, 0.2);
+          }
+
+          .progress-bar {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 8px;
+            height: 6px;
+            overflow: hidden;
+            margin-bottom: 8px;
+          }
+
+          .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            transition: width 0.5s ease;
+            border-radius: 8px;
+          }
+
+          .progress-text {
+            font-size: 12px;
+            color: #64748b;
+            text-align: center;
           }
 
           /* Mobile Responsive */
@@ -1605,12 +1715,40 @@ export default function Step1ProjectInfo({
                 {/* Procédures recommandées */}
                 {point.energyType && ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES] && (
                   <div className="procedures-list">
-                    <h4>🔧 Procédures Recommandées:</h4>
-                    <ol>
-                      {ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES].procedures.map((procedure, idx) => (
-                        <li key={idx}>{procedure}</li>
-                      ))}
-                    </ol>
+                    <h4>🔧 Procédures à Suivre:</h4>
+                    <ul className="procedures-checklist">
+                      {ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES].procedures.map((procedure, idx) => {
+                        const isCompleted = (point.completedProcedures || []).includes(idx);
+                        return (
+                          <li 
+                            key={idx} 
+                            className={`procedure-item ${isCompleted ? 'completed' : ''}`}
+                            onClick={() => toggleProcedureComplete(point.id, idx)}
+                          >
+                            <div className={`procedure-checkbox ${isCompleted ? 'checked' : ''}`}>
+                              {isCompleted && <Check size={12} />}
+                            </div>
+                            <span className="procedure-text">
+                              {procedure}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    
+                    {/* Barre de progression */}
+                    <div className="procedures-progress">
+                      <div className="progress-bar">
+                        <div 
+                          className="progress-fill"
+                          style={{ width: `${getProcedureProgress(point).percentage}%` }}
+                        />
+                      </div>
+                      <div className="progress-text">
+                        {getProcedureProgress(point).completed} / {getProcedureProgress(point).total} étapes complétées 
+                        ({getProcedureProgress(point).percentage}%)
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
