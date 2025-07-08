@@ -405,234 +405,249 @@ export default function Step1ProjectInfo({
           </div>
         </div>
 
-        {/* Grille Premium des Sections */}
+        {/* Grille Premium des Sections - OPTIMISÉE MOBILE */}
         <div className="premium-grid">
           
-          {/* Section Client */}
-          <div className="form-section">
-            <div className="section-header">
-              <Building className="section-icon" />
-              <h3 className="section-title">🏢 Informations Client</h3>
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Building style={{ width: '16px', height: '16px' }} />
-                Nom du Client
-                <span className="required-indicator">*</span>
-              </label>
-              <input
-                type="text"
-                className="premium-input"
-                placeholder="Ex: Hydro-Québec, Bell Canada..."
-                value={projectInfo.client || ''}
-                onChange={(e) => updateProjectInfo('client', e.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Phone style={{ width: '16px', height: '16px' }} />
-                Téléphone Client
-              </label>
-              <input
-                type="tel"
-                className="premium-input"
-                placeholder="Ex: (514) 555-0123"
-                value={projectInfo.clientPhone || ''}
-                onChange={(e) => updateProjectInfo('clientPhone', e.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <User style={{ width: '16px', height: '16px' }} />
-                Représentant Client
-              </label>
-              <input
-                type="text"
-                className="premium-input"
-                placeholder="Nom du responsable projet"
-                value={projectInfo.clientRepresentative || ''}
-                onChange={(e) => updateProjectInfo('clientRepresentative', e.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Phone style={{ width: '16px', height: '16px' }} />
-                Téléphone Représentant
-              </label>
-              <input
-                type="tel"
-                className="premium-input"
-                placeholder="Ex: (514) 555-0456"
-                value={projectInfo.clientRepresentativePhone || ''}
-                onChange={(e) => updateProjectInfo('clientRepresentativePhone', e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Section Projet */}
-          <div className="form-section">
-            <div className="section-header">
-              <Briefcase className="section-icon" />
-              <h3 className="section-title">📋 Détails du Projet</h3>
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Briefcase style={{ width: '16px', height: '16px' }} />
-                Numéro de Projet
-                <span className="required-indicator">*</span>
-              </label>
-              <input
-                type="text"
-                className="premium-input"
-                placeholder="Ex: PRJ-2025-001"
-                value={projectInfo.projectNumber || ''}
-                onChange={(e) => updateProjectInfo('projectNumber', e.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <FileText style={{ width: '16px', height: '16px' }} />
-                # AST Client (Optionnel)
-              </label>
-              <input
-                type="text"
-                className="premium-input"
-                placeholder="Numéro fourni par le client"
-                value={projectInfo.astClientNumber || ''}
-                onChange={(e) => updateProjectInfo('astClientNumber', e.target.value)}
-              />
-              <div className="field-help">
-                Numéro de référence du client (si applicable)
+          {/* Section Client et Projet - Desktop 2 colonnes */}
+          <div className="desktop-two-column">
+            {/* Section Client */}
+            <div className="form-section">
+              <div className="section-header">
+                <Building className="section-icon" />
+                <h3 className="section-title">🏢 Informations Client</h3>
               </div>
-            </div>
 
-            <div className="two-column">
               <div className="form-field">
                 <label className="field-label">
-                  <Calendar style={{ width: '16px', height: '16px' }} />
-                  Date
+                  <Building style={{ width: '18px', height: '18px' }} />
+                  Nom du Client
+                  <span className="required-indicator">*</span>
                 </label>
                 <input
-                  type="date"
+                  type="text"
                   className="premium-input"
-                  value={projectInfo.date || new Date().toISOString().split('T')[0]}
-                  onChange={(e) => updateProjectInfo('date', e.target.value)}
+                  placeholder="Ex: Hydro-Québec, Bell Canada..."
+                  value={projectInfo.client || ''}
+                  onChange={(e) => updateProjectInfo('client', e.target.value)}
                 />
               </div>
 
               <div className="form-field">
                 <label className="field-label">
-                  <Clock style={{ width: '16px', height: '16px' }} />
-                  Heure
+                  <Phone style={{ width: '18px', height: '18px' }} />
+                  Téléphone Client
                 </label>
                 <input
-                  type="time"
+                  type="tel"
                   className="premium-input"
-                  value={projectInfo.time || new Date().toTimeString().substring(0, 5)}
-                  onChange={(e) => updateProjectInfo('time', e.target.value)}
+                  placeholder="Ex: (514) 555-0123"
+                  value={projectInfo.clientPhone || ''}
+                  onChange={(e) => updateProjectInfo('clientPhone', e.target.value)}
+                />
+              </div>
+
+              <div className="form-field">
+                <label className="field-label">
+                  <User style={{ width: '18px', height: '18px' }} />
+                  Représentant Client
+                </label>
+                <input
+                  type="text"
+                  className="premium-input"
+                  placeholder="Nom du responsable projet"
+                  value={projectInfo.clientRepresentative || ''}
+                  onChange={(e) => updateProjectInfo('clientRepresentative', e.target.value)}
+                />
+              </div>
+
+              <div className="form-field">
+                <label className="field-label">
+                  <Phone style={{ width: '18px', height: '18px' }} />
+                  Téléphone Représentant
+                </label>
+                <input
+                  type="tel"
+                  className="premium-input"
+                  placeholder="Ex: (514) 555-0456"
+                  value={projectInfo.clientRepresentativePhone || ''}
+                  onChange={(e) => updateProjectInfo('clientRepresentativePhone', e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Section Projet */}
+            <div className="form-section">
+              <div className="section-header">
+                <Briefcase className="section-icon" />
+                <h3 className="section-title">📋 Détails du Projet</h3>
+              </div>
+
+              <div className="form-field">
+                <label className="field-label">
+                  <Briefcase style={{ width: '18px', height: '18px' }} />
+                  Numéro de Projet
+                  <span className="required-indicator">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="premium-input"
+                  placeholder="Ex: PRJ-2025-001"
+                  value={projectInfo.projectNumber || ''}
+                  onChange={(e) => updateProjectInfo('projectNumber', e.target.value)}
+                />
+              </div>
+
+              <div className="form-field">
+                <label className="field-label">
+                  <FileText style={{ width: '18px', height: '18px' }} />
+                  # AST Client (Optionnel)
+                </label>
+                <input
+                  type="text"
+                  className="premium-input"
+                  placeholder="Numéro fourni par le client"
+                  value={projectInfo.astClientNumber || ''}
+                  onChange={(e) => updateProjectInfo('astClientNumber', e.target.value)}
+                />
+                <div className="field-help">
+                  Numéro de référence du client (si applicable)
+                </div>
+              </div>
+
+              <div className="two-column">
+                <div className="form-field">
+                  <label className="field-label">
+                    <Calendar style={{ width: '18px', height: '18px' }} />
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    className="premium-input"
+                    value={projectInfo.date || new Date().toISOString().split('T')[0]}
+                    onChange={(e) => updateProjectInfo('date', e.target.value)}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label className="field-label">
+                    <Clock style={{ width: '18px', height: '18px' }} />
+                    Heure
+                  </label>
+                  <input
+                    type="time"
+                    className="premium-input"
+                    value={projectInfo.time || new Date().toTimeString().substring(0, 5)}
+                    onChange={(e) => updateProjectInfo('time', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section Localisation et Équipe - Desktop 2 colonnes */}
+          <div className="desktop-two-column">
+            {/* Section Localisation */}
+            <div className="form-section">
+              <div className="section-header">
+                <MapPin className="section-icon" />
+                <h3 className="section-title">📍 Localisation</h3>
+              </div>
+
+              <div className="form-field">
+                <label className="field-label">
+                  <MapPin style={{ width: '18px', height: '18px' }} />
+                  Lieu des Travaux
+                  <span className="required-indicator">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="premium-input"
+                  placeholder="Adresse complète du site de travail"
+                  value={projectInfo.workLocation || ''}
+                  onChange={(e) => updateProjectInfo('workLocation', e.target.value)}
+                />
+              </div>
+
+              <div className="form-field">
+                <label className="field-label">
+                  <Briefcase style={{ width: '18px', height: '18px' }} />
+                  Type d'Industrie
+                </label>
+                <select
+                  className="premium-select"
+                  value={projectInfo.industry || 'electrical'}
+                  onChange={(e) => updateProjectInfo('industry', e.target.value)}
+                >
+                  <option value="electrical">⚡ Électrique</option>
+                  <option value="construction">🏗️ Construction</option>
+                  <option value="industrial">🏭 Industriel</option>
+                  <option value="manufacturing">⚙️ Manufacturier</option>
+                  <option value="office">🏢 Bureau/Administratif</option>
+                  <option value="other">🔧 Autre</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Section Équipe */}
+            <div className="form-section">
+              <div className="section-header">
+                <Users className="section-icon" />
+                <h3 className="section-title">👥 Équipe de Travail</h3>
+              </div>
+
+              <div className="form-field">
+                <label className="field-label">
+                  <Users style={{ width: '18px', height: '18px' }} />
+                  Nombre de Personnes
+                  <span className="required-indicator">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  className="premium-input"
+                  placeholder="Ex: 5"
+                  value={projectInfo.workerCount || 1}
+                  onChange={(e) => updateProjectInfo('workerCount', parseInt(e.target.value) || 1)}
+                />
+                <div className="field-help">
+                  Ce nombre sera comparé aux approbations d'équipe
+                </div>
+              </div>
+
+              <div className="form-field">
+                <label className="field-label">
+                  <Clock style={{ width: '18px', height: '18px' }} />
+                  Durée Estimée
+                </label>
+                <input
+                  type="text"
+                  className="premium-input"
+                  placeholder="Ex: 4 heures, 2 jours, 1 semaine"
+                  value={projectInfo.estimatedDuration || ''}
+                  onChange={(e) => updateProjectInfo('estimatedDuration', e.target.value)}
                 />
               </div>
             </div>
           </div>
 
-          {/* Section Localisation */}
+          {/* Section Contacts d'Urgence - Pleine largeur */}
           <div className="form-section">
             <div className="section-header">
-              <MapPin className="section-icon" />
-              <h3 className="section-title">📍 Localisation</h3>
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <MapPin style={{ width: '16px', height: '16px' }} />
-                Lieu des Travaux
-                <span className="required-indicator">*</span>
-              </label>
-              <input
-                type="text"
-                className="premium-input"
-                placeholder="Adresse complète du site de travail"
-                value={projectInfo.workLocation || ''}
-                onChange={(e) => updateProjectInfo('workLocation', e.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                Type d'Industrie
-              </label>
-              <select
-                className="premium-select"
-                value={projectInfo.industry || 'electrical'}
-                onChange={(e) => updateProjectInfo('industry', e.target.value)}
-              >
-                <option value="electrical">⚡ Électrique</option>
-                <option value="construction">🏗️ Construction</option>
-                <option value="industrial">🏭 Industriel</option>
-                <option value="manufacturing">⚙️ Manufacturier</option>
-                <option value="office">🏢 Bureau/Administratif</option>
-                <option value="other">🔧 Autre</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Section Équipe */}
-          <div className="form-section">
-            <div className="section-header">
-              <Users className="section-icon" />
-              <h3 className="section-title">👥 Équipe de Travail</h3>
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Users style={{ width: '16px', height: '16px' }} />
-                Nombre de Personnes
-                <span className="required-indicator">*</span>
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="100"
-                className="premium-input"
-                placeholder="Ex: 5"
-                value={projectInfo.workerCount || 1}
-                onChange={(e) => updateProjectInfo('workerCount', parseInt(e.target.value) || 1)}
-              />
-              <div className="field-help">
-                Ce nombre sera comparé aux approbations d'équipe
-              </div>
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Clock style={{ width: '16px', height: '16px' }} />
-                Durée Estimée
-              </label>
-              <input
-                type="text"
-                className="premium-input"
-                placeholder="Ex: 4 heures, 2 jours, 1 semaine"
-                value={projectInfo.estimatedDuration || ''}
-                onChange={(e) => updateProjectInfo('estimatedDuration', e.target.value)}
-              />
+              <AlertTriangle className="section-icon" />
+              <h3 className="section-title">🚨 Contacts d'Urgence</h3>
             </div>
 
             <div className="two-column">
               <div className="form-field">
                 <label className="field-label">
-                  <AlertTriangle style={{ width: '16px', height: '16px' }} />
+                  <AlertTriangle style={{ width: '18px', height: '18px' }} />
                   Contact d'Urgence
                 </label>
                 <input
                   type="text"
                   className="premium-input"
-                  placeholder="Nom du contact"
+                  placeholder="Nom du contact d'urgence"
                   value={projectInfo.emergencyContact || ''}
                   onChange={(e) => updateProjectInfo('emergencyContact', e.target.value)}
                 />
@@ -640,13 +655,13 @@ export default function Step1ProjectInfo({
 
               <div className="form-field">
                 <label className="field-label">
-                  <Phone style={{ width: '16px', height: '16px' }} />
-                  # Urgence
+                  <Phone style={{ width: '18px', height: '18px' }} />
+                  Téléphone d'Urgence
                 </label>
                 <input
                   type="tel"
                   className="premium-input"
-                  placeholder="911 ou autre"
+                  placeholder="911 ou numéro spécifique"
                   value={projectInfo.emergencyPhone || ''}
                   onChange={(e) => updateProjectInfo('emergencyPhone', e.target.value)}
                 />
@@ -664,18 +679,18 @@ export default function Step1ProjectInfo({
 
           <div className="form-field">
             <label className="field-label">
-              <FileText style={{ width: '16px', height: '16px' }} />
+              <FileText style={{ width: '18px', height: '18px' }} />
               Description Complète
               <span className="required-indicator">*</span>
             </label>
             <textarea
               className="premium-textarea"
-              placeholder="Décrivez en détail les travaux à effectuer, les méthodes utilisées, les équipements impliqués, les zones d'intervention..."
+              placeholder="Décrivez en détail les travaux à effectuer, les méthodes utilisées, les équipements impliqués, les zones d'intervention, les procédures spéciales..."
               value={projectInfo.workDescription || ''}
               onChange={(e) => updateProjectInfo('workDescription', e.target.value)}
             />
             <div className="field-help">
-              Plus la description est détaillée, plus l'analyse de sécurité sera précise
+              Plus la description est détaillée, plus l'analyse de sécurité sera précise. Incluez les méthodes de travail, les équipements utilisés, et les zones spécifiques d'intervention.
             </div>
           </div>
         </div>
