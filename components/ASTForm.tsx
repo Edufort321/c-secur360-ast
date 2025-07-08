@@ -163,6 +163,11 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
   };
 
   const getCurrentStepComponent = () => {
+    // Force l'utilisation du code intégré pour Step 1
+    if (currentStep === 1) {
+      return null; // Le contenu est déjà géré dans le JSX principal
+    }
+
     const stepProps = {
       formData,
       onDataChange: handleDataChange,
@@ -172,7 +177,6 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
     };
 
     switch (currentStep) {
-      case 1: return <Step1ProjectInfo {...stepProps} />;
       case 2: return <Step2Equipment {...stepProps} />;
       case 3: return <Step3Hazards {...stepProps} />;
       case 4: return <Step4Controls {...stepProps} />;
@@ -180,7 +184,7 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
       case 6: return <Step6Validation {...stepProps} />;
       case 7: return <Step7TeamShare {...stepProps} />;
       case 8: return <Step8Finalization {...stepProps} />;
-      default: return <div>Step not found</div>;
+      default: return null;
     }
   };
 
@@ -913,7 +917,8 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
 
             {/* Contenu du step */}
             <div>
-              {getCurrentStepComponent()}
+              {/* Step 1 utilise le code intégré, autres steps utilisent les composants */}
+              {currentStep !== 1 && getCurrentStepComponent()}
             </div>
           </div>
 
