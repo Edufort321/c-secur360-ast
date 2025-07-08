@@ -45,6 +45,280 @@ import {
   HardHat
 } from 'lucide-react';
 
+interface EquipmentData {
+  list: Equipment[];
+  selected: Equipment[];
+  totalCost: number;
+  inspectionStatus: {
+    total: number;
+    verified: number;
+    available: number;
+    verificationRate: number;
+    availabilityRate: number;
+  };
+}
+
+interface Equipment {
+  id: string;
+  name: string;
+  category: string;
+  required: boolean;
+  available: boolean;
+  verified: boolean;
+  notes?: string;
+  certification?: string;
+  inspectionDate?: string;
+  inspectedBy?: string;
+  condition?: 'excellent' | 'good' | 'fair' | 'poor';
+  cost?: number;
+  supplier?: string;
+  photos?: EquipmentPhoto[];
+  priority?: 'high' | 'medium' | 'low';
+  mandatoryFor?: string[];
+}
+
+interface EquipmentPhoto {
+  id: string;
+  url: string;
+  caption: string;
+  timestamp: string;
+  category: 'inspection' | 'condition' | 'certification' | 'use';
+}
+
+interface HazardData {
+  list: Hazard[];
+  selected: Hazard[];
+  stats: {
+    totalHazards: number;
+    categories: Record<string, number>;
+  };
+}
+
+interface Hazard {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  legislation: string;
+  icon: string;
+  selected: boolean;
+  controlMeasures: ControlMeasure[];
+}
+
+interface ControlMeasure {
+  id: string;
+  name: string;
+  category: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
+  description: string;
+  priority: number;
+  implemented: boolean;
+  responsible?: string;
+  deadline?: string;
+  notes?: string;
+}
+
+interface PermitData {
+  permits: WorkPermit[];
+  authorities: Authority[];
+  generalRequirements: GeneralRequirement[];
+  timeline: TimelineItem[];
+  notifications: NotificationItem[];
+  hotWorkPermit?: HotWorkPermit;
+  confinedSpacePermit?: ConfinedSpacePermit;
+  heightWorkPermit?: HeightWorkPermit;
+  electricalPermit?: ElectricalPermit;
+  regulatory: RegulatoryCompliance;
+}
+
+interface WorkPermit {
+  id: string;
+  type: string;
+  number: string;
+  issuedBy: string;
+  validFrom: string;
+  validTo: string;
+  conditions: string[];
+  isRequired: boolean;
+  isObtained: boolean;
+  documents?: PermitDocument[];
+}
+
+interface PermitDocument {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  timestamp: string;
+}
+
+interface Authority {
+  id: string;
+  name: string;
+  type: string;
+  contactInfo: string;
+  jurisdiction: string;
+  requirements: string[];
+  isRequired: boolean;
+}
+
+interface GeneralRequirement {
+  id: string;
+  category: string;
+  description: string;
+  isRequired: boolean;
+  deadline?: string;
+  responsible?: string;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
+interface TimelineItem {
+  id: string;
+  date: string;
+  activity: string;
+  responsible: string;
+  status: 'pending' | 'completed' | 'overdue';
+  dependencies?: string[];
+}
+
+interface NotificationItem {
+  id: string;
+  recipient: string;
+  type: string;
+  message: string;
+  scheduledDate: string;
+  sent: boolean;
+  acknowledged: boolean;
+}
+
+interface HotWorkPermit {
+  fireWatchRequired: boolean;
+  fireWatchName?: string;
+  extinguisherLocation: string;
+  hotWorkType: string[];
+  precautions: string[];
+  validityHours: number;
+}
+
+interface ConfinedSpacePermit {
+  spaceType: string;
+  entryProcedure: string[];
+  gasMonitoring: boolean;
+  attendantName?: string;
+  ventilationRequired: boolean;
+  emergencyProcedures: string[];
+}
+
+interface HeightWorkPermit {
+  workHeight: number;
+  fallProtectionType: string[];
+  anchoragePoints: string[];
+  weatherRestrictions: string[];
+  rescuePlan: string;
+}
+
+interface ElectricalPermit {
+  voltageLevel: string;
+  lockoutRequired: boolean;
+  qualifiedPersonnel: string[];
+  testingRequired: boolean;
+  isolationVerified: boolean;
+}
+
+interface RegulatoryCompliance {
+  rsst: boolean;
+  cnesst: boolean;
+  municipalPermits: string[];
+  environmentalConsiderations: string[];
+  specialConditions: string[];
+}
+
+interface ValidationData {
+  teamMembers: TeamMember[];
+  discussionPoints: DiscussionPoint[];
+  meetingMinutes: MeetingMinutes;
+  approvals: TeamApproval[];
+  concerns: string[];
+  improvements: string[];
+  finalValidation: FinalValidation;
+  reviewers: TeamMember[];
+  approvalRequired: boolean;
+  minimumReviewers: number;
+  validationCriteria: string[];
+}
+
+interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  email: string;
+  department: string;
+  experience: string;
+  certifications: string[];
+  phoneNumber?: string;
+  hasParticipated: boolean;
+  signature?: string;
+  signatureDate?: string;
+  feedback?: string;
+  certification?: string;
+  status: 'approved' | 'pending' | 'rejected' | 'reviewing';
+  comments?: string;
+  rating?: number;
+  validatedAt?: string;
+}
+
+interface DiscussionPoint {
+  id: string;
+  category: 'safety' | 'procedure' | 'equipment' | 'environment' | 'emergency';
+  title: string;
+  description: string;
+  raisedBy: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  resolution?: string;
+  isResolved: boolean;
+  timestamp: string;
+}
+
+interface MeetingMinutes {
+  date: string;
+  duration: number;
+  location: string;
+  facilitator: string;
+  participants: string[];
+  keyPoints: string[];
+  decisions: string[];
+  actionItems: ActionItem[];
+}
+
+interface ActionItem {
+  id: string;
+  description: string;
+  assignedTo: string;
+  deadline: string;
+  status: 'open' | 'in_progress' | 'completed';
+  priority: 'low' | 'medium' | 'high';
+}
+
+interface TeamApproval {
+  memberId: string;
+  memberName: string;
+  role: string;
+  approved: boolean;
+  signature?: string;
+  timestamp?: string;
+  conditions?: string;
+  digitalSignature?: string;
+}
+
+interface FinalValidation {
+  allMembersParticipated: boolean;
+  allConcernsAddressed: boolean;
+  consensusReached: boolean;
+  validatorName: string;
+  validationDate: string;
+  validationSignature: string;
+}
+
 interface Worker {
   id: string;
   name: string;
@@ -144,10 +418,10 @@ interface FinalizationStepProps {
   formData: {
     finalization?: FinalizationData;
     projectInfo?: any;
-    equipment?: any[];
-    hazards?: any[];
-    permits?: any[];
-    validation?: any;
+    equipment?: EquipmentData;
+    hazards?: HazardData;
+    permits?: PermitData;
+    validation?: ValidationData;
   };
   onDataChange: (section: string, data: FinalizationData) => void;
   language: 'fr' | 'en';
@@ -200,9 +474,9 @@ export default function Step6Finalization({
     },
     completionStatus: {
       projectInfo: !!formData.projectInfo,
-      equipment: !!(formData.equipment?.length),
-      hazards: !!(formData.hazards?.length),
-      permits: !!(formData.permits?.length),
+      equipment: !!(formData.equipment?.selected?.length),
+      hazards: !!(formData.hazards?.selected?.length),
+      permits: !!(formData.permits?.permits?.length),
       validation: !!formData.validation
     },
     metadata: {
