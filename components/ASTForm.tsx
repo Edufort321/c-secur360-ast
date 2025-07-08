@@ -9,89 +9,13 @@ import {
   Droplets, Flame, Activity, Search, Filter, Hand
 } from 'lucide-react';
 
-// Import des composants Steps
+// Import des composants Steps - NOUVEAUX NOMS DE FICHIERS
 import Step1ProjectInfo from './steps/Step1ProjectInfo';
 import Step2Equipment from './steps/Step2Equipment';
 import Step3Hazards from './steps/Step3Hazards';
-
-// Placeholders temporaires pour les steps restants
-const Step4Permits = ({ formData, onDataChange, language, tenant, errors }: any) => (
-  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
-    <FileText size={64} color="#10b981" style={{ marginBottom: '24px' }} />
-    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
-      📋 Step 4: Permis & Autorisations
-    </h3>
-    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
-      Gestion automatique des permis de travail, conformité RSST/CNESST,
-      vérification réglementaire et timeline d'approbation.
-    </p>
-    <div style={{
-      background: 'rgba(16, 185, 129, 0.1)',
-      border: '1px solid rgba(16, 185, 129, 0.3)',
-      borderRadius: '12px',
-      padding: '20px',
-      color: '#10b981',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '8px'
-    }}>
-      <Settings size={20} className="pulse-animation" />
-      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
-    </div>
-  </div>
-);
-
-const Step5Validation = ({ formData, onDataChange, language, tenant, errors }: any) => (
-  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
-    <Users size={64} color="#06b6d4" style={{ marginBottom: '24px' }} />
-    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
-      ✍️ Step 5: Validation Équipe
-    </h3>
-    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
-      Signatures digitales, validation collaborative, procès-verbal de réunion,
-      feedback équipe et approbations hiérarchiques.
-    </p>
-    <div style={{
-      background: 'rgba(6, 182, 212, 0.1)',
-      border: '1px solid rgba(6, 182, 212, 0.3)',
-      borderRadius: '12px',
-      padding: '20px',
-      color: '#06b6d4',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '8px'
-    }}>
-      <Settings size={20} className="pulse-animation" />
-      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
-    </div>
-  </div>
-);
-
-const Step6Finalization = ({ formData, onDataChange, language, tenant, errors }: any) => (
-  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
-    <CheckCircle size={64} color="#059669" style={{ marginBottom: '24px' }} />
-    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
-      🏁 Step 6: Finalisation
-    </h3>
-    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
-      Validation finale, partage équipe, formation et archivage sécurisé.
-      Communication multi-canal et plan de surveillance continue.
-    </p>
-    <div style={{
-      background: 'rgba(5, 150, 105, 0.1)',
-      border: '1px solid rgba(5, 150, 105, 0.3)',
-      borderRadius: '12px',
-      padding: '20px',
-      color: '#059669',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '8px'
-    }}>
-      <Settings size={20} className="pulse-animation" />
-      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
-    </div>
-  </div>
-);
+import Step4Permits from './steps/Step4Permits';
+import Step5Validation from './steps/Step5Validation';
+import Step6Finalization from './steps/Step6Finalization';
 
 // =================== INTERFACES ENTERPRISE ===================
 interface ASTFormProps {
@@ -442,172 +366,99 @@ interface FinalValidation {
 }
 
 interface FinalizationData {
-  // Partage équipe
-  communicationPlan: CommunicationPlan;
-  emergencyProcedures: EmergencyProcedure[];
-  training: TrainingRecord[];
-  distribution: DistributionRecord[];
-  accessibility: AccessibilityFeatures;
-  
-  // Finalisation
-  qualityReview: QualityReview;
-  complianceCheck: ComplianceCheck;
-  finalApproval: FinalApproval;
-  archiving: ArchivingInfo;
-  finalDistribution: FinalDistribution;
-  monitoring: MonitoringPlan;
+  // Données fusionnées de TeamShare + Finalization
+  workers: Worker[];
+  photos: Photo[];
+  finalComments: string;
+  documentGeneration: DocumentGeneration;
+  distribution: Distribution;
+  completionStatus: {
+    projectInfo: boolean;
+    equipment: boolean;
+    hazards: boolean;
+    permits: boolean;
+    validation: boolean;
+  };
+  supervisorSignature?: {
+    signedBy: string;
+    signedAt: string;
+    signature: string;
+    title: string;
+  };
+  metadata: {
+    createdAt: string;
+    completedAt?: string;
+    version: string;
+    lastModified: string;
+    totalDuration?: number;
+  };
+  shareLink?: string;
+  qrCode?: string;
 }
 
-interface CommunicationPlan {
-  channels: CommunicationChannel[];
-  frequencies: string[];
-  emergencySignals: string[];
-  checkInSchedule: string;
-  responsiblePerson: string;
-  backupPerson: string;
-}
-
-interface CommunicationChannel {
-  type: 'radio' | 'phone' | 'visual' | 'digital';
-  details: string;
-  frequency?: string;
-  contactInfo?: string;
-  isBackup: boolean;
-}
-
-interface EmergencyProcedure {
-  id: string;
-  type: 'evacuation' | 'medical' | 'fire' | 'chemical_spill' | 'electrical' | 'fall' | 'entrapment';
-  title: string;
-  steps: string[];
-  emergencyContacts: EmergencyContact[];
-  equipmentRequired: string[];
-  responsiblePerson: string;
-  activationCriteria: string[];
-}
-
-interface EmergencyContact {
-  name: string;
-  role: string;
-  phone: string;
-  isExternal: boolean;
-  isAvailable24h: boolean;
-}
-
-interface TrainingRecord {
-  workerId: string;
-  workerName: string;
-  trainingType: string;
-  completedDate: string;
-  expiryDate?: string;
-  certificateNumber?: string;
-  isValid: boolean;
-}
-
-interface DistributionRecord {
-  recipientId: string;
-  recipientName: string;
-  role: string;
-  method: 'email' | 'print' | 'digital' | 'verbal';
-  distributedDate?: string;
-  acknowledged: boolean;
-  acknowledgedDate?: string;
-}
-
-interface AccessibilityFeatures {
-  languageOptions: string[];
-  visualAids: boolean;
-  audioSupport: boolean;
-  simplifiedVersion: boolean;
-  largeText: boolean;
-}
-
-interface QualityReview {
-  reviewerId: string;
-  reviewerName: string;
-  reviewDate: string;
-  completeness: number;
-  accuracy: number;
-  compliance: number;
-  overallScore: number;
-  comments: string;
-  improvements: string[];
-  approved: boolean;
-}
-
-interface ComplianceCheck {
-  rsst: boolean;
-  cnesst: boolean;
-  internal: boolean;
-  client: boolean;
-  regulatory: boolean;
-  certifications: string[];
-  gaps: string[];
-  correctionsPlan?: CorrectionPlan[];
-}
-
-interface CorrectionPlan {
-  issue: string;
-  correctionRequired: string;
-  responsible: string;
-  deadline: string;
-  status: 'pending' | 'in_progress' | 'completed';
-}
-
-interface FinalApproval {
-  approverId: string;
-  approverName: string;
-  approverRole: string;
-  approvalDate: string;
-  digitalSignature: string;
-  conditions?: string[];
-  validityPeriod: number;
-  reviewRequired: boolean;
-}
-
-interface ArchivingInfo {
-  archiveLocation: string;
-  retentionPeriod: number;
-  accessLevel: 'public' | 'internal' | 'restricted' | 'confidential';
-  backupLocation?: string;
-  encryptionLevel: string;
-}
-
-interface FinalDistribution {
-  recipients: FinalRecipient[];
-  distributionMethod: 'email' | 'print' | 'digital' | 'portal';
-  distributionDate?: string;
-  trackingEnabled: boolean;
-  confirmationRequired: boolean;
-}
-
-interface FinalRecipient {
+interface Worker {
   id: string;
   name: string;
-  role: string;
+  position: string;
+  employeeId?: string;
+  company: string;
+  phone?: string;
   email?: string;
-  method: string;
-  priority: 'high' | 'medium' | 'low';
-  delivered: boolean;
-  deliveredDate?: string;
-  acknowledged: boolean;
-  acknowledgedDate?: string;
+  certifications: string[];
+  experience: string;
+  hasConsented: boolean;
+  consentDate?: string;
+  consentTime?: string;
+  signature?: string;
+  digitalSignature?: boolean;
 }
 
-interface MonitoringPlan {
-  reviewSchedule: string;
-  responsiblePerson: string;
-  kpis: KPI[];
-  reportingFrequency: string;
-  escalationCriteria: string[];
+interface Photo {
+  id: string;
+  url: string;
+  caption: string;
+  type: 'before' | 'during' | 'after' | 'equipment' | 'hazard' | 'general';
+  timestamp: string;
+  location?: {
+    lat: number;
+    lng: number;
+  };
+  tags: string[];
 }
 
-interface KPI {
-  name: string;
-  target: number;
-  frequency: string;
-  responsible: string;
-  alertThreshold: number;
+interface DocumentGeneration {
+  format: 'pdf' | 'word' | 'excel' | 'html';
+  template: 'standard' | 'detailed' | 'summary' | 'regulatory';
+  language: 'fr' | 'en' | 'both';
+  includePhotos: boolean;
+  includeSignatures: boolean;
+  includeQRCode: boolean;
+  branding: boolean;
+  watermark: boolean;
+}
+
+interface Distribution {
+  email: {
+    enabled: boolean;
+    recipients: string[];
+    subject: string;
+    message: string;
+  };
+  portal: {
+    enabled: boolean;
+    publish: boolean;
+    category: string;
+  };
+  archive: {
+    enabled: boolean;
+    retention: number;
+    location: 'local' | 'cloud' | 'both';
+  };
+  compliance: {
+    enabled: boolean;
+    authorities: string[];
+    submissionDate?: string;
+  };
 }
 
 interface Signature {
@@ -699,43 +550,53 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       finalValidation: {} as FinalValidation
     },
     finalization: {
-      communicationPlan: {
-        channels: [],
-        frequencies: [],
-        emergencySignals: [],
-        checkInSchedule: '',
-        responsiblePerson: '',
-        backupPerson: ''
+      workers: [],
+      photos: [],
+      finalComments: '',
+      documentGeneration: {
+        format: 'pdf',
+        template: 'standard',
+        language: 'fr',
+        includePhotos: true,
+        includeSignatures: true,
+        includeQRCode: true,
+        branding: true,
+        watermark: true
       },
-      emergencyProcedures: [],
-      training: [],
-      distribution: [],
-      accessibility: {
-        languageOptions: ['fr'],
-        visualAids: false,
-        audioSupport: false,
-        simplifiedVersion: false,
-        largeText: false
+      distribution: {
+        email: {
+          enabled: true,
+          recipients: [],
+          subject: '',
+          message: ''
+        },
+        portal: {
+          enabled: true,
+          publish: false,
+          category: 'safety'
+        },
+        archive: {
+          enabled: true,
+          retention: 7,
+          location: 'cloud'
+        },
+        compliance: {
+          enabled: false,
+          authorities: []
+        }
       },
-      qualityReview: {} as QualityReview,
-      complianceCheck: {
-        rsst: false,
-        cnesst: false,
-        internal: false,
-        client: false,
-        regulatory: false,
-        certifications: [],
-        gaps: []
+      completionStatus: {
+        projectInfo: false,
+        equipment: false,
+        hazards: false,
+        permits: false,
+        validation: false
       },
-      finalApproval: {} as FinalApproval,
-      archiving: {} as ArchivingInfo,
-      finalDistribution: {
-        recipients: [],
-        distributionMethod: 'email',
-        trackingEnabled: false,
-        confirmationRequired: false
-      },
-      monitoring: {} as MonitoringPlan
+      metadata: {
+        createdAt: new Date().toISOString(),
+        version: '1.0',
+        lastModified: new Date().toISOString()
+      }
     },
     signatures: [],
     approvals: [],
@@ -928,7 +789,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     { 
       id: 6, 
       title: 'Finalisation', 
-      subtitle: 'Partage, Formation & Archive',
+      subtitle: 'Consentement & Archive',
       icon: CheckCircle, 
       color: '#059669',
       required: true,
@@ -1416,7 +1277,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
               />
             )}
 
-            {/* ÉTAPE 6: Finalisation (Partage + Archive) */}
+            {/* ÉTAPE 6: Finalisation (Consentement Travailleurs + Archive) */}
             {currentStep === 6 && (
               <Step6Finalization
                 formData={astData}
