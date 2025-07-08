@@ -405,10 +405,10 @@ export default function Step1ProjectInfo({
           </div>
         </div>
 
-        {/* Grille Premium des Sections - OPTIMISÉE MOBILE */}
+        {/* Grille Premium des Sections - AUTO-SIZING OPTIMISÉ */}
         <div className="premium-grid">
           
-          {/* Section Client et Projet - Desktop 2 colonnes */}
+          {/* Sections Client et Projet - Desktop 2 colonnes, Mobile empilé */}
           <div className="desktop-two-column">
             {/* Section Client */}
             <div className="form-section">
@@ -544,7 +544,7 @@ export default function Step1ProjectInfo({
             </div>
           </div>
 
-          {/* Section Localisation et Équipe - Desktop 2 colonnes */}
+          {/* Sections Localisation et Équipe - Desktop 2 colonnes, Mobile empilé */}
           <div className="desktop-two-column">
             {/* Section Localisation */}
             <div className="form-section">
@@ -631,7 +631,7 @@ export default function Step1ProjectInfo({
             </div>
           </div>
 
-          {/* Section Contacts d'Urgence - Pleine largeur */}
+          {/* Section Contacts d'Urgence - Pleine largeur avec 2 colonnes internes */}
           <div className="form-section">
             <div className="section-header">
               <AlertTriangle className="section-icon" />
@@ -668,29 +668,29 @@ export default function Step1ProjectInfo({
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Section Description - Pleine largeur */}
-        <div className="form-section">
-          <div className="section-header">
-            <FileText className="section-icon" />
-            <h3 className="section-title">📝 Description Détaillée des Travaux</h3>
-          </div>
+          {/* Section Description - Pleine largeur avec textarea agrandi */}
+          <div className="form-section">
+            <div className="section-header">
+              <FileText className="section-icon" />
+              <h3 className="section-title">📝 Description Détaillée des Travaux</h3>
+            </div>
 
-          <div className="form-field">
-            <label className="field-label">
-              <FileText style={{ width: '18px', height: '18px' }} />
-              Description Complète
-              <span className="required-indicator">*</span>
-            </label>
-            <textarea
-              className="premium-textarea"
-              placeholder="Décrivez en détail les travaux à effectuer, les méthodes utilisées, les équipements impliqués, les zones d'intervention, les procédures spéciales..."
-              value={projectInfo.workDescription || ''}
-              onChange={(e) => updateProjectInfo('workDescription', e.target.value)}
-            />
-            <div className="field-help">
-              Plus la description est détaillée, plus l'analyse de sécurité sera précise. Incluez les méthodes de travail, les équipements utilisés, et les zones spécifiques d'intervention.
+            <div className="form-field">
+              <label className="field-label">
+                <FileText style={{ width: '18px', height: '18px' }} />
+                Description Complète
+                <span className="required-indicator">*</span>
+              </label>
+              <textarea
+                className="premium-textarea"
+                placeholder="Décrivez en détail les travaux à effectuer :&#10;&#10;• Méthodes utilisées&#10;• Équipements impliqués&#10;• Zones d'intervention&#10;• Procédures spéciales&#10;• Conditions particulières&#10;&#10;Plus la description est détaillée, plus l'analyse de sécurité sera précise."
+                value={projectInfo.workDescription || ''}
+                onChange={(e) => updateProjectInfo('workDescription', e.target.value)}
+              />
+              <div className="field-help">
+                Une description complète aide à identifier tous les risques potentiels et à choisir les mesures de sécurité appropriées.
+              </div>
             </div>
           </div>
         </div>
