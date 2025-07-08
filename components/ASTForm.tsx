@@ -14,8 +14,34 @@ import Step1ProjectInfo from './steps/Step1ProjectInfo';
 import Step2Equipment from './steps/Step2Equipment';
 import Step3Hazards from './steps/Step3Hazards';
 import Step4Permits from './steps/Step4Permits';
-import Step5Validation from './steps/Step5Validation';
 import Step6Finalization from './steps/Step6Finalization';
+
+// Placeholder temporaire pour Step5 en attendant sa création
+const Step5Validation = ({ formData, onDataChange, language, tenant, errors }: any) => (
+  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
+    <Users size={64} color="#06b6d4" style={{ marginBottom: '24px' }} />
+    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
+      ✍️ Step 5: Validation Équipe
+    </h3>
+    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
+      Signatures digitales, validation collaborative, procès-verbal de réunion,
+      feedback équipe et approbations hiérarchiques.
+    </p>
+    <div style={{
+      background: 'rgba(6, 182, 212, 0.1)',
+      border: '1px solid rgba(6, 182, 212, 0.3)',
+      borderRadius: '12px',
+      padding: '20px',
+      color: '#06b6d4',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px'
+    }}>
+      <Settings size={20} className="pulse-animation" />
+      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
+    </div>
+  </div>
+);
 
 // =================== INTERFACES ENTERPRISE ===================
 interface ASTFormProps {
@@ -308,6 +334,8 @@ interface TeamMember {
   id: string;
   name: string;
   role: string;
+  email: string;
+  department: string;
   experience: string;
   certifications: string[];
   phoneNumber?: string;
@@ -315,6 +343,11 @@ interface TeamMember {
   signature?: string;
   signatureDate?: string;
   feedback?: string;
+  certification?: string;
+  status: 'approved' | 'pending' | 'rejected' | 'reviewing';
+  comments?: string;
+  rating?: number;
+  validatedAt?: string;
 }
 
 interface DiscussionPoint {
