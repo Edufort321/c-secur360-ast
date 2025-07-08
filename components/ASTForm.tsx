@@ -212,6 +212,91 @@ interface PhotoData {
   gpsLocation?: string;
 }
 
+interface DocumentData {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+  uploadedBy: string;
+  timestamp: string;
+}
+
+interface VideoData {
+  id: string;
+  url: string;
+  caption: string;
+  duration: number;
+  timestamp: string;
+}
+
+interface AttachmentData {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+  timestamp: string;
+}
+
+interface Signature {
+  id: string;
+  signerId: string;
+  signerName: string;
+  signerRole: string;
+  signatureData: string;
+  timestamp: string;
+  ipAddress?: string;
+  deviceInfo?: string;
+}
+
+interface Approval {
+  id: string;
+  approverId: string;
+  approverName: string;
+  approverRole: string;
+  approved: boolean;
+  comments?: string;
+  timestamp: string;
+  conditions?: string[];
+}
+
+interface NotificationData {
+  id: string;
+  recipientId: string;
+  recipientName: string;
+  type: 'signature_request' | 'approval_request' | 'status_change' | 'reminder';
+  message: string;
+  sent: boolean;
+  sentAt?: string;
+  readAt?: string;
+}
+
+interface EmergencyProcedure {
+  id: string;
+  type: 'evacuation' | 'medical' | 'fire' | 'chemical_spill' | 'electrical' | 'fall' | 'entrapment';
+  title: string;
+  steps: string[];
+  emergencyContacts: EmergencyContact[];
+  equipmentRequired: string[];
+  responsiblePerson: string;
+}
+
+interface EmergencyContact {
+  name: string;
+  role: string;
+  phone: string;
+  isExternal: boolean;
+}
+
+interface CommunicationPlan {
+  channels: string[];
+  frequencies: string[];
+  emergencySignals: string[];
+  checkInSchedule: string;
+  responsiblePerson: string;
+}
+
 interface FinalizationData {
   finalReview: {
     reviewedBy: string;
