@@ -245,12 +245,19 @@ export default function Step1ProjectInfo({ formData, onDataChange, language, ten
   };
 
   const deleteLockoutPoint = (pointId: string) => {
+    console.log('Suppression du point de verrouillage:', pointId);
+    console.log('Points avant suppression:', lockoutPoints.length);
+    
     const updatedPoints = lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
+    console.log('Points après suppression:', updatedPoints.length);
+    
     updateProjectInfo('lockoutPoints', updatedPoints);
     
     // Supprimer aussi les photos associées
     const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
     updateProjectInfo('lockoutPhotos', updatedPhotos);
+    
+    console.log('Point supprimé avec succès');
   };
 
   // =================== CARROUSEL PHOTOS ===================
@@ -710,8 +717,18 @@ export default function Step1ProjectInfo({ formData, onDataChange, language, ten
                 <h4 style={{ color: '#ef4444', margin: 0, fontSize: '16px', fontWeight: '600' }}>
                   🔒 Point de Verrouillage #{index + 1}
                 </h4>
-                <button className="btn-danger" onClick={() => deleteLockoutPoint(point.id)}>
-                  <Trash2 size={14} />Supprimer
+                <button 
+                  className="btn-danger" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Suppression du point:', point.id);
+                    deleteLockoutPoint(point.id);
+                  }}
+                  type="button"
+                >
+                  <Trash2 size={14} />
+                  Supprimer
                 </button>
               </div>
 
