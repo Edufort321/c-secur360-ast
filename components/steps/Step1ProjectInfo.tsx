@@ -143,149 +143,7 @@ export default function Step1ProjectInfo({ formData, onDataChange, language, ten
     onDataChange('astNumber', newNumber);
   };
 
-  return (
-    <>
-      {/* CSS Premium pour Step 1 avec Verrouillage */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .step1-container { padding: 0; }
-          .premium-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 32px; }
-          .form-section { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 20px; padding: 24px; transition: all 0.3s ease; }
-          .form-section:hover { transform: translateY(-4px); border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15); }
-          .lockout-section { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); }
-          .lockout-section:hover { border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 8px 25px rgba(239, 68, 68, 0.15); }
-          .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(100, 116, 139, 0.2); }
-          .section-icon { width: 24px; height: 24px; color: #3b82f6; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
-          .lockout-icon { color: #ef4444 !important; }
-          .section-title { color: #ffffff; font-size: 18px; font-weight: 700; margin: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
-          .form-field { margin-bottom: 20px; }
-          .field-label { display: block; color: #e2e8f0; font-size: 14px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-          .premium-input, .premium-select, .premium-textarea { width: 100%; padding: 14px 16px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; color: #ffffff; font-size: 15px; font-weight: 500; transition: all 0.3s ease; backdrop-filter: blur(10px); }
-          .premium-input:focus, .premium-select:focus, .premium-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); background: rgba(15, 23, 42, 0.9); }
-          .premium-textarea { min-height: 120px; resize: vertical; font-family: inherit; }
-          .premium-input::placeholder, .premium-textarea::placeholder { color: #64748b; font-weight: 400; }
-          .premium-select { cursor: pointer; }
-          .required-indicator { color: #ef4444; margin-left: 4px; }
-          .field-help { font-size: 12px; color: #64748b; margin-top: 6px; font-style: italic; }
-          .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-          .ast-number-card { background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%); border: 2px solid #22c55e; border-radius: 20px; padding: 24px; margin-bottom: 32px; position: relative; overflow: hidden; }
-          .ast-number-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.1), transparent); animation: shine 3s ease-in-out infinite; }
-          @keyframes shine { 0% { left: -100%; } 50% { left: 100%; } 100% { left: 100%; } }
-          .ast-number-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-          .ast-number-title { color: #22c55e; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-          .ast-number-value { font-family: 'Monaco', 'Menlo', 'Courier New', monospace; font-size: 24px; font-weight: 800; color: #22c55e; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); margin-bottom: 12px; }
-          .ast-actions { display: flex; gap: 12px; }
-          .btn-icon { background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; color: #22c55e; padding: 8px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
-          .btn-icon:hover { background: rgba(34, 197, 94, 0.2); transform: translateY(-2px); }
-          .btn-icon.copied { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
-          .btn-primary { background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: none; color: white; padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
-          .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3); }
-          .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: white; padding: 8px 12px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; font-size: 14px; }
-          .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
-          .energy-type-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
-          .energy-type-option { padding: 12px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; cursor: pointer; transition: all 0.3s ease; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-          .energy-type-option.selected { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
-          .energy-type-option:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); }
-          .lockout-point { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 20px; position: relative; }
-          .lockout-point-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(239, 68, 68, 0.2); }
-          .procedures-list { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(100, 116, 139, 0.2); border-radius: 12px; padding: 16px; margin-top: 12px; }
-          .procedures-list h4 { color: #e2e8f0; font-size: 14px; font-weight: 600; margin: 0 0 12px 0; }
-          .procedures-checklist { margin: 0; padding: 0; list-style: none; }
-          .procedure-item { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; padding: 8px; border-radius: 8px; transition: all 0.3s ease; cursor: pointer; }
-          .procedure-item:hover { background: rgba(59, 130, 246, 0.1); }
-          .procedure-item.completed { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); }
-          .procedure-checkbox { width: 18px; height: 18px; border: 2px solid rgba(100, 116, 139, 0.5); border-radius: 4px; background: rgba(15, 23, 42, 0.8); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0; margin-top: 2px; }
-          .procedure-checkbox.checked { background: #22c55e; border-color: #22c55e; color: white; }
-          .procedure-checkbox:hover { border-color: #3b82f6; transform: scale(1.05); }
-          .procedure-text { color: #94a3b8; font-size: 13px; line-height: 1.5; flex: 1; }
-          .procedure-item.completed .procedure-text { color: #a7f3d0; }
-          .procedures-progress { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(100, 116, 139, 0.2); }
-          .progress-bar { background: rgba(15, 23, 42, 0.8); border-radius: 8px; height: 6px; overflow: hidden; margin-bottom: 8px; }
-          .progress-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a); transition: width 0.5s ease; border-radius: 8px; }
-          .progress-text { font-size: 12px; color: #64748b; text-align: center; }
-          .time-quick-select { display: flex; gap: 6px; margin-top: 8px; }
-          .time-btn { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; flex: 1; justify-content: center; }
-          .time-btn:hover { background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.5); transform: translateY(-1px); }
-          .time-btn.now { background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3); color: #4ade80; }
-          .time-btn.now:hover { background: rgba(34, 197, 94, 0.2); border-color: rgba(34, 197, 94, 0.5); }
-          .time-btn.plus5 { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); color: #fbbf24; }
-          .time-btn.plus5:hover { background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); }
-          .time-btn.plus15 { background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3); color: #a78bfa; }
-          .time-btn.plus15:hover { background: rgba(139, 92, 246, 0.2); border-color: rgba(139, 92, 246, 0.5); }
-          .photo-capture-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-          .photo-capture-btn { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
-          .photo-capture-btn:hover { background: rgba(59, 130, 246, 0.2); transform: translateY(-1px); }
-          .photo-carousel { position: relative; margin-top: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 16px; overflow: hidden; }
-          .carousel-container { position: relative; width: 100%; height: 300px; overflow: hidden; }
-          .carousel-track { display: flex; transition: transform 0.3s ease; height: 100%; }
-          .carousel-slide { min-width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; }
-          .carousel-slide img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
-          .carousel-slide.add-photo { background: rgba(59, 130, 246, 0.1); border: 2px dashed rgba(59, 130, 246, 0.3); cursor: pointer; transition: all 0.3s ease; flex-direction: column; gap: 16px; }
-          .carousel-slide.add-photo:hover { background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.5); }
-          .add-photo-content { display: flex; flex-direction: column; align-items: center; gap: 12px; color: #60a5fa; }
-          .add-photo-icon { width: 48px; height: 48px; background: rgba(59, 130, 246, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
-          .carousel-slide.add-photo:hover .add-photo-icon { transform: scale(1.1); background: rgba(59, 130, 246, 0.3); }
-          .carousel-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0, 0, 0, 0.7); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10; }
-          .carousel-nav:hover { background: rgba(0, 0, 0, 0.9); transform: translateY(-50%) scale(1.1); }
-          .carousel-nav:disabled { opacity: 0.3; cursor: not-allowed; }
-          .carousel-nav.prev { left: 16px; }
-          .carousel-nav.next { right: 16px; }
-          .carousel-indicators { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 10; }
-          .carousel-indicator { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.4); cursor: pointer; transition: all 0.3s ease; }
-          .carousel-indicator.active { background: rgba(255, 255, 255, 0.9); transform: scale(1.2); }
-          .photo-info { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); color: white; padding: 20px 16px 16px; display: flex; justify-content: space-between; align-items: flex-end; }
-          .photo-caption { flex: 1; margin-right: 12px; }
-          .photo-caption h4 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
-          .photo-caption p { margin: 0; font-size: 12px; opacity: 0.8; }
-          .photo-actions { display: flex; gap: 8px; }
-          .photo-action-btn { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 6px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
-          .photo-action-btn:hover { background: rgba(255, 255, 255, 0.3); }
-          .photo-action-btn.delete:hover { background: rgba(239, 68, 68, 0.8); border-color: #ef4444; }
-          @media (max-width: 768px) {
-            .premium-grid { grid-template-columns: 1fr; gap: 16px; }
-            .form-section { padding: 16px; }
-            .two-column { grid-template-columns: 1fr; gap: 12px; }
-            .ast-number-value { font-size: 18px; }
-            .section-title { font-size: 16px; }
-            .premium-input, .premium-select, .premium-textarea { font-size: 16px; }
-            .energy-type-selector { grid-template-columns: repeat(2, 1fr); }
-            .photo-capture-buttons { flex-direction: column; }
-            .time-quick-select { flex-direction: column; gap: 4px; }
-            .time-btn { flex: none; }
-          }
-          @media (max-width: 480px) {
-            .form-section { padding: 12px; }
-            .ast-number-card { padding: 16px; }
-            .ast-actions { flex-direction: column; }
-            .energy-type-selector { grid-template-columns: 1fr; }
-          }
-        `
-      }} />
-
-      {/* Input caché pour capture photo */}
-      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} />
-      
-      <div className="step1-container">
-        {/* Carte Numéro AST Premium */}
-        <div className="ast-number-card">
-          <div className="ast-number-header">
-            <div className="ast-number-title">
-              <FileText style={{ width: '20px', height: '20px' }} />
-              🔢 Numéro AST Unique
-            </div>
-            <div className="ast-actions">
-              <button className={`btn-icon ${copied ? 'copied' : ''}`} onClick={copyASTNumber} title="Copier le numéro">
-                {copied ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
-              </button>
-              <button className="btn-icon" onClick={regenerateASTNumber} title="Générer un nouveau numéro">
-                <FileText style={{ width: '16px', height: '16px' }} />
-              </button>
-            </div>
-          </div>
-          <div className="ast-number-value">{astNumber}</div>
-          <div className="field-help">Numéro généré automatiquement - Usage unique pour cette AST</div>
-        </div>
-        // =================== GESTION PHOTOS ===================
+  // =================== GESTION PHOTOS ===================
   const handlePhotoCapture = async (category: string, lockoutPointId?: string) => {
     try {
       if (fileInputRef.current) {
@@ -468,6 +326,149 @@ export default function Step1ProjectInfo({ formData, onDataChange, language, ten
     );
   };
 
+  return (
+    <>
+      {/* CSS Premium pour Step 1 avec Verrouillage */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .step1-container { padding: 0; }
+          .premium-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 32px; }
+          .form-section { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 20px; padding: 24px; transition: all 0.3s ease; }
+          .form-section:hover { transform: translateY(-4px); border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15); }
+          .lockout-section { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); }
+          .lockout-section:hover { border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 8px 25px rgba(239, 68, 68, 0.15); }
+          .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(100, 116, 139, 0.2); }
+          .section-icon { width: 24px; height: 24px; color: #3b82f6; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+          .lockout-icon { color: #ef4444 !important; }
+          .section-title { color: #ffffff; font-size: 18px; font-weight: 700; margin: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+          .form-field { margin-bottom: 20px; }
+          .field-label { display: block; color: #e2e8f0; font-size: 14px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+          .premium-input, .premium-select, .premium-textarea { width: 100%; padding: 14px 16px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; color: #ffffff; font-size: 15px; font-weight: 500; transition: all 0.3s ease; backdrop-filter: blur(10px); }
+          .premium-input:focus, .premium-select:focus, .premium-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); background: rgba(15, 23, 42, 0.9); }
+          .premium-textarea { min-height: 120px; resize: vertical; font-family: inherit; }
+          .premium-input::placeholder, .premium-textarea::placeholder { color: #64748b; font-weight: 400; }
+          .premium-select { cursor: pointer; }
+          .required-indicator { color: #ef4444; margin-left: 4px; }
+          .field-help { font-size: 12px; color: #64748b; margin-top: 6px; font-style: italic; }
+          .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+          .ast-number-card { background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%); border: 2px solid #22c55e; border-radius: 20px; padding: 24px; margin-bottom: 32px; position: relative; overflow: hidden; }
+          .ast-number-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.1), transparent); animation: shine 3s ease-in-out infinite; }
+          @keyframes shine { 0% { left: -100%; } 50% { left: 100%; } 100% { left: 100%; } }
+          .ast-number-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+          .ast-number-title { color: #22c55e; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+          .ast-number-value { font-family: 'Monaco', 'Menlo', 'Courier New', monospace; font-size: 24px; font-weight: 800; color: #22c55e; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); margin-bottom: 12px; }
+          .ast-actions { display: flex; gap: 12px; }
+          .btn-icon { background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; color: #22c55e; padding: 8px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
+          .btn-icon:hover { background: rgba(34, 197, 94, 0.2); transform: translateY(-2px); }
+          .btn-icon.copied { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+          .btn-primary { background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: none; color: white; padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
+          .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3); }
+          .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: white; padding: 8px 12px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; font-size: 14px; }
+          .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+          .energy-type-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
+          .energy-type-option { padding: 12px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; cursor: pointer; transition: all 0.3s ease; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+          .energy-type-option.selected { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+          .energy-type-option:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); }
+          .lockout-point { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 20px; position: relative; }
+          .lockout-point-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(239, 68, 68, 0.2); }
+          .procedures-list { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(100, 116, 139, 0.2); border-radius: 12px; padding: 16px; margin-top: 12px; }
+          .procedures-list h4 { color: #e2e8f0; font-size: 14px; font-weight: 600; margin: 0 0 12px 0; }
+          .procedures-checklist { margin: 0; padding: 0; list-style: none; }
+          .procedure-item { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; padding: 8px; border-radius: 8px; transition: all 0.3s ease; cursor: pointer; }
+          .procedure-item:hover { background: rgba(59, 130, 246, 0.1); }
+          .procedure-item.completed { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); }
+          .procedure-checkbox { width: 18px; height: 18px; border: 2px solid rgba(100, 116, 139, 0.5); border-radius: 4px; background: rgba(15, 23, 42, 0.8); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0; margin-top: 2px; }
+          .procedure-checkbox.checked { background: #22c55e; border-color: #22c55e; color: white; }
+          .procedure-checkbox:hover { border-color: #3b82f6; transform: scale(1.05); }
+          .procedure-text { color: #94a3b8; font-size: 13px; line-height: 1.5; flex: 1; }
+          .procedure-item.completed .procedure-text { color: #a7f3d0; }
+          .procedures-progress { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(100, 116, 139, 0.2); }
+          .progress-bar { background: rgba(15, 23, 42, 0.8); border-radius: 8px; height: 6px; overflow: hidden; margin-bottom: 8px; }
+          .progress-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a); transition: width 0.5s ease; border-radius: 8px; }
+          .progress-text { font-size: 12px; color: #64748b; text-align: center; }
+          .time-quick-select { display: flex; gap: 6px; margin-top: 8px; }
+          .time-btn { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; flex: 1; justify-content: center; }
+          .time-btn:hover { background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.5); transform: translateY(-1px); }
+          .time-btn.now { background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3); color: #4ade80; }
+          .time-btn.now:hover { background: rgba(34, 197, 94, 0.2); border-color: rgba(34, 197, 94, 0.5); }
+          .time-btn.plus5 { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); color: #fbbf24; }
+          .time-btn.plus5:hover { background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); }
+          .time-btn.plus15 { background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3); color: #a78bfa; }
+          .time-btn.plus15:hover { background: rgba(139, 92, 246, 0.2); border-color: rgba(139, 92, 246, 0.5); }
+          .photo-capture-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+          .photo-capture-btn { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
+          .photo-capture-btn:hover { background: rgba(59, 130, 246, 0.2); transform: translateY(-1px); }
+          .photo-carousel { position: relative; margin-top: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 16px; overflow: hidden; }
+          .carousel-container { position: relative; width: 100%; height: 300px; overflow: hidden; }
+          .carousel-track { display: flex; transition: transform 0.3s ease; height: 100%; }
+          .carousel-slide { min-width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; }
+          .carousel-slide img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+          .carousel-slide.add-photo { background: rgba(59, 130, 246, 0.1); border: 2px dashed rgba(59, 130, 246, 0.3); cursor: pointer; transition: all 0.3s ease; flex-direction: column; gap: 16px; }
+          .carousel-slide.add-photo:hover { background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.5); }
+          .add-photo-content { display: flex; flex-direction: column; align-items: center; gap: 12px; color: #60a5fa; }
+          .add-photo-icon { width: 48px; height: 48px; background: rgba(59, 130, 246, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
+          .carousel-slide.add-photo:hover .add-photo-icon { transform: scale(1.1); background: rgba(59, 130, 246, 0.3); }
+          .carousel-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0, 0, 0, 0.7); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10; }
+          .carousel-nav:hover { background: rgba(0, 0, 0, 0.9); transform: translateY(-50%) scale(1.1); }
+          .carousel-nav:disabled { opacity: 0.3; cursor: not-allowed; }
+          .carousel-nav.prev { left: 16px; }
+          .carousel-nav.next { right: 16px; }
+          .carousel-indicators { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 10; }
+          .carousel-indicator { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.4); cursor: pointer; transition: all 0.3s ease; }
+          .carousel-indicator.active { background: rgba(255, 255, 255, 0.9); transform: scale(1.2); }
+          .photo-info { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); color: white; padding: 20px 16px 16px; display: flex; justify-content: space-between; align-items: flex-end; }
+          .photo-caption { flex: 1; margin-right: 12px; }
+          .photo-caption h4 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+          .photo-caption p { margin: 0; font-size: 12px; opacity: 0.8; }
+          .photo-actions { display: flex; gap: 8px; }
+          .photo-action-btn { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 6px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
+          .photo-action-btn:hover { background: rgba(255, 255, 255, 0.3); }
+          .photo-action-btn.delete:hover { background: rgba(239, 68, 68, 0.8); border-color: #ef4444; }
+          @media (max-width: 768px) {
+            .premium-grid { grid-template-columns: 1fr; gap: 16px; }
+            .form-section { padding: 16px; }
+            .two-column { grid-template-columns: 1fr; gap: 12px; }
+            .ast-number-value { font-size: 18px; }
+            .section-title { font-size: 16px; }
+            .premium-input, .premium-select, .premium-textarea { font-size: 16px; }
+            .energy-type-selector { grid-template-columns: repeat(2, 1fr); }
+            .photo-capture-buttons { flex-direction: column; }
+            .time-quick-select { flex-direction: column; gap: 4px; }
+            .time-btn { flex: none; }
+          }
+          @media (max-width: 480px) {
+            .form-section { padding: 12px; }
+            .ast-number-card { padding: 16px; }
+            .ast-actions { flex-direction: column; }
+            .energy-type-selector { grid-template-columns: 1fr; }
+          }
+        `
+      }} />
+
+      {/* Input caché pour capture photo */}
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} />
+      
+      <div className="step1-container">
+        {/* Carte Numéro AST Premium */}
+        <div className="ast-number-card">
+          <div className="ast-number-header">
+            <div className="ast-number-title">
+              <FileText style={{ width: '20px', height: '20px' }} />
+              🔢 Numéro AST Unique
+            </div>
+            <div className="ast-actions">
+              <button className={`btn-icon ${copied ? 'copied' : ''}`} onClick={copyASTNumber} title="Copier le numéro">
+                {copied ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
+              </button>
+              <button className="btn-icon" onClick={regenerateASTNumber} title="Générer un nouveau numéro">
+                <FileText style={{ width: '16px', height: '16px' }} />
+              </button>
+            </div>
+          </div>
+          <div className="ast-number-value">{astNumber}</div>
+          <div className="field-help">Numéro généré automatiquement - Usage unique pour cette AST</div>
+        </div>
+
         {/* Grille Premium des Sections */}
         <div className="premium-grid">
           {/* Section Client */}
@@ -645,6 +646,7 @@ export default function Step1ProjectInfo({ formData, onDataChange, language, ten
             </div>
           </div>
         </div>
+
         {/* =================== SECTION VERROUILLAGE/CADENASSAGE =================== */}
         <div className="form-section lockout-section span-full" style={{ marginTop: '32px' }}>
           <div className="section-header">
