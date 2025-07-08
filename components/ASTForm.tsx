@@ -21,7 +21,8 @@ import {
   User,
   Briefcase,
   Copy,
-  Check
+  Check,
+  Camera
 } from 'lucide-react';
 
 interface ASTFormProps {
