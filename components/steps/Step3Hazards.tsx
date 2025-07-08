@@ -50,9 +50,8 @@ interface Standard {
   description: string;
   mandatory: boolean;
 }
-// =================== DANGERS PRÉDÉFINIS PARTIE 1 ===================
-const hazardsList_Part1: Hazard[] = [
-  // ÉLECTRIQUES
+// =================== DANGERS ÉLECTRIQUES ===================
+const electricalHazards: Hazard[] = [
   {
     id: 'elec-shock',
     name: 'Électrocution / Électrisation',
@@ -83,8 +82,7 @@ const hazardsList_Part1: Hazard[] = [
         priority: 2, 
         implemented: false,
         standards: [
-          { id: 'csa-z462', name: 'CSA Z462', fullName: 'Sécurité en milieu de travail - Énergie électrique', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z462', section: 'Art. 6.3', description: 'Procédures de vérification', mandatory: true },
-          { id: 'ieee-1048', name: 'IEEE 1048', fullName: 'Guide for Protective Grounding', url: 'https://standards.ieee.org/ieee/1048/', section: 'Section 4', description: 'Tests de vérification', mandatory: false }
+          { id: 'csa-z462', name: 'CSA Z462', fullName: 'Sécurité en milieu de travail - Énergie électrique', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z462', section: 'Art. 6.3', description: 'Procédures de vérification', mandatory: true }
         ]
       },
       { 
@@ -95,8 +93,18 @@ const hazardsList_Part1: Hazard[] = [
         priority: 3, 
         implemented: false,
         standards: [
-          { id: 'astm-d120', name: 'ASTM D120', fullName: 'Rubber Insulating Gloves', url: 'https://www.astm.org/d0120-20.html', section: 'Table 1', description: 'Classification des gants isolants', mandatory: true },
-          { id: 'csa-z94.4', name: 'CSA Z94.4', fullName: 'Sélection des protecteurs oculaires et faciaux', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z94-4', section: 'Section 5', description: 'EPI électrique', mandatory: true }
+          { id: 'astm-d120', name: 'ASTM D120', fullName: 'Rubber Insulating Gloves', url: 'https://www.astm.org/d0120-20.html', section: 'Table 1', description: 'Classification des gants isolants', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-elec-4', 
+        name: 'Formation électrique qualifiée', 
+        category: 'administrative', 
+        description: 'Personnel certifié travaux électriques', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'cnesst-guide', name: 'Guide CNESST', fullName: 'Guide de prévention - Travaux électriques', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/travaux-electriques', section: 'Section 3', description: 'Formation requise', mandatory: true }
         ]
       }
     ]
@@ -119,8 +127,7 @@ const hazardsList_Part1: Hazard[] = [
         priority: 1, 
         implemented: false,
         standards: [
-          { id: 'ieee-1584', name: 'IEEE 1584', fullName: 'Guide for Performing Arc-Flash Hazard Calculations', url: 'https://standards.ieee.org/ieee/1584/5507/', section: 'Section 4', description: 'Calculs d\'arc électrique', mandatory: true },
-          { id: 'nfpa-70e', name: 'NFPA 70E', fullName: 'Standard for Electrical Safety', url: 'https://www.nfpa.org/codes-and-standards/all-codes-and-standards/list-of-codes-and-standards/detail?code=70E', section: 'Art. 130', description: 'Analyse des risques d\'arc', mandatory: true }
+          { id: 'ieee-1584', name: 'IEEE 1584', fullName: 'Guide for Performing Arc-Flash Hazard Calculations', url: 'https://standards.ieee.org/ieee/1584/5507/', section: 'Section 4', description: 'Calculs d\'arc électrique', mandatory: true }
         ]
       },
       { 
@@ -133,10 +140,69 @@ const hazardsList_Part1: Hazard[] = [
         standards: [
           { id: 'astm-f1506', name: 'ASTM F1506', fullName: 'Standard for Flame Resistant Textile Materials', url: 'https://www.astm.org/f1506-20a.html', section: 'Section 5', description: 'Vêtements résistants aux arcs', mandatory: true }
         ]
+      },
+      { 
+        id: 'cm-arc-3', 
+        name: 'Distance de sécurité respectée', 
+        category: 'administrative', 
+        description: 'Périmètre de protection', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-186', name: 'RSST Art. 186', fullName: 'Règlement SST - Distances sécurité', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 186', description: 'Distances minimales électriques', mandatory: true }
+        ]
       }
     ]
   },
-  // MÉCANIQUES
+  {
+    id: 'overhead-lines',
+    name: 'Lignes électriques aériennes',
+    category: 'Électrique',
+    description: 'Contact avec lignes électriques extérieures',
+    riskLevel: 'critical',
+    legislation: 'RSST Art. 185-190',
+    icon: '🌩️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-lines-1', 
+        name: 'Distance de sécurité minimale', 
+        category: 'administrative', 
+        description: 'Respecter zones de protection', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-187', name: 'RSST Art. 187', fullName: 'Distances lignes électriques', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 187', description: 'Distances minimales selon voltage', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-lines-2', 
+        name: 'Surveillance dédiée', 
+        category: 'administrative', 
+        description: 'Signaleur spécialisé', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-188', name: 'RSST Art. 188', fullName: 'Surveillance obligatoire', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 188', description: 'Surveillance près lignes électriques', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-lines-3', 
+        name: 'Isolation/mise hors tension', 
+        category: 'elimination', 
+        description: 'Coordination avec utilités', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'hydro-quebec', name: 'Hydro-Québec', fullName: 'Procédures coordination travaux', url: 'https://www.hydroquebec.com/securite/', section: 'Guide 2024', description: 'Coordination mise hors tension', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+
+// =================== DANGERS MÉCANIQUES ===================
+const mechanicalHazards: Hazard[] = [
   {
     id: 'moving-parts',
     name: 'Pièces mobiles',
@@ -166,7 +232,18 @@ const hazardsList_Part1: Hazard[] = [
         priority: 1, 
         implemented: false,
         standards: [
-          { id: 'csa-z460', name: 'CSA Z460', fullName: 'Maîtrise des énergies dangereuses', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z460', section: 'Art. 8', description: 'Consignation mécanique', mandatory: true }
+          { id: 'csa-z460-mech', name: 'CSA Z460', fullName: 'Maîtrise des énergies dangereuses', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z460', section: 'Art. 8', description: 'Consignation mécanique', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-mech-3', 
+        name: 'Protecteurs mécaniques', 
+        category: 'engineering', 
+        description: 'Barrières physiques', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'iso-14120', name: 'ISO 14120', fullName: 'Safety Guards - General requirements', url: 'https://www.iso.org/standard/54630.html', section: 'Section 5', description: 'Protecteurs fixes et mobiles', mandatory: true }
         ]
       }
     ]
@@ -191,13 +268,68 @@ const hazardsList_Part1: Hazard[] = [
         standards: [
           { id: 'csa-b51', name: 'CSA B51', fullName: 'Boiler, Pressure Vessel, and Pressure Piping Code', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-b51', section: 'Art. 7.1', description: 'Procédures dépressurisation', mandatory: true }
         ]
+      },
+      { 
+        id: 'cm-press-2', 
+        name: 'Soupapes de sécurité', 
+        category: 'engineering', 
+        description: 'Protection surpression', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'api-520', name: 'API 520', fullName: 'Sizing, Selection Safety Relief Valves', url: 'https://www.api.org/products-and-services/individual-certification-programs/piping-and-pipeline/publications/api-520', section: 'Part 1', description: 'Dimensionnement soupapes', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'lifting-equipment',
+    name: 'Équipements de levage',
+    category: 'Mécanique',
+    description: 'Chute de charge, basculement d\'équipement',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 260-290, CSA B335',
+    icon: '🏗️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-lift-1', 
+        name: 'Inspection quotidienne', 
+        category: 'administrative', 
+        description: 'Vérification pré-utilisation', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-b335', name: 'CSA B335', fullName: 'Safety Standard for Lift Trucks', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-b335', section: 'Art. 5.2', description: 'Inspections quotidiennes', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-lift-2', 
+        name: 'Certification des équipements', 
+        category: 'administrative', 
+        description: 'Inspection annuelle certifiée', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'asme-b30', name: 'ASME B30', fullName: 'Overhead and Mobile Cranes', url: 'https://www.asme.org/codes-standards/find-codes-standards/b30-overhead-mobile-cranes', section: 'B30.2', description: 'Certification grues mobiles', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-lift-3', 
+        name: 'Formation opérateurs', 
+        category: 'administrative', 
+        description: 'Certification spécialisée', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'cnesst-grue', name: 'CNESST Grues', fullName: 'Guide formation opérateurs grues', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/appareils-levage', section: 'Section 2', description: 'Formation obligatoire', mandatory: true }
+        ]
       }
     ]
   }
 ];
-// =================== DANGERS PRÉDÉFINIS PARTIE 2 ===================
-const hazardsList_Part2: Hazard[] = [
-  // PHYSIQUES
+// =================== DANGERS PHYSIQUES ===================
+const physicalHazards: Hazard[] = [
   {
     id: 'falls',
     name: 'Chutes de hauteur',
@@ -228,6 +360,85 @@ const hazardsList_Part2: Hazard[] = [
         implemented: false,
         standards: [
           { id: 'csa-z259.10', name: 'CSA Z259.10', fullName: 'Full Body Harnesses', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z259-10', section: 'Art. 5', description: 'Harnais complets', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-fall-3', 
+        name: 'Points d\'ancrage certifiés', 
+        category: 'engineering', 
+        description: 'Ancrages structuraux', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z259.16', name: 'CSA Z259.16', fullName: 'Design of Active Fall-Protection Systems', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z259-16', section: 'Art. 6', description: 'Systèmes protection active', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'scaffolding',
+    name: 'Échafaudages',
+    category: 'Physique',
+    description: 'Effondrement, instabilité des échafaudages',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 347-350, CSA S269.2',
+    icon: '🚧',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-scaf-1', 
+        name: 'Montage par personne compétente', 
+        category: 'administrative', 
+        description: 'Certification échafaudage', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-s269.2', name: 'CSA S269.2', fullName: 'Access Scaffolding for Construction Purposes', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-s269-2', section: 'Art. 4.2', description: 'Montage par personne qualifiée', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-scaf-2', 
+        name: 'Inspection quotidienne', 
+        category: 'administrative', 
+        description: 'Vérification stabilité', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-349', name: 'RSST Art. 349', fullName: 'Inspection échafaudages', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 349', description: 'Inspection obligatoire quotidienne', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'struck-objects',
+    name: 'Objets qui tombent',
+    category: 'Physique',
+    description: 'Impact d\'objets en chute libre',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 338',
+    icon: '⬇️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-obj-1', 
+        name: 'Casque de protection', 
+        category: 'ppe', 
+        description: 'Protection crânienne', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z94.1', name: 'CSA Z94.1', fullName: 'Industrial Protective Headwear', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z94-1', section: 'Type 1', description: 'Casques protection impact', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-obj-2', 
+        name: 'Périmètre de sécurité', 
+        category: 'administrative', 
+        description: 'Zone d\'exclusion', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-338', name: 'RSST Art. 338', fullName: 'Protection chute objets', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 338', description: 'Zones de protection obligatoires', mandatory: true }
         ]
       }
     ]
@@ -263,10 +474,24 @@ const hazardsList_Part2: Hazard[] = [
         standards: [
           { id: 'csa-z1006', name: 'CSA Z1006', fullName: 'Management of Work in Confined Spaces', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z1006', section: 'Art. 7.3', description: 'Tests atmosphère obligatoires', mandatory: true }
         ]
+      },
+      { 
+        id: 'cm-conf-3', 
+        name: 'Ventilation forcée', 
+        category: 'engineering', 
+        description: 'Renouvellement d\'air', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-307', name: 'RSST Art. 307', fullName: 'Ventilation espaces clos', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 307', description: 'Ventilation obligatoire', mandatory: true }
+        ]
       }
     ]
-  },
-  // CHIMIQUES
+  }
+];
+
+// =================== DANGERS CHIMIQUES ===================
+const chemicalHazards: Hazard[] = [
   {
     id: 'toxic-vapors',
     name: 'Vapeurs toxiques',
@@ -296,7 +521,41 @@ const hazardsList_Part2: Hazard[] = [
         priority: 1, 
         implemented: false,
         standards: [
-          { id: 'csa-z94.4', name: 'CSA Z94.4', fullName: 'Sélection des protecteurs respiratoires', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z94-4', section: 'Art. 8', description: 'Protection respiratoire', mandatory: true }
+          { id: 'csa-z94.4-resp', name: 'CSA Z94.4', fullName: 'Sélection des protecteurs respiratoires', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z94-4', section: 'Art. 8', description: 'Protection respiratoire', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'chemical-burns',
+    name: 'Brûlures chimiques',
+    category: 'Chimique',
+    description: 'Contact avec substances corrosives',
+    riskLevel: 'medium',
+    legislation: 'SIMDUT 2015',
+    icon: '🧪',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-burn-1', 
+        name: 'Gants chimiques', 
+        category: 'ppe', 
+        description: 'Protection cutanée', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'astm-f739', name: 'ASTM F739', fullName: 'Standard Test Method for Permeation of Liquids', url: 'https://www.astm.org/f0739-20.html', section: 'Section 4', description: 'Tests perméation gants chimiques', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-burn-2', 
+        name: 'Douche d\'urgence', 
+        category: 'engineering', 
+        description: 'Rinçage immédiat', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'ansi-z358.1', name: 'ANSI Z358.1', fullName: 'Emergency Eyewash and Shower Equipment', url: 'https://webstore.ansi.org/standards/isea/ansiz3581', section: 'Section 4', description: 'Douches et rince-œil d\'urgence', mandatory: true }
         ]
       }
     ]
@@ -321,10 +580,208 @@ const hazardsList_Part2: Hazard[] = [
         standards: [
           { id: 'rsst-30', name: 'RSST Art. 30', fullName: 'Travaux amiante', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 30-52', description: 'Réglementation amiante', mandatory: true }
         ]
+      },
+      { 
+        id: 'cm-asb-2', 
+        name: 'Confinement zone', 
+        category: 'engineering', 
+        description: 'Isolation étanche', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-34', name: 'RSST Art. 34', fullName: 'Confinement amiante', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 34-38', description: 'Méthodes confinement', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-asb-3', 
+        name: 'Respirateur P100', 
+        category: 'ppe', 
+        description: 'Protection respiratoire', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'niosh-p100', name: 'NIOSH P100', fullName: 'Particulate Filter Efficiency', url: 'https://www.cdc.gov/niosh/npptl/topics/respirators/disp_part/default.html', section: 'P100 Series', description: 'Filtres haute efficacité', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+// =================== DANGERS ERGONOMIQUES ===================
+const ergonomicHazards: Hazard[] = [
+  {
+    id: 'manual-handling',
+    name: 'Manutention manuelle',
+    category: 'Ergonomique',
+    description: 'Troubles musculo-squelettiques',
+    riskLevel: 'medium',
+    legislation: 'RSST Art. 166',
+    icon: '🏋️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-man-1', 
+        name: 'Équipements d\'aide', 
+        category: 'engineering', 
+        description: 'Outils de levage', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-166', name: 'RSST Art. 166', fullName: 'Manutention manuelle', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 166', description: 'Limites manutention', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-man-2', 
+        name: 'Techniques de levage', 
+        category: 'administrative', 
+        description: 'Formation postures', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'cnesst-tms', name: 'CNESST TMS', fullName: 'Guide prévention TMS', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/troubles-musculo-squelettiques', section: 'Section 3', description: 'Prévention TMS', mandatory: true }
+        ]
       }
     ]
   },
-  // ENVIRONNEMENTAUX
+  {
+    id: 'repetitive-work',
+    name: 'Travail répétitif',
+    category: 'Ergonomique',
+    description: 'Mouvements répétitifs, postures contraignantes',
+    riskLevel: 'medium',
+    legislation: 'Guide CNESST TMS',
+    icon: '🔄',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-rep-1', 
+        name: 'Rotation des postes', 
+        category: 'administrative', 
+        description: 'Alternance des tâches', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'iso-11228', name: 'ISO 11228', fullName: 'Ergonomics Manual Handling', url: 'https://www.iso.org/standard/51309.html', section: 'Part 3', description: 'Manutention charges faibles haute fréquence', mandatory: false }
+        ]
+      },
+      { 
+        id: 'cm-rep-2', 
+        name: 'Pauses actives', 
+        category: 'administrative', 
+        description: 'Récupération régulière', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'cnesst-tms-rep', name: 'CNESST TMS', fullName: 'Guide prévention TMS répétitifs', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/troubles-musculo-squelettiques', section: 'Section 4', description: 'Travail répétitif', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+
+// =================== DANGERS ENVIRONNEMENTAUX ===================
+const environmentalHazards: Hazard[] = [
+  {
+    id: 'extreme-weather',
+    name: 'Conditions météo extrêmes',
+    category: 'Environnemental',
+    description: 'Exposition aux intempéries',
+    riskLevel: 'medium',
+    legislation: 'Guide CNESST',
+    icon: '🌪️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-weather-1', 
+        name: 'Surveillance météorologique', 
+        category: 'administrative', 
+        description: 'Veille conditions', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'env-canada', name: 'Environnement Canada', fullName: 'Alertes météorologiques', url: 'https://meteo.gc.ca/', section: 'Alertes', description: 'Surveillance conditions météo', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-weather-2', 
+        name: 'Arrêt travaux si nécessaire', 
+        category: 'administrative', 
+        description: 'Protocole suspension', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'cnesst-meteo', name: 'CNESST Météo', fullName: 'Guide conditions météorologiques', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/travail-exterieur', section: 'Section 2', description: 'Suspension travaux extérieurs', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'heat-stress',
+    name: 'Stress thermique',
+    category: 'Environnemental',
+    description: 'Coups de chaleur, épuisement',
+    riskLevel: 'high',
+    legislation: 'Guide CNESST Coup de chaleur',
+    icon: '🌡️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-heat-1', 
+        name: 'Surveillance température', 
+        category: 'engineering', 
+        description: 'Mesure WBGT', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'iso-7243', name: 'ISO 7243', fullName: 'Hot environments - Estimation of heat stress', url: 'https://www.iso.org/standard/13895.html', section: 'Section 5', description: 'Mesure stress thermique WBGT', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-heat-2', 
+        name: 'Hydratation fréquente', 
+        category: 'administrative', 
+        description: 'Pauses boisson', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'cnesst-chaleur', name: 'CNESST Chaleur', fullName: 'Guide prévention coups de chaleur', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/coup-chaleur', section: 'Section 2', description: 'Prévention stress thermique', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'noise',
+    name: 'Exposition au bruit',
+    category: 'Environnemental',
+    description: 'Dommages auditifs',
+    riskLevel: 'medium',
+    legislation: 'RSST Art. 141-151',
+    icon: '🔊',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-noise-1', 
+        name: 'Protection auditive', 
+        category: 'ppe', 
+        description: 'Bouchons/casques', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z94.2', name: 'CSA Z94.2', fullName: 'Hearing Protection Devices', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z94-2', section: 'Class A', description: 'Protecteurs auditifs', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-noise-2', 
+        name: 'Mesure sonométrique', 
+        category: 'engineering', 
+        description: 'Évaluation exposition', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-141', name: 'RSST Art. 141', fullName: 'Exposition au bruit', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 141-151', description: 'Limites exposition bruit', mandatory: true }
+        ]
+      }
+    ]
+  },
   {
     id: 'spills',
     name: 'Déversements',
@@ -345,10 +802,97 @@ const hazardsList_Part2: Hazard[] = [
         standards: [
           { id: 'lqe-art-20', name: 'LQE Art. 20', fullName: 'Loi sur la qualité de l\'environnement', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/lc/Q-2/', section: 'Art. 20-22', description: 'Interdiction contamination', mandatory: true }
         ]
+      },
+      { 
+        id: 'cm-spill-2', 
+        name: 'Kit de déversement', 
+        category: 'engineering', 
+        description: 'Absorbants, barrières, contenants', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'astm-f716', name: 'ASTM F716', fullName: 'Sorbent Performance of Absorbents', url: 'https://www.astm.org/f0716-18.html', section: 'Section 5', description: 'Performance absorbants', mandatory: false }
+        ]
       }
     ]
   },
-  // INCENDIE
+  {
+    id: 'environmental-contamination',
+    name: 'Contamination environnementale',
+    category: 'Environnemental',
+    description: 'Pollution sol, eau, air par substances dangereuses',
+    riskLevel: 'high',
+    legislation: 'LQE, LCPE, Règlements municipaux',
+    icon: '🌍',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-env-1', 
+        name: 'Caractérisation environnementale', 
+        category: 'engineering', 
+        description: 'Analyse sol/eau existante', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'lqe-art-31.42', name: 'LQE Art. 31.42', fullName: 'Plans d\'urgence environnementale', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/lc/Q-2/', section: 'Art. 31.42', description: 'Plans intervention obligatoires', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+
+// =================== DANGERS PSYCHOSOCIAUX ===================
+const psychosocialHazards: Hazard[] = [
+  {
+    id: 'workplace-violence',
+    name: 'Violence au travail',
+    category: 'Psychosocial',
+    description: 'Violence physique ou psychologique',
+    riskLevel: 'high',
+    legislation: 'LSST Art. 2.1, RSST',
+    icon: '⚠️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-viol-1', 
+        name: 'Politique tolérance zéro', 
+        category: 'administrative', 
+        description: 'Cadre disciplinaire clair', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'lsst-2.1', name: 'LSST Art. 2.1', fullName: 'Prévention violence au travail', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/lc/S-2.1/', section: 'Art. 2.1', description: 'Obligations prévention violence', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'harassment',
+    name: 'Harcèlement psychologique',
+    category: 'Psychosocial',
+    description: 'Conduites vexatoires répétées',
+    riskLevel: 'medium',
+    legislation: 'Loi sur les normes du travail',
+    icon: '😰',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-har-1', 
+        name: 'Politique anti-harcèlement', 
+        category: 'administrative', 
+        description: 'Cadre préventif', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'lnt-harcelement', name: 'LNT Harcèlement', fullName: 'Loi normes travail - Harcèlement', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/lc/N-1.1/', section: 'Art. 81.18', description: 'Politique anti-harcèlement obligatoire', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+
+// =================== DANGERS INCENDIE/EXPLOSION ===================
+const fireHazards: Hazard[] = [
   {
     id: 'fire-explosion',
     name: 'Incendie/Explosion',
@@ -369,10 +913,24 @@ const hazardsList_Part2: Hazard[] = [
         standards: [
           { id: 'nfpa-51b', name: 'NFPA 51B', fullName: 'Standard for Fire Prevention During Welding', url: 'https://www.nfpa.org/codes-and-standards/all-codes-and-standards/list-of-codes-and-standards/detail?code=51B', section: 'Chapter 4', description: 'Prévention incendie soudage', mandatory: true }
         ]
+      },
+      { 
+        id: 'cm-fire-2', 
+        name: 'Surveillance incendie', 
+        category: 'administrative', 
+        description: 'Garde-feu spécialisé', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-323', name: 'RSST Art. 323', fullName: 'Travaux de soudage', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 323-325', description: 'Précautions travaux chauds', mandatory: true }
+        ]
       }
     ]
-  },
-  // TRANSPORT
+  }
+];
+
+// =================== DANGERS TRANSPORT/CIRCULATION ===================
+const transportHazards: Hazard[] = [
   {
     id: 'vehicle-traffic',
     name: 'Circulation véhiculaire',
@@ -404,13 +962,34 @@ const hazardsList_Part2: Hazard[] = [
         standards: [
           { id: 'csa-z96', name: 'CSA Z96', fullName: 'High-Visibility Safety Apparel', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z96', section: 'Class 2', description: 'Vêtements haute visibilité', mandatory: true }
         ]
+      },
+      { 
+        id: 'cm-traf-3', 
+        name: 'Séparation zones', 
+        category: 'engineering', 
+        description: 'Barrières physiques', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-320', name: 'RSST Art. 320', fullName: 'Protection circulation', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 320-325', description: 'Séparation obligatoire zones', mandatory: true }
+        ]
       }
     ]
   }
 ];
 
-// Combinaison des deux parties
-const hazardsList: Hazard[] = [...hazardsList_Part1, ...hazardsList_Part2];
+// =================== COMBINAISON DE TOUS LES DANGERS ===================
+const hazardsList: Hazard[] = [
+  ...electricalHazards,
+  ...mechanicalHazards,
+  ...physicalHazards,
+  ...chemicalHazards,
+  ...ergonomicHazards,
+  ...environmentalHazards,
+  ...psychosocialHazards,
+  ...fireHazards,
+  ...transportHazards
+];
 const Step3Hazards: React.FC<Step3HazardsProps> = ({
   formData,
   onDataChange,
@@ -593,6 +1172,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
           .hazard-card.selected { border-color: #f59e0b; background: rgba(251, 191, 36, 0.1); }
           .hazard-card.critical::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #ef4444; border-radius: 16px 0 0 16px; }
           .hazard-card.high::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #f97316; border-radius: 16px 0 0 16px; }
+          .hazard-card.medium::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #eab308; border-radius: 16px 0 0 16px; }
           .hazard-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
           .hazard-icon { font-size: 28px; width: 40px; text-align: center; }
           .hazard-content { flex: 1; }
