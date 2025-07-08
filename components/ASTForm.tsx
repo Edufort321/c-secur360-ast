@@ -557,7 +557,19 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     projectInfo: {} as ProjectInfo,
-    teamDiscussion: { participants: [], discussionPoints: [], lockoutProcedures: [], emergencyProcedures: [], communicationPlan: {} } as TeamDiscussion,
+    teamDiscussion: { 
+      participants: [], 
+      discussionPoints: [], 
+      lockoutProcedures: [], 
+      emergencyProcedures: [], 
+      communicationPlan: {
+        channels: [],
+        frequencies: [],
+        emergencySignals: [],
+        checkInSchedule: '',
+        responsiblePerson: ''
+      }
+    },
     equipment: [],
     hazards: [],
     controls: [],
