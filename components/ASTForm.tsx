@@ -15,37 +15,11 @@ import Step2Equipment from './steps/Step2Equipment';
 import Step3Hazards from './steps/Step3Hazards';
 
 // Placeholders temporaires pour les steps restants
-const Step4Controls = ({ formData, onDataChange, language, tenant, errors }: any) => (
-  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
-    <CheckCircle size={64} color="#8b5cf6" style={{ marginBottom: '24px' }} />
-    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
-      🛡️ Step 4: Contrôles de Sécurité
-    </h3>
-    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
-      Hiérarchie des contrôles selon CSA, génération automatique de mesures de contrôle,
-      plan d'implémentation et évaluation de l'efficacité.
-    </p>
-    <div style={{
-      background: 'rgba(139, 92, 246, 0.1)',
-      border: '1px solid rgba(139, 92, 246, 0.3)',
-      borderRadius: '12px',
-      padding: '20px',
-      color: '#8b5cf6',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '8px'
-    }}>
-      <Settings size={20} className="pulse-animation" />
-      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
-    </div>
-  </div>
-);
-
-const Step5Permits = ({ formData, onDataChange, language, tenant, errors }: any) => (
+const Step4Permits = ({ formData, onDataChange, language, tenant, errors }: any) => (
   <div style={{ textAlign: 'center', padding: '60px 40px' }}>
     <FileText size={64} color="#10b981" style={{ marginBottom: '24px' }} />
     <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
-      📋 Step 5: Permis & Autorisations
+      📋 Step 4: Permis & Autorisations
     </h3>
     <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
       Gestion automatique des permis de travail, conformité RSST/CNESST,
@@ -67,11 +41,11 @@ const Step5Permits = ({ formData, onDataChange, language, tenant, errors }: any)
   </div>
 );
 
-const Step6Validation = ({ formData, onDataChange, language, tenant, errors }: any) => (
+const Step5Validation = ({ formData, onDataChange, language, tenant, errors }: any) => (
   <div style={{ textAlign: 'center', padding: '60px 40px' }}>
     <Users size={64} color="#06b6d4" style={{ marginBottom: '24px' }} />
     <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
-      ✍️ Step 6: Validation Équipe
+      ✍️ Step 5: Validation Équipe
     </h3>
     <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
       Signatures digitales, validation collaborative, procès-verbal de réunion,
@@ -93,11 +67,11 @@ const Step6Validation = ({ formData, onDataChange, language, tenant, errors }: a
   </div>
 );
 
-const Step7TeamShare = ({ formData, onDataChange, language, tenant, errors }: any) => (
+const Step6TeamShare = ({ formData, onDataChange, language, tenant, errors }: any) => (
   <div style={{ textAlign: 'center', padding: '60px 40px' }}>
     <Users size={64} color="#84cc16" style={{ marginBottom: '24px' }} />
     <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
-      📢 Step 7: Partage Équipe
+      📢 Step 6: Partage Équipe
     </h3>
     <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
       Plan de communication, procédures d'urgence, formation équipe,
@@ -119,11 +93,11 @@ const Step7TeamShare = ({ formData, onDataChange, language, tenant, errors }: an
   </div>
 );
 
-const Step8Finalization = ({ formData, onDataChange, language, tenant, errors }: any) => (
+const Step7Finalization = ({ formData, onDataChange, language, tenant, errors }: any) => (
   <div style={{ textAlign: 'center', padding: '60px 40px' }}>
     <CheckCircle size={64} color="#059669" style={{ marginBottom: '24px' }} />
     <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
-      🏁 Step 8: Finalisation
+      🏁 Step 7: Finalisation
     </h3>
     <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
       Contrôle qualité automatique, validation finale, archivage sécurisé,
@@ -887,30 +861,24 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
   }, [updateASTData]);
 
   const handleStep4DataChange = useCallback((section: string, data: any) => {
-    if (section === 'controls') {
-      updateASTData('controls', data);
-    }
-  }, [updateASTData]);
-
-  const handleStep5DataChange = useCallback((section: string, data: any) => {
     if (section === 'permits') {
       updateASTData('permits', data);
     }
   }, [updateASTData]);
 
-  const handleStep6DataChange = useCallback((section: string, data: any) => {
+  const handleStep5DataChange = useCallback((section: string, data: any) => {
     if (section === 'validation') {
       updateASTData('validation', data);
     }
   }, [updateASTData]);
 
-  const handleStep7DataChange = useCallback((section: string, data: any) => {
+  const handleStep6DataChange = useCallback((section: string, data: any) => {
     if (section === 'teamShare') {
       updateASTData('teamShare', data);
     }
   }, [updateASTData]);
 
-  const handleStep8DataChange = useCallback((section: string, data: any) => {
+  const handleStep7DataChange = useCallback((section: string, data: any) => {
     if (section === 'finalization') {
       updateASTData('finalization', data);
     }
@@ -982,8 +950,8 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     },
     { 
       id: 3, 
-      title: 'Dangers & Risques', 
-      subtitle: 'Identification selon RSST',
+      title: 'Dangers & Contrôles', 
+      subtitle: 'Risques + Moyens contrôle',
       icon: AlertTriangle, 
       color: '#ef4444',
       required: true,
@@ -991,15 +959,6 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     },
     { 
       id: 4, 
-      title: 'Contrôles', 
-      subtitle: 'Hiérarchie des contrôles',
-      icon: CheckCircle, 
-      color: '#8b5cf6',
-      required: true,
-      mobileOptimized: true
-    },
-    { 
-      id: 5, 
       title: 'Permis & Autorisations', 
       subtitle: 'Conformité réglementaire',
       icon: FileText, 
@@ -1008,7 +967,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       mobileOptimized: true
     },
     { 
-      id: 6, 
+      id: 5, 
       title: 'Validation Équipe', 
       subtitle: 'Signatures & Approbations',
       icon: Users, 
@@ -1017,7 +976,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       mobileOptimized: true
     },
     { 
-      id: 7, 
+      id: 6, 
       title: 'Partage Équipe', 
       subtitle: 'Communication & Formation',
       icon: Users, 
@@ -1026,7 +985,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       mobileOptimized: true
     },
     { 
-      id: 8, 
+      id: 7, 
       title: 'Finalisation', 
       subtitle: 'Validation finale & Archive',
       icon: CheckCircle, 
@@ -1494,9 +1453,9 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
               />
             )}
 
-            {/* ÉTAPE 4: Contrôles */}
+            {/* ÉTAPE 4: Permis & Autorisations */}
             {currentStep === 4 && (
-              <Step4Controls
+              <Step4Permits
                 formData={astData}
                 onDataChange={handleStep4DataChange}
                 language={language}
@@ -1505,9 +1464,9 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
               />
             )}
 
-            {/* ÉTAPE 5: Permis & Autorisations */}
+            {/* ÉTAPE 5: Validation Équipe */}
             {currentStep === 5 && (
-              <Step5Permits
+              <Step5Validation
                 formData={astData}
                 onDataChange={handleStep5DataChange}
                 language={language}
@@ -1516,9 +1475,9 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
               />
             )}
 
-            {/* ÉTAPE 6: Validation Équipe */}
+            {/* ÉTAPE 6: Partage Équipe */}
             {currentStep === 6 && (
-              <Step6Validation
+              <Step6TeamShare
                 formData={astData}
                 onDataChange={handleStep6DataChange}
                 language={language}
@@ -1527,22 +1486,11 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
               />
             )}
 
-            {/* ÉTAPE 7: Partage Équipe */}
+            {/* ÉTAPE 7: Finalisation */}
             {currentStep === 7 && (
-              <Step7TeamShare
+              <Step7Finalization
                 formData={astData}
                 onDataChange={handleStep7DataChange}
-                language={language}
-                tenant={tenant}
-                errors={{}}
-              />
-            )}
-
-            {/* ÉTAPE 8: Finalisation */}
-            {currentStep === 8 && (
-              <Step8Finalization
-                formData={astData}
-                onDataChange={handleStep8DataChange}
                 language={language}
                 tenant={tenant}
                 errors={{}}
