@@ -664,6 +664,20 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     setTimeout(() => setCopied(false), 2000);
   }, [astData.astNumber]);
 
+  // =================== WRAPPER POUR COMPATIBILITÉ STEP1 ===================
+  const handleStep1DataChange = useCallback((section: string, data: any) => {
+    if (section === 'projectInfo') {
+      updateASTData('projectInfo', data);
+    } else if (section === 'astNumber') {
+      setAstData(prev => ({
+        ...prev,
+        astNumber: data,
+        updatedAt: new Date().toISOString()
+      }));
+      setHasUnsavedChanges(true);
+    }
+  }, [updateASTData]);
+
   // =================== WORKFLOW MANAGEMENT ===================
   const changeStatus = useCallback((newStatus: ASTData['status']) => {
     setAstData(prev => ({
@@ -1208,7 +1222,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
             {currentStep === 1 && (
               <Step1ProjectInfo
                 formData={astData}
-                onDataChange={updateASTData}
+                onDataChange={handleStep1DataChange}
                 language={language}
                 tenant={tenant}
                 errors={{}}
