@@ -194,16 +194,38 @@ export const useLocalStorage = <T>(
   };
 };
 
+// Interface pour les types AST
+interface ASTDraft {
+  id: string;
+  data: any;
+  savedAt: string;
+  title: string;
+}
+
+interface ASTPreferences {
+  language: 'fr' | 'en';
+  autoSave: boolean;
+  notifications: boolean;
+  theme: 'light' | 'dark';
+}
+
+interface RecentProject {
+  id: string;
+  title: string;
+  client: string;
+  lastAccessed: string;
+}
+
 // Hook spécialisé pour les données AST
 export const useASTLocalStorage = () => {
-  // ✅ CORRECTION : Utiliser l'objet retourné au lieu de déstructurer
-  const draftsStorage = useLocalStorage('ast_drafts', [], {
+  // ✅ CORRECTION : Utiliser les types explicites
+  const draftsStorage = useLocalStorage<ASTDraft[]>('ast_drafts', [], {
     syncAcrossTabs: true
   });
   const drafts = draftsStorage.value;
   const setDrafts = draftsStorage.setValue;
 
-  const preferencesStorage = useLocalStorage('ast_preferences', {
+  const preferencesStorage = useLocalStorage<ASTPreferences>('ast_preferences', {
     language: 'fr' as 'fr' | 'en',
     autoSave: true,
     notifications: true,
@@ -212,20 +234,20 @@ export const useASTLocalStorage = () => {
   const preferences = preferencesStorage.value;
   const setPreferences = preferencesStorage.setValue;
 
-  const recentProjectsStorage = useLocalStorage('ast_recent_projects', []);
+  const recentProjectsStorage = useLocalStorage<RecentProject[]>('ast_recent_projects', []);
   const recentProjects = recentProjectsStorage.value;
   const setRecentProjects = recentProjectsStorage.setValue;
 
   // Fonction pour sauvegarder un brouillon AST
   const saveDraft = useCallback((astData: any) => {
-    const draft = {
+    const draft: ASTDraft = {
       id: astData.id || `draft_${Date.now()}`,
       data: astData,
       savedAt: new Date().toISOString(),
       title: astData.projectInfo?.projectName || 'AST sans titre'
     };
 
-    setDrafts((prevDrafts: any[]) => {
+    setDrafts((prevDrafts: ASTDraft[]) => {
       const existingIndex = prevDrafts.findIndex(d => d.id === draft.id);
       if (existingIndex >= 0) {
         const newDrafts = [...prevDrafts];
@@ -238,25 +260,25 @@ export const useASTLocalStorage = () => {
 
   // Fonction pour charger un brouillon
   const loadDraft = useCallback((draftId: string) => {
-    const draft = (drafts as any[]).find(d => d.id === draftId);
+    const draft = drafts.find(d => d.id === draftId);
     return draft ? draft.data : null;
   }, [drafts]);
 
   // Fonction pour supprimer un brouillon
   const deleteDraft = useCallback((draftId: string) => {
-    setDrafts((prevDrafts: any[]) => prevDrafts.filter(d => d.id !== draftId));
+    setDrafts((prevDrafts: ASTDraft[]) => prevDrafts.filter(d => d.id !== draftId));
   }, [setDrafts]);
 
   // Fonction pour ajouter aux projets récents
   const addToRecentProjects = useCallback((project: any) => {
-    const recentProject = {
+    const recentProject: RecentProject = {
       id: project.id,
       title: project.projectInfo?.projectName || 'Projet sans titre',
       client: project.projectInfo?.client || 'Client inconnu',
       lastAccessed: new Date().toISOString()
     };
 
-    setRecentProjects((prevRecent: any[]) => {
+    setRecentProjects((prevRecent: RecentProject[]) => {
       const filtered = prevRecent.filter(p => p.id !== project.id);
       return [recentProject, ...filtered].slice(0, 10); // Garder max 10 projets récents
     });
@@ -267,7 +289,7 @@ export const useASTLocalStorage = () => {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
 
-    setDrafts((prevDrafts: any[]) => 
+    setDrafts((prevDrafts: ASTDraft[]) => 
       prevDrafts.filter(draft => 
         new Date(draft.savedAt) > cutoffDate
       )
