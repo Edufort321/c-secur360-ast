@@ -97,9 +97,14 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [equipment, setEquipment] = useState<Equipment[]>(
-    formData.equipment?.list || equipmentList
-  );
+  
+  // Initialiser avec la liste complète des équipements
+  const [equipment, setEquipment] = useState<Equipment[]>(() => {
+    if (formData.equipment?.list && formData.equipment.list.length > 0) {
+      return formData.equipment.list;
+    }
+    return equipmentList;
+  });
 
   // Filtrage des équipements
   const filteredEquipment = equipment.filter(item => {
@@ -114,6 +119,12 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
 
   // Équipements sélectionnés
   const selectedEquipment = equipment.filter(eq => eq.required);
+
+  // Debug - Afficher les counts dans la console
+  console.log('Total equipment:', equipment.length);
+  console.log('Filtered equipment:', filteredEquipment.length);
+  console.log('Search term:', searchTerm);
+  console.log('Selected category:', selectedCategory);
 
   // =================== HANDLERS ===================
   const handleEquipmentToggle = (equipmentId: string) => {
@@ -266,6 +277,19 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
               })}
             </select>
           </div>
+        </div>
+
+        {/* Message de débogage temporaire */}
+        <div style={{ 
+          background: 'rgba(59, 130, 246, 0.1)', 
+          border: '1px solid rgba(59, 130, 246, 0.3)', 
+          borderRadius: '8px', 
+          padding: '12px', 
+          marginBottom: '16px',
+          color: '#60a5fa',
+          fontSize: '14px'
+        }}>
+          <strong>Debug:</strong> {equipment.length} équipements chargés, {filteredEquipment.length} affichés
         </div>
 
         {/* Grille des équipements */}
