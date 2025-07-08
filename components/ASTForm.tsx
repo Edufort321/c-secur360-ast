@@ -899,12 +899,33 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
           to { opacity: 1; transform: translateY(0); }
         }
         
+        @keyframes glow {
+          0%, 100% { 
+            box-shadow: 0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15);
+          }
+          50% { 
+            box-shadow: 0 0 70px rgba(245, 158, 11, 0.8), inset 0 0 40px rgba(245, 158, 11, 0.25);
+          }
+        }
+        
+        @keyframes logoGlow {
+          0%, 100% { 
+            filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 15px rgba(245, 158, 11, 0.4));
+          }
+          50% { 
+            filter: brightness(1.5) contrast(1.3) drop-shadow(0 0 25px rgba(245, 158, 11, 0.7));
+          }
+        }
+        
         .float-animation { animation: float 6s ease-in-out infinite; }
         .pulse-animation { animation: pulse 4s ease-in-out infinite; }
         .slide-in { animation: slideIn 0.5s ease-out; }
+        .slide-in-right { animation: slideIn 0.6s ease-out; }
+        .glow-effect { animation: glow 4s ease-in-out infinite; }
+        .logo-glow { animation: logoGlow 3s ease-in-out infinite; }
         
         .shine-effect {
-          background: linear-gradient(90deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%);
+          background: linear-gradient(90deg, transparent 30%, rgba(245, 158, 11, 0.3) 50%, transparent 70%);
           background-size: 200px 100%;
           animation: shine 2.5s infinite;
         }
@@ -920,6 +941,35 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
           min-height: 44px;
           padding: 12px 16px;
           font-size: 16px;
+        }
+        
+        .text-gradient {
+          background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        
+        .btn-premium {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%);
+          background-size: 200% 200%;
+          border: none;
+          border-radius: 16px;
+          padding: 14px 28px;
+          color: white;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
+        }
+        
+        .btn-premium:hover {
+          transform: translateY(-2px);
+          background-position: 100% 0;
+          box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4);
         }
         
         /* Mobile responsive */
@@ -953,63 +1003,134 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
         }
       `}</style>
 
-      {/* =================== HEADER PREMIUM =================== */}
+      {/* =================== HEADER PREMIUM IDENTIQUE DASHBOARD =================== */}
       <header style={{
-        background: 'linear-gradient(135deg, #1e2a3a 0%, #2d3748 50%, #1a202c 100%)',
-        borderBottom: '3px solid transparent',
-        borderImage: 'linear-gradient(90deg, #3b82f6, #f59e0b, #10b981, #ef4444, #8b5cf6) 1',
-        padding: '16px 20px',
+        background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
+        backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(251, 191, 36, 0.3)',
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3), 0 0 50px rgba(251, 191, 36, 0.1)',
+        padding: '24px 20px',
         position: 'sticky',
         top: 0,
-        zIndex: 50,
-        backdropFilter: 'blur(20px)'
+        zIndex: 50
       }}>
         <div style={{ 
-          maxWidth: '1200px', 
+          maxWidth: '1400px', 
           margin: '0 auto', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between', 
           flexWrap: 'wrap', 
-          gap: '16px' 
+          gap: '20px' 
         }}>
           
-          {/* Logo et info */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            {/* Logo C-Secur360 */}
+          {/* Logo Premium Ultra Grossi - IDENTIQUE DASHBOARD */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
             <div 
-              className="float-animation"
+              className="float-animation glow-effect"
               style={{
-                width: '64px',
-                height: '64px',
                 background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
-                borderRadius: '16px',
-                border: '3px solid #f59e0b',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 0 20px rgba(245, 158, 11, 0.4), inset 0 0 15px rgba(245, 158, 11, 0.1)',
+                padding: '32px',
+                borderRadius: '32px',
+                border: '4px solid #f59e0b',
+                boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
                 position: 'relative',
                 overflow: 'hidden'
               }}
             >
-              <div className="shine-effect" style={{ position: 'absolute', inset: 0 }} />
-              <span style={{ color: '#f59e0b', fontSize: '24px', fontWeight: '900' }}>C🛡️</span>
+              <div style={{
+                width: '96px',
+                height: '96px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                zIndex: 1
+              }}>
+                <img 
+                  src="/c-secur360-logo.png" 
+                  alt="C-Secur360"
+                  className="logo-glow"
+                  style={{ 
+                    width: '200px', 
+                    height: '200px', 
+                    objectFit: 'contain'
+                  }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'block';
+                  }}
+                />
+                <span style={{ 
+                  display: 'none',
+                  color: '#f59e0b', 
+                  fontSize: '48px', 
+                  fontWeight: '900' 
+                }}>
+                  C🛡️
+                </span>
+              </div>
+              
+              {/* Effet brillance animé renforcé */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: '-100%',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
+                animation: 'shine 2.5s ease-in-out infinite'
+              }} />
+              
+              {/* Effet de pulse en arrière-plan */}
+              <div style={{
+                position: 'absolute',
+                inset: '-10px',
+                border: '2px solid rgba(245, 158, 11, 0.3)',
+                borderRadius: '40px',
+                animation: 'pulse 3s ease-in-out infinite'
+              }} />
             </div>
             
-            {/* Titre et status */}
-            <div>
-              <h1 style={{ 
-                fontSize: '24px', 
-                fontWeight: '700', 
-                margin: 0, 
-                background: 'linear-gradient(135deg, #ffffff, #e2e8f0)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
+            {/* Titre et status - MISE À JOUR */}
+            <div className="slide-in-right">
+              <h1 className="text-gradient" style={{
+                fontSize: '40px',
+                margin: 0,
+                lineHeight: 1.2,
+                fontWeight: '900',
+                letterSpacing: '-0.025em'
               }}>
-                C-Secur360
+                🛡️ C-Secur360
               </h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+              <p style={{
+                color: 'rgba(251, 191, 36, 0.9)',
+                fontSize: '20px',
+                margin: 0,
+                fontWeight: '600'
+              }}>
+                Analyse Sécuritaire de Travail • {tenant}
+              </p>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginTop: '12px'
+              }}>
+                <div style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  background: '#22c55e'
+                }} className="pulse-animation" />
+                <span style={{
+                  color: '#22c55e',
+                  fontSize: '16px',
+                  fontWeight: '600'
+                }}>
+                  Système opérationnel
+                </span>
                 <p style={{ 
                   fontSize: '14px', 
                   color: '#94a3b8', 
@@ -1019,17 +1140,11 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
                   AST • Étape {currentStep} sur {steps.length}
                 </p>
                 {getStatusBadge()}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  {isOnline ? <Wifi size={14} color="#10b981" /> : <WifiOff size={14} color="#ef4444" />}
-                  <span style={{ fontSize: '12px', color: isOnline ? '#10b981' : '#ef4444' }}>
-                    {isOnline ? 'En ligne' : 'Hors ligne'}
-                  </span>
-                </div>
               </div>
             </div>
           </div>
 
-          {/* Numéro AST et actions */}
+          {/* Numéro AST et actions - MISE À JOUR */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
             
             {/* Numéro AST */}
@@ -1076,25 +1191,28 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
               </div>
             </div>
 
+            {/* Indicateur en ligne/hors ligne */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {isOnline ? <Wifi size={14} color="#10b981" /> : <WifiOff size={14} color="#ef4444" />}
+              <span style={{ fontSize: '12px', color: isOnline ? '#10b981' : '#ef4444' }}>
+                {isOnline ? 'En ligne' : 'Hors ligne'}
+              </span>
+            </div>
+
             {/* Actions rapides */}
             {userRole === 'supervisor' || userRole === 'manager' ? (
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   onClick={() => changeStatus('pending_verification')}
                   disabled={astData.status !== 'draft'}
+                  className="btn-premium"
                   style={{
-                    padding: '8px 12px',
-                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#ffffff',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    cursor: astData.status === 'draft' ? 'pointer' : 'not-allowed',
                     opacity: astData.status === 'draft' ? 1 : 0.5,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px'
+                    gap: '4px',
+                    padding: '8px 12px',
+                    fontSize: '12px'
                   }}
                 >
                   <Bell size={12} />
@@ -1104,19 +1222,15 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
                 <button
                   onClick={() => changeStatus('approved')}
                   disabled={astData.status !== 'pending_verification'}
+                  className="btn-premium"
                   style={{
-                    padding: '8px 12px',
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#ffffff',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    cursor: astData.status === 'pending_verification' ? 'pointer' : 'not-allowed',
                     opacity: astData.status === 'pending_verification' ? 1 : 0.5,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px'
+                    gap: '4px',
+                    padding: '8px 12px',
+                    fontSize: '12px',
+                    background: 'linear-gradient(135deg, #10b981, #059669)'
                   }}
                 >
                   <CheckCircle size={12} />
