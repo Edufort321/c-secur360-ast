@@ -12,12 +12,163 @@ import {
 // Import des composants Steps
 import Step1ProjectInfo from './steps/Step1ProjectInfo';
 import Step2Equipment from './steps/Step2Equipment';
-import Step3Hazards from './steps/Step3Hazards';
-import Step4Controls from './steps/Step4Controls';
-import Step5Permits from './steps/Step5Permits';
-import Step6Validation from './steps/Step6Validation';
-import Step7TeamShare from './steps/Step7TeamShare';
-import Step8Finalization from './steps/Step8Finalization';
+
+// Placeholders temporaires pour éviter les erreurs d'import
+const Step3Hazards = ({ formData, onDataChange, language, tenant, errors }: any) => (
+  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
+    <AlertTriangle size={64} color="#ef4444" style={{ marginBottom: '24px' }} />
+    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
+      🎯 Step 3: Dangers & Risques
+    </h3>
+    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
+      Interface complète avec identification des 33+ dangers selon RSST, matrice de risques, 
+      évaluation automatique et documentation photo des dangers identifiés.
+    </p>
+    <div style={{
+      background: 'rgba(239, 68, 68, 0.1)',
+      border: '1px solid rgba(239, 68, 68, 0.3)',
+      borderRadius: '12px',
+      padding: '20px',
+      color: '#ef4444',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px'
+    }}>
+      <Settings size={20} className="pulse-animation" />
+      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
+    </div>
+  </div>
+);
+
+const Step4Controls = ({ formData, onDataChange, language, tenant, errors }: any) => (
+  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
+    <CheckCircle size={64} color="#8b5cf6" style={{ marginBottom: '24px' }} />
+    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
+      🛡️ Step 4: Contrôles de Sécurité
+    </h3>
+    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
+      Hiérarchie des contrôles selon CSA, génération automatique de mesures de contrôle,
+      plan d'implémentation et évaluation de l'efficacité.
+    </p>
+    <div style={{
+      background: 'rgba(139, 92, 246, 0.1)',
+      border: '1px solid rgba(139, 92, 246, 0.3)',
+      borderRadius: '12px',
+      padding: '20px',
+      color: '#8b5cf6',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px'
+    }}>
+      <Settings size={20} className="pulse-animation" />
+      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
+    </div>
+  </div>
+);
+
+const Step5Permits = ({ formData, onDataChange, language, tenant, errors }: any) => (
+  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
+    <FileText size={64} color="#10b981" style={{ marginBottom: '24px' }} />
+    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
+      📋 Step 5: Permis & Autorisations
+    </h3>
+    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
+      Gestion automatique des permis de travail, conformité RSST/CNESST,
+      vérification réglementaire et timeline d'approbation.
+    </p>
+    <div style={{
+      background: 'rgba(16, 185, 129, 0.1)',
+      border: '1px solid rgba(16, 185, 129, 0.3)',
+      borderRadius: '12px',
+      padding: '20px',
+      color: '#10b981',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px'
+    }}>
+      <Settings size={20} className="pulse-animation" />
+      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
+    </div>
+  </div>
+);
+
+const Step6Validation = ({ formData, onDataChange, language, tenant, errors }: any) => (
+  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
+    <Users size={64} color="#06b6d4" style={{ marginBottom: '24px' }} />
+    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
+      ✍️ Step 6: Validation Équipe
+    </h3>
+    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
+      Signatures digitales, validation collaborative, procès-verbal de réunion,
+      feedback équipe et approbations hiérarchiques.
+    </p>
+    <div style={{
+      background: 'rgba(6, 182, 212, 0.1)',
+      border: '1px solid rgba(6, 182, 212, 0.3)',
+      borderRadius: '12px',
+      padding: '20px',
+      color: '#06b6d4',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px'
+    }}>
+      <Settings size={20} className="pulse-animation" />
+      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
+    </div>
+  </div>
+);
+
+const Step7TeamShare = ({ formData, onDataChange, language, tenant, errors }: any) => (
+  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
+    <Users size={64} color="#84cc16" style={{ marginBottom: '24px' }} />
+    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
+      📢 Step 7: Partage Équipe
+    </h3>
+    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
+      Plan de communication, procédures d'urgence, formation équipe,
+      distribution multi-canal et accessibilité universelle.
+    </p>
+    <div style={{
+      background: 'rgba(132, 204, 22, 0.1)',
+      border: '1px solid rgba(132, 204, 22, 0.3)',
+      borderRadius: '12px',
+      padding: '20px',
+      color: '#84cc16',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px'
+    }}>
+      <Settings size={20} className="pulse-animation" />
+      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
+    </div>
+  </div>
+);
+
+const Step8Finalization = ({ formData, onDataChange, language, tenant, errors }: any) => (
+  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
+    <CheckCircle size={64} color="#059669" style={{ marginBottom: '24px' }} />
+    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
+      🏁 Step 8: Finalisation
+    </h3>
+    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
+      Contrôle qualité automatique, validation finale, archivage sécurisé,
+      distribution multi-canal et plan de surveillance continue.
+    </p>
+    <div style={{
+      background: 'rgba(5, 150, 105, 0.1)',
+      border: '1px solid rgba(5, 150, 105, 0.3)',
+      borderRadius: '12px',
+      padding: '20px',
+      color: '#059669',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px'
+    }}>
+      <Settings size={20} className="pulse-animation" />
+      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
+    </div>
+  </div>
+);
 
 // =================== INTERFACES ENTERPRISE ===================
 interface ASTFormProps {
@@ -236,12 +387,55 @@ interface ImplementationStep {
 }
 
 interface PermitData {
-  workPermits: WorkPermit[];
+  permits: WorkPermit[];
+  authorities: Authority[];
+  generalRequirements: GeneralRequirement[];
+  timeline: TimelineItem[];
+  notifications: NotificationItem[];
   hotWorkPermit?: HotWorkPermit;
   confinedSpacePermit?: ConfinedSpacePermit;
   heightWorkPermit?: HeightWorkPermit;
   electricalPermit?: ElectricalPermit;
   regulatory: RegulatoryCompliance;
+}
+
+interface Authority {
+  id: string;
+  name: string;
+  type: string;
+  contactInfo: string;
+  jurisdiction: string;
+  requirements: string[];
+  isRequired: boolean;
+}
+
+interface GeneralRequirement {
+  id: string;
+  category: string;
+  description: string;
+  isRequired: boolean;
+  deadline?: string;
+  responsible?: string;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
+interface TimelineItem {
+  id: string;
+  date: string;
+  activity: string;
+  responsible: string;
+  status: 'pending' | 'completed' | 'overdue';
+  dependencies?: string[];
+}
+
+interface NotificationItem {
+  id: string;
+  recipient: string;
+  type: string;
+  message: string;
+  scheduledDate: string;
+  sent: boolean;
+  acknowledged: boolean;
 }
 
 interface WorkPermit {
@@ -629,7 +823,11 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       implementationPlan: []
     },
     permits: {
-      workPermits: [],
+      permits: [],
+      authorities: [],
+      generalRequirements: [],
+      timeline: [],
+      notifications: [],
       regulatory: {
         rsst: false,
         cnesst: false,
