@@ -12,34 +12,9 @@ import {
 // Import des composants Steps
 import Step1ProjectInfo from './steps/Step1ProjectInfo';
 import Step2Equipment from './steps/Step2Equipment';
+import Step3Hazards from './steps/Step3Hazards';
 
-// Placeholders temporaires pour éviter les erreurs d'import
-const Step3Hazards = ({ formData, onDataChange, language, tenant, errors }: any) => (
-  <div style={{ textAlign: 'center', padding: '60px 40px' }}>
-    <AlertTriangle size={64} color="#ef4444" style={{ marginBottom: '24px' }} />
-    <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '16px' }}>
-      🎯 Step 3: Dangers & Risques
-    </h3>
-    <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px' }}>
-      Interface complète avec identification des 33+ dangers selon RSST, matrice de risques, 
-      évaluation automatique et documentation photo des dangers identifiés.
-    </p>
-    <div style={{
-      background: 'rgba(239, 68, 68, 0.1)',
-      border: '1px solid rgba(239, 68, 68, 0.3)',
-      borderRadius: '12px',
-      padding: '20px',
-      color: '#ef4444',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '8px'
-    }}>
-      <Settings size={20} className="pulse-animation" />
-      <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
-    </div>
-  </div>
-);
-
+// Placeholders temporaires pour les steps restants
 const Step4Controls = ({ formData, onDataChange, language, tenant, errors }: any) => (
   <div style={{ textAlign: 'center', padding: '60px 40px' }}>
     <CheckCircle size={64} color="#8b5cf6" style={{ marginBottom: '24px' }} />
@@ -298,12 +273,12 @@ interface EquipmentPhoto {
 }
 
 interface HazardData {
-  selectedHazards: Hazard[];
-  customHazards: Hazard[];
-  riskMatrix: RiskAssessment[];
-  overallRiskLevel: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
-  totalHazards: number;
-  priorityHazards: Hazard[];
+  list: Hazard[];
+  selected: Hazard[];
+  stats: {
+    totalHazards: number;
+    categories: Record<string, number>;
+  };
 }
 
 interface Hazard {
@@ -311,32 +286,23 @@ interface Hazard {
   category: string;
   name: string;
   description: string;
-  likelihood: 1 | 2 | 3 | 4 | 5;
-  severity: 1 | 2 | 3 | 4 | 5;
-  riskLevel: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
-  riskScore: number;
-  affectedPersons: number;
-  potentialConsequences: string[];
-  isSelected: boolean;
-  isCustom?: boolean;
-  controlMeasures?: string[];
-  photos?: HazardPhoto[];
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  legislation: string;
+  icon: string;
+  selected: boolean;
+  controlMeasures: ControlMeasure[];
 }
 
-interface HazardPhoto {
+interface ControlMeasure {
   id: string;
-  url: string;
-  caption: string;
-  timestamp: string;
-  category: 'identification' | 'location' | 'severity' | 'context';
-}
-
-interface RiskAssessment {
-  hazardId: string;
-  initialRisk: number;
-  residualRisk: number;
-  controlsApplied: string[];
-  effectiveness: number;
+  name: string;
+  category: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
+  description: string;
+  priority: number;
+  implemented: boolean;
+  responsible?: string;
+  deadline?: string;
+  notes?: string;
 }
 
 interface ControlData {
@@ -350,31 +316,6 @@ interface ControlData {
   };
   overallEffectiveness: number;
   implementationPlan: ImplementationStep[];
-}
-
-interface ControlMeasure {
-  id: string;
-  hazardId: string;
-  hierarchyLevel: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
-  name: string;
-  description: string;
-  implementation: string;
-  responsiblePerson: string;
-  deadline?: string;
-  isImplemented: boolean;
-  effectiveness: 1 | 2 | 3 | 4 | 5;
-  verificationMethod: string;
-  cost?: number;
-  photos?: ControlPhoto[];
-  isCustom?: boolean;
-}
-
-interface ControlPhoto {
-  id: string;
-  url: string;
-  caption: string;
-  timestamp: string;
-  category: 'implementation' | 'verification' | 'effectiveness' | 'maintenance';
 }
 
 interface ImplementationStep {
@@ -803,12 +744,12 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       }
     },
     hazards: {
-      selectedHazards: [],
-      customHazards: [],
-      riskMatrix: [],
-      overallRiskLevel: 'low',
-      totalHazards: 0,
-      priorityHazards: []
+      list: [],
+      selected: [],
+      stats: {
+        totalHazards: 0,
+        categories: {}
+      }
     },
     controls: {
       controlMeasures: [],
