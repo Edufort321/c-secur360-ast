@@ -696,7 +696,38 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
           <div className="header-counters">
             <div className="company-info">
               <div className="company-logo">
-                C🛡️
+                <img 
+                  src="/c-secur360-logo.png" 
+                  alt="C-Secur360"
+                  style={{ 
+                    width: '48px', 
+                    height: '48px', 
+                    objectFit: 'contain',
+                    filter: 'brightness(1.1) contrast(1.1)'
+                  }}
+                  onError={(e) => {
+                    // Fallback si l'image ne charge pas
+                    e.currentTarget.style.display = 'none';
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+                {/* Fallback logo en cas d'erreur */}
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  background: 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%)',
+                  borderRadius: '12px',
+                  display: 'none',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: '900',
+                  fontSize: '20px',
+                  color: '#1e293b',
+                  fontFamily: 'Arial, sans-serif'
+                }}>
+                  C🛡️
+                </div>
               </div>
               <div>
                 <h1 style={{ color: 'white', fontSize: '32px', fontWeight: '800', margin: '0', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
