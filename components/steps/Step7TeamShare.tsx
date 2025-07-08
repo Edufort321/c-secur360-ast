@@ -125,10 +125,10 @@ const translations = {
     approvePerm: "Approuver",
     
     // Access levels
-    readOnly: "Lecture Seule",
-    commenter: "Commentateur",
-    editor: "Éditeur",
-    admin: "Administrateur",
+    read: "Lecture",
+    comment: "Commentaire",
+    edit: "Édition",
+    admin: "Administration",
     
     // Share settings
     publicAccess: "Accès Public",
@@ -145,7 +145,7 @@ const translations = {
     shareViaEmail: "Partager par Email",
     shareViaTeams: "Partager via Teams",
     shareViaSlack: "Partager via Slack",
-    shareViaWhatsApp: "Partager via WhatsApp",
+    shareViaWhatsapp: "Partager via WhatsApp",
     shareViaPortal: "Publier sur le Portail",
     
     // Actions
@@ -210,10 +210,10 @@ const translations = {
     approvePerm: "Approve",
     
     // Access levels
-    readOnly: "Read Only",
-    commenter: "Commenter",
-    editor: "Editor",
-    admin: "Administrator",
+    read: "Read",
+    comment: "Comment",
+    edit: "Edit",
+    admin: "Admin",
     
     // Share settings
     publicAccess: "Public Access",
@@ -230,7 +230,7 @@ const translations = {
     shareViaEmail: "Share via Email",
     shareViaTeams: "Share via Teams",
     shareViaSlack: "Share via Slack",
-    shareViaWhatsApp: "Share via WhatsApp",
+    shareViaWhatsapp: "Share via WhatsApp",
     shareViaPortal: "Publish to Portal",
     
     // Actions
@@ -371,8 +371,8 @@ export default function Step7TeamShare({
         member.id === memberId 
           ? { 
               ...member, 
-              [field]: typeof member[field as keyof TeamMember] === 'object' 
-                ? { ...member[field as keyof TeamMember], ...value }
+              [field]: typeof (member as any)[field] === 'object' && (member as any)[field] !== null
+                ? { ...(member as any)[field], ...value }
                 : value
             }
           : member
@@ -447,14 +447,14 @@ export default function Step7TeamShare({
         <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full">
           <Share2 className="w-8 h-8 text-blue-600" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">{t.title}</h2>
-        <p className="text-gray-600">{t.subtitle}</p>
+        <h2 className="text-2xl font-bold text-white mb-2">{t.title}</h2>
+        <p className="text-gray-300">{t.subtitle}</p>
       </div>
 
       {/* Share Link & QR Code */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Link className="w-5 h-5 text-blue-500 mr-2" />
+      <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+          <Link className="w-5 h-5 text-blue-400 mr-2" />
           Lien de Partage
         </h3>
         
@@ -464,7 +464,7 @@ export default function Step7TeamShare({
               type="text"
               value={shareLink}
               readOnly
-              className="flex-1 p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+              className="flex-1 p-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-gray-400"
             />
             <button
               onClick={copyLinkToClipboard}
@@ -475,7 +475,7 @@ export default function Step7TeamShare({
           </div>
           
           {copySuccess && (
-            <div className="text-sm text-green-600 flex items-center">
+            <div className="text-sm text-green-400 flex items-center">
               <Check className="w-4 h-4 mr-1" />
               {t.linkCopied}
             </div>
@@ -501,10 +501,10 @@ export default function Step7TeamShare({
       </div>
 
       {/* Team Members */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-            <Users className="w-5 h-5 text-green-500 mr-2" />
+          <h3 className="text-lg font-semibold text-white flex items-center">
+            <Users className="w-5 h-5 text-green-400 mr-2" />
             {t.teamMembers}
           </h3>
           <button
@@ -518,17 +518,17 @@ export default function Step7TeamShare({
 
         {/* Add Member Modal */}
         {showAddMember && (
-          <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <div className="mb-4 p-4 bg-white/5 border border-white/20 rounded-lg">
             <select
               value={selectedMember}
               onChange={(e) => setSelectedMember(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full p-3 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white"
             >
-              <option value="">Sélectionner un membre...</option>
+              <option value="" className="text-gray-800">Sélectionner un membre...</option>
               {availableMembers
                 .filter(m => !teamShareData.teamMembers.find(tm => tm.id === m.id))
                 .map(member => (
-                  <option key={member.id} value={member.id}>
+                  <option key={member.id} value={member.id} className="text-gray-800">
                     {member.name} - {member.role} ({member.department})
                   </option>
                 ))
@@ -555,16 +555,16 @@ export default function Step7TeamShare({
         {/* Members List */}
         <div className="space-y-4">
           {teamShareData.teamMembers.map(member => (
-            <div key={member.id} className="border border-gray-200 rounded-lg p-4">
+            <div key={member.id} className="bg-white/5 border border-white/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                    <Users className="w-5 h-5 text-gray-600" />
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <Users className="w-5 h-5 text-gray-300" />
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-900">{member.name}</h4>
-                    <p className="text-sm text-gray-600">{member.role} - {member.department}</p>
-                    <p className="text-sm text-gray-500">{member.email}</p>
+                    <h4 className="font-medium text-white">{member.name}</h4>
+                    <p className="text-sm text-gray-300">{member.role} - {member.department}</p>
+                    <p className="text-sm text-gray-400">{member.email}</p>
                   </div>
                 </div>
                 
@@ -577,7 +577,7 @@ export default function Step7TeamShare({
                   </span>
                   <button
                     onClick={() => removeMember(member.id)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded"
+                    className="p-1 text-red-400 hover:bg-red-500/20 rounded"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -587,7 +587,7 @@ export default function Step7TeamShare({
               {/* Permissions */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <h5 className="text-sm font-medium text-gray-700 mb-2">{t.permissions}</h5>
+                  <h5 className="text-sm font-medium text-gray-200 mb-2">{t.permissions}</h5>
                   <div className="space-y-2">
                     {Object.entries(member.permissions).map(([perm, value]) => (
                       <label key={perm} className="flex items-center space-x-2">
@@ -597,7 +597,7 @@ export default function Step7TeamShare({
                           onChange={(e) => updateMemberPermissions(member.id, 'permissions', { [perm]: e.target.checked })}
                           className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
                         />
-                        <span className="text-sm text-gray-700">
+                        <span className="text-sm text-gray-300">
                           {t[`${perm}Perm` as keyof typeof t] || perm}
                         </span>
                       </label>
@@ -606,16 +606,16 @@ export default function Step7TeamShare({
                 </div>
 
                 <div>
-                  <h5 className="text-sm font-medium text-gray-700 mb-2">{t.notificationPrefs}</h5>
+                  <h5 className="text-sm font-medium text-gray-200 mb-2">{t.notificationPrefs}</h5>
                   <div className="space-y-2">
                     <select
                       value={member.notificationPreferences.frequency}
                       onChange={(e) => updateMemberPermissions(member.id, 'notificationPreferences', { frequency: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded text-sm"
+                      className="w-full p-2 bg-white/10 border border-white/30 rounded text-sm text-white"
                     >
-                      <option value="immediate">{t.immediate}</option>
-                      <option value="daily">{t.daily}</option>
-                      <option value="weekly">{t.weekly}</option>
+                      <option value="immediate" className="text-gray-800">{t.immediate}</option>
+                      <option value="daily" className="text-gray-800">{t.daily}</option>
+                      <option value="weekly" className="text-gray-800">{t.weekly}</option>
                     </select>
                     
                     <div className="flex space-x-4">
@@ -627,7 +627,7 @@ export default function Step7TeamShare({
                             onChange={(e) => updateMemberPermissions(member.id, 'notificationPreferences', { [type]: e.target.checked })}
                             className="w-3 h-3 text-green-600 border-gray-300 rounded"
                           />
-                          <span className="text-xs text-gray-600">
+                          <span className="text-xs text-gray-300">
                             {t[`${type}Notif` as keyof typeof t] || type}
                           </span>
                         </label>
@@ -641,8 +641,8 @@ export default function Step7TeamShare({
         </div>
 
         {teamShareData.teamMembers.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+          <div className="text-center py-8 text-gray-400">
+            <Users className="w-12 h-12 mx-auto mb-4 text-gray-600" />
             <p>Aucun membre assigné pour le moment</p>
           </div>
         )}
@@ -661,9 +661,9 @@ export default function Step7TeamShare({
       </div>
 
       {/* Share Settings */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Settings className="w-5 h-5 text-gray-500 mr-2" />
+      <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+          <Settings className="w-5 h-5 text-gray-400 mr-2" />
           {t.shareSettings}
         </h3>
         
@@ -677,8 +677,8 @@ export default function Step7TeamShare({
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <div>
-                <span className="text-sm font-medium text-gray-700">{t.publicAccess}</span>
-                <p className="text-xs text-gray-500">Accessible sans connexion</p>
+                <span className="text-sm font-medium text-gray-200">{t.publicAccess}</span>
+                <p className="text-xs text-gray-400">Accessible sans connexion</p>
               </div>
             </label>
 
@@ -690,8 +690,8 @@ export default function Step7TeamShare({
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <div>
-                <span className="text-sm font-medium text-gray-700">{t.requireLogin}</span>
-                <p className="text-xs text-gray-500">Connexion obligatoire</p>
+                <span className="text-sm font-medium text-gray-200">{t.requireLogin}</span>
+                <p className="text-xs text-gray-400">Connexion obligatoire</p>
               </div>
             </label>
 
@@ -702,7 +702,7 @@ export default function Step7TeamShare({
                 onChange={(e) => updateShareSettings('allowDownload', e.target.checked)}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
-              <span className="text-sm font-medium text-gray-700">{t.allowDownload}</span>
+              <span className="text-sm font-medium text-gray-200">{t.allowDownload}</span>
             </label>
 
             <label className="flex items-center space-x-3">
@@ -712,7 +712,7 @@ export default function Step7TeamShare({
                 onChange={(e) => updateShareSettings('watermark', e.target.checked)}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
-              <span className="text-sm font-medium text-gray-700">{t.watermark}</span>
+              <span className="text-sm font-medium text-gray-200">{t.watermark}</span>
             </label>
           </div>
 
@@ -724,7 +724,7 @@ export default function Step7TeamShare({
                 onChange={(e) => updateShareSettings('allowPrint', e.target.checked)}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
-              <span className="text-sm font-medium text-gray-700">{t.allowPrint}</span>
+              <span className="text-sm font-medium text-gray-200">{t.allowPrint}</span>
             </label>
 
             <label className="flex items-center space-x-3">
@@ -734,7 +734,7 @@ export default function Step7TeamShare({
                 onChange={(e) => updateShareSettings('trackViews', e.target.checked)}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
-              <span className="text-sm font-medium text-gray-700">{t.trackViews}</span>
+              <span className="text-sm font-medium text-gray-200">{t.trackViews}</span>
             </label>
 
             <label className="flex items-center space-x-3">
@@ -744,18 +744,18 @@ export default function Step7TeamShare({
                 onChange={(e) => updateShareSettings('allowComments', e.target.checked)}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
-              <span className="text-sm font-medium text-gray-700">{t.allowComments}</span>
+              <span className="text-sm font-medium text-gray-200">{t.allowComments}</span>
             </label>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-200 mb-1">
                 {t.expirationDate}
               </label>
               <input
                 type="date"
                 value={teamShareData.shareSettings.expirationDate || ''}
                 onChange={(e) => updateShareSettings('expirationDate', e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-2 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white"
               />
             </div>
           </div>
@@ -763,15 +763,15 @@ export default function Step7TeamShare({
       </div>
 
       {/* Distribution Channels */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Globe className="w-5 h-5 text-blue-500 mr-2" />
+      <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+          <Globe className="w-5 h-5 text-blue-400 mr-2" />
           {t.distributionChannels}
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.entries(teamShareData.distributionChannels).map(([channel, enabled]) => (
-            <label key={channel} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <label key={channel} className="flex items-center space-x-3 p-3 bg-white/5 border border-white/20 rounded-lg hover:bg-white/10">
               <input
                 type="checkbox"
                 checked={enabled}
@@ -779,12 +779,12 @@ export default function Step7TeamShare({
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <div className="flex items-center space-x-2">
-                {channel === 'email' && <Mail className="w-4 h-4 text-blue-500" />}
-                {channel === 'teams' && <MessageSquare className="w-4 h-4 text-purple-500" />}
-                {channel === 'slack' && <MessageSquare className="w-4 h-4 text-green-500" />}
-                {channel === 'whatsapp' && <Phone className="w-4 h-4 text-green-600" />}
-                {channel === 'portal' && <Globe className="w-4 h-4 text-blue-600" />}
-                <span className="text-sm font-medium text-gray-700">
+                {channel === 'email' && <Mail className="w-4 h-4 text-blue-400" />}
+                {channel === 'teams' && <MessageSquare className="w-4 h-4 text-purple-400" />}
+                {channel === 'slack' && <MessageSquare className="w-4 h-4 text-green-400" />}
+                {channel === 'whatsapp' && <Phone className="w-4 h-4 text-green-400" />}
+                {channel === 'portal' && <Globe className="w-4 h-4 text-blue-400" />}
+                <span className="text-sm font-medium text-gray-200">
                   {t[`shareVia${channel.charAt(0).toUpperCase() + channel.slice(1)}` as keyof typeof t] || channel}
                 </span>
               </div>
@@ -794,36 +794,36 @@ export default function Step7TeamShare({
       </div>
 
       {/* Access Analytics */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Eye className="w-5 h-5 text-green-500 mr-2" />
+      <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+          <Eye className="w-5 h-5 text-green-400 mr-2" />
           {t.accessAnalytics}
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">{teamShareData.accessAnalytics.totalViews}</div>
-            <div className="text-sm text-blue-800">{t.totalViews}</div>
+          <div className="text-center p-4 bg-blue-500/20 rounded-lg">
+            <div className="text-2xl font-bold text-blue-400">{teamShareData.accessAnalytics.totalViews}</div>
+            <div className="text-sm text-blue-300">{t.totalViews}</div>
           </div>
           
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">{teamShareData.accessAnalytics.uniqueViewers}</div>
-            <div className="text-sm text-green-800">{t.uniqueViewers}</div>
+          <div className="text-center p-4 bg-green-500/20 rounded-lg">
+            <div className="text-2xl font-bold text-green-400">{teamShareData.accessAnalytics.uniqueViewers}</div>
+            <div className="text-sm text-green-300">{t.uniqueViewers}</div>
           </div>
           
-          <div className="text-center p-4 bg-purple-50 rounded-lg">
-            <div className="text-2xl font-bold text-purple-600">{teamShareData.accessAnalytics.downloadCount}</div>
-            <div className="text-sm text-purple-800">{t.downloads}</div>
+          <div className="text-center p-4 bg-purple-500/20 rounded-lg">
+            <div className="text-2xl font-bold text-purple-400">{teamShareData.accessAnalytics.downloadCount}</div>
+            <div className="text-sm text-purple-300">{t.downloads}</div>
           </div>
           
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div className="text-lg font-medium text-gray-600">
+          <div className="text-center p-4 bg-gray-500/20 rounded-lg">
+            <div className="text-lg font-medium text-gray-300">
               {teamShareData.accessAnalytics.lastViewed 
                 ? new Date(teamShareData.accessAnalytics.lastViewed).toLocaleDateString()
                 : t.noActivity
               }
             </div>
-            <div className="text-sm text-gray-600">{t.lastViewed}</div>
+            <div className="text-sm text-gray-400">{t.lastViewed}</div>
           </div>
         </div>
       </div>
