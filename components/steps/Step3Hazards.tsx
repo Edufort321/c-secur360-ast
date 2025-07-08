@@ -1216,6 +1216,40 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
           .control-inputs { margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
           .control-input { padding: 4px 8px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 4px; color: #ffffff; font-size: 11px; }
           .control-input:focus { outline: none; border-color: #f59e0b; }
+          .control-input[type="date"] { 
+            background: rgba(30, 41, 59, 0.9); 
+            border: 2px solid rgba(251, 191, 36, 0.3); 
+            color: #ffffff; 
+            position: relative;
+          }
+          .control-input[type="date"]::-webkit-calendar-picker-indicator {
+            background-color: #f59e0b;
+            border-radius: 3px;
+            cursor: pointer;
+            filter: invert(1);
+            padding: 2px;
+          }
+          .control-input[type="date"]::-webkit-datetime-edit {
+            color: #ffffff;
+          }
+          .control-input[type="date"]::-webkit-datetime-edit-text {
+            color: #94a3b8;
+          }
+          .control-input[type="date"]::-webkit-datetime-edit-month-field,
+          .control-input[type="date"]::-webkit-datetime-edit-day-field,
+          .control-input[type="date"]::-webkit-datetime-edit-year-field {
+            color: #ffffff;
+            background: transparent;
+          }
+          .control-input[type="date"]:hover {
+            border-color: rgba(251, 191, 36, 0.6);
+            background: rgba(30, 41, 59, 1);
+          }
+          .control-input[type="date"]:focus {
+            border-color: #f59e0b;
+            background: rgba(30, 41, 59, 1);
+            box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2);
+          }
           .no-results { text-align: center; padding: 60px 20px; color: #94a3b8; background: rgba(30, 41, 59, 0.6); border-radius: 16px; border: 1px solid rgba(100, 116, 139, 0.3); }
           @media (max-width: 768px) {
             .hazards-grid { grid-template-columns: 1fr; gap: 16px; }
