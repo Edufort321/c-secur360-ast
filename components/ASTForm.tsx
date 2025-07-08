@@ -5,11 +5,19 @@ import {
   FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle, 
   AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building, 
   Phone, User, Briefcase, Copy, Check, Camera, HardHat, Zap, Settings,
-  Plus, Trash2, Edit, Star, Wifi, WifiOff, Upload, Bell
+  Plus, Trash2, Edit, Star, Wifi, WifiOff, Upload, Bell, Wrench, Wind,
+  Droplets, Flame, Activity, Search, Filter, Eye as EyeIcon, Hand
 } from 'lucide-react';
 
-// Import du composant Step1
+// Import des composants Steps
 import Step1ProjectInfo from './steps/Step1ProjectInfo';
+import Step2Equipment from './steps/Step2Equipment';
+import Step3Hazards from './steps/Step3Hazards';
+import Step4Controls from './steps/Step4Controls';
+import Step5Permits from './steps/Step5Permits';
+import Step6Validation from './steps/Step6Validation';
+import Step7TeamShare from './steps/Step7TeamShare';
+import Step8Finalization from './steps/Step8Finalization';
 
 // =================== INTERFACES ENTERPRISE ===================
 interface ASTFormProps {
@@ -32,12 +40,12 @@ interface ASTData {
   
   // Étapes de l'AST
   projectInfo: ProjectInfo;
-  teamDiscussion: TeamDiscussion;
-  equipment: EquipmentData[];
-  hazards: HazardData[];
-  controls: ControlData[];
-  teamValidation: TeamValidation;
-  documentation: DocumentationData;
+  equipment: EquipmentData;
+  hazards: HazardData;
+  controls: ControlData;
+  permits: PermitData;
+  validation: ValidationData;
+  teamShare: TeamShareData;
   finalization: FinalizationData;
   
   // Workflow
@@ -48,37 +56,265 @@ interface ASTData {
 
 interface ProjectInfo {
   // Client et localisation
-  clientName: string;
+  client: string;
   clientPhone?: string;
-  clientContact?: string;
+  clientRepresentative?: string;
+  clientRepresentativePhone?: string;
   workLocation: string;
   gpsCoordinates?: string;
-  industryType: string;
+  industry: string;
   
   // Projet
-  projectName: string;
-  projectDescription: string;
-  startDate: string;
-  endDate?: string;
+  projectNumber: string;
+  astClientNumber?: string;
+  date: string;
+  time: string;
+  workDescription: string;
   workerCount: number;
+  estimatedDuration?: string;
   
-  // Responsable AST
-  responsibleName: string;
-  responsibleTitle: string;
-  responsiblePhone: string;
+  // Contacts d'urgence
+  emergencyContact?: string;
+  emergencyPhone?: string;
   
-  // Contexte légal
-  permits: string[];
-  regulations: string[];
+  // Verrouillage/Cadenassage
+  lockoutPoints?: LockoutPoint[];
+  lockoutPhotos?: LockoutPhoto[];
+}
+
+interface LockoutPoint {
+  id: string;
+  energyType: 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'chemical' | 'thermal' | 'gravity';
+  equipmentName: string;
+  location: string;
+  lockType: string;
+  tagNumber: string;
+  isLocked: boolean;
+  verifiedBy: string;
+  verificationTime: string;
+  photos: string[];
+  notes: string;
+  completedProcedures: number[];
+}
+
+interface LockoutPhoto {
+  id: string;
+  url: string;
+  caption: string;
+  category: 'before_lockout' | 'during_lockout' | 'lockout_device' | 'client_form' | 'verification';
+  timestamp: string;
+  lockoutPointId?: string;
+}
+
+interface EquipmentData {
+  list: Equipment[];
+  selected: Equipment[];
+  totalCost: number;
+  inspectionStatus: {
+    total: number;
+    verified: number;
+    available: number;
+    verificationRate: number;
+    availabilityRate: number;
+  };
+}
+
+interface Equipment {
+  id: string;
+  name: string;
+  category: string;
+  required: boolean;
+  available: boolean;
+  verified: boolean;
+  notes?: string;
+  certification?: string;
+  inspectionDate?: string;
+  inspectedBy?: string;
+  condition?: 'excellent' | 'good' | 'fair' | 'poor';
+  cost?: number;
+  supplier?: string;
+  photos?: EquipmentPhoto[];
+  priority?: 'high' | 'medium' | 'low';
+  mandatoryFor?: string[];
+}
+
+interface EquipmentPhoto {
+  id: string;
+  url: string;
+  caption: string;
+  timestamp: string;
+  category: 'inspection' | 'condition' | 'certification' | 'use';
+}
+
+interface HazardData {
+  selectedHazards: Hazard[];
+  customHazards: Hazard[];
+  riskMatrix: RiskAssessment[];
+  overallRiskLevel: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
+  totalHazards: number;
+  priorityHazards: Hazard[];
+}
+
+interface Hazard {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  likelihood: 1 | 2 | 3 | 4 | 5;
+  severity: 1 | 2 | 3 | 4 | 5;
+  riskLevel: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
+  riskScore: number;
+  affectedPersons: number;
+  potentialConsequences: string[];
+  isSelected: boolean;
+  isCustom?: boolean;
+  controlMeasures?: string[];
+  photos?: HazardPhoto[];
+}
+
+interface HazardPhoto {
+  id: string;
+  url: string;
+  caption: string;
+  timestamp: string;
+  category: 'identification' | 'location' | 'severity' | 'context';
+}
+
+interface RiskAssessment {
+  hazardId: string;
+  initialRisk: number;
+  residualRisk: number;
+  controlsApplied: string[];
+  effectiveness: number;
+}
+
+interface ControlData {
+  controlMeasures: ControlMeasure[];
+  hierarchyCompliance: {
+    elimination: number;
+    substitution: number;
+    engineering: number;
+    administrative: number;
+    ppe: number;
+  };
+  overallEffectiveness: number;
+  implementationPlan: ImplementationStep[];
+}
+
+interface ControlMeasure {
+  id: string;
+  hazardId: string;
+  hierarchyLevel: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
+  name: string;
+  description: string;
+  implementation: string;
+  responsiblePerson: string;
+  deadline?: string;
+  isImplemented: boolean;
+  effectiveness: 1 | 2 | 3 | 4 | 5;
+  verificationMethod: string;
+  cost?: number;
+  photos?: ControlPhoto[];
+  isCustom?: boolean;
+}
+
+interface ControlPhoto {
+  id: string;
+  url: string;
+  caption: string;
+  timestamp: string;
+  category: 'implementation' | 'verification' | 'effectiveness' | 'maintenance';
+}
+
+interface ImplementationStep {
+  id: string;
+  description: string;
+  responsible: string;
+  deadline: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  dependencies?: string[];
+}
+
+interface PermitData {
+  workPermits: WorkPermit[];
+  hotWorkPermit?: HotWorkPermit;
+  confinedSpacePermit?: ConfinedSpacePermit;
+  heightWorkPermit?: HeightWorkPermit;
+  electricalPermit?: ElectricalPermit;
+  regulatory: RegulatoryCompliance;
+}
+
+interface WorkPermit {
+  id: string;
+  type: string;
+  number: string;
+  issuedBy: string;
+  validFrom: string;
+  validTo: string;
+  conditions: string[];
+  isRequired: boolean;
+  isObtained: boolean;
+  documents?: PermitDocument[];
+}
+
+interface PermitDocument {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  timestamp: string;
+}
+
+interface HotWorkPermit {
+  fireWatchRequired: boolean;
+  fireWatchName?: string;
+  extinguisherLocation: string;
+  hotWorkType: string[];
+  precautions: string[];
+  validityHours: number;
+}
+
+interface ConfinedSpacePermit {
+  spaceType: string;
+  entryProcedure: string[];
+  gasMonitoring: boolean;
+  attendantName?: string;
+  ventilationRequired: boolean;
+  emergencyProcedures: string[];
+}
+
+interface HeightWorkPermit {
+  workHeight: number;
+  fallProtectionType: string[];
+  anchoragePoints: string[];
+  weatherRestrictions: string[];
+  rescuePlan: string;
+}
+
+interface ElectricalPermit {
+  voltageLevel: string;
+  lockoutRequired: boolean;
+  qualifiedPersonnel: string[];
+  testingRequired: boolean;
+  isolationVerified: boolean;
+}
+
+interface RegulatoryCompliance {
+  rsst: boolean;
+  cnesst: boolean;
+  municipalPermits: string[];
+  environmentalConsiderations: string[];
   specialConditions: string[];
 }
 
-interface TeamDiscussion {
-  participants: TeamMember[];
+interface ValidationData {
+  teamMembers: TeamMember[];
   discussionPoints: DiscussionPoint[];
-  lockoutProcedures: LockoutProcedure[];
-  emergencyProcedures: EmergencyProcedure[];
-  communicationPlan: CommunicationPlan;
+  meetingMinutes: MeetingMinutes;
+  approvals: TeamApproval[];
+  concerns: string[];
+  improvements: string[];
+  finalValidation: FinalValidation;
 }
 
 interface TeamMember {
@@ -91,6 +327,7 @@ interface TeamMember {
   hasParticipated: boolean;
   signature?: string;
   signatureDate?: string;
+  feedback?: string;
 }
 
 interface DiscussionPoint {
@@ -102,144 +339,216 @@ interface DiscussionPoint {
   priority: 'low' | 'medium' | 'high' | 'critical';
   resolution?: string;
   isResolved: boolean;
-}
-
-interface LockoutProcedure {
-  id: string;
-  energyType: 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'chemical' | 'thermal' | 'gravity';
-  equipmentName: string;
-  isolationPoints: IsolationPoint[];
-  lockoutSteps: string[];
-  verificationSteps: string[];
-  responsiblePerson: string;
-  isRequired: boolean;
-}
-
-interface IsolationPoint {
-  id: string;
-  type: string;
-  location: string;
-  lockType: string;
-  tagNumber?: string;
-  verificationMethod: string;
-}
-
-interface EquipmentData {
-  id: string;
-  category: 'ppe' | 'tools' | 'machinery' | 'safety' | 'communication';
-  name: string;
-  description?: string;
-  isRequired: boolean;
-  quantity: number;
-  condition: 'excellent' | 'good' | 'acceptable' | 'needs_inspection' | 'defective';
-  inspectionDate?: string;
-  certificationNumber?: string;
-  assignedTo?: string[];
-  notes?: string;
-}
-
-interface HazardData {
-  id: string;
-  category: string;
-  name: string;
-  description: string;
-  likelihood: 1 | 2 | 3 | 4 | 5;
-  severity: 1 | 2 | 3 | 4 | 5;
-  riskLevel: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
-  affectedPersons: number;
-  potentialConsequences: string[];
-  isApplicable: boolean;
-  customHazard?: boolean;
-}
-
-interface ControlData {
-  id: string;
-  hazardId: string;
-  hierarchyLevel: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
-  name: string;
-  description: string;
-  implementation: string;
-  responsiblePerson: string;
-  deadline?: string;
-  isImplemented: boolean;
-  effectiveness: 1 | 2 | 3 | 4 | 5;
-  verificationMethod: string;
-  customControl?: boolean;
-}
-
-interface TeamValidation {
-  validationMeeting: {
-    date: string;
-    participants: string[];
-    duration: number;
-    location: string;
-  };
-  workerFeedback: WorkerFeedback[];
-  approvals: TeamApproval[];
-  concerns: string[];
-  improvements: string[];
-}
-
-interface WorkerFeedback {
-  workerId: string;
-  workerName: string;
-  feedback: string;
-  rating: 1 | 2 | 3 | 4 | 5;
-  suggestions: string[];
   timestamp: string;
+}
+
+interface MeetingMinutes {
+  date: string;
+  duration: number;
+  location: string;
+  facilitator: string;
+  participants: string[];
+  keyPoints: string[];
+  decisions: string[];
+  actionItems: ActionItem[];
+}
+
+interface ActionItem {
+  id: string;
+  description: string;
+  assignedTo: string;
+  deadline: string;
+  status: 'open' | 'in_progress' | 'completed';
+  priority: 'low' | 'medium' | 'high';
 }
 
 interface TeamApproval {
-  workerId: string;
-  workerName: string;
+  memberId: string;
+  memberName: string;
   role: string;
   approved: boolean;
-  signature: string;
-  timestamp: string;
+  signature?: string;
+  timestamp?: string;
   conditions?: string;
+  digitalSignature?: string;
 }
 
-interface DocumentationData {
-  photos: PhotoData[];
-  documents: DocumentData[];
-  videos: VideoData[];
-  attachments: AttachmentData[];
+interface FinalValidation {
+  allMembersParticipated: boolean;
+  allConcernsAddressed: boolean;
+  consensusReached: boolean;
+  validatorName: string;
+  validationDate: string;
+  validationSignature: string;
 }
 
-interface PhotoData {
+interface TeamShareData {
+  communicationPlan: CommunicationPlan;
+  emergencyProcedures: EmergencyProcedure[];
+  training: TrainingRecord[];
+  distribution: DistributionRecord[];
+  accessibility: AccessibilityFeatures;
+}
+
+interface CommunicationPlan {
+  channels: CommunicationChannel[];
+  frequencies: string[];
+  emergencySignals: string[];
+  checkInSchedule: string;
+  responsiblePerson: string;
+  backupPerson: string;
+}
+
+interface CommunicationChannel {
+  type: 'radio' | 'phone' | 'visual' | 'digital';
+  details: string;
+  frequency?: string;
+  contactInfo?: string;
+  isBackup: boolean;
+}
+
+interface EmergencyProcedure {
   id: string;
-  url: string;
-  caption: string;
-  category: 'site' | 'equipment' | 'hazard' | 'control' | 'team' | 'other';
-  timestamp: string;
-  gpsLocation?: string;
+  type: 'evacuation' | 'medical' | 'fire' | 'chemical_spill' | 'electrical' | 'fall' | 'entrapment';
+  title: string;
+  steps: string[];
+  emergencyContacts: EmergencyContact[];
+  equipmentRequired: string[];
+  responsiblePerson: string;
+  activationCriteria: string[];
 }
 
-interface DocumentData {
+interface EmergencyContact {
+  name: string;
+  role: string;
+  phone: string;
+  isExternal: boolean;
+  isAvailable24h: boolean;
+}
+
+interface TrainingRecord {
+  workerId: string;
+  workerName: string;
+  trainingType: string;
+  completedDate: string;
+  expiryDate?: string;
+  certificateNumber?: string;
+  isValid: boolean;
+}
+
+interface DistributionRecord {
+  recipientId: string;
+  recipientName: string;
+  role: string;
+  method: 'email' | 'print' | 'digital' | 'verbal';
+  distributedDate?: string;
+  acknowledged: boolean;
+  acknowledgedDate?: string;
+}
+
+interface AccessibilityFeatures {
+  languageOptions: string[];
+  visualAids: boolean;
+  audioSupport: boolean;
+  simplifiedVersion: boolean;
+  largeText: boolean;
+}
+
+interface FinalizationData {
+  qualityReview: QualityReview;
+  complianceCheck: ComplianceCheck;
+  finalApproval: FinalApproval;
+  archiving: ArchivingInfo;
+  distribution: FinalDistribution;
+  monitoring: MonitoringPlan;
+}
+
+interface QualityReview {
+  reviewerId: string;
+  reviewerName: string;
+  reviewDate: string;
+  completeness: number;
+  accuracy: number;
+  compliance: number;
+  overallScore: number;
+  comments: string;
+  improvements: string[];
+  approved: boolean;
+}
+
+interface ComplianceCheck {
+  rsst: boolean;
+  cnesst: boolean;
+  internal: boolean;
+  client: boolean;
+  regulatory: boolean;
+  certifications: string[];
+  gaps: string[];
+  correctionsPlan?: CorrectionPlan[];
+}
+
+interface CorrectionPlan {
+  issue: string;
+  correctionRequired: string;
+  responsible: string;
+  deadline: string;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
+interface FinalApproval {
+  approverId: string;
+  approverName: string;
+  approverRole: string;
+  approvalDate: string;
+  digitalSignature: string;
+  conditions?: string[];
+  validityPeriod: number;
+  reviewRequired: boolean;
+}
+
+interface ArchivingInfo {
+  archiveLocation: string;
+  retentionPeriod: number;
+  accessLevel: 'public' | 'internal' | 'restricted' | 'confidential';
+  backupLocation?: string;
+  encryptionLevel: string;
+}
+
+interface FinalDistribution {
+  recipients: FinalRecipient[];
+  distributionMethod: 'email' | 'print' | 'digital' | 'portal';
+  distributionDate?: string;
+  trackingEnabled: boolean;
+  confirmationRequired: boolean;
+}
+
+interface FinalRecipient {
   id: string;
   name: string;
-  url: string;
-  type: string;
-  size: number;
-  uploadedBy: string;
-  timestamp: string;
+  role: string;
+  email?: string;
+  method: string;
+  priority: 'high' | 'medium' | 'low';
+  delivered: boolean;
+  deliveredDate?: string;
+  acknowledged: boolean;
+  acknowledgedDate?: string;
 }
 
-interface VideoData {
-  id: string;
-  url: string;
-  caption: string;
-  duration: number;
-  timestamp: string;
+interface MonitoringPlan {
+  reviewSchedule: string;
+  responsiblePerson: string;
+  kpis: KPI[];
+  reportingFrequency: string;
+  escalationCriteria: string[];
 }
 
-interface AttachmentData {
-  id: string;
+interface KPI {
   name: string;
-  url: string;
-  type: string;
-  size: number;
-  timestamp: string;
+  target: number;
+  frequency: string;
+  responsible: string;
+  alertThreshold: number;
 }
 
 interface Signature {
@@ -275,279 +584,6 @@ interface NotificationData {
   readAt?: string;
 }
 
-interface EmergencyProcedure {
-  id: string;
-  type: 'evacuation' | 'medical' | 'fire' | 'chemical_spill' | 'electrical' | 'fall' | 'entrapment';
-  title: string;
-  steps: string[];
-  emergencyContacts: EmergencyContact[];
-  equipmentRequired: string[];
-  responsiblePerson: string;
-}
-
-interface EmergencyContact {
-  name: string;
-  role: string;
-  phone: string;
-  isExternal: boolean;
-}
-
-interface CommunicationPlan {
-  channels: string[];
-  frequencies: string[];
-  emergencySignals: string[];
-  checkInSchedule: string;
-  responsiblePerson: string;
-}
-
-interface FinalizationData {
-  finalReview: {
-    reviewedBy: string;
-    reviewDate: string;
-    reviewComments: string;
-    approved: boolean;
-  };
-  qualityCheck: {
-    completeness: number;
-    accuracy: number;
-    compliance: number;
-    overallScore: number;
-  };
-  distribution: {
-    recipients: string[];
-    distributionMethod: 'email' | 'print' | 'digital' | 'portal';
-    distributionDate?: string;
-  };
-  archiving: {
-    archiveLocation: string;
-    retentionPeriod: number;
-    accessLevel: 'public' | 'internal' | 'restricted' | 'confidential';
-  };
-}
-
-// =================== DONNÉES DE RÉFÉRENCE ===================
-const HAZARD_CATEGORIES = {
-  'physical': {
-    name: 'Dangers Physiques',
-    color: '#ef4444',
-    icon: '⚡',
-    hazards: [
-      'Électrocution/Électrisation',
-      'Chute de hauteur',
-      'Chute de plain-pied',
-      'Chute d\'objets',
-      'Coupure/Lacération',
-      'Écrasement/Coincement',
-      'Projection de particules',
-      'Bruit excessif',
-      'Vibrations',
-      'Températures extrêmes',
-      'Rayonnements ionisants',
-      'Rayonnements non-ionisants'
-    ]
-  },
-  'chemical': {
-    name: 'Dangers Chimiques',
-    color: '#f59e0b',
-    icon: '🧪',
-    hazards: [
-      'Inhalation de vapeurs toxiques',
-      'Contact cutané avec produits chimiques',
-      'Ingestion accidentelle',
-      'Réactions chimiques dangereuses',
-      'Incendie de produits chimiques',
-      'Explosion chimique',
-      'Corrosion',
-      'Sensibilisation allergique'
-    ]
-  },
-  'biological': {
-    name: 'Dangers Biologiques',
-    color: '#10b981',
-    icon: '🦠',
-    hazards: [
-      'Exposition à des agents pathogènes',
-      'Morsures/Piqûres d\'animaux',
-      'Contamination microbienne',
-      'Allergies biologiques',
-      'Maladies transmissibles'
-    ]
-  },
-  'ergonomic': {
-    name: 'Dangers Ergonomiques',
-    color: '#8b5cf6',
-    icon: '👤',
-    hazards: [
-      'Manutention manuelle',
-      'Postures contraignantes',
-      'Mouvements répétitifs',
-      'Efforts excessifs',
-      'Vibrations main-bras',
-      'Fatigue visuelle',
-      'Stress physique'
-    ]
-  },
-  'psychosocial': {
-    name: 'Dangers Psychosociaux',
-    color: '#06b6d4',
-    icon: '🧠',
-    hazards: [
-      'Stress au travail',
-      'Surcharge de travail',
-      'Isolement',
-      'Harcèlement',
-      'Violence au travail',
-      'Facteurs organisationnels'
-    ]
-  },
-  'environmental': {
-    name: 'Dangers Environnementaux',
-    color: '#84cc16',
-    icon: '🌍',
-    hazards: [
-      'Conditions météorologiques',
-      'Espaces confinés',
-      'Atmosphères explosives',
-      'Terrains instables',
-      'Présence d\'eau',
-      'Circulation véhiculaire',
-      'Travail en hauteur',
-      'Éclairage insuffisant'
-    ]
-  }
-};
-
-const CONTROL_HIERARCHY = {
-  'elimination': {
-    name: 'Élimination',
-    level: 1,
-    color: '#dc2626',
-    effectiveness: 95,
-    examples: [
-      'Supprimer la tâche dangereuse',
-      'Éliminer la source de danger',
-      'Automatisation complète',
-      'Changement de procédé'
-    ]
-  },
-  'substitution': {
-    name: 'Substitution',
-    level: 2,
-    color: '#ea580c',
-    effectiveness: 80,
-    examples: [
-      'Remplacer par moins dangereux',
-      'Utiliser des produits moins toxiques',
-      'Changer d\'équipement',
-      'Modifier la méthode de travail'
-    ]
-  },
-  'engineering': {
-    name: 'Contrôles d\'Ingénierie',
-    level: 3,
-    color: '#f59e0b',
-    effectiveness: 65,
-    examples: [
-      'Ventilation',
-      'Isolation/Encoffrement',
-      'Garde-corps',
-      'Systèmes de sécurité',
-      'Dispositifs de protection'
-    ]
-  },
-  'administrative': {
-    name: 'Contrôles Administratifs',
-    level: 4,
-    color: '#eab308',
-    effectiveness: 50,
-    examples: [
-      'Procédures de travail',
-      'Formation',
-      'Signalisation',
-      'Rotation du personnel',
-      'Surveillance médicale'
-    ]
-  },
-  'ppe': {
-    name: 'Équipements de Protection Individuelle',
-    level: 5,
-    color: '#84cc16',
-    effectiveness: 35,
-    examples: [
-      'Casques de sécurité',
-      'Lunettes de protection',
-      'Gants de protection',
-      'Chaussures de sécurité',
-      'Harnais de sécurité',
-      'Masques respiratoires'
-    ]
-  }
-};
-
-const EQUIPMENT_CATEGORIES = {
-  'ppe': {
-    name: 'Équipements de Protection Individuelle',
-    color: '#3b82f6',
-    icon: '🦺',
-    items: [
-      'Casque de sécurité',
-      'Lunettes de protection',
-      'Écran facial',
-      'Bouchons d\'oreilles',
-      'Casque antibruit',
-      'Masque respiratoire',
-      'Gants de protection',
-      'Chaussures de sécurité',
-      'Bottes de sécurité',
-      'Harnais de sécurité',
-      'Vêtements haute visibilité',
-      'Combinaison de protection'
-    ]
-  },
-  'tools': {
-    name: 'Outils et Équipements',
-    color: '#f59e0b',
-    icon: '🔧',
-    items: [
-      'Outils électriques',
-      'Outils pneumatiques',
-      'Échelles',
-      'Échafaudages',
-      'Plateformes élévatrices',
-      'Grues',
-      'Chariots élévateurs',
-      'Véhicules de chantier'
-    ]
-  },
-  'safety': {
-    name: 'Équipements de Sécurité',
-    color: '#ef4444',
-    icon: '🚨',
-    items: [
-      'Détecteurs de gaz',
-      'Extincteurs',
-      'Trousse de premiers soins',
-      'Douche d\'urgence',
-      'Lave-œil d\'urgence',
-      'Système d\'alarme',
-      'Éclairage d\'urgence',
-      'Barrières de sécurité'
-    ]
-  },
-  'communication': {
-    name: 'Communication',
-    color: '#8b5cf6',
-    icon: '📱',
-    items: [
-      'Radios de communication',
-      'Téléphones d\'urgence',
-      'Sifflets de sécurité',
-      'Système d\'alerte',
-      'Signalisation'
-    ]
-  }
-};
-
 // =================== COMPOSANT PRINCIPAL ===================
 export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'worker' }: ASTFormProps) {
   // =================== ÉTAT PRINCIPAL ===================
@@ -560,24 +596,77 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     projectInfo: {} as ProjectInfo,
-    teamDiscussion: { 
-      participants: [], 
-      discussionPoints: [], 
-      lockoutProcedures: [], 
-      emergencyProcedures: [], 
+    equipment: {
+      list: [],
+      selected: [],
+      totalCost: 0,
+      inspectionStatus: {
+        total: 0,
+        verified: 0,
+        available: 0,
+        verificationRate: 0,
+        availabilityRate: 0
+      }
+    },
+    hazards: {
+      selectedHazards: [],
+      customHazards: [],
+      riskMatrix: [],
+      overallRiskLevel: 'low',
+      totalHazards: 0,
+      priorityHazards: []
+    },
+    controls: {
+      controlMeasures: [],
+      hierarchyCompliance: {
+        elimination: 0,
+        substitution: 0,
+        engineering: 0,
+        administrative: 0,
+        ppe: 0
+      },
+      overallEffectiveness: 0,
+      implementationPlan: []
+    },
+    permits: {
+      workPermits: [],
+      regulatory: {
+        rsst: false,
+        cnesst: false,
+        municipalPermits: [],
+        environmentalConsiderations: [],
+        specialConditions: []
+      }
+    },
+    validation: {
+      teamMembers: [],
+      discussionPoints: [],
+      meetingMinutes: {} as MeetingMinutes,
+      approvals: [],
+      concerns: [],
+      improvements: [],
+      finalValidation: {} as FinalValidation
+    },
+    teamShare: {
       communicationPlan: {
         channels: [],
         frequencies: [],
         emergencySignals: [],
         checkInSchedule: '',
-        responsiblePerson: ''
+        responsiblePerson: '',
+        backupPerson: ''
+      },
+      emergencyProcedures: [],
+      training: [],
+      distribution: [],
+      accessibility: {
+        languageOptions: ['fr'],
+        visualAids: false,
+        audioSupport: false,
+        simplifiedVersion: false,
+        largeText: false
       }
     },
-    equipment: [],
-    hazards: [],
-    controls: [],
-    teamValidation: {} as TeamValidation,
-    documentation: { photos: [], documents: [], videos: [], attachments: [] },
     finalization: {} as FinalizationData,
     signatures: [],
     approvals: [],
@@ -632,6 +721,62 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     setHasUnsavedChanges(true);
   }, []);
 
+  // =================== HANDLERS POUR CHAQUE STEP ===================
+  const handleStep1DataChange = useCallback((section: string, data: any) => {
+    if (section === 'projectInfo') {
+      updateASTData('projectInfo', data);
+    } else if (section === 'astNumber') {
+      setAstData(prev => ({
+        ...prev,
+        astNumber: data,
+        updatedAt: new Date().toISOString()
+      }));
+      setHasUnsavedChanges(true);
+    }
+  }, [updateASTData]);
+
+  const handleStep2DataChange = useCallback((section: string, data: any) => {
+    if (section === 'equipment') {
+      updateASTData('equipment', data);
+    }
+  }, [updateASTData]);
+
+  const handleStep3DataChange = useCallback((section: string, data: any) => {
+    if (section === 'hazards') {
+      updateASTData('hazards', data);
+    }
+  }, [updateASTData]);
+
+  const handleStep4DataChange = useCallback((section: string, data: any) => {
+    if (section === 'controls') {
+      updateASTData('controls', data);
+    }
+  }, [updateASTData]);
+
+  const handleStep5DataChange = useCallback((section: string, data: any) => {
+    if (section === 'permits') {
+      updateASTData('permits', data);
+    }
+  }, [updateASTData]);
+
+  const handleStep6DataChange = useCallback((section: string, data: any) => {
+    if (section === 'validation') {
+      updateASTData('validation', data);
+    }
+  }, [updateASTData]);
+
+  const handleStep7DataChange = useCallback((section: string, data: any) => {
+    if (section === 'teamShare') {
+      updateASTData('teamShare', data);
+    }
+  }, [updateASTData]);
+
+  const handleStep8DataChange = useCallback((section: string, data: any) => {
+    if (section === 'finalization') {
+      updateASTData('finalization', data);
+    }
+  }, [updateASTData]);
+
   // =================== SAUVEGARDE AUTOMATIQUE ===================
   useEffect(() => {
     if (!hasUnsavedChanges) return;
@@ -664,20 +809,6 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     setTimeout(() => setCopied(false), 2000);
   }, [astData.astNumber]);
 
-  // =================== WRAPPER POUR COMPATIBILITÉ STEP1 ===================
-  const handleStep1DataChange = useCallback((section: string, data: any) => {
-    if (section === 'projectInfo') {
-      updateASTData('projectInfo', data);
-    } else if (section === 'astNumber') {
-      setAstData(prev => ({
-        ...prev,
-        astNumber: data,
-        updatedAt: new Date().toISOString()
-      }));
-      setHasUnsavedChanges(true);
-    }
-  }, [updateASTData]);
-
   // =================== WORKFLOW MANAGEMENT ===================
   const changeStatus = useCallback((newStatus: ASTData['status']) => {
     setAstData(prev => ({
@@ -695,7 +826,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     { 
       id: 1, 
       title: 'Informations Projet', 
-      subtitle: 'Identification légale du chantier',
+      subtitle: 'Identification & Verrouillage',
       icon: FileText, 
       color: '#3b82f6',
       required: true,
@@ -703,15 +834,6 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     },
     { 
       id: 2, 
-      title: 'Discussion Équipe', 
-      subtitle: 'Consultation et verrouillage',
-      icon: Users, 
-      color: '#10b981',
-      required: true,
-      mobileOptimized: true
-    },
-    { 
-      id: 3, 
       title: 'Équipements', 
       subtitle: 'EPI et équipements sécurité',
       icon: Shield, 
@@ -720,7 +842,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       mobileOptimized: true
     },
     { 
-      id: 4, 
+      id: 3, 
       title: 'Dangers & Risques', 
       subtitle: 'Identification selon RSST',
       icon: AlertTriangle, 
@@ -729,7 +851,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       mobileOptimized: true
     },
     { 
-      id: 5, 
+      id: 4, 
       title: 'Contrôles', 
       subtitle: 'Hiérarchie des contrôles',
       icon: CheckCircle, 
@@ -738,9 +860,18 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       mobileOptimized: true
     },
     { 
+      id: 5, 
+      title: 'Permis & Autorisations', 
+      subtitle: 'Conformité réglementaire',
+      icon: FileText, 
+      color: '#10b981',
+      required: true,
+      mobileOptimized: true
+    },
+    { 
       id: 6, 
       title: 'Validation Équipe', 
-      subtitle: 'Signatures travailleurs',
+      subtitle: 'Signatures & Approbations',
       icon: Users, 
       color: '#06b6d4',
       required: true,
@@ -748,9 +879,9 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     },
     { 
       id: 7, 
-      title: 'Documentation', 
-      subtitle: 'Photos et documents',
-      icon: Camera, 
+      title: 'Partage Équipe', 
+      subtitle: 'Communication & Formation',
+      icon: Users, 
       color: '#84cc16',
       required: false,
       mobileOptimized: true
@@ -758,7 +889,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     { 
       id: 8, 
       title: 'Finalisation', 
-      subtitle: 'Validation finale',
+      subtitle: 'Validation finale & Archive',
       icon: CheckCircle, 
       color: '#059669',
       required: true,
@@ -852,16 +983,6 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
           font-size: 16px;
         }
         
-        .dropdown-cascade {
-          transition: all 0.3s ease;
-          max-height: 0;
-          overflow: hidden;
-        }
-        
-        .dropdown-cascade.open {
-          max-height: 500px;
-        }
-        
         /* Mobile responsive */
         @media (max-width: 768px) {
           .step-grid {
@@ -873,11 +994,6 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
             padding: 20px !important;
             margin: 12px !important;
             border-radius: 16px !important;
-          }
-          
-          .form-grid {
-            grid-template-columns: 1fr !important;
-            gap: 20px !important;
           }
           
           .mobile-touch {
@@ -939,19 +1055,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
               }}
             >
               <div className="shine-effect" style={{ position: 'absolute', inset: 0 }} />
-              <img 
-                src="/c-secur360-logo.png" 
-                alt="C-Secur360"
-                style={{ 
-                  width: '48px', 
-                  height: '48px',
-                  filter: 'brightness(1.2) contrast(1.1)'
-                }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                  (e.target as HTMLImageElement).parentElement!.innerHTML = '<span style="color: #f59e0b; font-size: 24px; font-weight: 900;">C🛡️</span>';
-                }}
-              />
+              <span style={{ color: '#f59e0b', fontSize: '24px', fontWeight: '900' }}>C🛡️</span>
             </div>
             
             {/* Titre et status */}
@@ -1218,7 +1322,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
 
           {/* Contenu spécifique à chaque étape */}
           <div style={{ minHeight: '400px' }}>
-            {/* ÉTAPE 1: Informations Projet - COMPOSANT FONCTIONNEL */}
+            {/* ÉTAPE 1: Informations Projet + Verrouillage */}
             {currentStep === 1 && (
               <Step1ProjectInfo
                 formData={astData}
@@ -1229,60 +1333,81 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
               />
             )}
 
-            {/* Placeholders pour les autres étapes */}
-            {currentStep !== 1 && (
-              <div style={{
-                background: 'rgba(15, 23, 42, 0.8)',
-                border: `1px solid ${steps[currentStep - 1]?.color}40`,
-                borderRadius: '20px',
-                padding: '60px 40px',
-                textAlign: 'center'
-              }}>
-                <div style={{
-                  width: '80px',
-                  height: '80px',
-                  background: `linear-gradient(135deg, ${steps[currentStep - 1]?.color}40, ${steps[currentStep - 1]?.color}20)`,
-                  borderRadius: '20px',
-                  margin: '0 auto 24px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: `2px solid ${steps[currentStep - 1]?.color}60`
-                }}>
-                  {React.createElement(steps[currentStep - 1]?.icon || FileText, {
-                    size: 32,
-                    color: steps[currentStep - 1]?.color
-                  })}
-                </div>
-                
-                <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '12px' }}>
-                  {steps[currentStep - 1]?.title}
-                </h3>
-                
-                <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px', maxWidth: '500px', margin: '0 auto 32px' }}>
-                  Interface complète avec {currentStep === 2 ? 'système de verrouillage/cadenassage' : 
-                  currentStep === 3 ? 'sélection d\'équipements intelligente' :
-                  currentStep === 4 ? 'identification des 33+ dangers' :
-                  currentStep === 5 ? 'hiérarchie des contrôles automatique' :
-                  currentStep === 6 ? 'signatures digitales équipe' :
-                  currentStep === 7 ? 'upload photos et documents' :
-                  'validation finale et archivage'}
-                </p>
-                
-                <div style={{
-                  background: `rgba(${steps[currentStep - 1]?.color?.slice(1, 3) ? parseInt(steps[currentStep - 1]?.color?.slice(1, 3), 16) : 59}, ${steps[currentStep - 1]?.color?.slice(3, 5) ? parseInt(steps[currentStep - 1]?.color?.slice(3, 5), 16) : 130}, ${steps[currentStep - 1]?.color?.slice(5, 7) ? parseInt(steps[currentStep - 1]?.color?.slice(5, 7), 16) : 246}, 0.1)`,
-                  border: `1px solid ${steps[currentStep - 1]?.color}40`,
-                  borderRadius: '12px',
-                  padding: '20px',
-                  color: steps[currentStep - 1]?.color,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <Settings size={20} className="pulse-animation" />
-                  <span style={{ fontWeight: '500' }}>Section en développement avancé</span>
-                </div>
-              </div>
+            {/* ÉTAPE 2: Équipements de Protection */}
+            {currentStep === 2 && (
+              <Step2Equipment
+                formData={astData}
+                onDataChange={handleStep2DataChange}
+                language={language}
+                tenant={tenant}
+                errors={{}}
+              />
+            )}
+
+            {/* ÉTAPE 3: Dangers & Risques */}
+            {currentStep === 3 && (
+              <Step3Hazards
+                formData={astData}
+                onDataChange={handleStep3DataChange}
+                language={language}
+                tenant={tenant}
+                errors={{}}
+              />
+            )}
+
+            {/* ÉTAPE 4: Contrôles */}
+            {currentStep === 4 && (
+              <Step4Controls
+                formData={astData}
+                onDataChange={handleStep4DataChange}
+                language={language}
+                tenant={tenant}
+                errors={{}}
+              />
+            )}
+
+            {/* ÉTAPE 5: Permis & Autorisations */}
+            {currentStep === 5 && (
+              <Step5Permits
+                formData={astData}
+                onDataChange={handleStep5DataChange}
+                language={language}
+                tenant={tenant}
+                errors={{}}
+              />
+            )}
+
+            {/* ÉTAPE 6: Validation Équipe */}
+            {currentStep === 6 && (
+              <Step6Validation
+                formData={astData}
+                onDataChange={handleStep6DataChange}
+                language={language}
+                tenant={tenant}
+                errors={{}}
+              />
+            )}
+
+            {/* ÉTAPE 7: Partage Équipe */}
+            {currentStep === 7 && (
+              <Step7TeamShare
+                formData={astData}
+                onDataChange={handleStep7DataChange}
+                language={language}
+                tenant={tenant}
+                errors={{}}
+              />
+            )}
+
+            {/* ÉTAPE 8: Finalisation */}
+            {currentStep === 8 && (
+              <Step8Finalization
+                formData={astData}
+                onDataChange={handleStep8DataChange}
+                language={language}
+                tenant={tenant}
+                errors={{}}
+              />
             )}
           </div>
         </div>
