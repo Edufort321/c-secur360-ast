@@ -40,7 +40,7 @@ interface ControlMeasure {
   notes?: string;
 }
 
-// =================== DANGERS PRÉDÉFINIS ===================
+// =================== DANGERS PRÉDÉFINIS COMPLETS ===================
 const hazardsList: Hazard[] = [
   // ÉLECTRIQUES
   {
@@ -74,6 +74,22 @@ const hazardsList: Hazard[] = [
       { id: 'cm-arc-2', name: 'Vêtements résistants à l\'arc', category: 'ppe', description: 'Habit arc-flash certifié', priority: 1, implemented: false },
       { id: 'cm-arc-3', name: 'Distance de sécurité respectée', category: 'administrative', description: 'Périmètre de protection', priority: 2, implemented: false },
       { id: 'cm-arc-4', name: 'Procédures de manœuvre sécuritaires', category: 'administrative', description: 'Protocoles standardisés', priority: 2, implemented: false }
+    ]
+  },
+  {
+    id: 'overhead-lines',
+    name: 'Lignes électriques aériennes',
+    category: 'Électrique',
+    description: 'Contact avec lignes électriques extérieures',
+    riskLevel: 'critical',
+    legislation: 'RSST Art. 185-190',
+    icon: '🌩️',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-lines-1', name: 'Distance de sécurité minimale', category: 'administrative', description: 'Respecter zones de protection', priority: 1, implemented: false },
+      { id: 'cm-lines-2', name: 'Surveillance dédiée', category: 'administrative', description: 'Signaleur spécialisé', priority: 1, implemented: false },
+      { id: 'cm-lines-3', name: 'Isolation/mise hors tension', category: 'elimination', description: 'Coordination avec utilités', priority: 1, implemented: false },
+      { id: 'cm-lines-4', name: 'Équipements non conducteurs', category: 'engineering', description: 'Matériaux diélectriques', priority: 2, implemented: false }
     ]
   },
 
@@ -111,6 +127,23 @@ const hazardsList: Hazard[] = [
       { id: 'cm-press-4', name: 'Procédures de purge', category: 'administrative', description: 'Protocoles standardisés', priority: 2, implemented: false }
     ]
   },
+  {
+    id: 'lifting-equipment',
+    name: 'Équipements de levage',
+    category: 'Mécanique',
+    description: 'Chute de charge, basculement d\'équipement',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 260-290, CSA B335',
+    icon: '🏗️',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-lift-1', name: 'Inspection quotidienne', category: 'administrative', description: 'Vérification pré-utilisation', priority: 1, implemented: false },
+      { id: 'cm-lift-2', name: 'Certification des équipements', category: 'administrative', description: 'Inspection annuelle certifiée', priority: 1, implemented: false },
+      { id: 'cm-lift-3', name: 'Formation opérateurs', category: 'administrative', description: 'Certification spécialisée', priority: 2, implemented: false },
+      { id: 'cm-lift-4', name: 'Plan de levage', category: 'administrative', description: 'Procédures documentées', priority: 2, implemented: false },
+      { id: 'cm-lift-5', name: 'Signaleur qualifié', category: 'administrative', description: 'Communication sécuritaire', priority: 2, implemented: false }
+    ]
+  },
 
   // PHYSIQUES
   {
@@ -131,6 +164,23 @@ const hazardsList: Hazard[] = [
     ]
   },
   {
+    id: 'scaffolding',
+    name: 'Échafaudages',
+    category: 'Physique',
+    description: 'Effondrement, instabilité des échafaudages',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 347-350, CSA S269.2',
+    icon: '🚧',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-scaf-1', name: 'Montage par personne compétente', category: 'administrative', description: 'Certification échafaudage', priority: 1, implemented: false },
+      { id: 'cm-scaf-2', name: 'Inspection quotidienne', category: 'administrative', description: 'Vérification stabilité', priority: 1, implemented: false },
+      { id: 'cm-scaf-3', name: 'Ancrage adéquat', category: 'engineering', description: 'Fixation structure', priority: 1, implemented: false },
+      { id: 'cm-scaf-4', name: 'Protection périmètre', category: 'engineering', description: 'Garde-corps complets', priority: 2, implemented: false },
+      { id: 'cm-scaf-5', name: 'Étiquetage sécurité', category: 'administrative', description: 'Statut utilisation', priority: 3, implemented: false }
+    ]
+  },
+  {
     id: 'struck-objects',
     name: 'Objets qui tombent',
     category: 'Physique',
@@ -144,6 +194,27 @@ const hazardsList: Hazard[] = [
       { id: 'cm-obj-2', name: 'Périmètre de sécurité', category: 'administrative', description: 'Zone d\'exclusion', priority: 1, implemented: false },
       { id: 'cm-obj-3', name: 'Filets de protection', category: 'engineering', description: 'Barrières anti-chute', priority: 2, implemented: false },
       { id: 'cm-obj-4', name: 'Inspection outillage', category: 'administrative', description: 'Vérification fixation', priority: 2, implemented: false }
+    ]
+  },
+
+  // ESPACES CLOS (Ajout CNESST prioritaire)
+  {
+    id: 'confined-spaces',
+    name: 'Espaces clos',
+    category: 'Physique',
+    description: 'Atmosphères dangereuses, englouti ssement',
+    riskLevel: 'critical',
+    legislation: 'RSST Art. 302-317',
+    icon: '🕳️',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-conf-1', name: 'Permis d\'entrée', category: 'administrative', description: 'Autorisation documentée', priority: 1, implemented: false },
+      { id: 'cm-conf-2', name: 'Test atmosphérique', category: 'engineering', description: 'Détection 4 gaz minimum', priority: 1, implemented: false },
+      { id: 'cm-conf-3', name: 'Ventilation forcée', category: 'engineering', description: 'Renouvellement d\'air', priority: 1, implemented: false },
+      { id: 'cm-conf-4', name: 'Surveillance continue', category: 'administrative', description: 'Surveillant extérieur', priority: 1, implemented: false },
+      { id: 'cm-conf-5', name: 'Équipe de sauvetage', category: 'administrative', description: 'Plan d\'urgence', priority: 1, implemented: false },
+      { id: 'cm-conf-6', name: 'Communication continue', category: 'engineering', description: 'Liaison radio/visuelle', priority: 2, implemented: false },
+      { id: 'cm-conf-7', name: 'Harnais et treuil', category: 'ppe', description: 'Système de récupération', priority: 2, implemented: false }
     ]
   },
 
@@ -180,6 +251,24 @@ const hazardsList: Hazard[] = [
       { id: 'cm-burn-4', name: 'Protocole d\'urgence', category: 'administrative', description: 'Procédures d\'accident', priority: 2, implemented: false }
     ]
   },
+  {
+    id: 'asbestos',
+    name: 'Amiante',
+    category: 'Chimique',
+    description: 'Exposition aux fibres d\'amiante',
+    riskLevel: 'critical',
+    legislation: 'RSST Art. 30-52',
+    icon: '🫁',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-asb-1', name: 'Caractérisation préalable', category: 'engineering', description: 'Identification matériaux', priority: 1, implemented: false },
+      { id: 'cm-asb-2', name: 'Confinement zone', category: 'engineering', description: 'Isolation étanche', priority: 1, implemented: false },
+      { id: 'cm-asb-3', name: 'Ventilation à pression négative', category: 'engineering', description: 'Extraction sécurisée', priority: 1, implemented: false },
+      { id: 'cm-asb-4', name: 'Combinaison jetable', category: 'ppe', description: 'Vêtements étanches', priority: 1, implemented: false },
+      { id: 'cm-asb-5', name: 'Respirateur P100', category: 'ppe', description: 'Protection respiratoire', priority: 1, implemented: false },
+      { id: 'cm-asb-6', name: 'Décontamination', category: 'administrative', description: 'Procédures sortie', priority: 1, implemented: false }
+    ]
+  },
 
   // ERGONOMIQUES
   {
@@ -196,6 +285,22 @@ const hazardsList: Hazard[] = [
       { id: 'cm-man-2', name: 'Techniques de levage', category: 'administrative', description: 'Formation postures', priority: 2, implemented: false },
       { id: 'cm-man-3', name: 'Rotation des tâches', category: 'administrative', description: 'Limitation exposition', priority: 3, implemented: false },
       { id: 'cm-man-4', name: 'Limites de poids', category: 'administrative', description: 'Restrictions charges', priority: 2, implemented: false }
+    ]
+  },
+  {
+    id: 'repetitive-work',
+    name: 'Travail répétitif',
+    category: 'Ergonomique',
+    description: 'Mouvements répétitifs, postures contraignantes',
+    riskLevel: 'medium',
+    legislation: 'Guide CNESST TMS',
+    icon: '🔄',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-rep-1', name: 'Rotation des postes', category: 'administrative', description: 'Alternance des tâches', priority: 1, implemented: false },
+      { id: 'cm-rep-2', name: 'Pauses actives', category: 'administrative', description: 'Récupération régulière', priority: 2, implemented: false },
+      { id: 'cm-rep-3', name: 'Amélioration ergonomique', category: 'engineering', description: 'Adaptation postes', priority: 2, implemented: false },
+      { id: 'cm-rep-4', name: 'Formation postures', category: 'administrative', description: 'Sensibilisation TMS', priority: 3, implemented: false }
     ]
   },
 
@@ -217,6 +322,23 @@ const hazardsList: Hazard[] = [
     ]
   },
   {
+    id: 'heat-stress',
+    name: 'Stress thermique',
+    category: 'Environnemental',
+    description: 'Coups de chaleur, épuisement',
+    riskLevel: 'high',
+    legislation: 'Guide CNESST Coup de chaleur',
+    icon: '🌡️',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-heat-1', name: 'Surveillance température', category: 'engineering', description: 'Mesure WBGT', priority: 1, implemented: false },
+      { id: 'cm-heat-2', name: 'Hydratation fréquente', category: 'administrative', description: 'Pauses boisson', priority: 1, implemented: false },
+      { id: 'cm-heat-3', name: 'Zones d\'ombre/climatisées', category: 'engineering', description: 'Repos au frais', priority: 2, implemented: false },
+      { id: 'cm-heat-4', name: 'Vêtements légers/respirants', category: 'ppe', description: 'Adaptation vestimentaire', priority: 3, implemented: false },
+      { id: 'cm-heat-5', name: 'Rotation équipes', category: 'administrative', description: 'Limitation exposition', priority: 2, implemented: false }
+    ]
+  },
+  {
     id: 'noise',
     name: 'Exposition au bruit',
     category: 'Environnemental',
@@ -230,6 +352,117 @@ const hazardsList: Hazard[] = [
       { id: 'cm-noise-2', name: 'Mesure sonométrique', category: 'engineering', description: 'Évaluation exposition', priority: 2, implemented: false },
       { id: 'cm-noise-3', name: 'Rotation équipes', category: 'administrative', description: 'Limitation temps', priority: 3, implemented: false },
       { id: 'cm-noise-4', name: 'Encoffrement machines', category: 'engineering', description: 'Réduction à la source', priority: 2, implemented: false }
+    ]
+  },
+  {
+    id: 'spills',
+    name: 'Déversements',
+    category: 'Environnemental',
+    description: 'Déversement de fluides (huile, carburant, produits chimiques)',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 44, LQE, SIMDUT',
+    icon: '🛢️',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-spill-1', name: 'Rétention primaire', category: 'engineering', description: 'Bacs de rétention, plateformes étanches', priority: 1, implemented: false },
+      { id: 'cm-spill-2', name: 'Kit de déversement', category: 'engineering', description: 'Absorbants, barrières, contenants', priority: 1, implemented: false },
+      { id: 'cm-spill-3', name: 'Plan d\'intervention déversement', category: 'administrative', description: 'Procédures d\'urgence documentées', priority: 2, implemented: false },
+      { id: 'cm-spill-4', name: 'Formation intervention déversement', category: 'administrative', description: 'Personnel formé aux procédures', priority: 2, implemented: false },
+      { id: 'cm-spill-5', name: 'Inspection contenants', category: 'administrative', description: 'Vérification étanchéité régulière', priority: 3, implemented: false },
+      { id: 'cm-spill-6', name: 'Substitution produits moins dangereux', category: 'substitution', description: 'Remplacement par alternatives', priority: 2, implemented: false },
+      { id: 'cm-spill-7', name: 'Surveillance environnementale', category: 'engineering', description: 'Détecteurs, monitoring', priority: 3, implemented: false },
+      { id: 'cm-spill-8', name: 'EPI protection chimique', category: 'ppe', description: 'Gants, bottes, vêtements étanches', priority: 3, implemented: false }
+    ]
+  },
+  {
+    id: 'environmental-contamination',
+    name: 'Contamination environnementale',
+    category: 'Environnemental',
+    description: 'Pollution sol, eau, air par substances dangereuses',
+    riskLevel: 'high',
+    legislation: 'LQE, LCPE, Règlements municipaux',
+    icon: '🌍',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-env-1', name: 'Caractérisation environnementale', category: 'engineering', description: 'Analyse sol/eau existante', priority: 1, implemented: false },
+      { id: 'cm-env-2', name: 'Confinement zones contaminées', category: 'engineering', description: 'Isolation physique', priority: 1, implemented: false },
+      { id: 'cm-env-3', name: 'Gestion déchets dangereux', category: 'administrative', description: 'Collecte et élimination sécuritaires', priority: 2, implemented: false },
+      { id: 'cm-env-4', name: 'Permis environnementaux', category: 'administrative', description: 'Autorisations gouvernementales', priority: 1, implemented: false },
+      { id: 'cm-env-5', name: 'Monitoring environnemental', category: 'engineering', description: 'Surveillance continue qualité', priority: 2, implemented: false },
+      { id: 'cm-env-6', name: 'Plan de restauration', category: 'administrative', description: 'Procédures de remise en état', priority: 3, implemented: false }
+    ]
+  },
+
+  // RISQUES PSYCHOSOCIAUX (Ajout important CNESST)
+  {
+    id: 'workplace-violence',
+    name: 'Violence au travail',
+    category: 'Psychosocial',
+    description: 'Violence physique ou psychologique',
+    riskLevel: 'high',
+    legislation: 'LSST Art. 2.1, RSST',
+    icon: '⚠️',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-viol-1', name: 'Politique tolérance zéro', category: 'administrative', description: 'Cadre disciplinaire clair', priority: 1, implemented: false },
+      { id: 'cm-viol-2', name: 'Formation sensibilisation', category: 'administrative', description: 'Prévention violence', priority: 2, implemented: false },
+      { id: 'cm-viol-3', name: 'Procédures de signalement', category: 'administrative', description: 'Canaux sécurisés', priority: 2, implemented: false },
+      { id: 'cm-viol-4', name: 'Support aux victimes', category: 'administrative', description: 'Aide psychologique', priority: 2, implemented: false },
+      { id: 'cm-viol-5', name: 'Aménagement sécuritaire', category: 'engineering', description: 'Environnement protégé', priority: 3, implemented: false }
+    ]
+  },
+  {
+    id: 'harassment',
+    name: 'Harcèlement psychologique',
+    category: 'Psychosocial',
+    description: 'Conduites vexatoires répétées',
+    riskLevel: 'medium',
+    legislation: 'Loi sur les normes du travail',
+    icon: '😰',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-har-1', name: 'Politique anti-harcèlement', category: 'administrative', description: 'Cadre préventif', priority: 1, implemented: false },
+      { id: 'cm-har-2', name: 'Formation gestionnaires', category: 'administrative', description: 'Détection et intervention', priority: 2, implemented: false },
+      { id: 'cm-har-3', name: 'Enquête indépendante', category: 'administrative', description: 'Investigation impartiale', priority: 2, implemented: false },
+      { id: 'cm-har-4', name: 'Mesures correctives', category: 'administrative', description: 'Actions disciplinaires', priority: 2, implemented: false }
+    ]
+  },
+
+  // INCENDIE/EXPLOSION (Ajout important)
+  {
+    id: 'fire-explosion',
+    name: 'Incendie/Explosion',
+    category: 'Incendie',
+    description: 'Feu, explosion de matières inflammables',
+    riskLevel: 'critical',
+    legislation: 'Code de construction, NFPA',
+    icon: '🔥',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-fire-1', name: 'Permis de travail à chaud', category: 'administrative', description: 'Autorisation soudage/coupage', priority: 1, implemented: false },
+      { id: 'cm-fire-2', name: 'Surveillance incendie', category: 'administrative', description: 'Garde-feu spécialisé', priority: 1, implemented: false },
+      { id: 'cm-fire-3', name: 'Extinction à portée', category: 'engineering', description: 'Extincteurs appropriés', priority: 1, implemented: false },
+      { id: 'cm-fire-4', name: 'Ventilation explosion', category: 'engineering', description: 'Évacuation vapeurs', priority: 2, implemented: false },
+      { id: 'cm-fire-5', name: 'Zone dégagée', category: 'administrative', description: 'Élimination combustibles', priority: 2, implemented: false }
+    ]
+  },
+
+  // CIRCULATION/TRANSPORT (Ajout important chantiers)
+  {
+    id: 'vehicle-traffic',
+    name: 'Circulation véhiculaire',
+    category: 'Transport',
+    description: 'Collision avec véhicules, engins',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 320-340, Code sécurité routière',
+    icon: '🚛',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-traf-1', name: 'Signalisation temporaire', category: 'engineering', description: 'Cônes, panneaux, feux', priority: 1, implemented: false },
+      { id: 'cm-traf-2', name: 'Vêtements haute visibilité', category: 'ppe', description: 'Gilets rétroréfléchissants', priority: 1, implemented: false },
+      { id: 'cm-traf-3', name: 'Séparation zones', category: 'engineering', description: 'Barrières physiques', priority: 2, implemented: false },
+      { id: 'cm-traf-4', name: 'Signaleur certifié', category: 'administrative', description: 'Contrôle circulation', priority: 2, implemented: false },
+      { id: 'cm-traf-5', name: 'Plan de circulation', category: 'administrative', description: 'Procédures documentées', priority: 3, implemented: false }
     ]
   }
 ];
@@ -361,6 +594,9 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
       case 'Chimique': return '🧪';
       case 'Ergonomique': return '🏋️';
       case 'Environnemental': return '🌪️';
+      case 'Psychosocial': return '🧠';
+      case 'Incendie': return '🔥';
+      case 'Transport': return '🚛';
       default: return '⚠️';
     }
   };
