@@ -298,6 +298,10 @@ interface ValidationData {
   concerns: string[];
   improvements: string[];
   finalValidation: FinalValidation;
+  reviewers: TeamMember[];
+  approvalRequired: boolean;
+  minimumReviewers: number;
+  validationCriteria: string[];
 }
 
 interface TeamMember {
@@ -547,7 +551,11 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       approvals: [],
       concerns: [],
       improvements: [],
-      finalValidation: {} as FinalValidation
+      finalValidation: {} as FinalValidation,
+      reviewers: [],
+      approvalRequired: true,
+      minimumReviewers: 2,
+      validationCriteria: []
     },
     finalization: {
       workers: [],
