@@ -38,6 +38,17 @@ interface ControlMeasure {
   responsible?: string;
   deadline?: string;
   notes?: string;
+  standards?: Standard[];
+}
+
+interface Standard {
+  id: string;
+  name: string;
+  fullName: string;
+  url?: string;
+  section?: string;
+  description: string;
+  mandatory: boolean;
 }
 
 // =================== DANGERS PRÉDÉFINIS COMPLETS ===================
@@ -53,11 +64,65 @@ const hazardsList: Hazard[] = [
     icon: '⚡',
     selected: false,
     controlMeasures: [
-      { id: 'cm-elec-1', name: 'Consignation LOTO complète', category: 'elimination', description: 'Isolation complète des sources d\'énergie', priority: 1, implemented: false },
-      { id: 'cm-elec-2', name: 'Vérification absence de tension (VAT)', category: 'engineering', description: 'Test avec voltmètre certifié', priority: 2, implemented: false },
-      { id: 'cm-elec-3', name: 'Gants isolants classe appropriée', category: 'ppe', description: 'Gants diélectriques testés', priority: 3, implemented: false },
-      { id: 'cm-elec-4', name: 'Formation électrique qualifiée', category: 'administrative', description: 'Personnel certifié travaux électriques', priority: 2, implemented: false },
-      { id: 'cm-elec-5', name: 'Double vérification par témoin', category: 'administrative', description: 'Validation croisée des procédures', priority: 3, implemented: false }
+      { 
+        id: 'cm-elec-1', 
+        name: 'Consignation LOTO complète', 
+        category: 'elimination', 
+        description: 'Isolation complète des sources d\'énergie', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z460', name: 'CSA Z460', fullName: 'Maîtrise des énergies dangereuses', url: 'https://www.csagroup.org/store/product/CSA%20Z460-20/', section: 'Art. 5.2', description: 'Procédures de consignation', mandatory: true },
+          { id: 'rsst-185', name: 'RSST Art. 185', fullName: 'Règlement SST - Travaux électriques', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 185-190', description: 'Obligations consignation électrique', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-elec-2', 
+        name: 'Vérification absence de tension (VAT)', 
+        category: 'engineering', 
+        description: 'Test avec voltmètre certifié', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z462', name: 'CSA Z462', fullName: 'Sécurité en milieu de travail - Énergie électrique', url: 'https://www.csagroup.org/store/product/CSA%20Z462-21/', section: 'Art. 6.3', description: 'Procédures de vérification', mandatory: true },
+          { id: 'ieee-1048', name: 'IEEE 1048', fullName: 'Guide for Protective Grounding', url: 'https://standards.ieee.org/ieee/1048/', section: 'Section 4', description: 'Tests de vérification', mandatory: false }
+        ]
+      },
+      { 
+        id: 'cm-elec-3', 
+        name: 'Gants isolants classe appropriée', 
+        category: 'ppe', 
+        description: 'Gants diélectriques testés', 
+        priority: 3, 
+        implemented: false,
+        standards: [
+          { id: 'astm-d120', name: 'ASTM D120', fullName: 'Rubber Insulating Gloves', url: 'https://www.astm.org/d0120-20.html', section: 'Table 1', description: 'Classification des gants isolants', mandatory: true },
+          { id: 'csa-z94.4', name: 'CSA Z94.4', fullName: 'Sélection, utilisation et entretien des protecteurs oculaires et faciaux', url: 'https://www.csagroup.org/store/product/CSA%20Z94.4-18/', section: 'Section 5', description: 'EPI électrique', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-elec-4', 
+        name: 'Formation électrique qualifiée', 
+        category: 'administrative', 
+        description: 'Personnel certifié travaux électriques', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'cnesst-guide', name: 'Guide CNESST', fullName: 'Guide de prévention - Travaux électriques', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/travaux-electriques', section: 'Section 3', description: 'Formation requise', mandatory: true },
+          { id: 'nfpa-70e', name: 'NFPA 70E', fullName: 'Electrical Safety in the Workplace', url: 'https://www.nfpa.org/codes-and-standards/all-codes-and-standards/list-of-codes-and-standards/detail?code=70E', section: 'Art. 110.2', description: 'Formation sécurité électrique', mandatory: false }
+        ]
+      },
+      { 
+        id: 'cm-elec-5', 
+        name: 'Double vérification par témoin', 
+        category: 'administrative', 
+        description: 'Validation croisée des procédures', 
+        priority: 3, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-185', name: 'RSST Art. 185', fullName: 'Règlement SST - Travaux électriques', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 185.1', description: 'Vérification obligatoire', mandatory: true }
+        ]
+      }
     ]
   },
   {
@@ -682,7 +747,19 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
           .priority-1 { background: #ef4444; }
           .priority-2 { background: #f97316; }
           .priority-3 { background: #eab308; }
-          .control-inputs { margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+          .control-standards { margin-top: 8px; padding: 8px; background: rgba(15, 23, 42, 0.6); border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.2); }
+          .standards-label { color: #60a5fa; font-size: 10px; font-weight: 600; margin-bottom: 6px; }
+          .standards-list { display: flex; flex-wrap: wrap; gap: 4px; }
+          .standard-item { position: relative; }
+          .standard-link { text-decoration: none; display: block; transition: all 0.2s ease; }
+          .standard-link:hover { transform: translateY(-1px); }
+          .standard-badge { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 3px 6px; display: inline-flex; align-items: center; gap: 2px; cursor: pointer; transition: all 0.2s ease; }
+          .standard-badge:hover { background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.5); }
+          .standard-name { color: #60a5fa; font-size: 9px; font-weight: 600; }
+          .mandatory-indicator { color: #ef4444; font-size: 8px; font-weight: 700; }
+          .standard-section { color: #94a3b8; font-size: 8px; text-align: center; margin-top: 1px; }
+          .standard-tooltip { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.9); color: white; padding: 8px; border-radius: 6px; font-size: 10px; white-space: nowrap; max-width: 200px; white-space: normal; opacity: 0; visibility: hidden; transition: all 0.2s ease; z-index: 1000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+          .standard-item:hover .standard-tooltip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(-8px); }
           .control-input { padding: 4px 8px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 4px; color: #ffffff; font-size: 11px; }
           .control-input:focus { outline: none; border-color: #f59e0b; }
           .no-results { text-align: center; padding: 60px 20px; color: #94a3b8; background: rgba(30, 41, 59, 0.6); border-radius: 16px; border: 1px solid rgba(100, 116, 139, 0.3); }
@@ -857,6 +934,37 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                                   title={`Priorité ${control.priority}`}
                                 />
                               </div>
+
+                              {/* Standards/Normes associées */}
+                              {control.standards && control.standards.length > 0 && (
+                                <div className="control-standards">
+                                  <div className="standards-label">📋 Normes & Références :</div>
+                                  <div className="standards-list">
+                                    {control.standards.map((standard, index) => (
+                                      <div key={standard.id} className="standard-item">
+                                        <a
+                                          href={standard.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="standard-link"
+                                          title={`${standard.fullName} - ${standard.description}`}
+                                        >
+                                          <div className="standard-badge">
+                                            <span className="standard-name">{standard.name}</span>
+                                            {standard.mandatory && <span className="mandatory-indicator">*</span>}
+                                          </div>
+                                          <div className="standard-section">{standard.section}</div>
+                                        </a>
+                                        <div className="standard-tooltip">
+                                          <strong>{standard.fullName}</strong><br/>
+                                          {standard.description}<br/>
+                                          <em>{standard.mandatory ? 'Obligatoire' : 'Recommandé'}</em>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
 
                               {/* Inputs additionnels si contrôle sélectionné */}
                               {control.implemented && (
