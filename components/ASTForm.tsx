@@ -446,7 +446,7 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
               
               {/* Logo C-Secur360 IDENTIQUE */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                {/* Logo Container avec effet glow orange */}
+                {/* Logo C-Secur360 RÉEL */}
                 <div 
                   className="float-animation glow-effect"
                   style={{
@@ -464,13 +464,34 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
                     justifyContent: 'center'
                   }}
                 >
-                  {/* Logo C-Secur360 */}
+                  {/* VOTRE LOGO C-SECUR360 RÉEL */}
+                  <img 
+                    src="/c-secur360-logo.png" 
+                    alt="C-Secur360"
+                    className="logo-glow"
+                    style={{ 
+                      width: '56px', 
+                      height: '56px', 
+                      objectFit: 'contain',
+                      filter: 'brightness(1.1) contrast(1.1)',
+                      position: 'relative',
+                      zIndex: 1
+                    }}
+                    onError={(e) => {
+                      // Fallback si l'image ne charge pas
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'flex';
+                    }}
+                  />
+                  
+                  {/* Fallback logo en cas d'erreur */}
                   <div style={{
                     width: '48px',
                     height: '48px',
                     background: 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%)',
                     borderRadius: '12px',
-                    display: 'flex',
+                    display: 'none',
                     alignItems: 'center',
                     justifyContent: 'center',
                     position: 'relative',
@@ -866,30 +887,10 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
             </div>
 
             {/* Contenu du step avec styles pour meilleure visibilité */}
-            <div style={{
-              '& input, & textarea, & select': {
-                background: 'rgba(15, 23, 42, 0.8) !important',
-                border: `2px solid ${currentStepData.color}40 !important`,
-                color: '#ffffff !important',
-                borderRadius: '12px !important',
-                padding: '12px 16px !important',
-                fontSize: '14px !important',
-                fontWeight: '500 !important'
-              },
-              '& label': {
-                color: '#e2e8f0 !important',
-                fontSize: '14px !important',
-                fontWeight: '600 !important',
-                marginBottom: '8px !important',
-                display: 'block !important'
-              },
-              '& .glass-effect': {
-                background: 'rgba(15, 23, 42, 0.6) !important',
-                border: `1px solid ${currentStepData.color}30 !important'
-              }
-            } as any}>
+            <div>
               {getCurrentStepComponent()}
             </div>
+          </div>
           </div>
 
           {/* Navigation */}
