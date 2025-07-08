@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   FileText, 
   Building, 
@@ -13,7 +13,22 @@ import {
   Briefcase,
   Copy,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  Camera,
+  Upload,
+  X,
+  Lock,
+  Zap,
+  Settings,
+  Wrench,
+  Droplets,
+  Wind,
+  Flame,
+  Eye,
+  Trash2,
+  Plus,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 
 interface Step1ProjectInfoProps {
@@ -22,6 +37,29 @@ interface Step1ProjectInfoProps {
   language: 'fr' | 'en';
   tenant: string;
   errors: any;
+}
+
+interface LockoutPoint {
+  id: string;
+  energyType: 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'chemical' | 'thermal' | 'gravity';
+  equipmentName: string;
+  location: string;
+  lockType: string;
+  tagNumber: string;
+  isLocked: boolean;
+  verifiedBy: string;
+  verificationTime: string;
+  photos: string[];
+  notes: string;
+}
+
+interface LockoutPhoto {
+  id: string;
+  url: string;
+  caption: string;
+  category: 'before_lockout' | 'during_lockout' | 'lockout_device' | 'client_form' | 'verification';
+  timestamp: string;
+  lockoutPointId?: string;
 }
 
 // Générateur de numéro AST
@@ -34,6 +72,94 @@ const generateASTNumber = (): string => {
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
 
+// Types d'énergie avec icônes et couleurs
+const ENERGY_TYPES = {
+  electrical: { 
+    name: 'Électrique', 
+    icon: Zap, 
+    color: '#fbbf24',
+    procedures: [
+      'Identifier le disjoncteur principal',
+      'Couper l\'alimentation électrique', 
+      'Verrouiller le disjoncteur',
+      'Tester l\'absence de tension',
+      'Poser les étiquettes de sécurité'
+    ]
+  },
+  mechanical: { 
+    name: 'Mécanique', 
+    icon: Settings, 
+    color: '#6b7280',
+    procedures: [
+      'Arrêter les équipements mécaniques',
+      'Bloquer les parties mobiles',
+      'Verrouiller les commandes',
+      'Vérifier l\'immobilisation',
+      'Signaler la zone'
+    ]
+  },
+  hydraulic: { 
+    name: 'Hydraulique', 
+    icon: Droplets, 
+    color: '#3b82f6',
+    procedures: [
+      'Fermer les vannes principales',
+      'Purger la pression résiduelle',
+      'Verrouiller les vannes',
+      'Vérifier la dépressurisation',
+      'Installer des bouchons de sécurité'
+    ]
+  },
+  pneumatic: { 
+    name: 'Pneumatique', 
+    icon: Wind, 
+    color: '#10b981',
+    procedures: [
+      'Couper l\'alimentation en air',
+      'Purger les réservoirs d\'air',
+      'Verrouiller les vannes',
+      'Vérifier la dépressurisation',
+      'Isoler les circuits'
+    ]
+  },
+  chemical: { 
+    name: 'Chimique', 
+    icon: AlertTriangle, 
+    color: '#f59e0b',
+    procedures: [
+      'Fermer les vannes d\'alimentation',
+      'Purger les conduites',
+      'Neutraliser les résidus',
+      'Verrouiller les accès',
+      'Installer la signalisation'
+    ]
+  },
+  thermal: { 
+    name: 'Thermique', 
+    icon: Flame, 
+    color: '#ef4444',
+    procedures: [
+      'Couper l\'alimentation de chauffage',
+      'Laisser refroidir les équipements',
+      'Isoler les sources de chaleur',
+      'Vérifier la température',
+      'Signaler les zones chaudes'
+    ]
+  },
+  gravity: { 
+    name: 'Gravité', 
+    icon: Wrench, 
+    color: '#8b5cf6',
+    procedures: [
+      'Supporter les charges suspendues',
+      'Bloquer les mécanismes de levage',
+      'Installer des supports de sécurité',
+      'Vérifier la stabilité',
+      'Baliser la zone'
+    ]
+  }
+};
+
 export default function Step1ProjectInfo({ 
   formData, 
   onDataChange, 
@@ -43,8 +169,13 @@ export default function Step1ProjectInfo({
 }: Step1ProjectInfoProps) {
   const [astNumber, setAstNumber] = useState(formData?.astNumber || generateASTNumber());
   const [copied, setCopied] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const projectInfo = formData?.projectInfo || {};
+  const lockoutPoints = projectInfo?.lockoutPoints || [];
+  const lockoutPhotos = projectInfo?.lockoutPhotos || [];
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [currentLockoutPhotoIndex, setCurrentLockoutPhotoIndex] = useState<{[key: string]: number}>({});
 
   const updateProjectInfo = (field: string, value: any) => {
     onDataChange('projectInfo', {
@@ -69,9 +200,219 @@ export default function Step1ProjectInfo({
     onDataChange('astNumber', newNumber);
   };
 
+  // =================== GESTION PHOTOS ===================
+  const handlePhotoCapture = async (category: string, lockoutPointId?: string) => {
+    try {
+      if (fileInputRef.current) {
+        fileInputRef.current.accept = 'image/*';
+        fileInputRef.current.capture = 'environment'; // Caméra arrière par défaut
+        fileInputRef.current.onchange = (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          if (file) {
+            processPhoto(file, category, lockoutPointId);
+          }
+        };
+        fileInputRef.current.click();
+      }
+    } catch (error) {
+      console.error('Erreur capture photo:', error);
+    }
+  };
+
+  const processPhoto = async (file: File, category: string, lockoutPointId?: string) => {
+    try {
+      // Créer une URL locale pour preview immédiat
+      const photoUrl = URL.createObjectURL(file);
+      
+      const newPhoto: LockoutPhoto = {
+        id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        url: photoUrl,
+        caption: `${getCategoryLabel(category)} - ${new Date().toLocaleString('fr-CA')}`,
+        category: category as any,
+        timestamp: new Date().toISOString(),
+        lockoutPointId
+      };
+
+      const updatedPhotos = [...lockoutPhotos, newPhoto];
+      updateProjectInfo('lockoutPhotos', updatedPhotos);
+
+      // TODO: Upload vers serveur/Supabase ici
+      console.log('Photo à uploader:', file.name, category);
+      
+    } catch (error) {
+      console.error('Erreur traitement photo:', error);
+    }
+  };
+
+  const getCategoryLabel = (category: string): string => {
+    const labels = {
+      'before_lockout': 'Avant verrouillage',
+      'during_lockout': 'Pendant verrouillage', 
+      'lockout_device': 'Dispositif de verrouillage',
+      'client_form': 'Fiche client',
+      'verification': 'Vérification'
+    };
+    return labels[category as keyof typeof labels] || category;
+  };
+
+  const deletePhoto = (photoId: string) => {
+    const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId);
+    updateProjectInfo('lockoutPhotos', updatedPhotos);
+  };
+
+  // =================== GESTION POINTS DE VERROUILLAGE ===================
+  const addLockoutPoint = () => {
+    const newPoint: LockoutPoint = {
+      id: `lockout_${Date.now()}`,
+      energyType: 'electrical',
+      equipmentName: '',
+      location: '',
+      lockType: '',
+      tagNumber: `TAG-${Date.now().toString().slice(-6)}`,
+      isLocked: false,
+      verifiedBy: '',
+      verificationTime: '',
+      photos: [],
+      notes: ''
+    };
+
+    const updatedPoints = [...lockoutPoints, newPoint];
+    updateProjectInfo('lockoutPoints', updatedPoints);
+  };
+
+  const updateLockoutPoint = (pointId: string, field: string, value: any) => {
+    const updatedPoints = lockoutPoints.map((point: LockoutPoint) => 
+      point.id === pointId ? { ...point, [field]: value } : point
+    );
+    updateProjectInfo('lockoutPoints', updatedPoints);
+  };
+
+  const deleteLockoutPoint = (pointId: string) => {
+    const updatedPoints = lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
+    updateProjectInfo('lockoutPoints', updatedPoints);
+    
+    // Supprimer aussi les photos associées
+    const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
+    updateProjectInfo('lockoutPhotos', updatedPhotos);
+  };
+
+  // =================== CARROUSEL PHOTOS ===================
+  const PhotoCarousel = ({ photos, onAddPhoto, lockoutPointId }: {
+    photos: LockoutPhoto[];
+    onAddPhoto: () => void;
+    lockoutPointId?: string;
+  }) => {
+    const currentIndex = lockoutPointId ? (currentLockoutPhotoIndex[lockoutPointId] || 0) : currentPhotoIndex;
+    const totalSlides = photos.length + 1; // +1 pour le slide "Ajouter photo"
+
+    const setCurrentIndex = (index: number) => {
+      if (lockoutPointId) {
+        setCurrentLockoutPhotoIndex(prev => ({
+          ...prev,
+          [lockoutPointId]: index
+        }));
+      } else {
+        setCurrentPhotoIndex(index);
+      }
+    };
+
+    const nextSlide = () => {
+      setCurrentIndex((currentIndex + 1) % totalSlides);
+    };
+
+    const prevSlide = () => {
+      setCurrentIndex(currentIndex === 0 ? totalSlides - 1 : currentIndex - 1);
+    };
+
+    const goToSlide = (index: number) => {
+      setCurrentIndex(index);
+    };
+
+    return (
+      <div className="photo-carousel">
+        <div className="carousel-container">
+          <div 
+            className="carousel-track"
+            style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+          >
+            {/* Slides des photos existantes */}
+            {photos.map((photo: LockoutPhoto, index: number) => (
+              <div key={photo.id} className="carousel-slide">
+                <img src={photo.url} alt={photo.caption} />
+                <div className="photo-info">
+                  <div className="photo-caption">
+                    <h4>{getCategoryLabel(photo.category)}</h4>
+                    <p>{new Date(photo.timestamp).toLocaleString('fr-CA')}</p>
+                  </div>
+                  <div className="photo-actions">
+                    <button 
+                      className="photo-action-btn delete"
+                      onClick={() => deletePhoto(photo.id)}
+                      title="Supprimer cette photo"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Slide "Ajouter photo" */}
+            <div className="carousel-slide add-photo" onClick={onAddPhoto}>
+              <div className="add-photo-content">
+                <div className="add-photo-icon">
+                  <Camera size={24} />
+                </div>
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>
+                  Ajouter une photo
+                </h4>
+                <p style={{ margin: 0, fontSize: '14px', opacity: 0.8, textAlign: 'center' }}>
+                  Documentez cette étape avec une photo
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          {totalSlides > 1 && (
+            <>
+              <button 
+                className="carousel-nav prev"
+                onClick={prevSlide}
+                disabled={totalSlides <= 1}
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <button 
+                className="carousel-nav next"
+                onClick={nextSlide}
+                disabled={totalSlides <= 1}
+              >
+                <ArrowRight size={20} />
+              </button>
+            </>
+          )}
+
+          {/* Indicateurs */}
+          {totalSlides > 1 && (
+            <div className="carousel-indicators">
+              {Array.from({ length: totalSlides }).map((_, index) => (
+                <div
+                  key={index}
+                  className={`carousel-indicator ${index === currentIndex ? 'active' : ''}`}
+                  onClick={() => goToSlide(index)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
-      {/* CSS Premium pour Step 1 */}
+      {/* CSS Premium pour Step 1 avec Verrouillage */}
       <style dangerouslySetInnerHTML={{
         __html: `
           .step1-container {
@@ -100,6 +441,16 @@ export default function Step1ProjectInfo({
             box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
           }
 
+          .lockout-section {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+          }
+
+          .lockout-section:hover {
+            border-color: rgba(239, 68, 68, 0.5);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.15);
+          }
+
           .section-header {
             display: flex;
             align-items: center;
@@ -114,6 +465,10 @@ export default function Step1ProjectInfo({
             height: 24px;
             color: #3b82f6;
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+          }
+
+          .lockout-icon {
+            color: #ef4444 !important;
           }
 
           .section-title {
@@ -297,6 +652,372 @@ export default function Step1ProjectInfo({
             color: #22c55e;
           }
 
+          .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+          }
+
+          .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+          }
+
+          .btn-danger:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+          }
+
+          .energy-type-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+          }
+
+          .energy-type-option {
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .energy-type-option.selected {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+          }
+
+          .energy-type-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+          }
+
+          .lockout-point {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+          }
+
+          .lockout-point-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+          }
+
+          .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+          }
+
+          .photo-carousel {
+            position: relative;
+            margin-top: 16px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 16px;
+            overflow: hidden;
+          }
+
+          .carousel-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+          }
+
+          .carousel-track {
+            display: flex;
+            transition: transform 0.3s ease;
+            height: 100%;
+          }
+
+          .carousel-slide {
+            min-width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .carousel-slide img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+          }
+
+          .carousel-slide.add-photo {
+            background: rgba(59, 130, 246, 0.1);
+            border: 2px dashed rgba(59, 130, 246, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-direction: column;
+            gap: 16px;
+          }
+
+          .carousel-slide.add-photo:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.5);
+          }
+
+          .add-photo-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            color: #60a5fa;
+          }
+
+          .add-photo-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(59, 130, 246, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+          }
+
+          .carousel-slide.add-photo:hover .add-photo-icon {
+            transform: scale(1.1);
+            background: rgba(59, 130, 246, 0.3);
+          }
+
+          .carousel-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 10;
+          }
+
+          .carousel-nav:hover {
+            background: rgba(0, 0, 0, 0.9);
+            transform: translateY(-50%) scale(1.1);
+          }
+
+          .carousel-nav:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+          }
+
+          .carousel-nav.prev {
+            left: 16px;
+          }
+
+          .carousel-nav.next {
+            right: 16px;
+          }
+
+          .carousel-indicators {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+          }
+
+          .carousel-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+          }
+
+          .carousel-indicator.active {
+            background: rgba(255, 255, 255, 0.9);
+            transform: scale(1.2);
+          }
+
+          .photo-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            color: white;
+            padding: 20px 16px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+          }
+
+          .photo-caption {
+            flex: 1;
+            margin-right: 12px;
+          }
+
+          .photo-caption h4 {
+            margin: 0 0 4px;
+            font-size: 14px;
+            font-weight: 600;
+          }
+
+          .photo-caption p {
+            margin: 0;
+            font-size: 12px;
+            opacity: 0.8;
+          }
+
+          .photo-actions {
+            display: flex;
+            gap: 8px;
+          }
+
+          .photo-action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .photo-action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+          }
+
+          .photo-action-btn.delete:hover {
+            background: rgba(239, 68, 68, 0.8);
+            border-color: #ef4444;
+          }
+
+          .photo-item {
+            position: relative;
+            aspect-ratio: 1;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+          }
+
+          .photo-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+          }
+
+          .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .photo-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            color: white;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: 500;
+          }
+
+          .photo-delete {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(239, 68, 68, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            font-size: 12px;
+          }
+
+          .photo-capture-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+          }
+
+          .photo-capture-btn {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 500;
+          }
+
+          .photo-capture-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            transform: translateY(-1px);
+          }
+
           .field-help {
             font-size: 12px;
             color: #64748b;
@@ -317,6 +1038,33 @@ export default function Step1ProjectInfo({
           .required-indicator {
             color: #ef4444;
             margin-left: 4px;
+          }
+
+          .procedures-list {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+          }
+
+          .procedures-list h4 {
+            color: #e2e8f0;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+          }
+
+          .procedures-list ol {
+            margin: 0;
+            padding-left: 20px;
+            color: #94a3b8;
+            font-size: 13px;
+            line-height: 1.5;
+          }
+
+          .procedures-list li {
+            margin-bottom: 6px;
           }
 
           /* Mobile Responsive */
@@ -348,6 +1096,18 @@ export default function Step1ProjectInfo({
             .premium-textarea {
               font-size: 16px; /* Évite zoom iOS */
             }
+
+            .energy-type-selector {
+              grid-template-columns: repeat(2, 1fr);
+            }
+
+            .photo-grid {
+              grid-template-columns: repeat(2, 1fr);
+            }
+
+            .photo-capture-buttons {
+              flex-direction: column;
+            }
           }
 
           @media (max-width: 480px) {
@@ -362,9 +1122,26 @@ export default function Step1ProjectInfo({
             .ast-actions {
               flex-direction: column;
             }
+
+            .energy-type-selector {
+              grid-template-columns: 1fr;
+            }
+
+            .photo-grid {
+              grid-template-columns: 1fr;
+            }
           }
         `
       }} />
+
+      {/* Input caché pour capture photo */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style={{ display: 'none' }}
+      />
 
       <div className="step1-container">
         {/* Carte Numéro AST Premium */}
@@ -405,233 +1182,227 @@ export default function Step1ProjectInfo({
           </div>
         </div>
 
-        {/* Grille Premium des Sections - AUTO-SIZING OPTIMISÉ */}
+        {/* Grille Premium des Sections */}
         <div className="premium-grid">
           
-          {/* Sections Client et Projet - Desktop 2 colonnes, Mobile empilé */}
-          <div className="desktop-two-column">
-            {/* Section Client */}
-            <div className="form-section">
-              <div className="section-header">
-                <Building className="section-icon" />
-                <h3 className="section-title">🏢 Informations Client</h3>
-              </div>
-
-              <div className="form-field">
-                <label className="field-label">
-                  <Building style={{ width: '18px', height: '18px' }} />
-                  Nom du Client
-                  <span className="required-indicator">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="premium-input"
-                  placeholder="Ex: Hydro-Québec, Bell Canada..."
-                  value={projectInfo.client || ''}
-                  onChange={(e) => updateProjectInfo('client', e.target.value)}
-                />
-              </div>
-
-              <div className="form-field">
-                <label className="field-label">
-                  <Phone style={{ width: '18px', height: '18px' }} />
-                  Téléphone Client
-                </label>
-                <input
-                  type="tel"
-                  className="premium-input"
-                  placeholder="Ex: (514) 555-0123"
-                  value={projectInfo.clientPhone || ''}
-                  onChange={(e) => updateProjectInfo('clientPhone', e.target.value)}
-                />
-              </div>
-
-              <div className="form-field">
-                <label className="field-label">
-                  <User style={{ width: '18px', height: '18px' }} />
-                  Représentant Client
-                </label>
-                <input
-                  type="text"
-                  className="premium-input"
-                  placeholder="Nom du responsable projet"
-                  value={projectInfo.clientRepresentative || ''}
-                  onChange={(e) => updateProjectInfo('clientRepresentative', e.target.value)}
-                />
-              </div>
-
-              <div className="form-field">
-                <label className="field-label">
-                  <Phone style={{ width: '18px', height: '18px' }} />
-                  Téléphone Représentant
-                </label>
-                <input
-                  type="tel"
-                  className="premium-input"
-                  placeholder="Ex: (514) 555-0456"
-                  value={projectInfo.clientRepresentativePhone || ''}
-                  onChange={(e) => updateProjectInfo('clientRepresentativePhone', e.target.value)}
-                />
-              </div>
+          {/* Section Client */}
+          <div className="form-section">
+            <div className="section-header">
+              <Building className="section-icon" />
+              <h3 className="section-title">🏢 Informations Client</h3>
             </div>
 
-            {/* Section Projet */}
-            <div className="form-section">
-              <div className="section-header">
-                <Briefcase className="section-icon" />
-                <h3 className="section-title">📋 Détails du Projet</h3>
-              </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Building style={{ width: '18px', height: '18px' }} />
+                Nom du Client
+                <span className="required-indicator">*</span>
+              </label>
+              <input
+                type="text"
+                className="premium-input"
+                placeholder="Ex: Hydro-Québec, Bell Canada..."
+                value={projectInfo.client || ''}
+                onChange={(e) => updateProjectInfo('client', e.target.value)}
+              />
+            </div>
 
-              <div className="form-field">
-                <label className="field-label">
-                  <Briefcase style={{ width: '18px', height: '18px' }} />
-                  Numéro de Projet
-                  <span className="required-indicator">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="premium-input"
-                  placeholder="Ex: PRJ-2025-001"
-                  value={projectInfo.projectNumber || ''}
-                  onChange={(e) => updateProjectInfo('projectNumber', e.target.value)}
-                />
-              </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Phone style={{ width: '18px', height: '18px' }} />
+                Téléphone Client
+              </label>
+              <input
+                type="tel"
+                className="premium-input"
+                placeholder="Ex: (514) 555-0123"
+                value={projectInfo.clientPhone || ''}
+                onChange={(e) => updateProjectInfo('clientPhone', e.target.value)}
+              />
+            </div>
 
-              <div className="form-field">
-                <label className="field-label">
-                  <FileText style={{ width: '18px', height: '18px' }} />
-                  # AST Client (Optionnel)
-                </label>
-                <input
-                  type="text"
-                  className="premium-input"
-                  placeholder="Numéro fourni par le client"
-                  value={projectInfo.astClientNumber || ''}
-                  onChange={(e) => updateProjectInfo('astClientNumber', e.target.value)}
-                />
-                <div className="field-help">
-                  Numéro de référence du client (si applicable)
-                </div>
-              </div>
+            <div className="form-field">
+              <label className="field-label">
+                <User style={{ width: '18px', height: '18px' }} />
+                Représentant Client
+              </label>
+              <input
+                type="text"
+                className="premium-input"
+                placeholder="Nom du responsable projet"
+                value={projectInfo.clientRepresentative || ''}
+                onChange={(e) => updateProjectInfo('clientRepresentative', e.target.value)}
+              />
+            </div>
 
-              <div className="two-column">
-                <div className="form-field">
-                  <label className="field-label">
-                    <Calendar style={{ width: '18px', height: '18px' }} />
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    className="premium-input"
-                    value={projectInfo.date || new Date().toISOString().split('T')[0]}
-                    onChange={(e) => updateProjectInfo('date', e.target.value)}
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label className="field-label">
-                    <Clock style={{ width: '18px', height: '18px' }} />
-                    Heure
-                  </label>
-                  <input
-                    type="time"
-                    className="premium-input"
-                    value={projectInfo.time || new Date().toTimeString().substring(0, 5)}
-                    onChange={(e) => updateProjectInfo('time', e.target.value)}
-                  />
-                </div>
-              </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Phone style={{ width: '18px', height: '18px' }} />
+                Téléphone Représentant
+              </label>
+              <input
+                type="tel"
+                className="premium-input"
+                placeholder="Ex: (514) 555-0456"
+                value={projectInfo.clientRepresentativePhone || ''}
+                onChange={(e) => updateProjectInfo('clientRepresentativePhone', e.target.value)}
+              />
             </div>
           </div>
 
-          {/* Sections Localisation et Équipe - Desktop 2 colonnes, Mobile empilé */}
-          <div className="desktop-two-column">
-            {/* Section Localisation */}
-            <div className="form-section">
-              <div className="section-header">
-                <MapPin className="section-icon" />
-                <h3 className="section-title">📍 Localisation</h3>
-              </div>
+          {/* Section Projet */}
+          <div className="form-section">
+            <div className="section-header">
+              <Briefcase className="section-icon" />
+              <h3 className="section-title">📋 Détails du Projet</h3>
+            </div>
 
-              <div className="form-field">
-                <label className="field-label">
-                  <MapPin style={{ width: '18px', height: '18px' }} />
-                  Lieu des Travaux
-                  <span className="required-indicator">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="premium-input"
-                  placeholder="Adresse complète du site de travail"
-                  value={projectInfo.workLocation || ''}
-                  onChange={(e) => updateProjectInfo('workLocation', e.target.value)}
-                />
-              </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Briefcase style={{ width: '18px', height: '18px' }} />
+                Numéro de Projet
+                <span className="required-indicator">*</span>
+              </label>
+              <input
+                type="text"
+                className="premium-input"
+                placeholder="Ex: PRJ-2025-001"
+                value={projectInfo.projectNumber || ''}
+                onChange={(e) => updateProjectInfo('projectNumber', e.target.value)}
+              />
+            </div>
 
-              <div className="form-field">
-                <label className="field-label">
-                  <Briefcase style={{ width: '18px', height: '18px' }} />
-                  Type d'Industrie
-                </label>
-                <select
-                  className="premium-select"
-                  value={projectInfo.industry || 'electrical'}
-                  onChange={(e) => updateProjectInfo('industry', e.target.value)}
-                >
-                  <option value="electrical">⚡ Électrique</option>
-                  <option value="construction">🏗️ Construction</option>
-                  <option value="industrial">🏭 Industriel</option>
-                  <option value="manufacturing">⚙️ Manufacturier</option>
-                  <option value="office">🏢 Bureau/Administratif</option>
-                  <option value="other">🔧 Autre</option>
-                </select>
+            <div className="form-field">
+              <label className="field-label">
+                <FileText style={{ width: '18px', height: '18px' }} />
+                # AST Client (Optionnel)
+              </label>
+              <input
+                type="text"
+                className="premium-input"
+                placeholder="Numéro fourni par le client"
+                value={projectInfo.astClientNumber || ''}
+                onChange={(e) => updateProjectInfo('astClientNumber', e.target.value)}
+              />
+              <div className="field-help">
+                Numéro de référence du client (si applicable)
               </div>
             </div>
 
-            {/* Section Équipe */}
-            <div className="form-section">
-              <div className="section-header">
-                <Users className="section-icon" />
-                <h3 className="section-title">👥 Équipe de Travail</h3>
-              </div>
-
+            <div className="two-column">
               <div className="form-field">
                 <label className="field-label">
-                  <Users style={{ width: '18px', height: '18px' }} />
-                  Nombre de Personnes
-                  <span className="required-indicator">*</span>
+                  <Calendar style={{ width: '18px', height: '18px' }} />
+                  Date
                 </label>
                 <input
-                  type="number"
-                  min="1"
-                  max="100"
+                  type="date"
                   className="premium-input"
-                  placeholder="Ex: 5"
-                  value={projectInfo.workerCount || 1}
-                  onChange={(e) => updateProjectInfo('workerCount', parseInt(e.target.value) || 1)}
+                  value={projectInfo.date || new Date().toISOString().split('T')[0]}
+                  onChange={(e) => updateProjectInfo('date', e.target.value)}
                 />
-                <div className="field-help">
-                  Ce nombre sera comparé aux approbations d'équipe
-                </div>
               </div>
 
               <div className="form-field">
                 <label className="field-label">
                   <Clock style={{ width: '18px', height: '18px' }} />
-                  Durée Estimée
+                  Heure
                 </label>
                 <input
-                  type="text"
+                  type="time"
                   className="premium-input"
-                  placeholder="Ex: 4 heures, 2 jours, 1 semaine"
-                  value={projectInfo.estimatedDuration || ''}
-                  onChange={(e) => updateProjectInfo('estimatedDuration', e.target.value)}
+                  value={projectInfo.time || new Date().toTimeString().substring(0, 5)}
+                  onChange={(e) => updateProjectInfo('time', e.target.value)}
                 />
               </div>
             </div>
           </div>
 
-          {/* Section Contacts d'Urgence - Pleine largeur avec 2 colonnes internes */}
+          {/* Section Localisation */}
+          <div className="form-section">
+            <div className="section-header">
+              <MapPin className="section-icon" />
+              <h3 className="section-title">📍 Localisation</h3>
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <MapPin style={{ width: '18px', height: '18px' }} />
+                Lieu des Travaux
+                <span className="required-indicator">*</span>
+              </label>
+              <input
+                type="text"
+                className="premium-input"
+                placeholder="Adresse complète du site de travail"
+                value={projectInfo.workLocation || ''}
+                onChange={(e) => updateProjectInfo('workLocation', e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Briefcase style={{ width: '18px', height: '18px' }} />
+                Type d'Industrie
+              </label>
+              <select
+                className="premium-select"
+                value={projectInfo.industry || 'electrical'}
+                onChange={(e) => updateProjectInfo('industry', e.target.value)}
+              >
+                <option value="electrical">⚡ Électrique</option>
+                <option value="construction">🏗️ Construction</option>
+                <option value="industrial">🏭 Industriel</option>
+                <option value="manufacturing">⚙️ Manufacturier</option>
+                <option value="office">🏢 Bureau/Administratif</option>
+                <option value="other">🔧 Autre</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Section Équipe */}
+          <div className="form-section">
+            <div className="section-header">
+              <Users className="section-icon" />
+              <h3 className="section-title">👥 Équipe de Travail</h3>
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Users style={{ width: '18px', height: '18px' }} />
+                Nombre de Personnes
+                <span className="required-indicator">*</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                className="premium-input"
+                placeholder="Ex: 5"
+                value={projectInfo.workerCount || 1}
+                onChange={(e) => updateProjectInfo('workerCount', parseInt(e.target.value) || 1)}
+              />
+              <div className="field-help">
+                Ce nombre sera comparé aux approbations d'équipe
+              </div>
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Clock style={{ width: '18px', height: '18px' }} />
+                Durée Estimée
+              </label>
+              <input
+                type="text"
+                className="premium-input"
+                placeholder="Ex: 4 heures, 2 jours, 1 semaine"
+                value={projectInfo.estimatedDuration || ''}
+                onChange={(e) => updateProjectInfo('estimatedDuration', e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Section Contacts d'Urgence */}
           <div className="form-section">
             <div className="section-header">
               <AlertTriangle className="section-icon" />
@@ -669,7 +1440,7 @@ export default function Step1ProjectInfo({
             </div>
           </div>
 
-          {/* Section Description - PLEINE LARGEUR OPTIMISÉE */}
+          {/* Section Description */}
           <div className="form-section full-width-section">
             <div className="section-header">
               <FileText className="section-icon" />
@@ -699,6 +1470,318 @@ export default function Step1ProjectInfo({
               </div>
             </div>
           </div>
+        </div>
+
+        {/* =================== SECTION VERROUILLAGE/CADENASSAGE =================== */}
+        <div className="form-section lockout-section span-full" style={{ marginTop: '32px' }}>
+          <div className="section-header">
+            <Lock className="section-icon lockout-icon" />
+            <h3 className="section-title">🔒 Verrouillage / Cadenassage (LOTO)</h3>
+          </div>
+
+          <div className="field-help" style={{ marginBottom: '24px' }}>
+            Documentation des procédures de verrouillage/étiquetage des énergies dangereuses selon les normes RSST. 
+            Photographiez chaque étape pour assurer une traçabilité complète.
+          </div>
+
+          {/* Photos générales de verrouillage */}
+          <div className="form-field">
+            <label className="field-label">
+              <Camera style={{ width: '18px', height: '18px' }} />
+              Photos Générales de Verrouillage
+            </label>
+            
+            <div className="photo-capture-buttons">
+              <button 
+                className="photo-capture-btn"
+                onClick={() => handlePhotoCapture('before_lockout')}
+              >
+                <Camera size={14} />
+                Avant verrouillage
+              </button>
+              <button 
+                className="photo-capture-btn"
+                onClick={() => handlePhotoCapture('client_form')}
+              >
+                <FileText size={14} />
+                Fiche client
+              </button>
+              <button 
+                className="photo-capture-btn"
+                onClick={() => handlePhotoCapture('verification')}
+              >
+                <Eye size={14} />
+                Vérification finale
+              </button>
+            </div>
+
+            {/* Affichage des photos générales */}
+            {lockoutPhotos.filter((photo: LockoutPhoto) => !photo.lockoutPointId).length > 0 ? (
+              <PhotoCarousel 
+                photos={lockoutPhotos.filter((photo: LockoutPhoto) => !photo.lockoutPointId)}
+                onAddPhoto={() => handlePhotoCapture('verification')}
+              />
+            ) : (
+              <div style={{
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '2px dashed rgba(59, 130, 246, 0.3)',
+                borderRadius: '12px',
+                padding: '40px 20px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onClick={() => handlePhotoCapture('before_lockout')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
+                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+              }}
+              >
+                <Camera size={32} color="#60a5fa" style={{ marginBottom: '12px' }} />
+                <h4 style={{ margin: '0 0 8px', color: '#60a5fa' }}>Aucune photo</h4>
+                <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8' }}>
+                  Cliquez pour prendre votre première photo de verrouillage
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Bouton ajouter point de verrouillage */}
+          <div style={{ marginBottom: '24px' }}>
+            <button className="btn-primary" onClick={addLockoutPoint}>
+              <Plus size={20} />
+              Ajouter Point de Verrouillage
+            </button>
+          </div>
+
+          {/* Liste des points de verrouillage */}
+          {lockoutPoints.map((point: LockoutPoint, index: number) => (
+            <div key={point.id} className="lockout-point">
+              <div className="lockout-point-header">
+                <h4 style={{ color: '#ef4444', margin: 0, fontSize: '16px', fontWeight: '600' }}>
+                  🔒 Point de Verrouillage #{index + 1}
+                </h4>
+                <button 
+                  className="btn-danger"
+                  onClick={() => deleteLockoutPoint(point.id)}
+                >
+                  <Trash2 size={14} />
+                  Supprimer
+                </button>
+              </div>
+
+              {/* Type d'énergie */}
+              <div className="form-field">
+                <label className="field-label">
+                  Type d'Énergie
+                  <span className="required-indicator">*</span>
+                </label>
+                <div className="energy-type-selector">
+                  {Object.entries(ENERGY_TYPES).map(([key, type]) => {
+                    const IconComponent = type.icon;
+                    return (
+                      <div
+                        key={key}
+                        className={`energy-type-option ${point.energyType === key ? 'selected' : ''}`}
+                        onClick={() => updateLockoutPoint(point.id, 'energyType', key)}
+                        style={{ 
+                          borderColor: point.energyType === key ? type.color : undefined,
+                          backgroundColor: point.energyType === key ? `${type.color}20` : undefined 
+                        }}
+                      >
+                        <IconComponent size={20} color={type.color} />
+                        <span style={{ fontSize: '12px', fontWeight: '500', color: '#e2e8f0' }}>
+                          {type.name}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Procédures recommandées */}
+                {point.energyType && ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES] && (
+                  <div className="procedures-list">
+                    <h4>🔧 Procédures Recommandées:</h4>
+                    <ol>
+                      {ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES].procedures.map((procedure, idx) => (
+                        <li key={idx}>{procedure}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </div>
+
+              {/* Détails du point */}
+              <div className="two-column">
+                <div className="form-field">
+                  <label className="field-label">
+                    <Settings style={{ width: '18px', height: '18px' }} />
+                    Nom de l'Équipement
+                  </label>
+                  <input
+                    type="text"
+                    className="premium-input"
+                    placeholder="Ex: Disjoncteur principal"
+                    value={point.equipmentName}
+                    onChange={(e) => updateLockoutPoint(point.id, 'equipmentName', e.target.value)}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label className="field-label">
+                    <MapPin style={{ width: '18px', height: '18px' }} />
+                    Localisation
+                  </label>
+                  <input
+                    type="text"
+                    className="premium-input"
+                    placeholder="Ex: Panneau électrique B-2"
+                    value={point.location}
+                    onChange={(e) => updateLockoutPoint(point.id, 'location', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="two-column">
+                <div className="form-field">
+                  <label className="field-label">
+                    <Lock style={{ width: '18px', height: '18px' }} />
+                    Type de Cadenas/Dispositif
+                  </label>
+                  <input
+                    type="text"
+                    className="premium-input"
+                    placeholder="Ex: Cadenas rouge C-Secur360"
+                    value={point.lockType}
+                    onChange={(e) => updateLockoutPoint(point.id, 'lockType', e.target.value)}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label className="field-label">
+                    <FileText style={{ width: '18px', height: '18px' }} />
+                    Numéro d'Étiquette
+                  </label>
+                  <input
+                    type="text"
+                    className="premium-input"
+                    placeholder="TAG-123456"
+                    value={point.tagNumber}
+                    onChange={(e) => updateLockoutPoint(point.id, 'tagNumber', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Status et vérification */}
+              <div className="two-column">
+                <div className="form-field">
+                  <label className="field-label">
+                    <User style={{ width: '18px', height: '18px' }} />
+                    Vérifié par
+                  </label>
+                  <input
+                    type="text"
+                    className="premium-input"
+                    placeholder="Nom de la personne"
+                    value={point.verifiedBy}
+                    onChange={(e) => updateLockoutPoint(point.id, 'verifiedBy', e.target.value)}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label className="field-label">
+                    <Clock style={{ width: '18px', height: '18px' }} />
+                    Heure de Vérification
+                  </label>
+                  <input
+                    type="time"
+                    className="premium-input"
+                    value={point.verificationTime}
+                    onChange={(e) => updateLockoutPoint(point.id, 'verificationTime', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="form-field">
+                <label className="field-label">
+                  <FileText style={{ width: '18px', height: '18px' }} />
+                  Notes et Observations
+                </label>
+                <textarea
+                  className="premium-textarea"
+                  style={{ minHeight: '80px' }}
+                  placeholder="Observations particulières, difficultés rencontrées, modifications apportées..."
+                  value={point.notes}
+                  onChange={(e) => updateLockoutPoint(point.id, 'notes', e.target.value)}
+                />
+              </div>
+
+              {/* Photos spécifiques à ce point */}
+              <div className="form-field">
+                <label className="field-label">
+                  <Camera style={{ width: '18px', height: '18px' }} />
+                  Photos de ce Point de Verrouillage
+                </label>
+                
+                {lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id).length > 0 ? (
+                  <PhotoCarousel 
+                    photos={lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id)}
+                    onAddPhoto={() => handlePhotoCapture('lockout_device', point.id)}
+                    lockoutPointId={point.id}
+                  />
+                ) : (
+                  <div style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '2px dashed rgba(239, 68, 68, 0.3)',
+                    borderRadius: '12px',
+                    padding: '40px 20px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onClick={() => handlePhotoCapture('during_lockout', point.id)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                    e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                  }}
+                  >
+                    <Lock size={32} color="#f87171" style={{ marginBottom: '12px' }} />
+                    <h4 style={{ margin: '0 0 8px', color: '#f87171' }}>Aucune photo</h4>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8' }}>
+                      Documentez ce point de verrouillage avec une photo
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Message si aucun point */}
+          {lockoutPoints.length === 0 && (
+            <div style={{
+              background: 'rgba(59, 130, 246, 0.1)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '12px',
+              padding: '24px',
+              textAlign: 'center',
+              color: '#60a5fa'
+            }}>
+              <Lock size={32} style={{ marginBottom: '12px' }} />
+              <h4 style={{ margin: '0 0 8px', color: '#60a5fa' }}>Aucun Point de Verrouillage</h4>
+              <p style={{ margin: 0, fontSize: '14px' }}>
+                Cliquez sur "Ajouter Point de Verrouillage" pour documenter les procédures LOTO
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </>
