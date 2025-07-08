@@ -8,6 +8,9 @@ import {
   Plus, Trash2, Edit, Star, Wifi, WifiOff, Upload, Bell
 } from 'lucide-react';
 
+// Import du composant Step1
+import Step1ProjectInfo from './steps/Step1ProjectInfo';
+
 // =================== INTERFACES ENTERPRISE ===================
 interface ASTFormProps {
   tenant: string;
@@ -1201,71 +1204,15 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
 
           {/* Contenu spécifique à chaque étape */}
           <div style={{ minHeight: '400px' }}>
-            {/* ÉTAPE 1: Informations Projet */}
+            {/* ÉTAPE 1: Informations Projet - COMPOSANT FONCTIONNEL */}
             {currentStep === 1 && (
-              <div className="slide-in">
-                <div style={{
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  textAlign: 'center',
-                  marginBottom: '32px'
-                }}>
-                  <FileText size={32} color="#3b82f6" style={{ marginBottom: '12px' }} />
-                  <h3 style={{ color: '#ffffff', margin: '0 0 8px' }}>Étape 1 - Informations du Projet</h3>
-                  <p style={{ color: '#94a3b8', margin: 0 }}>
-                    Interface complète en développement avec formulaires intelligents,<br />
-                    validation cascade et sauvegarde automatique
-                  </p>
-                </div>
-                
-                {/* Preview des fonctionnalités */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                  gap: '20px'
-                }}>
-                  <div style={{
-                    background: 'rgba(30, 41, 59, 0.6)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
-                    borderRadius: '12px',
-                    padding: '20px'
-                  }}>
-                    <Building size={24} color="#3b82f6" style={{ marginBottom: '12px' }} />
-                    <h4 style={{ color: '#ffffff', margin: '0 0 8px' }}>Client & Localisation</h4>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
-                      Identification complète avec géolocalisation automatique
-                    </p>
-                  </div>
-                  
-                  <div style={{
-                    background: 'rgba(30, 41, 59, 0.6)',
-                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                    borderRadius: '12px',
-                    padding: '20px'
-                  }}>
-                    <Briefcase size={24} color="#10b981" style={{ marginBottom: '12px' }} />
-                    <h4 style={{ color: '#ffffff', margin: '0 0 8px' }}>Détails Projet</h4>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
-                      Description détaillée avec validation légale RSST
-                    </p>
-                  </div>
-                  
-                  <div style={{
-                    background: 'rgba(30, 41, 59, 0.6)',
-                    border: '1px solid rgba(245, 158, 11, 0.3)',
-                    borderRadius: '12px',
-                    padding: '20px'
-                  }}>
-                    <User size={24} color="#f59e0b" style={{ marginBottom: '12px' }} />
-                    <h4 style={{ color: '#ffffff', margin: '0 0 8px' }}>Responsable AST</h4>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
-                      Identification du responsable avec signatures digitales
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <Step1ProjectInfo
+                formData={astData}
+                onDataChange={updateASTData}
+                language={language}
+                tenant={tenant}
+                errors={{}}
+              />
             )}
 
             {/* Placeholders pour les autres étapes */}
