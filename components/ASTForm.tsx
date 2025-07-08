@@ -660,77 +660,85 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
           zIndex: 5
         }}>
 
-          {/* Indicateur de progression stylé */}
+          {/* Indicateur de progression stylé - COULEURS VIVES */}
           <div className="glass-effect slide-in-up" style={{ 
             padding: '32px', 
             marginBottom: '40px',
-            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)',
-            borderColor: 'rgba(59, 130, 246, 0.2)'
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
+            borderColor: 'rgba(59, 130, 246, 0.4)',
+            border: '2px solid rgba(59, 130, 246, 0.4)'
           }}>
-            {/* Barre de progression */}
+            {/* Barre de progression COLORÉE */}
             <div style={{
               position: 'absolute',
               top: 0,
               left: 0,
               right: 0,
-              height: '4px',
-              background: 'rgba(59, 130, 246, 0.2)',
-              borderRadius: '4px 4px 0 0'
+              height: '6px',
+              background: 'rgba(59, 130, 246, 0.3)',
+              borderRadius: '6px 6px 0 0'
             }}>
               <div 
                 className="progress-bar"
                 style={{
                   height: '100%',
-                  background: 'linear-gradient(90deg, #3b82f6, #9333ea, #22c55e)',
-                  borderRadius: '4px 4px 0 0',
+                  background: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 25%, #f59e0b 50%, #22c55e 75%, #ec4899 100%)',
+                  borderRadius: '6px 6px 0 0',
+                  boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)',
                   '--progress': `${progressPercentage}%`
                 } as any}
               />
             </div>
 
-            <h2 className="text-gradient" style={{
-              fontSize: '28px',
+            <h2 style={{
+              fontSize: '32px',
               margin: '0 0 24px 0',
               display: 'flex',
               alignItems: 'center',
               gap: '16px',
-              fontWeight: '700'
+              fontWeight: '800',
+              color: '#ffffff', // BLANC ÉCLATANT
+              textShadow: '0 2px 4px rgba(0,0,0,0.5)'
             }}>
               <currentStepData.icon 
                 className="pulse-animation" 
                 style={{ 
-                  width: '32px', 
-                  height: '32px', 
-                  color: currentStepData.color 
+                  width: '36px', 
+                  height: '36px', 
+                  color: currentStepData.color,
+                  filter: 'brightness(1.2) saturate(1.3)'
                 }} 
               />
               {currentStepData.title}
               <span style={{
                 background: currentStepData.gradient,
                 color: 'white',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                fontSize: '12px',
-                fontWeight: '600'
+                padding: '8px 16px',
+                borderRadius: '16px',
+                fontSize: '14px',
+                fontWeight: '700',
+                boxShadow: `0 4px 15px ${currentStepData.color}40`,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
               }}>
                 Étape {currentStep}/{steps.length}
               </span>
             </h2>
 
             <p style={{
-              color: '#94a3b8',
-              fontSize: '16px',
+              color: '#e2e8f0', // BLANC CASSÉ au lieu de gris
+              fontSize: '18px',
               margin: '0 0 32px 0',
-              fontWeight: '500'
+              fontWeight: '600'
             }}>
               {currentStepData.subtitle}
             </p>
 
-            {/* Steps navigation */}
+            {/* Steps navigation ULTRA CONTRASTÉS */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-              gap: '12px',
+              gap: '16px',
               marginBottom: '24px'
             }}>
               {steps.map((step, index) => {
@@ -743,31 +751,37 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
                     key={step.id}
                     className={`step-indicator ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
                     style={{
-                      padding: '16px 12px',
+                      padding: '20px 16px',
                       background: isActive ? step.gradient : 
                                  isCompleted ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' :
-                                 'rgba(30, 41, 59, 0.5)',
-                      border: `2px solid ${isActive ? step.color : 
+                                 'rgba(15, 23, 42, 0.8)',
+                      border: `3px solid ${isActive ? step.color : 
                                           isCompleted ? '#22c55e' : 
-                                          'rgba(255, 255, 255, 0.1)'}`,
-                      borderRadius: '16px',
+                                          'rgba(255, 255, 255, 0.2)'}`,
+                      borderRadius: '20px',
                       textAlign: 'center',
                       cursor: 'pointer',
-                      backdropFilter: 'blur(10px)'
+                      backdropFilter: 'blur(15px)',
+                      boxShadow: isActive ? `0 8px 25px ${step.color}40` : 
+                                isCompleted ? '0 8px 25px rgba(34, 197, 94, 0.3)' :
+                                '0 4px 15px rgba(0, 0, 0, 0.3)',
+                      transition: 'all 0.3s ease'
                     }}
                     onClick={() => setCurrentStep(step.id)}
                   >
                     <StepIcon style={{
-                      width: '24px',
-                      height: '24px',
-                      margin: '0 auto 8px auto',
-                      color: isActive || isCompleted ? 'white' : '#94a3b8'
+                      width: '28px',
+                      height: '28px',
+                      margin: '0 auto 12px auto',
+                      color: isActive || isCompleted ? 'white' : '#94a3b8',
+                      filter: isActive || isCompleted ? 'brightness(1.2) drop-shadow(0 2px 4px rgba(0,0,0,0.3))' : 'none'
                     }} />
                     <div style={{
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      color: isActive || isCompleted ? 'white' : '#94a3b8',
-                      lineHeight: 1.3
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      color: isActive || isCompleted ? 'white' : '#cbd5e1', // PLUS CLAIR
+                      lineHeight: 1.3,
+                      textShadow: isActive || isCompleted ? '0 1px 2px rgba(0,0,0,0.5)' : 'none'
                     }}>
                       {step.title}
                     </div>
@@ -776,26 +790,106 @@ export default function ASTForm({ tenant, language }: ASTFormProps) {
               })}
             </div>
 
-            {/* Progression textuelle */}
+            {/* Progression textuelle ULTRA VISIBLE */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '14px',
-              color: '#94a3b8'
+              fontSize: '15px',
+              color: '#e2e8f0', // BLANC CASSÉ
+              fontWeight: '600'
             }}>
-              <span>Progression: {Math.round(progressPercentage)}%</span>
-              <span>{currentStep - 1} sur {steps.length} étapes complétées</span>
+              <span style={{
+                background: 'rgba(59, 130, 246, 0.2)',
+                padding: '8px 16px',
+                borderRadius: '12px',
+                border: '1px solid rgba(59, 130, 246, 0.3)'
+              }}>
+                Progression: {Math.round(progressPercentage)}%
+              </span>
+              <span style={{
+                background: 'rgba(34, 197, 94, 0.2)',
+                padding: '8px 16px',
+                borderRadius: '12px',
+                border: '1px solid rgba(34, 197, 94, 0.3)'
+              }}>
+                {currentStep - 1} sur {steps.length} étapes complétées
+              </span>
             </div>
           </div>
 
-          {/* Contenu de l'étape courante */}
+          {/* Contenu de l'étape courante - CONTRASTE MAXIMUM */}
           <div className="glass-effect slide-in-up" style={{
             padding: '40px',
             marginBottom: '40px',
-            minHeight: '600px'
+            minHeight: '600px',
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
+            border: `2px solid ${currentStepData.color}60`,
+            boxShadow: `0 20px 40px rgba(0, 0, 0, 0.3), 0 0 30px ${currentStepData.color}20`
           }}>
-            {getCurrentStepComponent()}
+            {/* Header de l'étape avec couleur vive */}
+            <div style={{
+              marginBottom: '32px',
+              padding: '24px',
+              background: `linear-gradient(135deg, ${currentStepData.color}20 0%, ${currentStepData.color}10 100%)`,
+              borderRadius: '16px',
+              border: `2px solid ${currentStepData.color}40`
+            }}>
+              <h3 style={{
+                fontSize: '24px',
+                fontWeight: '800',
+                color: '#ffffff',
+                margin: '0 0 8px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+              }}>
+                <currentStepData.icon 
+                  style={{ 
+                    width: '28px', 
+                    height: '28px', 
+                    color: currentStepData.color,
+                    filter: 'brightness(1.2)'
+                  }} 
+                />
+                {currentStepData.title}
+              </h3>
+              <p style={{
+                color: '#e2e8f0',
+                fontSize: '16px',
+                margin: 0,
+                fontWeight: '500'
+              }}>
+                {currentStepData.subtitle}
+              </p>
+            </div>
+
+            {/* Contenu du step avec styles pour meilleure visibilité */}
+            <div style={{
+              '& input, & textarea, & select': {
+                background: 'rgba(15, 23, 42, 0.8) !important',
+                border: `2px solid ${currentStepData.color}40 !important`,
+                color: '#ffffff !important',
+                borderRadius: '12px !important',
+                padding: '12px 16px !important',
+                fontSize: '14px !important',
+                fontWeight: '500 !important'
+              },
+              '& label': {
+                color: '#e2e8f0 !important',
+                fontSize: '14px !important',
+                fontWeight: '600 !important',
+                marginBottom: '8px !important',
+                display: 'block !important'
+              },
+              '& .glass-effect': {
+                background: 'rgba(15, 23, 42, 0.6) !important',
+                border: `1px solid ${currentStepData.color}30 !important'
+              }
+            } as any}>
+              {getCurrentStepComponent()}
+            </div>
           </div>
 
           {/* Navigation */}
