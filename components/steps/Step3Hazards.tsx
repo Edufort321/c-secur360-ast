@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { AlertTriangle, Plus, Search, Filter, Eye, BarChart3, CheckCircle } from 'lucide-react';
-import HazardCard from '@/components/shared/HazardCard';
-import RiskMatrix from '@/components/shared/RiskMatrix';
+import React, { useState } from 'react';
+import { 
+  AlertTriangle, Search, Filter, CheckCircle, Shield, Eye, 
+  Zap, Wrench, Wind, Thermometer, Volume2, Activity,
+  Plus, BarChart3, Star
+} from 'lucide-react';
 
 // =================== INTERFACES ===================
 interface Step3HazardsProps {
@@ -16,627 +18,664 @@ interface Step3HazardsProps {
 
 interface Hazard {
   id: string;
-  category: 'electrical' | 'mechanical' | 'chemical' | 'physical' | 'ergonomic' | 'environmental';
+  name: string;
+  category: string;
   description: string;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
-  controlMeasures: string[];
-  photos: any[];
   legislation: string;
-  isSelected?: boolean;
-  severity?: number;
-  probability?: number;
+  icon: string;
+  selected: boolean;
+  controlMeasures: ControlMeasure[];
+}
+
+interface ControlMeasure {
+  id: string;
+  name: string;
+  category: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
+  description: string;
+  priority: number;
+  implemented: boolean;
+  responsible?: string;
+  deadline?: string;
   notes?: string;
 }
 
 // =================== DANGERS PRÉDÉFINIS ===================
-const predefinedHazards: Hazard[] = [
+const hazardsList: Hazard[] = [
   // ÉLECTRIQUES
   {
-    id: 'elec_shock',
-    category: 'electrical',
+    id: 'elec-shock',
+    name: 'Électrocution / Électrisation',
+    category: 'Électrique',
     description: 'Contact direct ou indirect avec parties sous tension',
     riskLevel: 'critical',
-    controlMeasures: ['Consignation LOTO', 'VAT', 'EPI électrique'],
-    photos: [],
-    legislation: 'CSA Z462, RSST Art. 185'
+    legislation: 'CSA Z462, RSST Art. 185',
+    icon: '⚡',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-elec-1', name: 'Consignation LOTO complète', category: 'elimination', description: 'Isolation complète des sources d\'énergie', priority: 1, implemented: false },
+      { id: 'cm-elec-2', name: 'Vérification absence de tension (VAT)', category: 'engineering', description: 'Test avec voltmètre certifié', priority: 2, implemented: false },
+      { id: 'cm-elec-3', name: 'Gants isolants classe appropriée', category: 'ppe', description: 'Gants diélectriques testés', priority: 3, implemented: false },
+      { id: 'cm-elec-4', name: 'Formation électrique qualifiée', category: 'administrative', description: 'Personnel certifié travaux électriques', priority: 2, implemented: false },
+      { id: 'cm-elec-5', name: 'Double vérification par témoin', category: 'administrative', description: 'Validation croisée des procédures', priority: 3, implemented: false }
+    ]
   },
   {
-    id: 'arc_flash',
-    category: 'electrical', 
-    description: 'Arc électrique lors de manœuvres',
+    id: 'arc-flash',
+    name: 'Arc électrique',
+    category: 'Électrique',
+    description: 'Arc électrique lors de manœuvres sous tension',
     riskLevel: 'critical',
-    controlMeasures: ['Vêtements résistants arc', 'Analyse arc', 'Distance sécurité'],
-    photos: [],
-    legislation: 'CSA Z462, NFPA 70E'
-  },
-  {
-    id: 'electrical_burns',
-    category: 'electrical',
-    description: 'Brûlures par contact électrique',
-    riskLevel: 'high',
-    controlMeasures: ['Isolation électrique', 'Gants isolants', 'Formation'],
-    photos: [],
-    legislation: 'CSA Z462'
+    legislation: 'CSA Z462, NFPA 70E',
+    icon: '🔥',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-arc-1', name: 'Analyse d\'arc électrique', category: 'engineering', description: 'Calcul énergie incidente', priority: 1, implemented: false },
+      { id: 'cm-arc-2', name: 'Vêtements résistants à l\'arc', category: 'ppe', description: 'Habit arc-flash certifié', priority: 1, implemented: false },
+      { id: 'cm-arc-3', name: 'Distance de sécurité respectée', category: 'administrative', description: 'Périmètre de protection', priority: 2, implemented: false },
+      { id: 'cm-arc-4', name: 'Procédures de manœuvre sécuritaires', category: 'administrative', description: 'Protocoles standardisés', priority: 2, implemented: false }
+    ]
   },
 
   // MÉCANIQUES
   {
-    id: 'moving_parts',
-    category: 'mechanical',
-    description: 'Pièces mobiles non protégées',
+    id: 'moving-parts',
+    name: 'Pièces mobiles',
+    category: 'Mécanique',
+    description: 'Écrasement, coincement par pièces mobiles',
     riskLevel: 'high',
-    controlMeasures: ['Protecteurs mécaniques', 'Consignation', 'Formation'],
-    photos: [],
-    legislation: 'RSST Art. 182-184'
+    legislation: 'RSST Art. 182-184',
+    icon: '⚙️',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-mech-1', name: 'Arrêt complet des équipements', category: 'elimination', description: 'Immobilisation totale', priority: 1, implemented: false },
+      { id: 'cm-mech-2', name: 'Consignation mécanique', category: 'elimination', description: 'Blocage physique', priority: 1, implemented: false },
+      { id: 'cm-mech-3', name: 'Protecteurs mécaniques', category: 'engineering', description: 'Barrières physiques', priority: 2, implemented: false },
+      { id: 'cm-mech-4', name: 'Détecteurs de présence', category: 'engineering', description: 'Capteurs de sécurité', priority: 3, implemented: false },
+      { id: 'cm-mech-5', name: 'Formation LOTO mécanique', category: 'administrative', description: 'Procédures de consignation', priority: 2, implemented: false }
+    ]
   },
   {
-    id: 'pressure_systems',
-    category: 'mechanical',
-    description: 'Systèmes sous pression',
+    id: 'pressure',
+    name: 'Systèmes sous pression',
+    category: 'Mécanique',
+    description: 'Explosion, projection due à la pression',
     riskLevel: 'high',
-    controlMeasures: ['Dépressurisation', 'Soupapes sécurité', 'Manomètres'],
-    photos: [],
-    legislation: 'CSA B51'
-  },
-  {
-    id: 'lifting_equipment',
-    category: 'mechanical',
-    description: 'Équipements de levage',
-    riskLevel: 'medium',
-    controlMeasures: ['Inspection équipement', 'Signaleur', 'Zone sécurité'],
-    photos: [],
-    legislation: 'RSST Art. 347'
+    legislation: 'CSA B51',
+    icon: '💨',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-press-1', name: 'Dépressurisation complète', category: 'elimination', description: 'Évacuation totale pression', priority: 1, implemented: false },
+      { id: 'cm-press-2', name: 'Soupapes de sécurité', category: 'engineering', description: 'Protection surpression', priority: 2, implemented: false },
+      { id: 'cm-press-3', name: 'Manomètres de contrôle', category: 'engineering', description: 'Surveillance continue', priority: 3, implemented: false },
+      { id: 'cm-press-4', name: 'Procédures de purge', category: 'administrative', description: 'Protocoles standardisés', priority: 2, implemented: false }
+    ]
   },
 
   // PHYSIQUES
   {
-    id: 'falls_height',
-    category: 'physical',
-    description: 'Chutes de hauteur (>3m)',
+    id: 'falls',
+    name: 'Chutes de hauteur',
+    category: 'Physique',
+    description: 'Chutes de plus de 3 mètres',
     riskLevel: 'critical',
-    controlMeasures: ['Harnais sécurité', 'Garde-corps', 'Filets sécurité'],
-    photos: [],
-    legislation: 'RSST Art. 347, CSA Z259'
+    legislation: 'RSST Art. 347, CSA Z259',
+    icon: '🪂',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-fall-1', name: 'Garde-corps permanents', category: 'engineering', description: 'Barrières de protection', priority: 1, implemented: false },
+      { id: 'cm-fall-2', name: 'Harnais de sécurité', category: 'ppe', description: 'Système antichute', priority: 1, implemented: false },
+      { id: 'cm-fall-3', name: 'Filets de sécurité', category: 'engineering', description: 'Protection collective', priority: 2, implemented: false },
+      { id: 'cm-fall-4', name: 'Points d\'ancrage certifiés', category: 'engineering', description: 'Ancrages structuraux', priority: 1, implemented: false },
+      { id: 'cm-fall-5', name: 'Formation travail en hauteur', category: 'administrative', description: 'Certification hauteur', priority: 2, implemented: false }
+    ]
   },
   {
-    id: 'struck_objects',
-    category: 'physical',
-    description: 'Objets qui tombent',
+    id: 'struck-objects',
+    name: 'Objets qui tombent',
+    category: 'Physique',
+    description: 'Impact d\'objets en chute libre',
     riskLevel: 'high',
-    controlMeasures: ['Casque protection', 'Périmètre sécurité', 'Filets'],
-    photos: [],
-    legislation: 'RSST Art. 338'
-  },
-  {
-    id: 'cuts_lacerations',
-    category: 'physical',
-    description: 'Coupures par objets tranchants',
-    riskLevel: 'medium',
-    controlMeasures: ['Gants anti-coupure', 'Outils sécuritaires', 'Formation'],
-    photos: [],
-    legislation: 'CSA Z94.4'
+    legislation: 'RSST Art. 338',
+    icon: '⬇️',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-obj-1', name: 'Casque de protection', category: 'ppe', description: 'Protection crânienne', priority: 1, implemented: false },
+      { id: 'cm-obj-2', name: 'Périmètre de sécurité', category: 'administrative', description: 'Zone d\'exclusion', priority: 1, implemented: false },
+      { id: 'cm-obj-3', name: 'Filets de protection', category: 'engineering', description: 'Barrières anti-chute', priority: 2, implemented: false },
+      { id: 'cm-obj-4', name: 'Inspection outillage', category: 'administrative', description: 'Vérification fixation', priority: 2, implemented: false }
+    ]
   },
 
   // CHIMIQUES
   {
-    id: 'toxic_vapors',
-    category: 'chemical',
-    description: 'Vapeurs toxiques',
+    id: 'toxic-vapors',
+    name: 'Vapeurs toxiques',
+    category: 'Chimique',
+    description: 'Inhalation de substances dangereuses',
     riskLevel: 'high',
-    controlMeasures: ['Ventilation', 'Masque respiratoire', 'Détection gaz'],
-    photos: [],
-    legislation: 'RSST Art. 44'
+    legislation: 'RSST Art. 44, SIMDUT',
+    icon: '☠️',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-chem-1', name: 'Ventilation mécanique', category: 'engineering', description: 'Extraction d\'air', priority: 1, implemented: false },
+      { id: 'cm-chem-2', name: 'Appareil respiratoire', category: 'ppe', description: 'Protection respiratoire', priority: 1, implemented: false },
+      { id: 'cm-chem-3', name: 'Détection de gaz', category: 'engineering', description: 'Surveillance atmosphère', priority: 2, implemented: false },
+      { id: 'cm-chem-4', name: 'Fiches de données sécurité', category: 'administrative', description: 'Information produits', priority: 3, implemented: false }
+    ]
   },
   {
-    id: 'chemical_burns',
-    category: 'chemical',
-    description: 'Brûlures chimiques',
+    id: 'chemical-burns',
+    name: 'Brûlures chimiques',
+    category: 'Chimique',
+    description: 'Contact avec substances corrosives',
     riskLevel: 'medium',
-    controlMeasures: ['Gants chimiques', 'Douche urgence', 'FDS'],
-    photos: [],
-    legislation: 'SIMDUT 2015'
+    legislation: 'SIMDUT 2015',
+    icon: '🧪',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-burn-1', name: 'Gants chimiques', category: 'ppe', description: 'Protection cutanée', priority: 1, implemented: false },
+      { id: 'cm-burn-2', name: 'Douche d\'urgence', category: 'engineering', description: 'Rinçage immédiat', priority: 1, implemented: false },
+      { id: 'cm-burn-3', name: 'Lunettes de protection', category: 'ppe', description: 'Protection oculaire', priority: 2, implemented: false },
+      { id: 'cm-burn-4', name: 'Protocole d\'urgence', category: 'administrative', description: 'Procédures d\'accident', priority: 2, implemented: false }
+    ]
   },
 
   // ERGONOMIQUES
   {
-    id: 'manual_handling',
-    category: 'ergonomic',
-    description: 'Manutention manuelle',
+    id: 'manual-handling',
+    name: 'Manutention manuelle',
+    category: 'Ergonomique',
+    description: 'Troubles musculo-squelettiques',
     riskLevel: 'medium',
-    controlMeasures: ['Techniques levage', 'Équipement aide', 'Rotation tâches'],
-    photos: [],
-    legislation: 'RSST Art. 166'
-  },
-  {
-    id: 'repetitive_strain',
-    category: 'ergonomic',
-    description: 'Mouvements répétitifs',
-    riskLevel: 'low',
-    controlMeasures: ['Pauses régulières', 'Rotation postes', 'Étirements'],
-    photos: [],
-    legislation: 'Guide CNESST'
+    legislation: 'RSST Art. 166',
+    icon: '🏋️',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-man-1', name: 'Équipements d\'aide', category: 'engineering', description: 'Outils de levage', priority: 1, implemented: false },
+      { id: 'cm-man-2', name: 'Techniques de levage', category: 'administrative', description: 'Formation postures', priority: 2, implemented: false },
+      { id: 'cm-man-3', name: 'Rotation des tâches', category: 'administrative', description: 'Limitation exposition', priority: 3, implemented: false },
+      { id: 'cm-man-4', name: 'Limites de poids', category: 'administrative', description: 'Restrictions charges', priority: 2, implemented: false }
+    ]
   },
 
   // ENVIRONNEMENTAUX
   {
-    id: 'extreme_weather',
-    category: 'environmental',
-    description: 'Conditions météo extrêmes',
+    id: 'extreme-weather',
+    name: 'Conditions météo extrêmes',
+    category: 'Environnemental',
+    description: 'Exposition aux intempéries',
     riskLevel: 'medium',
-    controlMeasures: ['Surveillance météo', 'Vêtements adaptés', 'Abris'],
-    photos: [],
-    legislation: 'Guide CNESST'
+    legislation: 'Guide CNESST',
+    icon: '🌪️',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-weather-1', name: 'Surveillance météorologique', category: 'administrative', description: 'Veille conditions', priority: 1, implemented: false },
+      { id: 'cm-weather-2', name: 'Vêtements adaptés', category: 'ppe', description: 'Protection climatique', priority: 2, implemented: false },
+      { id: 'cm-weather-3', name: 'Abris temporaires', category: 'engineering', description: 'Protection physique', priority: 3, implemented: false },
+      { id: 'cm-weather-4', name: 'Arrêt travaux si nécessaire', category: 'administrative', description: 'Protocole suspension', priority: 1, implemented: false }
+    ]
   },
   {
-    id: 'noise_exposure',
-    category: 'environmental',
-    description: 'Exposition au bruit',
+    id: 'noise',
+    name: 'Exposition au bruit',
+    category: 'Environnemental',
+    description: 'Dommages auditifs',
     riskLevel: 'medium',
-    controlMeasures: ['Protection auditive', 'Mesure bruit', 'Rotation'],
-    photos: [],
-    legislation: 'RSST Art. 141-151'
+    legislation: 'RSST Art. 141-151',
+    icon: '🔊',
+    selected: false,
+    controlMeasures: [
+      { id: 'cm-noise-1', name: 'Protection auditive', category: 'ppe', description: 'Bouchons/casques', priority: 1, implemented: false },
+      { id: 'cm-noise-2', name: 'Mesure sonométrique', category: 'engineering', description: 'Évaluation exposition', priority: 2, implemented: false },
+      { id: 'cm-noise-3', name: 'Rotation équipes', category: 'administrative', description: 'Limitation temps', priority: 3, implemented: false },
+      { id: 'cm-noise-4', name: 'Encoffrement machines', category: 'engineering', description: 'Réduction à la source', priority: 2, implemented: false }
+    ]
   }
 ];
 
-// =================== TRADUCTIONS ===================
-const translations = {
-  fr: {
-    title: 'Identification des Dangers',
-    subtitle: 'Identifiez les dangers potentiels et évaluez les risques',
-    searchPlaceholder: 'Rechercher un danger...',
-    filterByCategory: 'Filtrer par catégorie',
-    allCategories: 'Toutes catégories',
-    addCustomHazard: 'Ajouter danger personnalisé',
-    selectedHazards: 'Dangers identifiés',
-    riskAssessment: 'Évaluation des risques',
-    showMatrix: 'Afficher matrice',
-    hideMatrix: 'Masquer matrice',
-    categories: {
-      electrical: 'Électrique',
-      mechanical: 'Mécanique', 
-      chemical: 'Chimique',
-      physical: 'Physique',
-      ergonomic: 'Ergonomique',
-      environmental: 'Environnemental'
-    },
-    riskLevels: {
-      low: 'Faible',
-      medium: 'Moyen',
-      high: 'Élevé',
-      critical: 'Critique'
-    },
-    summary: {
-      totalHazards: 'Dangers identifiés',
-      highRisks: 'Risques élevés',
-      averageRisk: 'Risque moyen',
-      needsAttention: 'Attention requise'
-    },
-    validation: {
-      atLeastOne: 'Au moins un danger doit être identifié',
-      riskAssessment: 'Évaluation des risques requise',
-      controlMeasures: 'Mesures de contrôle manquantes'
-    }
-  },
-  en: {
-    title: 'Hazard Identification',
-    subtitle: 'Identify potential hazards and assess risks',
-    searchPlaceholder: 'Search hazard...',
-    filterByCategory: 'Filter by category',
-    allCategories: 'All categories',
-    addCustomHazard: 'Add custom hazard',
-    selectedHazards: 'Identified Hazards',
-    riskAssessment: 'Risk Assessment',
-    showMatrix: 'Show matrix',
-    hideMatrix: 'Hide matrix',
-    categories: {
-      electrical: 'Electrical',
-      mechanical: 'Mechanical',
-      chemical: 'Chemical', 
-      physical: 'Physical',
-      ergonomic: 'Ergonomic',
-      environmental: 'Environmental'
-    },
-    riskLevels: {
-      low: 'Low',
-      medium: 'Medium',
-      high: 'High',
-      critical: 'Critical'
-    },
-    summary: {
-      totalHazards: 'Identified Hazards',
-      highRisks: 'High Risks',
-      averageRisk: 'Average Risk',
-      needsAttention: 'Needs Attention'
-    },
-    validation: {
-      atLeastOne: 'At least one hazard must be identified',
-      riskAssessment: 'Risk assessment required',
-      controlMeasures: 'Missing control measures'
-    }
-  }
-};
-
-// =================== COMPOSANT PRINCIPAL ===================
 const Step3Hazards: React.FC<Step3HazardsProps> = ({
   formData,
   onDataChange,
-  language,
+  language = 'fr',
   tenant,
   errors
 }) => {
-  const t = translations[language];
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [showMatrix, setShowMatrix] = useState(false);
-  const [showAddCustom, setShowAddCustom] = useState(false);
-
-  // État local des dangers
-  const [hazardsList, setHazardsList] = useState<Hazard[]>(
-    formData.hazards?.list || predefinedHazards.map(h => ({ ...h, isSelected: false, severity: 3, probability: 3 }))
-  );
-
-  // Dangers sélectionnés
-  const selectedHazards = hazardsList.filter(h => h.isSelected);
+  const [hazards, setHazards] = useState<Hazard[]>(() => {
+    if (formData.hazards?.list && formData.hazards.list.length > 0) {
+      return formData.hazards.list;
+    }
+    return hazardsList;
+  });
 
   // Filtrage des dangers
-  const filteredHazards = hazardsList.filter(hazard => {
-    const matchesSearch = hazard.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredHazards = hazards.filter(hazard => {
+    const matchesSearch = hazard.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         hazard.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          hazard.category.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || hazard.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   // Categories uniques
-  const categories = Array.from(new Set(hazardsList.map(h => h.category)));
-
-  // =================== CALCULS ===================
-  const riskStats = useMemo(() => {
-    const total = selectedHazards.length;
-    const highRisks = selectedHazards.filter(h => 
-      h.riskLevel === 'high' || h.riskLevel === 'critical'
-    ).length;
-    
-    const averageRisk = total > 0 
-      ? selectedHazards.reduce((sum, h) => {
-          const riskScore = (h.severity || 3) * (h.probability || 3);
-          return sum + riskScore;
-        }, 0) / total
-      : 0;
-
-    const needsAttention = selectedHazards.filter(h => 
-      h.controlMeasures.length === 0 || h.riskLevel === 'critical'
-    ).length;
-
-    return { total, highRisks, averageRisk: Math.round(averageRisk * 10) / 10, needsAttention };
-  }, [selectedHazards]);
+  const categories = Array.from(new Set(hazards.map(h => h.category)));
+  
+  // Dangers sélectionnés
+  const selectedHazards = hazards.filter(h => h.selected);
 
   // =================== HANDLERS ===================
-  const handleHazardSelect = (hazardId: string) => {
-    const updatedList = hazardsList.map(hazard => 
+  const handleHazardToggle = (hazardId: string) => {
+    const updatedHazards = hazards.map(hazard => 
       hazard.id === hazardId 
-        ? { ...hazard, isSelected: !hazard.isSelected }
+        ? { ...hazard, selected: !hazard.selected }
         : hazard
     );
-    setHazardsList(updatedList);
-    updateFormData(updatedList);
+    setHazards(updatedHazards);
+    updateFormData(updatedHazards);
   };
 
-  const handleHazardUpdate = (hazardId: string, field: keyof Hazard, value: any) => {
-    const updatedList = hazardsList.map(hazard => 
+  const handleControlMeasureToggle = (hazardId: string, controlId: string) => {
+    const updatedHazards = hazards.map(hazard => 
       hazard.id === hazardId 
-        ? { ...hazard, [field]: value }
+        ? {
+            ...hazard,
+            controlMeasures: hazard.controlMeasures.map(control =>
+              control.id === controlId
+                ? { ...control, implemented: !control.implemented }
+                : control
+            )
+          }
         : hazard
     );
-    setHazardsList(updatedList);
-    updateFormData(updatedList);
+    setHazards(updatedHazards);
+    updateFormData(updatedHazards);
   };
 
-  const updateFormData = (updatedList: Hazard[]) => {
+  const updateControlMeasure = (hazardId: string, controlId: string, field: keyof ControlMeasure, value: any) => {
+    const updatedHazards = hazards.map(hazard => 
+      hazard.id === hazardId 
+        ? {
+            ...hazard,
+            controlMeasures: hazard.controlMeasures.map(control =>
+              control.id === controlId
+                ? { ...control, [field]: value }
+                : control
+            )
+          }
+        : hazard
+    );
+    setHazards(updatedHazards);
+    updateFormData(updatedHazards);
+  };
+
+  const updateFormData = (updatedHazards: Hazard[]) => {
+    const selectedList = updatedHazards.filter(h => h.selected);
+    const totalControls = selectedList.reduce((sum, h) => sum + h.controlMeasures.length, 0);
+    const implementedControls = selectedList.reduce((sum, h) => 
+      sum + h.controlMeasures.filter(c => c.implemented).length, 0
+    );
+
     const hazardsData = {
-      list: updatedList,
-      selected: updatedList.filter(h => h.isSelected),
+      list: updatedHazards,
+      selected: selectedList,
       stats: {
-        total: updatedList.filter(h => h.isSelected).length,
-        categories: categories.reduce((acc, cat) => {
-          acc[cat] = updatedList.filter(h => h.isSelected && h.category === cat).length;
-          return acc;
-        }, {} as Record<string, number>)
+        totalHazards: selectedList.length,
+        totalControls,
+        implementedControls,
+        implementationRate: totalControls > 0 ? Math.round((implementedControls / totalControls) * 100) : 0,
+        criticalHazards: selectedList.filter(h => h.riskLevel === 'critical').length,
+        highRiskHazards: selectedList.filter(h => h.riskLevel === 'high').length
       }
     };
     
     onDataChange('hazards', hazardsData);
   };
 
-  const addCustomHazard = () => {
-    const newHazard: Hazard = {
-      id: `custom-${Date.now()}`,
-      category: 'physical',
-      description: 'Nouveau danger personnalisé',
-      riskLevel: 'medium',
-      controlMeasures: [],
-      photos: [],
-      legislation: 'À définir',
-      isSelected: true,
-      severity: 3,
-      probability: 3
-    };
-    
-    const updatedList = [...hazardsList, newHazard];
-    setHazardsList(updatedList);
-    updateFormData(updatedList);
-    setShowAddCustom(false);
+  const getRiskColor = (level: string) => {
+    switch (level) {
+      case 'critical': return 'red';
+      case 'high': return 'orange';
+      case 'medium': return 'yellow';
+      case 'low': return 'green';
+      default: return 'gray';
+    }
   };
 
-  // Données pour la matrice de risques
-  const matrixRisks = selectedHazards.map(h => ({
-    id: h.id,
-    name: h.description,
-    severity: h.severity || 3,
-    probability: h.probability || 3,
-    category: h.category
-  }));
+  const getRiskLabel = (level: string) => {
+    switch (level) {
+      case 'critical': return '🔴 Critique';
+      case 'high': return '🟠 Élevé';
+      case 'medium': return '🟡 Moyen';
+      case 'low': return '🟢 Faible';
+      default: return '⚪ Indéterminé';
+    }
+  };
 
-  // =================== RENDU ===================
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Électrique': return '⚡';
+      case 'Mécanique': return '⚙️';
+      case 'Physique': return '🏗️';
+      case 'Chimique': return '🧪';
+      case 'Ergonomique': return '🏋️';
+      case 'Environnemental': return '🌪️';
+      default: return '⚠️';
+    }
+  };
+
+  const getControlCategoryColor = (category: string) => {
+    switch (category) {
+      case 'elimination': return 'red';
+      case 'substitution': return 'orange';
+      case 'engineering': return 'blue';
+      case 'administrative': return 'purple';
+      case 'ppe': return 'green';
+      default: return 'gray';
+    }
+  };
+
+  const getControlCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'elimination': return '❌ Élimination';
+      case 'substitution': return '🔄 Substitution';
+      case 'engineering': return '🔧 Ingénierie';
+      case 'administrative': return '📋 Administrative';
+      case 'ppe': return '🛡️ EPI';
+      default: return '❓ Autre';
+    }
+  };
+
+  // Debug
+  console.log('Total hazards:', hazards.length);
+  console.log('Filtered hazards:', filteredHazards.length);
+  console.log('Selected hazards:', selectedHazards.length);
+
   return (
-    <div className="space-y-8">
-      {/* En-tête */}
-      <div className="text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-100 rounded-full mb-4">
-          <AlertTriangle className="w-8 h-8 text-yellow-600" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">{t.title}</h2>
-        <p className="text-gray-600">{t.subtitle}</p>
-      </div>
+    <>
+      {/* CSS pour Step 3 */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .step3-container { padding: 0; }
+          .summary-header { background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+          .summary-title { color: #f59e0b; font-size: 18px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+          .summary-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; margin-top: 16px; }
+          .stat-item { text-align: center; background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px; }
+          .stat-value { font-size: 20px; font-weight: 800; color: #f59e0b; margin-bottom: 4px; }
+          .stat-label { font-size: 12px; color: #d97706; font-weight: 500; }
+          .search-section { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+          .search-grid { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
+          .search-input-wrapper { position: relative; }
+          .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; z-index: 10; }
+          .search-field { width: 100%; padding: 12px 12px 12px 40px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; color: #ffffff; font-size: 14px; transition: all 0.3s ease; }
+          .search-field:focus { outline: none; border-color: #f59e0b; background: rgba(15, 23, 42, 0.9); }
+          .category-select { padding: 12px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; color: #ffffff; font-size: 14px; cursor: pointer; transition: all 0.3s ease; }
+          .category-select:focus { outline: none; border-color: #f59e0b; }
+          .hazards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+          .hazard-card { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 16px; padding: 20px; transition: all 0.3s ease; cursor: pointer; position: relative; }
+          .hazard-card:hover { transform: translateY(-4px); border-color: rgba(251, 191, 36, 0.5); box-shadow: 0 8px 25px rgba(251, 191, 36, 0.15); }
+          .hazard-card.selected { border-color: #f59e0b; background: rgba(251, 191, 36, 0.1); }
+          .hazard-card.critical::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #ef4444; border-radius: 16px 0 0 16px; }
+          .hazard-card.high::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #f97316; border-radius: 16px 0 0 16px; }
+          .hazard-card.medium::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #eab308; border-radius: 16px 0 0 16px; }
+          .hazard-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+          .hazard-icon { font-size: 28px; width: 40px; text-align: center; }
+          .hazard-content { flex: 1; }
+          .hazard-name { color: #ffffff; font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+          .hazard-category { color: #94a3b8; font-size: 12px; font-weight: 500; margin-bottom: 4px; }
+          .hazard-description { color: #cbd5e1; font-size: 13px; line-height: 1.4; }
+          .hazard-checkbox { width: 24px; height: 24px; border: 2px solid rgba(100, 116, 139, 0.5); border-radius: 6px; background: rgba(15, 23, 42, 0.8); display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
+          .hazard-checkbox.checked { background: #f59e0b; border-color: #f59e0b; color: white; }
+          .hazard-details { margin-top: 16px; display: flex; justify-content: space-between; align-items: center; }
+          .risk-badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; }
+          .legislation-info { background: rgba(59, 130, 246, 0.1); color: #60a5fa; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 500; }
+          .controls-section { margin-top: 20px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 12px; padding: 16px; }
+          .controls-header { color: #f59e0b; font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+          .controls-grid { display: grid; gap: 8px; }
+          .control-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px; background: rgba(30, 41, 59, 0.6); border-radius: 8px; transition: all 0.3s ease; }
+          .control-item:hover { background: rgba(30, 41, 59, 0.8); }
+          .control-checkbox { width: 18px; height: 18px; border: 2px solid rgba(100, 116, 139, 0.5); border-radius: 4px; background: rgba(15, 23, 42, 0.8); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; margin-top: 2px; }
+          .control-checkbox.checked { background: #22c55e; border-color: #22c55e; color: white; }
+          .control-content { flex: 1; }
+          .control-name { color: #ffffff; font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+          .control-description { color: #94a3b8; font-size: 11px; line-height: 1.3; margin-bottom: 4px; }
+          .control-meta { display: flex; gap: 8px; align-items: center; }
+          .control-category { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 500; }
+          .priority-indicator { width: 12px; height: 12px; border-radius: 50%; }
+          .priority-1 { background: #ef4444; }
+          .priority-2 { background: #f97316; }
+          .priority-3 { background: #eab308; }
+          .control-inputs { margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+          .control-input { padding: 4px 8px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 4px; color: #ffffff; font-size: 11px; }
+          .control-input:focus { outline: none; border-color: #f59e0b; }
+          .no-results { text-align: center; padding: 60px 20px; color: #94a3b8; background: rgba(30, 41, 59, 0.6); border-radius: 16px; border: 1px solid rgba(100, 116, 139, 0.3); }
+          .error-section { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 16px; margin-top: 24px; }
+          .error-header { display: flex; align-items: center; gap: 8px; color: #f87171; margin-bottom: 8px; font-weight: 600; }
+          .error-list { margin: 0; padding-left: 20px; color: #fca5a5; }
+          @media (max-width: 768px) {
+            .hazards-grid { grid-template-columns: 1fr; gap: 16px; }
+            .search-grid { grid-template-columns: 1fr; gap: 8px; }
+            .summary-stats { grid-template-columns: repeat(2, 1fr); }
+            .control-inputs { grid-template-columns: 1fr; }
+          }
+        `
+      }} />
 
-      {/* Contrôles de filtrage */}
-      <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          {/* Recherche */}
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+      <div className="step3-container">
+        {/* En-tête avec résumé */}
+        <div className="summary-header">
+          <div className="summary-title">
+            <AlertTriangle size={24} />
+            ⚠️ Identification des Dangers & Risques
+          </div>
+          <p style={{ color: '#d97706', margin: '0 0 8px', fontSize: '14px' }}>
+            Sélectionnez les dangers potentiels et définissez les moyens de contrôle requis
+          </p>
+          
+          {selectedHazards.length > 0 && (
+            <div className="summary-stats">
+              <div className="stat-item">
+                <div className="stat-value">{selectedHazards.length}</div>
+                <div className="stat-label">Dangers identifiés</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">{selectedHazards.filter(h => h.riskLevel === 'critical' || h.riskLevel === 'high').length}</div>
+                <div className="stat-label">Risques élevés</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">
+                  {selectedHazards.reduce((sum, h) => sum + h.controlMeasures.filter(c => c.implemented).length, 0)}
+                </div>
+                <div className="stat-label">Contrôles implantés</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">
+                  {selectedHazards.reduce((sum, h) => sum + h.controlMeasures.length, 0) > 0 
+                    ? Math.round((selectedHazards.reduce((sum, h) => sum + h.controlMeasures.filter(c => c.implemented).length, 0) / 
+                        selectedHazards.reduce((sum, h) => sum + h.controlMeasures.length, 0)) * 100)
+                    : 0}%
+                </div>
+                <div className="stat-label">Taux d'implantation</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Section de recherche */}
+        <div className="search-section">
+          <div className="search-grid">
+            <div className="search-input-wrapper">
+              <Search className="search-icon" size={18} />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={t.searchPlaceholder}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                placeholder="Rechercher un danger..."
+                className="search-field"
               />
             </div>
-          </div>
-
-          {/* Filtre par catégorie */}
-          <div className="md:w-64">
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent appearance-none bg-white"
-              >
-                <option value="all">{t.allCategories}</option>
-                {categories.map(category => (
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="category-select"
+            >
+              <option value="all">Toutes catégories ({hazards.length})</option>
+              {categories.map(category => {
+                const count = hazards.filter(h => h.category === category).length;
+                return (
                   <option key={category} value={category}>
-                    {t.categories[category as keyof typeof t.categories]}
+                    {getCategoryIcon(category)} {category} ({count})
                   </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setShowMatrix(!showMatrix)}
-              className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
-                showMatrix 
-                  ? 'bg-purple-500 text-white hover:bg-purple-600' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <BarChart3 className="w-5 h-5 mr-2" />
-              {showMatrix ? t.hideMatrix : t.showMatrix}
-            </button>
-            
-            <button
-              onClick={() => setShowAddCustom(true)}
-              className="flex items-center px-4 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              {t.addCustomHazard}
-            </button>
+                );
+              })}
+            </select>
           </div>
         </div>
 
-        {/* Statistiques */}
-        {selectedHazards.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 text-center">
-              <div className="text-2xl font-bold text-blue-600">{riskStats.total}</div>
-              <div className="text-sm text-blue-700">{t.summary.totalHazards}</div>
+        {/* Grille des dangers */}
+        <div className="hazards-grid">
+          {filteredHazards.map(hazard => {
+            const isSelected = hazard.selected;
+            
+            return (
+              <div 
+                key={hazard.id} 
+                className={`hazard-card ${isSelected ? 'selected' : ''} ${hazard.riskLevel}`}
+              >
+                {/* Header avec sélection */}
+                <div className="hazard-header" onClick={() => handleHazardToggle(hazard.id)}>
+                  <div className="hazard-icon">{hazard.icon}</div>
+                  <div className="hazard-content">
+                    <h3 className="hazard-name">{hazard.name}</h3>
+                    <div className="hazard-category">{getCategoryIcon(hazard.category)} {hazard.category}</div>
+                    <div className="hazard-description">{hazard.description}</div>
+                  </div>
+                  <div className={`hazard-checkbox ${isSelected ? 'checked' : ''}`}>
+                    {isSelected && <CheckCircle size={18} />}
+                  </div>
+                </div>
+
+                {/* Détails du danger */}
+                <div className="hazard-details">
+                  <div 
+                    className="risk-badge"
+                    style={{ 
+                      background: `rgba(${getRiskColor(hazard.riskLevel) === 'red' ? '239, 68, 68' : 
+                                          getRiskColor(hazard.riskLevel) === 'orange' ? '249, 115, 22' :
+                                          getRiskColor(hazard.riskLevel) === 'yellow' ? '234, 179, 8' : '34, 197, 94'}, 0.2)`,
+                      color: getRiskColor(hazard.riskLevel) === 'red' ? '#f87171' : 
+                             getRiskColor(hazard.riskLevel) === 'orange' ? '#fb923c' :
+                             getRiskColor(hazard.riskLevel) === 'yellow' ? '#facc15' : '#4ade80'
+                    }}
+                  >
+                    {getRiskLabel(hazard.riskLevel)}
+                  </div>
+                  <div className="legislation-info">{hazard.legislation}</div>
+                </div>
+
+                {/* Section moyens de contrôle (si sélectionné) */}
+                {isSelected && (
+                  <div className="controls-section">
+                    <div className="controls-header">
+                      <Shield size={16} />
+                      Moyens de contrôle ({hazard.controlMeasures.filter(c => c.implemented).length}/{hazard.controlMeasures.length})
+                    </div>
+                    
+                    <div className="controls-grid">
+                      {hazard.controlMeasures
+                        .sort((a, b) => a.priority - b.priority)
+                        .map(control => (
+                          <div key={control.id} className="control-item">
+                            <div 
+                              className={`control-checkbox ${control.implemented ? 'checked' : ''}`}
+                              onClick={() => handleControlMeasureToggle(hazard.id, control.id)}
+                            >
+                              {control.implemented && <CheckCircle size={12} />}
+                            </div>
+                            
+                            <div className="control-content">
+                              <div className="control-name">{control.name}</div>
+                              <div className="control-description">{control.description}</div>
+                              
+                              <div className="control-meta">
+                                <div 
+                                  className="control-category"
+                                  style={{ 
+                                    background: `rgba(${getControlCategoryColor(control.category) === 'red' ? '239, 68, 68' : 
+                                                        getControlCategoryColor(control.category) === 'orange' ? '249, 115, 22' :
+                                                        getControlCategoryColor(control.category) === 'blue' ? '59, 130, 246' :
+                                                        getControlCategoryColor(control.category) === 'purple' ? '147, 51, 234' :
+                                                        getControlCategoryColor(control.category) === 'green' ? '34, 197, 94' : '107, 114, 128'}, 0.2)`,
+                                    color: getControlCategoryColor(control.category) === 'red' ? '#f87171' : 
+                                           getControlCategoryColor(control.category) === 'orange' ? '#fb923c' :
+                                           getControlCategoryColor(control.category) === 'blue' ? '#60a5fa' :
+                                           getControlCategoryColor(control.category) === 'purple' ? '#a78bfa' :
+                                           getControlCategoryColor(control.category) === 'green' ? '#4ade80' : '#9ca3af'
+                                  }}
+                                >
+                                  {getControlCategoryLabel(control.category)}
+                                </div>
+                                <div 
+                                  className={`priority-indicator priority-${control.priority}`}
+                                  title={`Priorité ${control.priority}`}
+                                />
+                              </div>
+
+                              {/* Inputs additionnels si contrôle sélectionné */}
+                              {control.implemented && (
+                                <div className="control-inputs">
+                                  <input
+                                    type="text"
+                                    value={control.responsible || ''}
+                                    onChange={(e) => updateControlMeasure(hazard.id, control.id, 'responsible', e.target.value)}
+                                    placeholder="Responsable..."
+                                    className="control-input"
+                                  />
+                                  <input
+                                    type="date"
+                                    value={control.deadline || ''}
+                                    onChange={(e) => updateControlMeasure(hazard.id, control.id, 'deadline', e.target.value)}
+                                    className="control-input"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Message si aucun résultat */}
+        {filteredHazards.length === 0 && (
+          <div className="no-results">
+            <AlertTriangle size={48} style={{ margin: '0 auto 16px', color: '#64748b' }} />
+            <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>Aucun danger trouvé</h3>
+            <p style={{ margin: 0 }}>Modifiez vos critères de recherche pour voir plus de dangers</p>
+          </div>
+        )}
+
+        {/* Validation d'erreurs */}
+        {errors?.hazards && (
+          <div className="error-section">
+            <div className="error-header">
+              <AlertTriangle size={20} />
+              Erreurs de validation :
             </div>
-            <div className="bg-red-50 p-4 rounded-lg border border-red-200 text-center">
-              <div className="text-2xl font-bold text-red-600">{riskStats.highRisks}</div>
-              <div className="text-sm text-red-700">{t.summary.highRisks}</div>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center">
-              <div className="text-2xl font-bold text-purple-600">{riskStats.averageRisk}</div>
-              <div className="text-sm text-purple-700">{t.summary.averageRisk}</div>
-            </div>
-            <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 text-center">
-              <div className="text-2xl font-bold text-orange-600">{riskStats.needsAttention}</div>
-              <div className="text-sm text-orange-700">{t.summary.needsAttention}</div>
-            </div>
+            <ul className="error-list">
+              {errors.hazards.map((error: string, index: number) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
-
-      {/* Matrice de risques */}
-      {showMatrix && selectedHazards.length > 0 && (
-        <RiskMatrix
-          risks={matrixRisks}
-          onRiskClick={(risk) => {
-            const hazard = hazardsList.find(h => h.id === risk.id);
-            if (hazard) {
-              // Focus sur le danger
-              console.log('Focus sur danger:', hazard);
-            }
-          }}
-          showLegend={true}
-          showStats={true}
-          language={language}
-          title={t.riskAssessment}
-        />
-      )}
-
-      {/* Liste des dangers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredHazards.map(hazard => (
-          <div key={hazard.id} className="relative">
-            <HazardCard
-              hazard={hazard}
-              isSelected={hazard.isSelected}
-              onSelect={handleHazardSelect}
-              language={language}
-              className="h-full"
-            />
-            
-            {/* Évaluation de risque si sélectionné */}
-            {hazard.isSelected && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <h4 className="font-medium text-gray-800 mb-3">Évaluation des risques</h4>
-                
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Gravité (1-5)
-                    </label>
-                    <select
-                      value={hazard.severity || 3}
-                      onChange={(e) => handleHazardUpdate(hazard.id, 'severity', parseInt(e.target.value))}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-yellow-500"
-                    >
-                      <option value={1}>1 - Négligeable</option>
-                      <option value={2}>2 - Mineur</option>
-                      <option value={3}>3 - Modéré</option>
-                      <option value={4}>4 - Majeur</option>
-                      <option value={5}>5 - Catastrophique</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Probabilité (1-5)
-                    </label>
-                    <select
-                      value={hazard.probability || 3}
-                      onChange={(e) => handleHazardUpdate(hazard.id, 'probability', parseInt(e.target.value))}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-yellow-500"
-                    >
-                      <option value={1}>1 - Très rare</option>
-                      <option value={2}>2 - Peu probable</option>
-                      <option value={3}>3 - Possible</option>
-                      <option value={4}>4 - Probable</option>
-                      <option value={5}>5 - Très probable</option>
-                    </select>
-                  </div>
-                </div>
-                
-                {/* Score de risque */}
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Score de risque:</span>
-                  <span className={`font-bold px-2 py-1 rounded ${
-                    (hazard.severity || 3) * (hazard.probability || 3) >= 15 ? 'bg-red-100 text-red-800' :
-                    (hazard.severity || 3) * (hazard.probability || 3) >= 10 ? 'bg-orange-100 text-orange-800' :
-                    (hazard.severity || 3) * (hazard.probability || 3) >= 5 ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
-                    {(hazard.severity || 3) * (hazard.probability || 3)}/25
-                  </span>
-                </div>
-
-                {/* Notes */}
-                <div className="mt-3">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Notes additionnelles
-                  </label>
-                  <textarea
-                    value={hazard.notes || ''}
-                    onChange={(e) => handleHazardUpdate(hazard.id, 'notes', e.target.value)}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-yellow-500"
-                    rows={2}
-                    placeholder="Notes sur ce danger..."
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Message si aucun résultat */}
-      {filteredHazards.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
-          <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-          <p>Aucun danger trouvé avec ces critères.</p>
-        </div>
-      )}
-
-      {/* Résumé des dangers sélectionnés */}
-      {selectedHazards.length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-yellow-800 mb-4 flex items-center">
-            <CheckCircle className="w-5 h-5 mr-2" />
-            {t.selectedHazards} ({selectedHazards.length})
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {selectedHazards.map(hazard => (
-              <div key={hazard.id} className="bg-white p-4 rounded-lg border border-yellow-200">
-                <div className="flex items-start justify-between mb-2">
-                  <h4 className="font-medium text-gray-800">{hazard.description}</h4>
-                  <span className={`text-xs px-2 py-1 rounded font-medium ${
-                    hazard.riskLevel === 'critical' ? 'bg-red-100 text-red-800' :
-                    hazard.riskLevel === 'high' ? 'bg-orange-100 text-orange-800' :
-                    hazard.riskLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
-                    {t.riskLevels[hazard.riskLevel]}
-                  </span>
-                </div>
-                
-                <div className="text-sm text-gray-600 mb-2">
-                  <span className="font-medium">Catégorie:</span> {t.categories[hazard.category]}
-                </div>
-                
-                <div className="text-sm text-gray-600 mb-2">
-                  <span className="font-medium">Score:</span> {(hazard.severity || 3)} × {(hazard.probability || 3)} = {(hazard.severity || 3) * (hazard.probability || 3)}
-                </div>
-                
-                <div className="text-sm text-gray-600">
-                  <span className="font-medium">Mesures:</span> {hazard.controlMeasures.length} mesure(s) de contrôle
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Validation */}
-      {errors?.hazards && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <div className="flex items-center space-x-2 text-red-800">
-            <AlertTriangle className="w-5 h-5" />
-            <span className="font-medium">Erreurs de validation :</span>
-          </div>
-          <ul className="mt-2 text-sm text-red-700">
-            {errors.hazards.map((error: string, index: number) => (
-              <li key={index}>• {error}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 
