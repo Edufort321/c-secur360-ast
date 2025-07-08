@@ -148,10 +148,13 @@ export default function Step1ProjectInfo({ formData, onDataChange, language, ten
     try {
       if (fileInputRef.current) {
         fileInputRef.current.accept = 'image/*';
-        fileInputRef.current.capture = 'environment';
+        fileInputRef.current.capture = 'environment'; // Force caméra arrière
+        fileInputRef.current.multiple = true; // Permettre plusieurs photos
         fileInputRef.current.onchange = (e) => {
-          const file = (e.target as HTMLInputElement).files?.[0];
-          if (file) processPhoto(file, category, lockoutPointId);
+          const files = Array.from((e.target as HTMLInputElement).files || []);
+          if (files.length > 0) {
+            files.forEach(file => processPhoto(file, category, lockoutPointId));
+          }
         };
         fileInputRef.current.click();
       }
@@ -171,9 +174,18 @@ export default function Step1ProjectInfo({ formData, onDataChange, language, ten
         timestamp: new Date().toISOString(),
         lockoutPointId
       };
+      
+      // Créer un nouvel array avec la nouvelle photo
       const updatedPhotos = [...lockoutPhotos, newPhoto];
-      updateProjectInfo('lockoutPhotos', updatedPhotos);
-      console.log('Photo à uploader:', file.name, category);
+      
+      // Mettre à jour avec un nouvel objet projectInfo
+      const newProjectInfo = {
+        ...projectInfo,
+        lockoutPhotos: updatedPhotos
+      };
+      
+      onDataChange('projectInfo', newProjectInfo);
+      console.log('Photo ajoutée:', file.name, category);
     } catch (error) {
       console.error('Erreur traitement photo:', error);
     }
@@ -191,8 +203,17 @@ export default function Step1ProjectInfo({ formData, onDataChange, language, ten
   };
 
   const deletePhoto = (photoId: string) => {
+    console.log('Suppression photo:', photoId);
     const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId);
-    updateProjectInfo('lockoutPhotos', updatedPhotos);
+    
+    // Mettre à jour avec un nouvel objet projectInfo
+    const newProjectInfo = {
+      ...projectInfo,
+      lockoutPhotos: updatedPhotos
+    };
+    
+    onDataChange('projectInfo', newProjectInfo);
+    console.log('Photo supprimée avec succès');
   };
 
   // =================== GESTION POINTS DE VERROUILLAGE ===================
@@ -248,15 +269,21 @@ export default function Step1ProjectInfo({ formData, onDataChange, language, ten
     console.log('Suppression du point de verrouillage:', pointId);
     console.log('Points avant suppression:', lockoutPoints.length);
     
+    // Forcer la mise à jour immédiate avec un nouvel objet
     const updatedPoints = lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
     console.log('Points après suppression:', updatedPoints.length);
     
-    updateProjectInfo('lockoutPoints', updatedPoints);
-    
     // Supprimer aussi les photos associées
     const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
-    updateProjectInfo('lockoutPhotos', updatedPhotos);
     
+    // Mettre à jour avec un nouvel objet projectInfo pour forcer le re-render
+    const newProjectInfo = {
+      ...projectInfo,
+      lockoutPoints: updatedPoints,
+      lockoutPhotos: updatedPhotos
+    };
+    
+    onDataChange('projectInfo', newProjectInfo);
     console.log('Point supprimé avec succès');
   };
 
@@ -863,6 +890,19 @@ export default function Step1ProjectInfo({ formData, onDataChange, language, ten
               <div className="form-field">
                 <label className="field-label"><Camera style={{ width: '18px', height: '18px' }} />Photos de ce Point de Verrouillage</label>
                 
+                {/* Boutons de capture photo pour ce point */}
+                <div className="photo-capture-buttons">
+                  <button className="photo-capture-btn" onClick={() => handlePhotoCapture('during_lockout', point.id)}>
+                    <Camera size={14} />Pendant verrouillage
+                  </button>
+                  <button className="photo-capture-btn" onClick={() => handlePhotoCapture('lockout_device', point.id)}>
+                    <Lock size={14} />Dispositif
+                  </button>
+                  <button className="photo-capture-btn" onClick={() => handlePhotoCapture('verification', point.id)}>
+                    <Eye size={14} />Vérification
+                  </button>
+                </div>
+                
                 {lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id).length > 0 ? (
                   <PhotoCarousel 
                     photos={lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id)}
@@ -883,10 +923,10 @@ export default function Step1ProjectInfo({ formData, onDataChange, language, ten
                     e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
                     e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
                   }}>
-                    <Lock size={32} color="#f87171" style={{ marginBottom: '12px' }} />
+                    <Camera size={32} color="#f87171" style={{ marginBottom: '12px' }} />
                     <h4 style={{ margin: '0 0 8px', color: '#f87171' }}>Aucune photo</h4>
                     <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8' }}>
-                      Documentez ce point de verrouillage avec une photo
+                      Cliquez pour prendre une photo avec l'appareil
                     </p>
                   </div>
                 )}
