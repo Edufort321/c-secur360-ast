@@ -1325,7 +1325,6 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
                 onDataChange={handleStep6DataChange}
                 language={language}
                 tenant={tenant}
-                errors={{}}
               />
             )}
           </div>
