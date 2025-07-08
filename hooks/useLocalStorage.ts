@@ -196,18 +196,25 @@ export const useLocalStorage = <T>(
 
 // Hook spécialisé pour les données AST
 export const useASTLocalStorage = () => {
-  const [drafts, setDrafts] = useLocalStorage('ast_drafts', [], {
+  // ✅ CORRECTION : Utiliser l'objet retourné au lieu de déstructurer
+  const draftsStorage = useLocalStorage('ast_drafts', [], {
     syncAcrossTabs: true
   });
+  const drafts = draftsStorage.value;
+  const setDrafts = draftsStorage.setValue;
 
-  const [preferences, setPreferences] = useLocalStorage('ast_preferences', {
+  const preferencesStorage = useLocalStorage('ast_preferences', {
     language: 'fr' as 'fr' | 'en',
     autoSave: true,
     notifications: true,
     theme: 'dark' as 'light' | 'dark'
   });
+  const preferences = preferencesStorage.value;
+  const setPreferences = preferencesStorage.setValue;
 
-  const [recentProjects, setRecentProjects] = useLocalStorage('ast_recent_projects', []);
+  const recentProjectsStorage = useLocalStorage('ast_recent_projects', []);
+  const recentProjects = recentProjectsStorage.value;
+  const setRecentProjects = recentProjectsStorage.setValue;
 
   // Fonction pour sauvegarder un brouillon AST
   const saveDraft = useCallback((astData: any) => {
