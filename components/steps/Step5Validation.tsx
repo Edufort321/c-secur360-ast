@@ -22,7 +22,8 @@ import {
   X,
   Edit,
   Save,
-  Trash2
+  Trash2,
+  BarChart3
 } from 'lucide-react';
 
 // =================== INTERFACES ===================
