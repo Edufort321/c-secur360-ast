@@ -390,6 +390,97 @@ export default function Step6Finalization({
     alert(`AST partagé avec ${finalizationData.shareRecipients.length} membres de l'équipe`);
   };
 
+  // =================== HANDLERS PARTAGE SIMPLE ===================
+  const shareViaEmail = () => {
+    const subject = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}`);
+    const body = encodeURIComponent(`Bonjour,\n\nVoici le lien pour consulter l'Analyse Sécuritaire de Tâches :\n\n${shareLink}\n\nMerci,\nÉquipe Sécurité`);
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+  };
+
+  const shareViaSMS = () => {
+    const message = encodeURIComponent(`🛡️ AST disponible: ${shareLink}`);
+    window.open(`sms:?body=${message}`);
+  };
+
+  const shareViaWhatsApp = () => {
+    const message = encodeURIComponent(`🛡️ Analyse Sécuritaire de Tâches disponible: ${shareLink}`);
+    window.open(`https://wa.me/?text=${message}`);
+  };
+
+  const printAST = () => {
+    console.log('🖨️ Fonction imprimer déclenchée');
+    
+    // Créer contenu d'impression
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .section { margin-bottom: 20px; }
+          .worker { border: 1px solid #ddd; padding: 10px; margin: 10px 0; }
+          @media print { .no-print { display: none; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>🛡️ Analyse Sécuritaire de Tâches</h1>
+          <p><strong>Projet:</strong> ${formData.projectInfo?.projectName || 'N/A'}</p>
+          <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-CA')}</p>
+          <p><strong>AST#:</strong> ${formData.astNumber || 'N/A'}</p>
+        </div>
+        
+        <div class="section">
+          <h2>👷 Équipe (${finalizationData.workers.length} travailleurs)</h2>
+          ${finalizationData.workers.map(worker => `
+            <div class="worker">
+              <p><strong>${worker.name}</strong> - ${worker.position}</p>
+              <p>Entreprise: ${worker.company}</p>
+              <p>Consentement: ${worker.hasConsented ? '✅ Donné le ' + worker.consentDate + ' à ' + worker.consentTime : '❌ En attente'}</p>
+              <p>Approbation: ${worker.approbationStatus === 'approved' ? '✅ Approuvé' : worker.approbationStatus === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}</p>
+            </div>
+          `).join('')}
+        </div>
+        
+        <div class="section">
+          <h2>📊 Statistiques</h2>
+          <p>Sections complétées: ${Math.round(completionPercentage)}%</p>
+          <p>Consentements: ${consentedWorkers}/${totalWorkers}</p>
+          <p>Approbations: ${approvedWorkers}/${totalWorkers}</p>
+        </div>
+        
+        <div class="section">
+          <h2>💬 Commentaires</h2>
+          <p>${finalizationData.finalComments || 'Aucun commentaire'}</p>
+        </div>
+        
+        <div class="section">
+          <p><strong>Généré le:</strong> ${new Date().toLocaleString('fr-CA')}</p>
+          <p><strong>Lien AST:</strong> ${shareLink}</p>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    // Ouvrir fenêtre d'impression
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+      console.log('✅ Fenêtre d\'impression ouverte');
+    } else {
+      console.error('❌ Impossible d\'ouvrir la fenêtre d\'impression');
+      alert('Impossible d\'ouvrir l\'impression. Vérifiez que les popups sont autorisés.');
+    }
+  };
+
   // =================== HANDLERS DOCUMENT & LOCK ===================
   const generateFullReport = async () => {
     setIsGenerating(true);
@@ -523,9 +614,13 @@ export default function Step6Finalization({
           .form-input:focus { outline: none; border-color: #3b82f6; }
           .form-select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
           .form-textarea { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; min-height: 100px; resize: vertical; }
-          .checkbox-field { display: flex; align-items: center; gap: 8px; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
-          .checkbox-field:hover { border-color: #3b82f6; background: #f1f5f9; }
-          .checkbox-field.checked { border-color: #10b981; background: #ecfdf5; }
+          .checkbox-field { display: flex; align-items: center; gap: 12px; padding: 16px; border: 2px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: all 0.3s; background: white !important; }
+          .checkbox-field:hover { border-color: #3b82f6; background: #f8fafc !important; }
+          .checkbox-field.checked { border-color: #10b981; background: #f0fdf4 !important; }
+          .checkbox-field span { color: #1f2937 !important; font-weight: 500 !important; font-size: 14px !important; }
+          .form-input, .form-select, .form-textarea { background: white !important; color: #1f2937 !important; border: 2px solid #d1d5db; }
+          .form-label { color: #374151 !important; font-weight: 600 !important; }
+          .section-title { color: #111827 !important; font-weight: 700 !important; }
           @media (max-width: 768px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .premium-tabs { flex-direction: column; }
@@ -800,167 +895,91 @@ export default function Step6Finalization({
             </div>
           </div>
         )}
-        {/* ONGLET 2: PARTAGE ÉQUIPE */}
+        {/* ONGLET 2: PARTAGE SIMPLE */}
         {activeTab === 'sharing' && (
           <div>
-            {/* Stats Partage */}
+            {/* Partage Simple AST */}
             <div className="finalization-section">
               <h3 className="section-title">
                 <Share2 size={24} />
-                Statistiques Partage AST
+                📡 Partage Simple AST
               </h3>
               
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <div className="stat-value stat-blue">{finalizationData.shareRecipients.length}</div>
-                  <div className="stat-label">Destinataires</div>
+              {/* Lien de partage */}
+              <div style={{ marginBottom: '20px' }}>
+                <label className="form-label">Lien de partage :</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    value={shareLink}
+                    readOnly
+                    className="form-input"
+                    style={{ fontSize: '12px', fontFamily: 'monospace' }}
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(shareLink);
+                      setCopySuccess(true);
+                      setTimeout(() => setCopySuccess(false), 2000);
+                    }}
+                    className="premium-button"
+                  >
+                    {copySuccess ? '✅' : '📋'}
+                  </button>
                 </div>
-                <div className="stat-card">
-                  <div className="stat-value stat-green">{viewedCount}</div>
-                  <div className="stat-label">Consultations</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-value stat-orange">{approvedCount}</div>
-                  <div className="stat-label">Approbations</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-value">{finalizationData.shareRecipients.length > 0 ? Math.round((approvedCount / finalizationData.shareRecipients.length) * 100) : 0}%</div>
-                  <div className="stat-label">Taux Réponse</div>
-                </div>
+                {copySuccess && (
+                  <p style={{ color: '#10b981', fontSize: '12px', marginTop: '4px' }}>
+                    ✅ Lien copié dans le presse-papier !
+                  </p>
+                )}
               </div>
-            </div>
-
-            {/* Lien de Partage Sécurisé */}
-            <div className="finalization-section">
-              <h3 className="section-title">
-                <Link size={24} />
-                🔗 Lien de Partage Sécurisé AST
-              </h3>
               
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                <input
-                  type="text"
-                  value={shareLink}
-                  readOnly
-                  className="form-input"
-                  style={{ fontSize: '12px', fontFamily: 'monospace' }}
-                />
+              {/* Boutons partage direct */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
+                <button onClick={shareViaEmail} className="premium-button">
+                  <Mail size={16} />
+                  📧 Email
+                </button>
+                <button onClick={shareViaSMS} className="premium-button">
+                  <MessageSquare size={16} />
+                  📱 SMS
+                </button>
+                <button onClick={shareViaWhatsApp} className="premium-button success">
+                  <Phone size={16} />
+                  💬 WhatsApp
+                </button>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(shareLink);
-                    setCopySuccess(true);
-                    setTimeout(() => setCopySuccess(false), 2000);
+                    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}`;
+                    window.open(url, '_blank');
                   }}
                   className="premium-button"
+                  style={{ background: '#1877f2' }}
                 >
-                  {copySuccess ? <Check size={16} /> : <Copy size={16} />}
+                  <Globe size={16} />
+                  📘 Facebook
                 </button>
               </div>
-
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button className="premium-button">
-                  <QrCode size={16} />
-                  📱 Code QR
-                </button>
-                <button className="premium-button">
-                  <Mail size={16} />
-                  📧 Email Équipe
-                </button>
-                <button className="premium-button">
-                  <Smartphone size={16} />
-                  📱 SMS Équipe
-                </button>
+              
+              {/* Instructions */}
+              <div style={{ 
+                marginTop: '20px', 
+                padding: '16px', 
+                background: '#f0f9ff', 
+                border: '1px solid #0ea5e9', 
+                borderRadius: '8px' 
+              }}>
+                <h4 style={{ margin: '0 0 8px 0', color: '#0369a1', fontSize: '16px' }}>
+                  ℹ️ Comment partager l'AST :
+                </h4>
+                <ul style={{ margin: 0, paddingLeft: '20px', color: '#075985' }}>
+                  <li>📧 <strong>Email</strong> : Ouvre votre client email avec le lien</li>
+                  <li>📱 <strong>SMS</strong> : Ouvre l'app SMS avec le message</li>
+                  <li>💬 <strong>WhatsApp</strong> : Partage directement sur WhatsApp</li>
+                  <li>📘 <strong>Facebook</strong> : Publie le lien sur Facebook</li>
+                  <li>📋 <strong>Copier</strong> : Copiez le lien pour l'utiliser ailleurs</li>
+                </ul>
               </div>
-
-              {copySuccess && (
-                <div style={{ marginTop: '8px', color: '#10b981', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Check size={16} />
-                  Lien copié dans le presse-papier
-                </div>
-              )}
-            </div>
-
-            {/* Destinataires du Partage */}
-            <div className="finalization-section">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 className="section-title">
-                  <Users size={24} />
-                  👥 Destinataires du Partage
-                </h3>
-                <button
-                  onClick={() => setShowAddRecipient(true)}
-                  className="premium-button"
-                >
-                  <Plus size={18} />
-                  Ajouter Destinataire
-                </button>
-              </div>
-
-              {finalizationData.shareRecipients.map(recipient => (
-                <div key={recipient.id} className="share-recipient">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                      width: '36px',
-                      height: '36px',
-                      background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '12px',
-                      fontWeight: '600'
-                    }}>
-                      {recipient.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: '600', fontSize: '14px' }}>{recipient.name}</div>
-                      <div style={{ fontSize: '12px', color: '#64748b' }}>
-                        {recipient.email} • {recipient.role} • {recipient.method}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className={`worker-status ${
-                      recipient.status === 'approved' ? 'status-approved' :
-                      recipient.status === 'rejected' ? 'status-rejected' :
-                      recipient.status === 'viewed' ? 'status-consented' : 'status-pending'
-                    }`}>
-                      {recipient.status === 'approved' ? '✅ Approuvé' :
-                       recipient.status === 'rejected' ? '❌ Rejeté' :
-                       recipient.status === 'viewed' ? '👁️ Consulté' : '📨 Envoyé'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-
-              {finalizationData.shareRecipients.length > 0 && (
-                <button
-                  onClick={shareASTWithTeam}
-                  className="premium-button success"
-                  style={{ width: '100%', marginTop: '16px' }}
-                  disabled={isSharingAST}
-                >
-                  {isSharingAST ? (
-                    <>
-                      <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
-                      Partage AST en cours...
-                    </>
-                  ) : (
-                    <>
-                      <Send size={18} />
-                      📡 Partager AST avec Équipe ({finalizationData.shareRecipients.length})
-                    </>
-                  )}
-                </button>
-              )}
-
-              {finalizationData.shareRecipients.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                  <Share2 size={48} style={{ margin: '0 auto 16px', color: '#d1d5db' }} />
-                  <p>Aucun destinataire ajouté pour le partage</p>
-                </div>
-              )}
             </div>
           </div>
         )}
