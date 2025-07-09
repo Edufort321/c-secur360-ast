@@ -58,6 +58,7 @@ interface FinalizationStepProps {
   onDataChange: (section: string, data: FinalizationData) => void;
   language: string;
   tenant: string;
+  errors?: any; // ← AJOUT DE LA PROP ERRORS OPTIONNELLE
 }
 
 // =================== TYPES DE SÉCURITÉ ===================
