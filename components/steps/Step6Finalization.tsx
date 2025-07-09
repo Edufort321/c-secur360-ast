@@ -783,35 +783,58 @@ Lien d'accès: ${shareLink}`);
 
   // =================== GÉNÉRATION STEP 2: ÉQUIPEMENTS ===================
   const generateStep2Section = () => {
-    if (!formData.equipment?.selectedEquipment?.length) return '';
+    const equipment = formData.equipment || {};
+    const selectedEquipment = equipment.selectedEquipment || [];
+    const customEquipment = equipment.customEquipment || [];
+    const allEquipment = [...selectedEquipment, ...customEquipment];
     
-    const equipmentHtml = formData.equipment.selectedEquipment.map((item: any) => `
+    if (allEquipment.length === 0) return '';
+    
+    const equipmentHtml = allEquipment.map((item: any, index: number) => `
         <div class="equipment-item">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <strong>${item.name || 'Équipement'}</strong>
-                <span class="badge badge-${item.condition === 'good' ? 'success' : item.condition === 'fair' ? 'warning' : 'danger'}">
-                    ${item.condition?.toUpperCase() || 'INCONNU'}
+                <strong>#${index + 1} - ${item.name || item.equipmentName || 'Équipement'}</strong>
+                <span class="badge badge-${item.condition === 'excellent' || item.condition === 'good' ? 'success' : 
+                                            item.condition === 'fair' || item.condition === 'average' ? 'warning' : 'danger'}">
+                    ${(item.condition || 'unknown').toUpperCase()}
                 </span>
             </div>
             <div class="info-row">
                 <span class="info-label">Type:</span>
-                <span class="info-value">${item.type || 'Non spécifié'}</span>
+                <span class="info-value">${item.type || item.category || 'Non spécifié'}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Modèle:</span>
-                <span class="info-value">${item.model || 'Non spécifié'}</span>
+                <span class="info-label">Marque/Modèle:</span>
+                <span class="info-value">${item.brand || item.model || 'Non spécifié'}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Inspection:</span>
-                <span class="info-value">${item.inspectionDate || 'Non inspectée'}</span>
+                <span class="info-label">Numéro série:</span>
+                <span class="info-value">${item.serialNumber || 'Non spécifié'}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Certificat:</span>
-                <span class="info-value">${item.certification || 'Non certifié'}</span>
+                <span class="info-label">Date inspection:</span>
+                <span class="info-value">${item.inspectionDate || item.lastInspection || 'Non inspectée'}</span>
             </div>
-            ${item.notes ? `
+            <div class="info-row">
+                <span class="info-label">Prochaine inspection:</span>
+                <span class="info-value">${item.nextInspection || 'Non programmée'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Certification:</span>
+                <span class="info-value">${item.certification || item.certifications || 'Non certifié'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Responsable:</span>
+                <span class="info-value">${item.responsiblePerson || 'Non assigné'}</span>
+            </div>
+            ${item.notes || item.specialInstructions ? `
                 <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
-                    <strong>Remarques:</strong> ${item.notes}
+                    <strong>Remarques:</strong> ${item.notes || item.specialInstructions}
+                </div>
+            ` : ''}
+            ${item.requiredPPE ? `
+                <div style="margin-top: 8px; padding: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px;">
+                    <strong>EPI requis:</strong> ${item.requiredPPE}
                 </div>
             ` : ''}
         </div>
@@ -820,7 +843,7 @@ Lien d'accès: ${shareLink}`);
     return `
     <div class="section">
         <div class="section-header">
-            <div class="section-title">🔧 STEP 2: ÉQUIPEMENTS ET OUTILS</div>
+            <div class="section-title">🔧 STEP 2: ÉQUIPEMENTS ET OUTILS (${allEquipment.length})</div>
         </div>
         <div class="section-content">
             ${equipmentHtml}
@@ -830,41 +853,67 @@ Lien d'accès: ${shareLink}`);
 
   // =================== GÉNÉRATION STEP 3: DANGERS ===================
   const generateStep3Section = () => {
-    if (!formData.hazards?.identifiedHazards?.length) return '';
+    const hazards = formData.hazards || {};
+    const identifiedHazards = hazards.identifiedHazards || [];
+    const customHazards = hazards.customHazards || [];
+    const allHazards = [...identifiedHazards, ...customHazards];
     
-    const hazardsHtml = formData.hazards.identifiedHazards.map((hazard: any) => `
-        <div class="hazard-item hazard-${hazard.riskLevel?.toLowerCase() || 'low'}">
+    if (allHazards.length === 0) return '';
+    
+    const hazardsHtml = allHazards.map((hazard: any, index: number) => `
+        <div class="hazard-item hazard-${(hazard.riskLevel || hazard.severity || 'low').toLowerCase()}">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <strong>${hazard.name || 'Danger non nommé'}</strong>
-                <span class="badge badge-${hazard.riskLevel === 'high' ? 'danger' : hazard.riskLevel === 'medium' ? 'warning' : 'success'}">
-                    ${hazard.riskLevel?.toUpperCase() || 'FAIBLE'}
+                <strong>#${index + 1} - ${hazard.name || hazard.hazardName || 'Danger'}</strong>
+                <span class="badge badge-${
+                    (hazard.riskLevel === 'high' || hazard.severity === 'high') ? 'danger' : 
+                    (hazard.riskLevel === 'medium' || hazard.severity === 'medium') ? 'warning' : 'success'
+                }">
+                    ${(hazard.riskLevel || hazard.severity || 'faible').toUpperCase()}
                 </span>
             </div>
             <div class="info-row">
                 <span class="info-label">Catégorie:</span>
-                <span class="info-value">${hazard.category || 'Non spécifiée'}</span>
+                <span class="info-value">${hazard.category || hazard.type || 'Non spécifiée'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Source du danger:</span>
+                <span class="info-value">${hazard.source || 'Non spécifiée'}</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Probabilité:</span>
-                <span class="info-value">${hazard.probability || 'Non évaluée'}</span>
+                <span class="info-value">${hazard.probability || hazard.likelihood || 'Non évaluée'}</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Gravité:</span>
-                <span class="info-value">${hazard.severity || 'Non évaluée'}</span>
+                <span class="info-value">${hazard.severity || hazard.impact || 'Non évaluée'}</span>
             </div>
-            ${hazard.description ? `
+            <div class="info-row">
+                <span class="info-label">Score de risque:</span>
+                <span class="info-value">${hazard.riskScore || 'Non calculé'}</span>
+            </div>
+            ${hazard.description || hazard.hazardDescription ? `
                 <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
-                    <strong>Description:</strong> ${hazard.description}
+                    <strong>Description:</strong> ${hazard.description || hazard.hazardDescription}
                 </div>
             ` : ''}
-            ${hazard.controlMeasures ? `
+            ${hazard.controlMeasures || hazard.preventiveMeasures ? `
                 <div style="margin-top: 8px; padding: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px;">
-                    <strong>Mesures de contrôle:</strong> ${hazard.controlMeasures}
+                    <strong>Mesures de contrôle:</strong> ${hazard.controlMeasures || hazard.preventiveMeasures}
                 </div>
             ` : ''}
-            ${hazard.requiredPPE ? `
+            ${hazard.requiredPPE || hazard.ppe ? `
                 <div style="margin-top: 8px; padding: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px;">
-                    <strong>EPI requis:</strong> ${hazard.requiredPPE}
+                    <strong>EPI requis:</strong> ${hazard.requiredPPE || hazard.ppe}
+                </div>
+            ` : ''}
+            ${hazard.emergencyProcedures ? `
+                <div style="margin-top: 8px; padding: 8px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 4px;">
+                    <strong>Procédures d'urgence:</strong> ${hazard.emergencyProcedures}
+                </div>
+            ` : ''}
+            ${hazard.responsiblePerson ? `
+                <div style="margin-top: 8px; padding: 8px; background: #e0e7ff; border: 1px solid #c7d2fe; border-radius: 4px;">
+                    <strong>Responsable:</strong> ${hazard.responsiblePerson}
                 </div>
             ` : ''}
         </div>
@@ -873,7 +922,7 @@ Lien d'accès: ${shareLink}`);
     return `
     <div class="section page-break">
         <div class="section-header">
-            <div class="section-title">⚠️ STEP 3: IDENTIFICATION DES DANGERS</div>
+            <div class="section-title">⚠️ STEP 3: IDENTIFICATION DES DANGERS (${allHazards.length})</div>
         </div>
         <div class="section-content">
             ${hazardsHtml}
@@ -883,39 +932,78 @@ Lien d'accès: ${shareLink}`);
 
   // =================== GÉNÉRATION STEP 4: PERMIS ===================
   const generateStep4Section = () => {
-    if (!formData.permits?.requiredPermits?.length) return '';
+    const permits = formData.permits || {};
+    const requiredPermits = permits.requiredPermits || [];
+    const customPermits = permits.customPermits || [];
+    const allPermits = [...requiredPermits, ...customPermits];
     
-    const permitsHtml = formData.permits.requiredPermits.map((permit: any) => `
+    if (allPermits.length === 0) return '';
+    
+    const permitsHtml = allPermits.map((permit: any, index: number) => `
         <div class="permit-item">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <strong>${permit.name || 'Permis'}</strong>
-                <span class="badge badge-${permit.status === 'obtained' ? 'success' : permit.status === 'pending' ? 'warning' : 'danger'}">
-                    ${permit.status?.toUpperCase() || 'INCONNU'}
+                <strong>#${index + 1} - ${permit.name || permit.permitName || 'Permis'}</strong>
+                <span class="badge badge-${
+                    permit.status === 'obtained' || permit.status === 'approved' ? 'success' : 
+                    permit.status === 'pending' || permit.status === 'in_progress' ? 'warning' : 'danger'
+                }">
+                    ${(permit.status || 'unknown').toUpperCase().replace('_', ' ')}
                 </span>
             </div>
             <div class="info-row">
+                <span class="info-label">Type de permis:</span>
+                <span class="info-value">${permit.type || permit.category || 'Non spécifié'}</span>
+            </div>
+            <div class="info-row">
                 <span class="info-label">Autorité émettrice:</span>
-                <span class="info-value">${permit.authority || 'Non spécifiée'}</span>
+                <span class="info-value">${permit.authority || permit.issuingAuthority || 'Non spécifiée'}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Numéro:</span>
-                <span class="info-value">${permit.number || 'Non attribué'}</span>
+                <span class="info-label">Numéro de permis:</span>
+                <span class="info-value">${permit.number || permit.permitNumber || 'Non attribué'}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Date émission:</span>
-                <span class="info-value">${permit.issueDate || 'Non spécifiée'}</span>
+                <span class="info-label">Date d'émission:</span>
+                <span class="info-value">${permit.issueDate || permit.issuedDate || 'Non spécifiée'}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Date expiration:</span>
-                <span class="info-value">${permit.expiryDate || 'Non spécifiée'}</span>
+                <span class="info-label">Date d'expiration:</span>
+                <span class="info-value">${permit.expiryDate || permit.expirationDate || 'Non spécifiée'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Validité (jours):</span>
+                <span class="info-value">${permit.validityPeriod || 'Non spécifiée'}</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Responsable:</span>
-                <span class="info-value">${permit.responsiblePerson || 'Non spécifié'}</span>
+                <span class="info-value">${permit.responsiblePerson || permit.responsible || 'Non assigné'}</span>
             </div>
-            ${permit.conditions ? `
+            <div class="info-row">
+                <span class="info-label">Contact responsable:</span>
+                <span class="info-value">${permit.contactInfo || 'Non spécifié'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Coût:</span>
+                <span class="info-value">${permit.cost || 'Non spécifié'}</span>
+            </div>
+            ${permit.description || permit.permitDescription ? `
+                <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
+                    <strong>Description:</strong> ${permit.description || permit.permitDescription}
+                </div>
+            ` : ''}
+            ${permit.conditions || permit.specialConditions ? `
                 <div style="margin-top: 8px; padding: 8px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 4px;">
-                    <strong>Conditions particulières:</strong> ${permit.conditions}
+                    <strong>Conditions particulières:</strong> ${permit.conditions || permit.specialConditions}
+                </div>
+            ` : ''}
+            ${permit.requirements ? `
+                <div style="margin-top: 8px; padding: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px;">
+                    <strong>Exigences:</strong> ${permit.requirements}
+                </div>
+            ` : ''}
+            ${permit.notes || permit.additionalNotes ? `
+                <div style="margin-top: 8px; padding: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px;">
+                    <strong>Notes:</strong> ${permit.notes || permit.additionalNotes}
                 </div>
             ` : ''}
         </div>
@@ -924,7 +1012,7 @@ Lien d'accès: ${shareLink}`);
     return `
     <div class="section">
         <div class="section-header">
-            <div class="section-title">📄 STEP 4: PERMIS ET AUTORISATIONS</div>
+            <div class="section-title">📄 STEP 4: PERMIS ET AUTORISATIONS (${allPermits.length})</div>
         </div>
         <div class="section-content">
             ${permitsHtml}
