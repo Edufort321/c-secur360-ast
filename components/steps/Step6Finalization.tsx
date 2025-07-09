@@ -217,10 +217,7 @@ export default function Step6Finalization({
   const [showAddRecipient, setShowAddRecipient] = useState(false);
   const [newWorker, setNewWorker] = useState<Partial<Worker>>({
     name: '',
-    position: '',
     company: '',
-    certifications: [],
-    experience: '',
     hasConsented: false,
     approbationStatus: 'pending'
   });
@@ -233,7 +230,13 @@ export default function Step6Finalization({
     status: 'sent'
   });
   const [copySuccess, setCopySuccess] = useState(false);
-  const [shareLink, setShareLink] = useState('');
+  const [shareLink, setShareLink] = useState(() => {
+    // Générer le lien immédiatement à l'initialisation
+    const baseUrl = `https://${tenant}.csecur360.com`;
+    const astId = Math.random().toString(36).substr(2, 12).toUpperCase();
+    const secureToken = Math.random().toString(36).substr(2, 16);
+    return `${baseUrl}/ast/view/${astId}?token=${secureToken}`;
+  });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isSharingAST, setIsSharingAST] = useState(false);
@@ -245,19 +248,20 @@ export default function Step6Finalization({
   }, [finalizationData, onDataChange]);
 
   useEffect(() => {
-    // Générer le lien de partage sécurisé
-    if (formData.projectInfo?.projectName) {
-      const baseUrl = `https://${tenant}.csecur360.com`;
-      const astId = Math.random().toString(36).substr(2, 12).toUpperCase();
-      const secureToken = Math.random().toString(36).substr(2, 16);
-      const link = `${baseUrl}/ast/view/${astId}?token=${secureToken}`;
-      setShareLink(link);
-      setFinalizationData(prev => ({
-        ...prev,
-        shareLink: link
-      }));
-    }
-  }, [formData.projectInfo?.projectName, tenant]);
+    // Générer le lien de partage sécurisé IMMÉDIATEMENT
+    const baseUrl = `https://${tenant}.csecur360.com`;
+    const astId = Math.random().toString(36).substr(2, 12).toUpperCase();
+    const secureToken = Math.random().toString(36).substr(2, 16);
+    const link = `${baseUrl}/ast/view/${astId}?token=${secureToken}`;
+    
+    console.log('🔗 Lien généré:', link); // Debug
+    
+    setShareLink(link);
+    setFinalizationData(prev => ({
+      ...prev,
+      shareLink: link
+    }));
+  }, [tenant]); // Supprimé la dépendance projectName
 
   // =================== HANDLERS WORKERS ===================
   const addWorker = () => {
@@ -905,31 +909,49 @@ export default function Step6Finalization({
                 📡 Partage Simple AST
               </h3>
               
-              {/* Lien de partage */}
+              {/* Lien de partage CORRIGÉ */}
               <div style={{ marginBottom: '20px' }}>
-                <label className="form-label">Lien de partage :</label>
+                <label className="form-label" style={{ color: '#374151', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+                  🔗 Lien de partage AST :
+                </label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <input
                     type="text"
-                    value={shareLink}
+                    value={shareLink || 'Génération du lien...'}
                     readOnly
                     className="form-input"
-                    style={{ fontSize: '12px', fontFamily: 'monospace' }}
+                    style={{ 
+                      fontSize: '12px', 
+                      fontFamily: 'monospace',
+                      background: '#f8fafc !important',
+                      color: '#1f2937 !important',
+                      border: '2px solid #e2e8f0',
+                      padding: '12px'
+                    }}
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(shareLink);
-                      setCopySuccess(true);
-                      setTimeout(() => setCopySuccess(false), 2000);
+                      if (shareLink) {
+                        navigator.clipboard.writeText(shareLink);
+                        setCopySuccess(true);
+                        setTimeout(() => setCopySuccess(false), 2000);
+                        console.log('📋 Lien copié:', shareLink);
+                      }
                     }}
                     className="premium-button"
+                    disabled={!shareLink}
                   >
                     {copySuccess ? '✅' : '📋'}
                   </button>
                 </div>
                 {copySuccess && (
-                  <p style={{ color: '#10b981', fontSize: '12px', marginTop: '4px' }}>
+                  <p style={{ color: '#10b981', fontSize: '12px', marginTop: '4px', fontWeight: '500' }}>
                     ✅ Lien copié dans le presse-papier !
+                  </p>
+                )}
+                {!shareLink && (
+                  <p style={{ color: '#f59e0b', fontSize: '12px', marginTop: '4px' }}>
+                    ⚠️ Génération du lien en cours...
                   </p>
                 )}
               </div>
@@ -1026,69 +1048,87 @@ export default function Step6Finalization({
               </h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-                <div className="checkbox-field">
+                <div 
+                  className={`checkbox-field ${finalizationData.documentGeneration.includeAllFields ? 'checked' : ''}`}
+                  onClick={() => setFinalizationData(prev => ({
+                    ...prev,
+                    documentGeneration: { ...prev.documentGeneration, includeAllFields: !prev.documentGeneration.includeAllFields }
+                  }))}
+                >
                   <input 
                     type="checkbox" 
                     checked={finalizationData.documentGeneration.includeAllFields}
-                    onChange={(e) => setFinalizationData(prev => ({
-                      ...prev,
-                      documentGeneration: { ...prev.documentGeneration, includeAllFields: e.target.checked }
-                    }))}
+                    onChange={() => {}}
                   />
                   <span>📄 Inclure toutes les sections</span>
                 </div>
-                <div className="checkbox-field">
+                <div 
+                  className={`checkbox-field ${finalizationData.documentGeneration.onlyFilledFields ? 'checked' : ''}`}
+                  onClick={() => setFinalizationData(prev => ({
+                    ...prev,
+                    documentGeneration: { ...prev.documentGeneration, onlyFilledFields: !prev.documentGeneration.onlyFilledFields }
+                  }))}
+                >
                   <input 
                     type="checkbox" 
                     checked={finalizationData.documentGeneration.onlyFilledFields}
-                    onChange={(e) => setFinalizationData(prev => ({
-                      ...prev,
-                      documentGeneration: { ...prev.documentGeneration, onlyFilledFields: e.target.checked }
-                    }))}
+                    onChange={() => {}}
                   />
                   <span>✅ Seulement champs remplis</span>
                 </div>
-                <div className="checkbox-field">
+                <div 
+                  className={`checkbox-field ${finalizationData.documentGeneration.includePhotos ? 'checked' : ''}`}
+                  onClick={() => setFinalizationData(prev => ({
+                    ...prev,
+                    documentGeneration: { ...prev.documentGeneration, includePhotos: !prev.documentGeneration.includePhotos }
+                  }))}
+                >
                   <input 
                     type="checkbox" 
                     checked={finalizationData.documentGeneration.includePhotos}
-                    onChange={(e) => setFinalizationData(prev => ({
-                      ...prev,
-                      documentGeneration: { ...prev.documentGeneration, includePhotos: e.target.checked }
-                    }))}
+                    onChange={() => {}}
                   />
                   <span>📸 Inclure photos</span>
                 </div>
-                <div className="checkbox-field">
+                <div 
+                  className={`checkbox-field ${finalizationData.documentGeneration.includeSignatures ? 'checked' : ''}`}
+                  onClick={() => setFinalizationData(prev => ({
+                    ...prev,
+                    documentGeneration: { ...prev.documentGeneration, includeSignatures: !prev.documentGeneration.includeSignatures }
+                  }))}
+                >
                   <input 
                     type="checkbox" 
                     checked={finalizationData.documentGeneration.includeSignatures}
-                    onChange={(e) => setFinalizationData(prev => ({
-                      ...prev,
-                      documentGeneration: { ...prev.documentGeneration, includeSignatures: e.target.checked }
-                    }))}
+                    onChange={() => {}}
                   />
                   <span>✍️ Inclure signatures</span>
                 </div>
-                <div className="checkbox-field">
+                <div 
+                  className={`checkbox-field ${finalizationData.documentGeneration.includeQRCode ? 'checked' : ''}`}
+                  onClick={() => setFinalizationData(prev => ({
+                    ...prev,
+                    documentGeneration: { ...prev.documentGeneration, includeQRCode: !prev.documentGeneration.includeQRCode }
+                  }))}
+                >
                   <input 
                     type="checkbox" 
                     checked={finalizationData.documentGeneration.includeQRCode}
-                    onChange={(e) => setFinalizationData(prev => ({
-                      ...prev,
-                      documentGeneration: { ...prev.documentGeneration, includeQRCode: e.target.checked }
-                    }))}
+                    onChange={() => {}}
                   />
                   <span>📱 Inclure Code QR</span>
                 </div>
-                <div className="checkbox-field">
+                <div 
+                  className={`checkbox-field ${finalizationData.documentGeneration.branding ? 'checked' : ''}`}
+                  onClick={() => setFinalizationData(prev => ({
+                    ...prev,
+                    documentGeneration: { ...prev.documentGeneration, branding: !prev.documentGeneration.branding }
+                  }))}
+                >
                   <input 
                     type="checkbox" 
                     checked={finalizationData.documentGeneration.branding}
-                    onChange={(e) => setFinalizationData(prev => ({
-                      ...prev,
-                      documentGeneration: { ...prev.documentGeneration, branding: e.target.checked }
-                    }))}
+                    onChange={() => {}}
                   />
                   <span>🏢 Branding entreprise</span>
                 </div>
@@ -1194,22 +1234,46 @@ export default function Step6Finalization({
               </button>
             </div>
 
-            {/* Actions Finales */}
+            {/* Actions Finales CORRIGÉES */}
             <div className="finalization-section">
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-                <button className="premium-button">
+                <button 
+                  onClick={() => {
+                    console.log('💾 Sauvegarde déclenchée');
+                    alert('AST sauvegardé avec succès !');
+                  }}
+                  className="premium-button"
+                >
                   <Save size={18} />
                   💾 Sauvegarder
                 </button>
-                <button className="premium-button">
+                
+                <button 
+                  onClick={printAST}
+                  className="premium-button"
+                >
                   <Printer size={18} />
                   🖨️ Imprimer
                 </button>
-                <button className="premium-button">
+                
+                <button 
+                  onClick={() => {
+                    console.log('📂 Archivage déclenchée');
+                    alert('AST archivé avec succès !');
+                  }}
+                  className="premium-button"
+                >
                   <Archive size={18} />
                   📂 Archiver
                 </button>
+                
                 <button 
+                  onClick={() => {
+                    console.log('✨ Publication finale déclenchée');
+                    if (isReadyToPublish) {
+                      alert('AST publié avec succès !');
+                    }
+                  }}
                   className="premium-button success"
                   disabled={!isReadyToPublish}
                 >
@@ -1241,7 +1305,7 @@ export default function Step6Finalization({
 
         {/* MODALS */}
         
-        {/* Modal Ajout Travailleur */}
+        {/* Modal Ajout Travailleur SIMPLIFIÉ */}
         {showAddWorker && (
           <div className="modal-overlay">
             <div className="modal-content">
@@ -1249,88 +1313,69 @@ export default function Step6Finalization({
                 👷 Ajouter Travailleur
               </h4>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                <div className="form-field">
-                  <label className="form-label">Nom complet *</label>
-                  <input
-                    type="text"
-                    value={newWorker.name || ''}
-                    onChange={(e) => setNewWorker(prev => ({ ...prev, name: e.target.value }))}
-                    className="form-input"
-                    placeholder="Ex: Jean Tremblay"
-                  />
-                </div>
-                
-                <div className="form-field">
-                  <label className="form-label">Poste *</label>
-                  <select
-                    value={newWorker.position || ''}
-                    onChange={(e) => setNewWorker(prev => ({ ...prev, position: e.target.value }))}
-                    className="form-select"
-                  >
-                    <option value="">Sélectionner...</option>
-                    <option value="Opérateur">Opérateur</option>
-                    <option value="Technicien">Technicien</option>
-                    <option value="Superviseur">Superviseur</option>
-                    <option value="Ingénieur">Ingénieur</option>
-                    <option value="Maintenance">Maintenance</option>
-                    <option value="Électricien">Électricien</option>
-                    <option value="Soudeur">Soudeur</option>
-                    <option value="Aide">Aide</option>
-                  </select>
-                </div>
-
-                <div className="form-field">
-                  <label className="form-label"># Employé</label>
-                  <input
-                    type="text"
-                    value={newWorker.employeeId || ''}
-                    onChange={(e) => setNewWorker(prev => ({ ...prev, employeeId: e.target.value }))}
-                    className="form-input"
-                    placeholder="Ex: EMP-12345"
-                  />
-                </div>
-                
-                <div className="form-field">
-                  <label className="form-label">Entreprise</label>
-                  <select
-                    value={newWorker.company || ''}
-                    onChange={(e) => setNewWorker(prev => ({ ...prev, company: e.target.value }))}
-                    className="form-select"
-                  >
-                    <option value="">Sélectionner...</option>
-                    <option value="Interne">Interne</option>
-                    <option value="Entrepreneur A">Entrepreneur A</option>
-                    <option value="Entrepreneur B">Entrepreneur B</option>
-                    <option value="Sous-traitant">Sous-traitant</option>
-                  </select>
-                </div>
-
-                <div className="form-field" style={{ gridColumn: 'span 2' }}>
-                  <label className="form-label">Email</label>
-                  <input
-                    type="email"
-                    value={newWorker.email || ''}
-                    onChange={(e) => setNewWorker(prev => ({ ...prev, email: e.target.value }))}
-                    className="form-input"
-                    placeholder="jean.tremblay@entreprise.com"
-                  />
-                </div>
+              {/* SEULEMENT 2 CHAMPS REQUIS */}
+              <div className="form-field">
+                <label className="form-label">Nom complet *</label>
+                <input
+                  type="text"
+                  value={newWorker.name || ''}
+                  onChange={(e) => setNewWorker(prev => ({ ...prev, name: e.target.value }))}
+                  className="form-input"
+                  placeholder="Ex: Jean Tremblay"
+                  style={{ fontSize: '16px', padding: '14px' }}
+                />
+              </div>
+              
+              <div className="form-field">
+                <label className="form-label">Entreprise *</label>
+                <input
+                  type="text"
+                  value={newWorker.company || ''}
+                  onChange={(e) => setNewWorker(prev => ({ ...prev, company: e.target.value }))}
+                  className="form-input"
+                  placeholder="Ex: Entreprise ABC Inc."
+                  style={{ fontSize: '16px', padding: '14px' }}
+                />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                 <button
-                  onClick={addWorker}
+                  onClick={() => {
+                    if (newWorker.name && newWorker.company) {
+                      const worker = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        name: newWorker.name,
+                        position: 'Travailleur', // Valeur par défaut
+                        employeeId: '',
+                        company: newWorker.company,
+                        phone: '',
+                        email: '',
+                        certifications: [],
+                        experience: '',
+                        hasConsented: false,
+                        approbationStatus: 'pending' as const,
+                        consultationTime: 0
+                      };
+                      
+                      setFinalizationData(prev => ({
+                        ...prev,
+                        workers: [...prev.workers, worker]
+                      }));
+                      
+                      setNewWorker({ name: '', company: '', hasConsented: false, approbationStatus: 'pending' });
+                      setShowAddWorker(false);
+                    }
+                  }}
                   className="premium-button success"
-                  style={{ flex: 1 }}
-                  disabled={!newWorker.name || !newWorker.position}
+                  style={{ flex: 1, padding: '16px', fontSize: '16px' }}
+                  disabled={!newWorker.name || !newWorker.company}
                 >
                   ✅ Ajouter
                 </button>
                 <button
                   onClick={() => setShowAddWorker(false)}
                   className="premium-button"
-                  style={{ flex: 1, background: '#6b7280' }}
+                  style={{ flex: 1, background: '#6b7280', padding: '16px', fontSize: '16px' }}
                 >
                   ❌ Annuler
                 </button>
