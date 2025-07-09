@@ -2,49 +2,16 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Camera, 
-  FileText, 
-  Download, 
-  Archive, 
-  Send, 
-  CheckCircle, 
-  AlertTriangle,
-  Clock,
-  Eye,
-  Share2,
-  Save,
-  Calendar,
-  User,
-  MapPin,
-  Shield,
-  Award,
-  Target,
-  BarChart3,
-  Globe,
-  Printer,
-  Mail,
-  Smartphone,
-  Image,
-  X,
-  Plus,
-  Upload,
-  Users,
-  Copy,
-  Check,
-  MessageSquare,
-  Phone,
-  Bell,
-  QrCode,
-  Link,
-  Settings,
-  Lock,
-  Edit,
-  Trash2,
-  UserPlus,
-  PenTool,
-  HardHat
+  Camera, FileText, Download, Archive, Send, CheckCircle, AlertTriangle,
+  Clock, Eye, Share2, Save, Calendar, User, MapPin, Shield, Award,
+  Target, BarChart3, Globe, Printer, Mail, Smartphone, Image, X,
+  Plus, Upload, Users, Copy, Check, MessageSquare, Phone, Bell,
+  QrCode, Link, Settings, Lock, Edit, Trash2, UserPlus, PenTool,
+  HardHat, FileCheck, Briefcase, Building, Star, ExternalLink,
+  RefreshCw, Zap, Crown, Sparkles
 } from 'lucide-react';
 
+// =================== INTERFACES WORKER ===================
 interface Worker {
   id: string;
   name: string;
@@ -60,62 +27,75 @@ interface Worker {
   consentTime?: string;
   signature?: string;
   digitalSignature?: boolean;
+  consultationTime?: number; // Temps en minutes passé à consulter l'AST
+  approbationStatus?: 'pending' | 'approved' | 'rejected';
+  approbationComments?: string;
+  lastAccessDate?: string;
 }
 
-interface Photo {
+// =================== INTERFACES PARTAGE ===================
+interface ShareRecipient {
   id: string;
-  url: string;
-  caption: string;
-  type: 'before' | 'during' | 'after' | 'equipment' | 'hazard' | 'general';
-  timestamp: string;
-  location?: {
-    lat: number;
-    lng: number;
-  };
-  tags: string[];
+  name: string;
+  email: string;
+  phone?: string;
+  method: 'email' | 'sms' | 'both';
+  role: 'worker' | 'supervisor' | 'manager';
+  status: 'sent' | 'viewed' | 'approved' | 'rejected';
+  sentAt?: string;
+  viewedAt?: string;
+  responseAt?: string;
 }
 
-interface DocumentGeneration {
-  format: 'pdf' | 'word' | 'excel' | 'html';
-  template: 'standard' | 'detailed' | 'summary' | 'regulatory';
-  language: 'fr' | 'en' | 'both';
-  includePhotos: boolean;
-  includeSignatures: boolean;
-  includeQRCode: boolean;
-  branding: boolean;
-  watermark: boolean;
-}
-
-interface Distribution {
-  email: {
-    enabled: boolean;
-    recipients: string[];
-    subject: string;
-    message: string;
-  };
-  portal: {
-    enabled: boolean;
-    publish: boolean;
-    category: string;
-  };
-  archive: {
-    enabled: boolean;
-    retention: number;
-    location: 'local' | 'cloud' | 'both';
-  };
-  compliance: {
-    enabled: boolean;
-    authorities: string[];
-    submissionDate?: string;
-  };
-}
-
+// =================== INTERFACE PRINCIPALE FINALIZATION ===================
 interface FinalizationData {
   workers: Worker[];
-  photos: Photo[];
+  shareRecipients: ShareRecipient[];
+  photos: any[];
   finalComments: string;
-  documentGeneration: DocumentGeneration;
-  distribution: Distribution;
+  documentGeneration: {
+    format: 'pdf' | 'word' | 'excel' | 'html';
+    template: 'standard' | 'detailed' | 'summary' | 'regulatory';
+    language: 'fr' | 'en' | 'both';
+    includePhotos: boolean;
+    includeSignatures: boolean;
+    includeQRCode: boolean;
+    branding: boolean;
+    watermark: boolean;
+    includeAllFields: boolean;
+    onlyFilledFields: boolean;
+  };
+  distribution: {
+    email: {
+      enabled: boolean;
+      recipients: string[];
+      subject: string;
+      message: string;
+      sendReminders: boolean;
+      reminderInterval: number;
+    };
+    sms: {
+      enabled: boolean;
+      recipients: string[];
+      message: string;
+    };
+    portal: {
+      enabled: boolean;
+      publish: boolean;
+      category: string;
+      accessLevel: 'public' | 'restricted' | 'private';
+    };
+    archive: {
+      enabled: boolean;
+      retention: number;
+      location: 'local' | 'cloud' | 'both';
+    };
+    compliance: {
+      enabled: boolean;
+      authorities: string[];
+      submissionDate?: string;
+    };
+  };
   completionStatus: {
     projectInfo: boolean;
     equipment: boolean;
@@ -138,6 +118,14 @@ interface FinalizationData {
   };
   shareLink?: string;
   qrCode?: string;
+  lockSettings: {
+    isLocked: boolean;
+    lockedBy?: string;
+    lockedAt?: string;
+    allowTeamView: boolean;
+    requireApproval: boolean;
+    autoLockAfterApproval: boolean;
+  };
 }
 
 interface FinalizationStepProps {
@@ -146,7 +134,6 @@ interface FinalizationStepProps {
   language: 'fr' | 'en';
   tenant: string;
 }
-
 export default function Step6Finalization({ 
   formData, 
   onDataChange, 
@@ -155,31 +142,43 @@ export default function Step6Finalization({
 }: FinalizationStepProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // =================== ÉTAT PRINCIPAL ===================
   const [finalizationData, setFinalizationData] = useState<FinalizationData>({
     workers: [],
+    shareRecipients: [],
     photos: [],
     finalComments: '',
     documentGeneration: {
       format: 'pdf',
-      template: 'standard',
+      template: 'detailed',
       language: 'fr',
       includePhotos: true,
       includeSignatures: true,
       includeQRCode: true,
       branding: true,
-      watermark: true
+      watermark: true,
+      includeAllFields: true,
+      onlyFilledFields: true
     },
     distribution: {
       email: {
         enabled: true,
         recipients: [],
-        subject: `AST - ${formData.projectInfo?.title || 'Nouveau projet'}`,
-        message: 'Veuillez trouver ci-joint l\'Analyse Sécuritaire de Tâches complétée.'
+        subject: `🛡️ AST - ${formData.projectInfo?.projectName || 'Nouveau projet'} - Consultation requise`,
+        message: 'Bonjour,\n\nVeuillez consulter l\'Analyse Sécuritaire de Tâches ci-jointe.\n\nVotre consultation et approbation sont requises.\n\nMerci,\nÉquipe Sécurité',
+        sendReminders: true,
+        reminderInterval: 24
+      },
+      sms: {
+        enabled: true,
+        recipients: [],
+        message: '🛡️ AST disponible pour consultation. Lien: [LINK]. Consultation requise avant travaux.'
       },
       portal: {
         enabled: true,
         publish: false,
-        category: 'safety'
+        category: 'safety',
+        accessLevel: 'restricted'
       },
       archive: {
         enabled: true,
@@ -203,42 +202,64 @@ export default function Step6Finalization({
       version: '1.0',
       lastModified: new Date().toISOString()
     },
+    lockSettings: {
+      isLocked: false,
+      allowTeamView: true,
+      requireApproval: true,
+      autoLockAfterApproval: true
+    },
     ...formData.finalization
   });
 
-  const [activeTab, setActiveTab] = useState<'workers' | 'finalization'>('workers');
+  // =================== ÉTATS SECONDAIRES ===================
+  const [activeTab, setActiveTab] = useState<'workers' | 'sharing' | 'finalization'>('workers');
   const [showAddWorker, setShowAddWorker] = useState(false);
+  const [showAddRecipient, setShowAddRecipient] = useState(false);
   const [newWorker, setNewWorker] = useState<Partial<Worker>>({
     name: '',
     position: '',
     company: '',
     certifications: [],
     experience: '',
-    hasConsented: false
+    hasConsented: false,
+    approbationStatus: 'pending'
+  });
+  const [newRecipient, setNewRecipient] = useState<Partial<ShareRecipient>>({
+    name: '',
+    email: '',
+    phone: '',
+    method: 'email',
+    role: 'worker',
+    status: 'sent'
   });
   const [copySuccess, setCopySuccess] = useState(false);
   const [shareLink, setShareLink] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isSharingAST, setIsSharingAST] = useState(false);
+  const [showLockConfirm, setShowLockConfirm] = useState(false);
 
+  // =================== EFFECTS ===================
   useEffect(() => {
     onDataChange('finalization', finalizationData);
   }, [finalizationData, onDataChange]);
 
   useEffect(() => {
-    // Générer le lien de partage
-    if (formData.projectInfo?.title) {
+    // Générer le lien de partage sécurisé
+    if (formData.projectInfo?.projectName) {
       const baseUrl = `https://${tenant}.csecur360.com`;
-      const astId = Math.random().toString(36).substr(2, 9);
-      const link = `${baseUrl}/ast/shared/${astId}`;
+      const astId = Math.random().toString(36).substr(2, 12).toUpperCase();
+      const secureToken = Math.random().toString(36).substr(2, 16);
+      const link = `${baseUrl}/ast/view/${astId}?token=${secureToken}`;
       setShareLink(link);
       setFinalizationData(prev => ({
         ...prev,
         shareLink: link
       }));
     }
-  }, [formData.projectInfo?.title, tenant]);
+  }, [formData.projectInfo?.projectName, tenant]);
 
+  // =================== HANDLERS WORKERS ===================
   const addWorker = () => {
     if (newWorker.name && newWorker.position) {
       const worker: Worker = {
@@ -251,7 +272,9 @@ export default function Step6Finalization({
         email: newWorker.email,
         certifications: newWorker.certifications || [],
         experience: newWorker.experience || '',
-        hasConsented: false
+        hasConsented: false,
+        approbationStatus: 'pending',
+        consultationTime: 0
       };
       
       setFinalizationData(prev => ({
@@ -265,7 +288,8 @@ export default function Step6Finalization({
         company: '',
         certifications: [],
         experience: '',
-        hasConsented: false
+        hasConsented: false,
+        approbationStatus: 'pending'
       });
       setShowAddWorker(false);
     }
@@ -273,12 +297,12 @@ export default function Step6Finalization({
 
   const updateWorkerConsent = (workerId: string, consented: boolean) => {
     const now = new Date();
-    const currentDate = now.toLocaleDateString('fr-CA'); // YYYY-MM-DD format
+    const currentDate = now.toLocaleDateString('fr-CA');
     const currentTime = now.toLocaleTimeString('fr-CA', { 
       hour: '2-digit', 
       minute: '2-digit',
       hour12: false 
-    }); // HH:MM format
+    });
 
     setFinalizationData(prev => ({
       ...prev,
@@ -290,536 +314,1177 @@ export default function Step6Finalization({
               consentDate: consented ? currentDate : undefined,
               consentTime: consented ? currentTime : undefined,
               signature: consented ? `${worker.name} - ${currentDate} ${currentTime}` : undefined,
-              digitalSignature: consented
+              digitalSignature: consented,
+              lastAccessDate: consented ? now.toISOString() : worker.lastAccessDate,
+              consultationTime: consented ? (worker.consultationTime || 0) + 5 : worker.consultationTime
             }
           : worker
       )
     }));
   };
 
-  const removeWorker = (workerId: string) => {
+  const updateWorkerApprobation = (workerId: string, status: 'approved' | 'rejected', comments?: string) => {
     setFinalizationData(prev => ({
       ...prev,
-      workers: prev.workers.filter(worker => worker.id !== workerId)
+      workers: prev.workers.map(worker => 
+        worker.id === workerId 
+          ? { 
+              ...worker, 
+              approbationStatus: status,
+              approbationComments: comments,
+              lastAccessDate: new Date().toISOString()
+            }
+          : worker
+      )
     }));
   };
 
-  const copyLinkToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(shareLink);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy link:', err);
+  // =================== HANDLERS SHARING ===================
+  const addRecipient = () => {
+    if (newRecipient.name && newRecipient.email) {
+      const recipient: ShareRecipient = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: newRecipient.name || '',
+        email: newRecipient.email || '',
+        phone: newRecipient.phone,
+        method: newRecipient.method || 'email',
+        role: newRecipient.role || 'worker',
+        status: 'sent'
+      };
+      
+      setFinalizationData(prev => ({
+        ...prev,
+        shareRecipients: [...prev.shareRecipients, recipient]
+      }));
+      
+      setNewRecipient({
+        name: '',
+        email: '',
+        phone: '',
+        method: 'email',
+        role: 'worker',
+        status: 'sent'
+      });
+      setShowAddRecipient(false);
     }
   };
 
-  const generateDocument = async () => {
-    setIsGenerating(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsGenerating(false);
-    alert('Document généré avec succès');
+  const shareASTWithTeam = async () => {
+    setIsSharingAST(true);
+    
+    // Simulation d'envoi
+    for (const recipient of finalizationData.shareRecipients) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setFinalizationData(prev => ({
+        ...prev,
+        shareRecipients: prev.shareRecipients.map(r => 
+          r.id === recipient.id 
+            ? { ...r, status: 'sent', sentAt: new Date().toISOString() }
+            : r
+        )
+      }));
+    }
+    
+    setIsSharingAST(false);
+    alert(`AST partagé avec ${finalizationData.shareRecipients.length} membres de l'équipe`);
   };
 
-  const publishAST = async () => {
-    setIsPublishing(true);
+  // =================== HANDLERS DOCUMENT & LOCK ===================
+  const generateFullReport = async () => {
+    setIsGenerating(true);
     
+    // Compilation de toutes les sections remplies
+    const reportSections = [];
+    
+    if (formData.projectInfo && finalizationData.documentGeneration.includeAllFields) {
+      reportSections.push('Informations Projet');
+    }
+    if (formData.equipment?.selected?.length && finalizationData.documentGeneration.includeAllFields) {
+      reportSections.push('Équipements & EPI');
+    }
+    if (formData.hazards?.selected?.length && finalizationData.documentGeneration.includeAllFields) {
+      reportSections.push('Dangers & Contrôles');
+    }
+    if (formData.permits?.permits?.length && finalizationData.documentGeneration.includeAllFields) {
+      reportSections.push('Permis & Autorisations');
+    }
+    if (formData.validation && finalizationData.documentGeneration.includeAllFields) {
+      reportSections.push('Validation Équipe');
+    }
+    
+    // Simulation génération
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    setIsGenerating(false);
+    alert(`Rapport complet généré avec ${reportSections.length} sections`);
+  };
+
+  const toggleLock = () => {
+    if (finalizationData.lockSettings.isLocked) {
+      // Déverrouiller
+      setFinalizationData(prev => ({
+        ...prev,
+        lockSettings: {
+          ...prev.lockSettings,
+          isLocked: false,
+          lockedBy: undefined,
+          lockedAt: undefined
+        }
+      }));
+    } else {
+      // Verrouiller
+      setShowLockConfirm(true);
+    }
+  };
+
+  const confirmLock = () => {
     setFinalizationData(prev => ({
       ...prev,
-      metadata: {
-        ...prev.metadata,
-        completedAt: new Date().toISOString(),
-        totalDuration: Math.round((new Date().getTime() - new Date(prev.metadata.createdAt).getTime()) / 60000)
-      },
-      supervisorSignature: {
-        signedBy: 'Superviseur Actuel',
-        signedAt: new Date().toISOString(),
-        signature: 'Electronic Signature - ' + new Date().toISOString(),
-        title: 'Superviseur HSE'
+      lockSettings: {
+        ...prev.lockSettings,
+        isLocked: true,
+        lockedBy: 'Superviseur Actuel',
+        lockedAt: new Date().toISOString()
       }
     }));
-    
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    setIsPublishing(false);
-    alert('AST publié avec succès');
+    setShowLockConfirm(false);
   };
 
+  // =================== COMPUTED VALUES ===================
   const completionPercentage = Object.values(finalizationData.completionStatus).filter(Boolean).length / 
                                Object.values(finalizationData.completionStatus).length * 100;
 
   const consentedWorkers = finalizationData.workers.filter(w => w.hasConsented).length;
+  const approvedWorkers = finalizationData.workers.filter(w => w.approbationStatus === 'approved').length;
   const totalWorkers = finalizationData.workers.length;
   const allWorkersConsented = totalWorkers > 0 && consentedWorkers === totalWorkers;
+  const allWorkersApproved = totalWorkers > 0 && approvedWorkers === totalWorkers;
+
+  const sharedCount = finalizationData.shareRecipients.filter(r => r.status !== 'sent').length;
+  const viewedCount = finalizationData.shareRecipients.filter(r => ['viewed', 'approved', 'rejected'].includes(r.status)).length;
+  const approvedCount = finalizationData.shareRecipients.filter(r => r.status === 'approved').length;
 
   const isReadyToPublish = completionPercentage === 100 && 
-                          allWorkersConsented &&
+                          allWorkersConsented && 
+                          allWorkersApproved &&
                           (finalizationData.distribution.email.enabled || 
                            finalizationData.distribution.portal.enabled ||
                            finalizationData.distribution.archive.enabled);
-
-  const getWorkerStatusColor = (worker: Worker) => {
-    if (worker.hasConsented) return 'bg-green-100 text-green-800 border-green-200';
-    return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-  };
-
-  const getWorkerStatusText = (worker: Worker) => {
-    if (worker.hasConsented) return 'Consentement donné';
-    return 'En attente';
-  };
-
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="text-center">
-        <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full">
-          <Award className="w-8 h-8 text-green-600" />
-        </div>
-        <h2 className="text-2xl font-bold text-white mb-2">Consentement Équipe & Finalisation</h2>
-        <p className="text-gray-300">Obtenez le consentement des travailleurs et finalisez l'AST</p>
-      </div>
+    <>
+      {/* CSS Premium Step 6 */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .step6-container { padding: 0; background: #f8fafc; min-height: 100vh; }
+          .finalization-header { text-align: center; margin-bottom: 32px; padding: 32px 20px; background: linear-gradient(135deg, #059669 0%, #047857 100%); border-radius: 20px; color: white; }
+          .header-icon { width: 64px; height: 64px; margin: 0 auto 16px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+          .header-title { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+          .header-subtitle { font-size: 16px; opacity: 0.9; }
+          .premium-tabs { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border-radius: 16px; padding: 4px; margin-bottom: 24px; }
+          .tab-button { flex: 1; padding: 12px 20px; border-radius: 12px; font-weight: 600; transition: all 0.3s; text-align: center; position: relative; overflow: hidden; border: none; cursor: pointer; }
+          .tab-button.active { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
+          .tab-button:not(.active) { color: #94a3b8; background: transparent; }
+          .tab-button:not(.active):hover { background: rgba(148,163,184,0.1); color: white; }
+          .finalization-section { background: white; border: none; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+          .section-title { font-size: 20px; font-weight: 600; color: #1e293b; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+          .premium-button { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
+          .premium-button:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(59,130,246,0.3); }
+          .premium-button.success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+          .premium-button.success:hover { box-shadow: 0 8px 25px rgba(16,185,129,0.3); }
+          .premium-button.danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+          .premium-button.danger:hover { box-shadow: 0 8px 25px rgba(239,68,68,0.3); }
+          .premium-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+          .worker-card { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px; position: relative; overflow: hidden; }
+          .worker-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3b82f6, #10b981, #f59e0b); }
+          .worker-status { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid; }
+          .status-pending { background: #fef3cd; color: #92400e; border-color: #f59e0b; }
+          .status-consented { background: #d1fae5; color: #065f46; border-color: #10b981; }
+          .status-approved { background: #dbeafe; color: #1e40af; border-color: #3b82f6; }
+          .status-rejected { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
+          .consent-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-top: 12px; }
+          .signature-display { background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 12px; margin-top: 8px; font-family: monospace; font-size: 12px; color: #059669; }
+          .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 24px; }
+          .stat-card { text-align: center; padding: 20px; background: white; border-radius: 12px; border: 1px solid #e2e8f0; }
+          .stat-value { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+          .stat-label { font-size: 13px; color: #64748b; font-weight: 500; }
+          .stat-green { color: #10b981; }
+          .stat-blue { color: #3b82f6; }
+          .stat-orange { color: #f59e0b; }
+          .progress-bar { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 16px 0; }
+          .progress-fill { height: 100%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.5s ease; }
+          .lock-banner { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; padding: 16px; border-radius: 12px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+          .share-recipient { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+          .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+          .modal-content { background: white; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+          .form-field { margin-bottom: 16px; }
+          .form-label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151; }
+          .form-input { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; transition: border-color 0.3s; }
+          .form-input:focus { outline: none; border-color: #3b82f6; }
+          .form-select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
+          .form-textarea { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; min-height: 100px; resize: vertical; }
+          .checkbox-field { display: flex; align-items: center; gap: 8px; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
+          .checkbox-field:hover { border-color: #3b82f6; background: #f1f5f9; }
+          .checkbox-field.checked { border-color: #10b981; background: #ecfdf5; }
+          @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .premium-tabs { flex-direction: column; }
+            .tab-button { margin-bottom: 4px; }
+          }
+        `
+      }} />
 
-      {/* Tabs */}
-      <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-2">
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setActiveTab('workers')}
-            className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all ${
-              activeTab === 'workers'
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'text-gray-300 hover:bg-white/10'
-            }`}
-          >
-            <HardHat className="w-5 h-5 inline mr-2" />
-            Équipe Chantier
-          </button>
-          <button
-            onClick={() => setActiveTab('finalization')}
-            className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all ${
-              activeTab === 'finalization'
-                ? 'bg-green-600 text-white shadow-lg'
-                : 'text-gray-300 hover:bg-white/10'
-            }`}
-          >
-            <Award className="w-5 h-5 inline mr-2" />
-            Finalisation
-          </button>
+      <div className="step6-container">
+        {/* Header */}
+        <div className="finalization-header">
+          <div className="header-icon">
+            <Award size={32} />
+          </div>
+          <h2 className="header-title">🏆 Finalisation Premium</h2>
+          <p className="header-subtitle">Consentement équipe, partage sécurisé et rapport complet</p>
         </div>
-      </div>
 
-      {/* Workers Tab */}
-      {activeTab === 'workers' && (
-        <div className="space-y-6">
-          {/* Workers Management */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white flex items-center">
-                <Users className="w-5 h-5 text-blue-400 mr-2" />
-                Travailleurs sur le Chantier
+        {/* Lock Status Banner */}
+        {finalizationData.lockSettings.isLocked && (
+          <div className="lock-banner">
+            <Lock size={24} />
+            <div>
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '600' }}>
+                🔒 AST Verrouillé
+              </h4>
+              <p style={{ margin: 0, fontSize: '14px', opacity: 0.9 }}>
+                Verrouillé par {finalizationData.lockSettings.lockedBy} le {finalizationData.lockSettings.lockedAt ? new Date(finalizationData.lockSettings.lockedAt).toLocaleDateString('fr-CA') : ''}
+                {finalizationData.lockSettings.allowTeamView && ' • Consultation équipe autorisée'}
+              </p>
+            </div>
+            <button
+              onClick={toggleLock}
+              className="premium-button danger"
+              style={{ marginLeft: 'auto' }}
+            >
+              <Lock size={16} />
+              Déverrouiller
+            </button>
+          </div>
+        )}
+
+        {/* Premium Tabs */}
+        <div className="premium-tabs">
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button
+              onClick={() => setActiveTab('workers')}
+              className={`tab-button ${activeTab === 'workers' ? 'active' : ''}`}
+            >
+              <HardHat size={18} style={{ marginBottom: '4px' }} />
+              <div>Équipe Chantier</div>
+            </button>
+            <button
+              onClick={() => setActiveTab('sharing')}
+              className={`tab-button ${activeTab === 'sharing' ? 'active' : ''}`}
+            >
+              <Share2 size={18} style={{ marginBottom: '4px' }} />
+              <div>Partage Équipe</div>
+            </button>
+            <button
+              onClick={() => setActiveTab('finalization')}
+              className={`tab-button ${activeTab === 'finalization' ? 'active' : ''}`}
+            >
+              <Crown size={18} style={{ marginBottom: '4px' }} />
+              <div>Finalisation</div>
+            </button>
+          </div>
+        </div>
+
+        {/* ONGLET 1: ÉQUIPE CHANTIER */}
+        {activeTab === 'workers' && (
+          <div>
+            {/* Stats Travailleurs */}
+            <div className="finalization-section">
+              <h3 className="section-title">
+                <BarChart3 size={24} />
+                Statistiques Équipe
               </h3>
-              <button
-                onClick={() => setShowAddWorker(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Ajouter Travailleur
-              </button>
-            </div>
-
-            {/* Worker Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-blue-500/20 p-4 rounded-lg text-center">
-                <div className="text-2xl font-bold text-blue-400">{totalWorkers}</div>
-                <div className="text-sm text-blue-300">Total Travailleurs</div>
-              </div>
-              <div className="bg-green-500/20 p-4 rounded-lg text-center">
-                <div className="text-2xl font-bold text-green-400">{consentedWorkers}</div>
-                <div className="text-sm text-green-300">Consentement donné</div>
-              </div>
-              <div className="bg-yellow-500/20 p-4 rounded-lg text-center">
-                <div className="text-2xl font-bold text-yellow-400">{totalWorkers - consentedWorkers}</div>
-                <div className="text-sm text-yellow-300">En attente</div>
-              </div>
-            </div>
-
-            {/* Add Worker Modal */}
-            {showAddWorker && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-screen overflow-y-auto">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Ajouter Travailleur</h4>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Nom du Travailleur *
-                      </label>
-                      <input
-                        type="text"
-                        value={newWorker.name || ''}
-                        onChange={(e) => setNewWorker(prev => ({ ...prev, name: e.target.value }))}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Ex: Jean Tremblay"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Poste *
-                      </label>
-                      <select
-                        value={newWorker.position || ''}
-                        onChange={(e) => setNewWorker(prev => ({ ...prev, position: e.target.value }))}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Sélectionner un poste...</option>
-                        <option value="Opérateur">Opérateur</option>
-                        <option value="Technicien">Technicien</option>
-                        <option value="Superviseur">Superviseur</option>
-                        <option value="Ingénieur">Ingénieur</option>
-                        <option value="Maintenance">Maintenance</option>
-                        <option value="Électricien">Électricien</option>
-                        <option value="Soudeur">Soudeur</option>
-                        <option value="Aide">Aide</option>
-                        <option value="Contremaître">Contremaître</option>
-                        <option value="Agent de sécurité">Agent de sécurité</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        # Employé
-                      </label>
-                      <input
-                        type="text"
-                        value={newWorker.employeeId || ''}
-                        onChange={(e) => setNewWorker(prev => ({ ...prev, employeeId: e.target.value }))}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Ex: EMP-12345"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Entreprise
-                      </label>
-                      <select
-                        value={newWorker.company || ''}
-                        onChange={(e) => setNewWorker(prev => ({ ...prev, company: e.target.value }))}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Sélectionner une entreprise...</option>
-                        <option value="Interne">Interne</option>
-                        <option value="Entrepreneur A">Entrepreneur A</option>
-                        <option value="Entrepreneur B">Entrepreneur B</option>
-                        <option value="Sous-traitant">Sous-traitant</option>
-                        <option value="Consultant">Consultant</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex space-x-2 mt-6">
-                    <button
-                      onClick={addWorker}
-                      disabled={!newWorker.name || !newWorker.position}
-                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Ajouter
-                    </button>
-                    <button
-                      onClick={() => setShowAddWorker(false)}
-                      className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                    >
-                      Annuler
-                    </button>
-                  </div>
+              
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-value stat-blue">{totalWorkers}</div>
+                  <div className="stat-label">Total Travailleurs</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value stat-green">{consentedWorkers}</div>
+                  <div className="stat-label">Consentements</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value stat-orange">{approvedWorkers}</div>
+                  <div className="stat-label">Approbations</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">{totalWorkers > 0 ? Math.round((approvedWorkers / totalWorkers) * 100) : 0}%</div>
+                  <div className="stat-label">Taux Approbation</div>
                 </div>
               </div>
-            )}
 
-            {/* Workers List */}
-            <div className="space-y-4">
-              {finalizationData.workers.map((worker, index) => (
-                <div key={worker.id} className="bg-white/5 border border-white/20 rounded-lg p-4">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-blue-300" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-white">
-                          Travailleur {index + 1}: {worker.name}
-                        </h4>
-                        <p className="text-sm text-gray-300">
-                          {worker.position} - {worker.company}
-                        </p>
-                        {worker.employeeId && (
-                          <p className="text-xs text-gray-400">#{worker.employeeId}</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getWorkerStatusColor(worker)}`}>
-                        {getWorkerStatusText(worker)}
-                      </span>
-                      <button
-                        onClick={() => removeWorker(worker.id)}
-                        className="p-1 text-red-400 hover:bg-red-500/20 rounded"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Consent Section */}
-                  <div className="bg-white/5 border border-white/20 rounded-lg p-4">
-                    <div className="flex items-start space-x-3">
-                      <input
-                        type="checkbox"
-                        id={`consent-${worker.id}`}
-                        checked={worker.hasConsented}
-                        onChange={(e) => updateWorkerConsent(worker.id, e.target.checked)}
-                        className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 mt-1"
-                      />
-                      <div className="flex-1">
-                        <label htmlFor={`consent-${worker.id}`} className="text-sm font-medium text-white cursor-pointer">
-                          Je consens avoir lu l'AST
-                        </label>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Je consens avoir lu l'AST et accepte de suivre toutes les procédures de sécurité
-                        </p>
-                        
-                        {worker.hasConsented && worker.consentDate && worker.consentTime && (
-                          <div className="mt-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                            <div className="flex items-center space-x-4 text-sm">
-                              <div className="flex items-center space-x-1">
-                                <Calendar className="w-4 h-4 text-green-400" />
-                                <span className="text-green-300">
-                                  Date: {worker.consentDate}
-                                </span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Clock className="w-4 h-4 text-green-400" />
-                                <span className="text-green-300">
-                                  Heure: {worker.consentTime}
-                                </span>
-                              </div>
-                            </div>
-                            {worker.signature && (
-                              <div className="mt-2 flex items-center space-x-1">
-                                <PenTool className="w-4 h-4 text-green-400" />
-                                <span className="text-xs text-green-300 font-mono">
-                                  {worker.signature}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {finalizationData.workers.length === 0 && (
-              <div className="text-center py-8 text-gray-400">
-                <Users className="w-12 h-12 mx-auto mb-4 text-gray-600" />
-                <p>Aucun travailleur ajouté</p>
-              </div>
-            )}
-
-            {/* Consent Summary */}
-            {totalWorkers > 0 && (
-              <div className="mt-6 p-4 bg-white/5 border border-white/20 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium text-white">Résumé des Consentements</h4>
-                    <p className="text-sm text-gray-300">
-                      {consentedWorkers} sur {totalWorkers} travailleurs ont consenti
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    {allWorkersConsented ? (
-                      <div className="flex items-center text-green-400">
-                        <CheckCircle className="w-5 h-5 mr-1" />
-                        <span className="font-medium">Tous les travailleurs ont consenti</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center text-yellow-400">
-                        <Clock className="w-5 h-5 mr-1" />
-                        <span className="font-medium">Consentements en attente</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="mt-3">
-                  <div className="w-full bg-white/20 rounded-full h-2">
-                    <div 
-                      className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${totalWorkers > 0 ? (consentedWorkers / totalWorkers) * 100 : 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Finalization Tab */}
-      {activeTab === 'finalization' && (
-        <div className="space-y-6">
-          {/* Completion Status */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-              <Target className="w-5 h-5 text-blue-400 mr-2" />
-              État de Complétion
-            </h3>
-            
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-200">Progression</span>
-                <span className="text-sm font-medium text-gray-200">{Math.round(completionPercentage)}%</span>
-              </div>
-              <div className="w-full bg-white/20 rounded-full h-3">
+              <div className="progress-bar">
                 <div 
-                  className="bg-green-600 h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${completionPercentage}%` }}
-                ></div>
+                  className="progress-fill" 
+                  style={{ width: `${totalWorkers > 0 ? (approvedWorkers / totalWorkers) * 100 : 0}%` }}
+                />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {Object.entries(finalizationData.completionStatus).map(([section, completed]) => (
-                <div key={section} className={`p-3 rounded-lg border ${completed ? 'border-green-200/30 bg-green-500/20' : 'border-yellow-200/30 bg-yellow-500/20'}`}>
-                  <div className="flex items-center space-x-2">
-                    {completed ? (
-                      <CheckCircle className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <AlertTriangle className="w-4 h-4 text-yellow-400" />
-                    )}
-                    <span className={`text-sm font-medium ${completed ? 'text-green-300' : 'text-yellow-300'}`}>
-                      {section.charAt(0).toUpperCase() + section.slice(1)}
-                    </span>
+            {/* Gestion Travailleurs */}
+            <div className="finalization-section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 className="section-title">
+                  <Users size={24} />
+                  Travailleurs sur le Chantier
+                </h3>
+                <button
+                  onClick={() => setShowAddWorker(true)}
+                  className="premium-button"
+                  disabled={finalizationData.lockSettings.isLocked}
+                >
+                  <UserPlus size={18} />
+                  Ajouter Travailleur
+                </button>
+              </div>
+
+              {/* Liste Travailleurs */}
+              <div>
+                {finalizationData.workers.map((worker, index) => (
+                  <div key={worker.id} className="worker-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '48px',
+                          height: '48px',
+                          background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: '600',
+                          fontSize: '16px'
+                        }}>
+                          {worker.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </div>
+                        <div>
+                          <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>
+                            {worker.name}
+                          </h4>
+                          <p style={{ margin: '0 0 2px 0', fontSize: '14px', color: '#64748b' }}>
+                            {worker.position} • {worker.company}
+                          </p>
+                          {worker.employeeId && (
+                            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+                              #{worker.employeeId}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className={`worker-status ${
+                          worker.approbationStatus === 'approved' ? 'status-approved' :
+                          worker.approbationStatus === 'rejected' ? 'status-rejected' :
+                          worker.hasConsented ? 'status-consented' : 'status-pending'
+                        }`}>
+                          {worker.approbationStatus === 'approved' ? '✅ Approuvé' :
+                           worker.approbationStatus === 'rejected' ? '❌ Rejeté' :
+                           worker.hasConsented ? '📋 Consenti' : '⏳ En attente'}
+                        </span>
+                        <button
+                          onClick={() => setFinalizationData(prev => ({
+                            ...prev,
+                            workers: prev.workers.filter(w => w.id !== worker.id)
+                          }))}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            padding: '4px'
+                          }}
+                          disabled={finalizationData.lockSettings.isLocked}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Section Consentement */}
+                    <div className="consent-section">
+                      <div 
+                        className={`checkbox-field ${worker.hasConsented ? 'checked' : ''}`}
+                        onClick={() => !finalizationData.lockSettings.isLocked && updateWorkerConsent(worker.id, !worker.hasConsented)}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={worker.hasConsented}
+                          onChange={() => {}}
+                          disabled={finalizationData.lockSettings.isLocked}
+                          style={{ width: '18px', height: '18px' }}
+                        />
+                        <div>
+                          <div style={{ fontWeight: '600', color: '#1e293b' }}>
+                            📋 Je consens avoir lu l'AST
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                            Je consens avoir lu l'Analyse Sécuritaire de Tâches et accepte de suivre toutes les procédures de sécurité
+                          </div>
+                        </div>
+                      </div>
+
+                      {worker.hasConsented && (
+                        <div className="signature-display">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                            <CheckCircle size={16} />
+                            <strong>Consentement enregistré automatiquement</strong>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px', fontSize: '11px' }}>
+                            <div>📅 Date: {worker.consentDate}</div>
+                            <div>🕐 Heure: {worker.consentTime}</div>
+                            <div>⏱️ Consultation: {worker.consultationTime || 0}min</div>
+                          </div>
+                          <div style={{ marginTop: '8px', padding: '8px', background: '#f0fdf4', borderRadius: '4px' }}>
+                            🖊️ {worker.signature}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Section Approbation */}
+                      {worker.hasConsented && (
+                        <div style={{ marginTop: '16px', padding: '12px', background: '#f8fafc', borderRadius: '8px' }}>
+                          <h5 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>
+                            🎯 Approbation AST
+                          </h5>
+                          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                            <button
+                              onClick={() => updateWorkerApprobation(worker.id, 'approved')}
+                              className="premium-button success"
+                              style={{ padding: '6px 12px', fontSize: '12px' }}
+                              disabled={finalizationData.lockSettings.isLocked}
+                            >
+                              <CheckCircle size={14} />
+                              Approuver
+                            </button>
+                            <button
+                              onClick={() => updateWorkerApprobation(worker.id, 'rejected', 'Modifications requises')}
+                              className="premium-button danger"
+                              style={{ padding: '6px 12px', fontSize: '12px' }}
+                              disabled={finalizationData.lockSettings.isLocked}
+                            >
+                              <X size={14} />
+                              Rejeter
+                            </button>
+                          </div>
+                          {worker.approbationComments && (
+                            <div style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic' }}>
+                              💬 {worker.approbationComments}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                ))}
+
+                {finalizationData.workers.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                    <Users size={48} style={{ margin: '0 auto 16px', color: '#d1d5db' }} />
+                    <p>Aucun travailleur ajouté pour le moment</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* ONGLET 2: PARTAGE ÉQUIPE */}
+        {activeTab === 'sharing' && (
+          <div>
+            {/* Stats Partage */}
+            <div className="finalization-section">
+              <h3 className="section-title">
+                <Share2 size={24} />
+                Statistiques Partage AST
+              </h3>
+              
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-value stat-blue">{finalizationData.shareRecipients.length}</div>
+                  <div className="stat-label">Destinataires</div>
                 </div>
-              ))}
+                <div className="stat-card">
+                  <div className="stat-value stat-green">{viewedCount}</div>
+                  <div className="stat-label">Consultations</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value stat-orange">{approvedCount}</div>
+                  <div className="stat-label">Approbations</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">{finalizationData.shareRecipients.length > 0 ? Math.round((approvedCount / finalizationData.shareRecipients.length) * 100) : 0}%</div>
+                  <div className="stat-label">Taux Réponse</div>
+                </div>
+              </div>
             </div>
 
-            {completionPercentage === 100 && allWorkersConsented && (
-              <div className="mt-4 p-3 bg-green-500/20 border border-green-200/30 rounded-lg flex items-center">
-                <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
-                <span className="text-green-300 font-medium">Toutes les sections et consentements sont complets</span>
-              </div>
-            )}
-          </div>
-
-          {/* Share Link */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-              <Link className="w-5 h-5 text-blue-400 mr-2" />
-              Partage
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
+            {/* Lien de Partage Sécurisé */}
+            <div className="finalization-section">
+              <h3 className="section-title">
+                <Link size={24} />
+                🔗 Lien de Partage Sécurisé AST
+              </h3>
+              
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                 <input
                   type="text"
                   value={shareLink}
                   readOnly
-                  className="flex-1 p-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-gray-400"
+                  className="form-input"
+                  style={{ fontSize: '12px', fontFamily: 'monospace' }}
                 />
                 <button
-                  onClick={copyLinkToClipboard}
-                  className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareLink);
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                  }}
+                  className="premium-button"
                 >
-                  {copySuccess ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copySuccess ? <Check size={16} /> : <Copy size={16} />}
                 </button>
               </div>
-              
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button className="premium-button">
+                  <QrCode size={16} />
+                  📱 Code QR
+                </button>
+                <button className="premium-button">
+                  <Mail size={16} />
+                  📧 Email Équipe
+                </button>
+                <button className="premium-button">
+                  <Smartphone size={16} />
+                  📱 SMS Équipe
+                </button>
+              </div>
+
               {copySuccess && (
-                <div className="text-sm text-green-400 flex items-center">
-                  <Check className="w-4 h-4 mr-1" />
+                <div style={{ marginTop: '8px', color: '#10b981', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Check size={16} />
                   Lien copié dans le presse-papier
                 </div>
               )}
+            </div>
 
-              <button
-                onClick={() => {/* Generate QR code */}}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm flex items-center"
-              >
-                <QrCode className="w-4 h-4 mr-2" />
-                Générer Code QR
-              </button>
+            {/* Destinataires du Partage */}
+            <div className="finalization-section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 className="section-title">
+                  <Users size={24} />
+                  👥 Destinataires du Partage
+                </h3>
+                <button
+                  onClick={() => setShowAddRecipient(true)}
+                  className="premium-button"
+                >
+                  <Plus size={18} />
+                  Ajouter Destinataire
+                </button>
+              </div>
+
+              {finalizationData.shareRecipients.map(recipient => (
+                <div key={recipient.id} className="share-recipient">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}>
+                      {recipient.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: '600', fontSize: '14px' }}>{recipient.name}</div>
+                      <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        {recipient.email} • {recipient.role} • {recipient.method}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className={`worker-status ${
+                      recipient.status === 'approved' ? 'status-approved' :
+                      recipient.status === 'rejected' ? 'status-rejected' :
+                      recipient.status === 'viewed' ? 'status-consented' : 'status-pending'
+                    }`}>
+                      {recipient.status === 'approved' ? '✅ Approuvé' :
+                       recipient.status === 'rejected' ? '❌ Rejeté' :
+                       recipient.status === 'viewed' ? '👁️ Consulté' : '📨 Envoyé'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              {finalizationData.shareRecipients.length > 0 && (
+                <button
+                  onClick={shareASTWithTeam}
+                  className="premium-button success"
+                  style={{ width: '100%', marginTop: '16px' }}
+                  disabled={isSharingAST}
+                >
+                  {isSharingAST ? (
+                    <>
+                      <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                      Partage AST en cours...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={18} />
+                      📡 Partager AST avec Équipe ({finalizationData.shareRecipients.length})
+                    </>
+                  )}
+                </button>
+              )}
+
+              {finalizationData.shareRecipients.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <Share2 size={48} style={{ margin: '0 auto 16px', color: '#d1d5db' }} />
+                  <p>Aucun destinataire ajouté pour le partage</p>
+                </div>
+              )}
             </div>
           </div>
+        )}
 
-          {/* Final Comments */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-              <FileText className="w-5 h-5 text-blue-400 mr-2" />
-              Commentaires finaux
-            </h3>
-            
-            <textarea
-              value={finalizationData.finalComments}
-              onChange={(e) => setFinalizationData(prev => ({ ...prev, finalComments: e.target.value }))}
-              rows={4}
-              className="w-full p-3 bg-white/10 border border-white/30 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400"
-              placeholder="Ajoutez vos commentaires finaux sur cette AST..."
-            />
-          </div>
-
-          {/* Final Actions */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
-            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-              <button
-                onClick={publishAST}
-                disabled={!isReadyToPublish || isPublishing}
-                className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center"
-              >
-                {isPublishing ? (
-                  <Clock className="w-5 h-5 mr-2 animate-spin" />
-                ) : (
-                  <Award className="w-5 h-5 mr-2" />
-                )}
-                {isPublishing ? 'Publication...' : 'Finaliser l\'AST'}
-              </button>
+        {/* ONGLET 3: FINALISATION */}
+        {activeTab === 'finalization' && (
+          <div>
+            {/* État de Complétion Globale */}
+            <div className="finalization-section">
+              <h3 className="section-title">
+                <Target size={24} />
+                🎯 État de Complétion Globale
+              </h3>
               
-              <button 
-                onClick={generateDocument}
+              <div className="progress-bar">
+                <div className="progress-fill" style={{ width: `${completionPercentage}%` }} />
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginTop: '16px' }}>
+                {Object.entries(finalizationData.completionStatus).map(([section, completed]) => (
+                  <div key={section} style={{
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: `2px solid ${completed ? '#10b981' : '#f59e0b'}`,
+                    background: completed ? '#ecfdf5' : '#fef3cd',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    {completed ? <CheckCircle size={16} color="#10b981" /> : <Clock size={16} color="#f59e0b" />}
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: completed ? '#059669' : '#92400e' }}>
+                      {section.charAt(0).toUpperCase() + section.slice(1)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Génération Rapport Complet */}
+            <div className="finalization-section">
+              <h3 className="section-title">
+                <FileText size={24} />
+                📄 Génération Rapport Complet AST
+              </h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                <div className="checkbox-field">
+                  <input 
+                    type="checkbox" 
+                    checked={finalizationData.documentGeneration.includeAllFields}
+                    onChange={(e) => setFinalizationData(prev => ({
+                      ...prev,
+                      documentGeneration: { ...prev.documentGeneration, includeAllFields: e.target.checked }
+                    }))}
+                  />
+                  <span>📄 Inclure toutes les sections</span>
+                </div>
+                <div className="checkbox-field">
+                  <input 
+                    type="checkbox" 
+                    checked={finalizationData.documentGeneration.onlyFilledFields}
+                    onChange={(e) => setFinalizationData(prev => ({
+                      ...prev,
+                      documentGeneration: { ...prev.documentGeneration, onlyFilledFields: e.target.checked }
+                    }))}
+                  />
+                  <span>✅ Seulement champs remplis</span>
+                </div>
+                <div className="checkbox-field">
+                  <input 
+                    type="checkbox" 
+                    checked={finalizationData.documentGeneration.includePhotos}
+                    onChange={(e) => setFinalizationData(prev => ({
+                      ...prev,
+                      documentGeneration: { ...prev.documentGeneration, includePhotos: e.target.checked }
+                    }))}
+                  />
+                  <span>📸 Inclure photos</span>
+                </div>
+                <div className="checkbox-field">
+                  <input 
+                    type="checkbox" 
+                    checked={finalizationData.documentGeneration.includeSignatures}
+                    onChange={(e) => setFinalizationData(prev => ({
+                      ...prev,
+                      documentGeneration: { ...prev.documentGeneration, includeSignatures: e.target.checked }
+                    }))}
+                  />
+                  <span>✍️ Inclure signatures</span>
+                </div>
+                <div className="checkbox-field">
+                  <input 
+                    type="checkbox" 
+                    checked={finalizationData.documentGeneration.includeQRCode}
+                    onChange={(e) => setFinalizationData(prev => ({
+                      ...prev,
+                      documentGeneration: { ...prev.documentGeneration, includeQRCode: e.target.checked }
+                    }))}
+                  />
+                  <span>📱 Inclure Code QR</span>
+                </div>
+                <div className="checkbox-field">
+                  <input 
+                    type="checkbox" 
+                    checked={finalizationData.documentGeneration.branding}
+                    onChange={(e) => setFinalizationData(prev => ({
+                      ...prev,
+                      documentGeneration: { ...prev.documentGeneration, branding: e.target.checked }
+                    }))}
+                  />
+                  <span>🏢 Branding entreprise</span>
+                </div>
+              </div>
+
+              <button
+                onClick={generateFullReport}
+                className="premium-button success"
+                style={{ width: '100%' }}
                 disabled={isGenerating}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center disabled:opacity-50"
               >
                 {isGenerating ? (
-                  <Clock className="w-4 h-4 mr-2 animate-spin" />
+                  <>
+                    <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                    Génération du rapport complet...
+                  </>
                 ) : (
-                  <Download className="w-4 h-4 mr-2" />
+                  <>
+                    <Download size={18} />
+                    📊 Générer Rapport Complet AST
+                  </>
                 )}
-                {isGenerating ? 'Génération...' : 'Télécharger PDF'}
-              </button>
-              
-              <button className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center">
-                <Save className="w-5 h-5 mr-2" />
-                Sauvegarder
               </button>
             </div>
 
-            {!isReadyToPublish && (
-              <div className="mt-4 p-3 bg-yellow-500/20 border border-yellow-200/30 rounded-lg flex items-center">
-                <AlertTriangle className="w-5 h-5 text-yellow-400 mr-2" />
-                <span className="text-yellow-300 text-sm">
-                  {!allWorkersConsented 
-                    ? 'Tous les travailleurs doivent consentir avant la finalisation.'
-                    : 'Complétez toutes les sections pour finaliser l\'AST.'
-                  }
-                </span>
+            {/* Commentaires Finaux */}
+            <div className="finalization-section">
+              <h3 className="section-title">
+                <MessageSquare size={24} />
+                💬 Commentaires Finaux
+              </h3>
+              
+              <textarea
+                value={finalizationData.finalComments}
+                onChange={(e) => setFinalizationData(prev => ({ ...prev, finalComments: e.target.value }))}
+                className="form-textarea"
+                placeholder="Ajoutez vos commentaires finaux sur cette AST..."
+                rows={4}
+                disabled={finalizationData.lockSettings.isLocked}
+              />
+            </div>
+
+            {/* Système de Verrouillage Premium */}
+            <div className="finalization-section">
+              <h3 className="section-title">
+                <Lock size={24} />
+                🔐 Système de Verrouillage Premium
+              </h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                <div className="checkbox-field">
+                  <input 
+                    type="checkbox" 
+                    checked={finalizationData.lockSettings.allowTeamView}
+                    onChange={(e) => setFinalizationData(prev => ({
+                      ...prev,
+                      lockSettings: { ...prev.lockSettings, allowTeamView: e.target.checked }
+                    }))}
+                  />
+                  <span>👁️ Permettre consultation équipe</span>
+                </div>
+                <div className="checkbox-field">
+                  <input 
+                    type="checkbox" 
+                    checked={finalizationData.lockSettings.requireApproval}
+                    onChange={(e) => setFinalizationData(prev => ({
+                      ...prev,
+                      lockSettings: { ...prev.lockSettings, requireApproval: e.target.checked }
+                    }))}
+                  />
+                  <span>✅ Requérir approbation</span>
+                </div>
+                <div className="checkbox-field">
+                  <input 
+                    type="checkbox" 
+                    checked={finalizationData.lockSettings.autoLockAfterApproval}
+                    onChange={(e) => setFinalizationData(prev => ({
+                      ...prev,
+                      lockSettings: { ...prev.lockSettings, autoLockAfterApproval: e.target.checked }
+                    }))}
+                  />
+                  <span>🔐 Verrouillage auto après approbation</span>
+                </div>
               </div>
-            )}
+
+              <button
+                onClick={toggleLock}
+                className={`premium-button ${finalizationData.lockSettings.isLocked ? 'danger' : 'success'}`}
+                style={{ width: '100%' }}
+                disabled={!isReadyToPublish && !finalizationData.lockSettings.isLocked}
+              >
+                {finalizationData.lockSettings.isLocked ? (
+                  <>
+                    <Lock size={18} />
+                    🔓 Déverrouiller AST
+                  </>
+                ) : (
+                  <>
+                    <Shield size={18} />
+                    🔒 Verrouiller & Finaliser AST
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Actions Finales */}
+            <div className="finalization-section">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                <button className="premium-button">
+                  <Save size={18} />
+                  💾 Sauvegarder
+                </button>
+                <button className="premium-button">
+                  <Printer size={18} />
+                  🖨️ Imprimer
+                </button>
+                <button className="premium-button">
+                  <Archive size={18} />
+                  📂 Archiver
+                </button>
+                <button 
+                  className="premium-button success"
+                  disabled={!isReadyToPublish}
+                >
+                  <Sparkles size={18} />
+                  ✨ Publier Final
+                </button>
+              </div>
+
+              {!isReadyToPublish && (
+                <div style={{
+                  marginTop: '16px',
+                  padding: '12px',
+                  background: '#fef3cd',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <AlertTriangle size={16} color="#f59e0b" />
+                  <span style={{ fontSize: '14px', color: '#92400e' }}>
+                    ⚠️ Complétez toutes les sections et obtenez tous les consentements avant la publication finale.
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {/* MODALS */}
+        
+        {/* Modal Ajout Travailleur */}
+        {showAddWorker && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h4 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600' }}>
+                👷 Ajouter Travailleur
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                <div className="form-field">
+                  <label className="form-label">Nom complet *</label>
+                  <input
+                    type="text"
+                    value={newWorker.name || ''}
+                    onChange={(e) => setNewWorker(prev => ({ ...prev, name: e.target.value }))}
+                    className="form-input"
+                    placeholder="Ex: Jean Tremblay"
+                  />
+                </div>
+                
+                <div className="form-field">
+                  <label className="form-label">Poste *</label>
+                  <select
+                    value={newWorker.position || ''}
+                    onChange={(e) => setNewWorker(prev => ({ ...prev, position: e.target.value }))}
+                    className="form-select"
+                  >
+                    <option value="">Sélectionner...</option>
+                    <option value="Opérateur">Opérateur</option>
+                    <option value="Technicien">Technicien</option>
+                    <option value="Superviseur">Superviseur</option>
+                    <option value="Ingénieur">Ingénieur</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Électricien">Électricien</option>
+                    <option value="Soudeur">Soudeur</option>
+                    <option value="Aide">Aide</option>
+                  </select>
+                </div>
+
+                <div className="form-field">
+                  <label className="form-label"># Employé</label>
+                  <input
+                    type="text"
+                    value={newWorker.employeeId || ''}
+                    onChange={(e) => setNewWorker(prev => ({ ...prev, employeeId: e.target.value }))}
+                    className="form-input"
+                    placeholder="Ex: EMP-12345"
+                  />
+                </div>
+                
+                <div className="form-field">
+                  <label className="form-label">Entreprise</label>
+                  <select
+                    value={newWorker.company || ''}
+                    onChange={(e) => setNewWorker(prev => ({ ...prev, company: e.target.value }))}
+                    className="form-select"
+                  >
+                    <option value="">Sélectionner...</option>
+                    <option value="Interne">Interne</option>
+                    <option value="Entrepreneur A">Entrepreneur A</option>
+                    <option value="Entrepreneur B">Entrepreneur B</option>
+                    <option value="Sous-traitant">Sous-traitant</option>
+                  </select>
+                </div>
+
+                <div className="form-field" style={{ gridColumn: 'span 2' }}>
+                  <label className="form-label">Email</label>
+                  <input
+                    type="email"
+                    value={newWorker.email || ''}
+                    onChange={(e) => setNewWorker(prev => ({ ...prev, email: e.target.value }))}
+                    className="form-input"
+                    placeholder="jean.tremblay@entreprise.com"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+                <button
+                  onClick={addWorker}
+                  className="premium-button success"
+                  style={{ flex: 1 }}
+                  disabled={!newWorker.name || !newWorker.position}
+                >
+                  ✅ Ajouter
+                </button>
+                <button
+                  onClick={() => setShowAddWorker(false)}
+                  className="premium-button"
+                  style={{ flex: 1, background: '#6b7280' }}
+                >
+                  ❌ Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Ajout Destinataire */}
+        {showAddRecipient && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h4 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600' }}>
+                📧 Ajouter Destinataire Partage
+              </h4>
+              
+              <div className="form-field">
+                <label className="form-label">Nom *</label>
+                <input
+                  type="text"
+                  value={newRecipient.name || ''}
+                  onChange={(e) => setNewRecipient(prev => ({ ...prev, name: e.target.value }))}
+                  className="form-input"
+                  placeholder="Nom du destinataire"
+                />
+              </div>
+              
+              <div className="form-field">
+                <label className="form-label">Email *</label>
+                <input
+                  type="email"
+                  value={newRecipient.email || ''}
+                  onChange={(e) => setNewRecipient(prev => ({ ...prev, email: e.target.value }))}
+                  className="form-input"
+                  placeholder="email@entreprise.com"
+                />
+              </div>
+
+              <div className="form-field">
+                <label className="form-label">Téléphone (optionnel)</label>
+                <input
+                  type="tel"
+                  value={newRecipient.phone || ''}
+                  onChange={(e) => setNewRecipient(prev => ({ ...prev, phone: e.target.value }))}
+                  className="form-input"
+                  placeholder="(514) 123-4567"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-field">
+                  <label className="form-label">Rôle</label>
+                  <select
+                    value={newRecipient.role || 'worker'}
+                    onChange={(e) => setNewRecipient(prev => ({ ...prev, role: e.target.value as any }))}
+                    className="form-select"
+                  >
+                    <option value="worker">👷 Travailleur</option>
+                    <option value="supervisor">👨‍💼 Superviseur</option>
+                    <option value="manager">🎖️ Gestionnaire</option>
+                  </select>
+                </div>
+                
+                <div className="form-field">
+                  <label className="form-label">Méthode d'envoi</label>
+                  <select
+                    value={newRecipient.method || 'email'}
+                    onChange={(e) => setNewRecipient(prev => ({ ...prev, method: e.target.value as any }))}
+                    className="form-select"
+                  >
+                    <option value="email">📧 Email seulement</option>
+                    <option value="sms">📱 SMS seulement</option>
+                    <option value="both">📧📱 Email + SMS</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+                <button
+                  onClick={addRecipient}
+                  className="premium-button success"
+                  style={{ flex: 1 }}
+                  disabled={!newRecipient.name || !newRecipient.email}
+                >
+                  ✅ Ajouter
+                </button>
+                <button
+                  onClick={() => setShowAddRecipient(false)}
+                  className="premium-button"
+                  style={{ flex: 1, background: '#6b7280' }}
+                >
+                  ❌ Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Confirmation Verrouillage */}
+        {showLockConfirm && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h4 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600', color: '#dc2626' }}>
+                🔒 Confirmer le Verrouillage
+              </h4>
+              
+              <div style={{ 
+                background: '#fee2e2', 
+                border: '1px solid #fecaca', 
+                borderRadius: '8px', 
+                padding: '16px', 
+                marginBottom: '20px' 
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <AlertTriangle size={20} color="#dc2626" />
+                  <span style={{ fontWeight: '600', color: '#dc2626' }}>Attention</span>
+                </div>
+                <p style={{ margin: 0, fontSize: '14px', color: '#991b1b' }}>
+                  Une fois verrouillé, l'AST ne pourra plus être modifié. Assurez-vous que toutes les informations sont correctes et complètes.
+                </p>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <h5 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '600' }}>
+                  ✅ Vérifications finales:
+                </h5>
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {completionPercentage === 100 ? <CheckCircle size={16} color="#10b981" /> : <X size={16} color="#ef4444" />}
+                    <span style={{ fontSize: '14px' }}>Toutes les sections complétées ({Math.round(completionPercentage)}%)</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {allWorkersConsented ? <CheckCircle size={16} color="#10b981" /> : <X size={16} color="#ef4444" />}
+                    <span style={{ fontSize: '14px' }}>Tous les travailleurs ont consenti ({consentedWorkers}/{totalWorkers})</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {allWorkersApproved ? <CheckCircle size={16} color="#10b981" /> : <X size={16} color="#ef4444" />}
+                    <span style={{ fontSize: '14px' }}>Tous les travailleurs ont approuvé ({approvedWorkers}/{totalWorkers})</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={confirmLock}
+                  className="premium-button danger"
+                  style={{ flex: 1 }}
+                  disabled={!isReadyToPublish}
+                >
+                  🔒 Confirmer Verrouillage
+                </button>
+                <button
+                  onClick={() => setShowLockConfirm(false)}
+                  className="premium-button"
+                  style={{ flex: 1, background: '#6b7280' }}
+                >
+                  ❌ Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CSS Animation pour spin */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `
+        }} />
+      </div>
+    </>
   );
 }
