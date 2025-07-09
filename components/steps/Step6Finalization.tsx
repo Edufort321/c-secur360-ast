@@ -58,6 +58,7 @@ interface FinalizationStepProps {
   onDataChange: (section: string, data: FinalizationData) => void;
   language: string;
   tenant: string;
+  errors?: any; // ← AJOUT DE LA PROP ERRORS OPTIONNELLE
 }
 
 // =================== TYPES DE SÉCURITÉ ===================
@@ -215,13 +216,13 @@ Lien d'accès: ${shareLink}`);
       alert('❌ Erreur lors de la copie du lien');
     }
   };
-  // =================== FONCTION D'IMPRESSION PROFESSIONNELLE ===================
+  // =================== FONCTION D'IMPRESSION COMPLÈTE AVEC LOGO ===================
   const printAST = () => {
-    console.log('🖨️ Génération du rapport AST professionnel...');
+    console.log('🖨️ Génération du rapport AST professionnel complet...');
     setIsLoading(true);
     
     setTimeout(() => {
-      const printContent = generateProfessionalAST();
+      const printContent = generateCompleteAST();
       const printWindow = window.open('', '_blank', 'width=1200,height=800');
       
       if (printWindow) {
@@ -234,7 +235,7 @@ Lien d'accès: ${shareLink}`);
           setIsLoading(false);
         };
         
-        console.log('✅ Rapport AST généré avec succès');
+        console.log('✅ Rapport AST complet généré avec succès');
       } else {
         alert('❌ Erreur : Impossible d\'ouvrir la fenêtre d\'impression. Vérifiez les paramètres de pop-up.');
         setIsLoading(false);
@@ -242,15 +243,19 @@ Lien d'accès: ${shareLink}`);
     }, 500);
   };
 
-  const generateProfessionalAST = () => {
+  const generateCompleteAST = () => {
     const currentDate = new Date().toLocaleDateString('fr-CA');
     const currentTime = new Date().toLocaleTimeString('fr-CA');
-    const astNumber = `AST-${Date.now().toString().slice(-6)}`;
+    const astNumber = formData?.astNumber || `AST-${Date.now().toString().slice(-6)}`;
     
     // Calcul des statistiques
     const totalWorkers = finalizationData.workers.length;
     const consentedWorkers = finalizationData.workers.filter(w => w.hasConsented).length;
     const approvedWorkers = finalizationData.workers.filter(w => w.approbationStatus === 'approved').length;
+    const totalHazards = formData.hazards?.identifiedHazards?.length || 0;
+    const totalEquipment = formData.equipment?.selectedEquipment?.length || 0;
+    const totalPermits = formData.permits?.requiredPermits?.length || 0;
+    const lockoutPoints = formData.projectInfo?.lockoutPoints?.length || 0;
     
     return `
 <!DOCTYPE html>
@@ -258,22 +263,23 @@ Lien d'accès: ${shareLink}`);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rapport AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}</title>
+    <title>Rapport AST Complet - ${formData.projectInfo?.client || 'Client'}</title>
     <style>
         @media print {
             @page { margin: 15mm; size: A4; }
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .page-break { page-break-before: always; }
+            .no-print { display: none; }
         }
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: 'Arial', sans-serif;
-            line-height: 1.3;
+            line-height: 1.4;
             color: #1f2937;
             background: white;
-            font-size: 10px;
+            font-size: 11px;
         }
         
         .header {
@@ -283,6 +289,34 @@ Lien d'accès: ${shareLink}`);
             text-align: center;
             margin-bottom: 20px;
             border-radius: 8px;
+            position: relative;
+        }
+        
+        .logo-container {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 60px;
+            background: #000;
+            border: 2px solid #f59e0b;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo-container img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+        
+        .logo-fallback {
+            color: #f59e0b;
+            font-size: 18px;
+            font-weight: bold;
         }
         
         .header h1 {
@@ -329,11 +363,14 @@ Lien d'accès: ${shareLink}`);
         .info-label {
             font-weight: 600;
             color: #4b5563;
+            min-width: 120px;
         }
         
         .info-value {
             color: #1f2937;
             font-weight: 500;
+            flex: 1;
+            text-align: right;
         }
         
         .section {
@@ -359,6 +396,24 @@ Lien d'accès: ${shareLink}`);
             padding: 15px;
         }
         
+        .subsection {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .subsection-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #374151;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
         .hazard-item, .equipment-item, .permit-item {
             background: white;
             border: 1px solid #e5e7eb;
@@ -367,9 +422,38 @@ Lien d'accès: ${shareLink}`);
             margin-bottom: 10px;
         }
         
-        .hazard-high { border-left: 4px solid #dc2626; }
-        .hazard-medium { border-left: 4px solid #f59e0b; }
-        .hazard-low { border-left: 4px solid #10b981; }
+        .hazard-high { border-left: 4px solid #dc2626; background: #fef2f2; }
+        .hazard-medium { border-left: 4px solid #f59e0b; background: #fffbeb; }
+        .hazard-low { border-left: 4px solid #10b981; background: #f0fdf4; }
+        
+        .lockout-point {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-left: 4px solid #dc2626;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .procedures-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .procedure-item {
+            font-size: 10px;
+            padding: 4px 8px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 4px;
+        }
+        
+        .procedure-completed {
+            background: #dcfce7;
+            border-color: #16a34a;
+        }
         
         .workers-table {
             width: 100%;
@@ -424,20 +508,6 @@ Lien d'accès: ${shareLink}`);
             font-weight: 600;
         }
         
-        .photos-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-        
-        .photo-item {
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            padding: 10px;
-            text-align: center;
-        }
-        
         .badge {
             display: inline-block;
             padding: 2px 8px;
@@ -449,140 +519,270 @@ Lien d'accès: ${shareLink}`);
         .badge-success { background: #dcfce7; color: #166534; }
         .badge-warning { background: #fef3c7; color: #92400e; }
         .badge-danger { background: #fee2e2; color: #991b1b; }
+        
+        .stats-summary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+        }
+        
+        .stat-number {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            font-size: 10px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
-    <!-- EN-TÊTE PROFESSIONNEL -->
+    <!-- EN-TÊTE AVEC LOGO -->
     <div class="header">
+        <div class="logo-container">
+            <img src="/c-secur360-logo.png" alt="C-Secur360" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+            <div class="logo-fallback" style="display: none;">C🛡️</div>
+        </div>
         <h1>🛡️ ANALYSE SÉCURITAIRE DE TRAVAIL (AST)</h1>
-        <div class="subtitle">Rapport Officiel - ${tenant} | N° ${astNumber}</div>
+        <div class="subtitle">Rapport Officiel Complet - ${tenant} | N° ${astNumber}</div>
+    </div>
+
+    <!-- RÉSUMÉ STATISTIQUES -->
+    <div class="stats-summary">
+        <h3 style="margin-bottom: 10px; font-size: 14px;">📊 RÉSUMÉ EXÉCUTIF</h3>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">${totalHazards}</div>
+                <div class="stat-label">⚠️ Dangers</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${totalEquipment}</div>
+                <div class="stat-label">🔧 Équipements</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${totalPermits}</div>
+                <div class="stat-label">📄 Permis</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${lockoutPoints}</div>
+                <div class="stat-label">🔒 Points LOTO</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${totalWorkers}</div>
+                <div class="stat-label">👷 Travailleurs</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${consentedWorkers}/${totalWorkers}</div>
+                <div class="stat-label">✅ Consentements</div>
+            </div>
+        </div>
     </div>
 
     <!-- INFORMATIONS GÉNÉRALES -->
     <div class="info-grid">
         <div class="info-box">
-            <h3>📋 INFORMATIONS DU PROJET</h3>
+            <h3>🏢 INFORMATIONS CLIENT & PROJET</h3>
             <div class="info-row">
-                <span class="info-label">Nom du projet:</span>
-                <span class="info-value">${formData.projectInfo?.projectName || 'Non spécifié'}</span>
+                <span class="info-label">Client:</span>
+                <span class="info-value">${formData.projectInfo?.client || 'Non spécifié'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Projet #:</span>
+                <span class="info-value">${formData.projectInfo?.projectNumber || 'Non spécifié'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">AST Client #:</span>
+                <span class="info-value">${formData.projectInfo?.astClientNumber || 'N/A'}</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Lieu:</span>
-                <span class="info-value">${formData.projectInfo?.location || 'Non spécifié'}</span>
+                <span class="info-value">${formData.projectInfo?.workLocation || 'Non spécifié'}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Date de début:</span>
-                <span class="info-value">${formData.projectInfo?.startDate || 'Non spécifiée'}</span>
+                <span class="info-label">Date/Heure:</span>
+                <span class="info-value">${formData.projectInfo?.date || currentDate} ${formData.projectInfo?.time || currentTime}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Responsable:</span>
-                <span class="info-value">${formData.projectInfo?.projectManager || 'Non spécifié'}</span>
+                <span class="info-label">Industrie:</span>
+                <span class="info-value">${getIndustryLabel(formData.projectInfo?.industry)}</span>
             </div>
         </div>
         
         <div class="info-box">
-            <h3>📊 STATISTIQUES DE VALIDATION</h3>
+            <h3>👥 ÉQUIPE & CONTACTS</h3>
             <div class="info-row">
-                <span class="info-label">Date génération:</span>
-                <span class="info-value">${currentDate} à ${currentTime}</span>
+                <span class="info-label">Nb Travailleurs:</span>
+                <span class="info-value">${formData.projectInfo?.workerCount || 'Non spécifié'}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Travailleurs total:</span>
-                <span class="info-value">${totalWorkers}</span>
+                <span class="info-label">Durée estimée:</span>
+                <span class="info-value">${formData.projectInfo?.estimatedDuration || 'Non spécifiée'}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Consentements:</span>
-                <span class="info-value">${consentedWorkers}/${totalWorkers}</span>
+                <span class="info-label">Contact client:</span>
+                <span class="info-value">${formData.projectInfo?.clientRepresentative || 'Non spécifié'}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Approbations:</span>
-                <span class="info-value">${approvedWorkers}/${totalWorkers}</span>
+                <span class="info-label">Tél. client:</span>
+                <span class="info-value">${formData.projectInfo?.clientPhone || 'Non spécifié'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Urgence:</span>
+                <span class="info-value">${formData.projectInfo?.emergencyContact || 'Non spécifié'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Tél. urgence:</span>
+                <span class="info-value">${formData.projectInfo?.emergencyPhone || '911'}</span>
             </div>
         </div>
     </div>
 
-    ${generateProjectInfoSection()}
-    ${generateHazardsSection()}
-    ${generateEquipmentSection()}
-    ${generatePermitsSection()}
-    ${generateWorkersSection()}
-    ${generatePhotosSection()}
-    ${generateValidationSection()}
+    ${generateStep1Section()}
+    ${generateStep2Section()}
+    ${generateStep3Section()}
+    ${generateStep4Section()}
+    ${generateStep5Section()}
+    ${generateStep6Section()}
     ${generateSignatureSection()}
 
     <div class="footer">
         <p><strong>Ce document a été généré automatiquement par le système C-Secur360</strong></p>
-        <p>Conforme aux normes de santé et sécurité au travail du Canada</p>
+        <p>Conforme aux normes de santé et sécurité au travail du Canada | Généré le ${currentDate} à ${currentTime}</p>
         <p>Document officiel valide pour comités de sécurité, inspections et enquêtes</p>
+        <p>🔗 Lien d'accès: ${shareLink}</p>
     </div>
 </body>
 </html>`;
   };
-  // =================== FONCTIONS GÉNÉRATION SECTIONS RAPPORT ===================
-  const generateProjectInfoSection = () => {
-    if (!formData.projectInfo) return '';
+
+  // =================== FONCTIONS GÉNÉRATION SECTIONS COMPLÈTES ===================
+  const getIndustryLabel = (industry: string) => {
+    const labels = {
+      'electrical': '⚡ Électrique',
+      'construction': '🏗️ Construction', 
+      'industrial': '🏭 Industriel',
+      'manufacturing': '⚙️ Manufacturier',
+      'office': '🏢 Bureau/Administratif',
+      'other': '🔧 Autre'
+    };
+    return labels[industry as keyof typeof labels] || industry || 'Non spécifié';
+  };
+  // =================== GÉNÉRATION STEP 1: INFORMATIONS PROJET + LOTO ===================
+  const generateStep1Section = () => {
+    const projectInfo = formData.projectInfo || {};
+    const lockoutPoints = projectInfo.lockoutPoints || [];
+    const lockoutPhotos = projectInfo.lockoutPhotos || [];
     
+    const lockoutPointsHtml = lockoutPoints.map((point: any, index: number) => {
+      const energyTypes = {
+        electrical: { name: 'Électrique', icon: '⚡', color: '#fbbf24' },
+        mechanical: { name: 'Mécanique', icon: '⚙️', color: '#6b7280' },
+        hydraulic: { name: 'Hydraulique', icon: '💧', color: '#3b82f6' },
+        pneumatic: { name: 'Pneumatique', icon: '💨', color: '#10b981' },
+        chemical: { name: 'Chimique', icon: '⚠️', color: '#f59e0b' },
+        thermal: { name: 'Thermique', icon: '🔥', color: '#ef4444' },
+        gravity: { name: 'Gravité', icon: '🔧', color: '#8b5cf6' }
+      };
+      
+      const energyType = energyTypes[point.energyType as keyof typeof energyTypes] || { name: 'Inconnu', icon: '❓', color: '#6b7280' };
+      const completedProcedures = point.completedProcedures || [];
+      const totalProcedures = 6; // Nombre standard de procédures
+      const progress = Math.round((completedProcedures.length / totalProcedures) * 100);
+      
+      return `
+        <div class="lockout-point">
+          <div class="subsection-title">
+            🔒 Point de Verrouillage #${index + 1} - ${energyType.icon} ${energyType.name}
+          </div>
+          <div class="info-row">
+            <span class="info-label">Équipement:</span>
+            <span class="info-value">${point.equipmentName || 'Non spécifié'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Localisation:</span>
+            <span class="info-value">${point.location || 'Non spécifiée'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Type de cadenas:</span>
+            <span class="info-value">${point.lockType || 'Non spécifié'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Numéro étiquette:</span>
+            <span class="info-value">${point.tagNumber || 'Non spécifié'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Vérifié par:</span>
+            <span class="info-value">${point.verifiedBy || 'Non spécifié'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Heure vérification:</span>
+            <span class="info-value">${point.verificationTime || 'Non spécifiée'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Procédures complétées:</span>
+            <span class="info-value">${completedProcedures.length}/${totalProcedures} (${progress}%)</span>
+          </div>
+          ${point.notes ? `
+            <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
+              <strong>Notes:</strong> ${point.notes}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+
     return `
-    <div class="section">
+    <div class="section page-break">
         <div class="section-header">
-            <div class="section-title">🏗️ INFORMATIONS DÉTAILLÉES DU PROJET</div>
+            <div class="section-title">🏗️ STEP 1: INFORMATIONS PROJET & VERROUILLAGE</div>
         </div>
         <div class="section-content">
-            <div class="info-row">
-                <span class="info-label">Description:</span>
-                <span class="info-value">${formData.projectInfo.description || 'Aucune description'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Type de travaux:</span>
-                <span class="info-value">${formData.projectInfo.workType || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Durée estimée:</span>
-                <span class="info-value">${formData.projectInfo.estimatedDuration || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Entreprise:</span>
-                <span class="info-value">${formData.projectInfo.company || 'Non spécifiée'}</span>
-            </div>
+            ${projectInfo.workDescription ? `
+                <div class="subsection">
+                    <div class="subsection-title">📝 Description des Travaux</div>
+                    <div style="white-space: pre-wrap; line-height: 1.5;">${projectInfo.workDescription}</div>
+                </div>
+            ` : ''}
+            
+            ${lockoutPoints.length > 0 ? `
+                <div class="subsection">
+                    <div class="subsection-title">🔒 Points de Verrouillage/Cadenassage (LOTO)</div>
+                    ${lockoutPointsHtml}
+                </div>
+            ` : ''}
+            
+            ${lockoutPhotos.length > 0 ? `
+                <div class="subsection">
+                    <div class="subsection-title">📷 Documentation Photographique LOTO</div>
+                    <div style="color: #6b7280; font-size: 10px;">
+                        ${lockoutPhotos.length} photo(s) documentée(s) pour les procédures de verrouillage
+                    </div>
+                </div>
+            ` : ''}
         </div>
     </div>`;
   };
 
-  const generateHazardsSection = () => {
-    if (!formData.hazards?.identifiedHazards?.length) return '';
-    
-    const hazardsHtml = formData.hazards.identifiedHazards.map((hazard: any) => `
-        <div class="hazard-item hazard-${hazard.riskLevel?.toLowerCase() || 'low'}">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <strong>${hazard.name || 'Danger non nommé'}</strong>
-                <span class="badge badge-${hazard.riskLevel === 'high' ? 'danger' : hazard.riskLevel === 'medium' ? 'warning' : 'success'}">
-                    ${hazard.riskLevel?.toUpperCase() || 'FAIBLE'}
-                </span>
-            </div>
-            <div style="margin-bottom: 6px;">
-                <strong>Description:</strong> ${hazard.description || 'Aucune description'}
-            </div>
-            <div style="margin-bottom: 6px;">
-                <strong>Mesures de contrôle:</strong> ${hazard.controlMeasures || 'Aucune mesure spécifiée'}
-            </div>
-            <div>
-                <strong>EPI requis:</strong> ${hazard.requiredPPE || 'Aucun EPI spécifié'}
-            </div>
-        </div>
-    `).join('');
-    
-    return `
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title">⚠️ IDENTIFICATION DES DANGERS</div>
-        </div>
-        <div class="section-content">
-            ${hazardsHtml}
-        </div>
-    </div>`;
-  };
-
-  const generateEquipmentSection = () => {
+  // =================== GÉNÉRATION STEP 2: ÉQUIPEMENTS ===================
+  const generateStep2Section = () => {
     if (!formData.equipment?.selectedEquipment?.length) return '';
     
     const equipmentHtml = formData.equipment.selectedEquipment.map((item: any) => `
@@ -593,22 +793,34 @@ Lien d'accès: ${shareLink}`);
                     ${item.condition?.toUpperCase() || 'INCONNU'}
                 </span>
             </div>
-            <div style="margin-bottom: 6px;">
-                <strong>Type:</strong> ${item.type || 'Non spécifié'}
+            <div class="info-row">
+                <span class="info-label">Type:</span>
+                <span class="info-value">${item.type || 'Non spécifié'}</span>
             </div>
-            <div style="margin-bottom: 6px;">
-                <strong>Inspection:</strong> ${item.inspectionDate || 'Non inspectée'}
+            <div class="info-row">
+                <span class="info-label">Modèle:</span>
+                <span class="info-value">${item.model || 'Non spécifié'}</span>
             </div>
-            <div>
-                <strong>Remarques:</strong> ${item.notes || 'Aucune remarque'}
+            <div class="info-row">
+                <span class="info-label">Inspection:</span>
+                <span class="info-value">${item.inspectionDate || 'Non inspectée'}</span>
             </div>
+            <div class="info-row">
+                <span class="info-label">Certificat:</span>
+                <span class="info-value">${item.certification || 'Non certifié'}</span>
+            </div>
+            ${item.notes ? `
+                <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
+                    <strong>Remarques:</strong> ${item.notes}
+                </div>
+            ` : ''}
         </div>
     `).join('');
     
     return `
     <div class="section">
         <div class="section-header">
-            <div class="section-title">🔧 ÉQUIPEMENTS ET OUTILS</div>
+            <div class="section-title">🔧 STEP 2: ÉQUIPEMENTS ET OUTILS</div>
         </div>
         <div class="section-content">
             ${equipmentHtml}
@@ -616,7 +828,61 @@ Lien d'accès: ${shareLink}`);
     </div>`;
   };
 
-  const generatePermitsSection = () => {
+  // =================== GÉNÉRATION STEP 3: DANGERS ===================
+  const generateStep3Section = () => {
+    if (!formData.hazards?.identifiedHazards?.length) return '';
+    
+    const hazardsHtml = formData.hazards.identifiedHazards.map((hazard: any) => `
+        <div class="hazard-item hazard-${hazard.riskLevel?.toLowerCase() || 'low'}">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong>${hazard.name || 'Danger non nommé'}</strong>
+                <span class="badge badge-${hazard.riskLevel === 'high' ? 'danger' : hazard.riskLevel === 'medium' ? 'warning' : 'success'}">
+                    ${hazard.riskLevel?.toUpperCase() || 'FAIBLE'}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Catégorie:</span>
+                <span class="info-value">${hazard.category || 'Non spécifiée'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Probabilité:</span>
+                <span class="info-value">${hazard.probability || 'Non évaluée'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Gravité:</span>
+                <span class="info-value">${hazard.severity || 'Non évaluée'}</span>
+            </div>
+            ${hazard.description ? `
+                <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
+                    <strong>Description:</strong> ${hazard.description}
+                </div>
+            ` : ''}
+            ${hazard.controlMeasures ? `
+                <div style="margin-top: 8px; padding: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px;">
+                    <strong>Mesures de contrôle:</strong> ${hazard.controlMeasures}
+                </div>
+            ` : ''}
+            ${hazard.requiredPPE ? `
+                <div style="margin-top: 8px; padding: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px;">
+                    <strong>EPI requis:</strong> ${hazard.requiredPPE}
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
+    
+    return `
+    <div class="section page-break">
+        <div class="section-header">
+            <div class="section-title">⚠️ STEP 3: IDENTIFICATION DES DANGERS</div>
+        </div>
+        <div class="section-content">
+            ${hazardsHtml}
+        </div>
+    </div>`;
+  };
+
+  // =================== GÉNÉRATION STEP 4: PERMIS ===================
+  const generateStep4Section = () => {
     if (!formData.permits?.requiredPermits?.length) return '';
     
     const permitsHtml = formData.permits.requiredPermits.map((permit: any) => `
@@ -627,22 +893,38 @@ Lien d'accès: ${shareLink}`);
                     ${permit.status?.toUpperCase() || 'INCONNU'}
                 </span>
             </div>
-            <div style="margin-bottom: 6px;">
-                <strong>Autorité:</strong> ${permit.authority || 'Non spécifiée'}
+            <div class="info-row">
+                <span class="info-label">Autorité émettrice:</span>
+                <span class="info-value">${permit.authority || 'Non spécifiée'}</span>
             </div>
-            <div style="margin-bottom: 6px;">
-                <strong>Numéro:</strong> ${permit.number || 'Non attribué'}
+            <div class="info-row">
+                <span class="info-label">Numéro:</span>
+                <span class="info-value">${permit.number || 'Non attribué'}</span>
             </div>
-            <div>
-                <strong>Expiration:</strong> ${permit.expiryDate || 'Non spécifiée'}
+            <div class="info-row">
+                <span class="info-label">Date émission:</span>
+                <span class="info-value">${permit.issueDate || 'Non spécifiée'}</span>
             </div>
+            <div class="info-row">
+                <span class="info-label">Date expiration:</span>
+                <span class="info-value">${permit.expiryDate || 'Non spécifiée'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Responsable:</span>
+                <span class="info-value">${permit.responsiblePerson || 'Non spécifié'}</span>
+            </div>
+            ${permit.conditions ? `
+                <div style="margin-top: 8px; padding: 8px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 4px;">
+                    <strong>Conditions particulières:</strong> ${permit.conditions}
+                </div>
+            ` : ''}
         </div>
     `).join('');
     
     return `
     <div class="section">
         <div class="section-header">
-            <div class="section-title">📄 PERMIS ET AUTORISATIONS</div>
+            <div class="section-title">📄 STEP 4: PERMIS ET AUTORISATIONS</div>
         </div>
         <div class="section-content">
             ${permitsHtml}
@@ -650,9 +932,54 @@ Lien d'accès: ${shareLink}`);
     </div>`;
   };
 
-  const generateWorkersSection = () => {
-    if (!finalizationData.workers.length) return '';
+  // =================== GÉNÉRATION STEP 5: VALIDATION ===================
+  const generateStep5Section = () => {
+    const validationData = formData.validation || {};
+    const reviewers = validationData.reviewers || [];
     
+    if (reviewers.length === 0) return '';
+    
+    const reviewersHtml = reviewers.map((reviewer: any) => `
+        <tr>
+            <td>${reviewer.name || 'Non spécifié'}</td>
+            <td>${reviewer.role || 'Non spécifié'}</td>
+            <td>${reviewer.department || 'Non spécifié'}</td>
+            <td>${reviewer.email || 'Non spécifié'}</td>
+            <td class="status-${reviewer.status || 'pending'}">
+                ${reviewer.status === 'approved' ? '✅ Approuvé' : 
+                  reviewer.status === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
+            </td>
+            <td>${reviewer.comments || '-'}</td>
+        </tr>
+    `).join('');
+    
+    return `
+    <div class="section">
+        <div class="section-header">
+            <div class="section-title">✅ STEP 5: VALIDATION ÉQUIPE</div>
+        </div>
+        <div class="section-content">
+            <table class="workers-table">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Rôle</th>
+                        <th>Département</th>
+                        <th>Email</th>
+                        <th>Statut</th>
+                        <th>Commentaires</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${reviewersHtml}
+                </tbody>
+            </table>
+        </div>
+    </div>`;
+  };
+
+  // =================== GÉNÉRATION STEP 6: FINALISATION ===================
+  const generateStep6Section = () => {
     const workersRows = finalizationData.workers.map(worker => `
         <tr>
             <td>${worker.name}</td>
@@ -671,83 +998,59 @@ Lien d'accès: ${shareLink}`);
     `).join('');
     
     return `
-    <div class="section">
+    <div class="section page-break">
         <div class="section-header">
-            <div class="section-title">👷 ÉQUIPE ET CONSENTEMENTS</div>
+            <div class="section-title">👷 STEP 6: ÉQUIPE ET CONSENTEMENTS</div>
         </div>
         <div class="section-content">
-            <table class="workers-table">
-                <thead>
-                    <tr>
-                        <th>Nom</th>
-                        <th>Entreprise</th>
-                        <th>Poste</th>
-                        <th>Consentement</th>
-                        <th>Date/Heure</th>
-                        <th>Statut</th>
-                        <th>Commentaires</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${workersRows}
-                </tbody>
-            </table>
-        </div>
-    </div>`;
-  };
-
-  const generatePhotosSection = () => {
-    if (!finalizationData.photos.length) return '';
-    
-    const photosHtml = finalizationData.photos.map(photo => `
-        <div class="photo-item">
-            <div style="margin-bottom: 8px;">
-                <strong>📸 Photo ${photo.category}</strong>
-            </div>
-            <div style="margin-bottom: 6px; font-size: 8px;">
-                ${photo.description}
-            </div>
-            <div style="font-size: 8px; color: #6b7280;">
-                ${new Date(photo.timestamp).toLocaleString('fr-CA')}
-            </div>
-        </div>
-    `).join('');
-    
-    return `
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title">📷 DOCUMENTATION PHOTOGRAPHIQUE</div>
-        </div>
-        <div class="section-content">
-            <div class="photos-grid">
-                ${photosHtml}
-            </div>
-        </div>
-    </div>`;
-  };
-
-  const generateValidationSection = () => {
-    return `
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title">✅ VALIDATION ET COMMENTAIRES</div>
-        </div>
-        <div class="section-content">
-            <div style="margin-bottom: 15px;">
-                <strong>Commentaires finaux:</strong>
-                <div style="margin-top: 8px; padding: 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px;">
-                    ${finalizationData.finalComments || 'Aucun commentaire final ajouté.'}
+            ${finalizationData.workers.length > 0 ? `
+                <table class="workers-table">
+                    <thead>
+                        <tr>
+                            <th>Nom</th>
+                            <th>Entreprise</th>
+                            <th>Poste</th>
+                            <th>Consentement</th>
+                            <th>Date/Heure</th>
+                            <th>Statut</th>
+                            <th>Commentaires</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${workersRows}
+                    </tbody>
+                </table>
+            ` : '<p style="text-align: center; color: #6b7280; font-style: italic;">Aucun travailleur ajouté à l\'équipe</p>'}
+            
+            ${finalizationData.finalComments ? `
+                <div class="subsection" style="margin-top: 20px;">
+                    <div class="subsection-title">💬 Commentaires Finaux</div>
+                    <div style="white-space: pre-wrap; line-height: 1.5; padding: 10px; background: #f9fafb; border-radius: 4px;">
+                        ${finalizationData.finalComments}
+                    </div>
                 </div>
-            </div>
-            <div style="margin-bottom: 15px;">
-                <strong>Statut du document:</strong>
-                <span class="badge badge-${finalizationData.isLocked ? 'success' : 'warning'}">
-                    ${finalizationData.isLocked ? '🔒 VERROUILLÉ' : '🔓 EN COURS'}
-                </span>
-            </div>
-            <div>
-                <strong>Pourcentage de complétion:</strong>
-                <span style="color: #059669; font-weight: bold;">${finalizationData.completionPercentage}%</span>
+            ` : ''}
+            
+            <div class="subsection" style="margin-top: 20px;">
+                <div class="subsection-title">📊 Statut du Document</div>
+                <div class="info-row">
+                    <span class="info-label">Statut:</span>
+                    <span class="info-value">
+                        <span class="badge badge-${finalizationData.isLocked ? 'success' : 'warning'}">
+                            ${finalizationData.isLocked ? '🔒 VERROUILLÉ' : '🔓 EN COURS'}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Complétion:</span>
+                    <span class="info-value">${finalizationData.completionPercentage}%</span>
+                </div>
+                ${finalizationData.lockTimestamp ? `
+                    <div class="info-row">
+                        <span class="info-label">Verrouillé le:</span>
+                        <span class="info-value">${new Date(finalizationData.lockTimestamp).toLocaleString('fr-CA')}</span>
+                    </div>
+                ` : ''}
             </div>
         </div>
     </div>`;
@@ -758,15 +1061,27 @@ Lien d'accès: ${shareLink}`);
     <div class="signature-section">
         <div class="signature-box">
             <div class="signature-label">RESPONSABLE SÉCURITÉ</div>
-            <div style="margin-top: 20px; font-size: 8px;">Date: ___________</div>
+            <div style="margin-top: 30px; font-size: 8px;">
+                Nom: _________________________<br><br>
+                Signature: ____________________<br><br>
+                Date: ________________________
+            </div>
         </div>
         <div class="signature-box">
             <div class="signature-label">SUPERVISEUR</div>
-            <div style="margin-top: 20px; font-size: 8px;">Date: ___________</div>
+            <div style="margin-top: 30px; font-size: 8px;">
+                Nom: _________________________<br><br>
+                Signature: ____________________<br><br>
+                Date: ________________________
+            </div>
         </div>
         <div class="signature-box">
             <div class="signature-label">GESTIONNAIRE</div>
-            <div style="margin-top: 20px; font-size: 8px;">Date: ___________</div>
+            <div style="margin-top: 30px; font-size: 8px;">
+                Nom: _________________________<br><br>
+                Signature: ____________________<br><br>
+                Date: ________________________
+            </div>
         </div>
     </div>`;
   };
