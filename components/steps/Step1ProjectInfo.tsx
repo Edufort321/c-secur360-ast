@@ -1,1776 +1,960 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
-  Camera, FileText, Download, Archive, Send, CheckCircle, AlertTriangle,
-  Clock, Eye, Share2, Save, Calendar, User, MapPin, Shield, Award,
-  Target, BarChart3, Globe, Printer, Mail, Smartphone, Image, X,
-  Plus, Upload, Copy, Check, RefreshCw, Lock, Unlock, Users, MessageSquare
+  FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
+  Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
+  Droplets, Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight
 } from 'lucide-react';
 
-// =================== INTERFACES PRINCIPALES ===================
-interface Worker {
-  id: string;
-  name: string;
-  position: string;
-  company: string;
-  employeeNumber?: string;
-  email?: string;
-  hasConsented: boolean;
-  consentTimestamp?: string;
-  approbationStatus: 'pending' | 'approved' | 'rejected';
-  approbationTimestamp?: string;
-  approbationComments?: string;
-  consultationTime?: number; // en minutes
+interface Step1ProjectInfoProps {
+  formData: any;
+  onDataChange: (section: string, data: any) => void;
+  language: 'fr' | 'en';
+  tenant: string;
+  errors: any;
 }
 
-interface Photo {
+interface LockoutPoint {
+  id: string;
+  energyType: 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'chemical' | 'thermal' | 'gravity';
+  equipmentName: string;
+  location: string;
+  lockType: string;
+  tagNumber: string;
+  isLocked: boolean;
+  verifiedBy: string;
+  verificationTime: string;
+  photos: string[];
+  notes: string;
+  completedProcedures: number[];
+}
+
+interface LockoutPhoto {
   id: string;
   url: string;
-  description: string;
+  caption: string;
+  category: 'before_lockout' | 'during_lockout' | 'lockout_device' | 'client_form' | 'verification';
   timestamp: string;
-  category: 'hazard' | 'equipment' | 'site' | 'other';
+  lockoutPointId?: string;
 }
 
-interface DocumentGeneration {
-  includePhotos: boolean;
-  includeSignatures: boolean;
-  includeQRCode: boolean;
-  includeBranding: boolean;
-  includeTimestamps: boolean;
-  includeComments: boolean;
-  format: 'pdf' | 'word' | 'html';
-}
+// Générateur de numéro AST
+const generateASTNumber = (): string => {
+  const year = new Date().getFullYear();
+  const month = String(new Date().getMonth() + 1).padStart(2, '0');
+  const day = String(new Date().getDate()).padStart(2, '0');
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
+  return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
+};
 
-interface FinalizationData {
-  workers: Worker[];
-  photos: Photo[];
-  finalComments: string;
-  documentGeneration: DocumentGeneration;
-  isLocked: boolean;
-  lockTimestamp?: string;
-  lockReason?: string;
-  completionPercentage: number;
-}
+// Types d'énergie avec icônes et couleurs
+const ENERGY_TYPES = {
+  electrical: { 
+    name: 'Électrique', icon: Zap, color: '#fbbf24',
+    procedures: [
+      'Identifier la source d\'alimentation (disjoncteur, sectionneur, etc...)',
+      'Couper l\'alimentation électrique', 
+      'Verrouiller la source d\'alimentation',
+      'Tester l\'absence de tension',
+      'Poser les étiquettes de sécurité',
+      'Installation des mises à la terre'
+    ]
+  },
+  mechanical: { 
+    name: 'Mécanique', icon: Settings, color: '#6b7280',
+    procedures: [
+      'Arrêter les équipements mécaniques', 'Bloquer les parties mobiles',
+      'Verrouiller les commandes', 'Vérifier l\'immobilisation',
+      'Signaler la zone', 'Installer les dispositifs de blocage'
+    ]
+  },
+  hydraulic: { 
+    name: 'Hydraulique', icon: Droplets, color: '#3b82f6',
+    procedures: [
+      'Fermer les vannes principales', 'Purger la pression résiduelle',
+      'Verrouiller les vannes', 'Vérifier la dépressurisation',
+      'Installer des bouchons de sécurité', 'Tester l\'étanchéité du système'
+    ]
+  },
+  pneumatic: { 
+    name: 'Pneumatique', icon: Wind, color: '#10b981',
+    procedures: [
+      'Couper l\'alimentation en air', 'Purger les réservoirs d\'air',
+      'Verrouiller les vannes', 'Vérifier la dépressurisation',
+      'Isoler les circuits', 'Contrôler l\'absence de pression'
+    ]
+  },
+  chemical: { 
+    name: 'Chimique', icon: AlertTriangle, color: '#f59e0b',
+    procedures: [
+      'Fermer les vannes d\'alimentation', 'Purger les conduites',
+      'Neutraliser les résidus', 'Verrouiller les accès',
+      'Installer la signalisation', 'Vérifier l\'absence de vapeurs'
+    ]
+  },
+  thermal: { 
+    name: 'Thermique', icon: Flame, color: '#ef4444',
+    procedures: [
+      'Couper l\'alimentation de chauffage', 'Laisser refroidir les équipements',
+      'Isoler les sources de chaleur', 'Vérifier la température',
+      'Signaler les zones chaudes', 'Installer les protections thermiques'
+    ]
+  },
+  gravity: { 
+    name: 'Gravité', icon: Wrench, color: '#8b5cf6',
+    procedures: [
+      'Supporter les charges suspendues', 'Bloquer les mécanismes de levage',
+      'Installer des supports de sécurité', 'Vérifier la stabilité',
+      'Baliser la zone', 'Contrôler les points d\'ancrage'
+    ]
+  }
+};
 
-interface FinalizationStepProps {
-  formData: any;
-  onDataChange: (section: string, data: FinalizationData) => void;
-  language: string;
-  tenant: string;
-  errors?: any; // ← AJOUT DE LA PROP ERRORS OPTIONNELLE
-}
-
-// =================== TYPES DE SÉCURITÉ ===================
-type ApprobationStatus = 'pending' | 'approved' | 'rejected';
-type LockType = 'temporary' | 'permanent' | 'review';
-type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'facebook';
-export default function Step6Finalization({ 
-  formData, 
-  onDataChange, 
-  language,
-  tenant 
-}: FinalizationStepProps) {
+export default function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: Step1ProjectInfoProps) {
+  const [astNumber, setAstNumber] = useState(formData?.astNumber || generateASTNumber());
+  const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // =================== ÉTAT PRINCIPAL ===================
-  const [activeTab, setActiveTab] = useState('workers');
-  const [showAddWorker, setShowAddWorker] = useState(false);
-  const [showLockConfirm, setShowLockConfirm] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Générer le lien de partage immédiatement
-  const [shareLink, setShareLink] = useState(() => {
-    const baseUrl = `https://${tenant}.csecur360.com`;
-    const astId = Math.random().toString(36).substr(2, 12).toUpperCase();
-    const secureToken = Math.random().toString(36).substr(2, 16);
-    return `${baseUrl}/ast/view/${astId}?token=${secureToken}`;
-  });
 
-  // État travailleur simple
-  const [newWorker, setNewWorker] = useState<Partial<Worker>>({
-    name: '',
-    company: '',
-    hasConsented: false,
-    approbationStatus: 'pending'
-  });
+  const projectInfo = formData?.projectInfo || {};
+  const lockoutPoints = projectInfo?.lockoutPoints || [];
+  const lockoutPhotos = projectInfo?.lockoutPhotos || [];
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [currentLockoutPhotoIndex, setCurrentLockoutPhotoIndex] = useState<{[key: string]: number}>({});
 
-  // État finalisation
-  const [finalizationData, setFinalizationData] = useState<FinalizationData>({
-    workers: [],
-    photos: [],
-    finalComments: '',
-    documentGeneration: {
-      includePhotos: true,
-      includeSignatures: true,
-      includeQRCode: true,
-      includeBranding: true,
-      includeTimestamps: true,
-      includeComments: true,
-      format: 'pdf'
-    },
-    isLocked: false,
-    completionPercentage: 85
-  });
-
-  // =================== HANDLERS PRINCIPAUX ===================
-  const addWorker = () => {
-    if (!newWorker.name || !newWorker.company) {
-      alert('❌ Veuillez remplir le nom et la compagnie');
-      return;
-    }
-
-    const worker: Worker = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: newWorker.name!,
-      position: 'Travailleur',
-      company: newWorker.company!,
-      hasConsented: false,
-      approbationStatus: 'pending'
-    };
-
-    setFinalizationData(prev => ({
-      ...prev,
-      workers: [...prev.workers, worker]
-    }));
-
-    setNewWorker({ name: '', company: '', hasConsented: false, approbationStatus: 'pending' });
-    setShowAddWorker(false);
-    console.log('✅ Travailleur ajouté:', worker);
+  const updateProjectInfo = (field: string, value: any) => {
+    onDataChange('projectInfo', { ...projectInfo, [field]: value });
   };
 
-  const toggleConsent = (workerId: string) => {
-    setFinalizationData(prev => ({
-      ...prev,
-      workers: prev.workers.map(worker => 
-        worker.id === workerId 
-          ? { 
-              ...worker, 
-              hasConsented: !worker.hasConsented,
-              consentTimestamp: !worker.hasConsented ? new Date().toISOString() : undefined
-            }
-          : worker
-      )
-    }));
-    console.log('✅ Consentement mis à jour pour travailleur:', workerId);
-  };
-
-  const updateApprobation = (workerId: string, status: ApprobationStatus, comments?: string) => {
-    setFinalizationData(prev => ({
-      ...prev,
-      workers: prev.workers.map(worker => 
-        worker.id === workerId 
-          ? { 
-              ...worker, 
-              approbationStatus: status,
-              approbationTimestamp: new Date().toISOString(),
-              approbationComments: comments
-            }
-          : worker
-      )
-    }));
-    console.log(`✅ Approbation ${status} pour travailleur:`, workerId);
-  };
-
-  // =================== HANDLERS PARTAGE SIMPLE ===================
-  const shareViaEmail = () => {
-    const subject = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}`);
-    const body = encodeURIComponent(`Bonjour,
-
-Veuillez consulter l'Analyse Sécuritaire de Travail (AST) pour le projet "${formData.projectInfo?.projectName || 'Projet'}".
-
-🔗 Lien d'accès sécurisé:
-${shareLink}
-
-Cette AST doit être consultée et approuvée avant le début des travaux.
-
-Cordialement,
-${tenant} - Équipe Sécurité`);
-    
-    window.open(`mailto:?subject=${subject}&body=${body}`);
-    console.log('📧 Partage par email initié');
-  };
-
-  const shareViaSMS = () => {
-    const message = encodeURIComponent(`🛡️ AST ${formData.projectInfo?.projectName || 'Projet'}: ${shareLink}`);
-    window.open(`sms:?body=${message}`);
-    console.log('📱 Partage par SMS initié');
-  };
-
-  const shareViaWhatsApp = () => {
-    const message = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}
-
-Lien d'accès: ${shareLink}`);
-    window.open(`https://wa.me/?text=${message}`);
-    console.log('💬 Partage WhatsApp initié');
-  };
-
-  const copyShareLink = async () => {
+  const copyASTNumber = async () => {
     try {
-      await navigator.clipboard.writeText(shareLink);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-      console.log('✅ Lien copié dans le presse-papiers');
+      await navigator.clipboard.writeText(astNumber);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      alert('❌ Erreur lors de la copie du lien');
+      console.error('Erreur copie:', err);
     }
   };
-  // =================== FONCTION D'IMPRESSION COMPLÈTE AVEC LOGO ===================
-  const printAST = () => {
-    console.log('🖨️ Génération du rapport AST professionnel complet...');
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      const printContent = generateCompleteAST();
-      const printWindow = window.open('', '_blank', 'width=1200,height=800');
-      
-      if (printWindow) {
-        printWindow.document.write(printContent);
-        printWindow.document.close();
-        
-        printWindow.onload = () => {
-          printWindow.focus();
-          printWindow.print();
-          setIsLoading(false);
+
+  const regenerateASTNumber = () => {
+    const newNumber = generateASTNumber();
+    setAstNumber(newNumber);
+    onDataChange('astNumber', newNumber);
+  };
+
+  // =================== GESTION PHOTOS ===================
+  const handlePhotoCapture = async (category: string, lockoutPointId?: string) => {
+    try {
+      if (fileInputRef.current) {
+        fileInputRef.current.accept = 'image/*';
+        fileInputRef.current.capture = 'environment'; // Force caméra arrière
+        fileInputRef.current.multiple = true; // Permettre plusieurs photos
+        fileInputRef.current.onchange = (e) => {
+          const files = Array.from((e.target as HTMLInputElement).files || []);
+          if (files.length > 0) {
+            files.forEach(file => processPhoto(file, category, lockoutPointId));
+          }
         };
-        
-        console.log('✅ Rapport AST complet généré avec succès');
-      } else {
-        alert('❌ Erreur : Impossible d\'ouvrir la fenêtre d\'impression. Vérifiez les paramètres de pop-up.');
-        setIsLoading(false);
+        fileInputRef.current.click();
       }
-    }, 500);
+    } catch (error) {
+      console.error('Erreur capture photo:', error);
+    }
   };
 
-  const generateCompleteAST = () => {
-    const currentDate = new Date().toLocaleDateString('fr-CA');
-    const currentTime = new Date().toLocaleTimeString('fr-CA');
-    const astNumber = formData?.astNumber || `AST-${Date.now().toString().slice(-6)}`;
-    
-    // Calcul des statistiques
-    const totalWorkers = finalizationData.workers.length;
-    const consentedWorkers = finalizationData.workers.filter(w => w.hasConsented).length;
-    const approvedWorkers = finalizationData.workers.filter(w => w.approbationStatus === 'approved').length;
-    const totalHazards = formData.hazards?.identifiedHazards?.length || 0;
-    const totalEquipment = formData.equipment?.selectedEquipment?.length || 0;
-    const totalPermits = formData.permits?.requiredPermits?.length || 0;
-    const lockoutPoints = formData.projectInfo?.lockoutPoints?.length || 0;
-    
-    return `
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rapport AST Complet - ${formData.projectInfo?.client || 'Client'}</title>
-    <style>
-        @media print {
-            @page { margin: 15mm; size: A4; }
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .page-break { page-break-before: always; }
-            .no-print { display: none; }
-        }
-        
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            line-height: 1.4;
-            color: #1f2937;
-            background: white;
-            font-size: 11px;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            position: relative;
-        }
-        
-        .logo-container {
-            position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 60px;
-            height: 60px;
-            background: #000;
-            border: 2px solid #f59e0b;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .logo-container img {
-            width: 50px;
-            height: 50px;
-            object-fit: contain;
-        }
-        
-        .logo-fallback {
-            color: #f59e0b;
-            font-size: 18px;
-            font-weight: bold;
-        }
-        
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-        
-        .header .subtitle {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-        
-        .info-box {
-            border: 2px solid #e5e7eb;
-            padding: 15px;
-            border-radius: 8px;
-            background: #f8fafc;
-        }
-        
-        .info-box h3 {
-            font-size: 12px;
-            color: #374151;
-            margin-bottom: 10px;
-            font-weight: bold;
-            border-bottom: 1px solid #d1d5db;
-            padding-bottom: 5px;
-        }
-        
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 6px;
-            padding: 4px 0;
-        }
-        
-        .info-label {
-            font-weight: 600;
-            color: #4b5563;
-            min-width: 120px;
-        }
-        
-        .info-value {
-            color: #1f2937;
-            font-weight: 500;
-            flex: 1;
-            text-align: right;
-        }
-        
-        .section {
-            margin-bottom: 25px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        .section-header {
-            background: #f3f4f6;
-            padding: 12px 15px;
-            border-bottom: 1px solid #d1d5db;
-        }
-        
-        .section-title {
-            font-size: 14px;
-            font-weight: bold;
-            color: #1f2937;
-        }
-        
-        .section-content {
-            padding: 15px;
-        }
-        
-        .subsection {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 10px;
-        }
-        
-        .subsection-title {
-            font-size: 12px;
-            font-weight: bold;
-            color: #374151;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .hazard-item, .equipment-item, .permit-item {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 10px;
-        }
-        
-        .hazard-high { border-left: 4px solid #dc2626; background: #fef2f2; }
-        .hazard-medium { border-left: 4px solid #f59e0b; background: #fffbeb; }
-        .hazard-low { border-left: 4px solid #10b981; background: #f0fdf4; }
-        
-        .lockout-point {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            border-left: 4px solid #dc2626;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 15px;
-        }
-        
-        .procedures-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 8px;
-            margin-top: 8px;
-        }
-        
-        .procedure-item {
-            font-size: 10px;
-            padding: 4px 8px;
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            border-radius: 4px;
-        }
-        
-        .procedure-completed {
-            background: #dcfce7;
-            border-color: #16a34a;
-        }
-        
-        .workers-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        
-        .workers-table th,
-        .workers-table td {
-            border: 1px solid #d1d5db;
-            padding: 8px;
-            text-align: left;
-            font-size: 9px;
-        }
-        
-        .workers-table th {
-            background: #f3f4f6;
-            font-weight: bold;
-        }
-        
-        .status-approved { background: #dcfce7; color: #166534; }
-        .status-pending { background: #fef3c7; color: #92400e; }
-        .status-rejected { background: #fee2e2; color: #991b1b; }
-        
-        .footer {
-            margin-top: 30px;
-            padding: 15px;
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 9px;
-            color: #6b7280;
-        }
-        
-        .signature-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 30px;
-            margin-top: 40px;
-        }
-        
-        .signature-box {
-            border-top: 2px solid #374151;
-            padding-top: 10px;
-            text-align: center;
-        }
-        
-        .signature-label {
-            font-size: 10px;
-            color: #4b5563;
-            font-weight: 600;
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 8px;
-            font-weight: 600;
-        }
-        
-        .badge-success { background: #dcfce7; color: #166534; }
-        .badge-warning { background: #fef3c7; color: #92400e; }
-        .badge-danger { background: #fee2e2; color: #991b1b; }
-        
-        .stats-summary {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
-            margin-top: 10px;
-        }
-        
-        .stat-item {
-            text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 6px;
-        }
-        
-        .stat-number {
-            font-size: 20px;
-            font-weight: bold;
-        }
-        
-        .stat-label {
-            font-size: 10px;
-            opacity: 0.9;
-            margin-top: 4px;
-        }
-    </style>
-</head>
-<body>
-    <!-- EN-TÊTE AVEC LOGO -->
-    <div class="header">
-        <div class="logo-container">
-            <img src="/c-secur360-logo.png" alt="C-Secur360" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
-            <div class="logo-fallback" style="display: none;">C🛡️</div>
-        </div>
-        <h1>🛡️ ANALYSE SÉCURITAIRE DE TRAVAIL (AST)</h1>
-        <div class="subtitle">Rapport Officiel Complet - ${tenant} | N° ${astNumber}</div>
-    </div>
-
-    <!-- RÉSUMÉ STATISTIQUES -->
-    <div class="stats-summary">
-        <h3 style="margin-bottom: 10px; font-size: 14px;">📊 RÉSUMÉ EXÉCUTIF</h3>
-        <div class="stats-grid">
-            <div class="stat-item">
-                <div class="stat-number">${totalHazards}</div>
-                <div class="stat-label">⚠️ Dangers</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">${totalEquipment}</div>
-                <div class="stat-label">🔧 Équipements</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">${totalPermits}</div>
-                <div class="stat-label">📄 Permis</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">${lockoutPoints}</div>
-                <div class="stat-label">🔒 Points LOTO</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">${totalWorkers}</div>
-                <div class="stat-label">👷 Travailleurs</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">${consentedWorkers}/${totalWorkers}</div>
-                <div class="stat-label">✅ Consentements</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- INFORMATIONS GÉNÉRALES -->
-    <div class="info-grid">
-        <div class="info-box">
-            <h3>🏢 INFORMATIONS CLIENT & PROJET</h3>
-            <div class="info-row">
-                <span class="info-label">Client:</span>
-                <span class="info-value">${formData.projectInfo?.client || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Projet #:</span>
-                <span class="info-value">${formData.projectInfo?.projectNumber || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">AST Client #:</span>
-                <span class="info-value">${formData.projectInfo?.astClientNumber || 'N/A'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Lieu:</span>
-                <span class="info-value">${formData.projectInfo?.workLocation || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Date/Heure:</span>
-                <span class="info-value">${formData.projectInfo?.date || currentDate} ${formData.projectInfo?.time || currentTime}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Industrie:</span>
-                <span class="info-value">${getIndustryLabel(formData.projectInfo?.industry)}</span>
-            </div>
-        </div>
-        
-        <div class="info-box">
-            <h3>👥 ÉQUIPE & CONTACTS</h3>
-            <div class="info-row">
-                <span class="info-label">Nb Travailleurs:</span>
-                <span class="info-value">${formData.projectInfo?.workerCount || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Durée estimée:</span>
-                <span class="info-value">${formData.projectInfo?.estimatedDuration || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Contact client:</span>
-                <span class="info-value">${formData.projectInfo?.clientRepresentative || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Tél. client:</span>
-                <span class="info-value">${formData.projectInfo?.clientPhone || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Urgence:</span>
-                <span class="info-value">${formData.projectInfo?.emergencyContact || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Tél. urgence:</span>
-                <span class="info-value">${formData.projectInfo?.emergencyPhone || '911'}</span>
-            </div>
-        </div>
-    </div>
-
-    ${generateStep1Section()}
-    ${generateStep2Section()}
-    ${generateStep3Section()}
-    ${generateStep4Section()}
-    ${generateStep5Section()}
-    ${generateStep6Section()}
-    ${generateSignatureSection()}
-
-    <div class="footer">
-        <p><strong>Ce document a été généré automatiquement par le système C-Secur360</strong></p>
-        <p>Conforme aux normes de santé et sécurité au travail du Canada | Généré le ${currentDate} à ${currentTime}</p>
-        <p>Document officiel valide pour comités de sécurité, inspections et enquêtes</p>
-        <p>🔗 Lien d'accès: ${shareLink}</p>
-    </div>
-</body>
-</html>`;
-  };
-
-  // =================== FONCTIONS GÉNÉRATION SECTIONS COMPLÈTES ===================
-  const getIndustryLabel = (industry: string) => {
-    const labels = {
-      'electrical': '⚡ Électrique',
-      'construction': '🏗️ Construction', 
-      'industrial': '🏭 Industriel',
-      'manufacturing': '⚙️ Manufacturier',
-      'office': '🏢 Bureau/Administratif',
-      'other': '🔧 Autre'
-    };
-    return labels[industry as keyof typeof labels] || industry || 'Non spécifié';
-  };
-  // =================== GÉNÉRATION STEP 1: INFORMATIONS PROJET + LOTO ===================
-  const generateStep1Section = () => {
-    const projectInfo = formData.projectInfo || {};
-    const lockoutPoints = projectInfo.lockoutPoints || [];
-    const lockoutPhotos = projectInfo.lockoutPhotos || [];
-    
-    const lockoutPointsHtml = lockoutPoints.map((point: any, index: number) => {
-      const energyTypes = {
-        electrical: { name: 'Électrique', icon: '⚡', color: '#fbbf24' },
-        mechanical: { name: 'Mécanique', icon: '⚙️', color: '#6b7280' },
-        hydraulic: { name: 'Hydraulique', icon: '💧', color: '#3b82f6' },
-        pneumatic: { name: 'Pneumatique', icon: '💨', color: '#10b981' },
-        chemical: { name: 'Chimique', icon: '⚠️', color: '#f59e0b' },
-        thermal: { name: 'Thermique', icon: '🔥', color: '#ef4444' },
-        gravity: { name: 'Gravité', icon: '🔧', color: '#8b5cf6' }
+  const processPhoto = async (file: File, category: string, lockoutPointId?: string) => {
+    try {
+      const photoUrl = URL.createObjectURL(file);
+      const newPhoto: LockoutPhoto = {
+        id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        url: photoUrl,
+        caption: `${getCategoryLabel(category)} - ${new Date().toLocaleString('fr-CA')}`,
+        category: category as any,
+        timestamp: new Date().toISOString(),
+        lockoutPointId
       };
       
-      const energyType = energyTypes[point.energyType as keyof typeof energyTypes] || { name: 'Inconnu', icon: '❓', color: '#6b7280' };
-      const completedProcedures = point.completedProcedures || [];
-      const totalProcedures = 6; // Nombre standard de procédures
-      const progress = Math.round((completedProcedures.length / totalProcedures) * 100);
+      // Créer un nouvel array avec la nouvelle photo
+      const updatedPhotos = [...lockoutPhotos, newPhoto];
       
-      return `
-        <div class="lockout-point">
-          <div class="subsection-title">
-            🔒 Point de Verrouillage #${index + 1} - ${energyType.icon} ${energyType.name}
-          </div>
-          <div class="info-row">
-            <span class="info-label">Équipement:</span>
-            <span class="info-value">${point.equipmentName || 'Non spécifié'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Localisation:</span>
-            <span class="info-value">${point.location || 'Non spécifiée'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Type de cadenas:</span>
-            <span class="info-value">${point.lockType || 'Non spécifié'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Numéro étiquette:</span>
-            <span class="info-value">${point.tagNumber || 'Non spécifié'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Vérifié par:</span>
-            <span class="info-value">${point.verifiedBy || 'Non spécifié'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Heure vérification:</span>
-            <span class="info-value">${point.verificationTime || 'Non spécifiée'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Procédures complétées:</span>
-            <span class="info-value">${completedProcedures.length}/${totalProcedures} (${progress}%)</span>
-          </div>
-          ${point.notes ? `
-            <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
-              <strong>Notes:</strong> ${point.notes}
-            </div>
-          ` : ''}
-        </div>
-      `;
-    }).join('');
-
-    return `
-    <div class="section page-break">
-        <div class="section-header">
-            <div class="section-title">🏗️ STEP 1: INFORMATIONS PROJET & VERROUILLAGE</div>
-        </div>
-        <div class="section-content">
-            ${projectInfo.workDescription ? `
-                <div class="subsection">
-                    <div class="subsection-title">📝 Description des Travaux</div>
-                    <div style="white-space: pre-wrap; line-height: 1.5;">${projectInfo.workDescription}</div>
-                </div>
-            ` : ''}
-            
-            ${lockoutPoints.length > 0 ? `
-                <div class="subsection">
-                    <div class="subsection-title">🔒 Points de Verrouillage/Cadenassage (LOTO)</div>
-                    ${lockoutPointsHtml}
-                </div>
-            ` : ''}
-            
-            ${lockoutPhotos.length > 0 ? `
-                <div class="subsection">
-                    <div class="subsection-title">📷 Documentation Photographique LOTO</div>
-                    <div style="color: #6b7280; font-size: 10px;">
-                        ${lockoutPhotos.length} photo(s) documentée(s) pour les procédures de verrouillage
-                    </div>
-                </div>
-            ` : ''}
-        </div>
-    </div>`;
+      // Mettre à jour avec un nouvel objet projectInfo
+      const newProjectInfo = {
+        ...projectInfo,
+        lockoutPhotos: updatedPhotos
+      };
+      
+      onDataChange('projectInfo', newProjectInfo);
+      console.log('Photo ajoutée:', file.name, category);
+    } catch (error) {
+      console.error('Erreur traitement photo:', error);
+    }
   };
 
-  // =================== GÉNÉRATION STEP 2: ÉQUIPEMENTS ===================
-  const generateStep2Section = () => {
-    const equipment = formData.equipment || {};
-    const selectedEquipment = equipment.selectedEquipment || [];
-    const customEquipment = equipment.customEquipment || [];
-    const allEquipment = [...selectedEquipment, ...customEquipment];
-    
-    if (allEquipment.length === 0) return '';
-    
-    const equipmentHtml = allEquipment.map((item: any, index: number) => `
-        <div class="equipment-item">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <strong>#${index + 1} - ${item.name || item.equipmentName || 'Équipement'}</strong>
-                <span class="badge badge-${item.condition === 'excellent' || item.condition === 'good' ? 'success' : 
-                                            item.condition === 'fair' || item.condition === 'average' ? 'warning' : 'danger'}">
-                    ${(item.condition || 'unknown').toUpperCase()}
-                </span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Type:</span>
-                <span class="info-value">${item.type || item.category || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Marque/Modèle:</span>
-                <span class="info-value">${item.brand || item.model || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Numéro série:</span>
-                <span class="info-value">${item.serialNumber || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Date inspection:</span>
-                <span class="info-value">${item.inspectionDate || item.lastInspection || 'Non inspectée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Prochaine inspection:</span>
-                <span class="info-value">${item.nextInspection || 'Non programmée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Certification:</span>
-                <span class="info-value">${item.certification || item.certifications || 'Non certifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Responsable:</span>
-                <span class="info-value">${item.responsiblePerson || 'Non assigné'}</span>
-            </div>
-            ${item.notes || item.specialInstructions ? `
-                <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
-                    <strong>Remarques:</strong> ${item.notes || item.specialInstructions}
-                </div>
-            ` : ''}
-            ${item.requiredPPE ? `
-                <div style="margin-top: 8px; padding: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px;">
-                    <strong>EPI requis:</strong> ${item.requiredPPE}
-                </div>
-            ` : ''}
-        </div>
-    `).join('');
-    
-    return `
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title">🔧 STEP 2: ÉQUIPEMENTS ET OUTILS (${allEquipment.length})</div>
-        </div>
-        <div class="section-content">
-            ${equipmentHtml}
-        </div>
-    </div>`;
+  const getCategoryLabel = (category: string): string => {
+    const labels = {
+      'before_lockout': 'Avant verrouillage',
+      'during_lockout': 'Pendant verrouillage', 
+      'lockout_device': 'Dispositif de verrouillage',
+      'client_form': 'Fiche client',
+      'verification': 'Vérification'
+    };
+    return labels[category as keyof typeof labels] || category;
   };
 
-  // =================== GÉNÉRATION STEP 3: DANGERS ===================
-  const generateStep3Section = () => {
-    const hazards = formData.hazards || {};
-    const identifiedHazards = hazards.identifiedHazards || [];
-    const customHazards = hazards.customHazards || [];
-    const allHazards = [...identifiedHazards, ...customHazards];
+  const deletePhoto = (photoId: string) => {
+    console.log('Suppression photo:', photoId);
+    const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId);
     
-    if (allHazards.length === 0) return '';
+    // Mettre à jour avec un nouvel objet projectInfo
+    const newProjectInfo = {
+      ...projectInfo,
+      lockoutPhotos: updatedPhotos
+    };
     
-    const hazardsHtml = allHazards.map((hazard: any, index: number) => `
-        <div class="hazard-item hazard-${(hazard.riskLevel || hazard.severity || 'low').toLowerCase()}">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <strong>#${index + 1} - ${hazard.name || hazard.hazardName || 'Danger'}</strong>
-                <span class="badge badge-${
-                    (hazard.riskLevel === 'high' || hazard.severity === 'high') ? 'danger' : 
-                    (hazard.riskLevel === 'medium' || hazard.severity === 'medium') ? 'warning' : 'success'
-                }">
-                    ${(hazard.riskLevel || hazard.severity || 'faible').toUpperCase()}
-                </span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Catégorie:</span>
-                <span class="info-value">${hazard.category || hazard.type || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Source du danger:</span>
-                <span class="info-value">${hazard.source || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Probabilité:</span>
-                <span class="info-value">${hazard.probability || hazard.likelihood || 'Non évaluée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Gravité:</span>
-                <span class="info-value">${hazard.severity || hazard.impact || 'Non évaluée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Score de risque:</span>
-                <span class="info-value">${hazard.riskScore || 'Non calculé'}</span>
-            </div>
-            ${hazard.description || hazard.hazardDescription ? `
-                <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
-                    <strong>Description:</strong> ${hazard.description || hazard.hazardDescription}
-                </div>
-            ` : ''}
-            ${hazard.controlMeasures || hazard.preventiveMeasures ? `
-                <div style="margin-top: 8px; padding: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px;">
-                    <strong>Mesures de contrôle:</strong> ${hazard.controlMeasures || hazard.preventiveMeasures}
-                </div>
-            ` : ''}
-            ${hazard.requiredPPE || hazard.ppe ? `
-                <div style="margin-top: 8px; padding: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px;">
-                    <strong>EPI requis:</strong> ${hazard.requiredPPE || hazard.ppe}
-                </div>
-            ` : ''}
-            ${hazard.emergencyProcedures ? `
-                <div style="margin-top: 8px; padding: 8px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 4px;">
-                    <strong>Procédures d'urgence:</strong> ${hazard.emergencyProcedures}
-                </div>
-            ` : ''}
-            ${hazard.responsiblePerson ? `
-                <div style="margin-top: 8px; padding: 8px; background: #e0e7ff; border: 1px solid #c7d2fe; border-radius: 4px;">
-                    <strong>Responsable:</strong> ${hazard.responsiblePerson}
-                </div>
-            ` : ''}
-        </div>
-    `).join('');
-    
-    return `
-    <div class="section page-break">
-        <div class="section-header">
-            <div class="section-title">⚠️ STEP 3: IDENTIFICATION DES DANGERS (${allHazards.length})</div>
-        </div>
-        <div class="section-content">
-            ${hazardsHtml}
-        </div>
-    </div>`;
+    onDataChange('projectInfo', newProjectInfo);
+    console.log('Photo supprimée avec succès');
   };
 
-  // =================== GÉNÉRATION STEP 4: PERMIS ===================
-  const generateStep4Section = () => {
-    const permits = formData.permits || {};
-    const requiredPermits = permits.requiredPermits || [];
-    const customPermits = permits.customPermits || [];
-    const allPermits = [...requiredPermits, ...customPermits];
-    
-    if (allPermits.length === 0) return '';
-    
-    const permitsHtml = allPermits.map((permit: any, index: number) => `
-        <div class="permit-item">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <strong>#${index + 1} - ${permit.name || permit.permitName || 'Permis'}</strong>
-                <span class="badge badge-${
-                    permit.status === 'obtained' || permit.status === 'approved' ? 'success' : 
-                    permit.status === 'pending' || permit.status === 'in_progress' ? 'warning' : 'danger'
-                }">
-                    ${(permit.status || 'unknown').toUpperCase().replace('_', ' ')}
-                </span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Type de permis:</span>
-                <span class="info-value">${permit.type || permit.category || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Autorité émettrice:</span>
-                <span class="info-value">${permit.authority || permit.issuingAuthority || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Numéro de permis:</span>
-                <span class="info-value">${permit.number || permit.permitNumber || 'Non attribué'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Date d'émission:</span>
-                <span class="info-value">${permit.issueDate || permit.issuedDate || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Date d'expiration:</span>
-                <span class="info-value">${permit.expiryDate || permit.expirationDate || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Validité (jours):</span>
-                <span class="info-value">${permit.validityPeriod || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Responsable:</span>
-                <span class="info-value">${permit.responsiblePerson || permit.responsible || 'Non assigné'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Contact responsable:</span>
-                <span class="info-value">${permit.contactInfo || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Coût:</span>
-                <span class="info-value">${permit.cost || 'Non spécifié'}</span>
-            </div>
-            ${permit.description || permit.permitDescription ? `
-                <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
-                    <strong>Description:</strong> ${permit.description || permit.permitDescription}
-                </div>
-            ` : ''}
-            ${permit.conditions || permit.specialConditions ? `
-                <div style="margin-top: 8px; padding: 8px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 4px;">
-                    <strong>Conditions particulières:</strong> ${permit.conditions || permit.specialConditions}
-                </div>
-            ` : ''}
-            ${permit.requirements ? `
-                <div style="margin-top: 8px; padding: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px;">
-                    <strong>Exigences:</strong> ${permit.requirements}
-                </div>
-            ` : ''}
-            ${permit.notes || permit.additionalNotes ? `
-                <div style="margin-top: 8px; padding: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px;">
-                    <strong>Notes:</strong> ${permit.notes || permit.additionalNotes}
-                </div>
-            ` : ''}
-        </div>
-    `).join('');
-    
-    return `
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title">📄 STEP 4: PERMIS ET AUTORISATIONS (${allPermits.length})</div>
-        </div>
-        <div class="section-content">
-            ${permitsHtml}
-        </div>
-    </div>`;
+  // =================== GESTION POINTS DE VERROUILLAGE ===================
+  const addLockoutPoint = () => {
+    const newPoint: LockoutPoint = {
+      id: `lockout_${Date.now()}`,
+      energyType: 'electrical',
+      equipmentName: '',
+      location: '',
+      lockType: '',
+      tagNumber: `TAG-${Date.now().toString().slice(-6)}`,
+      isLocked: false,
+      verifiedBy: '',
+      verificationTime: '',
+      photos: [],
+      notes: '',
+      completedProcedures: []
+    };
+    const updatedPoints = [...lockoutPoints, newPoint];
+    updateProjectInfo('lockoutPoints', updatedPoints);
   };
 
-  // =================== GÉNÉRATION STEP 5: VALIDATION ===================
-  const generateStep5Section = () => {
-    const validationData = formData.validation || {};
-    const reviewers = validationData.reviewers || [];
-    
-    if (reviewers.length === 0) return '';
-    
-    const reviewersHtml = reviewers.map((reviewer: any) => `
-        <tr>
-            <td>${reviewer.name || 'Non spécifié'}</td>
-            <td>${reviewer.role || 'Non spécifié'}</td>
-            <td>${reviewer.department || 'Non spécifié'}</td>
-            <td>${reviewer.email || 'Non spécifié'}</td>
-            <td class="status-${reviewer.status || 'pending'}">
-                ${reviewer.status === 'approved' ? '✅ Approuvé' : 
-                  reviewer.status === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
-            </td>
-            <td>${reviewer.comments || '-'}</td>
-        </tr>
-    `).join('');
-    
-    return `
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title">✅ STEP 5: VALIDATION ÉQUIPE</div>
-        </div>
-        <div class="section-content">
-            <table class="workers-table">
-                <thead>
-                    <tr>
-                        <th>Nom</th>
-                        <th>Rôle</th>
-                        <th>Département</th>
-                        <th>Email</th>
-                        <th>Statut</th>
-                        <th>Commentaires</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${reviewersHtml}
-                </tbody>
-            </table>
-        </div>
-    </div>`;
+  const updateLockoutPoint = (pointId: string, field: string, value: any) => {
+    const updatedPoints = lockoutPoints.map((point: LockoutPoint) => 
+      point.id === pointId ? { ...point, [field]: value } : point
+    );
+    updateProjectInfo('lockoutPoints', updatedPoints);
   };
 
-  // =================== GÉNÉRATION STEP 6: FINALISATION ===================
-  const generateStep6Section = () => {
-    const workersRows = finalizationData.workers.map(worker => `
-        <tr>
-            <td>${worker.name}</td>
-            <td>${worker.company}</td>
-            <td>${worker.position}</td>
-            <td class="${worker.hasConsented ? 'status-approved' : 'status-pending'}">
-                ${worker.hasConsented ? '✅ Oui' : '❌ Non'}
-            </td>
-            <td>${worker.consentTimestamp ? new Date(worker.consentTimestamp).toLocaleString('fr-CA') : '-'}</td>
-            <td class="status-${worker.approbationStatus}">
-                ${worker.approbationStatus === 'approved' ? '✅ Approuvé' : 
-                  worker.approbationStatus === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
-            </td>
-            <td>${worker.approbationComments || '-'}</td>
-        </tr>
-    `).join('');
+  const toggleProcedureComplete = (pointId: string, procedureIndex: number) => {
+    const point = lockoutPoints.find((p: LockoutPoint) => p.id === pointId);
+    if (!point) return;
+
+    const completedProcedures = point.completedProcedures || [];
+    const isCompleted = completedProcedures.includes(procedureIndex);
     
-    return `
-    <div class="section page-break">
-        <div class="section-header">
-            <div class="section-title">👷 STEP 6: ÉQUIPE ET CONSENTEMENTS</div>
-        </div>
-        <div class="section-content">
-            ${finalizationData.workers.length > 0 ? `
-                <table class="workers-table">
-                    <thead>
-                        <tr>
-                            <th>Nom</th>
-                            <th>Entreprise</th>
-                            <th>Poste</th>
-                            <th>Consentement</th>
-                            <th>Date/Heure</th>
-                            <th>Statut</th>
-                            <th>Commentaires</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${workersRows}
-                    </tbody>
-                </table>
-            ` : '<p style="text-align: center; color: #6b7280; font-style: italic;">Aucun travailleur ajouté à l\'équipe</p>'}
-            
-            ${finalizationData.finalComments ? `
-                <div class="subsection" style="margin-top: 20px;">
-                    <div class="subsection-title">💬 Commentaires Finaux</div>
-                    <div style="white-space: pre-wrap; line-height: 1.5; padding: 10px; background: #f9fafb; border-radius: 4px;">
-                        ${finalizationData.finalComments}
-                    </div>
-                </div>
-            ` : ''}
-            
-            <div class="subsection" style="margin-top: 20px;">
-                <div class="subsection-title">📊 Statut du Document</div>
-                <div class="info-row">
-                    <span class="info-label">Statut:</span>
-                    <span class="info-value">
-                        <span class="badge badge-${finalizationData.isLocked ? 'success' : 'warning'}">
-                            ${finalizationData.isLocked ? '🔒 VERROUILLÉ' : '🔓 EN COURS'}
-                        </span>
-                    </span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Complétion:</span>
-                    <span class="info-value">${finalizationData.completionPercentage}%</span>
-                </div>
-                ${finalizationData.lockTimestamp ? `
-                    <div class="info-row">
-                        <span class="info-label">Verrouillé le:</span>
-                        <span class="info-value">${new Date(finalizationData.lockTimestamp).toLocaleString('fr-CA')}</span>
-                    </div>
-                ` : ''}
-            </div>
-        </div>
-    </div>`;
+    const updatedCompleted = isCompleted 
+      ? completedProcedures.filter((index: number) => index !== procedureIndex)
+      : [...completedProcedures, procedureIndex];
+
+    updateLockoutPoint(pointId, 'completedProcedures', updatedCompleted);
   };
 
-  const generateSignatureSection = () => {
-    return `
-    <div class="signature-section">
-        <div class="signature-box">
-            <div class="signature-label">RESPONSABLE SÉCURITÉ</div>
-            <div style="margin-top: 30px; font-size: 8px;">
-                Nom: _________________________<br><br>
-                Signature: ____________________<br><br>
-                Date: ________________________
-            </div>
-        </div>
-        <div class="signature-box">
-            <div class="signature-label">SUPERVISEUR</div>
-            <div style="margin-top: 30px; font-size: 8px;">
-                Nom: _________________________<br><br>
-                Signature: ____________________<br><br>
-                Date: ________________________
-            </div>
-        </div>
-        <div class="signature-box">
-            <div class="signature-label">GESTIONNAIRE</div>
-            <div style="margin-top: 30px; font-size: 8px;">
-                Nom: _________________________<br><br>
-                Signature: ____________________<br><br>
-                Date: ________________________
-            </div>
-        </div>
-    </div>`;
-  };
-  // =================== HANDLERS AUTRES ===================
-  const lockAST = (lockType: LockType) => {
-    setFinalizationData(prev => ({
-      ...prev,
-      isLocked: true,
-      lockTimestamp: new Date().toISOString(),
-      lockReason: lockType
-    }));
-    setShowLockConfirm(false);
-    console.log(`🔒 AST verrouillée (${lockType})`);
-    alert(`✅ AST verrouillée avec succès (${lockType})`);
+  const getProcedureProgress = (point: LockoutPoint): { completed: number; total: number; percentage: number } => {
+    const energyType = ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES];
+    const total = energyType?.procedures.length || 0;
+    const completed = (point.completedProcedures || []).length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { completed, total, percentage };
   };
 
-  // =================== RENDU PRINCIPAL ===================
+  const deleteLockoutPoint = (pointId: string) => {
+    console.log('Suppression du point de verrouillage:', pointId);
+    console.log('Points avant suppression:', lockoutPoints.length);
+    
+    // Forcer la mise à jour immédiate avec un nouvel objet
+    const updatedPoints = lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
+    console.log('Points après suppression:', updatedPoints.length);
+    
+    // Supprimer aussi les photos associées
+    const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
+    
+    // Mettre à jour avec un nouvel objet projectInfo pour forcer le re-render
+    const newProjectInfo = {
+      ...projectInfo,
+      lockoutPoints: updatedPoints,
+      lockoutPhotos: updatedPhotos
+    };
+    
+    onDataChange('projectInfo', newProjectInfo);
+    console.log('Point supprimé avec succès');
+  };
+
+  // =================== CARROUSEL PHOTOS ===================
+  const PhotoCarousel = ({ photos, onAddPhoto, lockoutPointId }: {
+    photos: LockoutPhoto[];
+    onAddPhoto: () => void;
+    lockoutPointId?: string;
+  }) => {
+    const currentIndex = lockoutPointId ? (currentLockoutPhotoIndex[lockoutPointId] || 0) : currentPhotoIndex;
+    const totalSlides = photos.length + 1;
+
+    const setCurrentIndex = (index: number) => {
+      if (lockoutPointId) {
+        setCurrentLockoutPhotoIndex(prev => ({ ...prev, [lockoutPointId]: index }));
+      } else {
+        setCurrentPhotoIndex(index);
+      }
+    };
+
+    const nextSlide = () => setCurrentIndex((currentIndex + 1) % totalSlides);
+    const prevSlide = () => setCurrentIndex(currentIndex === 0 ? totalSlides - 1 : currentIndex - 1);
+    const goToSlide = (index: number) => setCurrentIndex(index);
+
+    return (
+      <div className="photo-carousel">
+        <div className="carousel-container">
+          <div className="carousel-track" style={{ transform: `translateX(-${currentIndex * 100}%)` }}>
+            {photos.map((photo: LockoutPhoto, index: number) => (
+              <div key={photo.id} className="carousel-slide">
+                <img src={photo.url} alt={photo.caption} />
+                <div className="photo-info">
+                  <div className="photo-caption">
+                    <h4>{getCategoryLabel(photo.category)}</h4>
+                    <p>{new Date(photo.timestamp).toLocaleString('fr-CA')}</p>
+                  </div>
+                  <div className="photo-actions">
+                    <button className="photo-action-btn delete" onClick={() => deletePhoto(photo.id)} title="Supprimer cette photo">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div className="carousel-slide add-photo" onClick={onAddPhoto}>
+              <div className="add-photo-content">
+                <div className="add-photo-icon"><Camera size={24} /></div>
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>Ajouter une photo</h4>
+                <p style={{ margin: 0, fontSize: '14px', opacity: 0.8, textAlign: 'center' }}>
+                  Documentez cette étape avec une photo
+                </p>
+              </div>
+            </div>
+          </div>
+          {totalSlides > 1 && (
+            <>
+              <button className="carousel-nav prev" onClick={prevSlide} disabled={totalSlides <= 1}>
+                <ArrowLeft size={20} />
+              </button>
+              <button className="carousel-nav next" onClick={nextSlide} disabled={totalSlides <= 1}>
+                <ArrowRight size={20} />
+              </button>
+            </>
+          )}
+          {totalSlides > 1 && (
+            <div className="carousel-indicators">
+              {Array.from({ length: totalSlides }).map((_, index) => (
+                <div key={index} className={`carousel-indicator ${index === currentIndex ? 'active' : ''}`} onClick={() => goToSlide(index)} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
-      {/* CSS Premium Step 6 */}
+      {/* CSS Premium pour Step 1 avec Verrouillage */}
       <style dangerouslySetInnerHTML={{
         __html: `
-          .step6-container { padding: 0; background: #f8fafc; min-height: 100vh; }
-          .finalization-header { text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 12px; }
-          .finalization-title { font-size: 28px; margin-bottom: 8px; font-weight: bold; }
-          .finalization-subtitle { font-size: 16px; opacity: 0.9; }
-          
-          .tabs-container { display: flex; background: white; border-radius: 12px; padding: 8px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-          .tab-button { flex: 1; padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
-          .tab-button.active { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4); }
-          
-          .finalization-section { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-          .section-title { font-size: 18px; font-weight: bold; margin-bottom: 16px; color: #1f2937; display: flex; align-items: center; gap: 8px; }
-          
-          .workers-grid { display: grid; gap: 16px; }
-          .worker-card { border: 2px solid #e5e7eb; border-radius: 12px; padding: 16px; background: #f9fafb; transition: all 0.3s; }
-          .worker-card:hover { border-color: #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); }
-          .worker-header { display: flex; justify-content: between; align-items: center; margin-bottom: 12px; }
-          .worker-name { font-size: 16px; font-weight: bold; color: #1f2937; }
-          .worker-company { color: #6b7280; font-size: 14px; }
-          
-          .consent-section { background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-top: 12px; }
-          .consent-checkbox { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; cursor: pointer; }
-          .consent-checkbox input { width: 20px; height: 20px; cursor: pointer; }
-          .consent-text { font-weight: 500; color: #374151; }
-          .consent-timestamp { font-size: 12px; color: #6b7280; font-style: italic; }
-          
-          .approbation-section { display: flex; gap: 8px; margin-top: 12px; }
-          .approbation-btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.3s; }
-          .approbation-approve { background: #dcfce7; color: #166534; }
-          .approbation-approve:hover { background: #bbf7d0; }
-          .approbation-reject { background: #fee2e2; color: #991b1b; }
-          .approbation-reject:hover { background: #fecaca; }
-          
-          .premium-button { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
-          .premium-button:hover { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); transform: translateY(-2px); box-shadow: 0 8px 16px rgba(245, 158, 11, 0.3); }
-          .premium-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-          
-          .share-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-top: 16px; }
-          .share-btn { padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; background: white; cursor: pointer; text-align: center; transition: all 0.3s; }
-          .share-btn:hover { border-color: #3b82f6; background: #eff6ff; }
-          
-          .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-          .modal-content { background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-          
-          .form-group { margin-bottom: 16px; }
-          .form-label { display: block; margin-bottom: 6px; font-weight: 600; color: #374151; }
-          .form-input { width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; transition: border-color 0.3s; }
-          .form-input:focus { outline: none; border-color: #3b82f6; }
-          
-          .checkbox-field { display: flex; align-items: center; gap: 12px; padding: 16px; border: 2px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: all 0.3s; background: white !important; }
-          .checkbox-field:hover { border-color: #3b82f6; background: #f0f9ff !important; }
-          .checkbox-field.checked { border-color: #10b981; background: #f0fdf4 !important; }
-          .checkbox-field span { color: #1f2937 !important; font-weight: 500 !important; }
-          
-          .progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-bottom: 16px; }
-          .progress-fill { height: 100%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.5s ease; }
-          
-          .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 20px; }
-          .stat-card { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 16px; border-radius: 8px; text-align: center; }
-          .stat-number { font-size: 24px; font-weight: bold; margin-bottom: 4px; }
-          .stat-label { font-size: 12px; opacity: 0.9; }
-          
-          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-          .spinning { animation: spin 1s linear infinite; }
+          .step1-container { padding: 0; }
+          .premium-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 32px; }
+          .form-section { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 20px; padding: 24px; transition: all 0.3s ease; }
+          .form-section:hover { transform: translateY(-4px); border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15); }
+          .lockout-section { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); }
+          .lockout-section:hover { border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 8px 25px rgba(239, 68, 68, 0.15); }
+          .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(100, 116, 139, 0.2); }
+          .section-icon { width: 24px; height: 24px; color: #3b82f6; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+          .lockout-icon { color: #ef4444 !important; }
+          .section-title { color: #ffffff; font-size: 18px; font-weight: 700; margin: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+          .form-field { margin-bottom: 20px; }
+          .field-label { display: block; color: #e2e8f0; font-size: 14px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+          .premium-input, .premium-select, .premium-textarea { width: 100%; padding: 14px 16px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; color: #ffffff; font-size: 15px; font-weight: 500; transition: all 0.3s ease; backdrop-filter: blur(10px); }
+          .premium-input:focus, .premium-select:focus, .premium-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); background: rgba(15, 23, 42, 0.9); }
+          .premium-textarea { min-height: 120px; resize: vertical; font-family: inherit; }
+          .premium-input::placeholder, .premium-textarea::placeholder { color: #64748b; font-weight: 400; }
+          .premium-select { cursor: pointer; }
+          .required-indicator { color: #ef4444; margin-left: 4px; }
+          .field-help { font-size: 12px; color: #64748b; margin-top: 6px; font-style: italic; }
+          .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+          .ast-number-card { background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%); border: 2px solid #22c55e; border-radius: 20px; padding: 24px; margin-bottom: 32px; position: relative; overflow: hidden; }
+          .ast-number-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.1), transparent); animation: shine 3s ease-in-out infinite; }
+          @keyframes shine { 0% { left: -100%; } 50% { left: 100%; } 100% { left: 100%; } }
+          .ast-number-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+          .ast-number-title { color: #22c55e; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+          .ast-number-value { font-family: 'Monaco', 'Menlo', 'Courier New', monospace; font-size: 24px; font-weight: 800; color: #22c55e; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); margin-bottom: 12px; }
+          .ast-actions { display: flex; gap: 12px; }
+          .btn-icon { background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; color: #22c55e; padding: 8px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
+          .btn-icon:hover { background: rgba(34, 197, 94, 0.2); transform: translateY(-2px); }
+          .btn-icon.copied { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+          .btn-primary { background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: none; color: white; padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
+          .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3); }
+          .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: white; padding: 8px 12px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; font-size: 14px; }
+          .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+          .energy-type-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
+          .energy-type-option { padding: 12px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; cursor: pointer; transition: all 0.3s ease; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+          .energy-type-option.selected { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+          .energy-type-option:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); }
+          .lockout-point { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 20px; position: relative; }
+          .lockout-point-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(239, 68, 68, 0.2); }
+          .procedures-list { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(100, 116, 139, 0.2); border-radius: 12px; padding: 16px; margin-top: 12px; }
+          .procedures-list h4 { color: #e2e8f0; font-size: 14px; font-weight: 600; margin: 0 0 12px 0; }
+          .procedures-checklist { margin: 0; padding: 0; list-style: none; }
+          .procedure-item { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; padding: 8px; border-radius: 8px; transition: all 0.3s ease; cursor: pointer; }
+          .procedure-item:hover { background: rgba(59, 130, 246, 0.1); }
+          .procedure-item.completed { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); }
+          .procedure-checkbox { width: 18px; height: 18px; border: 2px solid rgba(100, 116, 139, 0.5); border-radius: 4px; background: rgba(15, 23, 42, 0.8); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0; margin-top: 2px; }
+          .procedure-checkbox.checked { background: #22c55e; border-color: #22c55e; color: white; }
+          .procedure-checkbox:hover { border-color: #3b82f6; transform: scale(1.05); }
+          .procedure-text { color: #94a3b8; font-size: 13px; line-height: 1.5; flex: 1; }
+          .procedure-item.completed .procedure-text { color: #a7f3d0; }
+          .procedures-progress { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(100, 116, 139, 0.2); }
+          .progress-bar { background: rgba(15, 23, 42, 0.8); border-radius: 8px; height: 6px; overflow: hidden; margin-bottom: 8px; }
+          .progress-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a); transition: width 0.5s ease; border-radius: 8px; }
+          .progress-text { font-size: 12px; color: #64748b; text-align: center; }
+          .time-quick-select { display: flex; gap: 6px; margin-top: 8px; }
+          .time-btn { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; flex: 1; justify-content: center; }
+          .time-btn:hover { background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.5); transform: translateY(-1px); }
+          .time-btn.now { background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3); color: #4ade80; }
+          .time-btn.now:hover { background: rgba(34, 197, 94, 0.2); border-color: rgba(34, 197, 94, 0.5); }
+          .time-btn.plus5 { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); color: #fbbf24; }
+          .time-btn.plus5:hover { background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); }
+          .time-btn.plus15 { background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3); color: #a78bfa; }
+          .time-btn.plus15:hover { background: rgba(139, 92, 246, 0.2); border-color: rgba(139, 92, 246, 0.5); }
+          .photo-capture-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+          .photo-capture-btn { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
+          .photo-capture-btn:hover { background: rgba(59, 130, 246, 0.2); transform: translateY(-1px); }
+          .photo-carousel { position: relative; margin-top: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 16px; overflow: hidden; }
+          .carousel-container { position: relative; width: 100%; height: 300px; overflow: hidden; }
+          .carousel-track { display: flex; transition: transform 0.3s ease; height: 100%; }
+          .carousel-slide { min-width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; }
+          .carousel-slide img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+          .carousel-slide.add-photo { background: rgba(59, 130, 246, 0.1); border: 2px dashed rgba(59, 130, 246, 0.3); cursor: pointer; transition: all 0.3s ease; flex-direction: column; gap: 16px; }
+          .carousel-slide.add-photo:hover { background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.5); }
+          .add-photo-content { display: flex; flex-direction: column; align-items: center; gap: 12px; color: #60a5fa; }
+          .add-photo-icon { width: 48px; height: 48px; background: rgba(59, 130, 246, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
+          .carousel-slide.add-photo:hover .add-photo-icon { transform: scale(1.1); background: rgba(59, 130, 246, 0.3); }
+          .carousel-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0, 0, 0, 0.7); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10; }
+          .carousel-nav:hover { background: rgba(0, 0, 0, 0.9); transform: translateY(-50%) scale(1.1); }
+          .carousel-nav:disabled { opacity: 0.3; cursor: not-allowed; }
+          .carousel-nav.prev { left: 16px; }
+          .carousel-nav.next { right: 16px; }
+          .carousel-indicators { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 10; }
+          .carousel-indicator { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.4); cursor: pointer; transition: all 0.3s ease; }
+          .carousel-indicator.active { background: rgba(255, 255, 255, 0.9); transform: scale(1.2); }
+          .photo-info { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); color: white; padding: 20px 16px 16px; display: flex; justify-content: space-between; align-items: flex-end; }
+          .photo-caption { flex: 1; margin-right: 12px; }
+          .photo-caption h4 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+          .photo-caption p { margin: 0; font-size: 12px; opacity: 0.8; }
+          .photo-actions { display: flex; gap: 8px; }
+          .photo-action-btn { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 6px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
+          .photo-action-btn:hover { background: rgba(255, 255, 255, 0.3); }
+          .photo-action-btn.delete:hover { background: rgba(239, 68, 68, 0.8); border-color: #ef4444; }
+          @media (max-width: 768px) {
+            .premium-grid { grid-template-columns: 1fr; gap: 16px; }
+            .form-section { padding: 16px; }
+            .two-column { grid-template-columns: 1fr; gap: 12px; }
+            .ast-number-value { font-size: 18px; }
+            .section-title { font-size: 16px; }
+            .premium-input, .premium-select, .premium-textarea { font-size: 16px; }
+            .energy-type-selector { grid-template-columns: repeat(2, 1fr); }
+            .photo-capture-buttons { flex-direction: column; }
+            .time-quick-select { flex-direction: column; gap: 4px; }
+            .time-btn { flex: none; }
+          }
+          @media (max-width: 480px) {
+            .form-section { padding: 12px; }
+            .ast-number-card { padding: 16px; }
+            .ast-actions { flex-direction: column; }
+            .energy-type-selector { grid-template-columns: 1fr; }
+          }
         `
       }} />
 
-      <div className="step6-container">
-        {/* Header avec logo */}
-        <div className="finalization-header">
-          <h2 className="finalization-title">🛡️ Finalisation AST</h2>
-          <p className="finalization-subtitle">Équipe, Partage et Validation Finale</p>
+      {/* Input caché pour capture photo */}
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} />
+      
+      <div className="step1-container">
+        {/* Carte Numéro AST Premium */}
+        <div className="ast-number-card">
+          <div className="ast-number-header">
+            <div className="ast-number-title">
+              <FileText style={{ width: '20px', height: '20px' }} />
+              🔢 Numéro AST Unique
+            </div>
+            <div className="ast-actions">
+              <button className={`btn-icon ${copied ? 'copied' : ''}`} onClick={copyASTNumber} title="Copier le numéro">
+                {copied ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
+              </button>
+              <button className="btn-icon" onClick={regenerateASTNumber} title="Générer un nouveau numéro">
+                <FileText style={{ width: '16px', height: '16px' }} />
+              </button>
+            </div>
+          </div>
+          <div className="ast-number-value">{astNumber}</div>
+          <div className="field-help">Numéro généré automatiquement - Usage unique pour cette AST</div>
         </div>
 
-        {/* Navigation onglets */}
-        <div className="tabs-container">
-          <button 
-            className={`tab-button ${activeTab === 'workers' ? 'active' : ''}`}
-            onClick={() => setActiveTab('workers')}
-          >
-            <Users size={18} />
-            👷 Équipe Chantier
-          </button>
-          <button 
-            className={`tab-button ${activeTab === 'sharing' ? 'active' : ''}`}
-            onClick={() => setActiveTab('sharing')}
-          >
-            <Share2 size={18} />
-            📤 Partage
-          </button>
-          <button 
-            className={`tab-button ${activeTab === 'finalization' ? 'active' : ''}`}
-            onClick={() => setActiveTab('finalization')}
-          >
-            <FileText size={18} />
-            ✅ Finalisation
-          </button>
-        </div>
+        {/* Grille Premium des Sections */}
+        <div className="premium-grid">
+          {/* Section Client */}
+          <div className="form-section">
+            <div className="section-header">
+              <Building className="section-icon" />
+              <h3 className="section-title">🏢 Informations Client</h3>
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Building style={{ width: '18px', height: '18px' }} />
+                Nom du Client<span className="required-indicator">*</span>
+              </label>
+              <input type="text" className="premium-input" placeholder="Ex: Hydro-Québec, Bell Canada..."
+                value={projectInfo.client || ''} onChange={(e) => updateProjectInfo('client', e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Phone style={{ width: '18px', height: '18px' }} />Téléphone Client
+              </label>
+              <input type="tel" className="premium-input" placeholder="Ex: (514) 555-0123"
+                value={projectInfo.clientPhone || ''} onChange={(e) => updateProjectInfo('clientPhone', e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <User style={{ width: '18px', height: '18px' }} />Représentant Client
+              </label>
+              <input type="text" className="premium-input" placeholder="Nom du responsable projet"
+                value={projectInfo.clientRepresentative || ''} onChange={(e) => updateProjectInfo('clientRepresentative', e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Phone style={{ width: '18px', height: '18px' }} />Téléphone Représentant
+              </label>
+              <input type="tel" className="premium-input" placeholder="Ex: (514) 555-0456"
+                value={projectInfo.clientRepresentativePhone || ''} onChange={(e) => updateProjectInfo('clientRepresentativePhone', e.target.value)} />
+            </div>
+          </div>
 
-        {/* ONGLET 1: ÉQUIPE CHANTIER */}
-        {activeTab === 'workers' && (
-          <div>
-            {/* Stats équipe */}
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-number">{finalizationData.workers.length}</div>
-                <div className="stat-label">👷 Travailleurs</div>
+          {/* Section Projet */}
+          <div className="form-section">
+            <div className="section-header">
+              <Briefcase className="section-icon" />
+              <h3 className="section-title">📋 Détails du Projet</h3>
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Briefcase style={{ width: '18px', height: '18px' }} />
+                Numéro de Projet<span className="required-indicator">*</span>
+              </label>
+              <input type="text" className="premium-input" placeholder="Ex: PRJ-2025-001"
+                value={projectInfo.projectNumber || ''} onChange={(e) => updateProjectInfo('projectNumber', e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <FileText style={{ width: '18px', height: '18px' }} /># AST Client (Optionnel)
+              </label>
+              <input type="text" className="premium-input" placeholder="Numéro fourni par le client"
+                value={projectInfo.astClientNumber || ''} onChange={(e) => updateProjectInfo('astClientNumber', e.target.value)} />
+              <div className="field-help">Numéro de référence du client (si applicable)</div>
+            </div>
+            <div className="two-column">
+              <div className="form-field">
+                <label className="field-label">
+                  <Calendar style={{ width: '18px', height: '18px' }} />Date
+                </label>
+                <input type="date" className="premium-input"
+                  value={projectInfo.date || new Date().toISOString().split('T')[0]}
+                  onChange={(e) => updateProjectInfo('date', e.target.value)} />
               </div>
-              <div className="stat-card">
-                <div className="stat-number">{finalizationData.workers.filter(w => w.hasConsented).length}</div>
-                <div className="stat-label">✅ Consentements</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-number">{finalizationData.workers.filter(w => w.approbationStatus === 'approved').length}</div>
-                <div className="stat-label">👍 Approbations</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-number">{Math.round((finalizationData.workers.filter(w => w.hasConsented).length / Math.max(finalizationData.workers.length, 1)) * 100)}%</div>
-                <div className="stat-label">📊 Taux Lecture</div>
+              <div className="form-field">
+                <label className="field-label">
+                  <Clock style={{ width: '18px', height: '18px' }} />Heure
+                </label>
+                <input type="time" className="premium-input"
+                  value={projectInfo.time || new Date().toTimeString().substring(0, 5)}
+                  onChange={(e) => updateProjectInfo('time', e.target.value)} />
               </div>
             </div>
+          </div>
 
-            {/* Bouton ajout travailleur */}
-            <div className="finalization-section">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 className="section-title">
-                  <Users size={24} />
-                  Gestion de l'Équipe
-                </h3>
+          {/* Section Localisation */}
+          <div className="form-section">
+            <div className="section-header">
+              <MapPin className="section-icon" />
+              <h3 className="section-title">📍 Localisation</h3>
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <MapPin style={{ width: '18px', height: '18px' }} />
+                Lieu des Travaux<span className="required-indicator">*</span>
+              </label>
+              <input type="text" className="premium-input" placeholder="Adresse complète du site de travail"
+                value={projectInfo.workLocation || ''} onChange={(e) => updateProjectInfo('workLocation', e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Briefcase style={{ width: '18px', height: '18px' }} />Type d'Industrie
+              </label>
+              <select className="premium-select" value={projectInfo.industry || 'electrical'}
+                onChange={(e) => updateProjectInfo('industry', e.target.value)}>
+                <option value="electrical">⚡ Électrique</option>
+                <option value="construction">🏗️ Construction</option>
+                <option value="industrial">🏭 Industriel</option>
+                <option value="manufacturing">⚙️ Manufacturier</option>
+                <option value="office">🏢 Bureau/Administratif</option>
+                <option value="other">🔧 Autre</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Section Équipe */}
+          <div className="form-section">
+            <div className="section-header">
+              <Users className="section-icon" />
+              <h3 className="section-title">👥 Équipe de Travail</h3>
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Users style={{ width: '18px', height: '18px' }} />
+                Nombre de Personnes<span className="required-indicator">*</span>
+              </label>
+              <input type="number" min="1" max="100" className="premium-input" placeholder="Ex: 5"
+                value={projectInfo.workerCount || 1} onChange={(e) => updateProjectInfo('workerCount', parseInt(e.target.value) || 1)} />
+              <div className="field-help">Ce nombre sera comparé aux approbations d'équipe</div>
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Clock style={{ width: '18px', height: '18px' }} />Durée Estimée
+              </label>
+              <input type="text" className="premium-input" placeholder="Ex: 4 heures, 2 jours, 1 semaine"
+                value={projectInfo.estimatedDuration || ''} onChange={(e) => updateProjectInfo('estimatedDuration', e.target.value)} />
+            </div>
+          </div>
+
+          {/* Section Contacts d'Urgence */}
+          <div className="form-section">
+            <div className="section-header">
+              <AlertTriangle className="section-icon" />
+              <h3 className="section-title">🚨 Contacts d'Urgence</h3>
+            </div>
+            <div className="two-column">
+              <div className="form-field">
+                <label className="field-label">
+                  <AlertTriangle style={{ width: '18px', height: '18px' }} />Contact d'Urgence
+                </label>
+                <input type="text" className="premium-input" placeholder="Nom du contact d'urgence"
+                  value={projectInfo.emergencyContact || ''} onChange={(e) => updateProjectInfo('emergencyContact', e.target.value)} />
+              </div>
+              <div className="form-field">
+                <label className="field-label">
+                  <Phone style={{ width: '18px', height: '18px' }} />Téléphone d'Urgence
+                </label>
+                <input type="tel" className="premium-input" placeholder="911 ou numéro spécifique"
+                  value={projectInfo.emergencyPhone || ''} onChange={(e) => updateProjectInfo('emergencyPhone', e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* Section Description */}
+          <div className="form-section full-width-section">
+            <div className="section-header">
+              <FileText className="section-icon" />
+              <h3 className="section-title">📝 Description Détaillée des Travaux</h3>
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <FileText style={{ width: '18px', height: '18px' }} />
+                Description Complète<span className="required-indicator">*</span>
+              </label>
+              <textarea className="premium-textarea" style={{ width: '100%', minHeight: '200px', maxWidth: 'none', resize: 'vertical' }}
+                placeholder="Décrivez en détail les travaux à effectuer :&#10;&#10;• Méthodes utilisées&#10;• Équipements impliqués&#10;• Zones d'intervention&#10;• Procédures spéciales&#10;• Conditions particulières&#10;&#10;Plus la description est détaillée, plus l'analyse de sécurité sera précise."
+                value={projectInfo.workDescription || ''} onChange={(e) => updateProjectInfo('workDescription', e.target.value)} />
+              <div className="field-help">Une description complète aide à identifier tous les risques potentiels et à choisir les mesures de sécurité appropriées.</div>
+            </div>
+          </div>
+        </div>
+
+        {/* =================== SECTION VERROUILLAGE/CADENASSAGE =================== */}
+        <div className="form-section lockout-section span-full" style={{ marginTop: '32px' }}>
+          <div className="section-header">
+            <Lock className="section-icon lockout-icon" />
+            <h3 className="section-title">🔒 Verrouillage / Cadenassage (LOTO)</h3>
+          </div>
+          <div className="field-help" style={{ marginBottom: '24px' }}>
+            Documentation des procédures de verrouillage/étiquetage des énergies dangereuses selon les normes RSST. 
+            Photographiez chaque étape pour assurer une traçabilité complète.
+          </div>
+
+          {/* Photos générales de verrouillage */}
+          <div className="form-field">
+            <label className="field-label">
+              <Camera style={{ width: '18px', height: '18px' }} />Photos Générales de Verrouillage
+            </label>
+            <div className="photo-capture-buttons">
+              <button className="photo-capture-btn" onClick={() => handlePhotoCapture('before_lockout')}>
+                <Camera size={14} />Avant verrouillage
+              </button>
+              <button className="photo-capture-btn" onClick={() => handlePhotoCapture('client_form')}>
+                <FileText size={14} />Fiche client
+              </button>
+              <button className="photo-capture-btn" onClick={() => handlePhotoCapture('verification')}>
+                <Eye size={14} />Vérification finale
+              </button>
+            </div>
+
+            {lockoutPhotos.filter((photo: LockoutPhoto) => !photo.lockoutPointId).length > 0 ? (
+              <PhotoCarousel 
+                photos={lockoutPhotos.filter((photo: LockoutPhoto) => !photo.lockoutPointId)}
+                onAddPhoto={() => handlePhotoCapture('verification')}
+              />
+            ) : (
+              <div style={{
+                background: 'rgba(59, 130, 246, 0.1)', border: '2px dashed rgba(59, 130, 246, 0.3)',
+                borderRadius: '12px', padding: '40px 20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s ease'
+              }}
+              onClick={() => handlePhotoCapture('before_lockout')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
+                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+              }}>
+                <Camera size={32} color="#60a5fa" style={{ marginBottom: '12px' }} />
+                <h4 style={{ margin: '0 0 8px', color: '#60a5fa' }}>Aucune photo</h4>
+                <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8' }}>
+                  Cliquez pour prendre votre première photo de verrouillage
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Liste des points de verrouillage */}
+          {lockoutPoints.map((point: LockoutPoint, index: number) => (
+            <div key={point.id} className="lockout-point">
+              <div className="lockout-point-header">
+                <h4 style={{ color: '#ef4444', margin: 0, fontSize: '16px', fontWeight: '600' }}>
+                  🔒 Point de Verrouillage #{index + 1}
+                </h4>
                 <button 
-                  className="premium-button"
-                  onClick={() => setShowAddWorker(true)}
+                  className="btn-danger" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Suppression du point:', point.id);
+                    deleteLockoutPoint(point.id);
+                  }}
+                  type="button"
                 >
-                  <Plus size={18} />
-                  ➕ Ajouter Travailleur
+                  <Trash2 size={14} />
+                  Supprimer
                 </button>
               </div>
 
-              {/* Liste des travailleurs */}
-              <div className="workers-grid">
-                {finalizationData.workers.map(worker => (
-                  <div key={worker.id} className="worker-card">
-                    <div className="worker-header">
-                      <div>
-                        <div className="worker-name">{worker.name}</div>
-                        <div className="worker-company">{worker.company}</div>
+              {/* Type d'énergie */}
+              <div className="form-field">
+                <label className="field-label">Type d'Énergie<span className="required-indicator">*</span></label>
+                <div className="energy-type-selector">
+                  {Object.entries(ENERGY_TYPES).map(([key, type]) => {
+                    const IconComponent = type.icon;
+                    return (
+                      <div key={key} className={`energy-type-option ${point.energyType === key ? 'selected' : ''}`}
+                        onClick={() => updateLockoutPoint(point.id, 'energyType', key)}
+                        style={{ 
+                          borderColor: point.energyType === key ? type.color : undefined,
+                          backgroundColor: point.energyType === key ? `${type.color}20` : undefined 
+                        }}>
+                        <IconComponent size={20} color={type.color} />
+                        <span style={{ fontSize: '12px', fontWeight: '500', color: '#e2e8f0' }}>{type.name}</span>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span className={`badge badge-${worker.approbationStatus === 'approved' ? 'success' : worker.approbationStatus === 'rejected' ? 'danger' : 'warning'}`}>
-                          {worker.approbationStatus === 'approved' ? '✅ Approuvé' : 
-                           worker.approbationStatus === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
-                        </span>
-                      </div>
-                    </div>
+                    );
+                  })}
+                </div>
 
-                    {/* Section consentement */}
-                    <div className="consent-section">
-                      <div 
-                        className="consent-checkbox"
-                        onClick={() => toggleConsent(worker.id)}
-                      >
-                        <input 
-                          type="checkbox" 
-                          checked={worker.hasConsented}
-                          onChange={() => {}}
-                        />
-                        <span className="consent-text">
-                          ✋ Je consens avoir lu et compris cette AST
-                        </span>
+                {/* Procédures recommandées */}
+                {point.energyType && ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES] && (
+                  <div className="procedures-list">
+                    <h4>🔧 Procédures à Suivre:</h4>
+                    <ul className="procedures-checklist">
+                      {ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES].procedures.map((procedure, idx) => {
+                        const isCompleted = (point.completedProcedures || []).includes(idx);
+                        return (
+                          <li key={idx} className={`procedure-item ${isCompleted ? 'completed' : ''}`}
+                            onClick={() => toggleProcedureComplete(point.id, idx)}>
+                            <div className={`procedure-checkbox ${isCompleted ? 'checked' : ''}`}>
+                              {isCompleted && <Check size={12} />}
+                            </div>
+                            <span className="procedure-text">{procedure}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <div className="procedures-progress">
+                      <div className="progress-bar">
+                        <div className="progress-fill" style={{ width: `${getProcedureProgress(point).percentage}%` }} />
                       </div>
-                      {worker.hasConsented && worker.consentTimestamp && (
-                        <div className="consent-timestamp">
-                          📅 Consentement donné le {new Date(worker.consentTimestamp).toLocaleString('fr-CA')}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Boutons approbation */}
-                    <div className="approbation-section">
-                      <button 
-                        className="approbation-btn approbation-approve"
-                        onClick={() => updateApprobation(worker.id, 'approved', 'Approuvé par le superviseur')}
-                      >
-                        👍 Approuver
-                      </button>
-                      <button 
-                        className="approbation-btn approbation-reject"
-                        onClick={() => updateApprobation(worker.id, 'rejected', 'Formation supplémentaire requise')}
-                      >
-                        👎 Rejeter
-                      </button>
+                      <div className="progress-text">
+                        {getProcedureProgress(point).completed} / {getProcedureProgress(point).total} étapes complétées 
+                        ({getProcedureProgress(point).percentage}%)
+                      </div>
                     </div>
                   </div>
-                ))}
+                )}
+              </div>
 
-                {finalizationData.workers.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                    <Users size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-                    <p>Aucun travailleur ajouté. Cliquez sur "Ajouter Travailleur" pour commencer.</p>
+              {/* Détails du point */}
+              <div className="two-column">
+                <div className="form-field">
+                  <label className="field-label"><Settings style={{ width: '18px', height: '18px' }} />Nom de l'Équipement</label>
+                  <input type="text" className="premium-input" placeholder="Ex: Disjoncteur principal"
+                    value={point.equipmentName} onChange={(e) => updateLockoutPoint(point.id, 'equipmentName', e.target.value)} />
+                </div>
+                <div className="form-field">
+                  <label className="field-label"><MapPin style={{ width: '18px', height: '18px' }} />Localisation</label>
+                  <input type="text" className="premium-input" placeholder="Ex: Panneau électrique B-2"
+                    value={point.location} onChange={(e) => updateLockoutPoint(point.id, 'location', e.target.value)} />
+                </div>
+              </div>
+
+              <div className="two-column">
+                <div className="form-field">
+                  <label className="field-label"><Lock style={{ width: '18px', height: '18px' }} />Type de Cadenas/Dispositif</label>
+                  <input type="text" className="premium-input" placeholder="Ex: Cadenas rouge C-Secur360"
+                    value={point.lockType} onChange={(e) => updateLockoutPoint(point.id, 'lockType', e.target.value)} />
+                </div>
+                <div className="form-field">
+                  <label className="field-label"><FileText style={{ width: '18px', height: '18px' }} />Numéro d'Étiquette</label>
+                  <input type="text" className="premium-input" placeholder="TAG-123456"
+                    value={point.tagNumber} onChange={(e) => updateLockoutPoint(point.id, 'tagNumber', e.target.value)} />
+                </div>
+              </div>
+
+              {/* Status et vérification AVEC BOUTONS HORLOGE */}
+              <div className="two-column">
+                <div className="form-field">
+                  <label className="field-label"><User style={{ width: '18px', height: '18px' }} />Vérifié par</label>
+                  <input type="text" className="premium-input" placeholder="Nom de la personne"
+                    value={point.verifiedBy} onChange={(e) => updateLockoutPoint(point.id, 'verifiedBy', e.target.value)} />
+                </div>
+                <div className="form-field">
+                  <label className="field-label"><Clock style={{ width: '18px', height: '18px' }} />Heure de Vérification</label>
+                  <input type="time" className="premium-input" value={point.verificationTime}
+                    onChange={(e) => updateLockoutPoint(point.id, 'verificationTime', e.target.value)} />
+                  
+                  {/* Boutons de sélection rapide */}
+                  <div className="time-quick-select">
+                    <button className="time-btn now" onClick={() => {
+                      const now = new Date();
+                      const timeString = now.toTimeString().substring(0, 5);
+                      updateLockoutPoint(point.id, 'verificationTime', timeString);
+                    }}>
+                      <Clock size={12} />Maintenant
+                    </button>
+                    <button className="time-btn plus5" onClick={() => {
+                      const now = new Date();
+                      now.setMinutes(now.getMinutes() + 5);
+                      const timeString = now.toTimeString().substring(0, 5);
+                      updateLockoutPoint(point.id, 'verificationTime', timeString);
+                    }}>
+                      +5min
+                    </button>
+                    <button className="time-btn plus15" onClick={() => {
+                      const now = new Date();
+                      now.setMinutes(now.getMinutes() + 15);
+                      const timeString = now.toTimeString().substring(0, 5);
+                      updateLockoutPoint(point.id, 'verificationTime', timeString);
+                    }}>
+                      +15min
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="form-field">
+                <label className="field-label"><FileText style={{ width: '18px', height: '18px' }} />Notes et Observations</label>
+                <textarea className="premium-textarea" style={{ minHeight: '80px' }}
+                  placeholder="Observations particulières, difficultés rencontrées, modifications apportées..."
+                  value={point.notes} onChange={(e) => updateLockoutPoint(point.id, 'notes', e.target.value)} />
+              </div>
+
+              {/* Photos spécifiques à ce point */}
+              <div className="form-field">
+                <label className="field-label"><Camera style={{ width: '18px', height: '18px' }} />Photos de ce Point de Verrouillage</label>
+                
+                {/* Boutons de capture photo pour ce point */}
+                <div className="photo-capture-buttons">
+                  <button className="photo-capture-btn" onClick={() => handlePhotoCapture('during_lockout', point.id)}>
+                    <Camera size={14} />Pendant verrouillage
+                  </button>
+                  <button className="photo-capture-btn" onClick={() => handlePhotoCapture('lockout_device', point.id)}>
+                    <Lock size={14} />Dispositif
+                  </button>
+                  <button className="photo-capture-btn" onClick={() => handlePhotoCapture('verification', point.id)}>
+                    <Eye size={14} />Vérification
+                  </button>
+                </div>
+                
+                {lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id).length > 0 ? (
+                  <PhotoCarousel 
+                    photos={lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id)}
+                    onAddPhoto={() => handlePhotoCapture('lockout_device', point.id)}
+                    lockoutPointId={point.id}
+                  />
+                ) : (
+                  <div style={{
+                    background: 'rgba(239, 68, 68, 0.1)', border: '2px dashed rgba(239, 68, 68, 0.3)',
+                    borderRadius: '12px', padding: '40px 20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s ease'
+                  }}
+                  onClick={() => handlePhotoCapture('during_lockout', point.id)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                    e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                  }}>
+                    <Camera size={32} color="#f87171" style={{ marginBottom: '12px' }} />
+                    <h4 style={{ margin: '0 0 8px', color: '#f87171' }}>Aucune photo</h4>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8' }}>
+                      Cliquez pour prendre une photo avec l'appareil
+                    </p>
                   </div>
                 )}
               </div>
             </div>
+          ))}
+
+          {/* Bouton ajouter point de verrouillage - SE DÉPLACE AUTOMATIQUEMENT */}
+          <div style={{ marginTop: lockoutPoints.length > 0 ? '24px' : '0', marginBottom: '24px' }}>
+            <button className="btn-primary" onClick={addLockoutPoint}>
+              <Plus size={20} />Ajouter Point de Verrouillage
+            </button>
           </div>
-        )}
-        {/* ONGLET 2: PARTAGE SIMPLE */}
-        {activeTab === 'sharing' && (
-          <div>
-            {/* Partage Simple AST */}
-            <div className="finalization-section">
-              <h3 className="section-title">
-                <Share2 size={24} />
-                📤 Partage de l'AST
-              </h3>
-              
-              {/* Lien de partage */}
-              <div style={{ marginBottom: '20px' }}>
-                <label className="form-label" style={{ color: '#374151 !important', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
-                  🔗 Lien de partage sécurisé:
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input 
-                    type="text" 
-                    value={shareLink}
-                    readOnly
-                    className="form-input"
-                    style={{ 
-                      flex: 1, 
-                      background: '#f9fafb !important', 
-                      color: '#1f2937 !important',
-                      fontWeight: '500 !important',
-                      fontSize: '14px !important'
-                    }}
-                  />
-                  <button 
-                    onClick={copyShareLink}
-                    className="premium-button"
-                    style={{ minWidth: '120px' }}
-                  >
-                    {copySuccess ? <Check size={18} /> : <Copy size={18} />}
-                    {copySuccess ? '✅ Copié!' : '📋 Copier'}
-                  </button>
-                </div>
-              </div>
 
-              {/* Instructions */}
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
-                <h4 style={{ margin: '0 0 8px 0', color: '#1e40af', fontSize: '14px', fontWeight: '600' }}>
-                  📋 Instructions de partage:
-                </h4>
-                <ul style={{ margin: 0, paddingLeft: '20px', color: '#1e40af', fontSize: '13px' }}>
-                  <li>Partagez ce lien avec votre équipe pour consultation</li>
-                  <li>Chaque membre peut consulter l'AST et donner son approbation</li>
-                  <li>Le lien reste actif même si l'AST est verrouillée</li>
-                </ul>
-              </div>
-
-              {/* Boutons de partage */}
-              <div className="share-buttons">
-                <div className="share-btn" onClick={shareViaEmail}>
-                  <Mail size={24} style={{ color: '#dc2626', marginBottom: '8px' }} />
-                  <div style={{ fontWeight: '600', color: '#1f2937' }}>📧 Email</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Envoyer par courriel</div>
-                </div>
-                
-                <div className="share-btn" onClick={shareViaSMS}>
-                  <Smartphone size={24} style={{ color: '#059669', marginBottom: '8px' }} />
-                  <div style={{ fontWeight: '600', color: '#1f2937' }}>📱 SMS</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Envoyer par texto</div>
-                </div>
-                
-                <div className="share-btn" onClick={shareViaWhatsApp}>
-                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>💬</div>
-                  <div style={{ fontWeight: '600', color: '#1f2937' }}>WhatsApp</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Partager sur WhatsApp</div>
-                </div>
-                
-                <div className="share-btn" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}`)}>
-                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>📘</div>
-                  <div style={{ fontWeight: '600', color: '#1f2937' }}>Facebook</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Partager sur Facebook</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ONGLET 3: FINALISATION */}
-        {activeTab === 'finalization' && (
-          <div>
-            {/* État de complétion */}
-            <div className="finalization-section">
-              <h3 className="section-title">
-                <BarChart3 size={24} />
-                📊 État de Complétion Globale
-              </h3>
-              
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{ width: `${finalizationData.completionPercentage}%` }}
-                ></div>
-              </div>
-              <p style={{ textAlign: 'center', fontWeight: '600', color: '#059669' }}>
-                {finalizationData.completionPercentage}% Complété
+          {/* Message si aucun point */}
+          {lockoutPoints.length === 0 && (
+            <div style={{
+              background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '12px', padding: '24px', textAlign: 'center', color: '#60a5fa'
+            }}>
+              <Lock size={32} style={{ marginBottom: '12px' }} />
+              <h4 style={{ margin: '0 0 8px', color: '#60a5fa' }}>Aucun Point de Verrouillage</h4>
+              <p style={{ margin: 0, fontSize: '14px' }}>
+                Cliquez sur "Ajouter Point de Verrouillage" pour documenter les procédures LOTO
               </p>
-
-              {/* Statuts des sections */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginTop: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px' }}>
-                  <CheckCircle size={20} style={{ color: '#10b981' }} />
-                  <span>✅ Informations projet</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px' }}>
-                  <CheckCircle size={20} style={{ color: '#10b981' }} />
-                  <span>✅ Dangers identifiés</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px' }}>
-                  <CheckCircle size={20} style={{ color: '#10b981' }} />
-                  <span>✅ Équipements sélectionnés</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px' }}>
-                  <AlertTriangle size={20} style={{ color: '#f59e0b' }} />
-                  <span>⏳ Validation équipe</span>
-                </div>
-              </div>
             </div>
-
-            {/* Options de génération */}
-            <div className="finalization-section">
-              <h3 className="section-title">
-                <FileText size={24} />
-                📄 Options de Génération Rapport
-              </h3>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-                <div 
-                  className={`checkbox-field ${finalizationData.documentGeneration.includePhotos ? 'checked' : ''}`}
-                  onClick={() => setFinalizationData(prev => ({
-                    ...prev,
-                    documentGeneration: { ...prev.documentGeneration, includePhotos: !prev.documentGeneration.includePhotos }
-                  }))}
-                >
-                  <input type="checkbox" checked={finalizationData.documentGeneration.includePhotos} onChange={() => {}} />
-                  <span>📸 Inclure photos</span>
-                </div>
-                
-                <div 
-                  className={`checkbox-field ${finalizationData.documentGeneration.includeSignatures ? 'checked' : ''}`}
-                  onClick={() => setFinalizationData(prev => ({
-                    ...prev,
-                    documentGeneration: { ...prev.documentGeneration, includeSignatures: !prev.documentGeneration.includeSignatures }
-                  }))}
-                >
-                  <input type="checkbox" checked={finalizationData.documentGeneration.includeSignatures} onChange={() => {}} />
-                  <span>✍️ Inclure signatures</span>
-                </div>
-                
-                <div 
-                  className={`checkbox-field ${finalizationData.documentGeneration.includeQRCode ? 'checked' : ''}`}
-                  onClick={() => setFinalizationData(prev => ({
-                    ...prev,
-                    documentGeneration: { ...prev.documentGeneration, includeQRCode: !prev.documentGeneration.includeQRCode }
-                  }))}
-                >
-                  <input type="checkbox" checked={finalizationData.documentGeneration.includeQRCode} onChange={() => {}} />
-                  <span>📱 Inclure QR Code</span>
-                </div>
-                
-                <div 
-                  className={`checkbox-field ${finalizationData.documentGeneration.includeBranding ? 'checked' : ''}`}
-                  onClick={() => setFinalizationData(prev => ({
-                    ...prev,
-                    documentGeneration: { ...prev.documentGeneration, includeBranding: !prev.documentGeneration.includeBranding }
-                  }))}
-                >
-                  <input type="checkbox" checked={finalizationData.documentGeneration.includeBranding} onChange={() => {}} />
-                  <span>🏢 Inclure branding</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Commentaires finaux */}
-            <div className="finalization-section">
-              <h3 className="section-title">
-                <MessageSquare size={24} />
-                💬 Commentaires Finaux
-              </h3>
-              
-              <textarea
-                value={finalizationData.finalComments}
-                onChange={(e) => setFinalizationData(prev => ({ ...prev, finalComments: e.target.value }))}
-                placeholder="Ajoutez des commentaires finaux, notes importantes ou instructions spéciales..."
-                className="form-input"
-                style={{ minHeight: '100px', resize: 'vertical' }}
-                disabled={finalizationData.isLocked}
-              />
-              
-              {finalizationData.isLocked && (
-                <p style={{ marginTop: '8px', color: '#dc2626', fontSize: '14px', fontStyle: 'italic' }}>
-                  🔒 Document verrouillé - Modification impossible
-                </p>
-              )}
-            </div>
-
-            {/* Actions finales */}
-            <div className="finalization-section">
-              <h3 className="section-title">
-                <Target size={24} />
-                🎯 Actions Finales
-              </h3>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-                <button 
-                  onClick={printAST}
-                  className="premium-button"
-                  disabled={isLoading}
-                >
-                  {isLoading ? <RefreshCw size={18} className="spinning" /> : <Printer size={18} />}
-                  🖨️ Imprimer Rapport
-                </button>
-                
-                <button 
-                  onClick={() => {
-                    console.log('💾 Sauvegarde AST...');
-                    alert('✅ AST sauvegardée avec succès!');
-                  }}
-                  className="premium-button"
-                >
-                  <Save size={18} />
-                  💾 Sauvegarder
-                </button>
-                
-                <button 
-                  onClick={() => {
-                    console.log('📁 Archivage AST...');
-                    alert('✅ AST archivée avec succès!');
-                  }}
-                  className="premium-button"
-                >
-                  <Archive size={18} />
-                  📁 Archiver
-                </button>
-                
-                <button 
-                  onClick={() => setShowLockConfirm(true)}
-                  className="premium-button"
-                  disabled={finalizationData.isLocked}
-                  style={{ 
-                    background: finalizationData.isLocked ? 
-                      'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)' : 
-                      'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
-                  }}
-                >
-                  {finalizationData.isLocked ? <Lock size={18} /> : <Unlock size={18} />}
-                  {finalizationData.isLocked ? '🔒 Verrouillé' : '🔒 Verrouiller'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL AJOUT TRAVAILLEUR SIMPLIFIÉ */}
-        {showAddWorker && (
-          <div className="modal-overlay">
-            <div className="modal-content">
-              <h4 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600' }}>
-                👷 Ajouter un Travailleur
-              </h4>
-              
-              <div className="form-group">
-                <label className="form-label">Nom complet *</label>
-                <input
-                  type="text"
-                  value={newWorker.name || ''}
-                  onChange={(e) => setNewWorker(prev => ({ ...prev, name: e.target.value }))}
-                  className="form-input"
-                  placeholder="Jean Tremblay"
-                  style={{ padding: '14px', fontSize: '16px' }}
-                />
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Entreprise *</label>
-                <input
-                  type="text"
-                  value={newWorker.company || ''}
-                  onChange={(e) => setNewWorker(prev => ({ ...prev, company: e.target.value }))}
-                  className="form-input"
-                  placeholder="Construction ABC Inc."
-                  style={{ padding: '14px', fontSize: '16px' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-                <button
-                  onClick={addWorker}
-                  className="premium-button"
-                  style={{ flex: 1 }}
-                >
-                  <Plus size={18} />
-                  ➕ Ajouter
-                </button>
-                <button
-                  onClick={() => setShowAddWorker(false)}
-                  style={{
-                    flex: 1,
-                    padding: '12px 24px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '8px',
-                    background: 'white',
-                    cursor: 'pointer',
-                    fontWeight: '600'
-                  }}
-                >
-                  ❌ Annuler
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL CONFIRMATION VERROUILLAGE */}
-        {showLockConfirm && (
-          <div className="modal-overlay">
-            <div className="modal-content" style={{ background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' }}>
-              <h4 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600', color: '#991b1b' }}>
-                🔒 Confirmer le Verrouillage
-              </h4>
-              
-              <div style={{ marginBottom: '20px', color: '#7f1d1d' }}>
-                <p style={{ marginBottom: '12px' }}>
-                  ⚠️ <strong>ATTENTION:</strong> Cette action est irréversible !
-                </p>
-                
-                <div style={{ background: 'white', padding: '16px', borderRadius: '8px', marginBottom: '16px' }}>
-                  <h5 style={{ margin: '0 0 8px 0', color: '#991b1b' }}>Vérifications automatiques:</h5>
-                  <div style={{ fontSize: '14px', color: '#7f1d1d' }}>
-                    ✅ Sections complétées: {finalizationData.completionPercentage}%<br />
-                    ✅ Consentements: {finalizationData.workers.filter(w => w.hasConsented).length}/{finalizationData.workers.length}<br />
-                    ✅ Approbations: {finalizationData.workers.filter(w => w.approbationStatus === 'approved').length}/{finalizationData.workers.length}
-                  </div>
-                </div>
-                
-                <p style={{ fontSize: '14px' }}>
-                  Une fois verrouillée, l'AST ne pourra plus être modifiée mais restera consultable par l'équipe.
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  onClick={() => lockAST('permanent')}
-                  className="premium-button"
-                  style={{ 
-                    flex: 1,
-                    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
-                  }}
-                >
-                  <Lock size={18} />
-                  🔒 Verrouiller Définitivement
-                </button>
-                <button
-                  onClick={() => setShowLockConfirm(false)}
-                  style={{
-                    flex: 1,
-                    padding: '12px 24px',
-                    border: '2px solid #991b1b',
-                    borderRadius: '8px',
-                    background: 'white',
-                    color: '#991b1b',
-                    cursor: 'pointer',
-                    fontWeight: '600'
-                  }}
-                >
-                  ❌ Annuler
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </>
   );
