@@ -5,7 +5,7 @@ import {
   Camera, FileText, Download, Archive, Send, CheckCircle, AlertTriangle,
   Clock, Eye, Share2, Save, Calendar, User, MapPin, Shield, Award,
   Target, BarChart3, Globe, Printer, Mail, Smartphone, Image, X,
-  Plus, Upload, Copy, Check, RefreshCw, Lock, Unlock, Users
+  Plus, Upload, Copy, Check, RefreshCw, Lock, Unlock, Users, MessageSquare
 } from 'lucide-react';
 
 // =================== INTERFACES PRINCIPALES ===================
