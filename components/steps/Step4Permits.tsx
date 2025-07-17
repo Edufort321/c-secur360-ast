@@ -43,7 +43,7 @@ interface Permit {
 
 interface FormField {
   id: string;
-  type: 'text' | 'number' | 'date' | 'time' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file' | 'signature' | 'workers_tracking';
+  type: 'text' | 'number' | 'date' | 'time' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file' | 'signature' | 'workers_tracking' | 'time_picker';
   label: string;
   required: boolean;
   placeholder?: string;
@@ -87,7 +87,7 @@ const realPermitsDatabase: Permit[] = [
       { id: 'project_name', type: 'text', label: 'Nom du projet', required: true, section: 'identification' },
       { id: 'location', type: 'text', label: 'Localisation exacte', required: true, section: 'identification' },
       { id: 'permit_date', type: 'date', label: 'Date du permis', required: true, section: 'identification' },
-      { id: 'permit_time', type: 'time', label: 'Heure d\'émission', required: true, section: 'identification' },
+      { id: 'permit_time', type: 'time_picker', label: 'Heure d\'émission', required: true, section: 'identification' },
       
       // Section Entrées et Sorties
       { id: 'entry_mandatory', type: 'radio', label: 'L\'entrée est-elle obligatoire ?', required: true, section: 'access', options: ['Oui', 'Non'] },
@@ -448,6 +448,14 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
     });
     setPermits(updatedPermits);
     updateFormData(updatedPermits);
+    
+    // Empêcher le scroll automatique
+    setTimeout(() => {
+      const activeElement = document.activeElement as HTMLElement;
+      if (activeElement && activeElement.scrollIntoView) {
+        activeElement.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+      }
+    }, 0);
   };
 
   const toggleFormExpansion = (permitId: string) => {
@@ -513,16 +521,18 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               id={field.id}
               value={value}
               onChange={(e) => {
-                handleFormFieldChange(permit.id, field.id, e.target.value);
-                e.preventDefault();
                 e.stopPropagation();
+                handleFormFieldChange(permit.id, field.id, e.target.value);
               }}
+              onInput={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              onKeyUp={(e) => e.stopPropagation()}
               placeholder={field.placeholder}
               required={field.required}
               min={field.validation?.min}
               max={field.validation?.max}
               className="form-input"
-              onFocus={(e) => e.stopPropagation()}
+              style={{ scrollMarginTop: '100px' }}
             />
           );
         
@@ -534,14 +544,123 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               id={field.id}
               value={value}
               onChange={(e) => {
-                handleFormFieldChange(permit.id, field.id, e.target.value);
-                e.preventDefault();
                 e.stopPropagation();
+                handleFormFieldChange(permit.id, field.id, e.target.value);
               }}
+              onInput={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              onKeyUp={(e) => e.stopPropagation()}
               required={field.required}
               className="form-input"
-              onFocus={(e) => e.stopPropagation()}
+              style={{ scrollMarginTop: '100px' }}
             />
+          );
+        
+        case 'time_picker':
+          const [showTimePicker, setShowTimePicker] = useState(false);
+          const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+          const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+          const currentTime = value || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
+          const [selectedHour, selectedMinute] = currentTime.split(':');
+          
+          return (
+            <div className="time-picker-container">
+              <div 
+                className="time-display"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTimePicker(!showTimePicker);
+                }}
+              >
+                <span className="time-value">{currentTime}</span>
+                <span className="time-icon">🕐</span>
+              </div>
+              
+              {showTimePicker && (
+                <div className="time-picker-dropdown">
+                  <div className="time-picker-header">
+                    <span>Sélectionner l'heure</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowTimePicker(false);
+                      }}
+                      className="time-picker-close"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  
+                  <div className="time-picker-selectors">
+                    <div className="time-selector">
+                      <div className="time-selector-label">Heure</div>
+                      <div className="time-options">
+                        {hours.map(hour => (
+                          <div
+                            key={hour}
+                            className={`time-option ${selectedHour === hour ? 'selected' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newTime = `${hour}:${selectedMinute}`;
+                              handleFormFieldChange(permit.id, field.id, newTime);
+                            }}
+                          >
+                            {hour}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="time-separator">:</div>
+                    
+                    <div className="time-selector">
+                      <div className="time-selector-label">Minutes</div>
+                      <div className="time-options">
+                        {minutes.filter((_, i) => i % 5 === 0).map(minute => (
+                          <div
+                            key={minute}
+                            className={`time-option ${selectedMinute === minute ? 'selected' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newTime = `${selectedHour}:${minute}`;
+                              handleFormFieldChange(permit.id, field.id, newTime);
+                            }}
+                          >
+                            {minute}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="time-picker-actions">
+                    <button
+                      type="button"
+                      className="time-picker-now"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const now = new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
+                        handleFormFieldChange(permit.id, field.id, now);
+                        setShowTimePicker(false);
+                      }}
+                    >
+                      Maintenant
+                    </button>
+                    <button
+                      type="button"
+                      className="time-picker-ok"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowTimePicker(false);
+                      }}
+                    >
+                      OK
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           );
         
         case 'textarea':
@@ -550,15 +669,17 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               id={field.id}
               value={value}
               onChange={(e) => {
-                handleFormFieldChange(permit.id, field.id, e.target.value);
-                e.preventDefault();
                 e.stopPropagation();
+                handleFormFieldChange(permit.id, field.id, e.target.value);
               }}
+              onInput={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              onKeyUp={(e) => e.stopPropagation()}
               placeholder={field.placeholder}
               required={field.required}
               rows={3}
               className="form-textarea"
-              onFocus={(e) => e.stopPropagation()}
+              style={{ scrollMarginTop: '100px' }}
             />
           );
         
@@ -568,13 +689,13 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               id={field.id}
               value={value}
               onChange={(e) => {
-                handleFormFieldChange(permit.id, field.id, e.target.value);
-                e.preventDefault();
                 e.stopPropagation();
+                handleFormFieldChange(permit.id, field.id, e.target.value);
               }}
+              onInput={(e) => e.stopPropagation()}
               required={field.required}
               className="form-select"
-              onFocus={(e) => e.stopPropagation()}
+              style={{ scrollMarginTop: '100px' }}
             >
               <option value="">Sélectionner...</option>
               {field.options?.map(option => (
@@ -593,12 +714,39 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                     type="text"
                     placeholder="Nom du travailleur"
                     className="worker-name-input"
-                    onKeyPress={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    onKeyUp={(e) => e.stopPropagation()}
+                    onInput={(e) => e.stopPropagation()}
+                    onKeyPress={(e) => {
+                      e.stopPropagation();
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const container = (e.target as HTMLElement).closest('.worker-entry-form');
+                        const nameInput = container?.querySelector('.worker-name-input') as HTMLInputElement;
+                        const timeInput = container?.querySelector('.worker-time-input') as HTMLInputElement;
+                        
+                        if (nameInput?.value.trim()) {
+                          const newEntry = {
+                            id: Date.now(),
+                            name: nameInput.value.trim(),
+                            entryTime: timeInput.value || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
+                            exitTime: null,
+                            date: new Date().toLocaleDateString('fr-CA')
+                          };
+                          const updatedLog = [...workersLog, newEntry];
+                          handleFormFieldChange(permit.id, field.id, updatedLog);
+                          nameInput.value = '';
+                          timeInput.value = '';
+                        }
+                      }
+                    }}
                   />
                   <input
                     type="time"
                     className="worker-time-input"
-                    onFocus={(e) => e.stopPropagation()}
+                    onInput={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    onKeyUp={(e) => e.stopPropagation()}
                   />
                   <button
                     type="button"
@@ -699,12 +847,11 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                     value={option}
                     checked={value === option}
                     onChange={(e) => {
-                      handleFormFieldChange(permit.id, field.id, e.target.value);
-                      e.preventDefault();
                       e.stopPropagation();
+                      handleFormFieldChange(permit.id, field.id, e.target.value);
                     }}
+                    onInput={(e) => e.stopPropagation()}
                     required={field.required}
-                    onFocus={(e) => e.stopPropagation()}
                   />
                   <span>{option}</span>
                 </label>
@@ -730,7 +877,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                         : checkedValues.filter(v => v !== option);
                       handleFormFieldChange(permit.id, field.id, newValues);
                     }}
-                    onFocus={(e) => e.stopPropagation()}
+                    onInput={(e) => e.stopPropagation()}
                   />
                   <span>{option}</span>
                 </label>
@@ -751,9 +898,9 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                   handleFormFieldChange(permit.id, field.id, file.name);
                 }
               }}
+              onInput={(e) => e.stopPropagation()}
               required={field.required}
               className="form-file"
-              onFocus={(e) => e.stopPropagation()}
             />
           );
         
@@ -799,7 +946,9 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                       (e.target as HTMLInputElement).value = '';
                     }
                   }}
-                  onFocus={(e) => e.stopPropagation()}
+                  onInput={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onKeyUp={(e) => e.stopPropagation()}
                 />
                 <button 
                   type="button" 
@@ -1009,6 +1158,33 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
           .exit-btn:hover { background: rgba(34, 197, 94, 0.3); }
           .remove-btn { padding: 4px 8px; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; cursor: pointer; font-size: 10px; }
           .remove-btn:hover { background: rgba(239, 68, 68, 0.3); }
+          
+          .time-picker-container { position: relative; }
+          .time-display { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; cursor: pointer; transition: all 0.3s ease; }
+          .time-display:hover { border-color: #2563eb; }
+          .time-value { color: #ffffff; font-family: monospace; font-size: 14px; }
+          .time-icon { font-size: 16px; }
+          
+          .time-picker-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(100, 116, 139, 0.5); border-radius: 8px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); z-index: 1000; backdrop-filter: blur(20px); }
+          .time-picker-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(100, 116, 139, 0.3); color: #ffffff; font-weight: 600; }
+          .time-picker-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 18px; padding: 4px; }
+          .time-picker-close:hover { color: #ef4444; }
+          
+          .time-picker-selectors { display: flex; align-items: flex-start; gap: 8px; padding: 16px; }
+          .time-selector { flex: 1; }
+          .time-selector-label { color: #94a3b8; font-size: 12px; font-weight: 500; margin-bottom: 8px; text-align: center; }
+          .time-options { max-height: 150px; overflow-y: auto; border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; }
+          .time-option { padding: 8px 12px; text-align: center; color: #cbd5e1; cursor: pointer; border-bottom: 1px solid rgba(100, 116, 139, 0.2); font-family: monospace; }
+          .time-option:last-child { border-bottom: none; }
+          .time-option:hover { background: rgba(59, 130, 246, 0.2); color: #ffffff; }
+          .time-option.selected { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #ffffff; font-weight: 600; }
+          .time-separator { font-size: 24px; color: #94a3b8; align-self: center; margin-top: 20px; font-weight: bold; }
+          
+          .time-picker-actions { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid rgba(100, 116, 139, 0.3); }
+          .time-picker-now { padding: 6px 12px; background: rgba(100, 116, 139, 0.2); color: #cbd5e1; border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 4px; cursor: pointer; font-size: 12px; }
+          .time-picker-now:hover { background: rgba(100, 116, 139, 0.3); }
+          .time-picker-ok { padding: 6px 12px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; margin-left: auto; }
+          .time-picker-ok:hover { transform: translateY(-1px); }
           
           .field-help { font-size: 10px; color: #64748b; margin-top: 2px; font-style: italic; }
           
