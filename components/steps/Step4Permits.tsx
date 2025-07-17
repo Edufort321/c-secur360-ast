@@ -853,7 +853,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
 
         {/* Grille des permis */}
         <div className="permits-grid">
-          {filteredPermits.map(permit => {
+          {filteredPermits.map((permit: Permit) => {
             const isSelected = permit.selected;
             const isFormExpanded = expandedForms[permit.id];
             
