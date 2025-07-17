@@ -43,7 +43,7 @@ interface Permit {
 
 interface FormField {
   id: string;
-  type: 'text' | 'number' | 'date' | 'time' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file' | 'signature';
+  type: 'text' | 'number' | 'date' | 'time' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file' | 'signature' | 'workers_tracking';
   label: string;
   required: boolean;
   placeholder?: string;
@@ -105,8 +105,9 @@ const realPermitsDatabase: Permit[] = [
       { id: 'space_contents', type: 'textarea', label: 'Contenu de l\'espace clos', required: true, section: 'atmosphere', placeholder: 'Décrire le contenu, vérifier SDS...' },
       { id: 'atmosphere_types', type: 'checkbox', label: 'Types d\'atmosphère', required: true, section: 'atmosphere', options: ['Inflammable/combustible LIE ≥ 5%', 'Oxygène ≤ 19,5%', 'Oxygène ≥ 23%', 'Gaz toxique', 'Poussières', 'Irritante'] },
       
-      // Section Signatures
+      // Section Signatures et listing des travailleurs
       { id: 'authorized_workers', type: 'textarea', label: 'Noms des travailleurs autorisés', required: true, section: 'signatures', placeholder: 'Un travailleur par ligne...' },
+      { id: 'workers_log', type: 'workers_tracking', label: 'Registre des entrées/sorties', required: true, section: 'signatures' },
       { id: 'supervisor_name', type: 'text', label: 'Nom du surveillant', required: true, section: 'signatures' },
       { id: 'qualified_person', type: 'text', label: 'Nom de la personne qualifiée', required: true, section: 'signatures' },
       { id: 'supervisor_signature', type: 'signature', label: 'Signature du surveillant', required: true, section: 'signatures' },
@@ -511,12 +512,17 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               type={field.type}
               id={field.id}
               value={value}
-              onChange={(e) => handleFormFieldChange(permit.id, field.id, e.target.value)}
+              onChange={(e) => {
+                handleFormFieldChange(permit.id, field.id, e.target.value);
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               placeholder={field.placeholder}
               required={field.required}
               min={field.validation?.min}
               max={field.validation?.max}
               className="form-input"
+              onFocus={(e) => e.stopPropagation()}
             />
           );
         
@@ -527,9 +533,14 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               type={field.type}
               id={field.id}
               value={value}
-              onChange={(e) => handleFormFieldChange(permit.id, field.id, e.target.value)}
+              onChange={(e) => {
+                handleFormFieldChange(permit.id, field.id, e.target.value);
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               required={field.required}
               className="form-input"
+              onFocus={(e) => e.stopPropagation()}
             />
           );
         
@@ -538,11 +549,16 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
             <textarea
               id={field.id}
               value={value}
-              onChange={(e) => handleFormFieldChange(permit.id, field.id, e.target.value)}
+              onChange={(e) => {
+                handleFormFieldChange(permit.id, field.id, e.target.value);
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               placeholder={field.placeholder}
               required={field.required}
               rows={3}
               className="form-textarea"
+              onFocus={(e) => e.stopPropagation()}
             />
           );
         
@@ -551,15 +567,125 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
             <select
               id={field.id}
               value={value}
-              onChange={(e) => handleFormFieldChange(permit.id, field.id, e.target.value)}
+              onChange={(e) => {
+                handleFormFieldChange(permit.id, field.id, e.target.value);
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               required={field.required}
               className="form-select"
+              onFocus={(e) => e.stopPropagation()}
             >
               <option value="">Sélectionner...</option>
               {field.options?.map(option => (
                 <option key={option} value={option}>{option}</option>
               ))}
             </select>
+          );
+        
+        case 'workers_tracking':
+          const workersLog = Array.isArray(value) ? value : [];
+          return (
+            <div className="workers-tracking-container">
+              <div className="worker-entry-form">
+                <div className="worker-entry-inputs">
+                  <input
+                    type="text"
+                    placeholder="Nom du travailleur"
+                    className="worker-name-input"
+                    onKeyPress={(e) => e.stopPropagation()}
+                  />
+                  <input
+                    type="time"
+                    className="worker-time-input"
+                    onFocus={(e) => e.stopPropagation()}
+                  />
+                  <button
+                    type="button"
+                    className="worker-entry-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const container = (e.target as HTMLElement).closest('.worker-entry-form');
+                      const nameInput = container?.querySelector('.worker-name-input') as HTMLInputElement;
+                      const timeInput = container?.querySelector('.worker-time-input') as HTMLInputElement;
+                      
+                      if (nameInput?.value.trim()) {
+                        const newEntry = {
+                          id: Date.now(),
+                          name: nameInput.value.trim(),
+                          entryTime: timeInput.value || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
+                          exitTime: null,
+                          date: new Date().toLocaleDateString('fr-CA')
+                        };
+                        const updatedLog = [...workersLog, newEntry];
+                        handleFormFieldChange(permit.id, field.id, updatedLog);
+                        nameInput.value = '';
+                        timeInput.value = '';
+                      }
+                    }}
+                  >
+                    Enregistrer entrée
+                  </button>
+                </div>
+              </div>
+              
+              <div className="workers-log-list">
+                <h5>Registre des entrées/sorties</h5>
+                {workersLog.length === 0 ? (
+                  <p className="no-entries">Aucune entrée enregistrée</p>
+                ) : (
+                  <div className="workers-table">
+                    <div className="workers-table-header">
+                      <span>Nom</span>
+                      <span>Entrée</span>
+                      <span>Sortie</span>
+                      <span>Actions</span>
+                    </div>
+                    {workersLog.map((worker: any) => (
+                      <div key={worker.id} className="workers-table-row">
+                        <span className="worker-name">{worker.name}</span>
+                        <span className="worker-time">{worker.entryTime}</span>
+                        <span className="worker-time">
+                          {worker.exitTime || (
+                            <button
+                              type="button"
+                              className="exit-btn"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const updatedLog = workersLog.map((w: any) =>
+                                  w.id === worker.id
+                                    ? { ...w, exitTime: new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }) }
+                                    : w
+                                );
+                                handleFormFieldChange(permit.id, field.id, updatedLog);
+                              }}
+                            >
+                              Sortie
+                            </button>
+                          )}
+                        </span>
+                        <span>
+                          <button
+                            type="button"
+                            className="remove-btn"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const updatedLog = workersLog.filter((w: any) => w.id !== worker.id);
+                              handleFormFieldChange(permit.id, field.id, updatedLog);
+                            }}
+                          >
+                            Supprimer
+                          </button>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           );
         
         case 'radio':
@@ -572,8 +698,13 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                     name={field.id}
                     value={option}
                     checked={value === option}
-                    onChange={(e) => handleFormFieldChange(permit.id, field.id, e.target.value)}
+                    onChange={(e) => {
+                      handleFormFieldChange(permit.id, field.id, e.target.value);
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
                     required={field.required}
+                    onFocus={(e) => e.stopPropagation()}
                   />
                   <span>{option}</span>
                 </label>
@@ -592,11 +723,14 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                     value={option}
                     checked={checkedValues.includes(option)}
                     onChange={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       const newValues = e.target.checked
                         ? [...checkedValues, option]
                         : checkedValues.filter(v => v !== option);
                       handleFormFieldChange(permit.id, field.id, newValues);
                     }}
+                    onFocus={(e) => e.stopPropagation()}
                   />
                   <span>{option}</span>
                 </label>
@@ -610,6 +744,8 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               type="file"
               id={field.id}
               onChange={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 const file = e.target.files?.[0];
                 if (file) {
                   handleFormFieldChange(permit.id, field.id, file.name);
@@ -617,6 +753,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               }}
               required={field.required}
               className="form-file"
+              onFocus={(e) => e.stopPropagation()}
             />
           );
         
@@ -628,7 +765,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                   <div className="signature-content">
                     <div className="signature-text">{value}</div>
                     <div className="signature-timestamp">
-                      Signé le {new Date().toLocaleDateString('fr-CA')} à {new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}
+                      Signé le {permit.formData?.[field.id + '_metadata']?.date || new Date().toLocaleDateString('fr-CA')} à {permit.formData?.[field.id + '_metadata']?.time || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 ) : (
@@ -643,7 +780,9 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                   placeholder="Entrez votre nom complet"
                   className="signature-name-input"
                   onKeyPress={(e) => {
+                    e.stopPropagation();
                     if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                      e.preventDefault();
                       const signerName = (e.target as HTMLInputElement).value.trim();
                       const timestamp = new Date();
                       const signatureText = `${signerName}`;
@@ -652,7 +791,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                         date: timestamp.toLocaleDateString('fr-CA'),
                         time: timestamp.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
                         timestamp: timestamp.toISOString(),
-                        ipAddress: 'XXX.XXX.XXX.XXX', // En production, récupérer l'IP réelle
+                        ipAddress: 'XXX.XXX.XXX.XXX',
                         userAgent: navigator.userAgent
                       };
                       handleFormFieldChange(permit.id, field.id, signatureText);
@@ -660,11 +799,14 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                       (e.target as HTMLInputElement).value = '';
                     }
                   }}
+                  onFocus={(e) => e.stopPropagation()}
                 />
                 <button 
                   type="button" 
                   className="signature-btn"
                   onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     const input = (e.target as HTMLElement).parentElement?.querySelector('.signature-name-input') as HTMLInputElement;
                     if (input && input.value.trim()) {
                       const signerName = input.value.trim();
@@ -675,7 +817,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                         date: timestamp.toLocaleDateString('fr-CA'),
                         time: timestamp.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
                         timestamp: timestamp.toISOString(),
-                        ipAddress: 'XXX.XXX.XXX.XXX', // En production, récupérer l'IP réelle
+                        ipAddress: 'XXX.XXX.XXX.XXX',
                         userAgent: navigator.userAgent
                       };
                       handleFormFieldChange(permit.id, field.id, signatureText);
@@ -692,7 +834,9 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                   <button 
                     type="button" 
                     className="signature-clear-btn"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       handleFormFieldChange(permit.id, field.id, '');
                       handleFormFieldChange(permit.id, field.id + '_metadata', null);
                     }}
@@ -843,6 +987,28 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
           .signature-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3); }
           .signature-clear-btn { padding: 6px 12px; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; cursor: pointer; font-size: 11px; }
           .signature-clear-btn:hover { background: rgba(239, 68, 68, 0.3); }
+          
+          .workers-tracking-container { display: flex; flex-direction: column; gap: 16px; }
+          .worker-entry-form { background: rgba(30, 41, 59, 0.6); padding: 16px; border-radius: 8px; border: 1px solid rgba(100, 116, 139, 0.3); }
+          .worker-entry-inputs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+          .worker-name-input { flex: 2; min-width: 200px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; }
+          .worker-time-input { flex: 1; min-width: 120px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; }
+          .worker-entry-btn { padding: 8px 16px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; }
+          .worker-entry-btn:hover { transform: translateY(-1px); }
+          
+          .workers-log-list h5 { color: #2563eb; margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+          .no-entries { color: #64748b; font-style: italic; text-align: center; padding: 20px; }
+          .workers-table { border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 8px; overflow: hidden; }
+          .workers-table-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; background: rgba(59, 130, 246, 0.1); padding: 12px; font-weight: 600; color: #2563eb; font-size: 12px; border-bottom: 1px solid rgba(100, 116, 139, 0.3); }
+          .workers-table-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 12px; border-bottom: 1px solid rgba(100, 116, 139, 0.2); align-items: center; }
+          .workers-table-row:last-child { border-bottom: none; }
+          .workers-table-row:hover { background: rgba(100, 116, 139, 0.1); }
+          .worker-name { color: #ffffff; font-weight: 500; }
+          .worker-time { color: #94a3b8; font-family: monospace; }
+          .exit-btn { padding: 4px 8px; background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 4px; cursor: pointer; font-size: 10px; }
+          .exit-btn:hover { background: rgba(34, 197, 94, 0.3); }
+          .remove-btn { padding: 4px 8px; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; cursor: pointer; font-size: 10px; }
+          .remove-btn:hover { background: rgba(239, 68, 68, 0.3); }
           
           .field-help { font-size: 10px; color: #64748b; margin-top: 2px; font-style: italic; }
           
