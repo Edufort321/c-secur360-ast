@@ -39,6 +39,397 @@ interface LockoutPhoto {
   lockoutPointId?: string;
 }
 
+// =================== SYSTÈME DE TRADUCTIONS COMPLET ===================
+const translations = {
+  fr: {
+    // Générateur AST
+    astNumberTitle: "🔢 Numéro AST Unique",
+    astNumberGenerated: "Numéro généré automatiquement - Usage unique pour cette AST",
+    copyNumber: "Copier le numéro",
+    generateNew: "Générer un nouveau numéro",
+    
+    // Sections principales
+    clientInfo: "🏢 Informations Client",
+    projectDetails: "📋 Détails du Projet",
+    location: "📍 Localisation",
+    team: "👥 Équipe de Travail",
+    emergency: "🚨 Contacts d'Urgence",
+    workDescription: "📝 Description Détaillée des Travaux",
+    lockoutSection: "🔒 Verrouillage / Cadenassage (LOTO)",
+    
+    // Champs client
+    clientName: "Nom du Client",
+    clientNamePlaceholder: "Ex: Hydro-Québec, Bell Canada...",
+    clientPhone: "Téléphone Client",
+    clientPhonePlaceholder: "Ex: (514) 555-0123",
+    clientRepresentative: "Représentant Client",
+    clientRepPlaceholder: "Nom du responsable projet",
+    repPhone: "Téléphone Représentant",
+    repPhonePlaceholder: "Ex: (514) 555-0456",
+    
+    // Champs projet
+    projectNumber: "Numéro de Projet",
+    projectNumberPlaceholder: "Ex: PRJ-2025-001",
+    astClientNumber: "# AST Client (Optionnel)",
+    astClientPlaceholder: "Numéro fourni par le client",
+    astClientHelp: "Numéro de référence du client (si applicable)",
+    date: "Date",
+    time: "Heure",
+    
+    // Localisation
+    workLocation: "Lieu des Travaux",
+    workLocationPlaceholder: "Adresse complète du site de travail",
+    industryType: "Type d'Industrie",
+    
+    // Industries
+    electrical: "⚡ Électrique",
+    construction: "🏗️ Construction",
+    industrial: "🏭 Industriel",
+    manufacturing: "⚙️ Manufacturier",
+    office: "🏢 Bureau/Administratif",
+    other: "🔧 Autre",
+    
+    // Équipe
+    workerCount: "Nombre de Personnes",
+    workerCountPlaceholder: "Ex: 5",
+    workerCountHelp: "Ce nombre sera comparé aux approbations d'équipe",
+    estimatedDuration: "Durée Estimée",
+    durationPlaceholder: "Ex: 4 heures, 2 jours, 1 semaine",
+    
+    // Urgence
+    emergencyContact: "Contact d'Urgence",
+    emergencyContactPlaceholder: "Nom du contact d'urgence",
+    emergencyPhone: "Téléphone d'Urgence",
+    emergencyPhonePlaceholder: "911 ou numéro spécifique",
+    
+    // Description
+    workDescriptionLabel: "Description Complète",
+    workDescriptionPlaceholder: "Décrivez en détail les travaux à effectuer :\n\n• Méthodes utilisées\n• Équipements impliqués\n• Zones d'intervention\n• Procédures spéciales\n• Conditions particulières\n\nPlus la description est détaillée, plus l'analyse de sécurité sera précise.",
+    workDescriptionHelp: "Une description complète aide à identifier tous les risques potentiels et à choisir les mesures de sécurité appropriées.",
+    
+    // Verrouillage
+    lockoutDescription: "Documentation des procédures de verrouillage/étiquetage des énergies dangereuses selon les normes RSST. Photographiez chaque étape pour assurer une traçabilité complète.",
+    generalPhotos: "Photos Générales de Verrouillage",
+    beforeLockout: "Avant verrouillage",
+    clientForm: "Fiche client",
+    verification: "Vérification finale",
+    duringLockout: "Pendant verrouillage",
+    lockoutDevice: "Dispositif",
+    
+    // Points de verrouillage
+    lockoutPoint: "🔒 Point de Verrouillage #",
+    delete: "Supprimer",
+    energyType: "Type d'Énergie",
+    equipmentName: "Nom de l'Équipement",
+    equipmentPlaceholder: "Ex: Disjoncteur principal",
+    locationLabel: "Localisation",
+    locationPlaceholder: "Ex: Panneau électrique B-2",
+    lockType: "Type de Cadenas/Dispositif",
+    lockTypePlaceholder: "Ex: Cadenas rouge C-Secur360",
+    tagNumber: "Numéro d'Étiquette",
+    tagPlaceholder: "TAG-123456",
+    verifiedBy: "Vérifié par",
+    verifiedByPlaceholder: "Nom de la personne",
+    verificationTime: "Heure de Vérification",
+    now: "Maintenant",
+    notes: "Notes et Observations",
+    notesPlaceholder: "Observations particulières, difficultés rencontrées, modifications apportées...",
+    pointPhotos: "Photos de ce Point de Verrouillage",
+    addLockoutPoint: "Ajouter Point de Verrouillage",
+    
+    // Photos
+    noPhotos: "Aucune photo",
+    addPhoto: "Ajouter une photo",
+    addPhotoDescription: "Documentez cette étape avec une photo",
+    clickToPhoto: "Cliquez pour prendre votre première photo de verrouillage",
+    clickToPhotoDevice: "Cliquez pour prendre une photo avec l'appareil",
+    noLockoutPoints: "Aucun Point de Verrouillage",
+    noLockoutDescription: "Cliquez sur \"Ajouter Point de Verrouillage\" pour documenter les procédures LOTO",
+    
+    // Procédures
+    proceduresToFollow: "🔧 Procédures à Suivre:",
+    stepsCompleted: "étapes complétées",
+    
+    // Messages d'erreur
+    required: "*",
+    
+    // Catégories photo
+    categories: {
+      before_lockout: "Avant verrouillage",
+      during_lockout: "Pendant verrouillage",
+      lockout_device: "Dispositif de verrouillage",
+      client_form: "Fiche client",
+      verification: "Vérification"
+    }
+  },
+  
+  en: {
+    // AST Generator
+    astNumberTitle: "🔢 Unique JSA Number",
+    astNumberGenerated: "Automatically generated number - Single use for this JSA",
+    copyNumber: "Copy number",
+    generateNew: "Generate new number",
+    
+    // Main sections
+    clientInfo: "🏢 Client Information",
+    projectDetails: "📋 Project Details",
+    location: "📍 Location",
+    team: "👥 Work Team",
+    emergency: "🚨 Emergency Contacts",
+    workDescription: "📝 Detailed Work Description",
+    lockoutSection: "🔒 Lockout / Tagout (LOTO)",
+    
+    // Client fields
+    clientName: "Client Name",
+    clientNamePlaceholder: "Ex: Hydro-Quebec, Bell Canada...",
+    clientPhone: "Client Phone",
+    clientPhonePlaceholder: "Ex: (514) 555-0123",
+    clientRepresentative: "Client Representative",
+    clientRepPlaceholder: "Project manager name",
+    repPhone: "Representative Phone",
+    repPhonePlaceholder: "Ex: (514) 555-0456",
+    
+    // Project fields
+    projectNumber: "Project Number",
+    projectNumberPlaceholder: "Ex: PRJ-2025-001",
+    astClientNumber: "# Client JSA (Optional)",
+    astClientPlaceholder: "Number provided by client",
+    astClientHelp: "Client reference number (if applicable)",
+    date: "Date",
+    time: "Time",
+    
+    // Location
+    workLocation: "Work Location",
+    workLocationPlaceholder: "Complete address of work site",
+    industryType: "Industry Type",
+    
+    // Industries
+    electrical: "⚡ Electrical",
+    construction: "🏗️ Construction",
+    industrial: "🏭 Industrial",
+    manufacturing: "⚙️ Manufacturing",
+    office: "🏢 Office/Administrative",
+    other: "🔧 Other",
+    
+    // Team
+    workerCount: "Number of People",
+    workerCountPlaceholder: "Ex: 5",
+    workerCountHelp: "This number will be compared to team approvals",
+    estimatedDuration: "Estimated Duration",
+    durationPlaceholder: "Ex: 4 hours, 2 days, 1 week",
+    
+    // Emergency
+    emergencyContact: "Emergency Contact",
+    emergencyContactPlaceholder: "Emergency contact name",
+    emergencyPhone: "Emergency Phone",
+    emergencyPhonePlaceholder: "911 or specific number",
+    
+    // Description
+    workDescriptionLabel: "Complete Description",
+    workDescriptionPlaceholder: "Describe in detail the work to be performed:\n\n• Methods used\n• Equipment involved\n• Work areas\n• Special procedures\n• Particular conditions\n\nThe more detailed the description, the more accurate the safety analysis.",
+    workDescriptionHelp: "A complete description helps identify all potential risks and choose appropriate safety measures.",
+    
+    // Lockout
+    lockoutDescription: "Documentation of lockout/tagout procedures for hazardous energies according to OHSA standards. Photograph each step to ensure complete traceability.",
+    generalPhotos: "General Lockout Photos",
+    beforeLockout: "Before lockout",
+    clientForm: "Client form",
+    verification: "Final verification",
+    duringLockout: "During lockout",
+    lockoutDevice: "Device",
+    
+    // Lockout points
+    lockoutPoint: "🔒 Lockout Point #",
+    delete: "Delete",
+    energyType: "Energy Type",
+    equipmentName: "Equipment Name",
+    equipmentPlaceholder: "Ex: Main breaker",
+    locationLabel: "Location",
+    locationPlaceholder: "Ex: Electrical panel B-2",
+    lockType: "Lock/Device Type",
+    lockTypePlaceholder: "Ex: Red C-Secur360 lock",
+    tagNumber: "Tag Number",
+    tagPlaceholder: "TAG-123456",
+    verifiedBy: "Verified by",
+    verifiedByPlaceholder: "Person's name",
+    verificationTime: "Verification Time",
+    now: "Now",
+    notes: "Notes and Observations",
+    notesPlaceholder: "Particular observations, difficulties encountered, modifications made...",
+    pointPhotos: "Photos of this Lockout Point",
+    addLockoutPoint: "Add Lockout Point",
+    
+    // Photos
+    noPhotos: "No photos",
+    addPhoto: "Add photo",
+    addPhotoDescription: "Document this step with a photo",
+    clickToPhoto: "Click to take your first lockout photo",
+    clickToPhotoDevice: "Click to take a photo with device",
+    noLockoutPoints: "No Lockout Points",
+    noLockoutDescription: "Click \"Add Lockout Point\" to document LOTO procedures",
+    
+    // Procedures
+    proceduresToFollow: "🔧 Procedures to Follow:",
+    stepsCompleted: "steps completed",
+    
+    // Error messages
+    required: "*",
+    
+    // Photo categories
+    categories: {
+      before_lockout: "Before lockout",
+      during_lockout: "During lockout",
+      lockout_device: "Lockout device",
+      client_form: "Client form",
+      verification: "Verification"
+    }
+  }
+};
+
+// Types d'énergie avec icônes et couleurs + traductions
+const getEnergyTypes = (language: 'fr' | 'en') => ({
+  electrical: { 
+    name: language === 'fr' ? 'Électrique' : 'Electrical', 
+    icon: Zap, 
+    color: '#fbbf24',
+    procedures: language === 'fr' ? [
+      'Identifier la source d\'alimentation (disjoncteur, sectionneur, etc...)',
+      'Couper l\'alimentation électrique', 
+      'Verrouiller la source d\'alimentation',
+      'Tester l\'absence de tension',
+      'Poser les étiquettes de sécurité',
+      'Installation des mises à la terre'
+    ] : [
+      'Identify power source (breaker, disconnect, etc...)',
+      'Turn off electrical power',
+      'Lock the power source',
+      'Test for absence of voltage',
+      'Apply safety tags',
+      'Install grounding connections'
+    ]
+  },
+  mechanical: { 
+    name: language === 'fr' ? 'Mécanique' : 'Mechanical', 
+    icon: Settings, 
+    color: '#6b7280',
+    procedures: language === 'fr' ? [
+      'Arrêter les équipements mécaniques', 
+      'Bloquer les parties mobiles',
+      'Verrouiller les commandes', 
+      'Vérifier l\'immobilisation',
+      'Signaler la zone', 
+      'Installer les dispositifs de blocage'
+    ] : [
+      'Stop mechanical equipment',
+      'Block moving parts',
+      'Lock controls',
+      'Verify immobilization',
+      'Mark the area',
+      'Install blocking devices'
+    ]
+  },
+  hydraulic: { 
+    name: language === 'fr' ? 'Hydraulique' : 'Hydraulic', 
+    icon: Droplets, 
+    color: '#3b82f6',
+    procedures: language === 'fr' ? [
+      'Fermer les vannes principales', 
+      'Purger la pression résiduelle',
+      'Verrouiller les vannes', 
+      'Vérifier la dépressurisation',
+      'Installer des bouchons de sécurité', 
+      'Tester l\'étanchéité du système'
+    ] : [
+      'Close main valves',
+      'Bleed residual pressure',
+      'Lock valves',
+      'Verify depressurization',
+      'Install safety plugs',
+      'Test system tightness'
+    ]
+  },
+  pneumatic: { 
+    name: language === 'fr' ? 'Pneumatique' : 'Pneumatic', 
+    icon: Wind, 
+    color: '#10b981',
+    procedures: language === 'fr' ? [
+      'Couper l\'alimentation en air', 
+      'Purger les réservoirs d\'air',
+      'Verrouiller les vannes', 
+      'Vérifier la dépressurisation',
+      'Isoler les circuits', 
+      'Contrôler l\'absence de pression'
+    ] : [
+      'Cut air supply',
+      'Bleed air tanks',
+      'Lock valves',
+      'Verify depressurization',
+      'Isolate circuits',
+      'Check absence of pressure'
+    ]
+  },
+  chemical: { 
+    name: language === 'fr' ? 'Chimique' : 'Chemical', 
+    icon: AlertTriangle, 
+    color: '#f59e0b',
+    procedures: language === 'fr' ? [
+      'Fermer les vannes d\'alimentation', 
+      'Purger les conduites',
+      'Neutraliser les résidus', 
+      'Verrouiller les accès',
+      'Installer la signalisation', 
+      'Vérifier l\'absence de vapeurs'
+    ] : [
+      'Close supply valves',
+      'Purge lines',
+      'Neutralize residues',
+      'Lock access points',
+      'Install signage',
+      'Check absence of vapors'
+    ]
+  },
+  thermal: { 
+    name: language === 'fr' ? 'Thermique' : 'Thermal', 
+    icon: Flame, 
+    color: '#ef4444',
+    procedures: language === 'fr' ? [
+      'Couper l\'alimentation de chauffage', 
+      'Laisser refroidir les équipements',
+      'Isoler les sources de chaleur', 
+      'Vérifier la température',
+      'Signaler les zones chaudes', 
+      'Installer les protections thermiques'
+    ] : [
+      'Cut heating supply',
+      'Let equipment cool down',
+      'Isolate heat sources',
+      'Check temperature',
+      'Mark hot zones',
+      'Install thermal protections'
+    ]
+  },
+  gravity: { 
+    name: language === 'fr' ? 'Gravité' : 'Gravity', 
+    icon: Wrench, 
+    color: '#8b5cf6',
+    procedures: language === 'fr' ? [
+      'Supporter les charges suspendues', 
+      'Bloquer les mécanismes de levage',
+      'Installer des supports de sécurité', 
+      'Vérifier la stabilité',
+      'Baliser la zone', 
+      'Contrôler les points d\'ancrage'
+    ] : [
+      'Support suspended loads',
+      'Block lifting mechanisms',
+      'Install safety supports',
+      'Verify stability',
+      'Mark the area',
+      'Check anchor points'
+    ]
+  }
+});
+
 // Générateur de numéro AST
 const generateASTNumber = (): string => {
   const year = new Date().getFullYear();
@@ -48,71 +439,12 @@ const generateASTNumber = (): string => {
   const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
-
-// Types d'énergie avec icônes et couleurs
-const ENERGY_TYPES = {
-  electrical: { 
-    name: 'Électrique', icon: Zap, color: '#fbbf24',
-    procedures: [
-      'Identifier la source d\'alimentation (disjoncteur, sectionneur, etc...)',
-      'Couper l\'alimentation électrique', 
-      'Verrouiller la source d\'alimentation',
-      'Tester l\'absence de tension',
-      'Poser les étiquettes de sécurité',
-      'Installation des mises à la terre'
-    ]
-  },
-  mechanical: { 
-    name: 'Mécanique', icon: Settings, color: '#6b7280',
-    procedures: [
-      'Arrêter les équipements mécaniques', 'Bloquer les parties mobiles',
-      'Verrouiller les commandes', 'Vérifier l\'immobilisation',
-      'Signaler la zone', 'Installer les dispositifs de blocage'
-    ]
-  },
-  hydraulic: { 
-    name: 'Hydraulique', icon: Droplets, color: '#3b82f6',
-    procedures: [
-      'Fermer les vannes principales', 'Purger la pression résiduelle',
-      'Verrouiller les vannes', 'Vérifier la dépressurisation',
-      'Installer des bouchons de sécurité', 'Tester l\'étanchéité du système'
-    ]
-  },
-  pneumatic: { 
-    name: 'Pneumatique', icon: Wind, color: '#10b981',
-    procedures: [
-      'Couper l\'alimentation en air', 'Purger les réservoirs d\'air',
-      'Verrouiller les vannes', 'Vérifier la dépressurisation',
-      'Isoler les circuits', 'Contrôler l\'absence de pression'
-    ]
-  },
-  chemical: { 
-    name: 'Chimique', icon: AlertTriangle, color: '#f59e0b',
-    procedures: [
-      'Fermer les vannes d\'alimentation', 'Purger les conduites',
-      'Neutraliser les résidus', 'Verrouiller les accès',
-      'Installer la signalisation', 'Vérifier l\'absence de vapeurs'
-    ]
-  },
-  thermal: { 
-    name: 'Thermique', icon: Flame, color: '#ef4444',
-    procedures: [
-      'Couper l\'alimentation de chauffage', 'Laisser refroidir les équipements',
-      'Isoler les sources de chaleur', 'Vérifier la température',
-      'Signaler les zones chaudes', 'Installer les protections thermiques'
-    ]
-  },
-  gravity: { 
-    name: 'Gravité', icon: Wrench, color: '#8b5cf6',
-    procedures: [
-      'Supporter les charges suspendues', 'Bloquer les mécanismes de levage',
-      'Installer des supports de sécurité', 'Vérifier la stabilité',
-      'Baliser la zone', 'Contrôler les points d\'ancrage'
-    ]
-  }
-};
-
 function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: Step1ProjectInfoProps) {
+  // =================== TRADUCTIONS ET CONFIGURATION ===================
+  const t = translations[language];
+  const ENERGY_TYPES = getEnergyTypes(language);
+  
+  // =================== ÉTATS ===================
   const [astNumber, setAstNumber] = useState(formData?.astNumber || generateASTNumber());
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -123,6 +455,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [currentLockoutPhotoIndex, setCurrentLockoutPhotoIndex] = useState<{[key: string]: number}>({});
 
+  // =================== FONCTIONS UTILITAIRES ===================
   const updateProjectInfo = (field: string, value: any) => {
     onDataChange('projectInfo', { ...projectInfo, [field]: value });
   };
@@ -169,7 +502,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       const newPhoto: LockoutPhoto = {
         id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         url: photoUrl,
-        caption: `${getCategoryLabel(category)} - ${new Date().toLocaleString('fr-CA')}`,
+        caption: `${getCategoryLabel(category)} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
         category: category as any,
         timestamp: new Date().toISOString(),
         lockoutPointId
@@ -188,14 +521,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
   };
 
   const getCategoryLabel = (category: string): string => {
-    const labels = {
-      'before_lockout': 'Avant verrouillage',
-      'during_lockout': 'Pendant verrouillage', 
-      'lockout_device': 'Dispositif de verrouillage',
-      'client_form': 'Fiche client',
-      'verification': 'Vérification'
-    };
-    return labels[category as keyof typeof labels] || category;
+    return t.categories[category as keyof typeof t.categories] || category;
   };
 
   const deletePhoto = (photoId: string) => {
@@ -269,6 +595,20 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     onDataChange('projectInfo', newProjectInfo);
   };
 
+  // =================== FONCTIONS GESTION TEMPS ===================
+  const setTimeNow = (pointId: string) => {
+    const now = new Date();
+    const timeString = now.toTimeString().substring(0, 5);
+    updateLockoutPoint(pointId, 'verificationTime', timeString);
+  };
+
+  const setTimePlus = (pointId: string, minutes: number) => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + minutes);
+    const timeString = now.toTimeString().substring(0, 5);
+    updateLockoutPoint(pointId, 'verificationTime', timeString);
+  };
+
   // =================== CARROUSEL PHOTOS ===================
   const PhotoCarousel = ({ photos, onAddPhoto, lockoutPointId }: {
     photos: LockoutPhoto[];
@@ -300,10 +640,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <div className="photo-info">
                   <div className="photo-caption">
                     <h4>{getCategoryLabel(photo.category)}</h4>
-                    <p>{new Date(photo.timestamp).toLocaleString('fr-CA')}</p>
+                    <p>{new Date(photo.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}</p>
                   </div>
                   <div className="photo-actions">
-                    <button className="photo-action-btn delete" onClick={() => deletePhoto(photo.id)} title="Supprimer cette photo">
+                    <button className="photo-action-btn delete" onClick={() => deletePhoto(photo.id)} title={language === 'fr' ? "Supprimer cette photo" : "Delete this photo"}>
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -313,9 +653,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             <div className="carousel-slide add-photo" onClick={onAddPhoto}>
               <div className="add-photo-content">
                 <div className="add-photo-icon"><Camera size={24} /></div>
-                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>Ajouter une photo</h4>
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>{t.addPhoto}</h4>
                 <p style={{ margin: 0, fontSize: '14px', opacity: 0.8, textAlign: 'center' }}>
-                  Documentez cette étape avec une photo
+                  {t.addPhotoDescription}
                 </p>
               </div>
             </div>
@@ -341,6 +681,60 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       </div>
     );
   };
+
+  // =================== COMPOSANT SÉLECTEUR D'INDUSTRIE ===================
+  const IndustrySelector = () => (
+    <select 
+      className="premium-select" 
+      value={projectInfo.industry || 'electrical'}
+      onChange={(e) => updateProjectInfo('industry', e.target.value)}
+    >
+      <option value="electrical">{t.electrical}</option>
+      <option value="construction">{t.construction}</option>
+      <option value="industrial">{t.industrial}</option>
+      <option value="manufacturing">{t.manufacturing}</option>
+      <option value="office">{t.office}</option>
+      <option value="other">{t.other}</option>
+    </select>
+  );
+
+  // =================== COMPOSANT VIDE POUR PHOTOS ===================
+  const EmptyPhotoPlaceholder = ({ 
+    onClick, 
+    title, 
+    description, 
+    color = "#60a5fa" 
+  }: {
+    onClick: () => void;
+    title: string;
+    description: string;
+    color?: string;
+  }) => (
+    <div style={{
+      background: `${color}20`, 
+      border: `2px dashed ${color}50`,
+      borderRadius: '12px', 
+      padding: '40px 20px', 
+      textAlign: 'center', 
+      cursor: 'pointer', 
+      transition: 'all 0.3s ease'
+    }}
+    onClick={onClick}
+    onMouseEnter={(e) => {
+      (e.target as HTMLDivElement).style.background = `${color}30`;
+      (e.target as HTMLDivElement).style.borderColor = `${color}70`;
+    }}
+    onMouseLeave={(e) => {
+      (e.target as HTMLDivElement).style.background = `${color}20`;
+      (e.target as HTMLDivElement).style.borderColor = `${color}50`;
+    }}>
+      <Camera size={32} color={color} style={{ marginBottom: '12px' }} />
+      <h4 style={{ margin: '0 0 8px', color }}>{title}</h4>
+      <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8' }}>
+        {description}
+      </p>
+    </div>
+  );
   return (
     <>
       {/* CSS Optimisé et Corrigé pour Step 1 */}
@@ -1191,19 +1585,19 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
           <div className="ast-number-header">
             <div className="ast-number-title">
               <FileText style={{ width: '20px', height: '20px' }} />
-              🔢 Numéro AST Unique
+              {t.astNumberTitle}
             </div>
             <div className="ast-actions">
-              <button className={`btn-icon ${copied ? 'copied' : ''}`} onClick={copyASTNumber} title="Copier le numéro">
+              <button className={`btn-icon ${copied ? 'copied' : ''}`} onClick={copyASTNumber} title={t.copyNumber}>
                 {copied ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
               </button>
-              <button className="btn-icon" onClick={regenerateASTNumber} title="Générer un nouveau numéro">
+              <button className="btn-icon" onClick={regenerateASTNumber} title={t.generateNew}>
                 <FileText style={{ width: '16px', height: '16px' }} />
               </button>
             </div>
           </div>
           <div className="ast-number-value">{astNumber}</div>
-          <div className="field-help">Numéro généré automatiquement - Usage unique pour cette AST</div>
+          <div className="field-help">{t.astNumberGenerated}</div>
         </div>
 
         {/* Grille Premium des Sections */}
@@ -1212,35 +1606,35 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
           <div className="form-section">
             <div className="section-header">
               <Building className="section-icon" />
-              <h3 className="section-title">🏢 Informations Client</h3>
+              <h3 className="section-title">{t.clientInfo}</h3>
             </div>
             <div className="form-field">
               <label className="field-label">
                 <Building style={{ width: '18px', height: '18px' }} />
-                Nom du Client<span className="required-indicator">*</span>
+                {t.clientName}<span className="required-indicator">{t.required}</span>
               </label>
-              <input type="text" className="premium-input" placeholder="Ex: Hydro-Québec, Bell Canada..."
+              <input type="text" className="premium-input" placeholder={t.clientNamePlaceholder}
                 value={projectInfo.client || ''} onChange={(e) => updateProjectInfo('client', e.target.value)} />
             </div>
             <div className="form-field">
               <label className="field-label">
-                <Phone style={{ width: '18px', height: '18px' }} />Téléphone Client
+                <Phone style={{ width: '18px', height: '18px' }} />{t.clientPhone}
               </label>
-              <input type="tel" className="premium-input" placeholder="Ex: (514) 555-0123"
+              <input type="tel" className="premium-input" placeholder={t.clientPhonePlaceholder}
                 value={projectInfo.clientPhone || ''} onChange={(e) => updateProjectInfo('clientPhone', e.target.value)} />
             </div>
             <div className="form-field">
               <label className="field-label">
-                <User style={{ width: '18px', height: '18px' }} />Représentant Client
+                <User style={{ width: '18px', height: '18px' }} />{t.clientRepresentative}
               </label>
-              <input type="text" className="premium-input" placeholder="Nom du responsable projet"
+              <input type="text" className="premium-input" placeholder={t.clientRepPlaceholder}
                 value={projectInfo.clientRepresentative || ''} onChange={(e) => updateProjectInfo('clientRepresentative', e.target.value)} />
             </div>
             <div className="form-field">
               <label className="field-label">
-                <Phone style={{ width: '18px', height: '18px' }} />Téléphone Représentant
+                <Phone style={{ width: '18px', height: '18px' }} />{t.repPhone}
               </label>
-              <input type="tel" className="premium-input" placeholder="Ex: (514) 555-0456"
+              <input type="tel" className="premium-input" placeholder={t.repPhonePlaceholder}
                 value={projectInfo.clientRepresentativePhone || ''} onChange={(e) => updateProjectInfo('clientRepresentativePhone', e.target.value)} />
             </div>
           </div>
@@ -1249,28 +1643,28 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
           <div className="form-section">
             <div className="section-header">
               <Briefcase className="section-icon" />
-              <h3 className="section-title">📋 Détails du Projet</h3>
+              <h3 className="section-title">{t.projectDetails}</h3>
             </div>
             <div className="form-field">
               <label className="field-label">
                 <Briefcase style={{ width: '18px', height: '18px' }} />
-                Numéro de Projet<span className="required-indicator">*</span>
+                {t.projectNumber}<span className="required-indicator">{t.required}</span>
               </label>
-              <input type="text" className="premium-input" placeholder="Ex: PRJ-2025-001"
+              <input type="text" className="premium-input" placeholder={t.projectNumberPlaceholder}
                 value={projectInfo.projectNumber || ''} onChange={(e) => updateProjectInfo('projectNumber', e.target.value)} />
             </div>
             <div className="form-field">
               <label className="field-label">
-                <FileText style={{ width: '18px', height: '18px' }} /># AST Client (Optionnel)
+                <FileText style={{ width: '18px', height: '18px' }} />{t.astClientNumber}
               </label>
-              <input type="text" className="premium-input" placeholder="Numéro fourni par le client"
+              <input type="text" className="premium-input" placeholder={t.astClientPlaceholder}
                 value={projectInfo.astClientNumber || ''} onChange={(e) => updateProjectInfo('astClientNumber', e.target.value)} />
-              <div className="field-help">Numéro de référence du client (si applicable)</div>
+              <div className="field-help">{t.astClientHelp}</div>
             </div>
             <div className="two-column">
               <div className="form-field">
                 <label className="field-label">
-                  <Calendar style={{ width: '18px', height: '18px' }} />Date
+                  <Calendar style={{ width: '18px', height: '18px' }} />{t.date}
                 </label>
                 <input type="date" className="premium-input"
                   value={projectInfo.date || new Date().toISOString().split('T')[0]}
@@ -1278,7 +1672,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
               </div>
               <div className="form-field">
                 <label className="field-label">
-                  <Clock style={{ width: '18px', height: '18px' }} />Heure
+                  <Clock style={{ width: '18px', height: '18px' }} />{t.time}
                 </label>
                 <input type="time" className="premium-input"
                   value={projectInfo.time || new Date().toTimeString().substring(0, 5)}
@@ -1291,29 +1685,21 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
           <div className="form-section">
             <div className="section-header">
               <MapPin className="section-icon" />
-              <h3 className="section-title">📍 Localisation</h3>
+              <h3 className="section-title">{t.location}</h3>
             </div>
             <div className="form-field">
               <label className="field-label">
                 <MapPin style={{ width: '18px', height: '18px' }} />
-                Lieu des Travaux<span className="required-indicator">*</span>
+                {t.workLocation}<span className="required-indicator">{t.required}</span>
               </label>
-              <input type="text" className="premium-input" placeholder="Adresse complète du site de travail"
+              <input type="text" className="premium-input" placeholder={t.workLocationPlaceholder}
                 value={projectInfo.workLocation || ''} onChange={(e) => updateProjectInfo('workLocation', e.target.value)} />
             </div>
             <div className="form-field">
               <label className="field-label">
-                <Briefcase style={{ width: '18px', height: '18px' }} />Type d'Industrie
+                <Briefcase style={{ width: '18px', height: '18px' }} />{t.industryType}
               </label>
-              <select className="premium-select" value={projectInfo.industry || 'electrical'}
-                onChange={(e) => updateProjectInfo('industry', e.target.value)}>
-                <option value="electrical">⚡ Électrique</option>
-                <option value="construction">🏗️ Construction</option>
-                <option value="industrial">🏭 Industriel</option>
-                <option value="manufacturing">⚙️ Manufacturier</option>
-                <option value="office">🏢 Bureau/Administratif</option>
-                <option value="other">🔧 Autre</option>
-              </select>
+              <IndustrySelector />
             </div>
           </div>
 
@@ -1321,22 +1707,22 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
           <div className="form-section">
             <div className="section-header">
               <Users className="section-icon" />
-              <h3 className="section-title">👥 Équipe de Travail</h3>
+              <h3 className="section-title">{t.team}</h3>
             </div>
             <div className="form-field">
               <label className="field-label">
                 <Users style={{ width: '18px', height: '18px' }} />
-                Nombre de Personnes<span className="required-indicator">*</span>
+                {t.workerCount}<span className="required-indicator">{t.required}</span>
               </label>
-              <input type="number" min="1" max="100" className="premium-input" placeholder="Ex: 5"
+              <input type="number" min="1" max="100" className="premium-input" placeholder={t.workerCountPlaceholder}
                 value={projectInfo.workerCount || 1} onChange={(e) => updateProjectInfo('workerCount', parseInt(e.target.value) || 1)} />
-              <div className="field-help">Ce nombre sera comparé aux approbations d'équipe</div>
+              <div className="field-help">{t.workerCountHelp}</div>
             </div>
             <div className="form-field">
               <label className="field-label">
-                <Clock style={{ width: '18px', height: '18px' }} />Durée Estimée
+                <Clock style={{ width: '18px', height: '18px' }} />{t.estimatedDuration}
               </label>
-              <input type="text" className="premium-input" placeholder="Ex: 4 heures, 2 jours, 1 semaine"
+              <input type="text" className="premium-input" placeholder={t.durationPlaceholder}
                 value={projectInfo.estimatedDuration || ''} onChange={(e) => updateProjectInfo('estimatedDuration', e.target.value)} />
             </div>
           </div>
@@ -1345,21 +1731,21 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
           <div className="form-section">
             <div className="section-header">
               <AlertTriangle className="section-icon" />
-              <h3 className="section-title">🚨 Contacts d'Urgence</h3>
+              <h3 className="section-title">{t.emergency}</h3>
             </div>
             <div className="two-column">
               <div className="form-field">
                 <label className="field-label">
-                  <AlertTriangle style={{ width: '18px', height: '18px' }} />Contact d'Urgence
+                  <AlertTriangle style={{ width: '18px', height: '18px' }} />{t.emergencyContact}
                 </label>
-                <input type="text" className="premium-input" placeholder="Nom du contact d'urgence"
+                <input type="text" className="premium-input" placeholder={t.emergencyContactPlaceholder}
                   value={projectInfo.emergencyContact || ''} onChange={(e) => updateProjectInfo('emergencyContact', e.target.value)} />
               </div>
               <div className="form-field">
                 <label className="field-label">
-                  <Phone style={{ width: '18px', height: '18px' }} />Téléphone d'Urgence
+                  <Phone style={{ width: '18px', height: '18px' }} />{t.emergencyPhone}
                 </label>
-                <input type="tel" className="premium-input" placeholder="911 ou numéro spécifique"
+                <input type="tel" className="premium-input" placeholder={t.emergencyPhonePlaceholder}
                   value={projectInfo.emergencyPhone || ''} onChange={(e) => updateProjectInfo('emergencyPhone', e.target.value)} />
               </div>
             </div>
@@ -1369,17 +1755,17 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
           <div className="form-section full-width-section">
             <div className="section-header">
               <FileText className="section-icon" />
-              <h3 className="section-title">📝 Description Détaillée des Travaux</h3>
+              <h3 className="section-title">{t.workDescription}</h3>
             </div>
             <div className="form-field">
               <label className="field-label">
                 <FileText style={{ width: '18px', height: '18px' }} />
-                Description Complète<span className="required-indicator">*</span>
+                {t.workDescriptionLabel}<span className="required-indicator">{t.required}</span>
               </label>
               <textarea className="premium-textarea" style={{ width: '100%', minHeight: '200px', maxWidth: 'none', resize: 'vertical' }}
-                placeholder="Décrivez en détail les travaux à effectuer :&#10;&#10;• Méthodes utilisées&#10;• Équipements impliqués&#10;• Zones d'intervention&#10;• Procédures spéciales&#10;• Conditions particulières&#10;&#10;Plus la description est détaillée, plus l'analyse de sécurité sera précise."
+                placeholder={t.workDescriptionPlaceholder}
                 value={projectInfo.workDescription || ''} onChange={(e) => updateProjectInfo('workDescription', e.target.value)} />
-              <div className="field-help">Une description complète aide à identifier tous les risques potentiels et à choisir les mesures de sécurité appropriées.</div>
+              <div className="field-help">{t.workDescriptionHelp}</div>
             </div>
           </div>
         </div>
@@ -1388,27 +1774,26 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
         <div className="form-section lockout-section">
           <div className="section-header">
             <Lock className="section-icon lockout-icon" />
-            <h3 className="section-title">🔒 Verrouillage / Cadenassage (LOTO)</h3>
+            <h3 className="section-title">{t.lockoutSection}</h3>
           </div>
           <div className="field-help" style={{ marginBottom: '24px' }}>
-            Documentation des procédures de verrouillage/étiquetage des énergies dangereuses selon les normes RSST. 
-            Photographiez chaque étape pour assurer une traçabilité complète.
+            {t.lockoutDescription}
           </div>
 
           {/* Photos générales de verrouillage */}
           <div className="form-field">
             <label className="field-label">
-              <Camera style={{ width: '18px', height: '18px' }} />Photos Générales de Verrouillage
+              <Camera style={{ width: '18px', height: '18px' }} />{t.generalPhotos}
             </label>
             <div className="photo-capture-buttons">
               <button className="photo-capture-btn" onClick={() => handlePhotoCapture('before_lockout')}>
-                <Camera size={14} />Avant verrouillage
+                <Camera size={14} />{t.beforeLockout}
               </button>
               <button className="photo-capture-btn" onClick={() => handlePhotoCapture('client_form')}>
-                <FileText size={14} />Fiche client
+                <FileText size={14} />{t.clientForm}
               </button>
               <button className="photo-capture-btn" onClick={() => handlePhotoCapture('verification')}>
-                <Eye size={14} />Vérification finale
+                <Eye size={14} />{t.verification}
               </button>
             </div>
 
@@ -1418,25 +1803,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 onAddPhoto={() => handlePhotoCapture('verification')}
               />
             ) : (
-              <div style={{
-                background: 'rgba(59, 130, 246, 0.1)', border: '2px dashed rgba(59, 130, 246, 0.3)',
-                borderRadius: '12px', padding: '40px 20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s ease'
-              }}
-              onClick={() => handlePhotoCapture('before_lockout')}
-              onMouseEnter={(e) => {
-                (e.target as HTMLDivElement).style.background = 'rgba(59, 130, 246, 0.2)';
-                (e.target as HTMLDivElement).style.borderColor = 'rgba(59, 130, 246, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                (e.target as HTMLDivElement).style.background = 'rgba(59, 130, 246, 0.1)';
-                (e.target as HTMLDivElement).style.borderColor = 'rgba(59, 130, 246, 0.3)';
-              }}>
-                <Camera size={32} color="#60a5fa" style={{ marginBottom: '12px' }} />
-                <h4 style={{ margin: '0 0 8px', color: '#60a5fa' }}>Aucune photo</h4>
-                <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8' }}>
-                  Cliquez pour prendre votre première photo de verrouillage
-                </p>
-              </div>
+              <EmptyPhotoPlaceholder
+                onClick={() => handlePhotoCapture('before_lockout')}
+                title={t.noPhotos}
+                description={t.clickToPhoto}
+              />
             )}
           </div>
 
@@ -1445,7 +1816,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             <div key={point.id} className="lockout-point">
               <div className="lockout-point-header">
                 <h4 style={{ color: '#ef4444', margin: 0, fontSize: '16px', fontWeight: '600' }}>
-                  🔒 Point de Verrouillage #{index + 1}
+                  {t.lockoutPoint}{index + 1}
                 </h4>
                 <button 
                   className="btn-danger" 
@@ -1457,13 +1828,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   type="button"
                 >
                   <Trash2 size={14} />
-                  Supprimer
+                  {t.delete}
                 </button>
               </div>
 
               {/* Type d'énergie */}
               <div className="form-field">
-                <label className="field-label">Type d'Énergie<span className="required-indicator">*</span></label>
+                <label className="field-label">{t.energyType}<span className="required-indicator">{t.required}</span></label>
                 <div className="energy-type-selector">
                   {Object.entries(ENERGY_TYPES).map(([key, type]) => {
                     const IconComponent = type.icon;
@@ -1484,7 +1855,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 {/* Procédures recommandées */}
                 {point.energyType && ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES] && (
                   <div className="procedures-list">
-                    <h4>🔧 Procédures à Suivre:</h4>
+                    <h4>{t.proceduresToFollow}</h4>
                     <ul className="procedures-checklist">
                       {ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES].procedures.map((procedure, idx) => {
                         const isCompleted = (point.completedProcedures || []).includes(idx);
@@ -1504,7 +1875,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                         <div className="progress-fill" style={{ width: `${getProcedureProgress(point).percentage}%` }} />
                       </div>
                       <div className="progress-text">
-                        {getProcedureProgress(point).completed} / {getProcedureProgress(point).total} étapes complétées 
+                        {getProcedureProgress(point).completed} / {getProcedureProgress(point).total} {t.stepsCompleted} 
                         ({getProcedureProgress(point).percentage}%)
                       </div>
                     </div>
@@ -1515,26 +1886,26 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
               {/* Détails du point */}
               <div className="two-column">
                 <div className="form-field">
-                  <label className="field-label"><Settings style={{ width: '18px', height: '18px' }} />Nom de l'Équipement</label>
-                  <input type="text" className="premium-input" placeholder="Ex: Disjoncteur principal"
+                  <label className="field-label"><Settings style={{ width: '18px', height: '18px' }} />{t.equipmentName}</label>
+                  <input type="text" className="premium-input" placeholder={t.equipmentPlaceholder}
                     value={point.equipmentName} onChange={(e) => updateLockoutPoint(point.id, 'equipmentName', e.target.value)} />
                 </div>
                 <div className="form-field">
-                  <label className="field-label"><MapPin style={{ width: '18px', height: '18px' }} />Localisation</label>
-                  <input type="text" className="premium-input" placeholder="Ex: Panneau électrique B-2"
+                  <label className="field-label"><MapPin style={{ width: '18px', height: '18px' }} />{t.locationLabel}</label>
+                  <input type="text" className="premium-input" placeholder={t.locationPlaceholder}
                     value={point.location} onChange={(e) => updateLockoutPoint(point.id, 'location', e.target.value)} />
                 </div>
               </div>
 
               <div className="two-column">
                 <div className="form-field">
-                  <label className="field-label"><Lock style={{ width: '18px', height: '18px' }} />Type de Cadenas/Dispositif</label>
-                  <input type="text" className="premium-input" placeholder="Ex: Cadenas rouge C-Secur360"
+                  <label className="field-label"><Lock style={{ width: '18px', height: '18px' }} />{t.lockType}</label>
+                  <input type="text" className="premium-input" placeholder={t.lockTypePlaceholder}
                     value={point.lockType} onChange={(e) => updateLockoutPoint(point.id, 'lockType', e.target.value)} />
                 </div>
                 <div className="form-field">
-                  <label className="field-label"><FileText style={{ width: '18px', height: '18px' }} />Numéro d'Étiquette</label>
-                  <input type="text" className="premium-input" placeholder="TAG-123456"
+                  <label className="field-label"><FileText style={{ width: '18px', height: '18px' }} />{t.tagNumber}</label>
+                  <input type="text" className="premium-input" placeholder={t.tagPlaceholder}
                     value={point.tagNumber} onChange={(e) => updateLockoutPoint(point.id, 'tagNumber', e.target.value)} />
                 </div>
               </div>
@@ -1542,38 +1913,24 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
               {/* Status et vérification AVEC BOUTONS HORLOGE */}
               <div className="two-column">
                 <div className="form-field">
-                  <label className="field-label"><User style={{ width: '18px', height: '18px' }} />Vérifié par</label>
-                  <input type="text" className="premium-input" placeholder="Nom de la personne"
+                  <label className="field-label"><User style={{ width: '18px', height: '18px' }} />{t.verifiedBy}</label>
+                  <input type="text" className="premium-input" placeholder={t.verifiedByPlaceholder}
                     value={point.verifiedBy} onChange={(e) => updateLockoutPoint(point.id, 'verifiedBy', e.target.value)} />
                 </div>
                 <div className="form-field">
-                  <label className="field-label"><Clock style={{ width: '18px', height: '18px' }} />Heure de Vérification</label>
+                  <label className="field-label"><Clock style={{ width: '18px', height: '18px' }} />{t.verificationTime}</label>
                   <input type="time" className="premium-input" value={point.verificationTime}
                     onChange={(e) => updateLockoutPoint(point.id, 'verificationTime', e.target.value)} />
                   
                   {/* Boutons de sélection rapide */}
                   <div className="time-quick-select">
-                    <button className="time-btn now" onClick={() => {
-                      const now = new Date();
-                      const timeString = now.toTimeString().substring(0, 5);
-                      updateLockoutPoint(point.id, 'verificationTime', timeString);
-                    }}>
-                      <Clock size={12} />Maintenant
+                    <button className="time-btn now" onClick={() => setTimeNow(point.id)}>
+                      <Clock size={12} />{t.now}
                     </button>
-                    <button className="time-btn plus5" onClick={() => {
-                      const now = new Date();
-                      now.setMinutes(now.getMinutes() + 5);
-                      const timeString = now.toTimeString().substring(0, 5);
-                      updateLockoutPoint(point.id, 'verificationTime', timeString);
-                    }}>
+                    <button className="time-btn plus5" onClick={() => setTimePlus(point.id, 5)}>
                       +5min
                     </button>
-                    <button className="time-btn plus15" onClick={() => {
-                      const now = new Date();
-                      now.setMinutes(now.getMinutes() + 15);
-                      const timeString = now.toTimeString().substring(0, 5);
-                      updateLockoutPoint(point.id, 'verificationTime', timeString);
-                    }}>
+                    <button className="time-btn plus15" onClick={() => setTimePlus(point.id, 15)}>
                       +15min
                     </button>
                   </div>
@@ -1582,26 +1939,26 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
 
               {/* Notes */}
               <div className="form-field">
-                <label className="field-label"><FileText style={{ width: '18px', height: '18px' }} />Notes et Observations</label>
+                <label className="field-label"><FileText style={{ width: '18px', height: '18px' }} />{t.notes}</label>
                 <textarea className="premium-textarea" style={{ minHeight: '80px' }}
-                  placeholder="Observations particulières, difficultés rencontrées, modifications apportées..."
+                  placeholder={t.notesPlaceholder}
                   value={point.notes} onChange={(e) => updateLockoutPoint(point.id, 'notes', e.target.value)} />
               </div>
 
               {/* Photos spécifiques à ce point */}
               <div className="form-field">
-                <label className="field-label"><Camera style={{ width: '18px', height: '18px' }} />Photos de ce Point de Verrouillage</label>
+                <label className="field-label"><Camera style={{ width: '18px', height: '18px' }} />{t.pointPhotos}</label>
                 
                 {/* Boutons de capture photo pour ce point */}
                 <div className="photo-capture-buttons">
                   <button className="photo-capture-btn" onClick={() => handlePhotoCapture('during_lockout', point.id)}>
-                    <Camera size={14} />Pendant verrouillage
+                    <Camera size={14} />{t.duringLockout}
                   </button>
                   <button className="photo-capture-btn" onClick={() => handlePhotoCapture('lockout_device', point.id)}>
-                    <Lock size={14} />Dispositif
+                    <Lock size={14} />{t.lockoutDevice}
                   </button>
                   <button className="photo-capture-btn" onClick={() => handlePhotoCapture('verification', point.id)}>
-                    <Eye size={14} />Vérification
+                    <Eye size={14} />{t.verification}
                   </button>
                 </div>
                 
@@ -1612,25 +1969,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                     lockoutPointId={point.id}
                   />
                 ) : (
-                  <div style={{
-                    background: 'rgba(239, 68, 68, 0.1)', border: '2px dashed rgba(239, 68, 68, 0.3)',
-                    borderRadius: '12px', padding: '40px 20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s ease'
-                  }}
-                  onClick={() => handlePhotoCapture('during_lockout', point.id)}
-                  onMouseEnter={(e) => {
-                    (e.target as HTMLDivElement).style.background = 'rgba(239, 68, 68, 0.2)';
-                    (e.target as HTMLDivElement).style.borderColor = 'rgba(239, 68, 68, 0.5)';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.target as HTMLDivElement).style.background = 'rgba(239, 68, 68, 0.1)';
-                    (e.target as HTMLDivElement).style.borderColor = 'rgba(239, 68, 68, 0.3)';
-                  }}>
-                    <Camera size={32} color="#f87171" style={{ marginBottom: '12px' }} />
-                    <h4 style={{ margin: '0 0 8px', color: '#f87171' }}>Aucune photo</h4>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8' }}>
-                      Cliquez pour prendre une photo avec l'appareil
-                    </p>
-                  </div>
+                  <EmptyPhotoPlaceholder
+                    onClick={() => handlePhotoCapture('during_lockout', point.id)}
+                    title={t.noPhotos}
+                    description={t.clickToPhotoDevice}
+                    color="#f87171"
+                  />
                 )}
               </div>
             </div>
@@ -1639,7 +1983,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
           {/* Bouton ajouter point de verrouillage */}
           <div style={{ marginTop: lockoutPoints.length > 0 ? '24px' : '0', marginBottom: '24px' }}>
             <button className="btn-primary" onClick={addLockoutPoint}>
-              <Plus size={20} />Ajouter Point de Verrouillage
+              <Plus size={20} />{t.addLockoutPoint}
             </button>
           </div>
 
@@ -1650,9 +1994,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
               borderRadius: '12px', padding: '24px', textAlign: 'center', color: '#60a5fa'
             }}>
               <Lock size={32} style={{ marginBottom: '12px' }} />
-              <h4 style={{ margin: '0 0 8px', color: '#60a5fa' }}>Aucun Point de Verrouillage</h4>
+              <h4 style={{ margin: '0 0 8px', color: '#60a5fa' }}>{t.noLockoutPoints}</h4>
               <p style={{ margin: 0, fontSize: '14px' }}>
-                Cliquez sur "Ajouter Point de Verrouillage" pour documenter les procédures LOTO
+                {t.noLockoutDescription}
               </p>
             </div>
           )}
