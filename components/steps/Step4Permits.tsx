@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useMemo } from 'react';
 import { 
   FileText, CheckCircle, AlertTriangle, Clock, Download, Eye,
@@ -84,7 +82,147 @@ interface SignatureMetadata {
   userAgent: string;
 }
 
-// =================== SYSTÈME DE TRADUCTIONS COMPLET ===================
+// =================== BASE DE DONNÉES PERMIS RÉELS ===================
+const realPermitsDatabase: Permit[] = [
+  // 1. PERMIS ESPACE CLOS - Basé sur ASP Construction
+  {
+    id: 'confined-space-entry',
+    name: 'Fiche de Contrôle en Espace Clos',
+    category: 'Sécurité',
+    description: 'Permis d\'entrée obligatoire pour tous travaux en espace clos selon RSST et CSTC',
+    authority: 'Employeur / ASP Construction',
+    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
+    required: true,
+    priority: 'critical',
+    duration: 'Maximum 8 heures ou fin des travaux',
+    cost: 'Inclus dans formation',
+    processingTime: 'Avant chaque entrée',
+    renewalRequired: true,
+    renewalPeriod: 'Quotidien',
+    legislation: 'RSST Art. 297-312, CSTC Section 3.21',
+    contactInfo: {
+      phone: '514-355-6190',
+      website: 'https://www.asp-construction.org'
+    },
+    selected: false,
+    status: 'pending',
+    formFields: [
+      { id: 'space_identification', type: 'text', label: 'Identification de l\'espace clos', required: true, section: 'identification', placeholder: 'Ex: Réservoir A-12, Regard municipal...' },
+      { id: 'project_name', type: 'text', label: 'Nom du projet', required: true, section: 'identification' },
+      { id: 'location', type: 'text', label: 'Localisation exacte', required: true, section: 'identification' },
+      { id: 'permit_date', type: 'date', label: 'Date du permis', required: true, section: 'identification' },
+      { id: 'permit_time', type: 'time_picker', label: 'Heure d\'émission', required: true, section: 'identification' },
+      { id: 'entry_mandatory', type: 'radio', label: 'L\'entrée est-elle obligatoire ?', required: true, section: 'access', options: ['Oui', 'Non'] },
+      { id: 'entry_alternatives', type: 'textarea', label: 'Si non, options alternatives', required: false, section: 'access', placeholder: 'Décrire les alternatives...' },
+      { id: 'entry_frequency', type: 'text', label: 'Fréquence des entrées', required: false, section: 'access' },
+      { id: 'access_number', type: 'number', label: 'Nombre d\'accès', required: true, section: 'access', validation: { min: 1 } },
+      { id: 'access_dimensions', type: 'text', label: 'Dimensions des accès', required: true, section: 'access', placeholder: 'Ex: 60cm x 40cm' },
+      { id: 'interior_dimensions', type: 'text', label: 'Dimensions intérieures', required: true, section: 'access' },
+      { id: 'divisions_number', type: 'number', label: 'Nombre de divisions', required: false, section: 'access' },
+      { id: 'access_means', type: 'checkbox', label: 'Moyens d\'accès', required: true, section: 'access', options: ['Échelons', 'Échelle fixe', 'Échelle portative', 'Autre'] },
+      { id: 'signage_required', type: 'radio', label: 'Signalisation requise ?', required: true, section: 'access', options: ['Oui', 'Non'] },
+      { id: 'access_control', type: 'radio', label: 'Mesures prises pour interdire l\'entrée non autorisée ?', required: true, section: 'access', options: ['Oui', 'Non'] },
+      { id: 'space_contents', type: 'textarea', label: 'Contenu de l\'espace clos', required: true, section: 'atmosphere', placeholder: 'Décrire le contenu, vérifier SDS...' },
+      { id: 'atmosphere_types', type: 'checkbox', label: 'Types d\'atmosphère', required: true, section: 'atmosphere', options: ['Inflammable/combustible LIE ≥ 5%', 'Oxygène ≤ 19,5%', 'Oxygène ≥ 23%', 'Gaz toxique', 'Poussières', 'Irritante'] },
+      { id: 'photos_documentation', type: 'photo_gallery', label: 'Photos de documentation', required: false, section: 'atmosphere' },
+      { id: 'authorized_workers', type: 'textarea', label: 'Noms des travailleurs autorisés', required: true, section: 'signatures', placeholder: 'Un travailleur par ligne...' },
+      { id: 'workers_log', type: 'workers_tracking', label: 'Registre des entrées/sorties', required: true, section: 'signatures' },
+      { id: 'supervisor_name', type: 'text', label: 'Nom du surveillant', required: true, section: 'signatures' },
+      { id: 'qualified_person', type: 'text', label: 'Nom de la personne qualifiée', required: true, section: 'signatures' },
+      { id: 'supervisor_signature', type: 'signature', label: 'Signature du surveillant', required: true, section: 'signatures' },
+      { id: 'qualified_signature', type: 'signature', label: 'Signature de la personne qualifiée', required: true, section: 'signatures' }
+    ]
+  },
+
+  // 2. PERMIS TRAVAIL À CHAUD - Basé sur NFPA 51B et CNESST
+  {
+    id: 'hot-work-permit',
+    name: 'Permis de Travail à Chaud',
+    category: 'Sécurité',
+    description: 'Autorisation pour soudage, découpage, meulage et travaux générant étincelles selon NFPA 51B',
+    authority: 'Service incendie / Employeur',
+    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
+    required: true,
+    priority: 'critical',
+    duration: '24 heures maximum',
+    cost: 'Variable selon municipalité',
+    processingTime: 'Immédiat à 24h',
+    renewalRequired: true,
+    renewalPeriod: 'Quotidien',
+    legislation: 'NFPA 51B-2019, Code sécurité incendie, RSST',
+    contactInfo: {
+      phone: 'Service incendie local',
+      website: 'Municipal'
+    },
+    selected: false,
+    status: 'pending',
+    formFields: [
+      { id: 'permit_number', type: 'text', label: 'Numéro de permis', required: true, section: 'identification' },
+      { id: 'work_location', type: 'text', label: 'Lieu des travaux', required: true, section: 'identification' },
+      { id: 'work_date', type: 'date', label: 'Date des travaux', required: true, section: 'identification' },
+      { id: 'start_time', type: 'time', label: 'Heure de début', required: true, section: 'identification' },
+      { id: 'end_time', type: 'time', label: 'Heure de fin', required: true, section: 'identification' },
+      { id: 'company_name', type: 'text', label: 'Nom de l\'entreprise', required: true, section: 'identification' },
+      { id: 'work_type', type: 'checkbox', label: 'Type de travail à chaud', required: true, section: 'work_type', options: ['Soudage à l\'arc', 'Soudage au gaz', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage', 'Perçage', 'Brasage', 'Autre'] },
+      { id: 'work_description', type: 'textarea', label: 'Description détaillée des travaux', required: true, section: 'work_type' },
+      { id: 'fire_watch', type: 'radio', label: 'Surveillance incendie assignée', required: true, section: 'precautions', options: ['Oui', 'Non'] },
+      { id: 'fire_watch_name', type: 'text', label: 'Nom du surveillant incendie', required: false, section: 'precautions' },
+      { id: 'combustibles_removed', type: 'radio', label: 'Matières combustibles éloignées (11m minimum)', required: true, section: 'precautions', options: ['Oui', 'Non', 'Protégées'] },
+      { id: 'photos_precautions', type: 'photo_gallery', label: 'Photos des mesures de précaution', required: false, section: 'precautions' },
+      { id: 'applicant_signature', type: 'signature', label: 'Signature du demandeur', required: true, section: 'signatures' },
+      { id: 'supervisor_signature_hot', type: 'signature', label: 'Signature du superviseur', required: true, section: 'signatures' },
+      { id: 'permit_expiry', type: 'date', label: 'Date d\'expiration du permis', required: true, section: 'signatures' }
+    ]
+  },
+
+  // 3. PERMIS D'EXCAVATION - Basé sur Ville de Montréal
+  {
+    id: 'excavation-permit',
+    name: 'Permis d\'Excavation',
+    category: 'Construction',
+    description: 'Autorisation pour travaux d\'excavation près du domaine public selon règlements municipaux',
+    authority: 'Municipal',
+    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
+    required: true,
+    priority: 'high',
+    duration: 'Durée des travaux',
+    cost: '200$ - 2000$ selon ampleur',
+    processingTime: '5-15 jours ouvrables',
+    renewalRequired: false,
+    legislation: 'Règlements municipaux, Code de construction',
+    contactInfo: {
+      website: 'Bureau des permis municipal'
+    },
+    selected: false,
+    status: 'pending',
+    formFields: [
+      { id: 'applicant_name', type: 'text', label: 'Nom du demandeur', required: true, section: 'applicant' },
+      { id: 'applicant_address', type: 'textarea', label: 'Adresse du demandeur', required: true, section: 'applicant' },
+      { id: 'applicant_phone', type: 'text', label: 'Téléphone', required: true, section: 'applicant' },
+      { id: 'applicant_email', type: 'text', label: 'Courriel', required: true, section: 'applicant' },
+      { id: 'contractor_name', type: 'text', label: 'Nom de l\'entrepreneur', required: true, section: 'applicant' },
+      { id: 'contractor_license', type: 'text', label: 'Numéro de licence RBQ', required: true, section: 'applicant' },
+      { id: 'work_address', type: 'textarea', label: 'Adresse des travaux', required: true, section: 'project' },
+      { id: 'lot_number', type: 'text', label: 'Numéro de lot', required: false, section: 'project' },
+      { id: 'project_description', type: 'textarea', label: 'Description du projet', required: true, section: 'project' },
+      { id: 'work_start_date', type: 'date', label: 'Date de début prévue', required: true, section: 'project' },
+      { id: 'work_duration', type: 'number', label: 'Durée estimée (jours)', required: true, section: 'project' },
+      { id: 'excavation_depth', type: 'number', label: 'Profondeur d\'excavation (m)', required: true, section: 'excavation', validation: { min: 0 } },
+      { id: 'excavation_length', type: 'number', label: 'Longueur (m)', required: true, section: 'excavation', validation: { min: 0 } },
+      { id: 'excavation_width', type: 'number', label: 'Largeur (m)', required: true, section: 'excavation', validation: { min: 0 } },
+      { id: 'soil_type', type: 'select', label: 'Type de sol', required: true, section: 'excavation', options: ['Argile', 'Sable', 'Gravier', 'Roc', 'Remblai', 'Mixte'] },
+      { id: 'safety_plan', type: 'radio', label: 'Plan de sécurité préparé', required: true, section: 'safety', options: ['Oui', 'Non'] },
+      { id: 'traffic_control', type: 'radio', label: 'Contrôle de circulation requis', required: true, section: 'safety', options: ['Oui', 'Non'] },
+      { id: 'photos_safety', type: 'photo_gallery', label: 'Photos de sécurité du site', required: false, section: 'safety' },
+      { id: 'site_plan', type: 'file', label: 'Plan de site', required: true, section: 'documents' },
+      { id: 'excavation_plans', type: 'file', label: 'Plans d\'excavation', required: true, section: 'documents' },
+      { id: 'applicant_signature_excavation', type: 'signature', label: 'Signature du demandeur', required: true, section: 'signatures' },
+      { id: 'application_date', type: 'date', label: 'Date de la demande', required: true, section: 'signatures' }
+    ]
+  }
+];
+
+// =================== TRADUCTIONS COMPLÈTES ===================
 const translations = {
   fr: {
     title: 'Permis & Autorisations Réels',
@@ -92,32 +230,18 @@ const translations = {
     searchPlaceholder: 'Rechercher un permis...',
     allCategories: 'Toutes catégories',
     allProvinces: 'Toutes provinces',
-    
-    // Statistiques
-    stats: {
-      totalPermits: 'Permis disponibles',
-      selected: 'Sélectionnés',
-      critical: 'Critiques',
-      pending: 'En attente'
-    },
-    
-    // Catégories
     categories: {
       'Sécurité': 'Sécurité',
       'Construction': 'Construction',
       'Radioprotection': 'Radioprotection',
       'Équipements': 'Équipements'
     },
-    
-    // Priorités
     priorities: {
       low: 'Faible',
       medium: 'Moyen',
       high: 'Élevé',
       critical: 'Critique'
     },
-    
-    // Statuts
     statuses: {
       pending: 'En attente',
       submitted: 'Soumis',
@@ -125,8 +249,6 @@ const translations = {
       rejected: 'Rejeté',
       expired: 'Expiré'
     },
-    
-    // Sections de formulaires
     sections: {
       identification: 'Identification',
       applicant: 'Demandeur',
@@ -139,88 +261,26 @@ const translations = {
       excavation: 'Excavation',
       safety: 'Sécurité',
       documents: 'Documents'
-    },
-    
-    // Actions et boutons
-    actions: {
-      fill: 'Remplir',
-      close: 'Fermer',
-      preview: 'Aperçu',
-      save: 'Sauvegarder',
-      print: 'Imprimer',
-      submit: 'Soumettre',
-      sign: 'Signer électroniquement',
-      clear: 'Effacer',
-      addPhotos: 'Ajouter des photos',
-      takePhoto: 'Prendre une photo',
-      now: 'Maintenant',
-      recordEntry: 'Enregistrer entrée',
-      exit: 'Sortie',
-      remove: 'Supprimer'
-    },
-    
-    // Messages
-    messages: {
-      noPermitsFound: 'Aucun permis trouvé',
-      noPermitsMessage: 'Modifiez vos critères de recherche pour voir plus de permis',
-      noEntries: 'Aucune entrée enregistrée',
-      selectTime: 'Sélectionner l\'heure',
-      enterFullName: 'Entrez votre nom complet',
-      signatureRequired: 'Signature électronique requise',
-      photoDescription: 'Ajouter une description à cette photo...',
-      photoCaptured: 'Photo capturée',
-      enterNameToSign: 'Veuillez entrer votre nom complet pour signer'
-    },
-    
-    // Permis spécifiques
-    permits: {
-      'confined-space-entry': {
-        name: 'Fiche de Contrôle en Espace Clos',
-        description: 'Permis d\'entrée obligatoire pour tous travaux en espace clos selon RSST et CSTC'
-      },
-      'hot-work-permit': {
-        name: 'Permis de Travail à Chaud',
-        description: 'Autorisation pour soudage, découpage, meulage et travaux générant étincelles selon NFPA 51B'
-      },
-      'excavation-permit': {
-        name: 'Permis d\'Excavation',
-        description: 'Autorisation pour travaux d\'excavation près du domaine public selon règlements municipaux'
-      }
     }
   },
-  
   en: {
     title: 'Real Permits & Authorizations',
     subtitle: 'Authentic permit forms used in Canada',
     searchPlaceholder: 'Search permits...',
     allCategories: 'All categories',
     allProvinces: 'All provinces',
-    
-    // Statistics
-    stats: {
-      totalPermits: 'Available permits',
-      selected: 'Selected',
-      critical: 'Critical',
-      pending: 'Pending'
-    },
-    
-    // Categories
     categories: {
       'Sécurité': 'Safety',
       'Construction': 'Construction',
       'Radioprotection': 'Radiation Protection',
       'Équipements': 'Equipment'
     },
-    
-    // Priorities
     priorities: {
       low: 'Low',
       medium: 'Medium',
       high: 'High',
       critical: 'Critical'
     },
-    
-    // Statuses
     statuses: {
       pending: 'Pending',
       submitted: 'Submitted',
@@ -228,8 +288,6 @@ const translations = {
       rejected: 'Rejected',
       expired: 'Expired'
     },
-    
-    // Form sections
     sections: {
       identification: 'Identification',
       applicant: 'Applicant',
@@ -242,237 +300,38 @@ const translations = {
       excavation: 'Excavation',
       safety: 'Safety',
       documents: 'Documents'
-    },
-    
-    // Actions and buttons
-    actions: {
-      fill: 'Fill',
-      close: 'Close',
-      preview: 'Preview',
-      save: 'Save',
-      print: 'Print',
-      submit: 'Submit',
-      sign: 'Sign electronically',
-      clear: 'Clear',
-      addPhotos: 'Add photos',
-      takePhoto: 'Take photo',
-      now: 'Now',
-      recordEntry: 'Record entry',
-      exit: 'Exit',
-      remove: 'Remove'
-    },
-    
-    // Messages
-    messages: {
-      noPermitsFound: 'No permits found',
-      noPermitsMessage: 'Modify your search criteria to see more permits',
-      noEntries: 'No entries recorded',
-      selectTime: 'Select time',
-      enterFullName: 'Enter your full name',
-      signatureRequired: 'Electronic signature required',
-      photoDescription: 'Add a description to this photo...',
-      photoCaptured: 'Photo captured',
-      enterNameToSign: 'Please enter your full name to sign'
-    },
-    
-    // Specific permits
-    permits: {
-      'confined-space-entry': {
-        name: 'Confined Space Entry Control Sheet',
-        description: 'Mandatory entry permit for all confined space work according to OHSR and CSTC'
-      },
-      'hot-work-permit': {
-        name: 'Hot Work Permit',
-        description: 'Authorization for welding, cutting, grinding and spark-generating work according to NFPA 51B'
-      },
-      'excavation-permit': {
-        name: 'Excavation Permit',
-        description: 'Authorization for excavation work near public domain according to municipal regulations'
-      }
     }
   }
 };
-
-// =================== BASE DE DONNÉES PERMIS TRADUITE ===================
-const getPermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
-  const t = translations[language];
-  
-  return [
-    // 1. PERMIS ESPACE CLOS
-    {
-      id: 'confined-space-entry',
-      name: t.permits['confined-space-entry'].name,
-      category: t.categories['Sécurité'],
-      description: t.permits['confined-space-entry'].description,
-      authority: language === 'fr' ? 'Employeur / ASP Construction' : 'Employer / ASP Construction',
-      province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-      required: true,
-      priority: 'critical',
-      duration: language === 'fr' ? 'Maximum 8 heures ou fin des travaux' : 'Maximum 8 hours or end of work',
-      cost: language === 'fr' ? 'Inclus dans formation' : 'Included in training',
-      processingTime: language === 'fr' ? 'Avant chaque entrée' : 'Before each entry',
-      renewalRequired: true,
-      renewalPeriod: language === 'fr' ? 'Quotidien' : 'Daily',
-      legislation: 'RSST Art. 297-312, CSTC Section 3.21',
-      contactInfo: {
-        phone: '514-355-6190',
-        website: 'https://www.asp-construction.org'
-      },
-      selected: false,
-      status: 'pending',
-      formFields: [
-        { id: 'space_identification', type: 'text', label: language === 'fr' ? 'Identification de l\'espace clos' : 'Confined space identification', required: true, section: 'identification', placeholder: language === 'fr' ? 'Ex: Réservoir A-12, Regard municipal...' : 'Ex: Tank A-12, Municipal manhole...' },
-        { id: 'project_name', type: 'text', label: language === 'fr' ? 'Nom du projet' : 'Project name', required: true, section: 'identification' },
-        { id: 'location', type: 'text', label: language === 'fr' ? 'Localisation exacte' : 'Exact location', required: true, section: 'identification' },
-        { id: 'permit_date', type: 'date', label: language === 'fr' ? 'Date du permis' : 'Permit date', required: true, section: 'identification' },
-        { id: 'permit_time', type: 'time_picker', label: language === 'fr' ? 'Heure d\'émission' : 'Issue time', required: true, section: 'identification' },
-        { id: 'entry_mandatory', type: 'radio', label: language === 'fr' ? 'L\'entrée est-elle obligatoire ?' : 'Is entry mandatory?', required: true, section: 'access', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'] },
-        { id: 'atmosphere_types', type: 'checkbox', label: language === 'fr' ? 'Types d\'atmosphère' : 'Atmosphere types', required: true, section: 'atmosphere', options: language === 'fr' ? ['Inflammable/combustible LIE ≥ 5%', 'Oxygène ≤ 19,5%', 'Oxygène ≥ 23%', 'Gaz toxique', 'Poussières', 'Irritante'] : ['Flammable/combustible LEL ≥ 5%', 'Oxygen ≤ 19.5%', 'Oxygen ≥ 23%', 'Toxic gas', 'Dust', 'Irritant'] },
-        { id: 'photos_documentation', type: 'photo_gallery', label: language === 'fr' ? 'Photos de documentation' : 'Documentation photos', required: false, section: 'atmosphere' },
-        { id: 'workers_log', type: 'workers_tracking', label: language === 'fr' ? 'Registre des entrées/sorties' : 'Entry/exit log', required: true, section: 'signatures' },
-        { id: 'supervisor_signature', type: 'signature', label: language === 'fr' ? 'Signature du surveillant' : 'Supervisor signature', required: true, section: 'signatures' }
-      ]
-    },
-    
-    // 2. PERMIS TRAVAIL À CHAUD
-    {
-      id: 'hot-work-permit',
-      name: t.permits['hot-work-permit'].name,
-      category: t.categories['Sécurité'],
-      description: t.permits['hot-work-permit'].description,
-      authority: language === 'fr' ? 'Service incendie / Employeur' : 'Fire department / Employer',
-      province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-      required: true,
-      priority: 'critical',
-      duration: language === 'fr' ? '24 heures maximum' : '24 hours maximum',
-      cost: language === 'fr' ? 'Variable selon municipalité' : 'Variable by municipality',
-      processingTime: language === 'fr' ? 'Immédiat à 24h' : 'Immediate to 24h',
-      renewalRequired: true,
-      renewalPeriod: language === 'fr' ? 'Quotidien' : 'Daily',
-      legislation: 'NFPA 51B-2019, Code sécurité incendie, RSST',
-      contactInfo: {
-        phone: language === 'fr' ? 'Service incendie local' : 'Local fire department',
-        website: 'Municipal'
-      },
-      selected: false,
-      status: 'pending',
-      formFields: [
-        { id: 'permit_number', type: 'text', label: language === 'fr' ? 'Numéro de permis' : 'Permit number', required: true, section: 'identification' },
-        { id: 'work_location', type: 'text', label: language === 'fr' ? 'Lieu des travaux' : 'Work location', required: true, section: 'identification' },
-        { id: 'work_date', type: 'date', label: language === 'fr' ? 'Date des travaux' : 'Work date', required: true, section: 'identification' },
-        { id: 'start_time', type: 'time', label: language === 'fr' ? 'Heure de début' : 'Start time', required: true, section: 'identification' },
-        { id: 'end_time', type: 'time', label: language === 'fr' ? 'Heure de fin' : 'End time', required: true, section: 'identification' },
-        { id: 'company_name', type: 'text', label: language === 'fr' ? 'Nom de l\'entreprise' : 'Company name', required: true, section: 'identification' },
-        { id: 'work_type', type: 'checkbox', label: language === 'fr' ? 'Type de travail à chaud' : 'Hot work type', required: true, section: 'work_type', options: language === 'fr' ? ['Soudage à l\'arc', 'Soudage au gaz', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage', 'Perçage', 'Brasage', 'Autre'] : ['Arc welding', 'Gas welding', 'Torch cutting', 'Plasma cutting', 'Grinding', 'Drilling', 'Brazing', 'Other'] },
-        { id: 'work_description', type: 'textarea', label: language === 'fr' ? 'Description détaillée des travaux' : 'Detailed work description', required: true, section: 'work_type' },
-        { id: 'fire_watch', type: 'radio', label: language === 'fr' ? 'Surveillance incendie assignée' : 'Fire watch assigned', required: true, section: 'precautions', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'] },
-        { id: 'photos_precautions', type: 'photo_gallery', label: language === 'fr' ? 'Photos des mesures de précaution' : 'Precautionary measures photos', required: false, section: 'precautions' },
-        { id: 'applicant_signature', type: 'signature', label: language === 'fr' ? 'Signature du demandeur' : 'Applicant signature', required: true, section: 'signatures' }
-      ]
-    },
-    
-    // 3. PERMIS D'EXCAVATION
-    {
-      id: 'excavation-permit',
-      name: t.permits['excavation-permit'].name,
-      category: t.categories['Construction'],
-      description: t.permits['excavation-permit'].description,
-      authority: language === 'fr' ? 'Municipal' : 'Municipal',
-      province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-      required: true,
-      priority: 'high',
-      duration: language === 'fr' ? 'Durée des travaux' : 'Duration of work',
-      cost: language === 'fr' ? '200$ - 2000$ selon ampleur' : '$200 - $2000 depending on scope',
-      processingTime: language === 'fr' ? '5-15 jours ouvrables' : '5-15 business days',
-      renewalRequired: false,
-      legislation: language === 'fr' ? 'Règlements municipaux, Code de construction' : 'Municipal regulations, Building code',
-      contactInfo: {
-        website: language === 'fr' ? 'Bureau des permis municipal' : 'Municipal permit office'
-      },
-      selected: false,
-      status: 'pending',
-      formFields: [
-        { id: 'applicant_name', type: 'text', label: language === 'fr' ? 'Nom du demandeur' : 'Applicant name', required: true, section: 'applicant' },
-        { id: 'applicant_address', type: 'textarea', label: language === 'fr' ? 'Adresse du demandeur' : 'Applicant address', required: true, section: 'applicant' },
-        { id: 'contractor_license', type: 'text', label: language === 'fr' ? 'Numéro de licence RBQ' : 'RBQ license number', required: true, section: 'applicant' },
-        { id: 'work_address', type: 'textarea', label: language === 'fr' ? 'Adresse des travaux' : 'Work address', required: true, section: 'project' },
-        { id: 'project_description', type: 'textarea', label: language === 'fr' ? 'Description du projet' : 'Project description', required: true, section: 'project' },
-        { id: 'excavation_depth', type: 'number', label: language === 'fr' ? 'Profondeur d\'excavation (m)' : 'Excavation depth (m)', required: true, section: 'excavation', validation: { min: 0 } },
-        { id: 'soil_type', type: 'select', label: language === 'fr' ? 'Type de sol' : 'Soil type', required: true, section: 'excavation', options: language === 'fr' ? ['Argile', 'Sable', 'Gravier', 'Roc', 'Remblai', 'Mixte'] : ['Clay', 'Sand', 'Gravel', 'Rock', 'Fill', 'Mixed'] },
-        { id: 'safety_plan', type: 'radio', label: language === 'fr' ? 'Plan de sécurité préparé' : 'Safety plan prepared', required: true, section: 'safety', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'] },
-        { id: 'photos_safety', type: 'photo_gallery', label: language === 'fr' ? 'Photos de sécurité du site' : 'Site safety photos', required: false, section: 'safety' },
-        { id: 'site_plan', type: 'file', label: language === 'fr' ? 'Plan de site' : 'Site plan', required: true, section: 'documents' },
-        { id: 'applicant_signature_excavation', type: 'signature', label: language === 'fr' ? 'Signature du demandeur' : 'Applicant signature', required: true, section: 'signatures' }
-      ]
-    }
-  ];
-};
 // =================== COMPOSANT PRINCIPAL ===================
-const Step4Permits: React.FC<Step4PermitsProps> = ({ 
-  formData, 
-  onDataChange, 
-  language = 'fr', 
-  tenant, 
-  errors 
-}) => {
-  // =================== TRADUCTIONS ET CONFIGURATION ===================
+const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
   const t = translations[language];
   
-  // =================== ÉTATS ===================
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedProvince, setSelectedProvince] = useState('all');
-  
-  // Initialiser avec la liste des permis traduits
   const [permits, setPermits] = useState(() => {
-    if (formData.step4?.permits?.list && formData.step4.permits.list.length > 0) {
-      // Si nous avons déjà des permis sauvegardés, les utiliser mais mettre à jour les traductions
-      const savedPermits = formData.step4.permits.list;
-      const translatedPermits = getPermitsDatabase(language);
-      
-      // Fusionner les données sauvegardées avec les nouvelles traductions
-      return translatedPermits.map(translatedItem => {
-        const savedItem = savedPermits.find((saved: Permit) => saved.id === translatedItem.id);
-        return savedItem ? { 
-          ...translatedItem, 
-          selected: savedItem.selected,
-          status: savedItem.status,
-          formData: savedItem.formData
-        } : translatedItem;
-      });
+    if (formData.permits?.list && formData.permits.list.length > 0) {
+      return formData.permits.list;
     }
-    return getPermitsDatabase(language);
+    return realPermitsDatabase;
   });
-  
   const [expandedForms, setExpandedForms] = useState<{ [key: string]: boolean }>({});
 
-  // =================== FILTRAGE ET STATISTIQUES ===================
-  
   // Filtrage des permis
-  const filteredPermits = useMemo(() => {
-    return permits.filter((permit: Permit) => {
-      const matchesSearch = permit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           permit.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           permit.authority.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || permit.category === selectedCategory;
-      const matchesProvince = selectedProvince === 'all' || permit.province.includes(selectedProvince);
-      return matchesSearch && matchesCategory && matchesProvince;
-    });
-  }, [permits, searchTerm, selectedCategory, selectedProvince]);
+  const filteredPermits = permits.filter((permit: Permit) => {
+    const matchesSearch = permit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         permit.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         permit.authority.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || permit.category === selectedCategory;
+    const matchesProvince = selectedProvince === 'all' || permit.province.includes(selectedProvince);
+    return matchesSearch && matchesCategory && matchesProvince;
+  });
 
-  // Catégories et provinces disponibles
-  const categories = useMemo(() => {
-    return Array.from(new Set(permits.map((p: Permit) => p.category))) as string[];
-  }, [permits]);
-  
+  const categories = Array.from(new Set(permits.map((p: Permit) => p.category))) as string[];
   const provinces = ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'];
-  
-  // Permis sélectionnés
-  const selectedPermits = useMemo(() => {
-    return permits.filter((p: Permit) => p.selected);
-  }, [permits]);
+  const selectedPermits = permits.filter((p: Permit) => p.selected);
 
-  // Statistiques
   const stats = useMemo(() => ({
     totalPermits: permits.length,
     selected: selectedPermits.length,
@@ -481,7 +340,6 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   }), [permits, selectedPermits]);
 
   // =================== HANDLERS ===================
-  
   const handlePermitToggle = (permitId: string) => {
     const updatedPermits = permits.map((permit: Permit) => 
       permit.id === permitId 
@@ -504,7 +362,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
         pending: selectedList.filter((p: Permit) => p.status === 'pending').length
       }
     };
-    onDataChange('step4', { ...formData.step4, permits: permitsData });
+    onDataChange('permits', permitsData);
   };
 
   const handleFormFieldChange = (permitId: string, fieldId: string, value: any) => {
@@ -531,19 +389,12 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     }));
   };
 
-  // =================== FONCTIONS UTILITAIRES ===================
-  
   const getCategoryIcon = (category: string) => {
-    const iconMap: { [key: string]: string } = {
-      'Sécurité': '🛡️',
-      'Safety': '🛡️',
-      'Construction': '🏗️',
-      'Radioprotection': '☢️',
-      'Radiation Protection': '☢️',
-      'Équipements': '⚙️',
-      'Equipment': '⚙️'
-    };
-    return iconMap[category] || '📋';
+    switch (category) {
+      case 'Sécurité': return '🛡️';
+      case 'Construction': return '🏗️';
+      default: return '📋';
+    }
   };
 
   const getPriorityColor = (priority: string) => {
@@ -566,22 +417,6 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
       default: return '#6b7280';
     }
   };
-
-  // =================== EFFET POUR METTRE À JOUR LES TRADUCTIONS ===================
-  React.useEffect(() => {
-    // Mettre à jour les traductions quand la langue change
-    const translatedPermits = getPermitsDatabase(language);
-    const updatedPermits = translatedPermits.map(translatedItem => {
-      const currentItem = permits.find(item => item.id === translatedItem.id);
-      return currentItem ? { 
-        ...translatedItem, 
-        selected: currentItem.selected,
-        status: currentItem.status,
-        formData: currentItem.formData
-      } : translatedItem;
-    });
-    setPermits(updatedPermits);
-  }, [language]);
 
   // =================== COMPOSANT FORMULAIRE ===================
   const PermitForm = ({ permit }: { permit: Permit }) => {
@@ -608,8 +443,12 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               value={value}
               onChange={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 handleFormFieldChange(permit.id, field.id, e.target.value);
               }}
+              onInput={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              onFocus={(e) => e.stopPropagation()}
               placeholder={field.placeholder}
               required={field.required}
               min={field.validation?.min}
@@ -629,6 +468,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                 e.stopPropagation();
                 handleFormFieldChange(permit.id, field.id, e.target.value);
               }}
+              onInput={(e) => e.stopPropagation()}
               required={field.required}
               className="form-input"
             />
@@ -657,7 +497,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               {showTimePicker && (
                 <div className="time-picker-dropdown">
                   <div className="time-picker-header">
-                    <span>{t.messages.selectTime}</span>
+                    <span>Sélectionner l'heure</span>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -672,7 +512,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                   
                   <div className="time-picker-selectors">
                     <div className="time-selector">
-                      <div className="time-selector-label">{language === 'fr' ? 'Heure' : 'Hour'}</div>
+                      <div className="time-selector-label">Heure</div>
                       <div className="time-options">
                         {hours.map((hour: string) => (
                           <div
@@ -693,7 +533,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                     <div className="time-separator">:</div>
                     
                     <div className="time-selector">
-                      <div className="time-selector-label">{language === 'fr' ? 'Minutes' : 'Minutes'}</div>
+                      <div className="time-selector-label">Minutes</div>
                       <div className="time-options">
                         {minutes.filter((_, i) => i % 5 === 0).map((minute: string) => (
                           <div
@@ -723,7 +563,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                         setShowTimePicker(false);
                       }}
                     >
-                      {t.actions.now}
+                      Maintenant
                     </button>
                     <button
                       type="button"
@@ -748,8 +588,12 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               value={value}
               onChange={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 handleFormFieldChange(permit.id, field.id, e.target.value);
               }}
+              onInput={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              onFocus={(e) => e.stopPropagation()}
               placeholder={field.placeholder}
               required={field.required}
               rows={3}
@@ -769,7 +613,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               required={field.required}
               className="form-select"
             >
-              <option value="">{language === 'fr' ? 'Sélectionner...' : 'Select...'}</option>
+              <option value="">Sélectionner...</option>
               {field.options?.map((option: string) => (
                 <option key={option} value={option}>{option}</option>
               ))}
@@ -849,7 +693,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                 <div className="worker-entry-inputs">
                   <input
                     type="text"
-                    placeholder={language === 'fr' ? 'Nom du travailleur' : 'Worker name'}
+                    placeholder="Nom du travailleur"
                     className="worker-name-input"
                     onKeyPress={(e) => {
                       e.stopPropagation();
@@ -904,22 +748,22 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                       }
                     }}
                   >
-                    {t.actions.recordEntry}
+                    Enregistrer entrée
                   </button>
                 </div>
               </div>
               
               <div className="workers-log-list">
-                <h5>{language === 'fr' ? 'Registre des entrées/sorties' : 'Entry/exit log'}</h5>
+                <h5>Registre des entrées/sorties</h5>
                 {workersLog.length === 0 ? (
-                  <p className="no-entries">{t.messages.noEntries}</p>
+                  <p className="no-entries">Aucune entrée enregistrée</p>
                 ) : (
                   <div className="workers-table">
                     <div className="workers-table-header">
-                      <span>{language === 'fr' ? 'Nom' : 'Name'}</span>
-                      <span>{language === 'fr' ? 'Entrée' : 'Entry'}</span>
-                      <span>{language === 'fr' ? 'Sortie' : 'Exit'}</span>
-                      <span>{language === 'fr' ? 'Actions' : 'Actions'}</span>
+                      <span>Nom</span>
+                      <span>Entrée</span>
+                      <span>Sortie</span>
+                      <span>Actions</span>
                     </div>
                     {workersLog.map((worker: WorkerEntry) => (
                       <div key={worker.id} className="workers-table-row">
@@ -941,7 +785,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                                 handleFormFieldChange(permit.id, field.id, updatedLog);
                               }}
                             >
-                              {t.actions.exit}
+                              Sortie
                             </button>
                           )}
                         </span>
@@ -956,7 +800,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                               handleFormFieldChange(permit.id, field.id, updatedLog);
                             }}
                           >
-                            {t.actions.remove}
+                            Supprimer
                           </button>
                         </span>
                       </div>
@@ -1015,7 +859,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                       document.getElementById(`photo-input-${field.id}`)?.click();
                     }}
                   >
-                    📷 {t.actions.addPhotos}
+                    📷 Ajouter des photos
                   </button>
                   
                   <button
@@ -1038,9 +882,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                         ctx.fillStyle = '#ffffff';
                         ctx.font = '24px Arial';
                         ctx.textAlign = 'center';
-                        ctx.fillText(t.messages.photoCaptured, 320, 220);
+                        ctx.fillText('Photo capturée', 320, 220);
                         ctx.font = '16px Arial';
-                        ctx.fillText(new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA'), 320, 260);
+                        ctx.fillText(new Date().toLocaleString('fr-CA'), 320, 260);
                         
                         const dataUrl = canvas.toDataURL('image/png');
                         const newPhoto: PhotoEntry = {
@@ -1055,7 +899,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                       }
                     }}
                   >
-                    📸 {t.actions.takePhoto}
+                    📸 Prendre une photo
                   </button>
                 </div>
               </div>
@@ -1089,7 +933,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                         <div className="photo-info">
                           <div className="photo-name">{photos[currentPhotoIndex]?.name}</div>
                           <div className="photo-timestamp">
-                            {new Date(photos[currentPhotoIndex]?.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                            {new Date(photos[currentPhotoIndex]?.timestamp).toLocaleString('fr-CA')}
                           </div>
                         </div>
                         <button
@@ -1149,7 +993,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                     
                     <div className="photo-description">
                       <textarea
-                        placeholder={t.messages.photoDescription}
+                        placeholder="Ajouter une description à cette photo..."
                         value={photos[currentPhotoIndex]?.description || ''}
                         onChange={(e) => {
                           e.stopPropagation();
@@ -1167,12 +1011,10 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                   </div>
                   
                   <div className="photo-gallery-info">
-                    <span className="photo-count">
-                      {photos.length} {language === 'fr' ? 'photo' : 'photo'}{photos.length > 1 ? 's' : ''}
-                    </span>
+                    <span className="photo-count">{photos.length} photo{photos.length > 1 ? 's' : ''}</span>
                     {photos.length > 1 && (
                       <span className="photo-current">
-                        {language === 'fr' ? 'Photo' : 'Photo'} {currentPhotoIndex + 1} {language === 'fr' ? 'sur' : 'of'} {photos.length}
+                        Photo {currentPhotoIndex + 1} sur {photos.length}
                       </span>
                     )}
                   </div>
@@ -1190,21 +1032,21 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               <div className="signature-pad">
                 {signatureValue ? (
                   <div className="signature-content">
-                    <div className="signature-text">✓ {language === 'fr' ? 'Signé par' : 'Signed by'} : {signatureValue}</div>
+                    <div className="signature-text">✓ Signé par : {signatureValue}</div>
                     <div className="signature-timestamp">
-                      {language === 'fr' ? 'Le' : 'On'} {signatureMetadata?.date || new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA')} {language === 'fr' ? 'à' : 'at'} {signatureMetadata?.time || new Date().toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', { hour: '2-digit', minute: '2-digit' })}
+                      Le {signatureMetadata?.date || new Date().toLocaleDateString('fr-CA')} à {signatureMetadata?.time || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 ) : (
                   <span className="signature-placeholder">
-                    {t.messages.signatureRequired}
+                    Signature électronique requise
                   </span>
                 )}
               </div>
               <div className="signature-controls">
                 <input
                   type="text"
-                  placeholder={t.messages.enterFullName}
+                  placeholder="Entrez votre nom complet"
                   className="signature-name-input"
                   onKeyPress={(e) => {
                     e.stopPropagation();
@@ -1214,8 +1056,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                       const timestamp = new Date();
                       const fullSignature: SignatureMetadata = {
                         name: signerName,
-                        date: timestamp.toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA'),
-                        time: timestamp.toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', { hour: '2-digit', minute: '2-digit' }),
+                        date: timestamp.toLocaleDateString('fr-CA'),
+                        time: timestamp.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
                         timestamp: timestamp.toISOString(),
                         ipAddress: 'XXX.XXX.XXX.XXX',
                         userAgent: navigator.userAgent
@@ -1253,8 +1095,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                       const timestamp = new Date();
                       const fullSignature: SignatureMetadata = {
                         name: signerName,
-                        date: timestamp.toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA'),
-                        time: timestamp.toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', { hour: '2-digit', minute: '2-digit' }),
+                        date: timestamp.toLocaleDateString('fr-CA'),
+                        time: timestamp.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
                         timestamp: timestamp.toISOString(),
                         ipAddress: 'XXX.XXX.XXX.XXX',
                         userAgent: navigator.userAgent
@@ -1278,11 +1120,11 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                       updateFormData(updatedPermits);
                       input.value = '';
                     } else {
-                      alert(t.messages.enterNameToSign);
+                      alert('Veuillez entrer votre nom complet pour signer');
                     }
                   }}
                 >
-                  {t.actions.sign}
+                  Signer électroniquement
                 </button>
                 {signatureValue && (
                   <button 
@@ -1310,7 +1152,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                       updateFormData(updatedPermits);
                     }}
                   >
-                    {t.actions.clear}
+                    Effacer
                   </button>
                 )}
               </div>
@@ -1329,15 +1171,15 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
           <div className="form-actions">
             <button className="form-action-btn save">
               <Save size={16} />
-              {t.actions.save}
+              Sauvegarder
             </button>
             <button className="form-action-btn print">
               <Printer size={16} />
-              {t.actions.print}
+              Imprimer
             </button>
             <button className="form-action-btn submit">
               <Mail size={16} />
-              {t.actions.submit}
+              Soumettre
             </button>
           </div>
         </div>
@@ -1579,19 +1421,19 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
           <div className="permits-stats">
             <div className="stat-item">
               <div className="stat-value">{stats.totalPermits}</div>
-              <div className="stat-label">{t.stats.totalPermits}</div>
+              <div className="stat-label">Permis disponibles</div>
             </div>
             <div className="stat-item">
               <div className="stat-value">{stats.selected}</div>
-              <div className="stat-label">{t.stats.selected}</div>
+              <div className="stat-label">Sélectionnés</div>
             </div>
             <div className="stat-item">
               <div className="stat-value">{stats.critical}</div>
-              <div className="stat-label">{t.stats.critical}</div>
+              <div className="stat-label">Critiques</div>
             </div>
             <div className="stat-item">
               <div className="stat-value">{stats.pending}</div>
-              <div className="stat-label">{t.stats.pending}</div>
+              <div className="stat-label">En attente</div>
             </div>
           </div>
         </div>
@@ -1617,7 +1459,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               <option value="all">{t.allCategories}</option>
               {categories.map((category: string) => (
                 <option key={category} value={category}>
-                  {getCategoryIcon(category)} {category}
+                  {getCategoryIcon(category)} {(t.categories as any)[category] || category}
                 </option>
               ))}
             </select>
@@ -1652,7 +1494,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                   <div className="permit-icon">{getCategoryIcon(permit.category)}</div>
                   <div className="permit-content">
                     <h3 className="permit-name">{permit.name}</h3>
-                    <div className="permit-category">{permit.category}</div>
+                    <div className="permit-category">{(t.categories as any)[permit.category] || permit.category}</div>
                     <div className="permit-description">{permit.description}</div>
                     <div className="permit-authority">{permit.authority}</div>
                   </div>
@@ -1679,7 +1521,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                   </div>
                   <div className="meta-item">
                     <MapPin size={12} />
-                    {permit.province.length} {language === 'fr' ? 'provinces' : 'provinces'}
+                    {permit.province.length} provinces
                   </div>
                 </div>
 
@@ -1691,12 +1533,12 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                       onClick={() => toggleFormExpansion(permit.id)}
                     >
                       <Edit size={14} />
-                      {isFormExpanded ? t.actions.close : t.actions.fill}
+                      {isFormExpanded ? 'Fermer' : 'Remplir'}
                       {isFormExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     </button>
                     <button className="action-btn secondary">
                       <Eye size={14} />
-                      {t.actions.preview}
+                      Aperçu
                     </button>
                     <button className="action-btn secondary">
                       <Download size={14} />
@@ -1723,92 +1565,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             border: '1px solid rgba(100, 116, 139, 0.3)' 
           }}>
             <FileText size={48} style={{ margin: '0 auto 16px', color: '#64748b' }} />
-            <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>{t.messages.noPermitsFound}</h3>
-            <p style={{ margin: 0 }}>{t.messages.noPermitsMessage}</p>
-          </div>
-        )}
-
-        {/* Résumé des permis sélectionnés */}
-        {selectedPermits.length > 0 && (
-          <div style={{
-            marginTop: '25px',
-            padding: '20px',
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            borderRadius: '12px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-              <CheckCircle size={20} color="#10b981" />
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#10b981' }}>
-                {language === 'fr' ? 'Résumé des permis sélectionnés' : 'Selected permits summary'}
-              </h3>
-            </div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-              <div>
-                <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '5px' }}>
-                  {language === 'fr' ? 'Permis sélectionnés:' : 'Selected permits:'}
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#3b82f6' }}>
-                  {selectedPermits.length}
-                </div>
-              </div>
-              
-              <div>
-                <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '5px' }}>
-                  {language === 'fr' ? 'Permis critiques:' : 'Critical permits:'}
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#dc2626' }}>
-                  {stats.critical}
-                </div>
-              </div>
-              
-              <div>
-                <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '5px' }}>
-                  {language === 'fr' ? 'En attente:' : 'Pending:'}
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#f59e0b' }}>
-                  {stats.pending}
-                </div>
-              </div>
-              
-              <div>
-                <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '5px' }}>
-                  {language === 'fr' ? 'Formulaires remplis:' : 'Forms completed:'}
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>
-                  {selectedPermits.filter(p => p.formData && Object.keys(p.formData).length > 0).length}
-                </div>
-              </div>
-            </div>
-
-            {/* Liste des permis sélectionnés */}
-            <div style={{ marginTop: '15px' }}>
-              <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '8px' }}>
-                {language === 'fr' ? 'Permis requis:' : 'Required permits:'}
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {selectedPermits.map(permit => (
-                  <span 
-                    key={permit.id}
-                    style={{
-                      padding: '4px 12px',
-                      background: `${getPriorityColor(permit.priority)}20`,
-                      border: `1px solid ${getPriorityColor(permit.priority)}40`,
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      color: getPriorityColor(permit.priority)
-                    }}
-                  >
-                    {getCategoryIcon(permit.category)}
-                    {permit.name}
-                  </span>
-                ))}
-              </div>
-            </div>
+            <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>Aucun permis trouvé</h3>
+            <p style={{ margin: 0 }}>Modifiez vos critères de recherche pour voir plus de permis</p>
           </div>
         )}
       </div>
@@ -1816,4 +1574,4 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   );
 };
 
-export default Step4Permits;
+export default Step4RealPermits;
