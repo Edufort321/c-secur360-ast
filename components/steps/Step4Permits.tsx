@@ -84,7 +84,6 @@ interface SignatureMetadata {
 
 // =================== BASE DE DONNÉES PERMIS RÉELS ===================
 const realPermitsDatabase: Permit[] = [
-  // 1. PERMIS ESPACE CLOS - Basé sur ASP Construction
   {
     id: 'confined-space-entry',
     name: 'Fiche de Contrôle en Espace Clos',
@@ -107,142 +106,15 @@ const realPermitsDatabase: Permit[] = [
     selected: false,
     status: 'pending',
     formFields: [
-      // Section Identification
       { id: 'space_identification', type: 'text', label: 'Identification de l\'espace clos', required: true, section: 'identification', placeholder: 'Ex: Réservoir A-12, Regard municipal...' },
       { id: 'project_name', type: 'text', label: 'Nom du projet', required: true, section: 'identification' },
       { id: 'location', type: 'text', label: 'Localisation exacte', required: true, section: 'identification' },
       { id: 'permit_date', type: 'date', label: 'Date du permis', required: true, section: 'identification' },
       { id: 'permit_time', type: 'time_picker', label: 'Heure d\'émission', required: true, section: 'identification' },
-      
-      // Section Entrées et Sorties
-      { id: 'entry_mandatory', type: 'radio', label: 'L\'entrée est-elle obligatoire ?', required: true, section: 'access', options: ['Oui', 'Non'] },
-      { id: 'entry_alternatives', type: 'textarea', label: 'Si non, options alternatives', required: false, section: 'access', placeholder: 'Décrire les alternatives...' },
-      { id: 'entry_frequency', type: 'text', label: 'Fréquence des entrées', required: false, section: 'access' },
-      { id: 'access_number', type: 'number', label: 'Nombre d\'accès', required: true, section: 'access', validation: { min: 1 } },
-      { id: 'access_dimensions', type: 'text', label: 'Dimensions des accès', required: true, section: 'access', placeholder: 'Ex: 60cm x 40cm' },
-      { id: 'interior_dimensions', type: 'text', label: 'Dimensions intérieures', required: true, section: 'access' },
-      { id: 'divisions_number', type: 'number', label: 'Nombre de divisions', required: false, section: 'access' },
-      { id: 'access_means', type: 'checkbox', label: 'Moyens d\'accès', required: true, section: 'access', options: ['Échelons', 'Échelle fixe', 'Échelle portative', 'Autre'] },
-      { id: 'signage_required', type: 'radio', label: 'Signalisation requise ?', required: true, section: 'access', options: ['Oui', 'Non'] },
-      { id: 'access_control', type: 'radio', label: 'Mesures prises pour interdire l\'entrée non autorisée ?', required: true, section: 'access', options: ['Oui', 'Non'] },
-      
-      // Section Atmosphère
-      { id: 'space_contents', type: 'textarea', label: 'Contenu de l\'espace clos', required: true, section: 'atmosphere', placeholder: 'Décrire le contenu, vérifier SDS...' },
-      { id: 'atmosphere_types', type: 'checkbox', label: 'Types d\'atmosphère', required: true, section: 'atmosphere', options: ['Inflammable/combustible LIE ≥ 5%', 'Oxygène ≤ 19,5%', 'Oxygène ≥ 23%', 'Gaz toxique', 'Poussières', 'Irritante'] },
       { id: 'photos_documentation', type: 'photo_gallery', label: 'Photos de documentation', required: false, section: 'atmosphere' },
-      
-      // Section Signatures et listing des travailleurs
-      { id: 'authorized_workers', type: 'textarea', label: 'Noms des travailleurs autorisés', required: true, section: 'signatures', placeholder: 'Un travailleur par ligne...' },
       { id: 'workers_log', type: 'workers_tracking', label: 'Registre des entrées/sorties', required: true, section: 'signatures' },
-      { id: 'supervisor_name', type: 'text', label: 'Nom du surveillant', required: true, section: 'signatures' },
-      { id: 'qualified_person', type: 'text', label: 'Nom de la personne qualifiée', required: true, section: 'signatures' },
       { id: 'supervisor_signature', type: 'signature', label: 'Signature du surveillant', required: true, section: 'signatures' },
       { id: 'qualified_signature', type: 'signature', label: 'Signature de la personne qualifiée', required: true, section: 'signatures' }
-    ]
-  },
-
-  // 2. PERMIS TRAVAIL À CHAUD - Basé sur NFPA 51B et CNESST
-  {
-    id: 'hot-work-permit',
-    name: 'Permis de Travail à Chaud',
-    category: 'Sécurité',
-    description: 'Autorisation pour soudage, découpage, meulage et travaux générant étincelles selon NFPA 51B',
-    authority: 'Service incendie / Employeur',
-    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-    required: true,
-    priority: 'critical',
-    duration: '24 heures maximum',
-    cost: 'Variable selon municipalité',
-    processingTime: 'Immédiat à 24h',
-    renewalRequired: true,
-    renewalPeriod: 'Quotidien',
-    legislation: 'NFPA 51B-2019, Code sécurité incendie, RSST',
-    contactInfo: {
-      phone: 'Service incendie local',
-      website: 'Municipal'
-    },
-    selected: false,
-    status: 'pending',
-    formFields: [
-      // Section Identification
-      { id: 'permit_number', type: 'text', label: 'Numéro de permis', required: true, section: 'identification' },
-      { id: 'work_location', type: 'text', label: 'Lieu des travaux', required: true, section: 'identification' },
-      { id: 'work_date', type: 'date', label: 'Date des travaux', required: true, section: 'identification' },
-      { id: 'start_time', type: 'time', label: 'Heure de début', required: true, section: 'identification' },
-      { id: 'end_time', type: 'time', label: 'Heure de fin', required: true, section: 'identification' },
-      { id: 'company_name', type: 'text', label: 'Nom de l\'entreprise', required: true, section: 'identification' },
-      
-      // Section Type de travaux
-      { id: 'work_type', type: 'checkbox', label: 'Type de travail à chaud', required: true, section: 'work_type', options: ['Soudage à l\'arc', 'Soudage au gaz', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage', 'Perçage', 'Brasage', 'Autre'] },
-      { id: 'work_description', type: 'textarea', label: 'Description détaillée des travaux', required: true, section: 'work_type' },
-      
-      // Section Précautions
-      { id: 'fire_watch', type: 'radio', label: 'Surveillance incendie assignée', required: true, section: 'precautions', options: ['Oui', 'Non'] },
-      { id: 'fire_watch_name', type: 'text', label: 'Nom du surveillant incendie', required: false, section: 'precautions' },
-      { id: 'combustibles_removed', type: 'radio', label: 'Matières combustibles éloignées (11m minimum)', required: true, section: 'precautions', options: ['Oui', 'Non', 'Protégées'] },
-      { id: 'photos_precautions', type: 'photo_gallery', label: 'Photos des mesures de précaution', required: false, section: 'precautions' },
-      
-      // Section Signatures
-      { id: 'applicant_signature', type: 'signature', label: 'Signature du demandeur', required: true, section: 'signatures' },
-      { id: 'supervisor_signature', type: 'signature', label: 'Signature du superviseur', required: true, section: 'signatures' },
-      { id: 'permit_expiry', type: 'date', label: 'Date d\'expiration du permis', required: true, section: 'signatures' }
-    ]
-  },
-
-  // 3. PERMIS D'EXCAVATION - Basé sur Ville de Montréal
-  {
-    id: 'excavation-permit',
-    name: 'Permis d\'Excavation',
-    category: 'Construction',
-    description: 'Autorisation pour travaux d\'excavation près du domaine public selon règlements municipaux',
-    authority: 'Municipal',
-    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-    required: true,
-    priority: 'high',
-    duration: 'Durée des travaux',
-    cost: '200$ - 2000$ selon ampleur',
-    processingTime: '5-15 jours ouvrables',
-    renewalRequired: false,
-    legislation: 'Règlements municipaux, Code de construction',
-    contactInfo: {
-      website: 'Bureau des permis municipal'
-    },
-    selected: false,
-    status: 'pending',
-    formFields: [
-      // Section Demandeur
-      { id: 'applicant_name', type: 'text', label: 'Nom du demandeur', required: true, section: 'applicant' },
-      { id: 'applicant_address', type: 'textarea', label: 'Adresse du demandeur', required: true, section: 'applicant' },
-      { id: 'applicant_phone', type: 'text', label: 'Téléphone', required: true, section: 'applicant' },
-      { id: 'applicant_email', type: 'text', label: 'Courriel', required: true, section: 'applicant' },
-      { id: 'contractor_name', type: 'text', label: 'Nom de l\'entrepreneur', required: true, section: 'applicant' },
-      { id: 'contractor_license', type: 'text', label: 'Numéro de licence RBQ', required: true, section: 'applicant' },
-      
-      // Section Projet
-      { id: 'work_address', type: 'textarea', label: 'Adresse des travaux', required: true, section: 'project' },
-      { id: 'lot_number', type: 'text', label: 'Numéro de lot', required: false, section: 'project' },
-      { id: 'project_description', type: 'textarea', label: 'Description du projet', required: true, section: 'project' },
-      { id: 'work_start_date', type: 'date', label: 'Date de début prévue', required: true, section: 'project' },
-      { id: 'work_duration', type: 'number', label: 'Durée estimée (jours)', required: true, section: 'project' },
-      
-      // Section Excavation
-      { id: 'excavation_depth', type: 'number', label: 'Profondeur d\'excavation (m)', required: true, section: 'excavation', validation: { min: 0 } },
-      { id: 'excavation_length', type: 'number', label: 'Longueur (m)', required: true, section: 'excavation', validation: { min: 0 } },
-      { id: 'excavation_width', type: 'number', label: 'Largeur (m)', required: true, section: 'excavation', validation: { min: 0 } },
-      { id: 'soil_type', type: 'select', label: 'Type de sol', required: true, section: 'excavation', options: ['Argile', 'Sable', 'Gravier', 'Roc', 'Remblai', 'Mixte'] },
-      
-      // Section Sécurité
-      { id: 'safety_plan', type: 'radio', label: 'Plan de sécurité préparé', required: true, section: 'safety', options: ['Oui', 'Non'] },
-      { id: 'traffic_control', type: 'radio', label: 'Contrôle de circulation requis', required: true, section: 'safety', options: ['Oui', 'Non'] },
-      { id: 'photos_safety', type: 'photo_gallery', label: 'Photos de sécurité du site', required: false, section: 'safety' },
-      
-      // Section Documents
-      { id: 'site_plan', type: 'file', label: 'Plan de site', required: true, section: 'documents' },
-      { id: 'excavation_plans', type: 'file', label: 'Plans d\'excavation', required: true, section: 'documents' },
-      
-      // Section Signatures
-      { id: 'applicant_signature', type: 'signature', label: 'Signature du demandeur', required: true, section: 'signatures' },
-      { id: 'application_date', type: 'date', label: 'Date de la demande', required: true, section: 'signatures' }
     ]
   }
 ];
@@ -255,17 +127,9 @@ const translations = {
     searchPlaceholder: 'Rechercher un permis...',
     allCategories: 'Toutes catégories',
     allProvinces: 'Toutes provinces',
-    selectedPermits: 'Permis sélectionnés',
-    fillForm: 'Remplir le formulaire',
-    viewForm: 'Voir le formulaire',
-    saveForm: 'Sauvegarder',
-    submitForm: 'Soumettre',
-    printForm: 'Imprimer',
     categories: {
       'Sécurité': 'Sécurité',
-      'Construction': 'Construction',
-      'Radioprotection': 'Radioprotection',
-      'Équipements': 'Équipements'
+      'Construction': 'Construction'
     },
     priorities: {
       low: 'Faible',
@@ -282,37 +146,8 @@ const translations = {
     },
     sections: {
       identification: 'Identification',
-      applicant: 'Demandeur',
-      access: 'Accès',
-      lockout: 'Cadenassage',
       atmosphere: 'Atmosphère',
-      monitoring: 'Surveillance',
-      ventilation: 'Ventilation',
-      work: 'Travaux',
-      hazards: 'Dangers',
-      ppe: 'ÉPI',
-      rescue: 'Sauvetage',
-      communication: 'Communication',
-      signatures: 'Signatures',
-      activities: 'Activités',
-      radiation_protection: 'Radioprotection',
-      security: 'Sécurité',
-      waste: 'Déchets',
-      emergency: 'Urgence',
-      documents: 'Documents',
-      declarations: 'Déclarations',
-      candidate: 'Candidat',
-      experience: 'Expérience',
-      training: 'Formation',
-      permit_type: 'Type de permis',
-      owner: 'Propriétaire',
-      project: 'Projet',
-      construction_type: 'Type de construction',
-      specifications: 'Spécifications',
-      work_type: 'Type de travaux',
-      precautions: 'Précautions',
-      excavation: 'Excavation',
-      safety: 'Sécurité'
+      signatures: 'Signatures'
     }
   },
   en: {
@@ -321,17 +156,9 @@ const translations = {
     searchPlaceholder: 'Search permits...',
     allCategories: 'All categories',
     allProvinces: 'All provinces',
-    selectedPermits: 'Selected permits',
-    fillForm: 'Fill form',
-    viewForm: 'View form',
-    saveForm: 'Save',
-    submitForm: 'Submit',
-    printForm: 'Print',
     categories: {
       'Sécurité': 'Safety',
-      'Construction': 'Construction',
-      'Radioprotection': 'Radiation Protection',
-      'Équipements': 'Equipment'
+      'Construction': 'Construction'
     },
     priorities: {
       low: 'Low',
@@ -348,61 +175,11 @@ const translations = {
     },
     sections: {
       identification: 'Identification',
-      applicant: 'Applicant',
-      access: 'Access',
-      lockout: 'Lockout',
       atmosphere: 'Atmosphere',
-      monitoring: 'Monitoring',
-      ventilation: 'Ventilation',
-      work: 'Work',
-      hazards: 'Hazards',
-      ppe: 'PPE',
-      rescue: 'Rescue',
-      communication: 'Communication',
-      signatures: 'Signatures',
-      activities: 'Activities',
-      radiation_protection: 'Radiation Protection',
-      security: 'Security',
-      waste: 'Waste',
-      emergency: 'Emergency',
-      documents: 'Documents',
-      declarations: 'Declarations',
-      candidate: 'Candidate',
-      experience: 'Experience',
-      training: 'Training',
-      permit_type: 'Permit Type',
-      owner: 'Owner',
-      project: 'Project',
-      construction_type: 'Construction Type',
-      specifications: 'Specifications',
-      work_type: 'Work Type',
-      precautions: 'Precautions',
-      excavation: 'Excavation',
-      safety: 'Safety'
+      signatures: 'Signatures'
     }
   }
 };
-
-export { Step4PermitsProps, Permit, FormField, WorkerEntry, PhotoEntry, SignatureMetadata, realPermitsDatabase, translations };
-import React, { useState, useMemo } from 'react';
-import { 
-  FileText, CheckCircle, AlertTriangle, Clock, Download, Eye,
-  Shield, Users, MapPin, Calendar, Building, Phone, User, Briefcase,
-  Search, Filter, Plus, BarChart3, Star, Award, Zap, HardHat,
-  Camera, Save, X, Edit, ChevronDown, ChevronUp, Printer, Mail
-} from 'lucide-react';
-
-// Importation des types et données de la section 1
-import { 
-  Step4PermitsProps, 
-  Permit, 
-  FormField, 
-  WorkerEntry, 
-  PhotoEntry, 
-  SignatureMetadata, 
-  realPermitsDatabase, 
-  translations 
-} from './Step4Permits-Section1';
 
 // =================== COMPOSANT PRINCIPAL ===================
 const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
@@ -449,16 +226,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
     const updatedPermits = permits.map((permit: Permit) => 
       permit.id === permitId 
         ? { ...permit, selected: !permit.selected }
-        : permit
-    );
-    setPermits(updatedPermits);
-    updateFormData(updatedPermits);
-  };
-
-  const updatePermitField = (permitId: string, field: string, value: any) => {
-    const updatedPermits = permits.map((permit: Permit) => 
-      permit.id === permitId 
-        ? { ...permit, [field]: value }
         : permit
     );
     setPermits(updatedPermits);
@@ -513,8 +280,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
     switch (category) {
       case 'Sécurité': return '🛡️';
       case 'Construction': return '🏗️';
-      case 'Radioprotection': return '☢️';
-      case 'Équipements': return '⚙️';
       default: return '📋';
     }
   };
@@ -569,30 +334,9 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                 e.preventDefault();
                 handleFormFieldChange(permit.id, field.id, e.target.value);
               }}
-              onInput={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
-              onKeyDown={(e) => {
-                e.stopPropagation();
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                }
-              }}
-              onKeyUp={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
-              onFocus={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
               placeholder={field.placeholder}
               required={field.required}
-              min={field.validation?.min}
-              max={field.validation?.max}
               className="form-input"
-              style={{ scrollMarginTop: '100px' }}
             />
           );
         
@@ -607,21 +351,14 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                 e.stopPropagation();
                 handleFormFieldChange(permit.id, field.id, e.target.value);
               }}
-              onInput={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              onKeyUp={(e) => e.stopPropagation()}
               required={field.required}
               className="form-input"
-              style={{ scrollMarginTop: '100px' }}
             />
           );
         
         case 'time_picker':
           const [showTimePicker, setShowTimePicker] = useState(false);
-          const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
-          const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
           const currentTime = value || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
-          const [selectedHour, selectedMinute] = currentTime.split(':');
           
           return (
             <div className="time-picker-container">
@@ -650,48 +387,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                     >
                       ✕
                     </button>
-                  </div>
-                  
-                  <div className="time-picker-selectors">
-                    <div className="time-selector">
-                      <div className="time-selector-label">Heure</div>
-                      <div className="time-options">
-                        {hours.map((hour: string) => (
-                          <div
-                            key={hour}
-                            className={`time-option ${selectedHour === hour ? 'selected' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const newTime = `${hour}:${selectedMinute}`;
-                              handleFormFieldChange(permit.id, field.id, newTime);
-                            }}
-                          >
-                            {hour}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="time-separator">:</div>
-                    
-                    <div className="time-selector">
-                      <div className="time-selector-label">Minutes</div>
-                      <div className="time-options">
-                        {minutes.filter((_, i) => i % 5 === 0).map((minute: string) => (
-                          <div
-                            key={minute}
-                            className={`time-option ${selectedMinute === minute ? 'selected' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const newTime = `${selectedHour}:${minute}`;
-                              handleFormFieldChange(permit.id, field.id, newTime);
-                            }}
-                          >
-                            {minute}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
                   </div>
                   
                   <div className="time-picker-actions">
@@ -723,64 +418,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
             </div>
           );
         
-        case 'textarea':
-          return (
-            <textarea
-              id={field.id}
-              value={value}
-              onChange={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                handleFormFieldChange(permit.id, field.id, e.target.value);
-              }}
-              onInput={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
-              onKeyDown={(e) => {
-                e.stopPropagation();
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  // Permettre Enter + Shift pour nouvelle ligne
-                  e.preventDefault();
-                }
-              }}
-              onKeyUp={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
-              onFocus={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
-              placeholder={field.placeholder}
-              required={field.required}
-              rows={3}
-              className="form-textarea"
-              style={{ scrollMarginTop: '100px' }}
-            />
-          );
-        
-        case 'select':
-          return (
-            <select
-              id={field.id}
-              value={value}
-              onChange={(e) => {
-                e.stopPropagation();
-                handleFormFieldChange(permit.id, field.id, e.target.value);
-              }}
-              onInput={(e) => e.stopPropagation()}
-              required={field.required}
-              className="form-select"
-              style={{ scrollMarginTop: '100px' }}
-            >
-              <option value="">Sélectionner...</option>
-              {field.options?.map((option: string) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          );
-        
         case 'workers_tracking':
           const workersLog: WorkerEntry[] = Array.isArray(value) ? value : [];
           return (
@@ -791,9 +428,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                     type="text"
                     placeholder="Nom du travailleur"
                     className="worker-name-input"
-                    onKeyDown={(e) => e.stopPropagation()}
-                    onKeyUp={(e) => e.stopPropagation()}
-                    onInput={(e) => e.stopPropagation()}
                     onKeyPress={(e) => {
                       e.stopPropagation();
                       if (e.key === 'Enter') {
@@ -821,9 +455,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                   <input
                     type="time"
                     className="worker-time-input"
-                    onInput={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                    onKeyUp={(e) => e.stopPropagation()}
                   />
                   <button
                     type="button"
@@ -913,7 +544,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
             </div>
           );
         
-        // Partie 1 du renderField - Continue dans la prochaine section pour la galerie photos et signatures
         case 'photo_gallery':
           const photos: PhotoEntry[] = Array.isArray(value) ? value : [];
           const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
@@ -950,7 +580,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                     // Reset input
                     (e.target as HTMLInputElement).value = '';
                   }}
-                  onInput={(e) => e.stopPropagation()}
                   style={{ display: 'none' }}
                 />
                 
@@ -966,49 +595,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                   >
                     📷 Ajouter des photos
                   </button>
-                  
-                  <button
-                    type="button"
-                    className="photo-camera-btn"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      // Simuler une capture de caméra
-                      const canvas = document.createElement('canvas');
-                      canvas.width = 640;
-                      canvas.height = 480;
-                      const ctx = canvas.getContext('2d');
-                      if (ctx) {
-                        // Gradient de fond
-                        const gradient = ctx.createLinearGradient(0, 0, 640, 480);
-                        gradient.addColorStop(0, '#1e293b');
-                        gradient.addColorStop(1, '#334155');
-                        ctx.fillStyle = gradient;
-                        ctx.fillRect(0, 0, 640, 480);
-                        
-                        // Texte
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = '24px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('Photo capturée', 320, 220);
-                        ctx.font = '16px Arial';
-                        ctx.fillText(new Date().toLocaleString('fr-CA'), 320, 260);
-                        
-                        const dataUrl = canvas.toDataURL('image/png');
-                        const newPhoto: PhotoEntry = {
-                          id: Date.now(),
-                          url: dataUrl,
-                          name: `Capture_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.png`,
-                          timestamp: new Date().toISOString(),
-                          description: ''
-                        };
-                        const updatedPhotos = [...photos, newPhoto];
-                        handleFormFieldChange(permit.id, field.id, updatedPhotos);
-                      }
-                    }}
-                  >
-                    📸 Prendre une photo
-                  </button>
                 </div>
               </div>
               
@@ -1016,22 +602,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                 <div className="photo-gallery">
                   <div className="photo-carousel">
                     <div className="photo-main-container">
-                      {photos.length > 1 && (
-                        <button
-                          type="button"
-                          className="photo-nav-btn prev"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setCurrentPhotoIndex((prev) => 
-                              prev === 0 ? photos.length - 1 : prev - 1
-                            );
-                          }}
-                        >
-                          ←
-                        </button>
-                      )}
-                      
                       <div className="photo-main">
                         <img
                           src={photos[currentPhotoIndex]?.url}
@@ -1044,162 +614,16 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                             {new Date(photos[currentPhotoIndex]?.timestamp).toLocaleString('fr-CA')}
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          className="photo-delete-btn"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const updatedPhotos = photos.filter((_, index) => index !== currentPhotoIndex);
-                            handleFormFieldChange(permit.id, field.id, updatedPhotos);
-                            if (currentPhotoIndex >= updatedPhotos.length && updatedPhotos.length > 0) {
-                              setCurrentPhotoIndex(updatedPhotos.length - 1);
-                            }
-                          }}
-                        >
-                          🗑️
-                        </button>
                       </div>
-                      
-                      {photos.length > 1 && (
-                        <button
-                          type="button"
-                          className="photo-nav-btn next"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setCurrentPhotoIndex((prev) => 
-                              prev === photos.length - 1 ? 0 : prev + 1
-                            );
-                          }}
-                        >
-                          →
-                        </button>
-                      )}
-                    </div>
-                    
-                    {photos.length > 1 && (
-                      <div className="photo-thumbnails">
-                        {photos.map((photo: PhotoEntry, index: number) => (
-                          <div
-                            key={photo.id}
-                            className={`photo-thumbnail ${index === currentPhotoIndex ? 'active' : ''}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setCurrentPhotoIndex(index);
-                            }}
-                          >
-                            <img src={photo.url} alt={photo.name} />
-                            <div className="thumbnail-overlay">
-                              {index + 1}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <div className="photo-description">
-                      <textarea
-                        placeholder="Ajouter une description à cette photo..."
-                        value={photos[currentPhotoIndex]?.description || ''}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          const updatedPhotos = photos.map((photo: PhotoEntry, index: number) =>
-                            index === currentPhotoIndex
-                              ? { ...photo, description: e.target.value }
-                              : photo
-                          );
-                          handleFormFieldChange(permit.id, field.id, updatedPhotos);
-                        }}
-                        onInput={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.stopPropagation()}
-                        onKeyUp={(e) => e.stopPropagation()}
-                        className="photo-description-input"
-                        rows={2}
-                      />
                     </div>
                   </div>
                   
                   <div className="photo-gallery-info">
                     <span className="photo-count">{photos.length} photo{photos.length > 1 ? 's' : ''}</span>
-                    {photos.length > 1 && (
-                      <span className="photo-current">
-                        Photo {currentPhotoIndex + 1} sur {photos.length}
-                      </span>
-                    )}
                   </div>
                 </div>
               )}
             </div>
-          );
-        
-        case 'radio':
-          return (
-            <div className="radio-group">
-              {field.options?.map((option: string) => (
-                <label key={option} className="radio-label">
-                  <input
-                    type="radio"
-                    name={field.id}
-                    value={option}
-                    checked={value === option}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      handleFormFieldChange(permit.id, field.id, e.target.value);
-                    }}
-                    onInput={(e) => e.stopPropagation()}
-                    required={field.required}
-                  />
-                  <span>{option}</span>
-                </label>
-              ))}
-            </div>
-          );
-        
-        case 'checkbox':
-          const checkedValues: string[] = Array.isArray(value) ? value : [];
-          return (
-            <div className="checkbox-group">
-              {field.options?.map((option: string) => (
-                <label key={option} className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    value={option}
-                    checked={checkedValues.includes(option)}
-                    onChange={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const newValues = e.target.checked
-                        ? [...checkedValues, option]
-                        : checkedValues.filter((v: string) => v !== option);
-                      handleFormFieldChange(permit.id, field.id, newValues);
-                    }}
-                    onInput={(e) => e.stopPropagation()}
-                  />
-                  <span>{option}</span>
-                </label>
-              ))}
-            </div>
-          );
-        
-        case 'file':
-          return (
-            <input
-              type="file"
-              id={field.id}
-              onChange={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const file = e.target.files?.[0];
-                if (file) {
-                  handleFormFieldChange(permit.id, field.id, file.name);
-                }
-              }}
-              onInput={(e) => e.stopPropagation()}
-              required={field.required}
-              className="form-file"
-            />
           );
         
         case 'signature':
@@ -1262,10 +686,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                       (e.target as HTMLInputElement).value = '';
                     }
                   }}
-                  onInput={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => e.stopPropagation()}
-                  onKeyUp={(e) => e.stopPropagation()}
-                  onFocus={(e) => e.stopPropagation()}
                 />
                 <button 
                   type="button" 
@@ -1399,12 +819,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
 
   return (
     <>
-      {/* CSS pour Permis Réels */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-  return (
-    <>
-      {/* CSS pour Permis Réels */}
       <style dangerouslySetInnerHTML={{
         __html: `
           .step4-container { padding: 0; color: #ffffff; scroll-behavior: auto !important; }
@@ -1467,13 +881,86 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
           .form-field { display: flex; flex-direction: column; }
           .form-label { color: #e2e8f0; font-size: 12px; font-weight: 500; margin-bottom: 4px; }
           .required { color: #ef4444; margin-left: 2px; }
-          .form-input, .form-textarea, .form-select { padding: 8px 10px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; transition: all 0.3s ease; scroll-behavior: auto !important; scroll-margin: 0 !important; }
+          .form-input, .form-textarea, .form-select { padding: 8px 10px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; transition: all 0.3s ease; }
           .form-input:focus, .form-textarea:focus, .form-select:focus { outline: none; border-color: #2563eb; }
-          .form-file { padding: 4px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 11px; }
           
-          .radio-group, .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
-          .radio-label, .checkbox-label { display: flex; align-items: center; gap: 4px; color: #cbd5e1; font-size: 11px; cursor: pointer; }
-          .radio-label input, .checkbox-label input { margin: 0; }
+          .signature-field { display: flex; flex-direction: column; gap: 12px; }
+          .signature-pad { flex: 1; border: 2px solid rgba(100, 116, 139, 0.5); border-radius: 8px; padding: 12px; min-height: 60px; display: flex; align-items: center; background: rgba(15, 23, 42, 0.9); }
+          .signature-content { width: 100%; }
+          .signature-text { color: #22c55e; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+          .signature-timestamp { color: #94a3b8; font-size: 11px; font-style: italic; }
+          .signature-placeholder { color: #94a3b8; font-size: 12px; font-style: italic; }
+          .signature-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+          .signature-name-input { flex: 1; min-width: 200px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; transition: all 0.3s ease; }
+          .signature-name-input:focus { outline: none; border-color: #2563eb; }
+          .signature-name-input::placeholder { color: #64748b; }
+          .signature-btn { padding: 8px 16px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.3s ease; }
+          .signature-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3); }
+          .signature-clear-btn { padding: 6px 12px; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; cursor: pointer; font-size: 11px; }
+          .signature-clear-btn:hover { background: rgba(239, 68, 68, 0.3); }
+          
+          .workers-tracking-container { display: flex; flex-direction: column; gap: 16px; }
+          .worker-entry-form { background: rgba(30, 41, 59, 0.6); padding: 16px; border-radius: 8px; border: 1px solid rgba(100, 116, 139, 0.3); }
+          .worker-entry-inputs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+          .worker-name-input { flex: 2; min-width: 200px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; }
+          .worker-time-input { flex: 1; min-width: 120px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; }
+          .worker-entry-btn { padding: 8px 16px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; }
+          .worker-entry-btn:hover { transform: translateY(-1px); }
+          
+          .workers-log-list h5 { color: #2563eb; margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+          .no-entries { color: #64748b; font-style: italic; text-align: center; padding: 20px; }
+          .workers-table { border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 8px; overflow: hidden; }
+          .workers-table-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; background: rgba(59, 130, 246, 0.1); padding: 12px; font-weight: 600; color: #2563eb; font-size: 12px; border-bottom: 1px solid rgba(100, 116, 139, 0.3); }
+          .workers-table-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 12px; border-bottom: 1px solid rgba(100, 116, 139, 0.2); align-items: center; }
+          .workers-table-row:last-child { border-bottom: none; }
+          .workers-table-row:hover { background: rgba(100, 116, 139, 0.1); }
+          .worker-name { color: #ffffff; font-weight: 500; }
+          .worker-time { color: #94a3b8; font-family: monospace; }
+          .exit-btn { padding: 4px 8px; background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 4px; cursor: pointer; font-size: 10px; }
+          .exit-btn:hover { background: rgba(34, 197, 94, 0.3); }
+          .remove-btn { padding: 4px 8px; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; cursor: pointer; font-size: 10px; }
+          .remove-btn:hover { background: rgba(239, 68, 68, 0.3); }
+          
+          .time-picker-container { position: relative; }
+          .time-display { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; cursor: pointer; transition: all 0.3s ease; }
+          .time-display:hover { border-color: #2563eb; }
+          .time-value { color: #ffffff; font-family: monospace; font-size: 14px; }
+          .time-icon { font-size: 16px; }
+          .time-picker-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(100, 116, 139, 0.5); border-radius: 8px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); z-index: 1000; backdrop-filter: blur(20px); }
+          .time-picker-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(100, 116, 139, 0.3); color: #ffffff; font-weight: 600; }
+          .time-picker-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 18px; padding: 4px; }
+          .time-picker-close:hover { color: #ef4444; }
+          .time-picker-actions { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid rgba(100, 116, 139, 0.3); }
+          .time-picker-now { padding: 6px 12px; background: rgba(100, 116, 139, 0.2); color: #cbd5e1; border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 4px; cursor: pointer; font-size: 12px; }
+          .time-picker-now:hover { background: rgba(100, 116, 139, 0.3); }
+          .time-picker-ok { padding: 6px 12px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; margin-left: auto; }
+          .time-picker-ok:hover { transform: translateY(-1px); }
+          
+          .photo-gallery-container { display: flex; flex-direction: column; gap: 16px; }
+          .photo-upload-section { background: rgba(30, 41, 59, 0.6); padding: 16px; border-radius: 8px; border: 1px solid rgba(100, 116, 139, 0.3); }
+          .photo-upload-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
+          .photo-upload-btn { padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; }
+          .photo-upload-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+          .photo-gallery { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 12px; padding: 20px; }
+          .photo-carousel { display: flex; flex-direction: column; gap: 16px; }
+          .photo-main-container { position: relative; display: flex; align-items: center; gap: 12px; }
+          .photo-main { position: relative; flex: 1; border-radius: 8px; overflow: hidden; background: rgba(30, 41, 59, 0.6); }
+          .photo-main-image { width: 100%; height: 300px; object-fit: cover; display: block; }
+          .photo-info { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); padding: 16px; color: white; }
+          .photo-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+          .photo-timestamp { font-size: 12px; color: #cbd5e1; }
+          .photo-gallery-info { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(100, 116, 139, 0.3); }
+          .photo-count { color: #3b82f6; font-weight: 600; font-size: 12px; }
+          
+          .field-help { font-size: 10px; color: #64748b; margin-top: 2px; font-style: italic; }
+          
+          @media (max-width: 768px) {
+            .permits-grid { grid-template-columns: 1fr; gap: 16px; }
+            .search-grid { grid-template-columns: 1fr; gap: 8px; }
+            .permits-stats { grid-template-columns: repeat(2, 1fr); }
+            .form-fields { grid-template-columns: 1fr; }
+            .permit-actions { flex-direction: column; }
+          }
         `
       }} />
 
@@ -1645,758 +1132,3 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
 };
 
 export default Step4RealPermits;
-/* =================== CSS AVANCÉ POUR COMPOSANTS SPÉCIALISÉS =================== */
-
-/* Signatures électroniques */
-.signature-field { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 12px; 
-}
-
-.signature-pad { 
-  flex: 1; 
-  border: 2px solid rgba(100, 116, 139, 0.5); 
-  border-radius: 8px; 
-  padding: 12px; 
-  min-height: 60px; 
-  display: flex; 
-  align-items: center; 
-  background: rgba(15, 23, 42, 0.9); 
-}
-
-.signature-content { 
-  width: 100%; 
-}
-
-.signature-text { 
-  color: #22c55e; 
-  font-weight: 600; 
-  font-size: 14px; 
-  margin-bottom: 4px; 
-}
-
-.signature-timestamp { 
-  color: #94a3b8; 
-  font-size: 11px; 
-  font-style: italic; 
-}
-
-.signature-placeholder { 
-  color: #94a3b8; 
-  font-size: 12px; 
-  font-style: italic; 
-}
-
-.signature-controls { 
-  display: flex; 
-  gap: 8px; 
-  align-items: center; 
-  flex-wrap: wrap; 
-}
-
-.signature-name-input { 
-  flex: 1; 
-  min-width: 200px; 
-  padding: 8px 12px; 
-  background: rgba(15, 23, 42, 0.8); 
-  border: 1px solid rgba(100, 116, 139, 0.3); 
-  border-radius: 6px; 
-  color: #ffffff; 
-  font-size: 12px; 
-  transition: all 0.3s ease; 
-  scroll-behavior: auto !important; 
-  scroll-margin: 0 !important; 
-}
-
-.signature-name-input:focus { 
-  outline: none; 
-  border-color: #2563eb; 
-}
-
-.signature-name-input::placeholder { 
-  color: #64748b; 
-}
-
-.signature-btn { 
-  padding: 8px 16px; 
-  background: linear-gradient(135deg, #22c55e, #16a34a); 
-  color: white; 
-  border: none; 
-  border-radius: 6px; 
-  cursor: pointer; 
-  font-size: 12px; 
-  font-weight: 500; 
-  transition: all 0.3s ease; 
-}
-
-.signature-btn:hover { 
-  transform: translateY(-1px); 
-  box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3); 
-}
-
-.signature-clear-btn { 
-  padding: 6px 12px; 
-  background: rgba(239, 68, 68, 0.2); 
-  color: #ef4444; 
-  border: 1px solid rgba(239, 68, 68, 0.3); 
-  border-radius: 6px; 
-  cursor: pointer; 
-  font-size: 11px; 
-}
-
-.signature-clear-btn:hover { 
-  background: rgba(239, 68, 68, 0.3); 
-}
-
-/* Tracking des travailleurs */
-.workers-tracking-container { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 16px; 
-}
-
-.worker-entry-form { 
-  background: rgba(30, 41, 59, 0.6); 
-  padding: 16px; 
-  border-radius: 8px; 
-  border: 1px solid rgba(100, 116, 139, 0.3); 
-}
-
-.worker-entry-inputs { 
-  display: flex; 
-  gap: 8px; 
-  align-items: center; 
-  flex-wrap: wrap; 
-}
-
-.worker-name-input { 
-  flex: 2; 
-  min-width: 200px; 
-  padding: 8px 12px; 
-  background: rgba(15, 23, 42, 0.8); 
-  border: 1px solid rgba(100, 116, 139, 0.3); 
-  border-radius: 6px; 
-  color: #ffffff; 
-  font-size: 12px; 
-  scroll-behavior: auto !important; 
-  scroll-margin: 0 !important; 
-}
-
-.worker-time-input { 
-  flex: 1; 
-  min-width: 120px; 
-  padding: 8px 12px; 
-  background: rgba(15, 23, 42, 0.8); 
-  border: 1px solid rgba(100, 116, 139, 0.3); 
-  border-radius: 6px; 
-  color: #ffffff; 
-  font-size: 12px; 
-  scroll-behavior: auto !important; 
-  scroll-margin: 0 !important; 
-}
-
-.worker-entry-btn { 
-  padding: 8px 16px; 
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
-  color: white; 
-  border: none; 
-  border-radius: 6px; 
-  cursor: pointer; 
-  font-size: 12px; 
-  font-weight: 500; 
-}
-
-.worker-entry-btn:hover { 
-  transform: translateY(-1px); 
-}
-
-.workers-log-list h5 { 
-  color: #2563eb; 
-  margin: 0 0 12px; 
-  font-size: 14px; 
-  font-weight: 600; 
-}
-
-.no-entries { 
-  color: #64748b; 
-  font-style: italic; 
-  text-align: center; 
-  padding: 20px; 
-}
-
-.workers-table { 
-  border: 1px solid rgba(100, 116, 139, 0.3); 
-  border-radius: 8px; 
-  overflow: hidden; 
-}
-
-.workers-table-header { 
-  display: grid; 
-  grid-template-columns: 2fr 1fr 1fr 1fr; 
-  background: rgba(59, 130, 246, 0.1); 
-  padding: 12px; 
-  font-weight: 600; 
-  color: #2563eb; 
-  font-size: 12px; 
-  border-bottom: 1px solid rgba(100, 116, 139, 0.3); 
-}
-
-.workers-table-row { 
-  display: grid; 
-  grid-template-columns: 2fr 1fr 1fr 1fr; 
-  padding: 12px; 
-  border-bottom: 1px solid rgba(100, 116, 139, 0.2); 
-  align-items: center; 
-}
-
-.workers-table-row:last-child { 
-  border-bottom: none; 
-}
-
-.workers-table-row:hover { 
-  background: rgba(100, 116, 139, 0.1); 
-}
-
-.worker-name { 
-  color: #ffffff; 
-  font-weight: 500; 
-}
-
-.worker-time { 
-  color: #94a3b8; 
-  font-family: monospace; 
-}
-
-.exit-btn { 
-  padding: 4px 8px; 
-  background: rgba(34, 197, 94, 0.2); 
-  color: #22c55e; 
-  border: 1px solid rgba(34, 197, 94, 0.3); 
-  border-radius: 4px; 
-  cursor: pointer; 
-  font-size: 10px; 
-}
-
-.exit-btn:hover { 
-  background: rgba(34, 197, 94, 0.3); 
-}
-
-.remove-btn { 
-  padding: 4px 8px; 
-  background: rgba(239, 68, 68, 0.2); 
-  color: #ef4444; 
-  border: 1px solid rgba(239, 68, 68, 0.3); 
-  border-radius: 4px; 
-  cursor: pointer; 
-  font-size: 10px; 
-}
-
-.remove-btn:hover { 
-  background: rgba(239, 68, 68, 0.3); 
-}
-
-/* Sélecteur d'heure */
-.time-picker-container { 
-  position: relative; 
-}
-
-.time-display { 
-  display: flex; 
-  align-items: center; 
-  gap: 8px; 
-  padding: 8px 12px; 
-  background: rgba(15, 23, 42, 0.8); 
-  border: 1px solid rgba(100, 116, 139, 0.3); 
-  border-radius: 6px; 
-  cursor: pointer; 
-  transition: all 0.3s ease; 
-}
-
-.time-display:hover { 
-  border-color: #2563eb; 
-}
-
-.time-value { 
-  color: #ffffff; 
-  font-family: monospace; 
-  font-size: 14px; 
-}
-
-.time-icon { 
-  font-size: 16px; 
-}
-
-.time-picker-dropdown { 
-  position: absolute; 
-  top: 100%; 
-  left: 0; 
-  right: 0; 
-  background: rgba(15, 23, 42, 0.95); 
-  border: 1px solid rgba(100, 116, 139, 0.5); 
-  border-radius: 8px; 
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); 
-  z-index: 1000; 
-  backdrop-filter: blur(20px); 
-}
-
-.time-picker-header { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  padding: 12px 16px; 
-  border-bottom: 1px solid rgba(100, 116, 139, 0.3); 
-  color: #ffffff; 
-  font-weight: 600; 
-}
-
-.time-picker-close { 
-  background: none; 
-  border: none; 
-  color: #94a3b8; 
-  cursor: pointer; 
-  font-size: 18px; 
-  padding: 4px; 
-}
-
-.time-picker-close:hover { 
-  color: #ef4444; 
-}
-
-.time-picker-selectors { 
-  display: flex; 
-  align-items: flex-start; 
-  gap: 8px; 
-  padding: 16px; 
-}
-
-.time-selector { 
-  flex: 1; 
-}
-
-.time-selector-label { 
-  color: #94a3b8; 
-  font-size: 12px; 
-  font-weight: 500; 
-  margin-bottom: 8px; 
-  text-align: center; 
-}
-
-.time-options { 
-  max-height: 150px; 
-  overflow-y: auto; 
-  border: 1px solid rgba(100, 116, 139, 0.3); 
-  border-radius: 6px; 
-}
-
-.time-option { 
-  padding: 8px 12px; 
-  text-align: center; 
-  color: #cbd5e1; 
-  cursor: pointer; 
-  border-bottom: 1px solid rgba(100, 116, 139, 0.2); 
-  font-family: monospace; 
-}
-
-.time-option:last-child { 
-  border-bottom: none; 
-}
-
-.time-option:hover { 
-  background: rgba(59, 130, 246, 0.2); 
-  color: #ffffff; 
-}
-
-.time-option.selected { 
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
-  color: #ffffff; 
-  font-weight: 600; 
-}
-
-.time-separator { 
-  font-size: 24px; 
-  color: #94a3b8; 
-  align-self: center; 
-  margin-top: 20px; 
-  font-weight: bold; 
-}
-
-.time-picker-actions { 
-  display: flex; 
-  gap: 8px; 
-  padding: 12px 16px; 
-  border-top: 1px solid rgba(100, 116, 139, 0.3); 
-}
-
-.time-picker-now { 
-  padding: 6px 12px; 
-  background: rgba(100, 116, 139, 0.2); 
-  color: #cbd5e1; 
-  border: 1px solid rgba(100, 116, 139, 0.3); 
-  border-radius: 4px; 
-  cursor: pointer; 
-  font-size: 12px; 
-}
-
-.time-picker-now:hover { 
-  background: rgba(100, 116, 139, 0.3); 
-}
-
-.time-picker-ok { 
-  padding: 6px 12px; 
-  background: linear-gradient(135deg, #22c55e, #16a34a); 
-  color: white; 
-  border: none; 
-  border-radius: 4px; 
-  cursor: pointer; 
-  font-size: 12px; 
-  font-weight: 500; 
-  margin-left: auto; 
-}
-
-.time-picker-ok:hover { 
-  transform: translateY(-1px); 
-}
-
-/* Galerie photos */
-.photo-gallery-container { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 16px; 
-}
-
-.photo-upload-section { 
-  background: rgba(30, 41, 59, 0.6); 
-  padding: 16px; 
-  border-radius: 8px; 
-  border: 1px solid rgba(100, 116, 139, 0.3); 
-}
-
-.photo-upload-buttons { 
-  display: flex; 
-  gap: 12px; 
-  flex-wrap: wrap; 
-}
-
-.photo-upload-btn, .photo-camera-btn { 
-  padding: 10px 16px; 
-  border-radius: 8px; 
-  border: none; 
-  cursor: pointer; 
-  font-size: 13px; 
-  font-weight: 500; 
-  transition: all 0.3s ease; 
-  display: flex; 
-  align-items: center; 
-  gap: 8px; 
-}
-
-.photo-upload-btn { 
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
-  color: white; 
-}
-
-.photo-upload-btn:hover { 
-  transform: translateY(-1px); 
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); 
-}
-
-.photo-camera-btn { 
-  background: linear-gradient(135deg, #22c55e, #16a34a); 
-  color: white; 
-}
-
-.photo-camera-btn:hover { 
-  transform: translateY(-1px); 
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); 
-}
-
-.photo-gallery { 
-  background: rgba(15, 23, 42, 0.8); 
-  border: 1px solid rgba(100, 116, 139, 0.3); 
-  border-radius: 12px; 
-  padding: 20px; 
-}
-
-.photo-carousel { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 16px; 
-}
-
-.photo-main-container { 
-  position: relative; 
-  display: flex; 
-  align-items: center; 
-  gap: 12px; 
-}
-
-.photo-nav-btn { 
-  position: absolute; 
-  top: 50%; 
-  transform: translateY(-50%); 
-  z-index: 10; 
-  width: 40px; 
-  height: 40px; 
-  border-radius: 50%; 
-  background: rgba(0, 0, 0, 0.7); 
-  color: white; 
-  border: none; 
-  cursor: pointer; 
-  font-size: 18px; 
-  font-weight: bold; 
-  transition: all 0.3s ease; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-}
-
-.photo-nav-btn:hover { 
-  background: rgba(0, 0, 0, 0.9); 
-  transform: translateY(-50%) scale(1.1); 
-}
-
-.photo-nav-btn.prev { 
-  left: 10px; 
-}
-
-.photo-nav-btn.next { 
-  right: 10px; 
-}
-
-.photo-main { 
-  position: relative; 
-  flex: 1; 
-  border-radius: 8px; 
-  overflow: hidden; 
-  background: rgba(30, 41, 59, 0.6); 
-}
-
-.photo-main-image { 
-  width: 100%; 
-  height: 300px; 
-  object-fit: cover; 
-  display: block; 
-}
-
-.photo-info { 
-  position: absolute; 
-  bottom: 0; 
-  left: 0; 
-  right: 0; 
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); 
-  padding: 16px; 
-  color: white; 
-}
-
-.photo-name { 
-  font-weight: 600; 
-  font-size: 14px; 
-  margin-bottom: 4px; 
-}
-
-.photo-timestamp { 
-  font-size: 12px; 
-  color: #cbd5e1; 
-}
-
-.photo-delete-btn { 
-  position: absolute; 
-  top: 10px; 
-  right: 10px; 
-  width: 32px; 
-  height: 32px; 
-  border-radius: 50%; 
-  background: rgba(239, 68, 68, 0.8); 
-  color: white; 
-  border: none; 
-  cursor: pointer; 
-  font-size: 14px; 
-  transition: all 0.3s ease; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-}
-
-.photo-delete-btn:hover { 
-  background: rgba(239, 68, 68, 1); 
-  transform: scale(1.1); 
-}
-
-.photo-thumbnails { 
-  display: flex; 
-  gap: 8px; 
-  overflow-x: auto; 
-  padding: 8px 0; 
-}
-
-.photo-thumbnails::-webkit-scrollbar { 
-  height: 4px; 
-}
-
-.photo-thumbnails::-webkit-scrollbar-track { 
-  background: rgba(100, 116, 139, 0.2); 
-  border-radius: 2px; 
-}
-
-.photo-thumbnails::-webkit-scrollbar-thumb { 
-  background: rgba(100, 116, 139, 0.5); 
-  border-radius: 2px; 
-}
-
-.photo-thumbnail { 
-  position: relative; 
-  width: 60px; 
-  height: 60px; 
-  border-radius: 6px; 
-  overflow: hidden; 
-  cursor: pointer; 
-  border: 2px solid transparent; 
-  transition: all 0.3s ease; 
-  flex-shrink: 0; 
-}
-
-.photo-thumbnail:hover { 
-  border-color: rgba(59, 130, 246, 0.5); 
-  transform: scale(1.05); 
-}
-
-.photo-thumbnail.active { 
-  border-color: #3b82f6; 
-  transform: scale(1.1); 
-}
-
-.photo-thumbnail img { 
-  width: 100%; 
-  height: 100%; 
-  object-fit: cover; 
-}
-
-.thumbnail-overlay { 
-  position: absolute; 
-  bottom: 0; 
-  right: 0; 
-  background: rgba(0, 0, 0, 0.7); 
-  color: white; 
-  font-size: 10px; 
-  padding: 2px 4px; 
-  border-radius: 3px 0 0 0; 
-}
-
-.photo-description { 
-  margin-top: 12px; 
-}
-
-.photo-description-input { 
-  width: 100%; 
-  padding: 8px 12px; 
-  background: rgba(30, 41, 59, 0.8); 
-  border: 1px solid rgba(100, 116, 139, 0.3); 
-  border-radius: 6px; 
-  color: #ffffff; 
-  font-size: 12px; 
-  resize: vertical; 
-  transition: all 0.3s ease; 
-  scroll-behavior: auto !important; 
-  scroll-margin: 0 !important; 
-}
-
-.photo-description-input:focus { 
-  outline: none; 
-  border-color: #2563eb; 
-}
-
-.photo-description-input::placeholder { 
-  color: #64748b; 
-}
-
-.photo-gallery-info { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  margin-top: 12px; 
-  padding-top: 12px; 
-  border-top: 1px solid rgba(100, 116, 139, 0.3); 
-}
-
-.photo-count { 
-  color: #3b82f6; 
-  font-weight: 600; 
-  font-size: 12px; 
-}
-
-.photo-current { 
-  color: #94a3b8; 
-  font-size: 11px; 
-}
-
-/* Aide et validation */
-.field-help { 
-  font-size: 10px; 
-  color: #64748b; 
-  margin-top: 2px; 
-  font-style: italic; 
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .permits-grid { 
-    grid-template-columns: 1fr; 
-    gap: 16px; 
-  }
-  
-  .search-grid { 
-    grid-template-columns: 1fr; 
-    gap: 8px; 
-  }
-  
-  .permits-stats { 
-    grid-template-columns: repeat(2, 1fr); 
-  }
-  
-  .form-fields { 
-    grid-template-columns: 1fr; 
-  }
-  
-  .permit-actions { 
-    flex-direction: column; 
-  }
-  
-  .photo-main-image { 
-    height: 200px; 
-  }
-  
-  .photo-nav-btn { 
-    width: 32px; 
-    height: 32px; 
-    font-size: 14px; 
-  }
-  
-  .photo-thumbnails { 
-    gap: 6px; 
-  }
-  
-  .photo-thumbnail { 
-    width: 50px; 
-    height: 50px; 
-  }
-  
-  .worker-entry-inputs { 
-    flex-direction: column; 
-    align-items: stretch; 
-  }
-  
-  .worker-name-input, .worker-time-input { 
-    min-width: auto; 
-    flex: none; 
-  }
-  
-  .signature-controls { 
-    flex-direction: column; 
-    align-items: stretch; 
-  }
-  
-  .signature-name-input { 
-    min-width: auto; 
-  }
-}
