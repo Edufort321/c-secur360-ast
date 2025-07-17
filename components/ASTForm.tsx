@@ -528,265 +528,7 @@ const useIsMobile = () => {
 
   return isMobile;
 };
-// =================== COMPOSANT PRINCIPAL ===================
-export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'worker' }: ASTFormProps) {
-  // =================== DÉTECTION MOBILE ===================
-  const isMobile = useIsMobile();
-
-  // =================== ÉTAT PRINCIPAL ===================
-  const [astData, setAstData] = useState<ASTData>({
-    id: '',
-    astNumber: '',
-    tenant,
-    status: 'draft',
-    createdBy: userId || '',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    projectInfo: {} as ProjectInfo,
-    equipment: {
-      list: [],
-      selected: [],
-      totalCost: 0,
-      inspectionStatus: {
-        total: 0,
-        verified: 0,
-        available: 0,
-        verificationRate: 0,
-        availabilityRate: 0
-      }
-    },
-    hazards: {
-      list: [],
-      selected: [],
-      stats: {
-        totalHazards: 0,
-        categories: {}
-      }
-    },
-    permits: {
-      permits: [],
-      authorities: [],
-      generalRequirements: [],
-      timeline: [],
-      notifications: [],
-      regulatory: {
-        rsst: false,
-        cnesst: false,
-        municipalPermits: [],
-        environmentalConsiderations: [],
-        specialConditions: []
-      }
-    },
-    validation: {
-      reviewers: [],
-      approvalRequired: true,
-      minimumReviewers: 2,
-      reviewDeadline: '',
-      validationCriteria: {
-        hazardIdentification: false,
-        controlMeasures: false,
-        equipmentSelection: false,
-        procedural: false,
-        regulatory: false
-      },
-      teamMembers: [],
-      discussionPoints: [],
-      meetingMinutes: {} as MeetingMinutes,
-      approvals: [],
-      concerns: [],
-      improvements: []
-    },
-    finalization: {
-      workers: [],
-      photos: [],
-      finalComments: '',
-      documentGeneration: {
-        format: 'pdf',
-        template: 'standard',
-        language: 'fr',
-        includePhotos: true,
-        includeSignatures: true,
-        includeQRCode: true,
-        branding: true,
-        watermark: true
-      },
-      distribution: {
-        email: {
-          enabled: true,
-          recipients: [],
-          subject: '',
-          message: ''
-        },
-        portal: {
-          enabled: true,
-          publish: false,
-          category: 'safety'
-        },
-        archive: {
-          enabled: true,
-          retention: 7,
-          location: 'cloud'
-        },
-        compliance: {
-          enabled: false,
-          authorities: []
-        }
-      },
-      completionStatus: {
-        projectInfo: false,
-        equipment: false,
-        hazards: false,
-        permits: false,
-        validation: false
-      },
-      metadata: {
-        createdAt: new Date().toISOString(),
-        version: '1.0',
-        lastModified: new Date().toISOString()
-      }
-    },
-    signatures: [],
-    approvals: [],
-    notifications: []
-  });
-
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  // =================== GÉNÉRATION NUMÉRO AST ===================
-  const generateASTNumber = useCallback(() => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const random = Math.random().toString(36).substr(2, 8).toUpperCase();
-    return `AST-${year}${month}${day}-${random}`;
-  }, []);
-
-  // =================== INITIALISATION ===================
-  useEffect(() => {
-    const astNumber = generateASTNumber();
-    setAstData(prev => ({
-      ...prev,
-      id: astNumber,
-      astNumber
-    }));
-
-    // Détection en ligne/hors ligne
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [generateASTNumber]);
-
-  // =================== GESTION DES DONNÉES ===================
-  const updateASTData = useCallback((section: keyof ASTData, data: any) => {
-    setAstData(prev => ({
-      ...prev,
-      [section]: data,
-      updatedAt: new Date().toISOString()
-    }));
-    setHasUnsavedChanges(true);
-  }, []);
-
-  // =================== HANDLERS POUR CHAQUE STEP ===================
-  const handleStep1DataChange = useCallback((section: string, data: any) => {
-    if (section === 'projectInfo') {
-      updateASTData('projectInfo', data);
-    } else if (section === 'astNumber') {
-      setAstData(prev => ({
-        ...prev,
-        astNumber: data,
-        updatedAt: new Date().toISOString()
-      }));
-      setHasUnsavedChanges(true);
-    }
-  }, [updateASTData]);
-
-  const handleStep2DataChange = useCallback((section: string, data: any) => {
-    if (section === 'equipment') {
-      updateASTData('equipment', data);
-    }
-  }, [updateASTData]);
-
-  const handleStep3DataChange = useCallback((section: string, data: any) => {
-    if (section === 'hazards') {
-      updateASTData('hazards', data);
-    }
-  }, [updateASTData]);
-
-  const handleStep4DataChange = useCallback((section: string, data: any) => {
-    if (section === 'permits') {
-      updateASTData('permits', data);
-    }
-  }, [updateASTData]);
-
-  const handleStep5DataChange = useCallback((section: string, data: ValidationData) => {
-    if (section === 'validation') {
-      updateASTData('validation', data);
-    }
-  }, [updateASTData]);
-
-  const handleStep6DataChange = useCallback((section: string, data: any) => {
-    if (section === 'finalization') {
-      updateASTData('finalization', data);
-    }
-  }, [updateASTData]);
-
-  // =================== SAUVEGARDE AUTOMATIQUE ===================
-  useEffect(() => {
-    if (!hasUnsavedChanges) return;
-
-    const saveTimer = setTimeout(async () => {
-      if (isOnline) {
-        try {
-          setIsLoading(true);
-          // TODO: Sauvegarder vers Supabase
-          console.log('Sauvegarde automatique:', astData);
-          setHasUnsavedChanges(false);
-        } catch (error) {
-          console.error('Erreur sauvegarde:', error);
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        // Sauvegarde locale si hors ligne
-        localStorage.setItem(`ast_draft_${astData.id}`, JSON.stringify(astData));
-      }
-    }, 2000);
-
-    return () => clearTimeout(saveTimer);
-  }, [astData, hasUnsavedChanges, isOnline]);
-
-  // =================== COPIE NUMÉRO AST ===================
-  const handleCopyAST = useCallback(() => {
-    navigator.clipboard.writeText(astData.astNumber);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [astData.astNumber]);
-
-  // =================== WORKFLOW MANAGEMENT ===================
-  const changeStatus = useCallback((newStatus: ASTData['status']) => {
-    setAstData(prev => ({
-      ...prev,
-      status: newStatus,
-      updatedAt: new Date().toISOString(),
-      verificationDeadline: newStatus === 'pending_verification' 
-        ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h deadline
-        : prev.verificationDeadline
-    }));
-  }, []);
-
-  // =================== FONCTIONS MOBILE HELPERS ===================
+// =================== FONCTIONS MOBILE HELPERS CORRIGÉES ===================
   const getCompletionPercentage = (): number => {
     const completedSteps = getCurrentCompletedSteps();
     return Math.round((completedSteps / 6) * 100);
@@ -828,14 +570,18 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     return completed;
   };
 
+  // =================== FONCTION CORRIGÉE - RETOURNE TOUJOURS BOOLEAN ===================
   const canNavigateToNext = (): boolean => {
     switch (currentStep) {
       case 1:
-        return astData.projectInfo?.client && astData.projectInfo?.workDescription;
+        // Vérification avec conversion explicite en boolean
+        return Boolean(astData.projectInfo?.client && astData.projectInfo?.workDescription);
       case 2:
-        return astData.equipment?.selected?.length > 0;
+        // Vérification avec conversion explicite en boolean
+        return Boolean(astData.equipment?.selected?.length && astData.equipment.selected.length > 0);
       case 3:
-        return astData.hazards?.selected?.length > 0;
+        // Vérification avec conversion explicite en boolean
+        return Boolean(astData.hazards?.selected?.length && astData.hazards.selected.length > 0);
       case 4:
         return true; // Permis optionnels
       case 5:
@@ -861,7 +607,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
   const handleStepClick = (step: number) => {
     setCurrentStep(step);
   };
- // =================== CONFIGURATION STEPS MOBILE OPTIMIZED ===================
+// =================== CONFIGURATION STEPS MOBILE OPTIMIZED ===================
   const steps = [
     { 
       id: 1, 
@@ -1231,7 +977,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       </div>
     </div>
   );
-  // =================== RENDU PRINCIPAL ===================
+// =================== RENDU PRINCIPAL ===================
   return (
     <div style={{
       minHeight: '100vh',
