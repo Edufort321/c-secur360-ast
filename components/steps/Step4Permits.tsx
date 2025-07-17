@@ -435,7 +435,7 @@ const translations = {
 };
 
 // =================== COMPOSANT PRINCIPAL ===================
-const Step4RealPermits = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
+const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
   const t = translations[language];
   
   const [searchTerm, setSearchTerm] = useState('');
