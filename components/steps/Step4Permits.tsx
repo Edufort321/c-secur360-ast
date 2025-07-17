@@ -380,7 +380,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
   });
 
   // Catégories et provinces uniques
-  const categories = Array.from(new Set(permits.map((p: Permit) => p.category)));
+  const categories = Array.from(new Set(permits.map((p: Permit) => p.category))) as string[];
   const provinces = ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'];
   
   // Permis sélectionnés
@@ -556,7 +556,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               className="form-select"
             >
               <option value="">Sélectionner...</option>
-              {field.options?.map((option: string) => (
+              {field.options?.map(option => (
                 <option key={option} value={option}>{option}</option>
               ))}
             </select>
@@ -565,7 +565,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
         case 'radio':
           return (
             <div className="radio-group">
-              {field.options?.map((option: string) => (
+              {field.options?.map(option => (
                 <label key={option} className="radio-label">
                   <input
                     type="radio"
@@ -585,7 +585,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
           const checkedValues = Array.isArray(value) ? value : [];
           return (
             <div className="checkbox-group">
-              {field.options?.map((option: string) => (
+              {field.options?.map(option => (
                 <label key={option} className="checkbox-label">
                   <input
                     type="checkbox"
@@ -664,13 +664,13 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
         </div>
 
         <div className="form-content">
-          {Object.entries(fieldsBySection).map(([sectionName, fields]: [string, FormField[]]) => (
+          {Object.entries(fieldsBySection).map(([sectionName, fields]) => (
             <div key={sectionName} className="form-section-group">
               <h4 className="form-section-title">
                 {(t.sections as any)[sectionName] || sectionName}
               </h4>
               <div className="form-fields">
-                {fields.map((field: FormField) => (
+                {fields.map(field => (
                   <div key={field.id} className="form-field">
                     <label className="form-label" htmlFor={field.id}>
                       {field.label}
@@ -830,7 +830,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               className="filter-select"
             >
               <option value="all">{t.allCategories}</option>
-              {categories.map((category: string) => (
+              {categories.map(category => (
                 <option key={category} value={category}>
                   {getCategoryIcon(category)} {(t.categories as any)[category] || category}
                 </option>
@@ -842,7 +842,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               className="filter-select"
             >
               <option value="all">{t.allProvinces}</option>
-              {provinces.map((province: string) => (
+              {provinces.map(province => (
                 <option key={province} value={province}>
                   {province}
                 </option>
@@ -853,7 +853,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
 
         {/* Grille des permis */}
         <div className="permits-grid">
-          {filteredPermits.map((permit: Permit) => {
+          {filteredPermits.map(permit => {
             const isSelected = permit.selected;
             const isFormExpanded = expandedForms[permit.id];
             
