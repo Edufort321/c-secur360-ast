@@ -2246,13 +2246,3 @@ case 'signature':
     min-width: auto; 
   }
 }
-
-// =================== FICHIER FINAL COMPLET ===================
-// Combiner les 3 sections dans Step4Permits.tsx :
-
-/*
-1. Importer la Section 1 pour les types et données
-2. Utiliser la Section 2 comme base du composant  
-3. Remplacer les placeholders par les composants de la Section 3
-4. Ajouter le CSS de la Section 3 au style existant
-*/
