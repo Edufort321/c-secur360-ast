@@ -1,4 +1,10 @@
-import React, { useState, useMemo } from 'react';
+// Statistiques
+  const stats = useMemo(() => ({
+    totalPermits: permits.length,
+    selected: selectedPermits.length,
+    critical: selectedPermits.filter((p: Permit) => p.priority === 'critical').length,
+    pending: selectedPermits.filter((p: Permit) => p.status === 'pending').length
+  }), [permits, selectedPermits]);import React, { useState, useMemo } from 'react';
 import { 
   FileText, CheckCircle, AlertTriangle, Clock, Download, Eye,
   Shield, Users, MapPin, Calendar, Building, Phone, User, Briefcase,
@@ -516,7 +522,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
   const [expandedForms, setExpandedForms] = useState({});
 
   // Filtrage des permis
-  const filteredPermits = permits.filter(permit => {
+  const filteredPermits = permits.filter((permit: Permit) => {
     const matchesSearch = permit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          permit.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          permit.authority.toLowerCase().includes(searchTerm.toLowerCase());
@@ -526,11 +532,11 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
   });
 
   // Catégories et provinces uniques
-  const categories = Array.from(new Set(permits.map(p => p.category)));
+  const categories = Array.from(new Set(permits.map((p: Permit) => p.category)));
   const provinces = ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'];
   
   // Permis sélectionnés
-  const selectedPermits = permits.filter(p => p.selected);
+  const selectedPermits = permits.filter((p: Permit) => p.selected);
 
   // Statistiques
   const stats = useMemo(() => ({
@@ -541,8 +547,8 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
   }), [permits, selectedPermits]);
 
   // =================== HANDLERS ===================
-  const handlePermitToggle = (permitId) => {
-    const updatedPermits = permits.map(permit => 
+  const handlePermitToggle = (permitId: string) => {
+    const updatedPermits = permits.map((permit: Permit) => 
       permit.id === permitId 
         ? { ...permit, selected: !permit.selected }
         : permit
@@ -551,8 +557,8 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
     updateFormData(updatedPermits);
   };
 
-  const updatePermitField = (permitId, field, value) => {
-    const updatedPermits = permits.map(permit => 
+  const updatePermitField = (permitId: string, field: string, value: any) => {
+    const updatedPermits = permits.map((permit: Permit) => 
       permit.id === permitId 
         ? { ...permit, [field]: value }
         : permit
@@ -561,8 +567,8 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
     updateFormData(updatedPermits);
   };
 
-  const updateFormData = (updatedPermits) => {
-    const selectedList = updatedPermits.filter(p => p.selected);
+  const updateFormData = (updatedPermits: Permit[]) => {
+    const selectedList = updatedPermits.filter((p: Permit) => p.selected);
     
     const permitsData = {
       list: updatedPermits,
@@ -570,16 +576,16 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
       stats: {
         totalPermits: updatedPermits.length,
         selected: selectedList.length,
-        critical: selectedList.filter(p => p.priority === 'critical').length,
-        pending: selectedList.filter(p => p.status === 'pending').length
+        critical: selectedList.filter((p: Permit) => p.priority === 'critical').length,
+        pending: selectedList.filter((p: Permit) => p.status === 'pending').length
       }
     };
     
     onDataChange('permits', permitsData);
   };
 
-  const handleFormFieldChange = (permitId, fieldId, value) => {
-    const updatedPermits = permits.map(permit => {
+  const handleFormFieldChange = (permitId: string, fieldId: string, value: any) => {
+    const updatedPermits = permits.map((permit: Permit) => {
       if (permit.id === permitId) {
         return {
           ...permit,
@@ -595,14 +601,14 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
     updateFormData(updatedPermits);
   };
 
-  const toggleFormExpansion = (permitId) => {
+  const toggleFormExpansion = (permitId: string) => {
     setExpandedForms(prev => ({
       ...prev,
       [permitId]: !prev[permitId]
     }));
   };
 
-  const getCategoryIcon = (category) => {
+  const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'Sécurité': return '🛡️';
       case 'Construction': return '🏗️';
@@ -612,7 +618,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
     }
   };
 
-  const getPriorityColor = (priority) => {
+  const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'critical': return '#ef4444';
       case 'high': return '#f97316';
@@ -622,7 +628,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved': return '#22c55e';
       case 'submitted': return '#3b82f6';
@@ -634,7 +640,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
   };
 
   // =================== COMPOSANT FORMULAIRE ===================
-  const PermitForm = ({ permit }) => {
+  const PermitForm = ({ permit }: { permit: Permit }) => {
     const isExpanded = expandedForms[permit.id];
     if (!isExpanded) return null;
 
@@ -646,7 +652,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
       return acc;
     }, {}) || {};
 
-    const renderField = (field) => {
+    const renderField = (field: FormField) => {
       const value = permit.formData?.[field.id] || '';
       
       switch (field.type) {
