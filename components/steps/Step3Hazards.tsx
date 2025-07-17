@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { 
-  AlertTriangle, Search, CheckCircle, Shield, Eye, 
+  AlertTriangle, Search, Filter, CheckCircle, Shield, Eye, 
   Zap, Wrench, Wind, Thermometer, Volume2, Activity,
   Plus, BarChart3, Star
 } from 'lucide-react';
@@ -50,791 +50,946 @@ interface Standard {
   description: string;
   mandatory: boolean;
 }
-
-// =================== SYSTÈME DE TRADUCTIONS COMPLET ===================
-const translations = {
-  fr: {
-    // En-tête
-    title: "⚠️ Identification des Dangers & Risques",
-    subtitle: "Sélectionnez les dangers potentiels et définissez les moyens de contrôle requis",
-    
-    // Statistiques
-    stats: {
-      totalHazards: "Dangers identifiés",
-      criticalHazards: "Risques critiques",
-      selectedHazards: "Dangers sélectionnés",
-      implementationRate: "Taux d'implantation"
-    },
-    
-    // Recherche
-    searchPlaceholder: "Rechercher un danger...",
-    allCategories: "Toutes catégories",
-    allRisks: "Tous les risques",
-    
-    // Messages d'affichage
-    noHazardsFound: "Aucun danger trouvé",
-    noHazardsMessage: "Modifiez vos critères de recherche pour voir plus de dangers",
-    
-    // Niveaux de risque
-    riskLevels: {
-      critical: "Critique",
-      high: "Élevé", 
-      medium: "Moyen",
-      low: "Faible"
-    },
-    
-    // Catégories de dangers
-    hazardCategories: {
-      electrical: "Électrique",
-      mechanical: "Mécanique", 
-      physical: "Physique",
-      chemical: "Chimique",
-      ergonomic: "Ergonomique",
-      environmental: "Environnemental",
-      psychosocial: "Psychosocial",
-      fire: "Incendie",
-      transport: "Transport"
-    },
-    
-    // Messages
-    controlMeasures: "Moyens de contrôle",
-    
-    // Standards
-    standards: {
-      title: "Normes & Références",
-      description: "Standards applicables et documentation officielle",
-      viewDocument: "Voir document"
-    },
-    
-    // Dangers spécifiques
-    hazards: {
-      "elec-shock": {
-        name: "Électrocution / Électrisation",
-        description: "Contact direct ou indirect avec parties sous tension"
-      },
-      "arc-flash": {
-        name: "Arc électrique",
-        description: "Arc électrique lors de manœuvres sous tension"
-      },
-      "moving-parts": {
-        name: "Pièces mobiles",
-        description: "Écrasement, coincement par pièces mobiles"
-      },
-      "falls": {
-        name: "Chutes de hauteur",
-        description: "Chutes de plus de 3 mètres"
-      },
-      "confined-spaces": {
-        name: "Espaces clos",
-        description: "Atmosphères dangereuses, engloutissement"
-      },
-      "toxic-vapors": {
-        name: "Vapeurs toxiques",
-        description: "Inhalation de substances dangereuses"
-      },
-      "fire-explosion": {
-        name: "Incendie/Explosion",
-        description: "Feu, explosion de matières inflammables"
-      },
-      "vehicle-traffic": {
-        name: "Circulation véhiculaire",
-        description: "Collision avec véhicules, engins"
-      }
-    },
-    
-    // Mesures de contrôle
-    controlMeasuresData: {
-      "cm-elec-1": {
-        name: "Consignation LOTO complète",
-        description: "Isolation complète des sources d'énergie"
-      },
-      "cm-elec-2": {
-        name: "Vérification absence de tension (VAT)",
-        description: "Test avec voltmètre certifié"
-      },
-      "cm-fall-1": {
-        name: "Garde-corps permanents",
-        description: "Barrières de protection"
-      },
-      "cm-fall-2": {
-        name: "Harnais de sécurité",
-        description: "Système antichute"
-      },
-      "cm-conf-1": {
-        name: "Permis d'entrée",
-        description: "Autorisation documentée"
-      },
-      "cm-conf-2": {
-        name: "Test atmosphérique",
-        description: "Détection 4 gaz minimum"
-      },
-      "cm-chem-1": {
-        name: "Ventilation mécanique",
-        description: "Extraction d'air"
-      },
-      "cm-fire-1": {
-        name: "Permis de travail à chaud",
-        description: "Autorisation soudage/coupage"
-      },
-      "cm-traf-1": {
-        name: "Signalisation temporaire",
-        description: "Cônes, panneaux, feux"
-      }
-    }
-  },
-  
-  en: {
-    // Header
-    title: "⚠️ Hazard & Risk Identification",
-    subtitle: "Select potential hazards and define required control measures",
-    
-    // Statistics
-    stats: {
-      totalHazards: "Hazards identified",
-      criticalHazards: "Critical risks",
-      selectedHazards: "Selected hazards",
-      implementationRate: "Implementation rate"
-    },
-    
-    // Search
-    searchPlaceholder: "Search for a hazard...",
-    allCategories: "All categories",
-    allRisks: "All risks",
-    
-    // Display messages
-    noHazardsFound: "No hazards found",
-    noHazardsMessage: "Modify your search criteria to see more hazards",
-    
-    // Risk levels
-    riskLevels: {
-      critical: "Critical",
-      high: "High",
-      medium: "Medium", 
-      low: "Low"
-    },
-    
-    // Hazard categories
-    hazardCategories: {
-      electrical: "Electrical",
-      mechanical: "Mechanical",
-      physical: "Physical",
-      chemical: "Chemical",
-      ergonomic: "Ergonomic",
-      environmental: "Environmental",
-      psychosocial: "Psychosocial",
-      fire: "Fire",
-      transport: "Transport"
-    },
-    
-    // Messages
-    controlMeasures: "Control measures",
-    
-    // Standards
-    standards: {
-      title: "Standards & References",
-      description: "Applicable standards and official documentation",
-      viewDocument: "View document"
-    },
-    
-    // Specific hazards
-    hazards: {
-      "elec-shock": {
-        name: "Electrocution / Electric shock",
-        description: "Direct or indirect contact with live parts"
-      },
-      "arc-flash": {
-        name: "Arc flash",
-        description: "Electric arc during live work operations"
-      },
-      "moving-parts": {
-        name: "Moving parts",
-        description: "Crushing, pinching by moving parts"
-      },
-      "falls": {
-        name: "Falls from height",
-        description: "Falls from more than 3 meters"
-      },
-      "confined-spaces": {
-        name: "Confined spaces",
-        description: "Dangerous atmospheres, engulfment"
-      },
-      "toxic-vapors": {
-        name: "Toxic vapors",
-        description: "Inhalation of hazardous substances"
-      },
-      "fire-explosion": {
-        name: "Fire/Explosion",
-        description: "Fire, explosion of flammable materials"
-      },
-      "vehicle-traffic": {
-        name: "Vehicle traffic",
-        description: "Collision with vehicles, equipment"
-      }
-    },
-    
-    // Control measures
-    controlMeasuresData: {
-      "cm-elec-1": {
-        name: "Complete LOTO lockout",
-        description: "Complete isolation of energy sources"
-      },
-      "cm-elec-2": {
-        name: "Absence of voltage verification",
-        description: "Test with certified voltmeter"
-      },
-      "cm-fall-1": {
-        name: "Permanent guardrails",
-        description: "Protection barriers"
-      },
-      "cm-fall-2": {
-        name: "Safety harness",
-        description: "Fall arrest system"
-      },
-      "cm-conf-1": {
-        name: "Entry permit",
-        description: "Documented authorization"
-      },
-      "cm-conf-2": {
-        name: "Atmospheric testing",
-        description: "Minimum 4-gas detection"
-      },
-      "cm-chem-1": {
-        name: "Mechanical ventilation",
-        description: "Air extraction"
-      },
-      "cm-fire-1": {
-        name: "Hot work permit",
-        description: "Welding/cutting authorization"
-      },
-      "cm-traf-1": {
-        name: "Temporary signaling",
-        description: "Cones, signs, lights"
-      }
-    }
-  }
-};
-
-// =================== FONCTION POUR GÉNÉRER LA LISTE COMPLÈTE DE DANGERS ===================
-const getHazardsList = (language: 'fr' | 'en'): Hazard[] => {
-  const t = translations[language];
-  
-  // UTILISEZ VOTRE CODE ORIGINAL ICI - Gardez votre version complète avec tous vos dangers
-  // Remplacez juste cette fonction par votre version originale qui avait 15-20 dangers
-  // et ajoutez juste les traductions dynamiques comme ceci :
-  
-  return [
-    // =================== DANGERS ÉLECTRIQUES ===================
-    {
-      id: 'elec-shock',
-      name: language === 'fr' ? 'Électrocution / Électrisation' : 'Electrocution / Electric shock',
-      category: language === 'fr' ? 'Électrique' : 'Electrical',
-      description: language === 'fr' ? 'Contact direct ou indirect avec parties sous tension' : 'Direct or indirect contact with live parts',
-      riskLevel: 'critical' as const,
-      legislation: 'CSA Z462, RSST Art. 185',
-      icon: '⚡',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-elec-1', 
-          name: language === 'fr' ? 'Consignation LOTO complète' : 'Complete LOTO lockout',
-          category: 'elimination' as const,
-          description: language === 'fr' ? 'Isolation complète des sources d\'énergie' : 'Complete isolation of energy sources',
-          priority: 1, 
-          implemented: false
-        },
-        { 
-          id: 'cm-elec-2', 
-          name: language === 'fr' ? 'Vérification absence de tension (VAT)' : 'Absence of voltage verification (AOV)',
-          category: 'engineering' as const,
-          description: language === 'fr' ? 'Test avec voltmètre certifié' : 'Test with certified voltmeter',
-          priority: 2, 
-          implemented: false
-        }
-      ]
-    },
-    {
-      id: 'arc-flash',
-      name: language === 'fr' ? 'Arc électrique' : 'Arc flash',
-      category: language === 'fr' ? 'Électrique' : 'Electrical',
-      description: language === 'fr' ? 'Arc électrique lors de manœuvres sous tension' : 'Electric arc during live work operations',
-      riskLevel: 'critical' as const,
-      legislation: 'CSA Z462, NFPA 70E',
-      icon: '🔥',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-arc-1', 
-          name: language === 'fr' ? 'Analyse d\'arc électrique' : 'Arc flash analysis',
-          category: 'engineering' as const,
-          description: language === 'fr' ? 'Calcul énergie incidente' : 'Incident energy calculation',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-    {
-      id: 'overhead-lines',
-      name: language === 'fr' ? 'Lignes électriques aériennes' : 'Overhead power lines',
-      category: language === 'fr' ? 'Électrique' : 'Electrical',
-      description: language === 'fr' ? 'Contact avec lignes électriques extérieures' : 'Contact with external power lines',
-      riskLevel: 'critical' as const,
-      legislation: 'RSST Art. 185-190',
-      icon: '🌩️',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-lines-1', 
-          name: language === 'fr' ? 'Distance de sécurité minimale' : 'Minimum safety distance',
-          category: 'administrative' as const,
-          description: language === 'fr' ? 'Respecter zones de protection' : 'Respect protection zones',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-
-    // =================== DANGERS MÉCANIQUES ===================
-    {
-      id: 'moving-parts',
-      name: language === 'fr' ? 'Pièces mobiles' : 'Moving parts',
-      category: language === 'fr' ? 'Mécanique' : 'Mechanical',
-      description: language === 'fr' ? 'Écrasement, coincement par pièces mobiles' : 'Crushing, pinching by moving parts',
-      riskLevel: 'high' as const,
-      legislation: 'RSST Art. 182-184',
-      icon: '⚙️',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-mech-1', 
-          name: language === 'fr' ? 'Arrêt complet des équipements' : 'Complete equipment shutdown',
-          category: 'elimination' as const,
-          description: language === 'fr' ? 'Immobilisation totale' : 'Total immobilization',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-    {
-      id: 'pressure',
-      name: language === 'fr' ? 'Systèmes sous pression' : 'Pressure systems',
-      category: language === 'fr' ? 'Mécanique' : 'Mechanical',
-      description: language === 'fr' ? 'Explosion, projection due à la pression' : 'Explosion, projection due to pressure',
-      riskLevel: 'high' as const,
-      legislation: 'CSA B51',
-      icon: '💨',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-press-1', 
-          name: language === 'fr' ? 'Dépressurisation complète' : 'Complete depressurization',
-          category: 'elimination' as const,
-          description: language === 'fr' ? 'Évacuation totale pression' : 'Total pressure evacuation',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-    {
-      id: 'lifting-equipment',
-      name: language === 'fr' ? 'Équipements de levage' : 'Lifting equipment',
-      category: language === 'fr' ? 'Mécanique' : 'Mechanical',
-      description: language === 'fr' ? 'Chute de charge, basculement d\'équipement' : 'Load drop, equipment tipping',
-      riskLevel: 'high' as const,
-      legislation: 'RSST Art. 260-290, CSA B335',
-      icon: '🏗️',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-lift-1', 
-          name: language === 'fr' ? 'Inspection quotidienne' : 'Daily inspection',
-          category: 'administrative' as const,
-          description: language === 'fr' ? 'Vérification pré-utilisation' : 'Pre-use verification',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-
-    // =================== DANGERS PHYSIQUES ===================
-    {
-      id: 'falls',
-      name: language === 'fr' ? 'Chutes de hauteur' : 'Falls from height',
-      category: language === 'fr' ? 'Physique' : 'Physical',
-      description: language === 'fr' ? 'Chutes de plus de 3 mètres' : 'Falls from more than 3 meters',
-      riskLevel: 'critical' as const,
-      legislation: 'RSST Art. 347, CSA Z259',
-      icon: '🪂',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-fall-1', 
-          name: language === 'fr' ? 'Garde-corps permanents' : 'Permanent guardrails',
-          category: 'engineering' as const,
-          description: language === 'fr' ? 'Barrières de protection' : 'Protection barriers',
-          priority: 1, 
-          implemented: false
-        },
-        { 
-          id: 'cm-fall-2', 
-          name: language === 'fr' ? 'Harnais de sécurité' : 'Safety harness',
-          category: 'ppe' as const,
-          description: language === 'fr' ? 'Système antichute' : 'Fall arrest system',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-    {
-      id: 'scaffolding',
-      name: language === 'fr' ? 'Échafaudages' : 'Scaffolding',
-      category: language === 'fr' ? 'Physique' : 'Physical',
-      description: language === 'fr' ? 'Effondrement, instabilité des échafaudages' : 'Collapse, instability of scaffolding',
-      riskLevel: 'high' as const,
-      legislation: 'RSST Art. 347-350, CSA S269.2',
-      icon: '🚧',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-scaf-1', 
-          name: language === 'fr' ? 'Montage par personne compétente' : 'Assembly by competent person',
-          category: 'administrative' as const,
-          description: language === 'fr' ? 'Certification échafaudage' : 'Scaffolding certification',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-    {
-      id: 'struck-objects',
-      name: language === 'fr' ? 'Objets qui tombent' : 'Falling objects',
-      category: language === 'fr' ? 'Physique' : 'Physical',
-      description: language === 'fr' ? 'Impact d\'objets en chute libre' : 'Impact from falling objects',
-      riskLevel: 'high' as const,
-      legislation: 'RSST Art. 338',
-      icon: '⬇️',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-obj-1', 
-          name: language === 'fr' ? 'Casque de protection' : 'Protective helmet',
-          category: 'ppe' as const,
-          description: language === 'fr' ? 'Protection crânienne' : 'Head protection',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-    {
-      id: 'confined-spaces',
-      name: language === 'fr' ? 'Espaces clos' : 'Confined spaces',
-      category: language === 'fr' ? 'Physique' : 'Physical',
-      description: language === 'fr' ? 'Atmosphères dangereuses, engloutissement' : 'Dangerous atmospheres, engulfment',
-      riskLevel: 'critical' as const,
-      legislation: 'RSST Art. 302-317',
-      icon: '🕳️',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-conf-1', 
-          name: language === 'fr' ? 'Permis d\'entrée' : 'Entry permit',
-          category: 'administrative' as const,
-          description: language === 'fr' ? 'Autorisation documentée' : 'Documented authorization',
-          priority: 1, 
-          implemented: false
-        },
-        { 
-          id: 'cm-conf-2', 
-          name: language === 'fr' ? 'Test atmosphérique' : 'Atmospheric testing',
-          category: 'engineering' as const,
-          description: language === 'fr' ? 'Détection 4 gaz minimum' : 'Minimum 4-gas detection',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-
-    // =================== DANGERS CHIMIQUES ===================
-    {
-      id: 'toxic-vapors',
-      name: language === 'fr' ? 'Vapeurs toxiques' : 'Toxic vapors',
-      category: language === 'fr' ? 'Chimique' : 'Chemical',
-      description: language === 'fr' ? 'Inhalation de substances dangereuses' : 'Inhalation of hazardous substances',
-      riskLevel: 'high' as const,
-      legislation: 'RSST Art. 44, SIMDUT',
-      icon: '☠️',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-chem-1', 
-          name: language === 'fr' ? 'Ventilation mécanique' : 'Mechanical ventilation',
-          category: 'engineering' as const,
-          description: language === 'fr' ? 'Extraction d\'air' : 'Air extraction',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-    {
-      id: 'chemical-burns',
-      name: language === 'fr' ? 'Brûlures chimiques' : 'Chemical burns',
-      category: language === 'fr' ? 'Chimique' : 'Chemical',
-      description: language === 'fr' ? 'Contact avec substances corrosives' : 'Contact with corrosive substances',
-      riskLevel: 'medium' as const,
-      legislation: 'SIMDUT 2015',
-      icon: '🧪',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-burn-1', 
-          name: language === 'fr' ? 'Gants chimiques' : 'Chemical gloves',
-          category: 'ppe' as const,
-          description: language === 'fr' ? 'Protection cutanée' : 'Skin protection',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-    {
-      id: 'asbestos',
-      name: language === 'fr' ? 'Amiante' : 'Asbestos',
-      category: language === 'fr' ? 'Chimique' : 'Chemical',
-      description: language === 'fr' ? 'Exposition aux fibres d\'amiante' : 'Exposure to asbestos fibers',
-      riskLevel: 'critical' as const,
-      legislation: 'RSST Art. 30-52',
-      icon: '🫁',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-asb-1', 
-          name: language === 'fr' ? 'Caractérisation préalable' : 'Prior characterization',
-          category: 'engineering' as const,
-          description: language === 'fr' ? 'Identification matériaux' : 'Material identification',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-
-    // =================== DANGERS ERGONOMIQUES ===================
-    {
-      id: 'manual-handling',
-      name: language === 'fr' ? 'Manutention manuelle' : 'Manual handling',
-      category: language === 'fr' ? 'Ergonomique' : 'Ergonomic',
-      description: language === 'fr' ? 'Troubles musculo-squelettiques' : 'Musculoskeletal disorders',
-      riskLevel: 'medium' as const,
-      legislation: 'RSST Art. 166',
-      icon: '🏋️',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-man-1', 
-          name: language === 'fr' ? 'Équipements d\'aide' : 'Lifting aids',
-          category: 'engineering' as const,
-          description: language === 'fr' ? 'Outils de levage' : 'Lifting tools',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-    {
-      id: 'repetitive-work',
-      name: language === 'fr' ? 'Travail répétitif' : 'Repetitive work',
-      category: language === 'fr' ? 'Ergonomique' : 'Ergonomic',
-      description: language === 'fr' ? 'Mouvements répétitifs, postures contraignantes' : 'Repetitive movements, awkward postures',
-      riskLevel: 'medium' as const,
-      legislation: 'Guide CNESST TMS',
-      icon: '🔄',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-rep-1', 
-          name: language === 'fr' ? 'Rotation des postes' : 'Job rotation',
-          category: 'administrative' as const,
-          description: language === 'fr' ? 'Alternance des tâches' : 'Task alternation',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-
-    // =================== DANGERS ENVIRONNEMENTAUX ===================
-    {
-      id: 'extreme-weather',
-      name: language === 'fr' ? 'Conditions météo extrêmes' : 'Extreme weather conditions',
-      category: language === 'fr' ? 'Environnemental' : 'Environmental',
-      description: language === 'fr' ? 'Exposition aux intempéries' : 'Exposure to severe weather',
-      riskLevel: 'medium' as const,
-      legislation: 'Guide météo CNESST',
-      icon: '🌪️',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-weather-1', 
-          name: language === 'fr' ? 'Surveillance météorologique' : 'Weather monitoring',
-          category: 'administrative' as const,
-          description: language === 'fr' ? 'Veille conditions' : 'Condition surveillance',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-    {
-      id: 'heat-stress',
-      name: language === 'fr' ? 'Stress thermique' : 'Heat stress',
-      category: language === 'fr' ? 'Environnemental' : 'Environmental',
-      description: language === 'fr' ? 'Coups de chaleur, épuisement' : 'Heat stroke, exhaustion',
-      riskLevel: 'medium' as const,
-      legislation: 'ACGIH TLV',
-      icon: '🌡️',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-heat-1', 
-          name: language === 'fr' ? 'Surveillance température' : 'Temperature monitoring',
-          category: 'administrative' as const,
-          description: language === 'fr' ? 'Mesure WBGT' : 'WBGT measurement',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-    {
-      id: 'noise',
-      name: language === 'fr' ? 'Exposition au bruit' : 'Noise exposure',
-      category: language === 'fr' ? 'Environnemental' : 'Environmental',
-      description: language === 'fr' ? 'Dommages auditifs' : 'Hearing damage',
-      riskLevel: 'medium' as const,
-      legislation: 'RSST Art. 131',
-      icon: '🔊',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-noise-1', 
-          name: language === 'fr' ? 'Protection auditive' : 'Hearing protection',
-          category: 'ppe' as const,
-          description: language === 'fr' ? 'Bouchons/casques' : 'Plugs/earmuffs',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-
-    // =================== DANGERS PSYCHOSOCIAUX ===================
-    {
-      id: 'workplace-violence',
-      name: language === 'fr' ? 'Violence au travail' : 'Workplace violence',
-      category: language === 'fr' ? 'Psychosocial' : 'Psychosocial',
-      description: language === 'fr' ? 'Violence physique ou psychologique' : 'Physical or psychological violence',
-      riskLevel: 'high' as const,
-      legislation: 'LSST Art. 51',
-      icon: '🧠',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-viol-1', 
-          name: language === 'fr' ? 'Politique tolérance zéro' : 'Zero tolerance policy',
-          category: 'administrative' as const,
-          description: language === 'fr' ? 'Cadre disciplinaire clair' : 'Clear disciplinary framework',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-
-    // =================== DANGERS INCENDIE ===================
-    {
-      id: 'fire-explosion',
-      name: language === 'fr' ? 'Incendie/Explosion' : 'Fire/Explosion',
-      category: language === 'fr' ? 'Incendie' : 'Fire',
-      description: language === 'fr' ? 'Feu, explosion de matières inflammables' : 'Fire, explosion of flammable materials',
-      riskLevel: 'critical' as const,
-      legislation: 'Code de construction, NFPA',
-      icon: '🔥',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-fire-1', 
-          name: language === 'fr' ? 'Permis de travail à chaud' : 'Hot work permit',
-          category: 'administrative' as const,
-          description: language === 'fr' ? 'Autorisation soudage/coupage' : 'Welding/cutting authorization',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    },
-
-    // =================== DANGERS TRANSPORT ===================
-    {
-      id: 'vehicle-traffic',
-      name: language === 'fr' ? 'Circulation véhiculaire' : 'Vehicle traffic',
-      category: language === 'fr' ? 'Transport' : 'Transport',
-      description: language === 'fr' ? 'Collision avec véhicules, engins' : 'Collision with vehicles, equipment',
-      riskLevel: 'high' as const,
-      legislation: 'RSST Art. 320-340',
-      icon: '🚛',
-      selected: false,
-      controlMeasures: [
-        { 
-          id: 'cm-traf-1', 
-          name: language === 'fr' ? 'Signalisation temporaire' : 'Temporary signaling',
-          category: 'engineering' as const,
-          description: language === 'fr' ? 'Cônes, panneaux, feux' : 'Cones, signs, lights',
-          priority: 1, 
-          implemented: false
-        }
-      ]
-    }
-  ];
-};
-
-// =================== STANDARDS ET NORMES ===================
-const getStandards = (language: 'fr' | 'en') => [
+// =================== DANGERS ÉLECTRIQUES ===================
+const electricalHazards: Hazard[] = [
   {
-    name: 'CSA Z462',
-    description: language === 'fr' ? 'Sécurité en milieu de travail - Énergie électrique' : 'Workplace electrical safety',
-    url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z462'
+    id: 'elec-shock',
+    name: 'Électrocution / Électrisation',
+    category: 'Électrique',
+    description: 'Contact direct ou indirect avec parties sous tension',
+    riskLevel: 'critical',
+    legislation: 'CSA Z462, RSST Art. 185',
+    icon: '⚡',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-elec-1', 
+        name: 'Consignation LOTO complète', 
+        category: 'elimination', 
+        description: 'Isolation complète des sources d\'énergie', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z460', name: 'CSA Z460', fullName: 'Maîtrise des énergies dangereuses', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z460', section: 'Art. 5.2', description: 'Procédures de consignation', mandatory: true },
+          { id: 'rsst-185', name: 'RSST Art. 185', fullName: 'Règlement SST - Travaux électriques', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 185-190', description: 'Obligations consignation électrique', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-elec-2', 
+        name: 'Vérification absence de tension (VAT)', 
+        category: 'engineering', 
+        description: 'Test avec voltmètre certifié', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z462', name: 'CSA Z462', fullName: 'Sécurité en milieu de travail - Énergie électrique', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z462', section: 'Art. 6.3', description: 'Procédures de vérification', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-elec-3', 
+        name: 'Gants isolants classe appropriée', 
+        category: 'ppe', 
+        description: 'Gants diélectriques testés', 
+        priority: 3, 
+        implemented: false,
+        standards: [
+          { id: 'astm-d120', name: 'ASTM D120', fullName: 'Rubber Insulating Gloves', url: 'https://www.astm.org/d0120-20.html', section: 'Table 1', description: 'Classification des gants isolants', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-elec-4', 
+        name: 'Formation électrique qualifiée', 
+        category: 'administrative', 
+        description: 'Personnel certifié travaux électriques', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'cnesst-guide', name: 'Guide CNESST', fullName: 'Guide de prévention - Travaux électriques', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/travaux-electriques', section: 'Section 3', description: 'Formation requise', mandatory: true }
+        ]
+      }
+    ]
   },
   {
-    name: 'RSST Québec',
-    description: language === 'fr' ? 'Règlement sur la santé et la sécurité du travail' : 'Occupational Health and Safety Regulation',
-    url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/'
+    id: 'arc-flash',
+    name: 'Arc électrique',
+    category: 'Électrique',
+    description: 'Arc électrique lors de manœuvres sous tension',
+    riskLevel: 'critical',
+    legislation: 'CSA Z462, NFPA 70E',
+    icon: '🔥',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-arc-1', 
+        name: 'Analyse d\'arc électrique', 
+        category: 'engineering', 
+        description: 'Calcul énergie incidente', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'ieee-1584', name: 'IEEE 1584', fullName: 'Guide for Performing Arc-Flash Hazard Calculations', url: 'https://standards.ieee.org/ieee/1584/5507/', section: 'Section 4', description: 'Calculs d\'arc électrique', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-arc-2', 
+        name: 'Vêtements résistants à l\'arc', 
+        category: 'ppe', 
+        description: 'Habit arc-flash certifié', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'astm-f1506', name: 'ASTM F1506', fullName: 'Standard for Flame Resistant Textile Materials', url: 'https://www.astm.org/f1506-20a.html', section: 'Section 5', description: 'Vêtements résistants aux arcs', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-arc-3', 
+        name: 'Distance de sécurité respectée', 
+        category: 'administrative', 
+        description: 'Périmètre de protection', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-186', name: 'RSST Art. 186', fullName: 'Règlement SST - Distances sécurité', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 186', description: 'Distances minimales électriques', mandatory: true }
+        ]
+      }
+    ]
   },
   {
-    name: 'CSA Z259',
-    description: language === 'fr' ? 'Protection contre les chutes' : 'Fall protection',
-    url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z259-10'
-  },
-  {
-    name: 'NFPA 70E',
-    description: language === 'fr' ? 'Norme sécurité électrique' : 'Standard for Electrical Safety',
-    url: 'https://www.nfpa.org/codes-and-standards/all-codes-and-standards/list-of-codes-and-standards/detail?code=70E'
+    id: 'overhead-lines',
+    name: 'Lignes électriques aériennes',
+    category: 'Électrique',
+    description: 'Contact avec lignes électriques extérieures',
+    riskLevel: 'critical',
+    legislation: 'RSST Art. 185-190',
+    icon: '🌩️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-lines-1', 
+        name: 'Distance de sécurité minimale', 
+        category: 'administrative', 
+        description: 'Respecter zones de protection', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-187', name: 'RSST Art. 187', fullName: 'Distances lignes électriques', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 187', description: 'Distances minimales selon voltage', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-lines-2', 
+        name: 'Surveillance dédiée', 
+        category: 'administrative', 
+        description: 'Signaleur spécialisé', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-188', name: 'RSST Art. 188', fullName: 'Surveillance obligatoire', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 188', description: 'Surveillance près lignes électriques', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-lines-3', 
+        name: 'Isolation/mise hors tension', 
+        category: 'elimination', 
+        description: 'Coordination avec utilités', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'hydro-quebec', name: 'Hydro-Québec', fullName: 'Procédures coordination travaux', url: 'https://www.hydroquebec.com/securite/', section: 'Guide 2024', description: 'Coordination mise hors tension', mandatory: true }
+        ]
+      }
+    ]
   }
 ];
 
-// =================== FONCTION ICÔNES CATÉGORIES ===================
-const getCategoryIcon = (category: string) => {
-  const iconMap: { [key: string]: string } = {
-    'Électrique': '⚡',
-    'Electrical': '⚡',
-    'Mécanique': '⚙️',
-    'Mechanical': '⚙️',
-    'Physique': '🏗️',
-    'Physical': '🏗️',
-    'Chimique': '🧪',
-    'Chemical': '🧪',
-    'Ergonomique': '🏋️',
-    'Ergonomic': '🏋️',
-    'Environnemental': '🌪️',
-    'Environmental': '🌪️',
-    'Psychosocial': '🧠',
-    'Incendie': '🔥',
-    'Fire': '🔥',
-    'Transport': '🚛'
-  };
-  
-  return iconMap[category] || '⚠️';
-};
-// =================== COMPOSANT PRINCIPAL ===================
+// =================== DANGERS MÉCANIQUES ===================
+const mechanicalHazards: Hazard[] = [
+  {
+    id: 'moving-parts',
+    name: 'Pièces mobiles',
+    category: 'Mécanique',
+    description: 'Écrasement, coincement par pièces mobiles',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 182-184',
+    icon: '⚙️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-mech-1', 
+        name: 'Arrêt complet des équipements', 
+        category: 'elimination', 
+        description: 'Immobilisation totale', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z432', name: 'CSA Z432', fullName: 'Safeguarding of Machinery', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z432', section: 'Art. 4.2', description: 'Arrêt sécuritaire machines', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-mech-2', 
+        name: 'Consignation mécanique', 
+        category: 'elimination', 
+        description: 'Blocage physique', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z460-mech', name: 'CSA Z460', fullName: 'Maîtrise des énergies dangereuses', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z460', section: 'Art. 8', description: 'Consignation mécanique', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-mech-3', 
+        name: 'Protecteurs mécaniques', 
+        category: 'engineering', 
+        description: 'Barrières physiques', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'iso-14120', name: 'ISO 14120', fullName: 'Safety Guards - General requirements', url: 'https://www.iso.org/standard/54630.html', section: 'Section 5', description: 'Protecteurs fixes et mobiles', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'pressure',
+    name: 'Systèmes sous pression',
+    category: 'Mécanique',
+    description: 'Explosion, projection due à la pression',
+    riskLevel: 'high',
+    legislation: 'CSA B51',
+    icon: '💨',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-press-1', 
+        name: 'Dépressurisation complète', 
+        category: 'elimination', 
+        description: 'Évacuation totale pression', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-b51', name: 'CSA B51', fullName: 'Boiler, Pressure Vessel, and Pressure Piping Code', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-b51', section: 'Art. 7.1', description: 'Procédures dépressurisation', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-press-2', 
+        name: 'Soupapes de sécurité', 
+        category: 'engineering', 
+        description: 'Protection surpression', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'api-520', name: 'API 520', fullName: 'Sizing, Selection Safety Relief Valves', url: 'https://www.api.org/products-and-services/individual-certification-programs/piping-and-pipeline/publications/api-520', section: 'Part 1', description: 'Dimensionnement soupapes', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'lifting-equipment',
+    name: 'Équipements de levage',
+    category: 'Mécanique',
+    description: 'Chute de charge, basculement d\'équipement',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 260-290, CSA B335',
+    icon: '🏗️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-lift-1', 
+        name: 'Inspection quotidienne', 
+        category: 'administrative', 
+        description: 'Vérification pré-utilisation', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-b335', name: 'CSA B335', fullName: 'Safety Standard for Lift Trucks', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-b335', section: 'Art. 5.2', description: 'Inspections quotidiennes', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-lift-2', 
+        name: 'Certification des équipements', 
+        category: 'administrative', 
+        description: 'Inspection annuelle certifiée', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'asme-b30', name: 'ASME B30', fullName: 'Overhead and Mobile Cranes', url: 'https://www.asme.org/codes-standards/find-codes-standards/b30-overhead-mobile-cranes', section: 'B30.2', description: 'Certification grues mobiles', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-lift-3', 
+        name: 'Formation opérateurs', 
+        category: 'administrative', 
+        description: 'Certification spécialisée', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'cnesst-grue', name: 'CNESST Grues', fullName: 'Guide formation opérateurs grues', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/appareils-levage', section: 'Section 2', description: 'Formation obligatoire', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+// =================== DANGERS PHYSIQUES ===================
+const physicalHazards: Hazard[] = [
+  {
+    id: 'falls',
+    name: 'Chutes de hauteur',
+    category: 'Physique',
+    description: 'Chutes de plus de 3 mètres',
+    riskLevel: 'critical',
+    legislation: 'RSST Art. 347, CSA Z259',
+    icon: '🪂',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-fall-1', 
+        name: 'Garde-corps permanents', 
+        category: 'engineering', 
+        description: 'Barrières de protection', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-347', name: 'RSST Art. 347', fullName: 'Protection contre chutes', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 347-350', description: 'Garde-corps obligatoires', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-fall-2', 
+        name: 'Harnais de sécurité', 
+        category: 'ppe', 
+        description: 'Système antichute', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z259.10', name: 'CSA Z259.10', fullName: 'Full Body Harnesses', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z259-10', section: 'Art. 5', description: 'Harnais complets', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-fall-3', 
+        name: 'Points d\'ancrage certifiés', 
+        category: 'engineering', 
+        description: 'Ancrages structuraux', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z259.16', name: 'CSA Z259.16', fullName: 'Design of Active Fall-Protection Systems', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z259-16', section: 'Art. 6', description: 'Systèmes protection active', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'scaffolding',
+    name: 'Échafaudages',
+    category: 'Physique',
+    description: 'Effondrement, instabilité des échafaudages',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 347-350, CSA S269.2',
+    icon: '🚧',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-scaf-1', 
+        name: 'Montage par personne compétente', 
+        category: 'administrative', 
+        description: 'Certification échafaudage', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-s269.2', name: 'CSA S269.2', fullName: 'Access Scaffolding for Construction Purposes', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-s269-2', section: 'Art. 4.2', description: 'Montage par personne qualifiée', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-scaf-2', 
+        name: 'Inspection quotidienne', 
+        category: 'administrative', 
+        description: 'Vérification stabilité', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-349', name: 'RSST Art. 349', fullName: 'Inspection échafaudages', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 349', description: 'Inspection obligatoire quotidienne', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'struck-objects',
+    name: 'Objets qui tombent',
+    category: 'Physique',
+    description: 'Impact d\'objets en chute libre',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 338',
+    icon: '⬇️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-obj-1', 
+        name: 'Casque de protection', 
+        category: 'ppe', 
+        description: 'Protection crânienne', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z94.1', name: 'CSA Z94.1', fullName: 'Industrial Protective Headwear', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z94-1', section: 'Type 1', description: 'Casques protection impact', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-obj-2', 
+        name: 'Périmètre de sécurité', 
+        category: 'administrative', 
+        description: 'Zone d\'exclusion', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-338', name: 'RSST Art. 338', fullName: 'Protection chute objets', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 338', description: 'Zones de protection obligatoires', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'confined-spaces',
+    name: 'Espaces clos',
+    category: 'Physique',
+    description: 'Atmosphères dangereuses, engloutissement',
+    riskLevel: 'critical',
+    legislation: 'RSST Art. 302-317',
+    icon: '🕳️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-conf-1', 
+        name: 'Permis d\'entrée', 
+        category: 'administrative', 
+        description: 'Autorisation documentée', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-302', name: 'RSST Art. 302', fullName: 'Espaces clos - Permis', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 302-317', description: 'Permis d\'entrée obligatoire', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-conf-2', 
+        name: 'Test atmosphérique', 
+        category: 'engineering', 
+        description: 'Détection 4 gaz minimum', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z1006', name: 'CSA Z1006', fullName: 'Management of Work in Confined Spaces', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z1006', section: 'Art. 7.3', description: 'Tests atmosphère obligatoires', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-conf-3', 
+        name: 'Ventilation forcée', 
+        category: 'engineering', 
+        description: 'Renouvellement d\'air', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-307', name: 'RSST Art. 307', fullName: 'Ventilation espaces clos', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 307', description: 'Ventilation obligatoire', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+
+// =================== DANGERS CHIMIQUES ===================
+const chemicalHazards: Hazard[] = [
+  {
+    id: 'toxic-vapors',
+    name: 'Vapeurs toxiques',
+    category: 'Chimique',
+    description: 'Inhalation de substances dangereuses',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 44, SIMDUT',
+    icon: '☠️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-chem-1', 
+        name: 'Ventilation mécanique', 
+        category: 'engineering', 
+        description: 'Extraction d\'air', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-44', name: 'RSST Art. 44', fullName: 'Qualité de l\'air', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 44-55', description: 'Normes qualité air', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-chem-2', 
+        name: 'Appareil respiratoire', 
+        category: 'ppe', 
+        description: 'Protection respiratoire', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z94.4-resp', name: 'CSA Z94.4', fullName: 'Sélection des protecteurs respiratoires', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z94-4', section: 'Art. 8', description: 'Protection respiratoire', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'chemical-burns',
+    name: 'Brûlures chimiques',
+    category: 'Chimique',
+    description: 'Contact avec substances corrosives',
+    riskLevel: 'medium',
+    legislation: 'SIMDUT 2015',
+    icon: '🧪',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-burn-1', 
+        name: 'Gants chimiques', 
+        category: 'ppe', 
+        description: 'Protection cutanée', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'astm-f739', name: 'ASTM F739', fullName: 'Standard Test Method for Permeation of Liquids', url: 'https://www.astm.org/f0739-20.html', section: 'Section 4', description: 'Tests perméation gants chimiques', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-burn-2', 
+        name: 'Douche d\'urgence', 
+        category: 'engineering', 
+        description: 'Rinçage immédiat', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'ansi-z358.1', name: 'ANSI Z358.1', fullName: 'Emergency Eyewash and Shower Equipment', url: 'https://webstore.ansi.org/standards/isea/ansiz3581', section: 'Section 4', description: 'Douches et rince-œil d\'urgence', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'asbestos',
+    name: 'Amiante',
+    category: 'Chimique',
+    description: 'Exposition aux fibres d\'amiante',
+    riskLevel: 'critical',
+    legislation: 'RSST Art. 30-52',
+    icon: '🫁',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-asb-1', 
+        name: 'Caractérisation préalable', 
+        category: 'engineering', 
+        description: 'Identification matériaux', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-30', name: 'RSST Art. 30', fullName: 'Travaux amiante', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 30-52', description: 'Réglementation amiante', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-asb-2', 
+        name: 'Confinement zone', 
+        category: 'engineering', 
+        description: 'Isolation étanche', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-34', name: 'RSST Art. 34', fullName: 'Confinement amiante', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 34-38', description: 'Méthodes confinement', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-asb-3', 
+        name: 'Respirateur P100', 
+        category: 'ppe', 
+        description: 'Protection respiratoire', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'niosh-p100', name: 'NIOSH P100', fullName: 'Particulate Filter Efficiency', url: 'https://www.cdc.gov/niosh/npptl/topics/respirators/disp_part/default.html', section: 'P100 Series', description: 'Filtres haute efficacité', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+// =================== DANGERS ERGONOMIQUES ===================
+const ergonomicHazards: Hazard[] = [
+  {
+    id: 'manual-handling',
+    name: 'Manutention manuelle',
+    category: 'Ergonomique',
+    description: 'Troubles musculo-squelettiques',
+    riskLevel: 'medium',
+    legislation: 'RSST Art. 166',
+    icon: '🏋️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-man-1', 
+        name: 'Équipements d\'aide', 
+        category: 'engineering', 
+        description: 'Outils de levage', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-166', name: 'RSST Art. 166', fullName: 'Manutention manuelle', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 166', description: 'Limites manutention', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-man-2', 
+        name: 'Techniques de levage', 
+        category: 'administrative', 
+        description: 'Formation postures', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'cnesst-tms', name: 'CNESST TMS', fullName: 'Guide prévention TMS', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/troubles-musculo-squelettiques', section: 'Section 3', description: 'Prévention TMS', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'repetitive-work',
+    name: 'Travail répétitif',
+    category: 'Ergonomique',
+    description: 'Mouvements répétitifs, postures contraignantes',
+    riskLevel: 'medium',
+    legislation: 'Guide CNESST TMS',
+    icon: '🔄',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-rep-1', 
+        name: 'Rotation des postes', 
+        category: 'administrative', 
+        description: 'Alternance des tâches', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'iso-11228', name: 'ISO 11228', fullName: 'Ergonomics Manual Handling', url: 'https://www.iso.org/standard/51309.html', section: 'Part 3', description: 'Manutention charges faibles haute fréquence', mandatory: false }
+        ]
+      },
+      { 
+        id: 'cm-rep-2', 
+        name: 'Pauses actives', 
+        category: 'administrative', 
+        description: 'Récupération régulière', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'cnesst-tms-rep', name: 'CNESST TMS', fullName: 'Guide prévention TMS répétitifs', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/troubles-musculo-squelettiques', section: 'Section 4', description: 'Travail répétitif', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+
+// =================== DANGERS ENVIRONNEMENTAUX ===================
+const environmentalHazards: Hazard[] = [
+  {
+    id: 'extreme-weather',
+    name: 'Conditions météo extrêmes',
+    category: 'Environnemental',
+    description: 'Exposition aux intempéries',
+    riskLevel: 'medium',
+    legislation: 'Guide CNESST',
+    icon: '🌪️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-weather-1', 
+        name: 'Surveillance météorologique', 
+        category: 'administrative', 
+        description: 'Veille conditions', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'env-canada', name: 'Environnement Canada', fullName: 'Alertes météorologiques', url: 'https://meteo.gc.ca/', section: 'Alertes', description: 'Surveillance conditions météo', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-weather-2', 
+        name: 'Arrêt travaux si nécessaire', 
+        category: 'administrative', 
+        description: 'Protocole suspension', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'cnesst-meteo', name: 'CNESST Météo', fullName: 'Guide conditions météorologiques', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/travail-exterieur', section: 'Section 2', description: 'Suspension travaux extérieurs', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'heat-stress',
+    name: 'Stress thermique',
+    category: 'Environnemental',
+    description: 'Coups de chaleur, épuisement',
+    riskLevel: 'high',
+    legislation: 'Guide CNESST Coup de chaleur',
+    icon: '🌡️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-heat-1', 
+        name: 'Surveillance température', 
+        category: 'engineering', 
+        description: 'Mesure WBGT', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'iso-7243', name: 'ISO 7243', fullName: 'Hot environments - Estimation of heat stress', url: 'https://www.iso.org/standard/13895.html', section: 'Section 5', description: 'Mesure stress thermique WBGT', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-heat-2', 
+        name: 'Hydratation fréquente', 
+        category: 'administrative', 
+        description: 'Pauses boisson', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'cnesst-chaleur', name: 'CNESST Chaleur', fullName: 'Guide prévention coups de chaleur', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/coup-chaleur', section: 'Section 2', description: 'Prévention stress thermique', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'noise',
+    name: 'Exposition au bruit',
+    category: 'Environnemental',
+    description: 'Dommages auditifs',
+    riskLevel: 'medium',
+    legislation: 'RSST Art. 141-151',
+    icon: '🔊',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-noise-1', 
+        name: 'Protection auditive', 
+        category: 'ppe', 
+        description: 'Bouchons/casques', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z94.2', name: 'CSA Z94.2', fullName: 'Hearing Protection Devices', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z94-2', section: 'Class A', description: 'Protecteurs auditifs', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-noise-2', 
+        name: 'Mesure sonométrique', 
+        category: 'engineering', 
+        description: 'Évaluation exposition', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-141', name: 'RSST Art. 141', fullName: 'Exposition au bruit', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 141-151', description: 'Limites exposition bruit', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'spills',
+    name: 'Déversements',
+    category: 'Environnemental',
+    description: 'Déversement de fluides (huile, carburant, produits chimiques)',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 44, LQE, SIMDUT',
+    icon: '🛢️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-spill-1', 
+        name: 'Rétention primaire', 
+        category: 'engineering', 
+        description: 'Bacs de rétention, plateformes étanches', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'lqe-art-20', name: 'LQE Art. 20', fullName: 'Loi sur la qualité de l\'environnement', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/lc/Q-2/', section: 'Art. 20-22', description: 'Interdiction contamination', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-spill-2', 
+        name: 'Kit de déversement', 
+        category: 'engineering', 
+        description: 'Absorbants, barrières, contenants', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'astm-f716', name: 'ASTM F716', fullName: 'Sorbent Performance of Absorbents', url: 'https://www.astm.org/f0716-18.html', section: 'Section 5', description: 'Performance absorbants', mandatory: false }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'environmental-contamination',
+    name: 'Contamination environnementale',
+    category: 'Environnemental',
+    description: 'Pollution sol, eau, air par substances dangereuses',
+    riskLevel: 'high',
+    legislation: 'LQE, LCPE, Règlements municipaux',
+    icon: '🌍',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-env-1', 
+        name: 'Caractérisation environnementale', 
+        category: 'engineering', 
+        description: 'Analyse sol/eau existante', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'lqe-art-31.42', name: 'LQE Art. 31.42', fullName: 'Plans d\'urgence environnementale', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/lc/Q-2/', section: 'Art. 31.42', description: 'Plans intervention obligatoires', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+
+// =================== DANGERS PSYCHOSOCIAUX ===================
+const psychosocialHazards: Hazard[] = [
+  {
+    id: 'workplace-violence',
+    name: 'Violence au travail',
+    category: 'Psychosocial',
+    description: 'Violence physique ou psychologique',
+    riskLevel: 'high',
+    legislation: 'LSST Art. 2.1, RSST',
+    icon: '⚠️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-viol-1', 
+        name: 'Politique tolérance zéro', 
+        category: 'administrative', 
+        description: 'Cadre disciplinaire clair', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'lsst-2.1', name: 'LSST Art. 2.1', fullName: 'Prévention violence au travail', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/lc/S-2.1/', section: 'Art. 2.1', description: 'Obligations prévention violence', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'harassment',
+    name: 'Harcèlement psychologique',
+    category: 'Psychosocial',
+    description: 'Conduites vexatoires répétées',
+    riskLevel: 'medium',
+    legislation: 'Loi sur les normes du travail',
+    icon: '😰',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-har-1', 
+        name: 'Politique anti-harcèlement', 
+        category: 'administrative', 
+        description: 'Cadre préventif', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'lnt-harcelement', name: 'LNT Harcèlement', fullName: 'Loi normes travail - Harcèlement', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/lc/N-1.1/', section: 'Art. 81.18', description: 'Politique anti-harcèlement obligatoire', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+
+// =================== DANGERS INCENDIE/EXPLOSION ===================
+const fireHazards: Hazard[] = [
+  {
+    id: 'fire-explosion',
+    name: 'Incendie/Explosion',
+    category: 'Incendie',
+    description: 'Feu, explosion de matières inflammables',
+    riskLevel: 'critical',
+    legislation: 'Code de construction, NFPA',
+    icon: '🔥',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-fire-1', 
+        name: 'Permis de travail à chaud', 
+        category: 'administrative', 
+        description: 'Autorisation soudage/coupage', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'nfpa-51b', name: 'NFPA 51B', fullName: 'Standard for Fire Prevention During Welding', url: 'https://www.nfpa.org/codes-and-standards/all-codes-and-standards/list-of-codes-and-standards/detail?code=51B', section: 'Chapter 4', description: 'Prévention incendie soudage', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-fire-2', 
+        name: 'Surveillance incendie', 
+        category: 'administrative', 
+        description: 'Garde-feu spécialisé', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-323', name: 'RSST Art. 323', fullName: 'Travaux de soudage', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 323-325', description: 'Précautions travaux chauds', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+
+// =================== DANGERS TRANSPORT/CIRCULATION ===================
+const transportHazards: Hazard[] = [
+  {
+    id: 'vehicle-traffic',
+    name: 'Circulation véhiculaire',
+    category: 'Transport',
+    description: 'Collision avec véhicules, engins',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 320-340, Code sécurité routière',
+    icon: '🚛',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-traf-1', 
+        name: 'Signalisation temporaire', 
+        category: 'engineering', 
+        description: 'Cônes, panneaux, feux', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'mtq-signalisation', name: 'MTQ Signalisation', fullName: 'Norme signalisation temporaire', url: 'https://www.transports.gouv.qc.ca/fr/entreprises-partenaires/entreprises-construction/signalisation-temporaire/', section: 'Tome VII', description: 'Signalisation chantiers routiers', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-traf-2', 
+        name: 'Vêtements haute visibilité', 
+        category: 'ppe', 
+        description: 'Gilets rétroréfléchissants', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z96', name: 'CSA Z96', fullName: 'High-Visibility Safety Apparel', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z96', section: 'Class 2', description: 'Vêtements haute visibilité', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-traf-3', 
+        name: 'Séparation zones', 
+        category: 'engineering', 
+        description: 'Barrières physiques', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'rsst-320', name: 'RSST Art. 320', fullName: 'Protection circulation', url: 'https://www.legisquebec.gouv.qc.ca/fr/document/rc/S-2.1,%20r.%2013/', section: 'Art. 320-325', description: 'Séparation obligatoire zones', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+
+// =================== COMBINAISON DE TOUS LES DANGERS ===================
+const hazardsList: Hazard[] = [
+  ...electricalHazards,
+  ...mechanicalHazards,
+  ...physicalHazards,
+  ...chemicalHazards,
+  ...ergonomicHazards,
+  ...environmentalHazards,
+  ...psychosocialHazards,
+  ...fireHazards,
+  ...transportHazards
+];
 const Step3Hazards: React.FC<Step3HazardsProps> = ({
   formData,
   onDataChange,
@@ -842,112 +997,31 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
   tenant,
   errors
 }) => {
-  // =================== TRADUCTIONS ET CONFIGURATION ===================
-  const t = translations[language];
-  const standards = getStandards(language);
-  
-  // =================== ÉTATS ===================
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('');
-  const [filterRisk, setFilterRisk] = useState('');
-  
-  // Initialiser avec la liste complète des dangers traduits
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [hazards, setHazards] = useState<Hazard[]>(() => {
-    if (formData.step3?.hazards?.list && formData.step3.hazards.list.length > 0) {
-      // Si nous avons déjà des dangers sauvegardés, les utiliser mais mettre à jour les traductions
-      const savedHazards = formData.step3.hazards.list;
-      const translatedHazards = getHazardsList(language);
-      
-      // Fusionner les données sauvegardées avec les nouvelles traductions
-      return translatedHazards.map(translatedItem => {
-        const savedItem = savedHazards.find((saved: Hazard) => saved.id === translatedItem.id);
-        return savedItem ? { 
-          ...translatedItem, 
-          selected: savedItem.selected,
-          controlMeasures: translatedItem.controlMeasures.map(translatedControl => {
-            const savedControl = savedItem.controlMeasures?.find((sc: ControlMeasure) => sc.id === translatedControl.id);
-            return savedControl ? { 
-              ...translatedControl, 
-              implemented: savedControl.implemented,
-              responsible: savedControl.responsible,
-              deadline: savedControl.deadline,
-              notes: savedControl.notes
-            } : translatedControl;
-          })
-        } : translatedItem;
-      });
+    if (formData.hazards?.list && formData.hazards.list.length > 0) {
+      return formData.hazards.list;
     }
-    return getHazardsList(language);
+    return hazardsList;
   });
 
-  // =================== FONCTIONS UTILITAIRES ===================
-  
-  // Filtrage des dangers avec recherche intelligente
-  const filteredHazards = useMemo(() => {
-    return hazards.filter(hazard => {
-      const searchLower = searchTerm.toLowerCase();
-      
-      const matchesSearch = 
-        hazard.name.toLowerCase().includes(searchLower) ||
-        hazard.description.toLowerCase().includes(searchLower) ||
-        hazard.category.toLowerCase().includes(searchLower) ||
-        hazard.legislation.toLowerCase().includes(searchLower);
-      
-      const matchesCategory = filterCategory === '' || hazard.category === t.hazardCategories[filterCategory as keyof typeof t.hazardCategories];
-      const matchesRisk = filterRisk === '' || hazard.riskLevel === filterRisk;
-      
-      return matchesSearch && matchesCategory && matchesRisk;
-    });
-  }, [hazards, searchTerm, filterCategory, filterRisk, t.hazardCategories]);
+  // Filtrage des dangers
+  const filteredHazards = hazards.filter(hazard => {
+    const matchesSearch = hazard.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         hazard.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         hazard.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || hazard.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
+  // Categories uniques
+  const categories = Array.from(new Set(hazards.map(h => h.category)));
+  
   // Dangers sélectionnés
-  const selectedHazards = useMemo(() => {
-    return hazards.filter(h => h.selected);
-  }, [hazards]);
-
-  // =================== CALCUL DES STATISTIQUES CORRIGÉ ===================
-  const stats = useMemo(() => {
-    const totalHazards = selectedHazards.length;
-    const criticalHazards = selectedHazards.filter(h => h.riskLevel === 'critical').length;
-    const highRiskHazards = selectedHazards.filter(h => h.riskLevel === 'high').length;
-    
-    const totalControls = selectedHazards.reduce((acc, hazard) => acc + hazard.controlMeasures.length, 0);
-    const implementedControls = selectedHazards.reduce((acc, hazard) => {
-      return acc + hazard.controlMeasures.filter(control => control.implemented).length;
-    }, 0);
-    
-    // Calcul du taux d'implémentation - CORRECTION ICI
-    const implementationRate = totalControls > 0 
-      ? Math.round((implementedControls / totalControls) * 100) 
-      : 0;
-    
-    return {
-      totalHazards,
-      totalControls,
-      implementedControls,
-      criticalHazards,
-      highRiskHazards,
-      implementationRate // ← AJOUT de cette propriété manquante
-    };
-  }, [selectedHazards]);
-
-  // =================== FONCTIONS UTILITAIRES POUR LES CONTRÔLES ===================
-  
-  const isControlImplemented = (hazardId: string, controlId: string): boolean => {
-    const hazard = hazards.find(h => h.id === hazardId);
-    if (!hazard) return false;
-    const control = hazard.controlMeasures.find(c => c.id === controlId);
-    return control?.implemented || false;
-  };
-
-  const getSelectedControlsCount = (hazardId: string): number => {
-    const hazard = hazards.find(h => h.id === hazardId);
-    if (!hazard) return 0;
-    return hazard.controlMeasures.filter(c => c.implemented).length;
-  };
+  const selectedHazards = hazards.filter(h => h.selected);
 
   // =================== HANDLERS ===================
-  
   const handleHazardToggle = (hazardId: string) => {
     const updatedHazards = hazards.map(hazard => 
       hazard.id === hazardId 
@@ -958,7 +1032,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
     updateFormData(updatedHazards);
   };
 
-  const toggleControl = (hazardId: string, controlId: string) => {
+  const handleControlMeasureToggle = (hazardId: string, controlId: string) => {
     const updatedHazards = hazards.map(hazard => 
       hazard.id === hazardId 
         ? {
@@ -994,751 +1068,424 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
 
   const updateFormData = (updatedHazards: Hazard[]) => {
     const selectedList = updatedHazards.filter(h => h.selected);
-    
+    const totalControls = selectedList.reduce((sum, h) => sum + h.controlMeasures.length, 0);
+    const implementedControls = selectedList.reduce((sum, h) => 
+      sum + h.controlMeasures.filter(c => c.implemented).length, 0
+    );
+
     const hazardsData = {
       list: updatedHazards,
       selected: selectedList,
       stats: {
         totalHazards: selectedList.length,
-        totalControls: selectedList.reduce((acc, h) => acc + h.controlMeasures.length, 0),
-        implementedControls: selectedList.reduce((acc, h) => 
-          acc + h.controlMeasures.filter(c => c.implemented).length, 0
-        ),
-        implementationRate: selectedList.reduce((acc, h) => acc + h.controlMeasures.length, 0) > 0 
-          ? Math.round((selectedList.reduce((acc, h) => 
-              acc + h.controlMeasures.filter(c => c.implemented).length, 0
-            ) / selectedList.reduce((acc, h) => acc + h.controlMeasures.length, 0)) * 100)
-          : 0,
+        totalControls,
+        implementedControls,
+        implementationRate: totalControls > 0 ? Math.round((implementedControls / totalControls) * 100) : 0,
         criticalHazards: selectedList.filter(h => h.riskLevel === 'critical').length,
-        highRiskHazards: selectedList.filter(h => h.riskLevel === 'high').length,
-        categories: Array.from(new Set(selectedList.map(h => h.category)))
+        highRiskHazards: selectedList.filter(h => h.riskLevel === 'high').length
       }
     };
     
-    onDataChange('step3', { ...formData.step3, hazards: hazardsData });
+    onDataChange('hazards', hazardsData);
   };
 
-  // =================== FONCTIONS DE STYLE ===================
-  
   const getRiskColor = (level: string) => {
     switch (level) {
-      case 'critical': return '#dc2626';
-      case 'high': return '#ea580c';
-      case 'medium': return '#d97706';
-      case 'low': return '#16a34a';
-      default: return '#6b7280';
+      case 'critical': return 'red';
+      case 'high': return 'orange';
+      case 'medium': return 'yellow';
+      case 'low': return 'green';
+      default: return 'gray';
     }
   };
 
   const getRiskLabel = (level: string) => {
-    return t.riskLevels[level as keyof typeof t.riskLevels] || level;
+    switch (level) {
+      case 'critical': return '🔴 Critique';
+      case 'high': return '🟠 Élevé';
+      case 'medium': return '🟡 Moyen';
+      case 'low': return '🟢 Faible';
+      default: return '⚪ Indéterminé';
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Électrique': return '⚡';
+      case 'Mécanique': return '⚙️';
+      case 'Physique': return '🏗️';
+      case 'Chimique': return '🧪';
+      case 'Ergonomique': return '🏋️';
+      case 'Environnemental': return '🌪️';
+      case 'Psychosocial': return '🧠';
+      case 'Incendie': return '🔥';
+      case 'Transport': return '🚛';
+      default: return '⚠️';
+    }
   };
 
   const getControlCategoryColor = (category: string) => {
     switch (category) {
-      case 'elimination': return '#dc2626';
-      case 'substitution': return '#ea580c';
-      case 'engineering': return '#3b82f6';
-      case 'administrative': return '#8b5cf6';
-      case 'ppe': return '#16a34a';
-      default: return '#6b7280';
+      case 'elimination': return 'red';
+      case 'substitution': return 'orange';
+      case 'engineering': return 'blue';
+      case 'administrative': return 'purple';
+      case 'ppe': return 'green';
+      default: return 'gray';
     }
   };
 
-  const getControlCategoryIcon = (category: string) => {
+  const getControlCategoryLabel = (category: string) => {
     switch (category) {
-      case 'elimination': return '❌';
-      case 'substitution': return '🔄';
-      case 'engineering': return '🔧';
-      case 'administrative': return '📋';
-      case 'ppe': return '🛡️';
-      default: return '❓';
+      case 'elimination': return '❌ Élimination';
+      case 'substitution': return '🔄 Substitution';
+      case 'engineering': return '🔧 Ingénierie';
+      case 'administrative': return '📋 Administrative';
+      case 'ppe': return '🛡️ EPI';
+      default: return '❓ Autre';
     }
   };
 
-  // =================== EFFET POUR METTRE À JOUR LES TRADUCTIONS ===================
-  React.useEffect(() => {
-    // Mettre à jour les traductions quand la langue change
-    const translatedHazards = getHazardsList(language);
-    const updatedHazards = translatedHazards.map(translatedItem => {
-      const currentItem = hazards.find(item => item.id === translatedItem.id);
-      return currentItem ? { 
-        ...translatedItem, 
-        selected: currentItem.selected,
-        controlMeasures: translatedItem.controlMeasures.map(translatedControl => {
-          const currentControl = currentItem.controlMeasures?.find(cc => cc.id === translatedControl.id);
-          return currentControl ? { 
-            ...translatedControl, 
-            implemented: currentControl.implemented,
-            responsible: currentControl.responsible,
-            deadline: currentControl.deadline,
-            notes: currentControl.notes
-          } : translatedControl;
-        })
-      } : translatedItem;
-    });
-    setHazards(updatedHazards);
-  }, [language]);
-
-  // =================== EFFET POUR SAUVEGARDER AUTOMATIQUEMENT ===================
-  React.useEffect(() => {
-    updateFormData(hazards);
-  }, [hazards]);
-
-  // =================== COMPOSANTS UTILITAIRES ===================
-  
-  const SearchControls = () => (
-    <div style={{
-      display: 'flex',
-      gap: '15px',
-      marginBottom: '20px',
-      flexWrap: 'wrap'
-    }}>
-      <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-        <Search 
-          size={16} 
-          style={{ 
-            position: 'absolute', 
-            left: '12px', 
-            top: '50%', 
-            transform: 'translateY(-50%)', 
-            opacity: 0.6,
-            color: '#ffffff'
-          }} 
-        />
-        <input
-          type="text"
-          placeholder={t.searchPlaceholder}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            width: '100%',
-            paddingLeft: '40px',
-            padding: '12px 16px',
-            background: 'rgba(30, 41, 59, 0.8)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
-            borderRadius: '8px',
-            color: '#ffffff',
-            fontSize: '14px'
-          }}
-        />
-      </div>
-      
-      <select
-        value={filterCategory}
-        onChange={(e) => setFilterCategory(e.target.value)}
-        style={{
-          padding: '12px 16px',
-          background: 'rgba(30, 41, 59, 0.8)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          borderRadius: '8px',
-          color: '#ffffff',
-          minWidth: '150px'
-        }}
-      >
-        <option value="">{t.allCategories}</option>
-        {Object.entries(t.hazardCategories).map(([key, name]) => (
-          <option key={key} value={key}>{name}</option>
-        ))}
-      </select>
-      
-      <select
-        value={filterRisk}
-        onChange={(e) => setFilterRisk(e.target.value)}
-        style={{
-          padding: '12px 16px',
-          background: 'rgba(30, 41, 59, 0.8)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          borderRadius: '8px',
-          color: '#ffffff',
-          minWidth: '150px'
-        }}
-      >
-        <option value="">{t.allRisks}</option>
-        {Object.entries(t.riskLevels).map(([key, name]) => (
-          <option key={key} value={key}>{name}</option>
-        ))}
-      </select>
-    </div>
-  );
-
-  const StatsGrid = () => (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-      gap: '15px',
-      marginBottom: '25px'
-    }}>
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
-        padding: '15px',
-        borderRadius: '10px',
-        border: '1px solid rgba(59, 130, 246, 0.3)',
-        textAlign: 'center'
-      }}>
-        <div style={{ 
-          fontSize: '24px', 
-          fontWeight: 'bold', 
-          marginBottom: '5px',
-          color: '#f59e0b'
-        }}>
-          {filteredHazards.length}
-        </div>
-        <div style={{ fontSize: '12px', opacity: 0.8 }}>
-          {t.stats.totalHazards}
-        </div>
-      </div>
-      
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
-        padding: '15px',
-        borderRadius: '10px',
-        border: '1px solid rgba(59, 130, 246, 0.3)',
-        textAlign: 'center'
-      }}>
-        <div style={{ 
-          fontSize: '24px', 
-          fontWeight: 'bold', 
-          marginBottom: '5px',
-          color: '#dc2626'
-        }}>
-          {filteredHazards.filter(h => h.riskLevel === 'critical').length}
-        </div>
-        <div style={{ fontSize: '12px', opacity: 0.8 }}>
-          {t.stats.criticalHazards}
-        </div>
-      </div>
-      
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
-        padding: '15px',
-        borderRadius: '10px',
-        border: '1px solid rgba(59, 130, 246, 0.3)',
-        textAlign: 'center'
-      }}>
-        <div style={{ 
-          fontSize: '24px', 
-          fontWeight: 'bold', 
-          marginBottom: '5px',
-          color: '#3b82f6'
-        }}>
-          {selectedHazards.length}
-        </div>
-        <div style={{ fontSize: '12px', opacity: 0.8 }}>
-          {t.stats.selectedHazards}
-        </div>
-      </div>
-      
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
-        padding: '15px',
-        borderRadius: '10px',
-        border: '1px solid rgba(59, 130, 246, 0.3)',
-        textAlign: 'center'
-      }}>
-        <div style={{ 
-          fontSize: '24px', 
-          fontWeight: 'bold', 
-          marginBottom: '5px',
-          color: '#16a34a'
-        }}>
-          {stats.implementationRate}%
-        </div>
-        <div style={{ fontSize: '12px', opacity: 0.8 }}>
-          {t.stats.implementationRate}
-        </div>
-      </div>
-    </div>
-  );
   return (
     <>
-      {/* CSS pour le design optimisé et responsive */}
+      {/* CSS pour Step 3 */}
       <style dangerouslySetInnerHTML={{
         __html: `
-          .hazards-container { 
-            padding: 0; 
+          .step3-container { padding: 0; }
+          .summary-header { background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+          .summary-title { color: #f59e0b; font-size: 18px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+          .summary-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; margin-top: 16px; }
+          .stat-item { text-align: center; background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px; }
+          .stat-value { font-size: 20px; font-weight: 800; color: #f59e0b; margin-bottom: 4px; }
+          .stat-label { font-size: 12px; color: #d97706; font-weight: 500; }
+          .search-section { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+          .search-grid { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
+          .search-input-wrapper { position: relative; }
+          .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; z-index: 10; }
+          .search-field { width: 100%; padding: 12px 12px 12px 40px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; color: #ffffff; font-size: 14px; transition: all 0.3s ease; }
+          .search-field:focus { outline: none; border-color: #f59e0b; background: rgba(15, 23, 42, 0.9); }
+          .category-select { padding: 12px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; color: #ffffff; font-size: 14px; cursor: pointer; transition: all 0.3s ease; }
+          .category-select:focus { outline: none; border-color: #f59e0b; }
+          .hazards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+          .hazard-card { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 16px; padding: 20px; transition: all 0.3s ease; cursor: pointer; position: relative; }
+          .hazard-card:hover { transform: translateY(-4px); border-color: rgba(251, 191, 36, 0.5); box-shadow: 0 8px 25px rgba(251, 191, 36, 0.15); }
+          .hazard-card.selected { border-color: #f59e0b; background: rgba(251, 191, 36, 0.1); }
+          .hazard-card.critical::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #ef4444; border-radius: 16px 0 0 16px; }
+          .hazard-card.high::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #f97316; border-radius: 16px 0 0 16px; }
+          .hazard-card.medium::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #eab308; border-radius: 16px 0 0 16px; }
+          .hazard-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+          .hazard-icon { font-size: 28px; width: 40px; text-align: center; }
+          .hazard-content { flex: 1; }
+          .hazard-name { color: #ffffff; font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+          .hazard-category { color: #94a3b8; font-size: 12px; font-weight: 500; margin-bottom: 4px; }
+          .hazard-description { color: #cbd5e1; font-size: 13px; line-height: 1.4; }
+          .hazard-checkbox { width: 24px; height: 24px; border: 2px solid rgba(100, 116, 139, 0.5); border-radius: 6px; background: rgba(15, 23, 42, 0.8); display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
+          .hazard-checkbox.checked { background: #f59e0b; border-color: #f59e0b; color: white; }
+          .hazard-details { margin-top: 16px; display: flex; justify-content: space-between; align-items: center; }
+          .risk-badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; }
+          .legislation-info { background: rgba(59, 130, 246, 0.1); color: #60a5fa; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 500; }
+          .controls-section { margin-top: 20px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 12px; padding: 16px; }
+          .controls-header { color: #f59e0b; font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+          .controls-grid { display: grid; gap: 8px; }
+          .control-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px; background: rgba(30, 41, 59, 0.6); border-radius: 8px; transition: all 0.3s ease; }
+          .control-item:hover { background: rgba(30, 41, 59, 0.8); }
+          .control-checkbox { width: 18px; height: 18px; border: 2px solid rgba(100, 116, 139, 0.5); border-radius: 4px; background: rgba(15, 23, 42, 0.8); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; margin-top: 2px; }
+          .control-checkbox.checked { background: #22c55e; border-color: #22c55e; color: white; }
+          .control-content { flex: 1; }
+          .control-name { color: #ffffff; font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+          .control-description { color: #94a3b8; font-size: 11px; line-height: 1.3; margin-bottom: 4px; }
+          .control-meta { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+          .control-category { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 500; }
+          .priority-indicator { width: 12px; height: 12px; border-radius: 50%; }
+          .priority-1 { background: #ef4444; }
+          .priority-2 { background: #f97316; }
+          .priority-3 { background: #eab308; }
+          .control-standards { margin-top: 8px; padding: 8px; background: rgba(15, 23, 42, 0.6); border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.2); }
+          .standards-label { color: #60a5fa; font-size: 10px; font-weight: 600; margin-bottom: 6px; }
+          .standards-list { display: flex; flex-wrap: wrap; gap: 4px; }
+          .standard-item { position: relative; }
+          .standard-link { text-decoration: none; display: block; transition: all 0.2s ease; }
+          .standard-link:hover { transform: translateY(-1px); }
+          .standard-badge { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 3px 6px; display: inline-flex; align-items: center; gap: 2px; cursor: pointer; transition: all 0.2s ease; }
+          .standard-badge:hover { background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.5); }
+          .standard-name { color: #60a5fa; font-size: 9px; font-weight: 600; }
+          .mandatory-indicator { color: #ef4444; font-size: 8px; font-weight: 700; }
+          .standard-section { color: #94a3b8; font-size: 8px; text-align: center; margin-top: 1px; }
+          .standard-tooltip { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.9); color: white; padding: 8px; border-radius: 6px; font-size: 10px; white-space: nowrap; max-width: 200px; white-space: normal; opacity: 0; visibility: hidden; transition: all 0.2s ease; z-index: 1000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+          .standard-item:hover .standard-tooltip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(-8px); }
+          .control-inputs { margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+          .control-input { padding: 4px 8px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 4px; color: #ffffff; font-size: 11px; }
+          .control-input:focus { outline: none; border-color: #f59e0b; }
+          .control-input[type="date"] { 
+            background: rgba(30, 41, 59, 0.9); 
+            border: 2px solid rgba(251, 191, 36, 0.3); 
+            color: #ffffff; 
+            position: relative;
+          }
+          .control-input[type="date"]::-webkit-calendar-picker-indicator {
+            background-color: #f59e0b;
+            border-radius: 3px;
+            cursor: pointer;
+            filter: invert(1);
+            padding: 2px;
+          }
+          .control-input[type="date"]::-webkit-datetime-edit {
+            color: #ffffff;
+          }
+          .control-input[type="date"]::-webkit-datetime-edit-text {
+            color: #94a3b8;
+          }
+          .control-input[type="date"]::-webkit-datetime-edit-month-field,
+          .control-input[type="date"]::-webkit-datetime-edit-day-field,
+          .control-input[type="date"]::-webkit-datetime-edit-year-field {
             color: #ffffff;
             background: transparent;
           }
-          
-          .hazards-header {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(59, 130, 246, 0.3);
+          .control-input[type="date"]:hover {
+            border-color: rgba(251, 191, 36, 0.6);
+            background: rgba(30, 41, 59, 1);
           }
-          
-          .hazards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 20px;
+          .control-input[type="date"]:focus {
+            border-color: #f59e0b;
+            background: rgba(30, 41, 59, 1);
+            box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2);
           }
-          
-          .hazard-card {
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
-            border-radius: 12px;
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            overflow: hidden;
-            transition: all 0.3s ease;
-            cursor: pointer;
-          }
-          
-          .hazard-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(59, 130, 246, 0.6);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-          }
-          
-          .hazard-card.selected {
-            border-color: #3b82f6;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-          }
-          
-          .hazard-header {
-            padding: 15px;
-            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
-          }
-          
-          .hazard-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-          }
-          
-          .hazard-name {
-            font-weight: bold;
-            font-size: 16px;
-            flex: 1;
-          }
-          
-          .risk-badge {
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: bold;
-            text-transform: uppercase;
-            color: white;
-          }
-          
-          .hazard-description {
-            font-size: 13px;
-            opacity: 0.9;
-            line-height: 1.4;
-            margin-bottom: 8px;
-          }
-          
-          .hazard-legislation {
-            font-size: 11px;
-            opacity: 0.7;
-            font-style: italic;
-          }
-          
-          .controls-section {
-            padding: 15px;
-          }
-          
-          .controls-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-            font-weight: bold;
-            font-size: 14px;
-          }
-          
-          .controls-grid {
-            display: grid;
-            gap: 8px;
-          }
-          
-          .control-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 12px;
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 6px;
-            border: 1px solid transparent;
-            transition: all 0.2s ease;
-            cursor: pointer;
-          }
-          
-          .control-item:hover {
-            border-color: rgba(59, 130, 246, 0.4);
-            background: rgba(15, 23, 42, 0.8);
-          }
-          
-          .control-item.implemented {
-            border-color: #3b82f6;
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%);
-          }
-          
-          .control-info {
-            flex: 1;
-          }
-          
-          .control-name {
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 2px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-          }
-          
-          .control-description {
-            font-size: 11px;
-            opacity: 0.7;
-            line-height: 1.3;
-          }
-          
-          .control-checkbox {
-            width: 18px;
-            height: 18px;
-            border-radius: 4px;
-            border: 2px solid rgba(59, 130, 246, 0.5);
-            background: transparent;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            flex-shrink: 0;
-          }
-          
-          .control-checkbox.checked {
-            background: #3b82f6;
-            border-color: #3b82f6;
-          }
-          
-          .standards-section {
-            margin-top: 25px;
-            padding: 20px;
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
-            border-radius: 12px;
-            border: 1px solid rgba(59, 130, 246, 0.3);
-          }
-          
-          .standards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-          }
-          
-          .standard-card {
-            padding: 12px;
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 8px;
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            transition: all 0.2s ease;
-          }
-          
-          .standard-card:hover {
-            border-color: rgba(59, 130, 246, 0.5);
-            transform: translateY(-1px);
-          }
-          
-          .standard-name {
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 4px;
-            color: #60a5fa;
-          }
-          
-          .standard-description {
-            font-size: 12px;
-            opacity: 0.8;
-            line-height: 1.3;
-            margin-bottom: 8px;
-          }
-          
-          .standard-link {
-            font-size: 11px;
-            color: #3b82f6;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-          }
-          
-          .standard-link:hover {
-            text-decoration: underline;
-          }
-          
-          .no-hazards {
-            text-align: center;
-            padding: 40px 20px;
-            opacity: 0.7;
-          }
-          
-          .no-hazards-icon {
-            margin-bottom: 15px;
-            opacity: 0.5;
-          }
-          
+          .no-results { text-align: center; padding: 60px 20px; color: #94a3b8; background: rgba(30, 41, 59, 0.6); border-radius: 16px; border: 1px solid rgba(100, 116, 139, 0.3); }
           @media (max-width: 768px) {
-            .hazards-container {
-              padding: 0 10px;
-            }
-            
-            .hazards-grid {
-              grid-template-columns: 1fr;
-              gap: 15px;
-            }
-            
-            .standards-grid {
-              grid-template-columns: 1fr;
-              gap: 10px;
-            }
-            
-            .hazard-title {
-              flex-direction: column;
-              align-items: flex-start;
-              gap: 8px;
-            }
-          }
-          
-          @media (max-width: 480px) {
-            .hazard-header,
-            .controls-section {
-              padding: 12px;
-            }
-            
-            .standards-section {
-              padding: 15px;
-            }
+            .hazards-grid { grid-template-columns: 1fr; gap: 16px; }
+            .search-grid { grid-template-columns: 1fr; gap: 8px; }
+            .summary-stats { grid-template-columns: repeat(2, 1fr); }
+            .control-inputs { grid-template-columns: 1fr; }
           }
         `
       }} />
 
-      <div className="hazards-container">
-        {/* Header avec titre */}
-        <div className="hazards-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '15px' }}>
-            <AlertTriangle size={24} color="#f59e0b" />
-            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>
-              {t.title}
-            </h2>
+      <div className="step3-container">
+        {/* En-tête avec résumé */}
+        <div className="summary-header">
+          <div className="summary-title">
+            <AlertTriangle size={24} />
+            ⚠️ Identification des Dangers & Risques
           </div>
-          <p style={{ margin: 0, opacity: 0.9, fontSize: '14px' }}>
-            {t.subtitle}
-          </p>
-        </div>
-
-        {/* Contrôles de recherche */}
-        <SearchControls />
-
-        {/* Statistiques */}
-        <StatsGrid />
-
-        {/* Grille des dangers */}
-        {filteredHazards.length > 0 ? (
-          <div className="hazards-grid">
-            {filteredHazards.map((hazard) => {
-              const isSelected = hazard.selected;
-              
-              return (
-                <div 
-                  key={hazard.id}
-                  className={`hazard-card ${isSelected ? 'selected' : ''}`}
-                  onClick={() => handleHazardToggle(hazard.id)}
-                >
-                  {/* Header du danger */}
-                  <div className="hazard-header">
-                    <div className="hazard-title">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                        <span style={{ fontSize: '20px' }}>
-                          {getCategoryIcon(hazard.category)}
-                        </span>
-                        <span className="hazard-name">{hazard.name}</span>
-                      </div>
-                      <div 
-                        className="risk-badge"
-                        style={{ 
-                          backgroundColor: getRiskColor(hazard.riskLevel)
-                        }}
-                      >
-                        {getRiskLabel(hazard.riskLevel)}
-                      </div>
-                    </div>
-                    <p className="hazard-description">
-                      {hazard.description}
-                    </p>
-                    <p className="hazard-legislation">
-                      📋 {hazard.legislation}
-                    </p>
-                  </div>
-
-                  {/* Section des contrôles - seulement si sélectionné */}
-                  {isSelected && (
-                    <div className="controls-section">
-                      <div className="controls-title">
-                        <Shield size={16} color="#3b82f6" />
-                        <span>{t.controlMeasures}</span>
-                        <span style={{ 
-                          fontSize: '12px', 
-                          opacity: 0.7,
-                          marginLeft: 'auto'
-                        }}>
-                          {getSelectedControlsCount(hazard.id)}/{hazard.controlMeasures.length}
-                        </span>
-                      </div>
-                      
-                      <div className="controls-grid">
-                        {hazard.controlMeasures.map((control) => {
-                          const isImplemented = isControlImplemented(hazard.id, control.id);
-                          
-                          return (
-                            <div
-                              key={control.id}
-                              className={`control-item ${isImplemented ? 'implemented' : ''}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleControl(hazard.id, control.id);
-                              }}
-                            >
-                              <div className="control-info">
-                                <div className="control-name">
-                                  <span style={{ color: getControlCategoryColor(control.category) }}>
-                                    {getControlCategoryIcon(control.category)}
-                                  </span>
-                                  {control.name}
-                                </div>
-                                <div className="control-description">
-                                  {control.description}
-                                </div>
-                              </div>
-                              <div className={`control-checkbox ${isImplemented ? 'checked' : ''}`}>
-                                {isImplemented && <CheckCircle size={12} color="white" />}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="no-hazards">
-            <div className="no-hazards-icon">
-              <AlertTriangle size={48} color="#6b7280" />
-            </div>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>
-              {t.noHazardsFound}
-            </h3>
-            <p style={{ margin: 0, opacity: 0.7 }}>
-              {t.noHazardsMessage}
-            </p>
-          </div>
-        )}
-
-        {/* Section Standards et Normes */}
-        <div className="standards-section">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-            <BarChart3 size={20} color="#3b82f6" />
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>
-              {t.standards.title}
-            </h3>
-          </div>
-          <p style={{ margin: '0 0 15px 0', opacity: 0.8, fontSize: '13px' }}>
-            {t.standards.description}
+          <p style={{ color: '#d97706', margin: '0 0 8px', fontSize: '14px' }}>
+            Sélectionnez les dangers potentiels et définissez les moyens de contrôle requis
           </p>
           
-          <div className="standards-grid">
-            {standards.map((standard, index) => (
-              <div key={index} className="standard-card">
-                <div className="standard-name">{standard.name}</div>
-                <div className="standard-description">{standard.description}</div>
-                <a 
-                  href={standard.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="standard-link"
-                >
-                  <Eye size={12} />
-                  {t.standards.viewDocument}
-                </a>
+          {selectedHazards.length > 0 && (
+            <div className="summary-stats">
+              <div className="stat-item">
+                <div className="stat-value">{selectedHazards.length}</div>
+                <div className="stat-label">Dangers identifiés</div>
               </div>
-            ))}
+              <div className="stat-item">
+                <div className="stat-value">{selectedHazards.filter(h => h.riskLevel === 'critical' || h.riskLevel === 'high').length}</div>
+                <div className="stat-label">Risques élevés</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">
+                  {selectedHazards.reduce((sum, h) => sum + h.controlMeasures.filter(c => c.implemented).length, 0)}
+                </div>
+                <div className="stat-label">Contrôles implantés</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">
+                  {selectedHazards.reduce((sum, h) => sum + h.controlMeasures.length, 0) > 0 
+                    ? Math.round((selectedHazards.reduce((sum, h) => sum + h.controlMeasures.filter(c => c.implemented).length, 0) / 
+                        selectedHazards.reduce((sum, h) => sum + h.controlMeasures.length, 0)) * 100)
+                    : 0}%
+                </div>
+                <div className="stat-label">Taux d'implantation</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Section de recherche */}
+        <div className="search-section">
+          <div className="search-grid">
+            <div className="search-input-wrapper">
+              <Search className="search-icon" size={18} />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Rechercher un danger..."
+                className="search-field"
+              />
+            </div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="category-select"
+            >
+              <option value="all">Toutes catégories ({hazards.length})</option>
+              {categories.map(category => {
+                const count = hazards.filter(h => h.category === category).length;
+                return (
+                  <option key={category} value={category}>
+                    {getCategoryIcon(category)} {category} ({count})
+                  </option>
+                );
+              })}
+            </select>
           </div>
         </div>
 
-        {/* Résumé des dangers sélectionnés */}
-        {selectedHazards.length > 0 && (
-          <div style={{
-            marginTop: '25px',
-            padding: '20px',
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            borderRadius: '12px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-              <CheckCircle size={20} color="#10b981" />
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#10b981' }}>
-                Résumé des dangers identifiés
-              </h3>
-            </div>
+        {/* Grille des dangers */}
+        <div className="hazards-grid">
+          {filteredHazards.map(hazard => {
+            const isSelected = hazard.selected;
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-              <div>
-                <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '5px' }}>Dangers sélectionnés:</div>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#3b82f6' }}>
-                  {selectedHazards.length}
+            return (
+              <div 
+                key={hazard.id} 
+                className={`hazard-card ${isSelected ? 'selected' : ''} ${hazard.riskLevel}`}
+              >
+                {/* Header avec sélection */}
+                <div className="hazard-header" onClick={() => handleHazardToggle(hazard.id)}>
+                  <div className="hazard-icon">{hazard.icon}</div>
+                  <div className="hazard-content">
+                    <h3 className="hazard-name">{hazard.name}</h3>
+                    <div className="hazard-category">{getCategoryIcon(hazard.category)} {hazard.category}</div>
+                    <div className="hazard-description">{hazard.description}</div>
+                  </div>
+                  <div className={`hazard-checkbox ${isSelected ? 'checked' : ''}`}>
+                    {isSelected && <CheckCircle size={18} />}
+                  </div>
                 </div>
-              </div>
-              
-              <div>
-                <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '5px' }}>Contrôles identifiés:</div>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#f59e0b' }}>
-                  {stats.totalControls}
-                </div>
-              </div>
-              
-              <div>
-                <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '5px' }}>Contrôles implantés:</div>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>
-                  {stats.implementedControls}
-                </div>
-              </div>
-              
-              <div>
-                <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '5px' }}>Taux d'implantation:</div>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: stats.implementationRate >= 80 ? '#10b981' : stats.implementationRate >= 50 ? '#f59e0b' : '#dc2626' }}>
-                  {stats.implementationRate}%
-                </div>
-              </div>
-            </div>
 
-            {/* Liste des catégories sélectionnées */}
-            <div style={{ marginTop: '15px' }}>
-              <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '8px' }}>Catégories de dangers identifiées:</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {Array.from(new Set(selectedHazards.map(h => h.category))).map(category => (
-                  <span 
-                    key={category}
-                    style={{
-                      padding: '4px 12px',
-                      background: 'rgba(59, 130, 246, 0.2)',
-                      border: '1px solid rgba(59, 130, 246, 0.3)',
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
+                {/* Détails du danger */}
+                <div className="hazard-details">
+                  <div 
+                    className="risk-badge"
+                    style={{ 
+                      background: `rgba(${getRiskColor(hazard.riskLevel) === 'red' ? '239, 68, 68' : 
+                                          getRiskColor(hazard.riskLevel) === 'orange' ? '249, 115, 22' :
+                                          getRiskColor(hazard.riskLevel) === 'yellow' ? '234, 179, 8' : '34, 197, 94'}, 0.2)`,
+                      color: getRiskColor(hazard.riskLevel) === 'red' ? '#f87171' : 
+                             getRiskColor(hazard.riskLevel) === 'orange' ? '#fb923c' :
+                             getRiskColor(hazard.riskLevel) === 'yellow' ? '#facc15' : '#4ade80'
                     }}
                   >
-                    {getCategoryIcon(category)}
-                    {category}
-                  </span>
-                ))}
+                    {getRiskLabel(hazard.riskLevel)}
+                  </div>
+                  <div className="legislation-info">{hazard.legislation}</div>
+                </div>
+
+                {/* Section moyens de contrôle (si sélectionné) */}
+                {isSelected && (
+                  <div className="controls-section">
+                    <div className="controls-header">
+                      <Shield size={16} />
+                      Moyens de contrôle ({hazard.controlMeasures.filter(c => c.implemented).length}/{hazard.controlMeasures.length})
+                    </div>
+                    
+                    <div className="controls-grid">
+                      {hazard.controlMeasures
+                        .sort((a, b) => a.priority - b.priority)
+                        .map(control => (
+                          <div key={control.id} className="control-item">
+                            <div 
+                              className={`control-checkbox ${control.implemented ? 'checked' : ''}`}
+                              onClick={() => handleControlMeasureToggle(hazard.id, control.id)}
+                            >
+                              {control.implemented && <CheckCircle size={12} />}
+                            </div>
+                            
+                            <div className="control-content">
+                              <div className="control-name">{control.name}</div>
+                              <div className="control-description">{control.description}</div>
+                              
+                              <div className="control-meta">
+                                <div 
+                                  className="control-category"
+                                  style={{ 
+                                    background: `rgba(${getControlCategoryColor(control.category) === 'red' ? '239, 68, 68' : 
+                                                        getControlCategoryColor(control.category) === 'orange' ? '249, 115, 22' :
+                                                        getControlCategoryColor(control.category) === 'blue' ? '59, 130, 246' :
+                                                        getControlCategoryColor(control.category) === 'purple' ? '147, 51, 234' :
+                                                        getControlCategoryColor(control.category) === 'green' ? '34, 197, 94' : '107, 114, 128'}, 0.2)`,
+                                    color: getControlCategoryColor(control.category) === 'red' ? '#f87171' : 
+                                           getControlCategoryColor(control.category) === 'orange' ? '#fb923c' :
+                                           getControlCategoryColor(control.category) === 'blue' ? '#60a5fa' :
+                                           getControlCategoryColor(control.category) === 'purple' ? '#a78bfa' :
+                                           getControlCategoryColor(control.category) === 'green' ? '#4ade80' : '#9ca3af'
+                                  }}
+                                >
+                                  {getControlCategoryLabel(control.category)}
+                                </div>
+                                <div 
+                                  className={`priority-indicator priority-${control.priority}`}
+                                  title={`Priorité ${control.priority}`}
+                                />
+                              </div>
+
+                              {/* Standards/Normes associées */}
+                              {control.standards && control.standards.length > 0 && (
+                                <div className="control-standards">
+                                  <div className="standards-label">📋 Normes & Références :</div>
+                                  <div className="standards-list">
+                                    {control.standards.map((standard, index) => (
+                                      <div key={standard.id} className="standard-item">
+                                        <a
+                                          href={standard.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="standard-link"
+                                          title={`${standard.fullName} - ${standard.description}`}
+                                        >
+                                          <div className="standard-badge">
+                                            <span className="standard-name">{standard.name}</span>
+                                            {standard.mandatory && <span className="mandatory-indicator">*</span>}
+                                          </div>
+                                          <div className="standard-section">{standard.section}</div>
+                                        </a>
+                                        <div className="standard-tooltip">
+                                          <strong>{standard.fullName}</strong><br/>
+                                          {standard.description}<br/>
+                                          <em>{standard.mandatory ? 'Obligatoire' : 'Recommandé'}</em>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Inputs additionnels si contrôle sélectionné */}
+                              {control.implemented && (
+                                <div className="control-inputs">
+                                  <input
+                                    type="text"
+                                    value={control.responsible || ''}
+                                    onChange={(e) => updateControlMeasure(hazard.id, control.id, 'responsible', e.target.value)}
+                                    placeholder="Responsable..."
+                                    className="control-input"
+                                  />
+                                  <input
+                                    type="date"
+                                    value={control.deadline || ''}
+                                    onChange={(e) => updateControlMeasure(hazard.id, control.id, 'deadline', e.target.value)}
+                                    className="control-input"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            );
+          })}
+        </div>
+
+        {/* Message si aucun résultat */}
+        {filteredHazards.length === 0 && (
+          <div className="no-results">
+            <AlertTriangle size={48} style={{ margin: '0 auto 16px', color: '#64748b' }} />
+            <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>Aucun danger trouvé</h3>
+            <p style={{ margin: 0 }}>Modifiez vos critères de recherche pour voir plus de dangers</p>
           </div>
         )}
       </div>
