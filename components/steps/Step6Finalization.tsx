@@ -66,7 +66,7 @@ type ApprobationStatus = 'pending' | 'approved' | 'rejected';
 type LockType = 'temporary' | 'permanent' | 'review';
 type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'facebook';
 // =================== COMPOSANT PRINCIPAL ===================
-export default function Step6Finalization({ 
+function Step6Finalization({ 
   formData, 
   onDataChange, 
   language,
@@ -1292,7 +1292,7 @@ Lien d'accès: ${shareLink}`);
     <>
       {/* Injection CSS thème sombre optimisé */}
       <style dangerouslySetInnerHTML={{ __html: darkThemeCSS }} />
-      <div className="step6-container">
+    <div className="step6-container">
         {/* Header avec logo */}
         <div className="finalization-header">
           <h2 className="finalization-title">🛡️ Finalisation AST</h2>
@@ -1697,7 +1697,7 @@ Lien d'accès: ${shareLink}`);
             </div>
           </div>
         )}
-        {/* MODAL AJOUT TRAVAILLEUR OPTIMISÉ */}
+      {/* MODAL AJOUT TRAVAILLEUR OPTIMISÉ */}
         {showAddWorker && (
           <div className="modal-overlay">
             <div className="modal-content">
