@@ -431,6 +431,72 @@ const translations = {
       excavation: 'Excavation',
       safety: 'Sécurité'
     }
+  },
+  en: {
+    title: 'Real Permits & Authorizations',
+    subtitle: 'Authentic permit forms used in Canada',
+    searchPlaceholder: 'Search permits...',
+    allCategories: 'All categories',
+    allProvinces: 'All provinces',
+    selectedPermits: 'Selected permits',
+    fillForm: 'Fill form',
+    viewForm: 'View form',
+    saveForm: 'Save',
+    submitForm: 'Submit',
+    printForm: 'Print',
+    categories: {
+      'Sécurité': 'Safety',
+      'Construction': 'Construction',
+      'Radioprotection': 'Radiation Protection',
+      'Équipements': 'Equipment'
+    },
+    priorities: {
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High',
+      critical: 'Critical'
+    },
+    statuses: {
+      pending: 'Pending',
+      submitted: 'Submitted',
+      approved: 'Approved',
+      rejected: 'Rejected',
+      expired: 'Expired'
+    },
+    sections: {
+      identification: 'Identification',
+      applicant: 'Applicant',
+      access: 'Access',
+      lockout: 'Lockout',
+      atmosphere: 'Atmosphere',
+      monitoring: 'Monitoring',
+      ventilation: 'Ventilation',
+      work: 'Work',
+      hazards: 'Hazards',
+      ppe: 'PPE',
+      rescue: 'Rescue',
+      communication: 'Communication',
+      signatures: 'Signatures',
+      activities: 'Activities',
+      radiation_protection: 'Radiation Protection',
+      security: 'Security',
+      waste: 'Waste',
+      emergency: 'Emergency',
+      documents: 'Documents',
+      declarations: 'Declarations',
+      candidate: 'Candidate',
+      experience: 'Experience',
+      training: 'Training',
+      permit_type: 'Permit Type',
+      owner: 'Owner',
+      project: 'Project',
+      construction_type: 'Construction Type',
+      specifications: 'Specifications',
+      work_type: 'Work Type',
+      precautions: 'Precautions',
+      excavation: 'Excavation',
+      safety: 'Safety'
+    }
   }
 };
 
