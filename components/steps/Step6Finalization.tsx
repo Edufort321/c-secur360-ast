@@ -58,13 +58,14 @@ interface FinalizationStepProps {
   onDataChange: (section: string, data: FinalizationData) => void;
   language: string;
   tenant: string;
-  errors?: any; // ← AJOUT DE LA PROP ERRORS OPTIONNELLE
+  errors?: any;
 }
 
 // =================== TYPES DE SÉCURITÉ ===================
 type ApprobationStatus = 'pending' | 'approved' | 'rejected';
 type LockType = 'temporary' | 'permanent' | 'review';
 type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'facebook';
+// =================== COMPOSANT PRINCIPAL ===================
 export default function Step6Finalization({ 
   formData, 
   onDataChange, 
@@ -96,7 +97,7 @@ export default function Step6Finalization({
     approbationStatus: 'pending'
   });
 
-  // État finalisation
+  // État finalisation avec thème sombre
   const [finalizationData, setFinalizationData] = useState<FinalizationData>({
     workers: [],
     photos: [],
@@ -172,7 +173,6 @@ export default function Step6Finalization({
     }));
     console.log(`✅ Approbation ${status} pour travailleur:`, workerId);
   };
-
   // =================== HANDLERS PARTAGE SIMPLE ===================
   const shareViaEmail = () => {
     const subject = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}`);
@@ -216,7 +216,34 @@ Lien d'accès: ${shareLink}`);
       alert('❌ Erreur lors de la copie du lien');
     }
   };
-  // =================== FONCTION D'IMPRESSION COMPLÈTE AVEC LOGO ===================
+
+  // =================== HANDLERS AUTRES ===================
+  const lockAST = (lockType: LockType) => {
+    setFinalizationData(prev => ({
+      ...prev,
+      isLocked: true,
+      lockTimestamp: new Date().toISOString(),
+      lockReason: lockType
+    }));
+    setShowLockConfirm(false);
+    console.log(`🔒 AST verrouillée (${lockType})`);
+    alert(`✅ AST verrouillée avec succès (${lockType})`);
+  };
+
+  // =================== FONCTIONS UTILITAIRES ===================
+  const getIndustryLabel = (industry: string) => {
+    const labels = {
+      'electrical': '⚡ Électrique',
+      'construction': '🏗️ Construction', 
+      'industrial': '🏭 Industriel',
+      'manufacturing': '⚙️ Manufacturier',
+      'office': '🏢 Bureau/Administratif',
+      'other': '🔧 Autre'
+    };
+    return labels[industry as keyof typeof labels] || industry || 'Non spécifié';
+  };
+
+  // =================== FONCTION D'IMPRESSION COMPLÈTE ===================
   const printAST = () => {
     console.log('🖨️ Génération du rapport AST professionnel complet...');
     setIsLoading(true);
@@ -242,7 +269,7 @@ Lien d'accès: ${shareLink}`);
       }
     }, 500);
   };
-
+  // =================== GÉNÉRATION RAPPORT AST COMPLET ===================
   const generateCompleteAST = () => {
     const currentDate = new Date().toLocaleDateString('fr-CA');
     const currentTime = new Date().toLocaleTimeString('fr-CA');
@@ -305,12 +332,6 @@ Lien d'accès: ${shareLink}`);
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-        
-        .logo-container img {
-            width: 50px;
-            height: 50px;
-            object-fit: contain;
         }
         
         .logo-fallback {
@@ -414,45 +435,37 @@ Lien d'accès: ${shareLink}`);
             gap: 6px;
         }
         
-        .hazard-item, .equipment-item, .permit-item {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 10px;
+        .stats-summary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
         }
         
-        .hazard-high { border-left: 4px solid #dc2626; background: #fef2f2; }
-        .hazard-medium { border-left: 4px solid #f59e0b; background: #fffbeb; }
-        .hazard-low { border-left: 4px solid #10b981; background: #f0fdf4; }
-        
-        .lockout-point {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            border-left: 4px solid #dc2626;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 15px;
-        }
-        
-        .procedures-grid {
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 8px;
-            margin-top: 8px;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
         }
         
-        .procedure-item {
+        .stat-item {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+        }
+        
+        .stat-number {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .stat-label {
             font-size: 10px;
-            padding: 4px 8px;
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            border-radius: 4px;
-        }
-        
-        .procedure-completed {
-            background: #dcfce7;
-            border-color: #16a34a;
+            opacity: 0.9;
+            margin-top: 4px;
         }
         
         .workers-table {
@@ -519,47 +532,13 @@ Lien d'accès: ${shareLink}`);
         .badge-success { background: #dcfce7; color: #166534; }
         .badge-warning { background: #fef3c7; color: #92400e; }
         .badge-danger { background: #fee2e2; color: #991b1b; }
-        
-        .stats-summary {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
-            margin-top: 10px;
-        }
-        
-        .stat-item {
-            text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 6px;
-        }
-        
-        .stat-number {
-            font-size: 20px;
-            font-weight: bold;
-        }
-        
-        .stat-label {
-            font-size: 10px;
-            opacity: 0.9;
-            margin-top: 4px;
-        }
     </style>
 </head>
 <body>
     <!-- EN-TÊTE AVEC LOGO -->
     <div class="header">
         <div class="logo-container">
-            <img src="/c-secur360-logo.png" alt="C-Secur360" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
-            <div class="logo-fallback" style="display: none;">C🛡️</div>
+            <div class="logo-fallback">C🛡️</div>
         </div>
         <h1>🛡️ ANALYSE SÉCURITAIRE DE TRAVAIL (AST)</h1>
         <div class="subtitle">Rapport Officiel Complet - ${tenant} | N° ${astNumber}</div>
@@ -609,10 +588,6 @@ Lien d'accès: ${shareLink}`);
                 <span class="info-value">${formData.projectInfo?.projectNumber || 'Non spécifié'}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">AST Client #:</span>
-                <span class="info-value">${formData.projectInfo?.astClientNumber || 'N/A'}</span>
-            </div>
-            <div class="info-row">
                 <span class="info-label">Lieu:</span>
                 <span class="info-value">${formData.projectInfo?.workLocation || 'Non spécifié'}</span>
             </div>
@@ -641,25 +616,12 @@ Lien d'accès: ${shareLink}`);
                 <span class="info-value">${formData.projectInfo?.clientRepresentative || 'Non spécifié'}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Tél. client:</span>
-                <span class="info-value">${formData.projectInfo?.clientPhone || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
                 <span class="info-label">Urgence:</span>
                 <span class="info-value">${formData.projectInfo?.emergencyContact || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Tél. urgence:</span>
-                <span class="info-value">${formData.projectInfo?.emergencyPhone || '911'}</span>
             </div>
         </div>
     </div>
 
-    ${generateStep1Section()}
-    ${generateStep2Section()}
-    ${generateStep3Section()}
-    ${generateStep4Section()}
-    ${generateStep5Section()}
     ${generateStep6Section()}
     ${generateSignatureSection()}
 
@@ -672,400 +634,6 @@ Lien d'accès: ${shareLink}`);
 </body>
 </html>`;
   };
-
-  // =================== FONCTIONS GÉNÉRATION SECTIONS COMPLÈTES ===================
-  const getIndustryLabel = (industry: string) => {
-    const labels = {
-      'electrical': '⚡ Électrique',
-      'construction': '🏗️ Construction', 
-      'industrial': '🏭 Industriel',
-      'manufacturing': '⚙️ Manufacturier',
-      'office': '🏢 Bureau/Administratif',
-      'other': '🔧 Autre'
-    };
-    return labels[industry as keyof typeof labels] || industry || 'Non spécifié';
-  };
-  // =================== GÉNÉRATION STEP 1: INFORMATIONS PROJET + LOTO ===================
-  const generateStep1Section = () => {
-    const projectInfo = formData.projectInfo || {};
-    const lockoutPoints = projectInfo.lockoutPoints || [];
-    const lockoutPhotos = projectInfo.lockoutPhotos || [];
-    
-    const lockoutPointsHtml = lockoutPoints.map((point: any, index: number) => {
-      const energyTypes = {
-        electrical: { name: 'Électrique', icon: '⚡', color: '#fbbf24' },
-        mechanical: { name: 'Mécanique', icon: '⚙️', color: '#6b7280' },
-        hydraulic: { name: 'Hydraulique', icon: '💧', color: '#3b82f6' },
-        pneumatic: { name: 'Pneumatique', icon: '💨', color: '#10b981' },
-        chemical: { name: 'Chimique', icon: '⚠️', color: '#f59e0b' },
-        thermal: { name: 'Thermique', icon: '🔥', color: '#ef4444' },
-        gravity: { name: 'Gravité', icon: '🔧', color: '#8b5cf6' }
-      };
-      
-      const energyType = energyTypes[point.energyType as keyof typeof energyTypes] || { name: 'Inconnu', icon: '❓', color: '#6b7280' };
-      const completedProcedures = point.completedProcedures || [];
-      const totalProcedures = 6; // Nombre standard de procédures
-      const progress = Math.round((completedProcedures.length / totalProcedures) * 100);
-      
-      return `
-        <div class="lockout-point">
-          <div class="subsection-title">
-            🔒 Point de Verrouillage #${index + 1} - ${energyType.icon} ${energyType.name}
-          </div>
-          <div class="info-row">
-            <span class="info-label">Équipement:</span>
-            <span class="info-value">${point.equipmentName || 'Non spécifié'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Localisation:</span>
-            <span class="info-value">${point.location || 'Non spécifiée'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Type de cadenas:</span>
-            <span class="info-value">${point.lockType || 'Non spécifié'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Numéro étiquette:</span>
-            <span class="info-value">${point.tagNumber || 'Non spécifié'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Vérifié par:</span>
-            <span class="info-value">${point.verifiedBy || 'Non spécifié'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Heure vérification:</span>
-            <span class="info-value">${point.verificationTime || 'Non spécifiée'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Procédures complétées:</span>
-            <span class="info-value">${completedProcedures.length}/${totalProcedures} (${progress}%)</span>
-          </div>
-          ${point.notes ? `
-            <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
-              <strong>Notes:</strong> ${point.notes}
-            </div>
-          ` : ''}
-        </div>
-      `;
-    }).join('');
-
-    return `
-    <div class="section page-break">
-        <div class="section-header">
-            <div class="section-title">🏗️ STEP 1: INFORMATIONS PROJET & VERROUILLAGE</div>
-        </div>
-        <div class="section-content">
-            ${projectInfo.workDescription ? `
-                <div class="subsection">
-                    <div class="subsection-title">📝 Description des Travaux</div>
-                    <div style="white-space: pre-wrap; line-height: 1.5;">${projectInfo.workDescription}</div>
-                </div>
-            ` : ''}
-            
-            ${lockoutPoints.length > 0 ? `
-                <div class="subsection">
-                    <div class="subsection-title">🔒 Points de Verrouillage/Cadenassage (LOTO)</div>
-                    ${lockoutPointsHtml}
-                </div>
-            ` : ''}
-            
-            ${lockoutPhotos.length > 0 ? `
-                <div class="subsection">
-                    <div class="subsection-title">📷 Documentation Photographique LOTO</div>
-                    <div style="color: #6b7280; font-size: 10px;">
-                        ${lockoutPhotos.length} photo(s) documentée(s) pour les procédures de verrouillage
-                    </div>
-                </div>
-            ` : ''}
-        </div>
-    </div>`;
-  };
-
-  // =================== GÉNÉRATION STEP 2: ÉQUIPEMENTS ===================
-  const generateStep2Section = () => {
-    const equipment = formData.equipment || {};
-    const selectedEquipment = equipment.selectedEquipment || [];
-    const customEquipment = equipment.customEquipment || [];
-    const allEquipment = [...selectedEquipment, ...customEquipment];
-    
-    if (allEquipment.length === 0) return '';
-    
-    const equipmentHtml = allEquipment.map((item: any, index: number) => `
-        <div class="equipment-item">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <strong>#${index + 1} - ${item.name || item.equipmentName || 'Équipement'}</strong>
-                <span class="badge badge-${item.condition === 'excellent' || item.condition === 'good' ? 'success' : 
-                                            item.condition === 'fair' || item.condition === 'average' ? 'warning' : 'danger'}">
-                    ${(item.condition || 'unknown').toUpperCase()}
-                </span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Type:</span>
-                <span class="info-value">${item.type || item.category || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Marque/Modèle:</span>
-                <span class="info-value">${item.brand || item.model || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Numéro série:</span>
-                <span class="info-value">${item.serialNumber || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Date inspection:</span>
-                <span class="info-value">${item.inspectionDate || item.lastInspection || 'Non inspectée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Prochaine inspection:</span>
-                <span class="info-value">${item.nextInspection || 'Non programmée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Certification:</span>
-                <span class="info-value">${item.certification || item.certifications || 'Non certifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Responsable:</span>
-                <span class="info-value">${item.responsiblePerson || 'Non assigné'}</span>
-            </div>
-            ${item.notes || item.specialInstructions ? `
-                <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
-                    <strong>Remarques:</strong> ${item.notes || item.specialInstructions}
-                </div>
-            ` : ''}
-            ${item.requiredPPE ? `
-                <div style="margin-top: 8px; padding: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px;">
-                    <strong>EPI requis:</strong> ${item.requiredPPE}
-                </div>
-            ` : ''}
-        </div>
-    `).join('');
-    
-    return `
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title">🔧 STEP 2: ÉQUIPEMENTS ET OUTILS (${allEquipment.length})</div>
-        </div>
-        <div class="section-content">
-            ${equipmentHtml}
-        </div>
-    </div>`;
-  };
-
-  // =================== GÉNÉRATION STEP 3: DANGERS ===================
-  const generateStep3Section = () => {
-    const hazards = formData.hazards || {};
-    const identifiedHazards = hazards.identifiedHazards || [];
-    const customHazards = hazards.customHazards || [];
-    const allHazards = [...identifiedHazards, ...customHazards];
-    
-    if (allHazards.length === 0) return '';
-    
-    const hazardsHtml = allHazards.map((hazard: any, index: number) => `
-        <div class="hazard-item hazard-${(hazard.riskLevel || hazard.severity || 'low').toLowerCase()}">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <strong>#${index + 1} - ${hazard.name || hazard.hazardName || 'Danger'}</strong>
-                <span class="badge badge-${
-                    (hazard.riskLevel === 'high' || hazard.severity === 'high') ? 'danger' : 
-                    (hazard.riskLevel === 'medium' || hazard.severity === 'medium') ? 'warning' : 'success'
-                }">
-                    ${(hazard.riskLevel || hazard.severity || 'faible').toUpperCase()}
-                </span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Catégorie:</span>
-                <span class="info-value">${hazard.category || hazard.type || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Source du danger:</span>
-                <span class="info-value">${hazard.source || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Probabilité:</span>
-                <span class="info-value">${hazard.probability || hazard.likelihood || 'Non évaluée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Gravité:</span>
-                <span class="info-value">${hazard.severity || hazard.impact || 'Non évaluée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Score de risque:</span>
-                <span class="info-value">${hazard.riskScore || 'Non calculé'}</span>
-            </div>
-            ${hazard.description || hazard.hazardDescription ? `
-                <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
-                    <strong>Description:</strong> ${hazard.description || hazard.hazardDescription}
-                </div>
-            ` : ''}
-            ${hazard.controlMeasures || hazard.preventiveMeasures ? `
-                <div style="margin-top: 8px; padding: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px;">
-                    <strong>Mesures de contrôle:</strong> ${hazard.controlMeasures || hazard.preventiveMeasures}
-                </div>
-            ` : ''}
-            ${hazard.requiredPPE || hazard.ppe ? `
-                <div style="margin-top: 8px; padding: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px;">
-                    <strong>EPI requis:</strong> ${hazard.requiredPPE || hazard.ppe}
-                </div>
-            ` : ''}
-            ${hazard.emergencyProcedures ? `
-                <div style="margin-top: 8px; padding: 8px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 4px;">
-                    <strong>Procédures d'urgence:</strong> ${hazard.emergencyProcedures}
-                </div>
-            ` : ''}
-            ${hazard.responsiblePerson ? `
-                <div style="margin-top: 8px; padding: 8px; background: #e0e7ff; border: 1px solid #c7d2fe; border-radius: 4px;">
-                    <strong>Responsable:</strong> ${hazard.responsiblePerson}
-                </div>
-            ` : ''}
-        </div>
-    `).join('');
-    
-    return `
-    <div class="section page-break">
-        <div class="section-header">
-            <div class="section-title">⚠️ STEP 3: IDENTIFICATION DES DANGERS (${allHazards.length})</div>
-        </div>
-        <div class="section-content">
-            ${hazardsHtml}
-        </div>
-    </div>`;
-  };
-
-  // =================== GÉNÉRATION STEP 4: PERMIS ===================
-  const generateStep4Section = () => {
-    const permits = formData.permits || {};
-    const requiredPermits = permits.requiredPermits || [];
-    const customPermits = permits.customPermits || [];
-    const allPermits = [...requiredPermits, ...customPermits];
-    
-    if (allPermits.length === 0) return '';
-    
-    const permitsHtml = allPermits.map((permit: any, index: number) => `
-        <div class="permit-item">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <strong>#${index + 1} - ${permit.name || permit.permitName || 'Permis'}</strong>
-                <span class="badge badge-${
-                    permit.status === 'obtained' || permit.status === 'approved' ? 'success' : 
-                    permit.status === 'pending' || permit.status === 'in_progress' ? 'warning' : 'danger'
-                }">
-                    ${(permit.status || 'unknown').toUpperCase().replace('_', ' ')}
-                </span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Type de permis:</span>
-                <span class="info-value">${permit.type || permit.category || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Autorité émettrice:</span>
-                <span class="info-value">${permit.authority || permit.issuingAuthority || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Numéro de permis:</span>
-                <span class="info-value">${permit.number || permit.permitNumber || 'Non attribué'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Date d'émission:</span>
-                <span class="info-value">${permit.issueDate || permit.issuedDate || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Date d'expiration:</span>
-                <span class="info-value">${permit.expiryDate || permit.expirationDate || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Validité (jours):</span>
-                <span class="info-value">${permit.validityPeriod || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Responsable:</span>
-                <span class="info-value">${permit.responsiblePerson || permit.responsible || 'Non assigné'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Contact responsable:</span>
-                <span class="info-value">${permit.contactInfo || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Coût:</span>
-                <span class="info-value">${permit.cost || 'Non spécifié'}</span>
-            </div>
-            ${permit.description || permit.permitDescription ? `
-                <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
-                    <strong>Description:</strong> ${permit.description || permit.permitDescription}
-                </div>
-            ` : ''}
-            ${permit.conditions || permit.specialConditions ? `
-                <div style="margin-top: 8px; padding: 8px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 4px;">
-                    <strong>Conditions particulières:</strong> ${permit.conditions || permit.specialConditions}
-                </div>
-            ` : ''}
-            ${permit.requirements ? `
-                <div style="margin-top: 8px; padding: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px;">
-                    <strong>Exigences:</strong> ${permit.requirements}
-                </div>
-            ` : ''}
-            ${permit.notes || permit.additionalNotes ? `
-                <div style="margin-top: 8px; padding: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px;">
-                    <strong>Notes:</strong> ${permit.notes || permit.additionalNotes}
-                </div>
-            ` : ''}
-        </div>
-    `).join('');
-    
-    return `
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title">📄 STEP 4: PERMIS ET AUTORISATIONS (${allPermits.length})</div>
-        </div>
-        <div class="section-content">
-            ${permitsHtml}
-        </div>
-    </div>`;
-  };
-
-  // =================== GÉNÉRATION STEP 5: VALIDATION ===================
-  const generateStep5Section = () => {
-    const validationData = formData.validation || {};
-    const reviewers = validationData.reviewers || [];
-    
-    if (reviewers.length === 0) return '';
-    
-    const reviewersHtml = reviewers.map((reviewer: any) => `
-        <tr>
-            <td>${reviewer.name || 'Non spécifié'}</td>
-            <td>${reviewer.role || 'Non spécifié'}</td>
-            <td>${reviewer.department || 'Non spécifié'}</td>
-            <td>${reviewer.email || 'Non spécifié'}</td>
-            <td class="status-${reviewer.status || 'pending'}">
-                ${reviewer.status === 'approved' ? '✅ Approuvé' : 
-                  reviewer.status === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
-            </td>
-            <td>${reviewer.comments || '-'}</td>
-        </tr>
-    `).join('');
-    
-    return `
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title">✅ STEP 5: VALIDATION ÉQUIPE</div>
-        </div>
-        <div class="section-content">
-            <table class="workers-table">
-                <thead>
-                    <tr>
-                        <th>Nom</th>
-                        <th>Rôle</th>
-                        <th>Département</th>
-                        <th>Email</th>
-                        <th>Statut</th>
-                        <th>Commentaires</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${reviewersHtml}
-                </tbody>
-            </table>
-        </div>
-    </div>`;
-  };
-
   // =================== GÉNÉRATION STEP 6: FINALISATION ===================
   const generateStep6Section = () => {
     const workersRows = finalizationData.workers.map(worker => `
@@ -1144,6 +712,7 @@ Lien d'accès: ${shareLink}`);
     </div>`;
   };
 
+  // =================== GÉNÉRATION SECTION SIGNATURES ===================
   const generateSignatureSection = () => {
     return `
     <div class="signature-section">
@@ -1173,91 +742,556 @@ Lien d'accès: ${shareLink}`);
         </div>
     </div>`;
   };
-  // =================== HANDLERS AUTRES ===================
-  const lockAST = (lockType: LockType) => {
-    setFinalizationData(prev => ({
-      ...prev,
-      isLocked: true,
-      lockTimestamp: new Date().toISOString(),
-      lockReason: lockType
-    }));
-    setShowLockConfirm(false);
-    console.log(`🔒 AST verrouillée (${lockType})`);
-    alert(`✅ AST verrouillée avec succès (${lockType})`);
-  };
 
-  // =================== RENDU PRINCIPAL ===================
+  // =================== EFFET DE SYNCHRONISATION ===================
+  useEffect(() => {
+    // Synchroniser les données avec le parent
+    onDataChange('finalization', finalizationData);
+  }, [finalizationData, onDataChange]);
+
+  // =================== EFFET DE MISE À JOUR DES STATS ===================
+  useEffect(() => {
+    // Calculer le pourcentage de complétion automatiquement
+    const totalSections = 6;
+    const completedSections = [
+      formData.projectInfo ? 1 : 0,
+      formData.equipment ? 1 : 0,
+      formData.hazards ? 1 : 0,
+      formData.permits ? 1 : 0,
+      formData.validation ? 1 : 0,
+      finalizationData.workers.length > 0 ? 1 : 0
+    ].reduce((sum, val) => sum + val, 0);
+    
+    const newPercentage = Math.round((completedSections / totalSections) * 100);
+    
+    if (newPercentage !== finalizationData.completionPercentage) {
+      setFinalizationData(prev => ({
+        ...prev,
+        completionPercentage: newPercentage
+      }));
+    }
+  }, [formData, finalizationData.workers.length]);
+  // =================== CSS MOBILE OPTIMISÉ THÈME SOMBRE ===================
+  const darkThemeCSS = `
+    .step6-container { 
+      padding: 0; 
+      background: transparent; 
+      min-height: 100vh; 
+      color: #ffffff !important;
+    }
+    
+    .finalization-header { 
+      text-align: center; 
+      margin-bottom: 20px; 
+      padding: 20px; 
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
+      color: white; 
+      border-radius: 12px; 
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      backdrop-filter: blur(10px);
+    }
+    
+    .finalization-title { 
+      font-size: 24px; 
+      margin-bottom: 8px; 
+      font-weight: bold; 
+      color: #ffffff !important;
+    }
+    
+    .finalization-subtitle { 
+      font-size: 14px; 
+      opacity: 0.9; 
+      color: #e2e8f0 !important;
+    }
+    
+    .tabs-container { 
+      display: flex; 
+      background: rgba(15, 23, 42, 0.8); 
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 12px; 
+      padding: 6px; 
+      margin-bottom: 20px; 
+      backdrop-filter: blur(10px);
+    }
+    
+    .tab-button { 
+      flex: 1; 
+      padding: 12px 16px; 
+      border: none; 
+      background: transparent; 
+      color: #94a3b8; 
+      font-weight: 500; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      transition: all 0.3s ease;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 48px;
+    }
+    
+    .tab-button.active { 
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
+      color: white; 
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      transform: translateY(-1px);
+    }
+    
+    .tab-button:hover:not(.active) {
+      background: rgba(59, 130, 246, 0.1);
+      color: #3b82f6;
+    }
+    
+    .finalization-section { 
+      background: rgba(15, 23, 42, 0.8); 
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 12px; 
+      padding: 20px; 
+      margin-bottom: 16px; 
+      backdrop-filter: blur(10px);
+    }
+    
+    .section-title { 
+      font-size: 18px; 
+      font-weight: bold; 
+      margin-bottom: 16px; 
+      color: #ffffff !important; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+    }
+    
+    .workers-grid { 
+      display: grid; 
+      gap: 16px; 
+    }
+    
+    .worker-card { 
+      border: 2px solid rgba(148, 163, 184, 0.2); 
+      border-radius: 12px; 
+      padding: 16px; 
+      background: rgba(30, 41, 59, 0.6); 
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
+    }
+    
+    .worker-card:hover { 
+      border-color: #3b82f6; 
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+      transform: translateY(-2px);
+    }
+    
+    .worker-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: flex-start; 
+      margin-bottom: 12px; 
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    .worker-name { 
+      font-size: 16px; 
+      font-weight: bold; 
+      color: #ffffff !important; 
+    }
+    
+    .worker-company { 
+      color: #94a3b8 !important; 
+      font-size: 14px; 
+    }
+    
+    .consent-section { 
+      background: rgba(51, 65, 85, 0.6); 
+      border: 1px solid rgba(148, 163, 184, 0.2); 
+      border-radius: 8px; 
+      padding: 16px; 
+      margin-top: 12px; 
+      backdrop-filter: blur(5px);
+    }
+    
+    .consent-checkbox { 
+      display: flex; 
+      align-items: center; 
+      gap: 12px; 
+      margin-bottom: 12px; 
+      cursor: pointer; 
+      padding: 8px;
+      border-radius: 6px;
+      transition: background 0.3s ease;
+    }
+    
+    .consent-checkbox:hover {
+      background: rgba(59, 130, 246, 0.1);
+    }
+    
+    .consent-checkbox input { 
+      width: 20px; 
+      height: 20px; 
+      cursor: pointer; 
+      accent-color: #3b82f6;
+    }
+    
+    .consent-text { 
+      font-weight: 500; 
+      color: #e2e8f0 !important; 
+      flex: 1;
+    }
+    
+    .consent-timestamp { 
+      font-size: 12px; 
+      color: #94a3b8 !important; 
+      font-style: italic; 
+    }
+    
+    .approbation-section { 
+      display: flex; 
+      gap: 8px; 
+      margin-top: 12px; 
+      flex-wrap: wrap;
+    }
+    
+    .approbation-btn { 
+      padding: 10px 16px; 
+      border: none; 
+      border-radius: 6px; 
+      cursor: pointer; 
+      font-weight: 500; 
+      transition: all 0.3s ease;
+      min-height: 44px;
+      flex: 1;
+      min-width: 120px;
+    }
+    
+    .approbation-approve { 
+      background: rgba(16, 185, 129, 0.2); 
+      color: #10b981; 
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    .approbation-approve:hover { 
+      background: rgba(16, 185, 129, 0.3); 
+      transform: translateY(-1px);
+    }
+    
+    .approbation-reject { 
+      background: rgba(239, 68, 68, 0.2); 
+      color: #ef4444; 
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .approbation-reject:hover { 
+      background: rgba(239, 68, 68, 0.3); 
+      transform: translateY(-1px);
+    }
+    
+    .premium-button { 
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
+      color: white; 
+      border: none; 
+      padding: 12px 20px; 
+      border-radius: 8px; 
+      font-weight: 600; 
+      cursor: pointer; 
+      transition: all 0.3s ease; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      gap: 8px; 
+      min-height: 48px;
+      font-size: 14px;
+    }
+    
+    .premium-button:hover { 
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%); 
+      transform: translateY(-2px); 
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3); 
+    }
+    
+    .premium-button:disabled { 
+      opacity: 0.5; 
+      cursor: not-allowed; 
+      transform: none; 
+    }
+    
+    .share-buttons { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+      gap: 12px; 
+      margin-top: 16px; 
+    }
+    
+    .share-btn { 
+      padding: 16px 12px; 
+      border: 2px solid rgba(148, 163, 184, 0.2); 
+      border-radius: 8px; 
+      background: rgba(30, 41, 59, 0.6); 
+      cursor: pointer; 
+      text-align: center; 
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    
+    .share-btn:hover { 
+      border-color: #3b82f6; 
+      background: rgba(59, 130, 246, 0.1);
+      transform: translateY(-2px);
+    }
+    
+    .modal-overlay { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      right: 0; 
+      bottom: 0; 
+      background: rgba(0, 0, 0, 0.8); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 1000; 
+      backdrop-filter: blur(4px);
+    }
+    
+    .modal-content { 
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 12px; 
+      padding: 24px; 
+      max-width: 500px; 
+      width: 90%; 
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      color: #ffffff !important;
+    }
+    
+    .form-group { 
+      margin-bottom: 16px; 
+    }
+    
+    .form-label { 
+      display: block; 
+      margin-bottom: 6px; 
+      font-weight: 600; 
+      color: #e2e8f0 !important; 
+    }
+    
+    .form-input { 
+      width: 100%; 
+      padding: 14px; 
+      border: 2px solid rgba(148, 163, 184, 0.2); 
+      border-radius: 8px; 
+      font-size: 16px; 
+      transition: border-color 0.3s ease;
+      background: rgba(51, 65, 85, 0.6) !important;
+      color: #ffffff !important;
+      backdrop-filter: blur(5px);
+    }
+    
+    .form-input:focus { 
+      outline: none; 
+      border-color: #3b82f6; 
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .form-input::placeholder {
+      color: #94a3b8 !important;
+    }
+    
+    .checkbox-field { 
+      display: flex; 
+      align-items: center; 
+      gap: 12px; 
+      padding: 16px; 
+      border: 2px solid rgba(148, 163, 184, 0.2); 
+      border-radius: 8px; 
+      cursor: pointer; 
+      transition: all 0.3s ease; 
+      background: rgba(30, 41, 59, 0.6) !important;
+      backdrop-filter: blur(5px);
+    }
+    
+    .checkbox-field:hover { 
+      border-color: #3b82f6; 
+      background: rgba(59, 130, 246, 0.1) !important; 
+    }
+    
+    .checkbox-field.checked { 
+      border-color: #10b981; 
+      background: rgba(16, 185, 129, 0.1) !important; 
+    }
+    
+    .checkbox-field span { 
+      color: #e2e8f0 !important; 
+      font-weight: 500 !important; 
+    }
+    
+    .progress-bar { 
+      width: 100%; 
+      height: 8px; 
+      background: rgba(55, 65, 81, 0.6); 
+      border-radius: 4px; 
+      overflow: hidden; 
+      margin-bottom: 16px; 
+    }
+    
+    .progress-fill { 
+      height: 100%; 
+      background: linear-gradient(90deg, #10b981, #059669); 
+      transition: width 0.5s ease; 
+    }
+    
+    .stats-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+      gap: 12px; 
+      margin-bottom: 20px; 
+    }
+    
+    .stat-card { 
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
+      color: white; 
+      padding: 16px; 
+      border-radius: 8px; 
+      text-align: center;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    
+    .stat-number { 
+      font-size: 20px; 
+      font-weight: bold; 
+      margin-bottom: 4px; 
+    }
+    
+    .stat-label { 
+      font-size: 11px; 
+      opacity: 0.9; 
+    }
+    
+    @keyframes spin { 
+      0% { transform: rotate(0deg); } 
+      100% { transform: rotate(360deg); } 
+    }
+    
+    .spinning { 
+      animation: spin 1s linear infinite; 
+    }
+    
+    /* RESPONSIVE MOBILE */
+    @media (max-width: 768px) {
+      .finalization-header {
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      
+      .finalization-title {
+        font-size: 20px;
+      }
+      
+      .tabs-container {
+        flex-direction: column;
+        gap: 4px;
+      }
+      
+      .tab-button {
+        padding: 14px 16px;
+        font-size: 16px;
+        min-height: 52px;
+      }
+      
+      .finalization-section {
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+      
+      .section-title {
+        font-size: 16px;
+        margin-bottom: 12px;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      
+      .stat-card {
+        padding: 12px;
+      }
+      
+      .stat-number {
+        font-size: 18px;
+      }
+      
+      .worker-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      
+      .approbation-section {
+        flex-direction: column;
+        gap: 6px;
+      }
+      
+      .approbation-btn {
+        min-width: 100%;
+      }
+      
+      .share-buttons {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      
+      .share-btn {
+        padding: 12px 8px;
+        min-height: 70px;
+        font-size: 13px;
+      }
+      
+      .modal-content {
+        padding: 20px;
+        margin: 16px;
+        width: calc(100% - 32px);
+      }
+      
+      .form-input {
+        padding: 16px;
+        font-size: 16px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .tabs-container {
+        padding: 4px;
+      }
+      
+      .tab-button {
+        padding: 12px 8px;
+        font-size: 14px;
+        flex-direction: column;
+        gap: 4px;
+      }
+      
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .share-buttons {
+        grid-template-columns: 1fr;
+      }
+    }
+  `;
+
   return (
     <>
-      {/* CSS Premium Step 6 */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .step6-container { padding: 0; background: #f8fafc; min-height: 100vh; }
-          .finalization-header { text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 12px; }
-          .finalization-title { font-size: 28px; margin-bottom: 8px; font-weight: bold; }
-          .finalization-subtitle { font-size: 16px; opacity: 0.9; }
-          
-          .tabs-container { display: flex; background: white; border-radius: 12px; padding: 8px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-          .tab-button { flex: 1; padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
-          .tab-button.active { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4); }
-          
-          .finalization-section { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-          .section-title { font-size: 18px; font-weight: bold; margin-bottom: 16px; color: #1f2937; display: flex; align-items: center; gap: 8px; }
-          
-          .workers-grid { display: grid; gap: 16px; }
-          .worker-card { border: 2px solid #e5e7eb; border-radius: 12px; padding: 16px; background: #f9fafb; transition: all 0.3s; }
-          .worker-card:hover { border-color: #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); }
-          .worker-header { display: flex; justify-content: between; align-items: center; margin-bottom: 12px; }
-          .worker-name { font-size: 16px; font-weight: bold; color: #1f2937; }
-          .worker-company { color: #6b7280; font-size: 14px; }
-          
-          .consent-section { background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-top: 12px; }
-          .consent-checkbox { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; cursor: pointer; }
-          .consent-checkbox input { width: 20px; height: 20px; cursor: pointer; }
-          .consent-text { font-weight: 500; color: #374151; }
-          .consent-timestamp { font-size: 12px; color: #6b7280; font-style: italic; }
-          
-          .approbation-section { display: flex; gap: 8px; margin-top: 12px; }
-          .approbation-btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.3s; }
-          .approbation-approve { background: #dcfce7; color: #166534; }
-          .approbation-approve:hover { background: #bbf7d0; }
-          .approbation-reject { background: #fee2e2; color: #991b1b; }
-          .approbation-reject:hover { background: #fecaca; }
-          
-          .premium-button { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
-          .premium-button:hover { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); transform: translateY(-2px); box-shadow: 0 8px 16px rgba(245, 158, 11, 0.3); }
-          .premium-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-          
-          .share-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-top: 16px; }
-          .share-btn { padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; background: white; cursor: pointer; text-align: center; transition: all 0.3s; }
-          .share-btn:hover { border-color: #3b82f6; background: #eff6ff; }
-          
-          .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-          .modal-content { background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-          
-          .form-group { margin-bottom: 16px; }
-          .form-label { display: block; margin-bottom: 6px; font-weight: 600; color: #374151; }
-          .form-input { width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; transition: border-color 0.3s; }
-          .form-input:focus { outline: none; border-color: #3b82f6; }
-          
-          .checkbox-field { display: flex; align-items: center; gap: 12px; padding: 16px; border: 2px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: all 0.3s; background: white !important; }
-          .checkbox-field:hover { border-color: #3b82f6; background: #f0f9ff !important; }
-          .checkbox-field.checked { border-color: #10b981; background: #f0fdf4 !important; }
-          .checkbox-field span { color: #1f2937 !important; font-weight: 500 !important; }
-          
-          .progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-bottom: 16px; }
-          .progress-fill { height: 100%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.5s ease; }
-          
-          .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 20px; }
-          .stat-card { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 16px; border-radius: 8px; text-align: center; }
-          .stat-number { font-size: 24px; font-weight: bold; margin-bottom: 4px; }
-          .stat-label { font-size: 12px; opacity: 0.9; }
-          
-          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-          .spinning { animation: spin 1s linear infinite; }
-        `
-      }} />
-
+      {/* Injection CSS thème sombre optimisé */}
+      <style dangerouslySetInnerHTML={{ __html: darkThemeCSS }} />
       <div className="step6-container">
         {/* Header avec logo */}
         <div className="finalization-header">
@@ -1272,7 +1306,7 @@ Lien d'accès: ${shareLink}`);
             onClick={() => setActiveTab('workers')}
           >
             <Users size={18} />
-            👷 Équipe Chantier
+            👷 Équipe
           </button>
           <button 
             className={`tab-button ${activeTab === 'sharing' ? 'active' : ''}`}
@@ -1286,7 +1320,7 @@ Lien d'accès: ${shareLink}`);
             onClick={() => setActiveTab('finalization')}
           >
             <FileText size={18} />
-            ✅ Finalisation
+            ✅ Final
           </button>
         </div>
 
@@ -1313,9 +1347,9 @@ Lien d'accès: ${shareLink}`);
               </div>
             </div>
 
-            {/* Bouton ajout travailleur */}
+            {/* Gestion équipe */}
             <div className="finalization-section">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                 <h3 className="section-title">
                   <Users size={24} />
                   Gestion de l'Équipe
@@ -1325,7 +1359,7 @@ Lien d'accès: ${shareLink}`);
                   onClick={() => setShowAddWorker(true)}
                 >
                   <Plus size={18} />
-                  ➕ Ajouter Travailleur
+                  ➕ Ajouter
                 </button>
               </div>
 
@@ -1339,7 +1373,18 @@ Lien d'accès: ${shareLink}`);
                         <div className="worker-company">{worker.company}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <span className={`badge badge-${worker.approbationStatus === 'approved' ? 'success' : worker.approbationStatus === 'rejected' ? 'danger' : 'warning'}`}>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          background: worker.approbationStatus === 'approved' ? 'rgba(16, 185, 129, 0.2)' : 
+                                     worker.approbationStatus === 'rejected' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                          color: worker.approbationStatus === 'approved' ? '#10b981' : 
+                                 worker.approbationStatus === 'rejected' ? '#ef4444' : '#f59e0b',
+                          border: `1px solid ${worker.approbationStatus === 'approved' ? 'rgba(16, 185, 129, 0.3)' : 
+                                                worker.approbationStatus === 'rejected' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
+                        }}>
                           {worker.approbationStatus === 'approved' ? '✅ Approuvé' : 
                            worker.approbationStatus === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
                         </span>
@@ -1387,19 +1432,19 @@ Lien d'accès: ${shareLink}`);
                 ))}
 
                 {finalizationData.workers.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
                     <Users size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-                    <p>Aucun travailleur ajouté. Cliquez sur "Ajouter Travailleur" pour commencer.</p>
+                    <p>Aucun travailleur ajouté. Cliquez sur "Ajouter" pour commencer.</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
         )}
+
         {/* ONGLET 2: PARTAGE SIMPLE */}
         {activeTab === 'sharing' && (
           <div>
-            {/* Partage Simple AST */}
             <div className="finalization-section">
               <h3 className="section-title">
                 <Share2 size={24} />
@@ -1408,22 +1453,16 @@ Lien d'accès: ${shareLink}`);
               
               {/* Lien de partage */}
               <div style={{ marginBottom: '20px' }}>
-                <label className="form-label" style={{ color: '#374151 !important', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+                <label className="form-label">
                   🔗 Lien de partage sécurisé:
                 </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <input 
                     type="text" 
                     value={shareLink}
                     readOnly
                     className="form-input"
-                    style={{ 
-                      flex: 1, 
-                      background: '#f9fafb !important', 
-                      color: '#1f2937 !important',
-                      fontWeight: '500 !important',
-                      fontSize: '14px !important'
-                    }}
+                    style={{ flex: 1, minWidth: '200px' }}
                   />
                   <button 
                     onClick={copyShareLink}
@@ -1437,11 +1476,17 @@ Lien d'accès: ${shareLink}`);
               </div>
 
               {/* Instructions */}
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
-                <h4 style={{ margin: '0 0 8px 0', color: '#1e40af', fontSize: '14px', fontWeight: '600' }}>
+              <div style={{ 
+                background: 'rgba(59, 130, 246, 0.1)', 
+                border: '1px solid rgba(59, 130, 246, 0.2)', 
+                borderRadius: '8px', 
+                padding: '16px', 
+                marginBottom: '20px' 
+              }}>
+                <h4 style={{ margin: '0 0 8px 0', color: '#3b82f6', fontSize: '14px', fontWeight: '600' }}>
                   📋 Instructions de partage:
                 </h4>
-                <ul style={{ margin: 0, paddingLeft: '20px', color: '#1e40af', fontSize: '13px' }}>
+                <ul style={{ margin: 0, paddingLeft: '20px', color: '#94a3b8', fontSize: '13px' }}>
                   <li>Partagez ce lien avec votre équipe pour consultation</li>
                   <li>Chaque membre peut consulter l'AST et donner son approbation</li>
                   <li>Le lien reste actif même si l'AST est verrouillée</li>
@@ -1451,27 +1496,27 @@ Lien d'accès: ${shareLink}`);
               {/* Boutons de partage */}
               <div className="share-buttons">
                 <div className="share-btn" onClick={shareViaEmail}>
-                  <Mail size={24} style={{ color: '#dc2626', marginBottom: '8px' }} />
-                  <div style={{ fontWeight: '600', color: '#1f2937' }}>📧 Email</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Envoyer par courriel</div>
+                  <Mail size={24} style={{ color: '#dc2626', marginBottom: '4px' }} />
+                  <div style={{ fontWeight: '600', color: '#ffffff' }}>📧 Email</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Courriel</div>
                 </div>
                 
                 <div className="share-btn" onClick={shareViaSMS}>
-                  <Smartphone size={24} style={{ color: '#059669', marginBottom: '8px' }} />
-                  <div style={{ fontWeight: '600', color: '#1f2937' }}>📱 SMS</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Envoyer par texto</div>
+                  <Smartphone size={24} style={{ color: '#059669', marginBottom: '4px' }} />
+                  <div style={{ fontWeight: '600', color: '#ffffff' }}>📱 SMS</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Texto</div>
                 </div>
                 
                 <div className="share-btn" onClick={shareViaWhatsApp}>
-                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>💬</div>
-                  <div style={{ fontWeight: '600', color: '#1f2937' }}>WhatsApp</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Partager sur WhatsApp</div>
+                  <div style={{ fontSize: '24px', marginBottom: '4px' }}>💬</div>
+                  <div style={{ fontWeight: '600', color: '#ffffff' }}>WhatsApp</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Messenger</div>
                 </div>
                 
                 <div className="share-btn" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}`)}>
-                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>📘</div>
-                  <div style={{ fontWeight: '600', color: '#1f2937' }}>Facebook</div>
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Partager sur Facebook</div>
+                  <div style={{ fontSize: '24px', marginBottom: '4px' }}>📘</div>
+                  <div style={{ fontWeight: '600', color: '#ffffff' }}>Facebook</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Réseau social</div>
                 </div>
               </div>
             </div>
@@ -1485,7 +1530,7 @@ Lien d'accès: ${shareLink}`);
             <div className="finalization-section">
               <h3 className="section-title">
                 <BarChart3 size={24} />
-                📊 État de Complétion Globale
+                📊 État de Complétion
               </h3>
               
               <div className="progress-bar">
@@ -1494,27 +1539,27 @@ Lien d'accès: ${shareLink}`);
                   style={{ width: `${finalizationData.completionPercentage}%` }}
                 ></div>
               </div>
-              <p style={{ textAlign: 'center', fontWeight: '600', color: '#059669' }}>
+              <p style={{ textAlign: 'center', fontWeight: '600', color: '#10b981', marginBottom: '16px' }}>
                 {finalizationData.completionPercentage}% Complété
               </p>
 
               {/* Statuts des sections */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginTop: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px' }}>
-                  <CheckCircle size={20} style={{ color: '#10b981' }} />
-                  <span>✅ Informations projet</span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px' }}>
+                  <CheckCircle size={16} style={{ color: '#10b981' }} />
+                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>✅ Informations projet</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px' }}>
-                  <CheckCircle size={20} style={{ color: '#10b981' }} />
-                  <span>✅ Dangers identifiés</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px' }}>
+                  <CheckCircle size={16} style={{ color: '#10b981' }} />
+                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>✅ Dangers identifiés</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px' }}>
-                  <CheckCircle size={20} style={{ color: '#10b981' }} />
-                  <span>✅ Équipements sélectionnés</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px' }}>
+                  <CheckCircle size={16} style={{ color: '#10b981' }} />
+                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>✅ Équipements sélectionnés</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px' }}>
-                  <AlertTriangle size={20} style={{ color: '#f59e0b' }} />
-                  <span>⏳ Validation équipe</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '6px' }}>
+                  <AlertTriangle size={16} style={{ color: '#f59e0b' }} />
+                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>⏳ Validation équipe</span>
                 </div>
               </div>
             </div>
@@ -1523,10 +1568,10 @@ Lien d'accès: ${shareLink}`);
             <div className="finalization-section">
               <h3 className="section-title">
                 <FileText size={24} />
-                📄 Options de Génération Rapport
+                📄 Options Rapport
               </h3>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
                 <div 
                   className={`checkbox-field ${finalizationData.documentGeneration.includePhotos ? 'checked' : ''}`}
                   onClick={() => setFinalizationData(prev => ({
@@ -1535,7 +1580,7 @@ Lien d'accès: ${shareLink}`);
                   }))}
                 >
                   <input type="checkbox" checked={finalizationData.documentGeneration.includePhotos} onChange={() => {}} />
-                  <span>📸 Inclure photos</span>
+                  <span>📸 Photos</span>
                 </div>
                 
                 <div 
@@ -1546,7 +1591,7 @@ Lien d'accès: ${shareLink}`);
                   }))}
                 >
                   <input type="checkbox" checked={finalizationData.documentGeneration.includeSignatures} onChange={() => {}} />
-                  <span>✍️ Inclure signatures</span>
+                  <span>✍️ Signatures</span>
                 </div>
                 
                 <div 
@@ -1557,7 +1602,7 @@ Lien d'accès: ${shareLink}`);
                   }))}
                 >
                   <input type="checkbox" checked={finalizationData.documentGeneration.includeQRCode} onChange={() => {}} />
-                  <span>📱 Inclure QR Code</span>
+                  <span>📱 QR Code</span>
                 </div>
                 
                 <div 
@@ -1568,7 +1613,7 @@ Lien d'accès: ${shareLink}`);
                   }))}
                 >
                   <input type="checkbox" checked={finalizationData.documentGeneration.includeBranding} onChange={() => {}} />
-                  <span>🏢 Inclure branding</span>
+                  <span>🏢 Branding</span>
                 </div>
               </div>
             </div>
@@ -1590,7 +1635,7 @@ Lien d'accès: ${shareLink}`);
               />
               
               {finalizationData.isLocked && (
-                <p style={{ marginTop: '8px', color: '#dc2626', fontSize: '14px', fontStyle: 'italic' }}>
+                <p style={{ marginTop: '8px', color: '#ef4444', fontSize: '14px', fontStyle: 'italic' }}>
                   🔒 Document verrouillé - Modification impossible
                 </p>
               )}
@@ -1603,20 +1648,20 @@ Lien d'accès: ${shareLink}`);
                 🎯 Actions Finales
               </h3>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                 <button 
                   onClick={printAST}
                   className="premium-button"
                   disabled={isLoading}
                 >
                   {isLoading ? <RefreshCw size={18} className="spinning" /> : <Printer size={18} />}
-                  🖨️ Imprimer Rapport
+                  🖨️ Imprimer
                 </button>
                 
                 <button 
                   onClick={() => {
                     console.log('💾 Sauvegarde AST...');
-                    alert('✅ AST sauvegardée avec succès!');
+                    alert('✅ AST sauvegardée!');
                   }}
                   className="premium-button"
                 >
@@ -1627,7 +1672,7 @@ Lien d'accès: ${shareLink}`);
                 <button 
                   onClick={() => {
                     console.log('📁 Archivage AST...');
-                    alert('✅ AST archivée avec succès!');
+                    alert('✅ AST archivée!');
                   }}
                   className="premium-button"
                 >
@@ -1652,14 +1697,31 @@ Lien d'accès: ${shareLink}`);
             </div>
           </div>
         )}
-
-        {/* MODAL AJOUT TRAVAILLEUR SIMPLIFIÉ */}
+        {/* MODAL AJOUT TRAVAILLEUR OPTIMISÉ */}
         {showAddWorker && (
           <div className="modal-overlay">
             <div className="modal-content">
-              <h4 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600' }}>
-                👷 Ajouter un Travailleur
-              </h4>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#ffffff' }}>
+                  👷 Ajouter un Travailleur
+                </h4>
+                <button
+                  onClick={() => setShowAddWorker(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    transition: 'color 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => e.target.style.color = '#ef4444'}
+                  onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
+                >
+                  <X size={20} />
+                </button>
+              </div>
               
               <div className="form-group">
                 <label className="form-label">Nom complet *</label>
@@ -1669,7 +1731,7 @@ Lien d'accès: ${shareLink}`);
                   onChange={(e) => setNewWorker(prev => ({ ...prev, name: e.target.value }))}
                   className="form-input"
                   placeholder="Jean Tremblay"
-                  style={{ padding: '14px', fontSize: '16px' }}
+                  autoFocus
                 />
               </div>
               
@@ -1681,15 +1743,15 @@ Lien d'accès: ${shareLink}`);
                   onChange={(e) => setNewWorker(prev => ({ ...prev, company: e.target.value }))}
                   className="form-input"
                   placeholder="Construction ABC Inc."
-                  style={{ padding: '14px', fontSize: '16px' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                 <button
                   onClick={addWorker}
                   className="premium-button"
                   style={{ flex: 1 }}
+                  disabled={!newWorker.name || !newWorker.company}
                 >
                   <Plus size={18} />
                   ➕ Ajouter
@@ -1698,45 +1760,108 @@ Lien d'accès: ${shareLink}`);
                   onClick={() => setShowAddWorker(false)}
                   style={{
                     flex: 1,
-                    padding: '12px 24px',
-                    border: '2px solid #e5e7eb',
+                    padding: '12px 20px',
+                    border: '2px solid rgba(148, 163, 184, 0.3)',
                     borderRadius: '8px',
-                    background: 'white',
+                    background: 'rgba(51, 65, 85, 0.6)',
+                    color: '#e2e8f0',
                     cursor: 'pointer',
-                    fontWeight: '600'
+                    fontWeight: '600',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.borderColor = '#ef4444';
+                    e.target.style.background = 'rgba(239, 68, 68, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+                    e.target.style.background = 'rgba(51, 65, 85, 0.6)';
                   }}
                 >
-                  ❌ Annuler
+                  <X size={18} />
+                  Annuler
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* MODAL CONFIRMATION VERROUILLAGE */}
+        {/* MODAL CONFIRMATION VERROUILLAGE SÉCURISÉ */}
         {showLockConfirm && (
           <div className="modal-overlay">
-            <div className="modal-content" style={{ background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' }}>
-              <h4 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600', color: '#991b1b' }}>
-                🔒 Confirmer le Verrouillage
-              </h4>
+            <div className="modal-content" style={{ 
+              background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+              border: '2px solid rgba(239, 68, 68, 0.3)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#ffffff' }}>
+                  🔒 Confirmer le Verrouillage
+                </h4>
+                <button
+                  onClick={() => setShowLockConfirm(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#fca5a5',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    transition: 'color 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => e.target.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.target.style.color = '#fca5a5'}
+                >
+                  <X size={20} />
+                </button>
+              </div>
               
-              <div style={{ marginBottom: '20px', color: '#7f1d1d' }}>
-                <p style={{ marginBottom: '12px' }}>
-                  ⚠️ <strong>ATTENTION:</strong> Cette action est irréversible !
-                </p>
+              <div style={{ marginBottom: '20px', color: '#fef2f2' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  marginBottom: '12px',
+                  padding: '12px',
+                  background: 'rgba(254, 242, 242, 0.1)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(252, 165, 165, 0.2)'
+                }}>
+                  <AlertTriangle size={20} style={{ color: '#fbbf24' }} />
+                  <strong>ATTENTION: Cette action est irréversible !</strong>
+                </div>
                 
-                <div style={{ background: 'white', padding: '16px', borderRadius: '8px', marginBottom: '16px' }}>
-                  <h5 style={{ margin: '0 0 8px 0', color: '#991b1b' }}>Vérifications automatiques:</h5>
-                  <div style={{ fontSize: '14px', color: '#7f1d1d' }}>
-                    ✅ Sections complétées: {finalizationData.completionPercentage}%<br />
-                    ✅ Consentements: {finalizationData.workers.filter(w => w.hasConsented).length}/{finalizationData.workers.length}<br />
-                    ✅ Approbations: {finalizationData.workers.filter(w => w.approbationStatus === 'approved').length}/{finalizationData.workers.length}
+                <div style={{ 
+                  background: 'rgba(254, 242, 242, 0.1)', 
+                  padding: '16px', 
+                  borderRadius: '8px', 
+                  marginBottom: '16px',
+                  border: '1px solid rgba(252, 165, 165, 0.2)'
+                }}>
+                  <h5 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '14px' }}>
+                    📊 Vérifications automatiques:
+                  </h5>
+                  <div style={{ fontSize: '13px', color: '#fef2f2', lineHeight: '1.4' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span>✅ Sections complétées:</span>
+                      <strong>{finalizationData.completionPercentage}%</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span>✅ Consentements:</span>
+                      <strong>{finalizationData.workers.filter(w => w.hasConsented).length}/{finalizationData.workers.length}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>✅ Approbations:</span>
+                      <strong>{finalizationData.workers.filter(w => w.approbationStatus === 'approved').length}/{finalizationData.workers.length}</strong>
+                    </div>
                   </div>
                 </div>
                 
-                <p style={{ fontSize: '14px' }}>
-                  Une fois verrouillée, l'AST ne pourra plus être modifiée mais restera consultable par l'équipe.
+                <p style={{ fontSize: '13px', lineHeight: '1.4', opacity: 0.9 }}>
+                  Une fois verrouillée, l'AST ne pourra plus être modifiée mais restera consultable par l'équipe via le lien de partage.
                 </p>
               </div>
 
@@ -1746,7 +1871,8 @@ Lien d'accès: ${shareLink}`);
                   className="premium-button"
                   style={{ 
                     flex: 1,
-                    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
+                    background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                    borderColor: 'rgba(220, 38, 38, 0.3)'
                   }}
                 >
                   <Lock size={18} />
@@ -1756,16 +1882,30 @@ Lien d'accès: ${shareLink}`);
                   onClick={() => setShowLockConfirm(false)}
                   style={{
                     flex: 1,
-                    padding: '12px 24px',
-                    border: '2px solid #991b1b',
+                    padding: '12px 20px',
+                    border: '2px solid rgba(252, 165, 165, 0.3)',
                     borderRadius: '8px',
-                    background: 'white',
-                    color: '#991b1b',
+                    background: 'rgba(254, 242, 242, 0.1)',
+                    color: '#fef2f2',
                     cursor: 'pointer',
-                    fontWeight: '600'
+                    fontWeight: '600',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = 'rgba(254, 242, 242, 0.2)';
+                    e.target.style.borderColor = 'rgba(252, 165, 165, 0.5)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'rgba(254, 242, 242, 0.1)';
+                    e.target.style.borderColor = 'rgba(252, 165, 165, 0.3)';
                   }}
                 >
-                  ❌ Annuler
+                  <X size={18} />
+                  Annuler
                 </button>
               </div>
             </div>
@@ -1775,3 +1915,6 @@ Lien d'accès: ${shareLink}`);
     </>
   );
 }
+
+// =================== EXPORT DU COMPOSANT ===================
+export default Step6Finalization;
