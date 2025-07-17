@@ -9,12 +9,12 @@ import {
   Droplets, Flame, Activity, Search, Filter, Hand
 } from 'lucide-react';
 
-// Import des composants Steps - CORRECTION STEP 5
+// Import des composants Steps
 import Step1ProjectInfo from './steps/Step1ProjectInfo';
 import Step2Equipment from './steps/Step2Equipment';
 import Step3Hazards from './steps/Step3Hazards';
 import Step4Permits from './steps/Step4Permits';
-import Step5Validation from './steps/Step5Validation';  // ← IMPORT RÉEL AU LIEU DU PLACEHOLDER
+import Step5Validation from './steps/Step5Validation';
 import Step6Finalization from './steps/Step6Finalization';
 
 // =================== INTERFACES ENTERPRISE ===================
@@ -36,7 +36,7 @@ interface ASTData {
   updatedAt: string;
   verificationDeadline?: string;
   
-  // Étapes de l'AST (6 steps maintenant)
+  // Étapes de l'AST (6 steps)
   projectInfo: ProjectInfo;
   equipment: EquipmentData;
   hazards: HazardData;
@@ -290,9 +290,8 @@ interface RegulatoryCompliance {
   specialConditions: string[];
 }
 
-// =================== INTERFACE VALIDATION CORRIGÉE ===================
+// =================== INTERFACE VALIDATION ===================
 interface ValidationData {
-  // Compatible avec Step5Validation
   reviewers: TeamMember[];
   approvalRequired: boolean;
   minimumReviewers: number;
@@ -383,17 +382,8 @@ interface TeamApproval {
   digitalSignature?: string;
 }
 
-interface FinalValidation {
-  allMembersParticipated: boolean;
-  allConcernsAddressed: boolean;
-  consensusReached: boolean;
-  validatorName: string;
-  validationDate: string;
-  validationSignature: string;
-}
 // =================== INTERFACES FINALIZATION ===================
 interface FinalizationData {
-  // Données fusionnées de TeamShare + Finalization
   workers: Worker[];
   photos: Photo[];
   finalComments: string;
@@ -521,8 +511,28 @@ interface NotificationData {
   readAt?: string;
 }
 
+// =================== HOOK DÉTECTION MOBILE ===================
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  return isMobile;
+};
 // =================== COMPOSANT PRINCIPAL ===================
 export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'worker' }: ASTFormProps) {
+  // =================== DÉTECTION MOBILE ===================
+  const isMobile = useIsMobile();
+
   // =================== ÉTAT PRINCIPAL ===================
   const [astData, setAstData] = useState<ASTData>({
     id: '',
@@ -567,7 +577,6 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
         specialConditions: []
       }
     },
-    // =================== VALIDATION CORRIGÉE ===================
     validation: {
       reviewers: [],
       approvalRequired: true,
@@ -580,7 +589,6 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
         procedural: false,
         regulatory: false
       },
-      // Données étendues optionnelles
       teamMembers: [],
       discussionPoints: [],
       meetingMinutes: {} as MeetingMinutes,
@@ -722,7 +730,6 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     }
   }, [updateASTData]);
 
-  // =================== HANDLER STEP 5 CORRIGÉ ===================
   const handleStep5DataChange = useCallback((section: string, data: ValidationData) => {
     if (section === 'validation') {
       updateASTData('validation', data);
@@ -779,7 +786,82 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
     }));
   }, []);
 
-  // =================== CONFIGURATION STEPS (6 STEPS) ===================
+  // =================== FONCTIONS MOBILE HELPERS ===================
+  const getCompletionPercentage = (): number => {
+    const completedSteps = getCurrentCompletedSteps();
+    return Math.round((completedSteps / 6) * 100);
+  };
+
+  const getCurrentCompletedSteps = (): number => {
+    let completed = 0;
+    
+    // Step 1: Informations projet
+    if (astData.projectInfo?.client && astData.projectInfo?.workDescription) {
+      completed++;
+    }
+    
+    // Step 2: Équipements
+    if (astData.equipment?.selected?.length > 0) {
+      completed++;
+    }
+    
+    // Step 3: Dangers
+    if (astData.hazards?.selected?.length > 0) {
+      completed++;
+    }
+    
+    // Step 4: Permis
+    if (astData.permits?.permits?.length > 0) {
+      completed++;
+    }
+    
+    // Step 5: Validation
+    if (astData.validation?.reviewers?.length > 0) {
+      completed++;
+    }
+    
+    // Step 6: Finalisation
+    if (currentStep >= 6) {
+      completed++;
+    }
+    
+    return completed;
+  };
+
+  const canNavigateToNext = (): boolean => {
+    switch (currentStep) {
+      case 1:
+        return astData.projectInfo?.client && astData.projectInfo?.workDescription;
+      case 2:
+        return astData.equipment?.selected?.length > 0;
+      case 3:
+        return astData.hazards?.selected?.length > 0;
+      case 4:
+        return true; // Permis optionnels
+      case 5:
+        return true; // Validation optionnelle
+      case 6:
+        return false; // Dernier step
+      default:
+        return false;
+    }
+  };
+
+  // =================== NAVIGATION MOBILE ===================
+  const handlePrevious = () => {
+    setCurrentStep(Math.max(1, currentStep - 1));
+  };
+
+  const handleNext = () => {
+    if (canNavigateToNext() && currentStep < 6) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handleStepClick = (step: number) => {
+    setCurrentStep(step);
+  };
+ // =================== CONFIGURATION STEPS MOBILE OPTIMIZED ===================
   const steps = [
     { 
       id: 1, 
@@ -836,6 +918,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       mobileOptimized: true
     }
   ];
+
   // =================== STATUS BADGE ===================
   const getStatusBadge = () => {
     const statusConfig = {
@@ -854,20 +937,300 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        padding: '8px 16px',
+        padding: isMobile ? '6px 12px' : '8px 16px',
         background: `${config.color}20`,
         border: `1px solid ${config.color}40`,
         borderRadius: '20px',
         color: config.color,
-        fontSize: '14px',
+        fontSize: isMobile ? '12px' : '14px',
         fontWeight: '500'
       }}>
-        <Icon size={16} />
+        <Icon size={isMobile ? 14 : 16} />
         {config.text}
       </div>
     );
   };
 
+  // =================== COMPOSANTS HEADER MOBILE ===================
+  const MobileHeader = () => (
+    <header style={{
+      background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(0, 0, 0, 0.95) 100%)',
+      backdropFilter: 'blur(20px)',
+      padding: '16px 20px',
+      position: 'sticky',
+      top: 0,
+      zIndex: 100,
+      borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        maxWidth: '100%'
+      }}>
+        {/* Logo mobile */}
+        <div style={{
+          width: '48px',
+          height: '48px',
+          background: 'linear-gradient(135deg, #000 0%, #1e293b 100%)',
+          border: '2px solid #f59e0b',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <img 
+            src="/c-secur360-logo.png" 
+            alt="C-Secur360"
+            style={{ width: '36px', height: '36px', objectFit: 'contain' }}
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+              if (fallback) fallback.style.display = 'block';
+            }}
+          />
+          <span style={{ 
+            display: 'none',
+            color: '#f59e0b', 
+            fontSize: '16px', 
+            fontWeight: 'bold' 
+          }}>
+            C🛡️
+          </span>
+        </div>
+        
+        {/* Titre mobile */}
+        <div style={{ flex: 1, marginLeft: '12px' }}>
+          <h1 style={{
+            color: '#ffffff',
+            fontSize: '18px',
+            fontWeight: '700',
+            margin: 0,
+            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          }}>
+            🛡️ C-Secur360
+          </h1>
+          <div style={{
+            color: '#94a3b8',
+            fontSize: '12px',
+            margin: '2px 0 0 0',
+            fontWeight: '400'
+          }}>
+            AST #{astData.astNumber.slice(-6)} • {tenant}
+          </div>
+        </div>
+        
+        {/* Status mobile */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          background: 'rgba(34, 197, 94, 0.1)',
+          border: '1px solid rgba(34, 197, 94, 0.3)',
+          padding: '6px 10px',
+          borderRadius: '16px'
+        }}>
+          <div style={{
+            width: '12px',
+            height: '12px',
+            background: '#22c55e',
+            borderRadius: '50%',
+            animation: 'pulse 2s infinite'
+          }} />
+          <span style={{
+            color: '#22c55e',
+            fontSize: '11px',
+            fontWeight: '600'
+          }}>
+            Actif
+          </span>
+        </div>
+      </div>
+    </header>
+  );
+
+  // =================== NAVIGATION STEPS MOBILE ===================
+  const MobileStepsNavigation = () => (
+    <div style={{
+      padding: '16px 20px',
+      background: 'rgba(15, 23, 42, 0.8)',
+      backdropFilter: 'blur(10px)',
+      borderBottom: '1px solid rgba(100, 116, 139, 0.2)'
+    }}>
+      {/* Grid des steps */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '8px',
+        marginBottom: '12px'
+      }}>
+        {steps.map((step) => (
+          <div
+            key={step.id}
+            style={{
+              background: currentStep === step.id 
+                ? 'rgba(59, 130, 246, 0.2)' 
+                : 'rgba(30, 41, 59, 0.6)',
+              border: currentStep === step.id 
+                ? '1px solid #3b82f6' 
+                : '1px solid rgba(100, 116, 139, 0.3)',
+              borderRadius: '12px',
+              padding: '12px 8px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              transform: currentStep === step.id ? 'translateY(-2px)' : 'none',
+              boxShadow: currentStep === step.id ? '0 4px 12px rgba(59, 130, 246, 0.3)' : 'none'
+            }}
+            onClick={() => handleStepClick(step.id)}
+          >
+            <div style={{
+              width: '32px',
+              height: '32px',
+              margin: '0 auto 6px',
+              background: currentStep === step.id ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: currentStep === step.id ? '#3b82f6' : '#60a5fa',
+              fontSize: '14px'
+            }}>
+              {getCurrentCompletedSteps() > step.id - 1 ? '✓' : 
+               currentStep === step.id ? <step.icon size={16} /> : 
+               <step.icon size={14} />}
+            </div>
+            <div style={{
+              color: currentStep === step.id ? '#ffffff' : '#e2e8f0',
+              fontSize: '11px',
+              fontWeight: '600',
+              margin: 0,
+              lineHeight: '1.2'
+            }}>
+              {step.title}
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Barre de progression */}
+      <div style={{ marginTop: '12px' }}>
+        <div style={{
+          width: '100%',
+          height: '6px',
+          background: 'rgba(30, 41, 59, 0.8)',
+          borderRadius: '3px',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            height: '100%',
+            background: 'linear-gradient(90deg, #3b82f6, #1d4ed8)',
+            borderRadius: '3px',
+            transition: 'width 0.5s ease',
+            width: `${getCompletionPercentage()}%`,
+            position: 'relative'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+              animation: 'progressShine 2s ease-in-out infinite'
+            }} />
+          </div>
+        </div>
+        <div style={{
+          textAlign: 'center',
+          color: '#94a3b8',
+          fontSize: '11px',
+          marginTop: '6px',
+          fontWeight: '500'
+        }}>
+          Étape {currentStep}/6 • {Math.round(getCompletionPercentage())}% complété
+        </div>
+      </div>
+    </div>
+  );
+
+  // =================== NAVIGATION MOBILE FIXE ===================
+  const MobileNavigation = () => (
+    <div style={{
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      background: 'rgba(15, 23, 42, 0.95)',
+      backdropFilter: 'blur(20px)',
+      borderTop: '1px solid rgba(100, 116, 139, 0.3)',
+      padding: '16px 20px',
+      zIndex: 50
+    }}>
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        maxWidth: '500px',
+        margin: '0 auto'
+      }}>
+        <button
+          onClick={handlePrevious}
+          disabled={currentStep === 1}
+          style={{
+            flex: 1,
+            padding: '14px 20px',
+            borderRadius: '12px',
+            fontWeight: '600',
+            fontSize: '14px',
+            border: 'none',
+            cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            minHeight: '48px',
+            background: currentStep === 1 ? 'rgba(100, 116, 139, 0.2)' : 'rgba(100, 116, 139, 0.2)',
+            color: currentStep === 1 ? '#94a3b8' : '#94a3b8',
+            opacity: currentStep === 1 ? 0.5 : 1
+          }}
+        >
+          <ArrowLeft size={16} />
+          Précédent
+        </button>
+        
+        <button
+          onClick={handleNext}
+          disabled={currentStep === 6 || !canNavigateToNext()}
+          style={{
+            flex: 1,
+            padding: '14px 20px',
+            borderRadius: '12px',
+            fontWeight: '600',
+            fontSize: '14px',
+            border: 'none',
+            cursor: (currentStep === 6 || !canNavigateToNext()) ? 'not-allowed' : 'pointer',
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            minHeight: '48px',
+            background: (currentStep === 6 || !canNavigateToNext()) 
+              ? 'rgba(100, 116, 139, 0.3)' 
+              : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+            color: '#ffffff',
+            opacity: (currentStep === 6 || !canNavigateToNext()) ? 0.5 : 1
+          }}
+        >
+          {currentStep === 6 ? 'Terminé ✓' : 'Suivant'}
+          {currentStep !== 6 && <ArrowRight size={16} />}
+        </button>
+      </div>
+    </div>
+  );
   // =================== RENDU PRINCIPAL ===================
   return (
     <div style={{
@@ -877,7 +1240,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
       position: 'relative'
     }}>
       
-      {/* =================== STYLES CSS =================== */}
+      {/* =================== CSS MOBILE OPTIMISÉ =================== */}
       <style jsx>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
@@ -915,6 +1278,11 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
           50% { 
             filter: brightness(1.5) contrast(1.3) drop-shadow(0 0 25px rgba(245, 158, 11, 0.7));
           }
+        }
+        
+        @keyframes progressShine {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
         }
         
         .float-animation { animation: float 6s ease-in-out infinite; }
@@ -972,7 +1340,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
           box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4);
         }
         
-        /* Mobile responsive */
+        /* =================== MOBILE RESPONSIVE =================== */
         @media (max-width: 768px) {
           .step-grid {
             grid-template-columns: repeat(2, 1fr) !important;
@@ -989,6 +1357,61 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
             min-height: 48px !important;
             font-size: 16px !important;
           }
+          
+          .desktop-only {
+            display: none !important;
+          }
+          
+          /* Ajuster padding pour navigation mobile fixe */
+          .step-content-mobile {
+            padding-bottom: 100px !important;
+          }
+          
+          /* Optimisation des formulaires pour mobile */
+          .premium-input,
+          .premium-select,
+          .premium-textarea {
+            font-size: 16px !important; /* Empêche le zoom sur iOS */
+            padding: 14px 16px !important;
+            border-radius: 8px !important;
+          }
+          
+          /* Optimisation des boutons pour touch */
+          .btn-primary,
+          .premium-button {
+            min-height: 48px !important;
+            font-size: 16px !important;
+            padding: 14px 20px !important;
+            border-radius: 12px !important;
+          }
+          
+          /* Grilles responsive */
+          .two-column,
+          .premium-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+          
+          /* Sections form mobile */
+          .form-section {
+            margin: 0 0 16px 0 !important;
+            border-radius: 16px !important;
+            padding: 16px !important;
+          }
+          
+          /* Typography mobile */
+          .section-title {
+            font-size: 16px !important;
+          }
+          
+          .finalization-title {
+            font-size: 20px !important;
+          }
+          
+          .ast-number-value {
+            font-size: 18px !important;
+            word-break: break-all !important;
+          }
         }
         
         @media (max-width: 480px) {
@@ -1000,255 +1423,321 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
             padding: 16px !important;
             margin: 8px !important;
           }
+          
+          .mobile-steps-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+        }
+        
+        @media (max-width: 360px) {
+          .mobile-steps-grid {
+            grid-template-columns: 1fr !important;
+          }
+          
+          .form-section {
+            padding: 12px !important;
+          }
+        }
+        
+        /* Landscape mobile optimizations */
+        @media (max-height: 500px) and (orientation: landscape) {
+          .mobile-header {
+            padding: 8px 16px !important;
+          }
+          
+          .mobile-steps-navigation {
+            padding: 8px 16px !important;
+          }
+          
+          .step-content-mobile {
+            padding: 12px 16px !important;
+            min-height: calc(100vh - 140px) !important;
+          }
+          
+          .mobile-navigation {
+            padding: 8px 16px !important;
+          }
+        }
+        
+        /* Safe area pour notch */
+        @supports (padding: max(0px)) {
+          .mobile-header {
+            padding-top: max(16px, env(safe-area-inset-top)) !important;
+            padding-left: max(20px, env(safe-area-inset-left)) !important;
+            padding-right: max(20px, env(safe-area-inset-right)) !important;
+          }
+          
+          .mobile-navigation {
+            padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
+            padding-left: max(20px, env(safe-area-inset-left)) !important;
+            padding-right: max(20px, env(safe-area-inset-right)) !important;
+          }
+        }
+        
+        /* Masquer éléments desktop sur mobile */
+        @media (min-width: 769px) {
+          .mobile-only {
+            display: none !important;
+          }
         }
       `}</style>
 
-      {/* =================== HEADER PREMIUM IDENTIQUE DASHBOARD =================== */}
-      <header style={{
-        background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(251, 191, 36, 0.3)',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3), 0 0 50px rgba(251, 191, 36, 0.1)',
-        padding: '24px 20px',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50
-      }}>
-        <div style={{ 
-          maxWidth: '1400px', 
-          margin: '0 auto', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
-          flexWrap: 'wrap', 
-          gap: '20px' 
+      {/* =================== HEADER CONDITIONNEL =================== */}
+      {isMobile ? (
+        <MobileHeader />
+      ) : (
+        /* HEADER DESKTOP */
+        <header style={{
+          background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(251, 191, 36, 0.3)',
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3), 0 0 50px rgba(251, 191, 36, 0.1)',
+          padding: '24px 20px',
+          position: 'sticky',
+          top: 0,
+          zIndex: 50
         }}>
-          
-          {/* Logo Premium Ultra Grossi - IDENTIQUE DASHBOARD */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-            <div 
-              className="float-animation glow-effect"
-              style={{
-                background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
-                padding: '32px',
-                borderRadius: '32px',
-                border: '4px solid #f59e0b',
-                boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-            >
-              <div style={{
-                width: '96px',
-                height: '96px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                zIndex: 1
-              }}>
-                <img 
-                  src="/c-secur360-logo.png" 
-                  alt="C-Secur360"
-                  className="logo-glow"
-                  style={{ 
-                    width: '200px', 
-                    height: '200px', 
-                    objectFit: 'contain'
-                  }}
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                    if (fallback) fallback.style.display = 'block';
-                  }}
-                />
-                <span style={{ 
-                  display: 'none',
-                  color: '#f59e0b', 
-                  fontSize: '48px', 
-                  fontWeight: '900' 
-                }}>
-                  C🛡️
-                </span>
-              </div>
-              
-              {/* Effet brillance animé renforcé */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: '-100%',
-                width: '100%',
-                height: '100%',
-                background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
-                animation: 'shine 2.5s ease-in-out infinite'
-              }} />
-              
-              {/* Effet de pulse en arrière-plan */}
-              <div style={{
-                position: 'absolute',
-                inset: '-10px',
-                border: '2px solid rgba(245, 158, 11, 0.3)',
-                borderRadius: '40px',
-                animation: 'pulse 3s ease-in-out infinite'
-              }} />
-            </div>
+          <div style={{ 
+            maxWidth: '1400px', 
+            margin: '0 auto', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            flexWrap: 'wrap', 
+            gap: '20px' 
+          }}>
             
-            {/* Titre et status - MISE À JOUR */}
-            <div className="slide-in-right">
-              <h1 className="text-gradient" style={{
-                fontSize: '40px',
-                margin: 0,
-                lineHeight: 1.2,
-                fontWeight: '900',
-                letterSpacing: '-0.025em'
-              }}>
-                🛡️ C-Secur360
-              </h1>
-              <p style={{
-                color: 'rgba(251, 191, 36, 0.9)',
-                fontSize: '20px',
-                margin: 0,
-                fontWeight: '600'
-              }}>
-                Analyse Sécuritaire de Travail • {tenant}
-              </p>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                marginTop: '12px'
-              }}>
+            {/* Logo Premium Desktop */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+              <div 
+                className="float-animation glow-effect"
+                style={{
+                  background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
+                  padding: '32px',
+                  borderRadius: '32px',
+                  border: '4px solid #f59e0b',
+                  boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+              >
                 <div style={{
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '50%',
-                  background: '#22c55e'
-                }} className="pulse-animation" />
-                <span style={{
-                  color: '#22c55e',
-                  fontSize: '16px',
-                  fontWeight: '600'
-                }}>
-                  Système opérationnel
-                </span>
-                <p style={{ 
-                  fontSize: '14px', 
-                  color: '#94a3b8', 
-                  margin: 0,
-                  fontWeight: '500'
-                }}>
-                  AST • Étape {currentStep} sur {steps.length}
-                </p>
-                {getStatusBadge()}
-              </div>
-            </div>
-          </div>
-
-          {/* Numéro AST et actions - MISE À JOUR */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            
-            {/* Numéro AST */}
-            <div style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
-              borderRadius: '12px',
-              padding: '12px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <Shield size={16} color="#3b82f6" />
-              <div>
-                <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px' }}>
-                  NUMÉRO AST
-                </div>
-                <div style={{ 
-                  fontSize: '14px', 
-                  fontWeight: '600', 
-                  color: '#ffffff',
-                  fontFamily: 'monospace',
+                  width: '96px',
+                  height: '96px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  justifyContent: 'center',
+                  position: 'relative',
+                  zIndex: 1
                 }}>
-                  {astData.astNumber}
-                  <button
-                    onClick={handleCopyAST}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: copied ? '#10b981' : '#94a3b8',
-                      cursor: 'pointer',
-                      padding: '2px',
-                      borderRadius: '4px',
-                      transition: 'color 0.2s'
+                  <img 
+                    src="/c-secur360-logo.png" 
+                    alt="C-Secur360"
+                    className="logo-glow"
+                    style={{ 
+                      width: '200px', 
+                      height: '200px', 
+                      objectFit: 'contain'
                     }}
-                  >
-                    {copied ? <Check size={12} /> : <Copy size={12} />}
-                  </button>
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'block';
+                    }}
+                  />
+                  <span style={{ 
+                    display: 'none',
+                    color: '#f59e0b', 
+                    fontSize: '48px', 
+                    fontWeight: '900' 
+                  }}>
+                    C🛡️
+                  </span>
+                </div>
+                
+                {/* Effets animés */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
+                  animation: 'shine 2.5s ease-in-out infinite'
+                }} />
+                
+                <div style={{
+                  position: 'absolute',
+                  inset: '-10px',
+                  border: '2px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: '40px',
+                  animation: 'pulse 3s ease-in-out infinite'
+                }} />
+              </div>
+              
+              {/* Titre Desktop */}
+              <div className="slide-in-right">
+                <h1 className="text-gradient" style={{
+                  fontSize: '40px',
+                  margin: 0,
+                  lineHeight: 1.2,
+                  fontWeight: '900',
+                  letterSpacing: '-0.025em'
+                }}>
+                  🛡️ C-Secur360
+                </h1>
+                <p style={{
+                  color: 'rgba(251, 191, 36, 0.9)',
+                  fontSize: '20px',
+                  margin: 0,
+                  fontWeight: '600'
+                }}>
+                  Analyse Sécuritaire de Travail • {tenant}
+                </p>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginTop: '12px'
+                }}>
+                  <div style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    background: '#22c55e'
+                  }} className="pulse-animation" />
+                  <span style={{
+                    color: '#22c55e',
+                    fontSize: '16px',
+                    fontWeight: '600'
+                  }}>
+                    Système opérationnel
+                  </span>
+                  <p style={{ 
+                    fontSize: '14px', 
+                    color: '#94a3b8', 
+                    margin: 0,
+                    fontWeight: '500'
+                  }}>
+                    AST • Étape {currentStep} sur {steps.length}
+                  </p>
+                  {getStatusBadge()}
                 </div>
               </div>
             </div>
 
-            {/* Indicateur en ligne/hors ligne */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {isOnline ? <Wifi size={14} color="#10b981" /> : <WifiOff size={14} color="#ef4444" />}
-              <span style={{ fontSize: '12px', color: isOnline ? '#10b981' : '#ef4444' }}>
-                {isOnline ? 'En ligne' : 'Hors ligne'}
-              </span>
-            </div>
-
-            {/* Actions rapides */}
-            {userRole === 'supervisor' || userRole === 'manager' ? (
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={() => changeStatus('pending_verification')}
-                  disabled={astData.status !== 'draft'}
-                  className="btn-premium"
-                  style={{
-                    opacity: astData.status === 'draft' ? 1 : 0.5,
+            {/* Actions Desktop */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              
+              {/* Numéro AST */}
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.8)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Shield size={16} color="#3b82f6" />
+                <div>
+                  <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px' }}>
+                    NUMÉRO AST
+                  </div>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '600', 
+                    color: '#ffffff',
+                    fontFamily: 'monospace',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    padding: '8px 12px',
-                    fontSize: '12px'
-                  }}
-                >
-                  <Bell size={12} />
-                  Soumettre
-                </button>
-                
-                <button
-                  onClick={() => changeStatus('approved')}
-                  disabled={astData.status !== 'pending_verification'}
-                  className="btn-premium"
-                  style={{
-                    opacity: astData.status === 'pending_verification' ? 1 : 0.5,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '8px 12px',
-                    fontSize: '12px',
-                    background: 'linear-gradient(135deg, #10b981, #059669)'
-                  }}
-                >
-                  <CheckCircle size={12} />
-                  Approuver
-                </button>
+                    gap: '6px'
+                  }}>
+                    {astData.astNumber}
+                    <button
+                      onClick={handleCopyAST}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: copied ? '#10b981' : '#94a3b8',
+                        cursor: 'pointer',
+                        padding: '2px',
+                        borderRadius: '4px',
+                        transition: 'color 0.2s'
+                      }}
+                    >
+                      {copied ? <Check size={12} /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                </div>
               </div>
-            ) : null}
-          </div>
-        </div>
-      </header>
 
-      {/* =================== CONTENU PRINCIPAL =================== */}
-      <main style={{ padding: '20px 16px', maxWidth: '1200px', margin: '0 auto' }}>
-        
-        {/* Progress bar et navigation steps */}
-        <div className="glass-effect slide-in" style={{ padding: '24px', marginBottom: '24px' }}>
+              {/* Indicateur en ligne */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {isOnline ? <Wifi size={14} color="#10b981" /> : <WifiOff size={14} color="#ef4444" />}
+                <span style={{ fontSize: '12px', color: isOnline ? '#10b981' : '#ef4444' }}>
+                  {isOnline ? 'En ligne' : 'Hors ligne'}
+                </span>
+              </div>
+
+              {/* Actions superviseur */}
+              {(userRole === 'supervisor' || userRole === 'manager') && (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => changeStatus('pending_verification')}
+                    disabled={astData.status !== 'draft'}
+                    className="btn-premium"
+                    style={{
+                      opacity: astData.status === 'draft' ? 1 : 0.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '8px 12px',
+                      fontSize: '12px'
+                    }}
+                  >
+                    <Bell size={12} />
+                    Soumettre
+                  </button>
+                  
+                  <button
+                    onClick={() => changeStatus('approved')}
+                    disabled={astData.status !== 'pending_verification'}
+                    className="btn-premium"
+                    style={{
+                      opacity: astData.status === 'pending_verification' ? 1 : 0.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '8px 12px',
+                      fontSize: '12px',
+                      background: 'linear-gradient(135deg, #10b981, #059669)'
+                    }}
+                  >
+                    <CheckCircle size={12} />
+                    Approuver
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+      )}
+
+      {/* =================== NAVIGATION STEPS CONDITIONNELLE =================== */}
+      {isMobile ? (
+        <MobileStepsNavigation />
+      ) : (
+        /* NAVIGATION DESKTOP */
+        <div className="glass-effect slide-in desktop-only" style={{ 
+          padding: '24px', 
+          marginBottom: '24px',
+          maxWidth: '1200px',
+          margin: '20px auto 24px'
+        }}>
           
-          {/* Barre de progression */}
+          {/* Barre de progression Desktop */}
           <div style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#ffffff', margin: 0 }}>
@@ -1275,7 +1764,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
             </div>
           </div>
 
-          {/* Navigation steps - Mobile optimized */}
+          {/* Navigation steps Desktop */}
           <div className="step-grid" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -1353,28 +1842,45 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
             ))}
           </div>
         </div>
+      )}
 
+      {/* =================== CONTENU PRINCIPAL =================== */}
+      <main style={{ 
+        padding: isMobile ? '0' : '20px 16px', 
+        maxWidth: '1200px', 
+        margin: '0 auto',
+        paddingBottom: isMobile ? '100px' : '20px'
+      }}>
+        
         {/* Contenu de l'étape */}
-        <div className="glass-effect slide-in" style={{ padding: '32px 24px', marginBottom: '24px' }}>
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <h2 style={{ 
-              fontSize: '28px', 
-              fontWeight: '700', 
-              color: '#ffffff',
-              marginBottom: '8px',
-              background: `linear-gradient(135deg, ${steps[currentStep - 1]?.color}, ${steps[currentStep - 1]?.color}CC)`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>
-              {steps[currentStep - 1]?.title}
-            </h2>
-            <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>
-              {steps[currentStep - 1]?.subtitle}
-            </p>
-          </div>
+        <div className={`glass-effect slide-in ${isMobile ? 'mobile-content' : ''}`} style={{ 
+          padding: isMobile ? '20px 16px' : '32px 24px', 
+          marginBottom: isMobile ? '16px' : '24px',
+          borderRadius: isMobile ? '16px' : '20px',
+          margin: isMobile ? '16px' : '0 auto 24px'
+        }}>
+          
+          {!isMobile && (
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <h2 style={{ 
+                fontSize: '28px', 
+                fontWeight: '700', 
+                color: '#ffffff',
+                marginBottom: '8px',
+                background: `linear-gradient(135deg, ${steps[currentStep - 1]?.color}, ${steps[currentStep - 1]?.color}CC)`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}>
+                {steps[currentStep - 1]?.title}
+              </h2>
+              <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>
+                {steps[currentStep - 1]?.subtitle}
+              </p>
+            </div>
+          )}
 
           {/* =================== CONTENU SPÉCIFIQUE À CHAQUE ÉTAPE =================== */}
-          <div style={{ minHeight: '400px' }}>
+          <div style={{ minHeight: isMobile ? '300px' : '400px' }}>
             {/* ÉTAPE 1: Informations Projet + Verrouillage */}
             {currentStep === 1 && (
               <Step1ProjectInfo
@@ -1419,7 +1925,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
               />
             )}
 
-            {/* =================== ÉTAPE 5: VALIDATION ÉQUIPE CORRIGÉE =================== */}
+            {/* ÉTAPE 5: Validation Équipe */}
             {currentStep === 5 && (
               <Step5Validation
                 formData={astData}
@@ -1429,7 +1935,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
               />
             )}
 
-            {/* ÉTAPE 6: Finalisation (Consentement Travailleurs + Archive) */}
+            {/* ÉTAPE 6: Finalisation */}
             {currentStep === 6 && (
               <Step6Finalization
                 formData={astData}
@@ -1440,9 +1946,14 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
             )}
           </div>
         </div>
+      </main>
 
-        {/* Navigation footer */}
-        <div className="glass-effect" style={{ 
+      {/* =================== NAVIGATION FOOTER CONDITIONNELLE =================== */}
+      {isMobile ? (
+        <MobileNavigation />
+      ) : (
+        /* Navigation footer Desktop */
+        <div className="glass-effect desktop-only" style={{ 
           padding: '20px 24px', 
           display: 'flex', 
           justifyContent: 'space-between', 
@@ -1450,7 +1961,9 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
           position: 'sticky',
           bottom: '16px',
           flexWrap: 'wrap',
-          gap: '16px'
+          gap: '16px',
+          maxWidth: '1200px',
+          margin: '0 auto'
         }}>
           <button
             onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
@@ -1525,8 +2038,7 @@ export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'w
             <ArrowRight size={18} />
           </button>
         </div>
-
-      </main>
+      )}
     </div>
   );
 }
