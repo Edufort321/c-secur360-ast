@@ -57,6 +57,31 @@ interface FormField {
   };
 }
 
+interface WorkerEntry {
+  id: number;
+  name: string;
+  entryTime: string;
+  exitTime: string | null;
+  date: string;
+}
+
+interface PhotoEntry {
+  id: number;
+  url: string;
+  name: string;
+  timestamp: string;
+  description: string;
+}
+
+interface SignatureMetadata {
+  name: string;
+  date: string;
+  time: string;
+  timestamp: string;
+  ipAddress: string;
+  userAgent: string;
+}
+
 // =================== BASE DE DONNÉES PERMIS RÉELS ===================
 const realPermitsDatabase: Permit[] = [
   // 1. PERMIS ESPACE CLOS - Basé sur ASP Construction
@@ -358,6 +383,27 @@ const translations = {
   }
 };
 
+export { Step4PermitsProps, Permit, FormField, WorkerEntry, PhotoEntry, SignatureMetadata, realPermitsDatabase, translations };
+import React, { useState, useMemo } from 'react';
+import { 
+  FileText, CheckCircle, AlertTriangle, Clock, Download, Eye,
+  Shield, Users, MapPin, Calendar, Building, Phone, User, Briefcase,
+  Search, Filter, Plus, BarChart3, Star, Award, Zap, HardHat,
+  Camera, Save, X, Edit, ChevronDown, ChevronUp, Printer, Mail
+} from 'lucide-react';
+
+// Importation des types et données de la section 1
+import { 
+  Step4PermitsProps, 
+  Permit, 
+  FormField, 
+  WorkerEntry, 
+  PhotoEntry, 
+  SignatureMetadata, 
+  realPermitsDatabase, 
+  translations 
+} from './Step4Permits-Section1';
+
 // =================== COMPOSANT PRINCIPAL ===================
 const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
   const t = translations[language];
@@ -437,10 +483,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
   };
 
   const handleFormFieldChange = (permitId: string, fieldId: string, value: any) => {
-    // Arrêter immédiatement la propagation
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
-    
     const updatedPermits = permits.map((permit: Permit) => {
       if (permit.id === permitId) {
         const newFormData = {
@@ -614,7 +656,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                     <div className="time-selector">
                       <div className="time-selector-label">Heure</div>
                       <div className="time-options">
-                        {hours.map(hour => (
+                        {hours.map((hour: string) => (
                           <div
                             key={hour}
                             className={`time-option ${selectedHour === hour ? 'selected' : ''}`}
@@ -635,7 +677,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                     <div className="time-selector">
                       <div className="time-selector-label">Minutes</div>
                       <div className="time-options">
-                        {minutes.filter((_, i) => i % 5 === 0).map(minute => (
+                        {minutes.filter((_, i) => i % 5 === 0).map((minute: string) => (
                           <div
                             key={minute}
                             className={`time-option ${selectedMinute === minute ? 'selected' : ''}`}
@@ -733,14 +775,14 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               style={{ scrollMarginTop: '100px' }}
             >
               <option value="">Sélectionner...</option>
-              {field.options?.map(option => (
+              {field.options?.map((option: string) => (
                 <option key={option} value={option}>{option}</option>
               ))}
             </select>
           );
         
         case 'workers_tracking':
-          const workersLog = Array.isArray(value) ? value : [];
+          const workersLog: WorkerEntry[] = Array.isArray(value) ? value : [];
           return (
             <div className="workers-tracking-container">
               <div className="worker-entry-form">
@@ -761,7 +803,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                         const timeInput = container?.querySelector('.worker-time-input') as HTMLInputElement;
                         
                         if (nameInput?.value.trim()) {
-                          const newEntry = {
+                          const newEntry: WorkerEntry = {
                             id: Date.now(),
                             name: nameInput.value.trim(),
                             entryTime: timeInput.value || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
@@ -794,7 +836,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                       const timeInput = container?.querySelector('.worker-time-input') as HTMLInputElement;
                       
                       if (nameInput?.value.trim()) {
-                        const newEntry = {
+                        const newEntry: WorkerEntry = {
                           id: Date.now(),
                           name: nameInput.value.trim(),
                           entryTime: timeInput.value || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
@@ -825,7 +867,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                       <span>Sortie</span>
                       <span>Actions</span>
                     </div>
-                    {workersLog.map((worker: any) => (
+                    {workersLog.map((worker: WorkerEntry) => (
                       <div key={worker.id} className="workers-table-row">
                         <span className="worker-name">{worker.name}</span>
                         <span className="worker-time">{worker.entryTime}</span>
@@ -837,7 +879,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                const updatedLog = workersLog.map((w: any) =>
+                                const updatedLog = workersLog.map((w: WorkerEntry) =>
                                   w.id === worker.id
                                     ? { ...w, exitTime: new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }) }
                                     : w
@@ -856,7 +898,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              const updatedLog = workersLog.filter((w: any) => w.id !== worker.id);
+                              const updatedLog = workersLog.filter((w: WorkerEntry) => w.id !== worker.id);
                               handleFormFieldChange(permit.id, field.id, updatedLog);
                             }}
                           >
@@ -871,8 +913,9 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
             </div>
           );
         
+        // Partie 1 du renderField - Continue dans la prochaine section pour la galerie photos et signatures
         case 'photo_gallery':
-          const photos = Array.isArray(value) ? value : [];
+          const photos: PhotoEntry[] = Array.isArray(value) ? value : [];
           const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
           
           return (
@@ -891,7 +934,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                     files.forEach((file) => {
                       const reader = new FileReader();
                       reader.onload = (event) => {
-                        const newPhoto = {
+                        const newPhoto: PhotoEntry = {
                           id: Date.now() + Math.random(),
                           url: event.target?.result as string,
                           name: file.name,
@@ -952,7 +995,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                         ctx.fillText(new Date().toLocaleString('fr-CA'), 320, 260);
                         
                         const dataUrl = canvas.toDataURL('image/png');
-                        const newPhoto = {
+                        const newPhoto: PhotoEntry = {
                           id: Date.now(),
                           url: dataUrl,
                           name: `Capture_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.png`,
@@ -1037,7 +1080,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                     
                     {photos.length > 1 && (
                       <div className="photo-thumbnails">
-                        {photos.map((photo, index) => (
+                        {photos.map((photo: PhotoEntry, index: number) => (
                           <div
                             key={photo.id}
                             className={`photo-thumbnail ${index === currentPhotoIndex ? 'active' : ''}`}
@@ -1062,7 +1105,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                         value={photos[currentPhotoIndex]?.description || ''}
                         onChange={(e) => {
                           e.stopPropagation();
-                          const updatedPhotos = photos.map((photo, index) =>
+                          const updatedPhotos = photos.map((photo: PhotoEntry, index: number) =>
                             index === currentPhotoIndex
                               ? { ...photo, description: e.target.value }
                               : photo
@@ -1094,7 +1137,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
         case 'radio':
           return (
             <div className="radio-group">
-              {field.options?.map(option => (
+              {field.options?.map((option: string) => (
                 <label key={option} className="radio-label">
                   <input
                     type="radio"
@@ -1115,10 +1158,10 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
           );
         
         case 'checkbox':
-          const checkedValues = Array.isArray(value) ? value : [];
+          const checkedValues: string[] = Array.isArray(value) ? value : [];
           return (
             <div className="checkbox-group">
-              {field.options?.map(option => (
+              {field.options?.map((option: string) => (
                 <label key={option} className="checkbox-label">
                   <input
                     type="checkbox"
@@ -1129,7 +1172,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                       e.stopPropagation();
                       const newValues = e.target.checked
                         ? [...checkedValues, option]
-                        : checkedValues.filter(v => v !== option);
+                        : checkedValues.filter((v: string) => v !== option);
                       handleFormFieldChange(permit.id, field.id, newValues);
                     }}
                     onInput={(e) => e.stopPropagation()}
@@ -1161,7 +1204,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
         
         case 'signature':
           const signatureValue = permit.formData?.[field.id] || '';
-          const signatureMetadata = permit.formData?.[field.id + '_metadata'];
+          const signatureMetadata: SignatureMetadata | undefined = permit.formData?.[field.id + '_metadata'];
           
           return (
             <div className="signature-field">
@@ -1190,7 +1233,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                       e.preventDefault();
                       const signerName = (e.target as HTMLInputElement).value.trim();
                       const timestamp = new Date();
-                      const fullSignature = {
+                      const fullSignature: SignatureMetadata = {
                         name: signerName,
                         date: timestamp.toLocaleDateString('fr-CA'),
                         time: timestamp.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
@@ -1199,25 +1242,23 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                         userAgent: navigator.userAgent
                       };
                       
-                      // Mise à jour en deux étapes pour garantir la persistance
-                      const currentPermit = permits.find((p: Permit) => p.id === permit.id);
-                      if (currentPermit) {
-                        const updatedFormData = {
-                          ...currentPermit.formData,
-                          [field.id]: signerName,
-                          [field.id + '_metadata']: fullSignature
-                        };
-                        
-                        const updatedPermits = permits.map((p: Permit) => 
-                          p.id === permit.id 
-                            ? { ...p, formData: updatedFormData }
-                            : p
-                        );
-                        
-                        setPermits(updatedPermits);
-                        updateFormData(updatedPermits);
-                      }
+                      // Mise à jour atomique en une seule opération
+                      const updatedPermits = permits.map((permitItem: Permit) => {
+                        if (permitItem.id === permit.id) {
+                          return {
+                            ...permitItem,
+                            formData: {
+                              ...permitItem.formData,
+                              [field.id]: signerName,
+                              [field.id + '_metadata']: fullSignature
+                            }
+                          };
+                        }
+                        return permitItem;
+                      });
                       
+                      setPermits(updatedPermits);
+                      updateFormData(updatedPermits);
                       (e.target as HTMLInputElement).value = '';
                     }
                   }}
@@ -1236,7 +1277,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                     if (input && input.value.trim()) {
                       const signerName = input.value.trim();
                       const timestamp = new Date();
-                      const fullSignature = {
+                      const fullSignature: SignatureMetadata = {
                         name: signerName,
                         date: timestamp.toLocaleDateString('fr-CA'),
                         time: timestamp.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
@@ -1245,25 +1286,23 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                         userAgent: navigator.userAgent
                       };
                       
-                      // Mise à jour en deux étapes pour garantir la persistance
-                      const currentPermit = permits.find(p => p.id === permit.id);
-                      if (currentPermit) {
-                        const updatedFormData = {
-                          ...currentPermit.formData,
-                          [field.id]: signerName,
-                          [field.id + '_metadata']: fullSignature
-                        };
-                        
-                        const updatedPermits = permits.map(p => 
-                          p.id === permit.id 
-                            ? { ...p, formData: updatedFormData }
-                            : p
-                        );
-                        
-                        setPermits(updatedPermits);
-                        updateFormData(updatedPermits);
-                      }
+                      // Mise à jour atomique en une seule opération
+                      const updatedPermits = permits.map((permitItem: Permit) => {
+                        if (permitItem.id === permit.id) {
+                          return {
+                            ...permitItem,
+                            formData: {
+                              ...permitItem.formData,
+                              [field.id]: signerName,
+                              [field.id + '_metadata']: fullSignature
+                            }
+                          };
+                        }
+                        return permitItem;
+                      });
                       
+                      setPermits(updatedPermits);
+                      updateFormData(updatedPermits);
                       input.value = '';
                     } else {
                       alert('Veuillez entrer votre nom complet pour signer');
@@ -1281,23 +1320,22 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                       e.stopPropagation();
                       
                       // Effacer la signature avec mise à jour complète
-                      const currentPermit = permits.find((p: Permit) => p.id === permit.id);
-                      if (currentPermit) {
-                        const updatedFormData = {
-                          ...currentPermit.formData,
-                          [field.id]: '',
-                          [field.id + '_metadata']: null
-                        };
-                        
-                        const updatedPermits = permits.map((p: Permit) => 
-                          p.id === permit.id 
-                            ? { ...p, formData: updatedFormData }
-                            : p
-                        );
-                        
-                        setPermits(updatedPermits);
-                        updateFormData(updatedPermits);
-                      }
+                      const updatedPermits = permits.map((permitItem: Permit) => {
+                        if (permitItem.id === permit.id) {
+                          return {
+                            ...permitItem,
+                            formData: {
+                              ...permitItem.formData,
+                              [field.id]: '',
+                              [field.id + '_metadata']: null
+                            }
+                          };
+                        }
+                        return permitItem;
+                      });
+                      
+                      setPermits(updatedPermits);
+                      updateFormData(updatedPermits);
                     }}
                   >
                     Effacer
@@ -1333,13 +1371,13 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
         </div>
 
         <div className="form-content">
-          {Object.entries(fieldsBySection).map(([sectionName, fields]) => (
+          {Object.entries(fieldsBySection).map(([sectionName, fields]: [string, FormField[]]) => (
             <div key={sectionName} className="form-section-group">
               <h4 className="form-section-title">
                 {(t.sections as any)[sectionName] || sectionName}
               </h4>
               <div className="form-fields">
-                {fields.map(field => (
+                {fields.map((field: FormField) => (
                   <div key={field.id} className="form-field">
                     <label className="form-label" htmlFor={field.id}>
                       {field.label}
@@ -1359,6 +1397,11 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
     );
   };
 
+  return (
+    <>
+      {/* CSS pour Permis Réels */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
   return (
     <>
       {/* CSS pour Permis Réels */}
@@ -1424,138 +1467,13 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
           .form-field { display: flex; flex-direction: column; }
           .form-label { color: #e2e8f0; font-size: 12px; font-weight: 500; margin-bottom: 4px; }
           .required { color: #ef4444; margin-left: 2px; }
-          .form-input, .form-textarea, .form-select { padding: 8px 10px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; transition: all 0.3s ease; }
+          .form-input, .form-textarea, .form-select { padding: 8px 10px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; transition: all 0.3s ease; scroll-behavior: auto !important; scroll-margin: 0 !important; }
           .form-input:focus, .form-textarea:focus, .form-select:focus { outline: none; border-color: #2563eb; }
           .form-file { padding: 4px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 11px; }
           
           .radio-group, .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
           .radio-label, .checkbox-label { display: flex; align-items: center; gap: 4px; color: #cbd5e1; font-size: 11px; cursor: pointer; }
           .radio-label input, .checkbox-label input { margin: 0; }
-          
-          .signature-field { display: flex; flex-direction: column; gap: 12px; }
-          .signature-pad { flex: 1; border: 2px solid rgba(100, 116, 139, 0.5); border-radius: 8px; padding: 12px; min-height: 60px; display: flex; align-items: center; background: rgba(15, 23, 42, 0.9); }
-          .signature-content { width: 100%; }
-          .signature-text { color: #22c55e; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-          .signature-timestamp { color: #94a3b8; font-size: 11px; font-style: italic; }
-          .signature-placeholder { color: #94a3b8; font-size: 12px; font-style: italic; }
-          .signature-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-          .signature-name-input { flex: 1; min-width: 200px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; transition: all 0.3s ease; }
-          .signature-name-input:focus { outline: none; border-color: #2563eb; }
-          .signature-name-input::placeholder { color: #64748b; }
-          .signature-btn { padding: 8px 16px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.3s ease; }
-          .signature-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3); }
-          .signature-clear-btn { padding: 6px 12px; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; cursor: pointer; font-size: 11px; }
-          .signature-clear-btn:hover { background: rgba(239, 68, 68, 0.3); }
-          
-          .workers-tracking-container { display: flex; flex-direction: column; gap: 16px; }
-          .worker-entry-form { background: rgba(30, 41, 59, 0.6); padding: 16px; border-radius: 8px; border: 1px solid rgba(100, 116, 139, 0.3); }
-          .worker-entry-inputs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-          .worker-name-input { flex: 2; min-width: 200px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; }
-          .worker-time-input { flex: 1; min-width: 120px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; }
-          .worker-entry-btn { padding: 8px 16px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; }
-          .worker-entry-btn:hover { transform: translateY(-1px); }
-          
-          .workers-log-list h5 { color: #2563eb; margin: 0 0 12px; font-size: 14px; font-weight: 600; }
-          .no-entries { color: #64748b; font-style: italic; text-align: center; padding: 20px; }
-          .workers-table { border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 8px; overflow: hidden; }
-          .workers-table-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; background: rgba(59, 130, 246, 0.1); padding: 12px; font-weight: 600; color: #2563eb; font-size: 12px; border-bottom: 1px solid rgba(100, 116, 139, 0.3); }
-          .workers-table-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 12px; border-bottom: 1px solid rgba(100, 116, 139, 0.2); align-items: center; }
-          .workers-table-row:last-child { border-bottom: none; }
-          .workers-table-row:hover { background: rgba(100, 116, 139, 0.1); }
-          .worker-name { color: #ffffff; font-weight: 500; }
-          .worker-time { color: #94a3b8; font-family: monospace; }
-          .exit-btn { padding: 4px 8px; background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 4px; cursor: pointer; font-size: 10px; }
-          .exit-btn:hover { background: rgba(34, 197, 94, 0.3); }
-          .remove-btn { padding: 4px 8px; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; cursor: pointer; font-size: 10px; }
-          .remove-btn:hover { background: rgba(239, 68, 68, 0.3); }
-          
-          .time-picker-container { position: relative; }
-          .time-display { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; cursor: pointer; transition: all 0.3s ease; }
-          .time-display:hover { border-color: #2563eb; }
-          .time-value { color: #ffffff; font-family: monospace; font-size: 14px; }
-          .time-icon { font-size: 16px; }
-          
-          .time-picker-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(100, 116, 139, 0.5); border-radius: 8px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); z-index: 1000; backdrop-filter: blur(20px); }
-          .time-picker-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(100, 116, 139, 0.3); color: #ffffff; font-weight: 600; }
-          .time-picker-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 18px; padding: 4px; }
-          .time-picker-close:hover { color: #ef4444; }
-          
-          .time-picker-selectors { display: flex; align-items: flex-start; gap: 8px; padding: 16px; }
-          .time-selector { flex: 1; }
-          .time-selector-label { color: #94a3b8; font-size: 12px; font-weight: 500; margin-bottom: 8px; text-align: center; }
-          .time-options { max-height: 150px; overflow-y: auto; border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; }
-          .time-option { padding: 8px 12px; text-align: center; color: #cbd5e1; cursor: pointer; border-bottom: 1px solid rgba(100, 116, 139, 0.2); font-family: monospace; }
-          .time-option:last-child { border-bottom: none; }
-          .time-option:hover { background: rgba(59, 130, 246, 0.2); color: #ffffff; }
-          .time-option.selected { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #ffffff; font-weight: 600; }
-          .time-separator { font-size: 24px; color: #94a3b8; align-self: center; margin-top: 20px; font-weight: bold; }
-          
-          .time-picker-actions { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid rgba(100, 116, 139, 0.3); }
-          .time-picker-now { padding: 6px 12px; background: rgba(100, 116, 139, 0.2); color: #cbd5e1; border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 4px; cursor: pointer; font-size: 12px; }
-          .time-picker-now:hover { background: rgba(100, 116, 139, 0.3); }
-          .time-picker-ok { padding: 6px 12px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; margin-left: auto; }
-          .time-picker-ok:hover { transform: translateY(-1px); }
-          
-          .photo-gallery-container { display: flex; flex-direction: column; gap: 16px; }
-          .photo-upload-section { background: rgba(30, 41, 59, 0.6); padding: 16px; border-radius: 8px; border: 1px solid rgba(100, 116, 139, 0.3); }
-          .photo-upload-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
-          .photo-upload-btn, .photo-camera-btn { padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
-          .photo-upload-btn { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; }
-          .photo-upload-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
-          .photo-camera-btn { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; }
-          .photo-camera-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); }
-          
-          .photo-gallery { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 12px; padding: 20px; }
-          .photo-carousel { display: flex; flex-direction: column; gap: 16px; }
-          .photo-main-container { position: relative; display: flex; align-items: center; gap: 12px; }
-          .photo-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); z-index: 10; width: 40px; height: 40px; border-radius: 50%; background: rgba(0, 0, 0, 0.7); color: white; border: none; cursor: pointer; font-size: 18px; font-weight: bold; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
-          .photo-nav-btn:hover { background: rgba(0, 0, 0, 0.9); transform: translateY(-50%) scale(1.1); }
-          .photo-nav-btn.prev { left: 10px; }
-          .photo-nav-btn.next { right: 10px; }
-          
-          .photo-main { position: relative; flex: 1; border-radius: 8px; overflow: hidden; background: rgba(30, 41, 59, 0.6); }
-          .photo-main-image { width: 100%; height: 300px; object-fit: cover; display: block; }
-          .photo-info { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); padding: 16px; color: white; }
-          .photo-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-          .photo-timestamp { font-size: 12px; color: #cbd5e1; }
-          .photo-delete-btn { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(239, 68, 68, 0.8); color: white; border: none; cursor: pointer; font-size: 14px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
-          .photo-delete-btn:hover { background: rgba(239, 68, 68, 1); transform: scale(1.1); }
-          
-          .photo-thumbnails { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; }
-          .photo-thumbnails::-webkit-scrollbar { height: 4px; }
-          .photo-thumbnails::-webkit-scrollbar-track { background: rgba(100, 116, 139, 0.2); border-radius: 2px; }
-          .photo-thumbnails::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.5); border-radius: 2px; }
-          .photo-thumbnail { position: relative; width: 60px; height: 60px; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: all 0.3s ease; flex-shrink: 0; }
-          .photo-thumbnail:hover { border-color: rgba(59, 130, 246, 0.5); transform: scale(1.05); }
-          .photo-thumbnail.active { border-color: #3b82f6; transform: scale(1.1); }
-          .photo-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
-          .thumbnail-overlay { position: absolute; bottom: 0; right: 0; background: rgba(0, 0, 0, 0.7); color: white; font-size: 10px; padding: 2px 4px; border-radius: 3px 0 0 0; }
-          
-          .photo-description { margin-top: 12px; }
-          .photo-description-input { width: 100%; padding: 8px 12px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; resize: vertical; transition: all 0.3s ease; }
-          .photo-description-input:focus { outline: none; border-color: #2563eb; }
-          .photo-description-input::placeholder { color: #64748b; }
-          
-          .photo-gallery-info { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(100, 116, 139, 0.3); }
-          .photo-count { color: #3b82f6; font-weight: 600; font-size: 12px; }
-          .photo-current { color: #94a3b8; font-size: 11px; }
-          
-          @media (max-width: 768px) {
-            .photo-main-image { height: 200px; }
-            .photo-nav-btn { width: 32px; height: 32px; font-size: 14px; }
-            .photo-thumbnails { gap: 6px; }
-            .photo-thumbnail { width: 50px; height: 50px; }
-          }
-          
-          .field-help { font-size: 10px; color: #64748b; margin-top: 2px; font-style: italic; }
-          
-          @media (max-width: 768px) {
-            .permits-grid { grid-template-columns: 1fr; gap: 16px; }
-            .search-grid { grid-template-columns: 1fr; gap: 8px; }
-            .permits-stats { grid-template-columns: repeat(2, 1fr); }
-            .form-fields { grid-template-columns: 1fr; }
-            .permit-actions { flex-direction: column; }
-          }
         `
       }} />
 
@@ -1609,7 +1527,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               className="filter-select"
             >
               <option value="all">{t.allCategories}</option>
-              {categories.map(category => (
+              {categories.map((category: string) => (
                 <option key={category} value={category}>
                   {getCategoryIcon(category)} {(t.categories as any)[category] || category}
                 </option>
@@ -1621,7 +1539,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               className="filter-select"
             >
               <option value="all">{t.allProvinces}</option>
-              {provinces.map(province => (
+              {provinces.map((province: string) => (
                 <option key={province} value={province}>
                   {province}
                 </option>
@@ -1727,3 +1645,758 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
 };
 
 export default Step4RealPermits;
+/* =================== CSS AVANCÉ POUR COMPOSANTS SPÉCIALISÉS =================== */
+
+/* Signatures électroniques */
+.signature-field { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 12px; 
+}
+
+.signature-pad { 
+  flex: 1; 
+  border: 2px solid rgba(100, 116, 139, 0.5); 
+  border-radius: 8px; 
+  padding: 12px; 
+  min-height: 60px; 
+  display: flex; 
+  align-items: center; 
+  background: rgba(15, 23, 42, 0.9); 
+}
+
+.signature-content { 
+  width: 100%; 
+}
+
+.signature-text { 
+  color: #22c55e; 
+  font-weight: 600; 
+  font-size: 14px; 
+  margin-bottom: 4px; 
+}
+
+.signature-timestamp { 
+  color: #94a3b8; 
+  font-size: 11px; 
+  font-style: italic; 
+}
+
+.signature-placeholder { 
+  color: #94a3b8; 
+  font-size: 12px; 
+  font-style: italic; 
+}
+
+.signature-controls { 
+  display: flex; 
+  gap: 8px; 
+  align-items: center; 
+  flex-wrap: wrap; 
+}
+
+.signature-name-input { 
+  flex: 1; 
+  min-width: 200px; 
+  padding: 8px 12px; 
+  background: rgba(15, 23, 42, 0.8); 
+  border: 1px solid rgba(100, 116, 139, 0.3); 
+  border-radius: 6px; 
+  color: #ffffff; 
+  font-size: 12px; 
+  transition: all 0.3s ease; 
+  scroll-behavior: auto !important; 
+  scroll-margin: 0 !important; 
+}
+
+.signature-name-input:focus { 
+  outline: none; 
+  border-color: #2563eb; 
+}
+
+.signature-name-input::placeholder { 
+  color: #64748b; 
+}
+
+.signature-btn { 
+  padding: 8px 16px; 
+  background: linear-gradient(135deg, #22c55e, #16a34a); 
+  color: white; 
+  border: none; 
+  border-radius: 6px; 
+  cursor: pointer; 
+  font-size: 12px; 
+  font-weight: 500; 
+  transition: all 0.3s ease; 
+}
+
+.signature-btn:hover { 
+  transform: translateY(-1px); 
+  box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3); 
+}
+
+.signature-clear-btn { 
+  padding: 6px 12px; 
+  background: rgba(239, 68, 68, 0.2); 
+  color: #ef4444; 
+  border: 1px solid rgba(239, 68, 68, 0.3); 
+  border-radius: 6px; 
+  cursor: pointer; 
+  font-size: 11px; 
+}
+
+.signature-clear-btn:hover { 
+  background: rgba(239, 68, 68, 0.3); 
+}
+
+/* Tracking des travailleurs */
+.workers-tracking-container { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 16px; 
+}
+
+.worker-entry-form { 
+  background: rgba(30, 41, 59, 0.6); 
+  padding: 16px; 
+  border-radius: 8px; 
+  border: 1px solid rgba(100, 116, 139, 0.3); 
+}
+
+.worker-entry-inputs { 
+  display: flex; 
+  gap: 8px; 
+  align-items: center; 
+  flex-wrap: wrap; 
+}
+
+.worker-name-input { 
+  flex: 2; 
+  min-width: 200px; 
+  padding: 8px 12px; 
+  background: rgba(15, 23, 42, 0.8); 
+  border: 1px solid rgba(100, 116, 139, 0.3); 
+  border-radius: 6px; 
+  color: #ffffff; 
+  font-size: 12px; 
+  scroll-behavior: auto !important; 
+  scroll-margin: 0 !important; 
+}
+
+.worker-time-input { 
+  flex: 1; 
+  min-width: 120px; 
+  padding: 8px 12px; 
+  background: rgba(15, 23, 42, 0.8); 
+  border: 1px solid rgba(100, 116, 139, 0.3); 
+  border-radius: 6px; 
+  color: #ffffff; 
+  font-size: 12px; 
+  scroll-behavior: auto !important; 
+  scroll-margin: 0 !important; 
+}
+
+.worker-entry-btn { 
+  padding: 8px 16px; 
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
+  color: white; 
+  border: none; 
+  border-radius: 6px; 
+  cursor: pointer; 
+  font-size: 12px; 
+  font-weight: 500; 
+}
+
+.worker-entry-btn:hover { 
+  transform: translateY(-1px); 
+}
+
+.workers-log-list h5 { 
+  color: #2563eb; 
+  margin: 0 0 12px; 
+  font-size: 14px; 
+  font-weight: 600; 
+}
+
+.no-entries { 
+  color: #64748b; 
+  font-style: italic; 
+  text-align: center; 
+  padding: 20px; 
+}
+
+.workers-table { 
+  border: 1px solid rgba(100, 116, 139, 0.3); 
+  border-radius: 8px; 
+  overflow: hidden; 
+}
+
+.workers-table-header { 
+  display: grid; 
+  grid-template-columns: 2fr 1fr 1fr 1fr; 
+  background: rgba(59, 130, 246, 0.1); 
+  padding: 12px; 
+  font-weight: 600; 
+  color: #2563eb; 
+  font-size: 12px; 
+  border-bottom: 1px solid rgba(100, 116, 139, 0.3); 
+}
+
+.workers-table-row { 
+  display: grid; 
+  grid-template-columns: 2fr 1fr 1fr 1fr; 
+  padding: 12px; 
+  border-bottom: 1px solid rgba(100, 116, 139, 0.2); 
+  align-items: center; 
+}
+
+.workers-table-row:last-child { 
+  border-bottom: none; 
+}
+
+.workers-table-row:hover { 
+  background: rgba(100, 116, 139, 0.1); 
+}
+
+.worker-name { 
+  color: #ffffff; 
+  font-weight: 500; 
+}
+
+.worker-time { 
+  color: #94a3b8; 
+  font-family: monospace; 
+}
+
+.exit-btn { 
+  padding: 4px 8px; 
+  background: rgba(34, 197, 94, 0.2); 
+  color: #22c55e; 
+  border: 1px solid rgba(34, 197, 94, 0.3); 
+  border-radius: 4px; 
+  cursor: pointer; 
+  font-size: 10px; 
+}
+
+.exit-btn:hover { 
+  background: rgba(34, 197, 94, 0.3); 
+}
+
+.remove-btn { 
+  padding: 4px 8px; 
+  background: rgba(239, 68, 68, 0.2); 
+  color: #ef4444; 
+  border: 1px solid rgba(239, 68, 68, 0.3); 
+  border-radius: 4px; 
+  cursor: pointer; 
+  font-size: 10px; 
+}
+
+.remove-btn:hover { 
+  background: rgba(239, 68, 68, 0.3); 
+}
+
+/* Sélecteur d'heure */
+.time-picker-container { 
+  position: relative; 
+}
+
+.time-display { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  padding: 8px 12px; 
+  background: rgba(15, 23, 42, 0.8); 
+  border: 1px solid rgba(100, 116, 139, 0.3); 
+  border-radius: 6px; 
+  cursor: pointer; 
+  transition: all 0.3s ease; 
+}
+
+.time-display:hover { 
+  border-color: #2563eb; 
+}
+
+.time-value { 
+  color: #ffffff; 
+  font-family: monospace; 
+  font-size: 14px; 
+}
+
+.time-icon { 
+  font-size: 16px; 
+}
+
+.time-picker-dropdown { 
+  position: absolute; 
+  top: 100%; 
+  left: 0; 
+  right: 0; 
+  background: rgba(15, 23, 42, 0.95); 
+  border: 1px solid rgba(100, 116, 139, 0.5); 
+  border-radius: 8px; 
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); 
+  z-index: 1000; 
+  backdrop-filter: blur(20px); 
+}
+
+.time-picker-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 12px 16px; 
+  border-bottom: 1px solid rgba(100, 116, 139, 0.3); 
+  color: #ffffff; 
+  font-weight: 600; 
+}
+
+.time-picker-close { 
+  background: none; 
+  border: none; 
+  color: #94a3b8; 
+  cursor: pointer; 
+  font-size: 18px; 
+  padding: 4px; 
+}
+
+.time-picker-close:hover { 
+  color: #ef4444; 
+}
+
+.time-picker-selectors { 
+  display: flex; 
+  align-items: flex-start; 
+  gap: 8px; 
+  padding: 16px; 
+}
+
+.time-selector { 
+  flex: 1; 
+}
+
+.time-selector-label { 
+  color: #94a3b8; 
+  font-size: 12px; 
+  font-weight: 500; 
+  margin-bottom: 8px; 
+  text-align: center; 
+}
+
+.time-options { 
+  max-height: 150px; 
+  overflow-y: auto; 
+  border: 1px solid rgba(100, 116, 139, 0.3); 
+  border-radius: 6px; 
+}
+
+.time-option { 
+  padding: 8px 12px; 
+  text-align: center; 
+  color: #cbd5e1; 
+  cursor: pointer; 
+  border-bottom: 1px solid rgba(100, 116, 139, 0.2); 
+  font-family: monospace; 
+}
+
+.time-option:last-child { 
+  border-bottom: none; 
+}
+
+.time-option:hover { 
+  background: rgba(59, 130, 246, 0.2); 
+  color: #ffffff; 
+}
+
+.time-option.selected { 
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
+  color: #ffffff; 
+  font-weight: 600; 
+}
+
+.time-separator { 
+  font-size: 24px; 
+  color: #94a3b8; 
+  align-self: center; 
+  margin-top: 20px; 
+  font-weight: bold; 
+}
+
+.time-picker-actions { 
+  display: flex; 
+  gap: 8px; 
+  padding: 12px 16px; 
+  border-top: 1px solid rgba(100, 116, 139, 0.3); 
+}
+
+.time-picker-now { 
+  padding: 6px 12px; 
+  background: rgba(100, 116, 139, 0.2); 
+  color: #cbd5e1; 
+  border: 1px solid rgba(100, 116, 139, 0.3); 
+  border-radius: 4px; 
+  cursor: pointer; 
+  font-size: 12px; 
+}
+
+.time-picker-now:hover { 
+  background: rgba(100, 116, 139, 0.3); 
+}
+
+.time-picker-ok { 
+  padding: 6px 12px; 
+  background: linear-gradient(135deg, #22c55e, #16a34a); 
+  color: white; 
+  border: none; 
+  border-radius: 4px; 
+  cursor: pointer; 
+  font-size: 12px; 
+  font-weight: 500; 
+  margin-left: auto; 
+}
+
+.time-picker-ok:hover { 
+  transform: translateY(-1px); 
+}
+
+/* Galerie photos */
+.photo-gallery-container { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 16px; 
+}
+
+.photo-upload-section { 
+  background: rgba(30, 41, 59, 0.6); 
+  padding: 16px; 
+  border-radius: 8px; 
+  border: 1px solid rgba(100, 116, 139, 0.3); 
+}
+
+.photo-upload-buttons { 
+  display: flex; 
+  gap: 12px; 
+  flex-wrap: wrap; 
+}
+
+.photo-upload-btn, .photo-camera-btn { 
+  padding: 10px 16px; 
+  border-radius: 8px; 
+  border: none; 
+  cursor: pointer; 
+  font-size: 13px; 
+  font-weight: 500; 
+  transition: all 0.3s ease; 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+}
+
+.photo-upload-btn { 
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
+  color: white; 
+}
+
+.photo-upload-btn:hover { 
+  transform: translateY(-1px); 
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); 
+}
+
+.photo-camera-btn { 
+  background: linear-gradient(135deg, #22c55e, #16a34a); 
+  color: white; 
+}
+
+.photo-camera-btn:hover { 
+  transform: translateY(-1px); 
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); 
+}
+
+.photo-gallery { 
+  background: rgba(15, 23, 42, 0.8); 
+  border: 1px solid rgba(100, 116, 139, 0.3); 
+  border-radius: 12px; 
+  padding: 20px; 
+}
+
+.photo-carousel { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 16px; 
+}
+
+.photo-main-container { 
+  position: relative; 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+}
+
+.photo-nav-btn { 
+  position: absolute; 
+  top: 50%; 
+  transform: translateY(-50%); 
+  z-index: 10; 
+  width: 40px; 
+  height: 40px; 
+  border-radius: 50%; 
+  background: rgba(0, 0, 0, 0.7); 
+  color: white; 
+  border: none; 
+  cursor: pointer; 
+  font-size: 18px; 
+  font-weight: bold; 
+  transition: all 0.3s ease; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+}
+
+.photo-nav-btn:hover { 
+  background: rgba(0, 0, 0, 0.9); 
+  transform: translateY(-50%) scale(1.1); 
+}
+
+.photo-nav-btn.prev { 
+  left: 10px; 
+}
+
+.photo-nav-btn.next { 
+  right: 10px; 
+}
+
+.photo-main { 
+  position: relative; 
+  flex: 1; 
+  border-radius: 8px; 
+  overflow: hidden; 
+  background: rgba(30, 41, 59, 0.6); 
+}
+
+.photo-main-image { 
+  width: 100%; 
+  height: 300px; 
+  object-fit: cover; 
+  display: block; 
+}
+
+.photo-info { 
+  position: absolute; 
+  bottom: 0; 
+  left: 0; 
+  right: 0; 
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); 
+  padding: 16px; 
+  color: white; 
+}
+
+.photo-name { 
+  font-weight: 600; 
+  font-size: 14px; 
+  margin-bottom: 4px; 
+}
+
+.photo-timestamp { 
+  font-size: 12px; 
+  color: #cbd5e1; 
+}
+
+.photo-delete-btn { 
+  position: absolute; 
+  top: 10px; 
+  right: 10px; 
+  width: 32px; 
+  height: 32px; 
+  border-radius: 50%; 
+  background: rgba(239, 68, 68, 0.8); 
+  color: white; 
+  border: none; 
+  cursor: pointer; 
+  font-size: 14px; 
+  transition: all 0.3s ease; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+}
+
+.photo-delete-btn:hover { 
+  background: rgba(239, 68, 68, 1); 
+  transform: scale(1.1); 
+}
+
+.photo-thumbnails { 
+  display: flex; 
+  gap: 8px; 
+  overflow-x: auto; 
+  padding: 8px 0; 
+}
+
+.photo-thumbnails::-webkit-scrollbar { 
+  height: 4px; 
+}
+
+.photo-thumbnails::-webkit-scrollbar-track { 
+  background: rgba(100, 116, 139, 0.2); 
+  border-radius: 2px; 
+}
+
+.photo-thumbnails::-webkit-scrollbar-thumb { 
+  background: rgba(100, 116, 139, 0.5); 
+  border-radius: 2px; 
+}
+
+.photo-thumbnail { 
+  position: relative; 
+  width: 60px; 
+  height: 60px; 
+  border-radius: 6px; 
+  overflow: hidden; 
+  cursor: pointer; 
+  border: 2px solid transparent; 
+  transition: all 0.3s ease; 
+  flex-shrink: 0; 
+}
+
+.photo-thumbnail:hover { 
+  border-color: rgba(59, 130, 246, 0.5); 
+  transform: scale(1.05); 
+}
+
+.photo-thumbnail.active { 
+  border-color: #3b82f6; 
+  transform: scale(1.1); 
+}
+
+.photo-thumbnail img { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+}
+
+.thumbnail-overlay { 
+  position: absolute; 
+  bottom: 0; 
+  right: 0; 
+  background: rgba(0, 0, 0, 0.7); 
+  color: white; 
+  font-size: 10px; 
+  padding: 2px 4px; 
+  border-radius: 3px 0 0 0; 
+}
+
+.photo-description { 
+  margin-top: 12px; 
+}
+
+.photo-description-input { 
+  width: 100%; 
+  padding: 8px 12px; 
+  background: rgba(30, 41, 59, 0.8); 
+  border: 1px solid rgba(100, 116, 139, 0.3); 
+  border-radius: 6px; 
+  color: #ffffff; 
+  font-size: 12px; 
+  resize: vertical; 
+  transition: all 0.3s ease; 
+  scroll-behavior: auto !important; 
+  scroll-margin: 0 !important; 
+}
+
+.photo-description-input:focus { 
+  outline: none; 
+  border-color: #2563eb; 
+}
+
+.photo-description-input::placeholder { 
+  color: #64748b; 
+}
+
+.photo-gallery-info { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-top: 12px; 
+  padding-top: 12px; 
+  border-top: 1px solid rgba(100, 116, 139, 0.3); 
+}
+
+.photo-count { 
+  color: #3b82f6; 
+  font-weight: 600; 
+  font-size: 12px; 
+}
+
+.photo-current { 
+  color: #94a3b8; 
+  font-size: 11px; 
+}
+
+/* Aide et validation */
+.field-help { 
+  font-size: 10px; 
+  color: #64748b; 
+  margin-top: 2px; 
+  font-style: italic; 
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .permits-grid { 
+    grid-template-columns: 1fr; 
+    gap: 16px; 
+  }
+  
+  .search-grid { 
+    grid-template-columns: 1fr; 
+    gap: 8px; 
+  }
+  
+  .permits-stats { 
+    grid-template-columns: repeat(2, 1fr); 
+  }
+  
+  .form-fields { 
+    grid-template-columns: 1fr; 
+  }
+  
+  .permit-actions { 
+    flex-direction: column; 
+  }
+  
+  .photo-main-image { 
+    height: 200px; 
+  }
+  
+  .photo-nav-btn { 
+    width: 32px; 
+    height: 32px; 
+    font-size: 14px; 
+  }
+  
+  .photo-thumbnails { 
+    gap: 6px; 
+  }
+  
+  .photo-thumbnail { 
+    width: 50px; 
+    height: 50px; 
+  }
+  
+  .worker-entry-inputs { 
+    flex-direction: column; 
+    align-items: stretch; 
+  }
+  
+  .worker-name-input, .worker-time-input { 
+    min-width: auto; 
+    flex: none; 
+  }
+  
+  .signature-controls { 
+    flex-direction: column; 
+    align-items: stretch; 
+  }
+  
+  .signature-name-input { 
+    min-width: auto; 
+  }
+}
