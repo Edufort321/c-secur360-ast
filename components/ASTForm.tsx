@@ -6,7 +6,7 @@ import {
   AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building, 
   Phone, User, Briefcase, Copy, Check, Camera, HardHat, Zap, Settings,
   Plus, Trash2, Edit, Star, Wifi, WifiOff, Upload, Bell, Wrench, Wind,
-  Droplets, Flame, Activity, Search, Filter, Hand
+  Droplets, Flame, Activity, Search, Filter, Hand, MessageSquare
 } from 'lucide-react';
 
 // Import des composants Steps
@@ -26,7 +26,6 @@ interface ASTFormProps {
 }
 
 interface ASTData {
-  // Métadonnées
   id: string;
   astNumber: string;
   tenant: string;
@@ -35,23 +34,18 @@ interface ASTData {
   createdAt: string;
   updatedAt: string;
   verificationDeadline?: string;
-  
-  // Étapes de l'AST (6 steps)
   projectInfo: ProjectInfo;
   equipment: EquipmentData;
   hazards: HazardData;
   permits: PermitData;
   validation: ValidationData;
   finalization: FinalizationData;
-  
-  // Workflow
   signatures: Signature[];
   approvals: Approval[];
   notifications: NotificationData[];
 }
 
 interface ProjectInfo {
-  // Client et localisation
   client: string;
   clientPhone?: string;
   clientRepresentative?: string;
@@ -59,8 +53,6 @@ interface ProjectInfo {
   workLocation: string;
   gpsCoordinates?: string;
   industry: string;
-  
-  // Projet
   projectNumber: string;
   astClientNumber?: string;
   date: string;
@@ -68,12 +60,8 @@ interface ProjectInfo {
   workDescription: string;
   workerCount: number;
   estimatedDuration?: string;
-  
-  // Contacts d'urgence
   emergencyContact?: string;
   emergencyPhone?: string;
-  
-  // Verrouillage/Cadenassage
   lockoutPoints?: LockoutPoint[];
   lockoutPhotos?: LockoutPhoto[];
 }
@@ -290,7 +278,6 @@ interface RegulatoryCompliance {
   specialConditions: string[];
 }
 
-// =================== INTERFACE VALIDATION ===================
 interface ValidationData {
   reviewers: TeamMember[];
   approvalRequired: boolean;
@@ -309,8 +296,6 @@ interface ValidationData {
     signature: string;
     conditions?: string;
   };
-  
-  // Données étendues pour entreprise
   teamMembers?: TeamMember[];
   discussionPoints?: DiscussionPoint[];
   meetingMinutes?: MeetingMinutes;
@@ -382,7 +367,6 @@ interface TeamApproval {
   digitalSignature?: string;
 }
 
-// =================== INTERFACES FINALIZATION ===================
 interface FinalizationData {
   workers: Worker[];
   photos: Photo[];
@@ -528,7 +512,139 @@ const useIsMobile = () => {
 
   return isMobile;
 };
-// =================== FONCTIONS MOBILE HELPERS CORRIGÉES ===================
+// =================== COMPOSANT PRINCIPAL ===================
+export default function ASTForm({ tenant, language = 'fr', userId, userRole = 'worker' }: ASTFormProps) {
+  // =================== DÉTECTION MOBILE ===================
+  const isMobile = useIsMobile();
+
+  // =================== ÉTAT PRINCIPAL ===================
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isOnline, setIsOnline] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // =================== DONNÉES AST INITIALES ===================
+  const [astData, setAstData] = useState<ASTData>({
+    id: `ast_${Date.now()}`,
+    astNumber: `AST-${tenant.toUpperCase()}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+    tenant,
+    status: 'draft',
+    createdBy: userId || 'user_anonymous',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    projectInfo: {
+      client: '',
+      workLocation: '',
+      industry: '',
+      projectNumber: '',
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toTimeString().slice(0, 5),
+      workDescription: '',
+      workerCount: 1,
+      lockoutPoints: [],
+      lockoutPhotos: []
+    },
+    equipment: {
+      list: [],
+      selected: [],
+      totalCost: 0,
+      inspectionStatus: {
+        total: 0,
+        verified: 0,
+        available: 0,
+        verificationRate: 0,
+        availabilityRate: 0
+      }
+    },
+    hazards: {
+      list: [],
+      selected: [],
+      stats: {
+        totalHazards: 0,
+        categories: {}
+      }
+    },
+    permits: {
+      permits: [],
+      authorities: [],
+      generalRequirements: [],
+      timeline: [],
+      notifications: [],
+      regulatory: {
+        rsst: false,
+        cnesst: false,
+        municipalPermits: [],
+        environmentalConsiderations: [],
+        specialConditions: []
+      }
+    },
+    validation: {
+      reviewers: [],
+      approvalRequired: false,
+      minimumReviewers: 1,
+      validationCriteria: {
+        hazardIdentification: false,
+        controlMeasures: false,
+        equipmentSelection: false,
+        procedural: false,
+        regulatory: false
+      }
+    },
+    finalization: {
+      workers: [],
+      photos: [],
+      finalComments: '',
+      documentGeneration: {
+        format: 'pdf',
+        template: 'standard',
+        language: 'fr',
+        includePhotos: true,
+        includeSignatures: true,
+        includeQRCode: true,
+        branding: true,
+        watermark: false
+      },
+      distribution: {
+        email: {
+          enabled: false,
+          recipients: [],
+          subject: '',
+          message: ''
+        },
+        portal: {
+          enabled: false,
+          publish: false,
+          category: ''
+        },
+        archive: {
+          enabled: true,
+          retention: 7,
+          location: 'cloud'
+        },
+        compliance: {
+          enabled: false,
+          authorities: []
+        }
+      },
+      completionStatus: {
+        projectInfo: false,
+        equipment: false,
+        hazards: false,
+        permits: false,
+        validation: false
+      },
+      metadata: {
+        createdAt: new Date().toISOString(),
+        version: '1.0',
+        lastModified: new Date().toISOString()
+      }
+    },
+    signatures: [],
+    approvals: [],
+    notifications: []
+  });
+
+  // =================== FONCTIONS MOBILE HELPERS CORRIGÉES ===================
   const getCompletionPercentage = (): number => {
     const completedSteps = getCurrentCompletedSteps();
     return Math.round((completedSteps / 6) * 100);
@@ -607,7 +723,102 @@ const useIsMobile = () => {
   const handleStepClick = (step: number) => {
     setCurrentStep(step);
   };
-// =================== CONFIGURATION STEPS MOBILE OPTIMIZED ===================
+
+  // =================== HANDLERS POUR CHAQUE STEP ===================
+  const handleStep1DataChange = useCallback((section: string, data: any) => {
+    setAstData(prev => ({
+      ...prev,
+      projectInfo: { ...prev.projectInfo, ...data }
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleStep2DataChange = useCallback((section: string, data: any) => {
+    setAstData(prev => ({
+      ...prev,
+      equipment: { ...prev.equipment, ...data }
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleStep3DataChange = useCallback((section: string, data: any) => {
+    setAstData(prev => ({
+      ...prev,
+      hazards: { ...prev.hazards, ...data }
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleStep4DataChange = useCallback((section: string, data: any) => {
+    setAstData(prev => ({
+      ...prev,
+      permits: { ...prev.permits, ...data }
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleStep5DataChange = useCallback((section: string, data: any) => {
+    setAstData(prev => ({
+      ...prev,
+      validation: { ...prev.validation, ...data }
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleStep6DataChange = useCallback((section: string, data: any) => {
+    setAstData(prev => ({
+      ...prev,
+      finalization: { ...prev.finalization, ...data }
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  // =================== FONCTIONS UTILITAIRES ===================
+  const handleCopyAST = async () => {
+    try {
+      await navigator.clipboard.writeText(astData.astNumber);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Erreur lors de la copie:', err);
+    }
+  };
+
+  const changeStatus = (newStatus: ASTData['status']) => {
+    setAstData(prev => ({
+      ...prev,
+      status: newStatus,
+      updatedAt: new Date().toISOString()
+    }));
+  };
+
+  // =================== EFFET DE SAUVEGARDE AUTOMATIQUE ===================
+  useEffect(() => {
+    if (hasUnsavedChanges) {
+      const saveTimer = setTimeout(() => {
+        // Simuler la sauvegarde
+        console.log('🔄 Sauvegarde automatique...', astData);
+        setHasUnsavedChanges(false);
+      }, 2000);
+
+      return () => clearTimeout(saveTimer);
+    }
+  }, [hasUnsavedChanges, astData]);
+
+  // =================== EFFET DE DÉTECTION DE CONNEXION ===================
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+  // =================== CONFIGURATION STEPS MOBILE OPTIMIZED ===================
   const steps = [
     { 
       id: 1, 
@@ -977,7 +1188,7 @@ const useIsMobile = () => {
       </div>
     </div>
   );
-// =================== RENDU PRINCIPAL ===================
+  // =================== RENDU PRINCIPAL ===================
   return (
     <div style={{
       minHeight: '100vh',
@@ -1470,7 +1681,6 @@ const useIsMobile = () => {
           </div>
         </header>
       )}
-
       {/* =================== NAVIGATION STEPS CONDITIONNELLE =================== */}
       {isMobile ? (
         <MobileStepsNavigation />
@@ -1688,6 +1898,7 @@ const useIsMobile = () => {
                 onDataChange={handleStep6DataChange}
                 language={language}
                 tenant={tenant}
+                errors={{}}
               />
             )}
           </div>
