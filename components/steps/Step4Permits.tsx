@@ -43,7 +43,7 @@ interface Permit {
 
 interface FormField {
   id: string;
-  type: 'text' | 'number' | 'date' | 'time' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file' | 'signature' | 'workers_tracking' | 'time_picker';
+  type: 'text' | 'number' | 'date' | 'time' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file' | 'signature' | 'workers_tracking' | 'time_picker' | 'photo_gallery';
   label: string;
   required: boolean;
   placeholder?: string;
@@ -104,6 +104,7 @@ const realPermitsDatabase: Permit[] = [
       // Section Atmosphère
       { id: 'space_contents', type: 'textarea', label: 'Contenu de l\'espace clos', required: true, section: 'atmosphere', placeholder: 'Décrire le contenu, vérifier SDS...' },
       { id: 'atmosphere_types', type: 'checkbox', label: 'Types d\'atmosphère', required: true, section: 'atmosphere', options: ['Inflammable/combustible LIE ≥ 5%', 'Oxygène ≤ 19,5%', 'Oxygène ≥ 23%', 'Gaz toxique', 'Poussières', 'Irritante'] },
+      { id: 'photos_documentation', type: 'photo_gallery', label: 'Photos de documentation', required: false, section: 'atmosphere' },
       
       // Section Signatures et listing des travailleurs
       { id: 'authorized_workers', type: 'textarea', label: 'Noms des travailleurs autorisés', required: true, section: 'signatures', placeholder: 'Un travailleur par ligne...' },
@@ -154,6 +155,7 @@ const realPermitsDatabase: Permit[] = [
       { id: 'fire_watch', type: 'radio', label: 'Surveillance incendie assignée', required: true, section: 'precautions', options: ['Oui', 'Non'] },
       { id: 'fire_watch_name', type: 'text', label: 'Nom du surveillant incendie', required: false, section: 'precautions' },
       { id: 'combustibles_removed', type: 'radio', label: 'Matières combustibles éloignées (11m minimum)', required: true, section: 'precautions', options: ['Oui', 'Non', 'Protégées'] },
+      { id: 'photos_precautions', type: 'photo_gallery', label: 'Photos des mesures de précaution', required: false, section: 'precautions' },
       
       // Section Signatures
       { id: 'applicant_signature', type: 'signature', label: 'Signature du demandeur', required: true, section: 'signatures' },
@@ -207,6 +209,7 @@ const realPermitsDatabase: Permit[] = [
       // Section Sécurité
       { id: 'safety_plan', type: 'radio', label: 'Plan de sécurité préparé', required: true, section: 'safety', options: ['Oui', 'Non'] },
       { id: 'traffic_control', type: 'radio', label: 'Contrôle de circulation requis', required: true, section: 'safety', options: ['Oui', 'Non'] },
+      { id: 'photos_safety', type: 'photo_gallery', label: 'Photos de sécurité du site', required: false, section: 'safety' },
       
       // Section Documents
       { id: 'site_plan', type: 'file', label: 'Plan de site', required: true, section: 'documents' },
@@ -434,28 +437,27 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
   };
 
   const handleFormFieldChange = (permitId: string, fieldId: string, value: any) => {
+    // Arrêter immédiatement la propagation
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    
     const updatedPermits = permits.map((permit: Permit) => {
       if (permit.id === permitId) {
+        const newFormData = {
+          ...permit.formData,
+          [fieldId]: value
+        };
+        
         return {
           ...permit,
-          formData: {
-            ...permit.formData,
-            [fieldId]: value
-          }
+          formData: newFormData
         };
       }
       return permit;
     });
+    
     setPermits(updatedPermits);
     updateFormData(updatedPermits);
-    
-    // Empêcher le scroll automatique
-    setTimeout(() => {
-      const activeElement = document.activeElement as HTMLElement;
-      if (activeElement && activeElement.scrollIntoView) {
-        activeElement.scrollIntoView({ behavior: 'auto', block: 'nearest' });
-      }
-    }, 0);
   };
 
   const toggleFormExpansion = (permitId: string) => {
@@ -522,11 +524,27 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               value={value}
               onChange={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 handleFormFieldChange(permit.id, field.id, e.target.value);
               }}
-              onInput={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              onKeyUp={(e) => e.stopPropagation()}
+              onInput={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
+              onKeyUp={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onFocus={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
               placeholder={field.placeholder}
               required={field.required}
               min={field.validation?.min}
@@ -670,11 +688,28 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               value={value}
               onChange={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 handleFormFieldChange(permit.id, field.id, e.target.value);
               }}
-              onInput={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              onKeyUp={(e) => e.stopPropagation()}
+              onInput={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  // Permettre Enter + Shift pour nouvelle ligne
+                  e.preventDefault();
+                }
+              }}
+              onKeyUp={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onFocus={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
               placeholder={field.placeholder}
               required={field.required}
               rows={3}
@@ -836,6 +871,226 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
             </div>
           );
         
+        case 'photo_gallery':
+          const photos = Array.isArray(value) ? value : [];
+          const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+          
+          return (
+            <div className="photo-gallery-container">
+              <div className="photo-upload-section">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="photo-input"
+                  id={`photo-input-${field.id}`}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    const files = Array.from(e.target.files || []);
+                    
+                    files.forEach((file) => {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const newPhoto = {
+                          id: Date.now() + Math.random(),
+                          url: event.target?.result as string,
+                          name: file.name,
+                          timestamp: new Date().toISOString(),
+                          description: ''
+                        };
+                        const updatedPhotos = [...photos, newPhoto];
+                        handleFormFieldChange(permit.id, field.id, updatedPhotos);
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                    
+                    // Reset input
+                    (e.target as HTMLInputElement).value = '';
+                  }}
+                  onInput={(e) => e.stopPropagation()}
+                  style={{ display: 'none' }}
+                />
+                
+                <div className="photo-upload-buttons">
+                  <button
+                    type="button"
+                    className="photo-upload-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      document.getElementById(`photo-input-${field.id}`)?.click();
+                    }}
+                  >
+                    📷 Ajouter des photos
+                  </button>
+                  
+                  <button
+                    type="button"
+                    className="photo-camera-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      // Simuler une capture de caméra
+                      const canvas = document.createElement('canvas');
+                      canvas.width = 640;
+                      canvas.height = 480;
+                      const ctx = canvas.getContext('2d');
+                      if (ctx) {
+                        // Gradient de fond
+                        const gradient = ctx.createLinearGradient(0, 0, 640, 480);
+                        gradient.addColorStop(0, '#1e293b');
+                        gradient.addColorStop(1, '#334155');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(0, 0, 640, 480);
+                        
+                        // Texte
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '24px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Photo capturée', 320, 220);
+                        ctx.font = '16px Arial';
+                        ctx.fillText(new Date().toLocaleString('fr-CA'), 320, 260);
+                        
+                        const dataUrl = canvas.toDataURL('image/png');
+                        const newPhoto = {
+                          id: Date.now(),
+                          url: dataUrl,
+                          name: `Capture_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.png`,
+                          timestamp: new Date().toISOString(),
+                          description: ''
+                        };
+                        const updatedPhotos = [...photos, newPhoto];
+                        handleFormFieldChange(permit.id, field.id, updatedPhotos);
+                      }
+                    }}
+                  >
+                    📸 Prendre une photo
+                  </button>
+                </div>
+              </div>
+              
+              {photos.length > 0 && (
+                <div className="photo-gallery">
+                  <div className="photo-carousel">
+                    <div className="photo-main-container">
+                      {photos.length > 1 && (
+                        <button
+                          type="button"
+                          className="photo-nav-btn prev"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setCurrentPhotoIndex((prev) => 
+                              prev === 0 ? photos.length - 1 : prev - 1
+                            );
+                          }}
+                        >
+                          ←
+                        </button>
+                      )}
+                      
+                      <div className="photo-main">
+                        <img
+                          src={photos[currentPhotoIndex]?.url}
+                          alt={photos[currentPhotoIndex]?.name}
+                          className="photo-main-image"
+                        />
+                        <div className="photo-info">
+                          <div className="photo-name">{photos[currentPhotoIndex]?.name}</div>
+                          <div className="photo-timestamp">
+                            {new Date(photos[currentPhotoIndex]?.timestamp).toLocaleString('fr-CA')}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="photo-delete-btn"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const updatedPhotos = photos.filter((_, index) => index !== currentPhotoIndex);
+                            handleFormFieldChange(permit.id, field.id, updatedPhotos);
+                            if (currentPhotoIndex >= updatedPhotos.length && updatedPhotos.length > 0) {
+                              setCurrentPhotoIndex(updatedPhotos.length - 1);
+                            }
+                          }}
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                      
+                      {photos.length > 1 && (
+                        <button
+                          type="button"
+                          className="photo-nav-btn next"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setCurrentPhotoIndex((prev) => 
+                              prev === photos.length - 1 ? 0 : prev + 1
+                            );
+                          }}
+                        >
+                          →
+                        </button>
+                      )}
+                    </div>
+                    
+                    {photos.length > 1 && (
+                      <div className="photo-thumbnails">
+                        {photos.map((photo, index) => (
+                          <div
+                            key={photo.id}
+                            className={`photo-thumbnail ${index === currentPhotoIndex ? 'active' : ''}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setCurrentPhotoIndex(index);
+                            }}
+                          >
+                            <img src={photo.url} alt={photo.name} />
+                            <div className="thumbnail-overlay">
+                              {index + 1}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="photo-description">
+                      <textarea
+                        placeholder="Ajouter une description à cette photo..."
+                        value={photos[currentPhotoIndex]?.description || ''}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          const updatedPhotos = photos.map((photo, index) =>
+                            index === currentPhotoIndex
+                              ? { ...photo, description: e.target.value }
+                              : photo
+                          );
+                          handleFormFieldChange(permit.id, field.id, updatedPhotos);
+                        }}
+                        onInput={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        onKeyUp={(e) => e.stopPropagation()}
+                        className="photo-description-input"
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="photo-gallery-info">
+                    <span className="photo-count">{photos.length} photo{photos.length > 1 ? 's' : ''}</span>
+                    {photos.length > 1 && (
+                      <span className="photo-current">
+                        Photo {currentPhotoIndex + 1} sur {photos.length}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        
         case 'radio':
           return (
             <div className="radio-group">
@@ -905,14 +1160,17 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
           );
         
         case 'signature':
+          const signatureValue = permit.formData?.[field.id] || '';
+          const signatureMetadata = permit.formData?.[field.id + '_metadata'];
+          
           return (
             <div className="signature-field">
               <div className="signature-pad">
-                {value ? (
+                {signatureValue ? (
                   <div className="signature-content">
-                    <div className="signature-text">{value}</div>
+                    <div className="signature-text">✓ Signé par : {signatureValue}</div>
                     <div className="signature-timestamp">
-                      Signé le {permit.formData?.[field.id + '_metadata']?.date || new Date().toLocaleDateString('fr-CA')} à {permit.formData?.[field.id + '_metadata']?.time || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}
+                      Le {signatureMetadata?.date || new Date().toLocaleDateString('fr-CA')} à {signatureMetadata?.time || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 ) : (
@@ -932,7 +1190,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                       e.preventDefault();
                       const signerName = (e.target as HTMLInputElement).value.trim();
                       const timestamp = new Date();
-                      const signatureText = `${signerName}`;
                       const fullSignature = {
                         name: signerName,
                         date: timestamp.toLocaleDateString('fr-CA'),
@@ -941,14 +1198,33 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                         ipAddress: 'XXX.XXX.XXX.XXX',
                         userAgent: navigator.userAgent
                       };
-                      handleFormFieldChange(permit.id, field.id, signatureText);
-                      handleFormFieldChange(permit.id, field.id + '_metadata', fullSignature);
+                      
+                      // Mise à jour en deux étapes pour garantir la persistance
+                      const currentPermit = permits.find(p => p.id === permit.id);
+                      if (currentPermit) {
+                        const updatedFormData = {
+                          ...currentPermit.formData,
+                          [field.id]: signerName,
+                          [field.id + '_metadata']: fullSignature
+                        };
+                        
+                        const updatedPermits = permits.map(p => 
+                          p.id === permit.id 
+                            ? { ...p, formData: updatedFormData }
+                            : p
+                        );
+                        
+                        setPermits(updatedPermits);
+                        updateFormData(updatedPermits);
+                      }
+                      
                       (e.target as HTMLInputElement).value = '';
                     }
                   }}
                   onInput={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
                   onKeyUp={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.stopPropagation()}
                 />
                 <button 
                   type="button" 
@@ -960,7 +1236,6 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                     if (input && input.value.trim()) {
                       const signerName = input.value.trim();
                       const timestamp = new Date();
-                      const signatureText = `${signerName}`;
                       const fullSignature = {
                         name: signerName,
                         date: timestamp.toLocaleDateString('fr-CA'),
@@ -969,8 +1244,26 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                         ipAddress: 'XXX.XXX.XXX.XXX',
                         userAgent: navigator.userAgent
                       };
-                      handleFormFieldChange(permit.id, field.id, signatureText);
-                      handleFormFieldChange(permit.id, field.id + '_metadata', fullSignature);
+                      
+                      // Mise à jour en deux étapes pour garantir la persistance
+                      const currentPermit = permits.find(p => p.id === permit.id);
+                      if (currentPermit) {
+                        const updatedFormData = {
+                          ...currentPermit.formData,
+                          [field.id]: signerName,
+                          [field.id + '_metadata']: fullSignature
+                        };
+                        
+                        const updatedPermits = permits.map(p => 
+                          p.id === permit.id 
+                            ? { ...p, formData: updatedFormData }
+                            : p
+                        );
+                        
+                        setPermits(updatedPermits);
+                        updateFormData(updatedPermits);
+                      }
+                      
                       input.value = '';
                     } else {
                       alert('Veuillez entrer votre nom complet pour signer');
@@ -979,15 +1272,32 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                 >
                   Signer électroniquement
                 </button>
-                {value && (
+                {signatureValue && (
                   <button 
                     type="button" 
                     className="signature-clear-btn"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      handleFormFieldChange(permit.id, field.id, '');
-                      handleFormFieldChange(permit.id, field.id + '_metadata', null);
+                      
+                      // Effacer la signature avec mise à jour complète
+                      const currentPermit = permits.find(p => p.id === permit.id);
+                      if (currentPermit) {
+                        const updatedFormData = {
+                          ...currentPermit.formData,
+                          [field.id]: '',
+                          [field.id + '_metadata']: null
+                        };
+                        
+                        const updatedPermits = permits.map(p => 
+                          p.id === permit.id 
+                            ? { ...p, formData: updatedFormData }
+                            : p
+                        );
+                        
+                        setPermits(updatedPermits);
+                        updateFormData(updatedPermits);
+                      }
                     }}
                   >
                     Effacer
@@ -1054,7 +1364,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
       {/* CSS pour Permis Réels */}
       <style dangerouslySetInnerHTML={{
         __html: `
-          .step4-container { padding: 0; color: #ffffff; }
+          .step4-container { padding: 0; color: #ffffff; scroll-behavior: auto !important; }
           .permits-header { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
           .permits-title { color: #2563eb; font-size: 18px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
           .permits-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; margin-top: 16px; }
@@ -1185,6 +1495,57 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
           .time-picker-now:hover { background: rgba(100, 116, 139, 0.3); }
           .time-picker-ok { padding: 6px 12px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; margin-left: auto; }
           .time-picker-ok:hover { transform: translateY(-1px); }
+          
+          .photo-gallery-container { display: flex; flex-direction: column; gap: 16px; }
+          .photo-upload-section { background: rgba(30, 41, 59, 0.6); padding: 16px; border-radius: 8px; border: 1px solid rgba(100, 116, 139, 0.3); }
+          .photo-upload-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
+          .photo-upload-btn, .photo-camera-btn { padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
+          .photo-upload-btn { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; }
+          .photo-upload-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+          .photo-camera-btn { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; }
+          .photo-camera-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); }
+          
+          .photo-gallery { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 12px; padding: 20px; }
+          .photo-carousel { display: flex; flex-direction: column; gap: 16px; }
+          .photo-main-container { position: relative; display: flex; align-items: center; gap: 12px; }
+          .photo-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); z-index: 10; width: 40px; height: 40px; border-radius: 50%; background: rgba(0, 0, 0, 0.7); color: white; border: none; cursor: pointer; font-size: 18px; font-weight: bold; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
+          .photo-nav-btn:hover { background: rgba(0, 0, 0, 0.9); transform: translateY(-50%) scale(1.1); }
+          .photo-nav-btn.prev { left: 10px; }
+          .photo-nav-btn.next { right: 10px; }
+          
+          .photo-main { position: relative; flex: 1; border-radius: 8px; overflow: hidden; background: rgba(30, 41, 59, 0.6); }
+          .photo-main-image { width: 100%; height: 300px; object-fit: cover; display: block; }
+          .photo-info { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); padding: 16px; color: white; }
+          .photo-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+          .photo-timestamp { font-size: 12px; color: #cbd5e1; }
+          .photo-delete-btn { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(239, 68, 68, 0.8); color: white; border: none; cursor: pointer; font-size: 14px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
+          .photo-delete-btn:hover { background: rgba(239, 68, 68, 1); transform: scale(1.1); }
+          
+          .photo-thumbnails { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; }
+          .photo-thumbnails::-webkit-scrollbar { height: 4px; }
+          .photo-thumbnails::-webkit-scrollbar-track { background: rgba(100, 116, 139, 0.2); border-radius: 2px; }
+          .photo-thumbnails::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.5); border-radius: 2px; }
+          .photo-thumbnail { position: relative; width: 60px; height: 60px; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: all 0.3s ease; flex-shrink: 0; }
+          .photo-thumbnail:hover { border-color: rgba(59, 130, 246, 0.5); transform: scale(1.05); }
+          .photo-thumbnail.active { border-color: #3b82f6; transform: scale(1.1); }
+          .photo-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+          .thumbnail-overlay { position: absolute; bottom: 0; right: 0; background: rgba(0, 0, 0, 0.7); color: white; font-size: 10px; padding: 2px 4px; border-radius: 3px 0 0 0; }
+          
+          .photo-description { margin-top: 12px; }
+          .photo-description-input { width: 100%; padding: 8px 12px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; resize: vertical; transition: all 0.3s ease; }
+          .photo-description-input:focus { outline: none; border-color: #2563eb; }
+          .photo-description-input::placeholder { color: #64748b; }
+          
+          .photo-gallery-info { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(100, 116, 139, 0.3); }
+          .photo-count { color: #3b82f6; font-weight: 600; font-size: 12px; }
+          .photo-current { color: #94a3b8; font-size: 11px; }
+          
+          @media (max-width: 768px) {
+            .photo-main-image { height: 200px; }
+            .photo-nav-btn { width: 32px; height: 32px; font-size: 14px; }
+            .photo-thumbnails { gap: 6px; }
+            .photo-thumbnail { width: 50px; height: 50px; }
+          }
           
           .field-help { font-size: 10px; color: #64748b; margin-top: 2px; font-style: italic; }
           
