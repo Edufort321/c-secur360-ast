@@ -1292,7 +1292,7 @@ Lien d'accès: ${shareLink}`);
     <>
       {/* Injection CSS thème sombre optimisé */}
       <style dangerouslySetInnerHTML={{ __html: darkThemeCSS }} />
-    <div className="step6-container">
+      <div className="step6-container">
         {/* Header avec logo */}
         <div className="finalization-header">
           <h2 className="finalization-title">🛡️ Finalisation AST</h2>
@@ -1697,7 +1697,7 @@ Lien d'accès: ${shareLink}`);
             </div>
           </div>
         )}
-      {/* MODAL AJOUT TRAVAILLEUR OPTIMISÉ */}
+        {/* MODAL AJOUT TRAVAILLEUR OPTIMISÉ */}
         {showAddWorker && (
           <div className="modal-overlay">
             <div className="modal-content">
@@ -1716,8 +1716,8 @@ Lien d'accès: ${shareLink}`);
                     borderRadius: '4px',
                     transition: 'color 0.3s ease'
                   }}
-                  onMouseEnter={(e) => e.target.style.color = '#ef4444'}
-                  onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
+                  onMouseEnter={(e) => (e.target as HTMLButtonElement).style.color = '#ef4444'}
+                  onMouseLeave={(e) => (e.target as HTMLButtonElement).style.color = '#94a3b8'}
                 >
                   <X size={20} />
                 </button>
@@ -1812,8 +1812,8 @@ Lien d'accès: ${shareLink}`);
                     borderRadius: '4px',
                     transition: 'color 0.3s ease'
                   }}
-                  onMouseEnter={(e) => e.target.style.color = '#ffffff'}
-                  onMouseLeave={(e) => e.target.style.color = '#fca5a5'}
+                  onMouseEnter={(e) => (e.target as HTMLButtonElement).style.color = '#ffffff'}
+                  onMouseLeave={(e) => (e.target as HTMLButtonElement).style.color = '#fca5a5'}
                 >
                   <X size={20} />
                 </button>
