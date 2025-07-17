@@ -1200,7 +1200,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                       };
                       
                       // Mise à jour en deux étapes pour garantir la persistance
-                      const currentPermit = permits.find(p => p.id === permit.id);
+                      const currentPermit = permits.find((p: Permit) => p.id === permit.id);
                       if (currentPermit) {
                         const updatedFormData = {
                           ...currentPermit.formData,
@@ -1208,7 +1208,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                           [field.id + '_metadata']: fullSignature
                         };
                         
-                        const updatedPermits = permits.map(p => 
+                        const updatedPermits = permits.map((p: Permit) => 
                           p.id === permit.id 
                             ? { ...p, formData: updatedFormData }
                             : p
@@ -1281,7 +1281,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                       e.stopPropagation();
                       
                       // Effacer la signature avec mise à jour complète
-                      const currentPermit = permits.find(p => p.id === permit.id);
+                      const currentPermit = permits.find((p: Permit) => p.id === permit.id);
                       if (currentPermit) {
                         const updatedFormData = {
                           ...currentPermit.formData,
@@ -1289,7 +1289,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                           [field.id + '_metadata']: null
                         };
                         
-                        const updatedPermits = permits.map(p => 
+                        const updatedPermits = permits.map((p: Permit) => 
                           p.id === permit.id 
                             ? { ...p, formData: updatedFormData }
                             : p
