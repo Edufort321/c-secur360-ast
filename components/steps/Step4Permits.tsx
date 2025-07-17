@@ -643,8 +643,8 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                   placeholder="Entrez votre nom complet"
                   className="signature-name-input"
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter' && e.target.value.trim()) {
-                      const signerName = e.target.value.trim();
+                    if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                      const signerName = (e.target as HTMLInputElement).value.trim();
                       const timestamp = new Date();
                       const signatureText = `${signerName}`;
                       const fullSignature = {
@@ -657,7 +657,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                       };
                       handleFormFieldChange(permit.id, field.id, signatureText);
                       handleFormFieldChange(permit.id, field.id + '_metadata', fullSignature);
-                      e.target.value = '';
+                      (e.target as HTMLInputElement).value = '';
                     }
                   }}
                 />
@@ -665,7 +665,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                   type="button" 
                   className="signature-btn"
                   onClick={(e) => {
-                    const input = e.target.parentElement.querySelector('.signature-name-input');
+                    const input = (e.target as HTMLElement).parentElement?.querySelector('.signature-name-input') as HTMLInputElement;
                     if (input && input.value.trim()) {
                       const signerName = input.value.trim();
                       const timestamp = new Date();
