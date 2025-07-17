@@ -667,7 +667,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
           {Object.entries(fieldsBySection).map(([sectionName, fields]) => (
             <div key={sectionName} className="form-section-group">
               <h4 className="form-section-title">
-                {t.sections[sectionName] || sectionName}
+                {(t.sections as any)[sectionName] || sectionName}
               </h4>
               <div className="form-fields">
                 {fields.map(field => (
@@ -832,7 +832,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               <option value="all">{t.allCategories}</option>
               {categories.map(category => (
                 <option key={category} value={category}>
-                  {getCategoryIcon(category)} {t.categories[category] || category}
+                  {getCategoryIcon(category)} {(t.categories as any)[category] || category}
                 </option>
               ))}
             </select>
@@ -867,7 +867,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                   <div className="permit-icon">{getCategoryIcon(permit.category)}</div>
                   <div className="permit-content">
                     <h3 className="permit-name">{permit.name}</h3>
-                    <div className="permit-category">{t.categories[permit.category] || permit.category}</div>
+                    <div className="permit-category">{(t.categories as any)[permit.category] || permit.category}</div>
                     <div className="permit-description">{permit.description}</div>
                     <div className="permit-authority">{permit.authority}</div>
                   </div>
@@ -880,12 +880,12 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
                 <div className="permit-meta">
                   <div className="meta-item">
                     <span className="priority-badge" style={{ backgroundColor: `${getPriorityColor(permit.priority)}20`, color: getPriorityColor(permit.priority) }}>
-                      {t.priorities[permit.priority]}
+                      {(t.priorities as any)[permit.priority]}
                     </span>
                   </div>
                   <div className="meta-item">
                     <span className="status-badge" style={{ backgroundColor: `${getStatusColor(permit.status)}20`, color: getStatusColor(permit.status) }}>
-                      {t.statuses[permit.status]}
+                      {(t.statuses as any)[permit.status]}
                     </span>
                   </div>
                   <div className="meta-item">
