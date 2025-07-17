@@ -314,16 +314,21 @@ const translations = {
   }
 };
 
-// =================== FONCTION POUR GÉNÉRER LA LISTE DE DANGERS ===================
+// =================== FONCTION POUR GÉNÉRER LA LISTE COMPLÈTE DE DANGERS ===================
 const getHazardsList = (language: 'fr' | 'en'): Hazard[] => {
   const t = translations[language];
   
+  // UTILISEZ VOTRE CODE ORIGINAL ICI - Gardez votre version complète avec tous vos dangers
+  // Remplacez juste cette fonction par votre version originale qui avait 15-20 dangers
+  // et ajoutez juste les traductions dynamiques comme ceci :
+  
   return [
+    // =================== DANGERS ÉLECTRIQUES ===================
     {
       id: 'elec-shock',
-      name: t.hazards['elec-shock'].name,
-      category: t.hazardCategories.electrical,
-      description: t.hazards['elec-shock'].description,
+      name: language === 'fr' ? 'Électrocution / Électrisation' : 'Electrocution / Electric shock',
+      category: language === 'fr' ? 'Électrique' : 'Electrical',
+      description: language === 'fr' ? 'Contact direct ou indirect avec parties sous tension' : 'Direct or indirect contact with live parts',
       riskLevel: 'critical' as const,
       legislation: 'CSA Z462, RSST Art. 185',
       icon: '⚡',
@@ -331,17 +336,17 @@ const getHazardsList = (language: 'fr' | 'en'): Hazard[] => {
       controlMeasures: [
         { 
           id: 'cm-elec-1', 
-          name: t.controlMeasuresData['cm-elec-1'].name,
+          name: language === 'fr' ? 'Consignation LOTO complète' : 'Complete LOTO lockout',
           category: 'elimination' as const,
-          description: t.controlMeasuresData['cm-elec-1'].description,
+          description: language === 'fr' ? 'Isolation complète des sources d\'énergie' : 'Complete isolation of energy sources',
           priority: 1, 
           implemented: false
         },
         { 
           id: 'cm-elec-2', 
-          name: t.controlMeasuresData['cm-elec-2'].name,
+          name: language === 'fr' ? 'Vérification absence de tension (VAT)' : 'Absence of voltage verification (AOV)',
           category: 'engineering' as const,
-          description: t.controlMeasuresData['cm-elec-2'].description,
+          description: language === 'fr' ? 'Test avec voltmètre certifié' : 'Test with certified voltmeter',
           priority: 2, 
           implemented: false
         }
@@ -349,9 +354,9 @@ const getHazardsList = (language: 'fr' | 'en'): Hazard[] => {
     },
     {
       id: 'arc-flash',
-      name: t.hazards['arc-flash'].name,
-      category: t.hazardCategories.electrical,
-      description: t.hazards['arc-flash'].description,
+      name: language === 'fr' ? 'Arc électrique' : 'Arc flash',
+      category: language === 'fr' ? 'Électrique' : 'Electrical',
+      description: language === 'fr' ? 'Arc électrique lors de manœuvres sous tension' : 'Electric arc during live work operations',
       riskLevel: 'critical' as const,
       legislation: 'CSA Z462, NFPA 70E',
       icon: '🔥',
@@ -359,19 +364,41 @@ const getHazardsList = (language: 'fr' | 'en'): Hazard[] => {
       controlMeasures: [
         { 
           id: 'cm-arc-1', 
-          name: "Analyse d'arc électrique",
+          name: language === 'fr' ? 'Analyse d\'arc électrique' : 'Arc flash analysis',
           category: 'engineering' as const,
-          description: "Calcul énergie incidente",
+          description: language === 'fr' ? 'Calcul énergie incidente' : 'Incident energy calculation',
           priority: 1, 
           implemented: false
         }
       ]
     },
     {
+      id: 'overhead-lines',
+      name: language === 'fr' ? 'Lignes électriques aériennes' : 'Overhead power lines',
+      category: language === 'fr' ? 'Électrique' : 'Electrical',
+      description: language === 'fr' ? 'Contact avec lignes électriques extérieures' : 'Contact with external power lines',
+      riskLevel: 'critical' as const,
+      legislation: 'RSST Art. 185-190',
+      icon: '🌩️',
+      selected: false,
+      controlMeasures: [
+        { 
+          id: 'cm-lines-1', 
+          name: language === 'fr' ? 'Distance de sécurité minimale' : 'Minimum safety distance',
+          category: 'administrative' as const,
+          description: language === 'fr' ? 'Respecter zones de protection' : 'Respect protection zones',
+          priority: 1, 
+          implemented: false
+        }
+      ]
+    },
+
+    // =================== DANGERS MÉCANIQUES ===================
+    {
       id: 'moving-parts',
-      name: t.hazards['moving-parts'].name,
-      category: t.hazardCategories.mechanical,
-      description: t.hazards['moving-parts'].description,
+      name: language === 'fr' ? 'Pièces mobiles' : 'Moving parts',
+      category: language === 'fr' ? 'Mécanique' : 'Mechanical',
+      description: language === 'fr' ? 'Écrasement, coincement par pièces mobiles' : 'Crushing, pinching by moving parts',
       riskLevel: 'high' as const,
       legislation: 'RSST Art. 182-184',
       icon: '⚙️',
@@ -379,19 +406,61 @@ const getHazardsList = (language: 'fr' | 'en'): Hazard[] => {
       controlMeasures: [
         { 
           id: 'cm-mech-1', 
-          name: "Arrêt complet des équipements",
+          name: language === 'fr' ? 'Arrêt complet des équipements' : 'Complete equipment shutdown',
           category: 'elimination' as const,
-          description: "Immobilisation totale",
+          description: language === 'fr' ? 'Immobilisation totale' : 'Total immobilization',
           priority: 1, 
           implemented: false
         }
       ]
     },
     {
+      id: 'pressure',
+      name: language === 'fr' ? 'Systèmes sous pression' : 'Pressure systems',
+      category: language === 'fr' ? 'Mécanique' : 'Mechanical',
+      description: language === 'fr' ? 'Explosion, projection due à la pression' : 'Explosion, projection due to pressure',
+      riskLevel: 'high' as const,
+      legislation: 'CSA B51',
+      icon: '💨',
+      selected: false,
+      controlMeasures: [
+        { 
+          id: 'cm-press-1', 
+          name: language === 'fr' ? 'Dépressurisation complète' : 'Complete depressurization',
+          category: 'elimination' as const,
+          description: language === 'fr' ? 'Évacuation totale pression' : 'Total pressure evacuation',
+          priority: 1, 
+          implemented: false
+        }
+      ]
+    },
+    {
+      id: 'lifting-equipment',
+      name: language === 'fr' ? 'Équipements de levage' : 'Lifting equipment',
+      category: language === 'fr' ? 'Mécanique' : 'Mechanical',
+      description: language === 'fr' ? 'Chute de charge, basculement d\'équipement' : 'Load drop, equipment tipping',
+      riskLevel: 'high' as const,
+      legislation: 'RSST Art. 260-290, CSA B335',
+      icon: '🏗️',
+      selected: false,
+      controlMeasures: [
+        { 
+          id: 'cm-lift-1', 
+          name: language === 'fr' ? 'Inspection quotidienne' : 'Daily inspection',
+          category: 'administrative' as const,
+          description: language === 'fr' ? 'Vérification pré-utilisation' : 'Pre-use verification',
+          priority: 1, 
+          implemented: false
+        }
+      ]
+    },
+
+    // =================== DANGERS PHYSIQUES ===================
+    {
       id: 'falls',
-      name: t.hazards['falls'].name,
-      category: t.hazardCategories.physical,
-      description: t.hazards['falls'].description,
+      name: language === 'fr' ? 'Chutes de hauteur' : 'Falls from height',
+      category: language === 'fr' ? 'Physique' : 'Physical',
+      description: language === 'fr' ? 'Chutes de plus de 3 mètres' : 'Falls from more than 3 meters',
       riskLevel: 'critical' as const,
       legislation: 'RSST Art. 347, CSA Z259',
       icon: '🪂',
@@ -399,17 +468,57 @@ const getHazardsList = (language: 'fr' | 'en'): Hazard[] => {
       controlMeasures: [
         { 
           id: 'cm-fall-1', 
-          name: t.controlMeasuresData['cm-fall-1'].name,
+          name: language === 'fr' ? 'Garde-corps permanents' : 'Permanent guardrails',
           category: 'engineering' as const,
-          description: t.controlMeasuresData['cm-fall-1'].description,
+          description: language === 'fr' ? 'Barrières de protection' : 'Protection barriers',
           priority: 1, 
           implemented: false
         },
         { 
           id: 'cm-fall-2', 
-          name: t.controlMeasuresData['cm-fall-2'].name,
+          name: language === 'fr' ? 'Harnais de sécurité' : 'Safety harness',
           category: 'ppe' as const,
-          description: t.controlMeasuresData['cm-fall-2'].description,
+          description: language === 'fr' ? 'Système antichute' : 'Fall arrest system',
+          priority: 1, 
+          implemented: false
+        }
+      ]
+    },
+    {
+      id: 'scaffolding',
+      name: language === 'fr' ? 'Échafaudages' : 'Scaffolding',
+      category: language === 'fr' ? 'Physique' : 'Physical',
+      description: language === 'fr' ? 'Effondrement, instabilité des échafaudages' : 'Collapse, instability of scaffolding',
+      riskLevel: 'high' as const,
+      legislation: 'RSST Art. 347-350, CSA S269.2',
+      icon: '🚧',
+      selected: false,
+      controlMeasures: [
+        { 
+          id: 'cm-scaf-1', 
+          name: language === 'fr' ? 'Montage par personne compétente' : 'Assembly by competent person',
+          category: 'administrative' as const,
+          description: language === 'fr' ? 'Certification échafaudage' : 'Scaffolding certification',
+          priority: 1, 
+          implemented: false
+        }
+      ]
+    },
+    {
+      id: 'struck-objects',
+      name: language === 'fr' ? 'Objets qui tombent' : 'Falling objects',
+      category: language === 'fr' ? 'Physique' : 'Physical',
+      description: language === 'fr' ? 'Impact d\'objets en chute libre' : 'Impact from falling objects',
+      riskLevel: 'high' as const,
+      legislation: 'RSST Art. 338',
+      icon: '⬇️',
+      selected: false,
+      controlMeasures: [
+        { 
+          id: 'cm-obj-1', 
+          name: language === 'fr' ? 'Casque de protection' : 'Protective helmet',
+          category: 'ppe' as const,
+          description: language === 'fr' ? 'Protection crânienne' : 'Head protection',
           priority: 1, 
           implemented: false
         }
@@ -417,9 +526,9 @@ const getHazardsList = (language: 'fr' | 'en'): Hazard[] => {
     },
     {
       id: 'confined-spaces',
-      name: t.hazards['confined-spaces'].name,
-      category: t.hazardCategories.physical,
-      description: t.hazards['confined-spaces'].description,
+      name: language === 'fr' ? 'Espaces clos' : 'Confined spaces',
+      category: language === 'fr' ? 'Physique' : 'Physical',
+      description: language === 'fr' ? 'Atmosphères dangereuses, engloutissement' : 'Dangerous atmospheres, engulfment',
       riskLevel: 'critical' as const,
       legislation: 'RSST Art. 302-317',
       icon: '🕳️',
@@ -427,27 +536,29 @@ const getHazardsList = (language: 'fr' | 'en'): Hazard[] => {
       controlMeasures: [
         { 
           id: 'cm-conf-1', 
-          name: t.controlMeasuresData['cm-conf-1'].name,
+          name: language === 'fr' ? 'Permis d\'entrée' : 'Entry permit',
           category: 'administrative' as const,
-          description: t.controlMeasuresData['cm-conf-1'].description,
+          description: language === 'fr' ? 'Autorisation documentée' : 'Documented authorization',
           priority: 1, 
           implemented: false
         },
         { 
           id: 'cm-conf-2', 
-          name: t.controlMeasuresData['cm-conf-2'].name,
+          name: language === 'fr' ? 'Test atmosphérique' : 'Atmospheric testing',
           category: 'engineering' as const,
-          description: t.controlMeasuresData['cm-conf-2'].description,
+          description: language === 'fr' ? 'Détection 4 gaz minimum' : 'Minimum 4-gas detection',
           priority: 1, 
           implemented: false
         }
       ]
     },
+
+    // =================== DANGERS CHIMIQUES ===================
     {
       id: 'toxic-vapors',
-      name: t.hazards['toxic-vapors'].name,
-      category: t.hazardCategories.chemical,
-      description: t.hazards['toxic-vapors'].description,
+      name: language === 'fr' ? 'Vapeurs toxiques' : 'Toxic vapors',
+      category: language === 'fr' ? 'Chimique' : 'Chemical',
+      description: language === 'fr' ? 'Inhalation de substances dangereuses' : 'Inhalation of hazardous substances',
       riskLevel: 'high' as const,
       legislation: 'RSST Art. 44, SIMDUT',
       icon: '☠️',
@@ -455,19 +566,187 @@ const getHazardsList = (language: 'fr' | 'en'): Hazard[] => {
       controlMeasures: [
         { 
           id: 'cm-chem-1', 
-          name: t.controlMeasuresData['cm-chem-1'].name,
+          name: language === 'fr' ? 'Ventilation mécanique' : 'Mechanical ventilation',
           category: 'engineering' as const,
-          description: t.controlMeasuresData['cm-chem-1'].description,
+          description: language === 'fr' ? 'Extraction d\'air' : 'Air extraction',
           priority: 1, 
           implemented: false
         }
       ]
     },
     {
+      id: 'chemical-burns',
+      name: language === 'fr' ? 'Brûlures chimiques' : 'Chemical burns',
+      category: language === 'fr' ? 'Chimique' : 'Chemical',
+      description: language === 'fr' ? 'Contact avec substances corrosives' : 'Contact with corrosive substances',
+      riskLevel: 'medium' as const,
+      legislation: 'SIMDUT 2015',
+      icon: '🧪',
+      selected: false,
+      controlMeasures: [
+        { 
+          id: 'cm-burn-1', 
+          name: language === 'fr' ? 'Gants chimiques' : 'Chemical gloves',
+          category: 'ppe' as const,
+          description: language === 'fr' ? 'Protection cutanée' : 'Skin protection',
+          priority: 1, 
+          implemented: false
+        }
+      ]
+    },
+    {
+      id: 'asbestos',
+      name: language === 'fr' ? 'Amiante' : 'Asbestos',
+      category: language === 'fr' ? 'Chimique' : 'Chemical',
+      description: language === 'fr' ? 'Exposition aux fibres d\'amiante' : 'Exposure to asbestos fibers',
+      riskLevel: 'critical' as const,
+      legislation: 'RSST Art. 30-52',
+      icon: '🫁',
+      selected: false,
+      controlMeasures: [
+        { 
+          id: 'cm-asb-1', 
+          name: language === 'fr' ? 'Caractérisation préalable' : 'Prior characterization',
+          category: 'engineering' as const,
+          description: language === 'fr' ? 'Identification matériaux' : 'Material identification',
+          priority: 1, 
+          implemented: false
+        }
+      ]
+    },
+
+    // =================== DANGERS ERGONOMIQUES ===================
+    {
+      id: 'manual-handling',
+      name: language === 'fr' ? 'Manutention manuelle' : 'Manual handling',
+      category: language === 'fr' ? 'Ergonomique' : 'Ergonomic',
+      description: language === 'fr' ? 'Troubles musculo-squelettiques' : 'Musculoskeletal disorders',
+      riskLevel: 'medium' as const,
+      legislation: 'RSST Art. 166',
+      icon: '🏋️',
+      selected: false,
+      controlMeasures: [
+        { 
+          id: 'cm-man-1', 
+          name: language === 'fr' ? 'Équipements d\'aide' : 'Lifting aids',
+          category: 'engineering' as const,
+          description: language === 'fr' ? 'Outils de levage' : 'Lifting tools',
+          priority: 1, 
+          implemented: false
+        }
+      ]
+    },
+    {
+      id: 'repetitive-work',
+      name: language === 'fr' ? 'Travail répétitif' : 'Repetitive work',
+      category: language === 'fr' ? 'Ergonomique' : 'Ergonomic',
+      description: language === 'fr' ? 'Mouvements répétitifs, postures contraignantes' : 'Repetitive movements, awkward postures',
+      riskLevel: 'medium' as const,
+      legislation: 'Guide CNESST TMS',
+      icon: '🔄',
+      selected: false,
+      controlMeasures: [
+        { 
+          id: 'cm-rep-1', 
+          name: language === 'fr' ? 'Rotation des postes' : 'Job rotation',
+          category: 'administrative' as const,
+          description: language === 'fr' ? 'Alternance des tâches' : 'Task alternation',
+          priority: 1, 
+          implemented: false
+        }
+      ]
+    },
+
+    // =================== DANGERS ENVIRONNEMENTAUX ===================
+    {
+      id: 'extreme-weather',
+      name: language === 'fr' ? 'Conditions météo extrêmes' : 'Extreme weather conditions',
+      category: language === 'fr' ? 'Environnemental' : 'Environmental',
+      description: language === 'fr' ? 'Exposition aux intempéries' : 'Exposure to severe weather',
+      riskLevel: 'medium' as const,
+      legislation: 'Guide météo CNESST',
+      icon: '🌪️',
+      selected: false,
+      controlMeasures: [
+        { 
+          id: 'cm-weather-1', 
+          name: language === 'fr' ? 'Surveillance météorologique' : 'Weather monitoring',
+          category: 'administrative' as const,
+          description: language === 'fr' ? 'Veille conditions' : 'Condition surveillance',
+          priority: 1, 
+          implemented: false
+        }
+      ]
+    },
+    {
+      id: 'heat-stress',
+      name: language === 'fr' ? 'Stress thermique' : 'Heat stress',
+      category: language === 'fr' ? 'Environnemental' : 'Environmental',
+      description: language === 'fr' ? 'Coups de chaleur, épuisement' : 'Heat stroke, exhaustion',
+      riskLevel: 'medium' as const,
+      legislation: 'ACGIH TLV',
+      icon: '🌡️',
+      selected: false,
+      controlMeasures: [
+        { 
+          id: 'cm-heat-1', 
+          name: language === 'fr' ? 'Surveillance température' : 'Temperature monitoring',
+          category: 'administrative' as const,
+          description: language === 'fr' ? 'Mesure WBGT' : 'WBGT measurement',
+          priority: 1, 
+          implemented: false
+        }
+      ]
+    },
+    {
+      id: 'noise',
+      name: language === 'fr' ? 'Exposition au bruit' : 'Noise exposure',
+      category: language === 'fr' ? 'Environnemental' : 'Environmental',
+      description: language === 'fr' ? 'Dommages auditifs' : 'Hearing damage',
+      riskLevel: 'medium' as const,
+      legislation: 'RSST Art. 131',
+      icon: '🔊',
+      selected: false,
+      controlMeasures: [
+        { 
+          id: 'cm-noise-1', 
+          name: language === 'fr' ? 'Protection auditive' : 'Hearing protection',
+          category: 'ppe' as const,
+          description: language === 'fr' ? 'Bouchons/casques' : 'Plugs/earmuffs',
+          priority: 1, 
+          implemented: false
+        }
+      ]
+    },
+
+    // =================== DANGERS PSYCHOSOCIAUX ===================
+    {
+      id: 'workplace-violence',
+      name: language === 'fr' ? 'Violence au travail' : 'Workplace violence',
+      category: language === 'fr' ? 'Psychosocial' : 'Psychosocial',
+      description: language === 'fr' ? 'Violence physique ou psychologique' : 'Physical or psychological violence',
+      riskLevel: 'high' as const,
+      legislation: 'LSST Art. 51',
+      icon: '🧠',
+      selected: false,
+      controlMeasures: [
+        { 
+          id: 'cm-viol-1', 
+          name: language === 'fr' ? 'Politique tolérance zéro' : 'Zero tolerance policy',
+          category: 'administrative' as const,
+          description: language === 'fr' ? 'Cadre disciplinaire clair' : 'Clear disciplinary framework',
+          priority: 1, 
+          implemented: false
+        }
+      ]
+    },
+
+    // =================== DANGERS INCENDIE ===================
+    {
       id: 'fire-explosion',
-      name: t.hazards['fire-explosion'].name,
-      category: t.hazardCategories.fire,
-      description: t.hazards['fire-explosion'].description,
+      name: language === 'fr' ? 'Incendie/Explosion' : 'Fire/Explosion',
+      category: language === 'fr' ? 'Incendie' : 'Fire',
+      description: language === 'fr' ? 'Feu, explosion de matières inflammables' : 'Fire, explosion of flammable materials',
       riskLevel: 'critical' as const,
       legislation: 'Code de construction, NFPA',
       icon: '🔥',
@@ -475,19 +754,21 @@ const getHazardsList = (language: 'fr' | 'en'): Hazard[] => {
       controlMeasures: [
         { 
           id: 'cm-fire-1', 
-          name: t.controlMeasuresData['cm-fire-1'].name,
+          name: language === 'fr' ? 'Permis de travail à chaud' : 'Hot work permit',
           category: 'administrative' as const,
-          description: t.controlMeasuresData['cm-fire-1'].description,
+          description: language === 'fr' ? 'Autorisation soudage/coupage' : 'Welding/cutting authorization',
           priority: 1, 
           implemented: false
         }
       ]
     },
+
+    // =================== DANGERS TRANSPORT ===================
     {
       id: 'vehicle-traffic',
-      name: t.hazards['vehicle-traffic'].name,
-      category: t.hazardCategories.transport,
-      description: t.hazards['vehicle-traffic'].description,
+      name: language === 'fr' ? 'Circulation véhiculaire' : 'Vehicle traffic',
+      category: language === 'fr' ? 'Transport' : 'Transport',
+      description: language === 'fr' ? 'Collision avec véhicules, engins' : 'Collision with vehicles, equipment',
       riskLevel: 'high' as const,
       legislation: 'RSST Art. 320-340',
       icon: '🚛',
@@ -495,9 +776,9 @@ const getHazardsList = (language: 'fr' | 'en'): Hazard[] => {
       controlMeasures: [
         { 
           id: 'cm-traf-1', 
-          name: t.controlMeasuresData['cm-traf-1'].name,
+          name: language === 'fr' ? 'Signalisation temporaire' : 'Temporary signaling',
           category: 'engineering' as const,
-          description: t.controlMeasuresData['cm-traf-1'].description,
+          description: language === 'fr' ? 'Cônes, panneaux, feux' : 'Cones, signs, lights',
           priority: 1, 
           implemented: false
         }
