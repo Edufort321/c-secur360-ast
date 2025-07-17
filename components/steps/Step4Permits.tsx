@@ -624,17 +624,83 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
           return (
             <div className="signature-field">
               <div className="signature-pad">
-                <span className="signature-placeholder">
-                  {value || 'Signature requise'}
-                </span>
+                {value ? (
+                  <div className="signature-content">
+                    <div className="signature-text">{value}</div>
+                    <div className="signature-timestamp">
+                      Signé le {new Date().toLocaleDateString('fr-CA')} à {new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="signature-placeholder">
+                    Signature électronique requise
+                  </span>
+                )}
               </div>
-              <button 
-                type="button" 
-                className="signature-btn"
-                onClick={() => handleFormFieldChange(permit.id, field.id, `Signé le ${new Date().toLocaleDateString()}`)}
-              >
-                Signer
-              </button>
+              <div className="signature-controls">
+                <input
+                  type="text"
+                  placeholder="Entrez votre nom complet"
+                  className="signature-name-input"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                      const signerName = e.target.value.trim();
+                      const timestamp = new Date();
+                      const signatureText = `${signerName}`;
+                      const fullSignature = {
+                        name: signerName,
+                        date: timestamp.toLocaleDateString('fr-CA'),
+                        time: timestamp.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
+                        timestamp: timestamp.toISOString(),
+                        ipAddress: 'XXX.XXX.XXX.XXX', // En production, récupérer l'IP réelle
+                        userAgent: navigator.userAgent
+                      };
+                      handleFormFieldChange(permit.id, field.id, signatureText);
+                      handleFormFieldChange(permit.id, field.id + '_metadata', fullSignature);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                <button 
+                  type="button" 
+                  className="signature-btn"
+                  onClick={(e) => {
+                    const input = e.target.parentElement.querySelector('.signature-name-input');
+                    if (input && input.value.trim()) {
+                      const signerName = input.value.trim();
+                      const timestamp = new Date();
+                      const signatureText = `${signerName}`;
+                      const fullSignature = {
+                        name: signerName,
+                        date: timestamp.toLocaleDateString('fr-CA'),
+                        time: timestamp.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
+                        timestamp: timestamp.toISOString(),
+                        ipAddress: 'XXX.XXX.XXX.XXX', // En production, récupérer l'IP réelle
+                        userAgent: navigator.userAgent
+                      };
+                      handleFormFieldChange(permit.id, field.id, signatureText);
+                      handleFormFieldChange(permit.id, field.id + '_metadata', fullSignature);
+                      input.value = '';
+                    } else {
+                      alert('Veuillez entrer votre nom complet pour signer');
+                    }
+                  }}
+                >
+                  Signer électroniquement
+                </button>
+                {value && (
+                  <button 
+                    type="button" 
+                    className="signature-clear-btn"
+                    onClick={() => {
+                      handleFormFieldChange(permit.id, field.id, '');
+                      handleFormFieldChange(permit.id, field.id + '_metadata', null);
+                    }}
+                  >
+                    Effacer
+                  </button>
+                )}
+              </div>
             </div>
           );
         
@@ -763,10 +829,20 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
           .radio-label, .checkbox-label { display: flex; align-items: center; gap: 4px; color: #cbd5e1; font-size: 11px; cursor: pointer; }
           .radio-label input, .checkbox-label input { margin: 0; }
           
-          .signature-field { display: flex; align-items: center; gap: 8px; }
-          .signature-pad { flex: 1; border: 1px dashed rgba(100, 116, 139, 0.5); border-radius: 4px; padding: 8px; min-height: 40px; display: flex; align-items: center; }
-          .signature-placeholder { color: #94a3b8; font-size: 11px; font-style: italic; }
-          .signature-btn { padding: 6px 12px; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; cursor: pointer; font-size: 11px; }
+          .signature-field { display: flex; flex-direction: column; gap: 12px; }
+          .signature-pad { flex: 1; border: 2px solid rgba(100, 116, 139, 0.5); border-radius: 8px; padding: 12px; min-height: 60px; display: flex; align-items: center; background: rgba(15, 23, 42, 0.9); }
+          .signature-content { width: 100%; }
+          .signature-text { color: #22c55e; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+          .signature-timestamp { color: #94a3b8; font-size: 11px; font-style: italic; }
+          .signature-placeholder { color: #94a3b8; font-size: 12px; font-style: italic; }
+          .signature-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+          .signature-name-input { flex: 1; min-width: 200px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; transition: all 0.3s ease; }
+          .signature-name-input:focus { outline: none; border-color: #2563eb; }
+          .signature-name-input::placeholder { color: #64748b; }
+          .signature-btn { padding: 8px 16px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.3s ease; }
+          .signature-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3); }
+          .signature-clear-btn { padding: 6px 12px; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; cursor: pointer; font-size: 11px; }
+          .signature-clear-btn:hover { background: rgba(239, 68, 68, 0.3); }
           
           .field-help { font-size: 10px; color: #64748b; margin-top: 2px; font-style: italic; }
           
