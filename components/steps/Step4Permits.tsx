@@ -1,10 +1,4 @@
-// Statistiques
-  const stats = useMemo(() => ({
-    totalPermits: permits.length,
-    selected: selectedPermits.length,
-    critical: selectedPermits.filter((p: Permit) => p.priority === 'critical').length,
-    pending: selectedPermits.filter((p: Permit) => p.status === 'pending').length
-  }), [permits, selectedPermits]);import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   FileText, CheckCircle, AlertTriangle, Clock, Download, Eye,
   Shield, Users, MapPin, Calendar, Building, Phone, User, Briefcase,
@@ -221,152 +215,6 @@ const realPermitsDatabase: Permit[] = [
       { id: 'applicant_signature', type: 'signature', label: 'Signature du demandeur', required: true, section: 'signatures' },
       { id: 'application_date', type: 'date', label: 'Date de la demande', required: true, section: 'signatures' }
     ]
-  },
-
-  // 4. PERMIS RADIOPROTECTION CCSN - Basé sur REGDOC-1.6.1
-  {
-    id: 'radiation-protection-permit',
-    name: 'Permis de Substances Nucléaires et Appareils à Rayonnement',
-    category: 'Radioprotection',
-    description: 'Autorisation CCSN pour possession et utilisation de substances nucléaires selon LSCRN',
-    authority: 'Commission canadienne de sûreté nucléaire (CCSN)',
-    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-    required: true,
-    priority: 'critical',
-    duration: '1-10 ans selon type',
-    cost: '500$ - 50,000$ selon complexité',
-    processingTime: '30-180 jours',
-    renewalRequired: true,
-    renewalPeriod: 'Selon permis',
-    legislation: 'LSCRN, Règlement radioprotection, REGDOC-1.6.1',
-    contactInfo: {
-      phone: '1-888-229-2672',
-      email: 'licence-permis@cnsc-ccsn.gc.ca',
-      website: 'https://www.cnsc-ccsn.gc.ca/'
-    },
-    selected: false,
-    status: 'pending',
-    formFields: [
-      // Section A: Renseignements sur le demandeur
-      { id: 'legal_name', type: 'text', label: 'Dénomination sociale complète', required: true, section: 'applicant' },
-      { id: 'corporation_number', type: 'text', label: 'Numéro de corporation', required: true, section: 'applicant' },
-      { id: 'business_address', type: 'textarea', label: 'Adresse d\'affaires', required: true, section: 'applicant' },
-      { id: 'primary_contact', type: 'text', label: 'Personne-ressource principale', required: true, section: 'applicant' },
-      
-      // Section B: Renseignements sur les activités autorisées
-      { id: 'use_types', type: 'checkbox', label: 'Types d\'utilisation', required: true, section: 'activities', 
-        options: ['Radiographie industrielle', 'Jauges nucléaires fixes', 'Jauges nucléaires portatives', 'Sources d\'étalonnage', 'Recherche et développement', 'Enseignement', 'Sources scellées', 'Substances non scellées'] },
-      { id: 'nuclear_substances', type: 'textarea', label: 'Substances nucléaires demandées', required: true, section: 'activities', 
-        placeholder: 'Indiquer radionuclide, forme physique/chimique, quantité...' },
-      
-      // Section C: Programme de radioprotection
-      { id: 'rso_name', type: 'text', label: 'Nom du responsable de la radioprotection (RSR)', required: true, section: 'radiation_protection' },
-      { id: 'rso_qualifications', type: 'textarea', label: 'Qualifications du RSR', required: true, section: 'radiation_protection' },
-      
-      // Section Signatures
-      { id: 'applicant_signature', type: 'signature', label: 'Signature du demandeur autorisé', required: true, section: 'signatures' },
-      { id: 'rso_signature', type: 'signature', label: 'Signature du RSR', required: true, section: 'signatures' },
-      { id: 'application_date', type: 'date', label: 'Date de la demande', required: true, section: 'signatures' }
-    ]
-  },
-
-  // 5. PERMIS DE CONSTRUCTION - Basé sur Code du bâtiment Ontario
-  {
-    id: 'building-permit',
-    name: 'Permis de Construction',
-    category: 'Construction',
-    description: 'Autorisation municipale pour construction selon Code du bâtiment de l\'Ontario/CNB',
-    authority: 'Municipal',
-    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-    required: true,
-    priority: 'critical',
-    duration: '6 mois - 2 ans',
-    cost: '0.5% - 2% valeur projet',
-    processingTime: '15-60 jours',
-    renewalRequired: true,
-    renewalPeriod: 'Si prolongation',
-    legislation: 'Code national du bâtiment, Code du bâtiment provincial, Règlements municipaux',
-    selected: false,
-    status: 'pending',
-    formFields: [
-      // Section Propriétaire/Demandeur
-      { id: 'owner_name', type: 'text', label: 'Nom du propriétaire', required: true, section: 'owner' },
-      { id: 'owner_address', type: 'textarea', label: 'Adresse du propriétaire', required: true, section: 'owner' },
-      { id: 'owner_phone', type: 'text', label: 'Téléphone du propriétaire', required: true, section: 'owner' },
-      { id: 'applicant_name', type: 'text', label: 'Nom du demandeur', required: true, section: 'owner' },
-      
-      // Section Projet
-      { id: 'project_address', type: 'textarea', label: 'Adresse du projet', required: true, section: 'project' },
-      { id: 'legal_description', type: 'text', label: 'Description légale', required: true, section: 'project' },
-      { id: 'construction_type', type: 'select', label: 'Type de construction', required: true, section: 'construction_type',
-        options: ['Nouvelle construction', 'Addition', 'Rénovation', 'Transformation', 'Démolition', 'Changement d\'usage'] },
-      { id: 'building_use', type: 'select', label: 'Usage du bâtiment', required: true, section: 'construction_type',
-        options: ['Résidentiel - maison unifamiliale', 'Résidentiel - duplex', 'Résidentiel - multifamilial', 'Commercial', 'Industriel', 'Institutionnel', 'Assemblée'] },
-      
-      // Section Spécifications
-      { id: 'building_height', type: 'number', label: 'Hauteur du bâtiment (m)', required: true, section: 'specifications', validation: { min: 0 } },
-      { id: 'number_storeys', type: 'number', label: 'Nombre d\'étages', required: true, section: 'specifications', validation: { min: 1 } },
-      { id: 'floor_area', type: 'number', label: 'Superficie de plancher (m²)', required: true, section: 'specifications', validation: { min: 0 } },
-      
-      // Section Documents
-      { id: 'architectural_plans', type: 'file', label: 'Plans architecturaux', required: true, section: 'documents' },
-      { id: 'structural_plans', type: 'file', label: 'Plans de structure', required: true, section: 'documents' },
-      
-      // Section Signatures
-      { id: 'owner_signature', type: 'signature', label: 'Signature du propriétaire', required: true, section: 'signatures' },
-      { id: 'applicant_signature', type: 'signature', label: 'Signature du demandeur', required: true, section: 'signatures' }
-    ]
-  },
-
-  // 6. PERMIS GRUE MOBILE - Basé sur RSST et CSA B335
-  {
-    id: 'crane-operator-permit',
-    name: 'Permis d\'Opérateur de Grue Mobile',
-    category: 'Équipements',
-    description: 'Certification pour opération de grues mobiles selon RSST et CSA B335',
-    authority: 'Provincial (CNESST/WorkSafeBC/etc.)',
-    province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-    required: true,
-    priority: 'high',
-    duration: '3-5 ans',
-    cost: '300$ - 1500$ formation + examen',
-    processingTime: '2-4 semaines après formation',
-    renewalRequired: true,
-    renewalPeriod: '3-5 ans',
-    legislation: 'RSST Art. 260-290, CSA B335, Règlements provinciaux',
-    selected: false,
-    status: 'pending',
-    formFields: [
-      // Section Candidat
-      { id: 'candidate_name', type: 'text', label: 'Nom complet du candidat', required: true, section: 'candidate' },
-      { id: 'date_of_birth', type: 'date', label: 'Date de naissance', required: true, section: 'candidate' },
-      { id: 'address', type: 'textarea', label: 'Adresse résidentielle', required: true, section: 'candidate' },
-      { id: 'phone_number', type: 'text', label: 'Téléphone', required: true, section: 'candidate' },
-      { id: 'employer_name', type: 'text', label: 'Nom de l\'employeur', required: true, section: 'candidate' },
-      
-      // Section Expérience
-      { id: 'crane_experience', type: 'number', label: 'Années d\'expérience avec grues', required: true, section: 'experience', validation: { min: 0 } },
-      { id: 'crane_types', type: 'checkbox', label: 'Types de grues expérimentées', required: true, section: 'experience',
-        options: ['Grue mobile conventionnelle', 'Grue tout-terrain', 'Grue sur chenilles', 'Grue téléscopique', 'Grue tour'] },
-      
-      // Section Formation
-      { id: 'training_course', type: 'text', label: 'Cours de formation complété', required: true, section: 'training' },
-      { id: 'training_provider', type: 'text', label: 'Fournisseur de formation', required: true, section: 'training' },
-      { id: 'training_date', type: 'date', label: 'Date de formation', required: true, section: 'training' },
-      
-      // Section Type de permis
-      { id: 'permit_type', type: 'select', label: 'Type de permis demandé', required: true, section: 'permit_type',
-        options: ['Grue mobile - Classe A (0-15 tonnes)', 'Grue mobile - Classe B (15-40 tonnes)', 'Grue mobile - Classe C (40-100 tonnes)', 'Grue mobile - Classe D (plus de 100 tonnes)', 'Grue tout-terrain', 'Grue sur chenilles'] },
-      
-      // Section Documents
-      { id: 'photo_id', type: 'file', label: 'Pièce d\'identité avec photo', required: true, section: 'documents' },
-      { id: 'medical_certificate', type: 'file', label: 'Certificat médical', required: true, section: 'documents' },
-      
-      // Section Signatures
-      { id: 'candidate_signature', type: 'signature', label: 'Signature du candidat', required: true, section: 'signatures' },
-      { id: 'employer_signature', type: 'signature', label: 'Signature de l\'employeur', required: true, section: 'signatures' },
-      { id: 'application_date', type: 'date', label: 'Date de la demande', required: true, section: 'signatures' }
-    ]
   }
 ];
 
@@ -519,7 +367,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
     }
     return realPermitsDatabase;
   });
-  const [expandedForms, setExpandedForms] = useState({});
+  const [expandedForms, setExpandedForms] = useState<{ [key: string]: boolean }>({});
 
   // Filtrage des permis
   const filteredPermits = permits.filter((permit: Permit) => {
@@ -542,8 +390,8 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
   const stats = useMemo(() => ({
     totalPermits: permits.length,
     selected: selectedPermits.length,
-    critical: selectedPermits.filter(p => p.priority === 'critical').length,
-    pending: selectedPermits.filter(p => p.status === 'pending').length
+    critical: selectedPermits.filter((p: Permit) => p.priority === 'critical').length,
+    pending: selectedPermits.filter((p: Permit) => p.status === 'pending').length
   }), [permits, selectedPermits]);
 
   // =================== HANDLERS ===================
@@ -650,7 +498,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
       if (!acc[section]) acc[section] = [];
       acc[section].push(field);
       return acc;
-    }, {}) || {};
+    }, {} as { [key: string]: FormField[] }) || {};
 
     const renderField = (field: FormField) => {
       const value = permit.formData?.[field.id] || '';
@@ -762,7 +610,7 @@ const Step4RealPermits: React.FC<Step4PermitsProps> = ({ formData, onDataChange,
               type="file"
               id={field.id}
               onChange={(e) => {
-                const file = e.target.files[0];
+                const file = e.target.files?.[0];
                 if (file) {
                   handleFormFieldChange(permit.id, field.id, file.name);
                 }
