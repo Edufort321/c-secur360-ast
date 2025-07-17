@@ -1794,7 +1794,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
     });
     setHazards(updatedHazards);
   }, [language]);
-  return (
+return (
     <>
       {/* CSS pour le design optimisé et responsive */}
       <style dangerouslySetInnerHTML={{
@@ -2213,7 +2213,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
           
           <div className="stat-card">
             <div className="stat-number" style={{ color: '#16a34a' }}>
-              {Math.round(implementationRate)}%
+              {stats.implementationRate}%
             </div>
             <div className="stat-label">{t.stats.implementationRate}</div>
           </div>
