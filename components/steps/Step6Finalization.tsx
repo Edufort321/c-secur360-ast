@@ -21,7 +21,7 @@ interface Worker {
   approbationStatus: 'pending' | 'approved' | 'rejected';
   approbationTimestamp?: string;
   approbationComments?: string;
-  consultationTime?: number; // en minutes
+  consultationTime?: number;
 }
 
 interface Photo {
@@ -65,7 +65,7 @@ interface FinalizationStepProps {
 type ApprobationStatus = 'pending' | 'approved' | 'rejected';
 type LockType = 'temporary' | 'permanent' | 'review';
 type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'facebook';
-// =================== COMPOSANT PRINCIPAL ===================
+
 function Step6Finalization({ 
   formData, 
   onDataChange, 
@@ -173,7 +173,8 @@ function Step6Finalization({
     }));
     console.log(`✅ Approbation ${status} pour travailleur:`, workerId);
   };
-  // =================== HANDLERS PARTAGE SIMPLE ===================
+
+  // =================== HANDLERS PARTAGE ===================
   const shareViaEmail = () => {
     const subject = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}`);
     const body = encodeURIComponent(`Bonjour,
@@ -217,7 +218,6 @@ Lien d'accès: ${shareLink}`);
     }
   };
 
-  // =================== HANDLERS AUTRES ===================
   const lockAST = (lockType: LockType) => {
     setFinalizationData(prev => ({
       ...prev,
@@ -230,7 +230,6 @@ Lien d'accès: ${shareLink}`);
     alert(`✅ AST verrouillée avec succès (${lockType})`);
   };
 
-  // =================== FONCTIONS UTILITAIRES ===================
   const getIndustryLabel = (industry: string) => {
     const labels = {
       'electrical': '⚡ Électrique',
@@ -243,7 +242,6 @@ Lien d'accès: ${shareLink}`);
     return labels[industry as keyof typeof labels] || industry || 'Non spécifié';
   };
 
-  // =================== FONCTION D'IMPRESSION COMPLÈTE ===================
   const printAST = () => {
     console.log('🖨️ Génération du rapport AST professionnel complet...');
     setIsLoading(true);
@@ -275,7 +273,6 @@ Lien d'accès: ${shareLink}`);
     const currentTime = new Date().toLocaleTimeString('fr-CA');
     const astNumber = formData?.astNumber || `AST-${Date.now().toString().slice(-6)}`;
     
-    // Calcul des statistiques
     const totalWorkers = finalizationData.workers.length;
     const consentedWorkers = finalizationData.workers.filter(w => w.hasConsented).length;
     const approvedWorkers = finalizationData.workers.filter(w => w.approbationStatus === 'approved').length;
@@ -292,339 +289,77 @@ Lien d'accès: ${shareLink}`);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rapport AST Complet - ${formData.projectInfo?.client || 'Client'}</title>
     <style>
-        @media print {
-            @page { margin: 15mm; size: A4; }
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .page-break { page-break-before: always; }
-            .no-print { display: none; }
-        }
-        
+        @media print { @page { margin: 15mm; size: A4; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page-break { page-break-before: always; } .no-print { display: none; } }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            line-height: 1.4;
-            color: #1f2937;
-            background: white;
-            font-size: 11px;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            position: relative;
-        }
-        
-        .logo-container {
-            position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 60px;
-            height: 60px;
-            background: #000;
-            border: 2px solid #f59e0b;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .logo-fallback {
-            color: #f59e0b;
-            font-size: 18px;
-            font-weight: bold;
-        }
-        
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-        
-        .header .subtitle {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-        
-        .info-box {
-            border: 2px solid #e5e7eb;
-            padding: 15px;
-            border-radius: 8px;
-            background: #f8fafc;
-        }
-        
-        .info-box h3 {
-            font-size: 12px;
-            color: #374151;
-            margin-bottom: 10px;
-            font-weight: bold;
-            border-bottom: 1px solid #d1d5db;
-            padding-bottom: 5px;
-        }
-        
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 6px;
-            padding: 4px 0;
-        }
-        
-        .info-label {
-            font-weight: 600;
-            color: #4b5563;
-            min-width: 120px;
-        }
-        
-        .info-value {
-            color: #1f2937;
-            font-weight: 500;
-            flex: 1;
-            text-align: right;
-        }
-        
-        .section {
-            margin-bottom: 25px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        .section-header {
-            background: #f3f4f6;
-            padding: 12px 15px;
-            border-bottom: 1px solid #d1d5db;
-        }
-        
-        .section-title {
-            font-size: 14px;
-            font-weight: bold;
-            color: #1f2937;
-        }
-        
-        .section-content {
-            padding: 15px;
-        }
-        
-        .subsection {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 10px;
-        }
-        
-        .subsection-title {
-            font-size: 12px;
-            font-weight: bold;
-            color: #374151;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .stats-summary {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
-            margin-top: 10px;
-        }
-        
-        .stat-item {
-            text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 6px;
-        }
-        
-        .stat-number {
-            font-size: 20px;
-            font-weight: bold;
-        }
-        
-        .stat-label {
-            font-size: 10px;
-            opacity: 0.9;
-            margin-top: 4px;
-        }
-        
-        .workers-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        
-        .workers-table th,
-        .workers-table td {
-            border: 1px solid #d1d5db;
-            padding: 8px;
-            text-align: left;
-            font-size: 9px;
-        }
-        
-        .workers-table th {
-            background: #f3f4f6;
-            font-weight: bold;
-        }
-        
+        body { font-family: 'Arial', sans-serif; line-height: 1.4; color: #1f2937; background: white; font-size: 11px; }
+        .header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 20px; text-align: center; margin-bottom: 20px; border-radius: 8px; position: relative; }
+        .logo-container { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 60px; height: 60px; background: #000; border: 2px solid #f59e0b; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .logo-fallback { color: #f59e0b; font-size: 18px; font-weight: bold; }
+        .header h1 { font-size: 24px; margin-bottom: 8px; font-weight: bold; }
+        .header .subtitle { font-size: 14px; opacity: 0.9; }
+        .stats-summary { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-top: 10px; }
+        .stat-item { text-align: center; background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 6px; }
+        .stat-number { font-size: 20px; font-weight: bold; }
+        .stat-label { font-size: 10px; opacity: 0.9; margin-top: 4px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .info-box { border: 2px solid #e5e7eb; padding: 15px; border-radius: 8px; background: #f8fafc; }
+        .info-box h3 { font-size: 12px; color: #374151; margin-bottom: 10px; font-weight: bold; border-bottom: 1px solid #d1d5db; padding-bottom: 5px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; padding: 4px 0; }
+        .info-label { font-weight: 600; color: #4b5563; min-width: 120px; }
+        .info-value { color: #1f2937; font-weight: 500; flex: 1; text-align: right; }
+        .section { margin-bottom: 25px; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; }
+        .section-header { background: #f3f4f6; padding: 12px 15px; border-bottom: 1px solid #d1d5db; }
+        .section-title { font-size: 14px; font-weight: bold; color: #1f2937; }
+        .section-content { padding: 15px; }
+        .workers-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .workers-table th, .workers-table td { border: 1px solid #d1d5db; padding: 8px; text-align: left; font-size: 9px; }
+        .workers-table th { background: #f3f4f6; font-weight: bold; }
         .status-approved { background: #dcfce7; color: #166534; }
         .status-pending { background: #fef3c7; color: #92400e; }
         .status-rejected { background: #fee2e2; color: #991b1b; }
-        
-        .footer {
-            margin-top: 30px;
-            padding: 15px;
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 9px;
-            color: #6b7280;
-        }
-        
-        .signature-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 30px;
-            margin-top: 40px;
-        }
-        
-        .signature-box {
-            border-top: 2px solid #374151;
-            padding-top: 10px;
-            text-align: center;
-        }
-        
-        .signature-label {
-            font-size: 10px;
-            color: #4b5563;
-            font-weight: 600;
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 8px;
-            font-weight: 600;
-        }
-        
-        .badge-success { background: #dcfce7; color: #166534; }
-        .badge-warning { background: #fef3c7; color: #92400e; }
-        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .footer { margin-top: 30px; padding: 15px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; text-align: center; font-size: 9px; color: #6b7280; }
+        .signature-section { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; margin-top: 40px; }
+        .signature-box { border-top: 2px solid #374151; padding-top: 10px; text-align: center; }
+        .signature-label { font-size: 10px; color: #4b5563; font-weight: 600; }
     </style>
 </head>
 <body>
-    <!-- EN-TÊTE AVEC LOGO -->
     <div class="header">
-        <div class="logo-container">
-            <div class="logo-fallback">C🛡️</div>
-        </div>
+        <div class="logo-container"><div class="logo-fallback">C🛡️</div></div>
         <h1>🛡️ ANALYSE SÉCURITAIRE DE TRAVAIL (AST)</h1>
         <div class="subtitle">Rapport Officiel Complet - ${tenant} | N° ${astNumber}</div>
     </div>
-
-    <!-- RÉSUMÉ STATISTIQUES -->
     <div class="stats-summary">
         <h3 style="margin-bottom: 10px; font-size: 14px;">📊 RÉSUMÉ EXÉCUTIF</h3>
         <div class="stats-grid">
-            <div class="stat-item">
-                <div class="stat-number">${totalHazards}</div>
-                <div class="stat-label">⚠️ Dangers</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">${totalEquipment}</div>
-                <div class="stat-label">🔧 Équipements</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">${totalPermits}</div>
-                <div class="stat-label">📄 Permis</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">${lockoutPoints}</div>
-                <div class="stat-label">🔒 Points LOTO</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">${totalWorkers}</div>
-                <div class="stat-label">👷 Travailleurs</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">${consentedWorkers}/${totalWorkers}</div>
-                <div class="stat-label">✅ Consentements</div>
-            </div>
+            <div class="stat-item"><div class="stat-number">${totalHazards}</div><div class="stat-label">⚠️ Dangers</div></div>
+            <div class="stat-item"><div class="stat-number">${totalEquipment}</div><div class="stat-label">🔧 Équipements</div></div>
+            <div class="stat-item"><div class="stat-number">${totalPermits}</div><div class="stat-label">📄 Permis</div></div>
+            <div class="stat-item"><div class="stat-number">${lockoutPoints}</div><div class="stat-label">🔒 Points LOTO</div></div>
+            <div class="stat-item"><div class="stat-number">${totalWorkers}</div><div class="stat-label">👷 Travailleurs</div></div>
+            <div class="stat-item"><div class="stat-number">${consentedWorkers}/${totalWorkers}</div><div class="stat-label">✅ Consentements</div></div>
         </div>
     </div>
-
-    <!-- INFORMATIONS GÉNÉRALES -->
     <div class="info-grid">
         <div class="info-box">
             <h3>🏢 INFORMATIONS CLIENT & PROJET</h3>
-            <div class="info-row">
-                <span class="info-label">Client:</span>
-                <span class="info-value">${formData.projectInfo?.client || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Projet #:</span>
-                <span class="info-value">${formData.projectInfo?.projectNumber || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Lieu:</span>
-                <span class="info-value">${formData.projectInfo?.workLocation || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Date/Heure:</span>
-                <span class="info-value">${formData.projectInfo?.date || currentDate} ${formData.projectInfo?.time || currentTime}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Industrie:</span>
-                <span class="info-value">${getIndustryLabel(formData.projectInfo?.industry)}</span>
-            </div>
+            <div class="info-row"><span class="info-label">Client:</span><span class="info-value">${formData.projectInfo?.client || 'Non spécifié'}</span></div>
+            <div class="info-row"><span class="info-label">Projet #:</span><span class="info-value">${formData.projectInfo?.projectNumber || 'Non spécifié'}</span></div>
+            <div class="info-row"><span class="info-label">Lieu:</span><span class="info-value">${formData.projectInfo?.workLocation || 'Non spécifié'}</span></div>
+            <div class="info-row"><span class="info-label">Date/Heure:</span><span class="info-value">${formData.projectInfo?.date || currentDate} ${formData.projectInfo?.time || currentTime}</span></div>
+            <div class="info-row"><span class="info-label">Industrie:</span><span class="info-value">${getIndustryLabel(formData.projectInfo?.industry)}</span></div>
         </div>
-        
         <div class="info-box">
             <h3>👥 ÉQUIPE & CONTACTS</h3>
-            <div class="info-row">
-                <span class="info-label">Nb Travailleurs:</span>
-                <span class="info-value">${formData.projectInfo?.workerCount || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Durée estimée:</span>
-                <span class="info-value">${formData.projectInfo?.estimatedDuration || 'Non spécifiée'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Contact client:</span>
-                <span class="info-value">${formData.projectInfo?.clientRepresentative || 'Non spécifié'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Urgence:</span>
-                <span class="info-value">${formData.projectInfo?.emergencyContact || 'Non spécifié'}</span>
-            </div>
+            <div class="info-row"><span class="info-label">Nb Travailleurs:</span><span class="info-value">${formData.projectInfo?.workerCount || 'Non spécifié'}</span></div>
+            <div class="info-row"><span class="info-label">Durée estimée:</span><span class="info-value">${formData.projectInfo?.estimatedDuration || 'Non spécifiée'}</span></div>
+            <div class="info-row"><span class="info-label">Contact client:</span><span class="info-value">${formData.projectInfo?.clientRepresentative || 'Non spécifié'}</span></div>
+            <div class="info-row"><span class="info-label">Urgence:</span><span class="info-value">${formData.projectInfo?.emergencyContact || 'Non spécifié'}</span></div>
         </div>
     </div>
-
     ${generateStep6Section()}
     ${generateSignatureSection()}
-
     <div class="footer">
         <p><strong>Ce document a été généré automatiquement par le système C-Secur360</strong></p>
         <p>Conforme aux normes de santé et sécurité au travail du Canada | Généré le ${currentDate} à ${currentTime}</p>
@@ -634,7 +369,7 @@ Lien d'accès: ${shareLink}`);
 </body>
 </html>`;
   };
-  // =================== GÉNÉRATION STEP 6: FINALISATION ===================
+
   const generateStep6Section = () => {
     const workersRows = finalizationData.workers.map(worker => `
         <tr>
@@ -663,56 +398,29 @@ Lien d'accès: ${shareLink}`);
                 <table class="workers-table">
                     <thead>
                         <tr>
-                            <th>Nom</th>
-                            <th>Entreprise</th>
-                            <th>Poste</th>
-                            <th>Consentement</th>
-                            <th>Date/Heure</th>
-                            <th>Statut</th>
-                            <th>Commentaires</th>
+                            <th>Nom</th><th>Entreprise</th><th>Poste</th><th>Consentement</th><th>Date/Heure</th><th>Statut</th><th>Commentaires</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        ${workersRows}
-                    </tbody>
+                    <tbody>${workersRows}</tbody>
                 </table>
             ` : '<p style="text-align: center; color: #6b7280; font-style: italic;">Aucun travailleur ajouté à l\'équipe</p>'}
-            
             ${finalizationData.finalComments ? `
-                <div class="subsection" style="margin-top: 20px;">
-                    <div class="subsection-title">💬 Commentaires Finaux</div>
-                    <div style="white-space: pre-wrap; line-height: 1.5; padding: 10px; background: #f9fafb; border-radius: 4px;">
-                        ${finalizationData.finalComments}
-                    </div>
+                <div style="margin-top: 20px; padding: 10px; background: #f9fafb; border-radius: 4px;">
+                    <strong>💬 Commentaires Finaux:</strong><br>${finalizationData.finalComments}
                 </div>
             ` : ''}
-            
-            <div class="subsection" style="margin-top: 20px;">
-                <div class="subsection-title">📊 Statut du Document</div>
-                <div class="info-row">
-                    <span class="info-label">Statut:</span>
-                    <span class="info-value">
-                        <span class="badge badge-${finalizationData.isLocked ? 'success' : 'warning'}">
-                            ${finalizationData.isLocked ? '🔒 VERROUILLÉ' : '🔓 EN COURS'}
-                        </span>
-                    </span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Complétion:</span>
-                    <span class="info-value">${finalizationData.completionPercentage}%</span>
-                </div>
-                ${finalizationData.lockTimestamp ? `
-                    <div class="info-row">
-                        <span class="info-label">Verrouillé le:</span>
-                        <span class="info-value">${new Date(finalizationData.lockTimestamp).toLocaleString('fr-CA')}</span>
-                    </div>
-                ` : ''}
+            <div style="margin-top: 20px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                <strong>📊 Statut du Document:</strong> 
+                <span style="padding: 2px 8px; border-radius: 12px; font-size: 8px; font-weight: 600; ${finalizationData.isLocked ? 'background: #dcfce7; color: #166534;' : 'background: #fef3c7; color: #92400e;'}">
+                    ${finalizationData.isLocked ? '🔒 VERROUILLÉ' : '🔓 EN COURS'}
+                </span>
+                | Complétion: ${finalizationData.completionPercentage}%
+                ${finalizationData.lockTimestamp ? ` | Verrouillé le: ${new Date(finalizationData.lockTimestamp).toLocaleString('fr-CA')}` : ''}
             </div>
         </div>
     </div>`;
   };
 
-  // =================== GÉNÉRATION SECTION SIGNATURES ===================
   const generateSignatureSection = () => {
     return `
     <div class="signature-section">
@@ -743,15 +451,11 @@ Lien d'accès: ${shareLink}`);
     </div>`;
   };
 
-  // =================== EFFET DE SYNCHRONISATION ===================
   useEffect(() => {
-    // Synchroniser les données avec le parent
     onDataChange('finalization', finalizationData);
   }, [finalizationData, onDataChange]);
 
-  // =================== EFFET DE MISE À JOUR DES STATS ===================
   useEffect(() => {
-    // Calculer le pourcentage de complétion automatiquement
     const totalSections = 6;
     const completedSections = [
       formData.projectInfo ? 1 : 0,
@@ -771,527 +475,92 @@ Lien d'accès: ${shareLink}`);
       }));
     }
   }, [formData, finalizationData.workers.length]);
+
   // =================== CSS MOBILE OPTIMISÉ THÈME SOMBRE ===================
   const darkThemeCSS = `
-    .step6-container { 
-      padding: 0; 
-      background: transparent; 
-      min-height: 100vh; 
-      color: #ffffff !important;
-    }
-    
-    .finalization-header { 
-      text-align: center; 
-      margin-bottom: 20px; 
-      padding: 20px; 
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
-      color: white; 
-      border-radius: 12px; 
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      backdrop-filter: blur(10px);
-    }
-    
-    .finalization-title { 
-      font-size: 24px; 
-      margin-bottom: 8px; 
-      font-weight: bold; 
-      color: #ffffff !important;
-    }
-    
-    .finalization-subtitle { 
-      font-size: 14px; 
-      opacity: 0.9; 
-      color: #e2e8f0 !important;
-    }
-    
-    .tabs-container { 
-      display: flex; 
-      background: rgba(15, 23, 42, 0.8); 
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 12px; 
-      padding: 6px; 
-      margin-bottom: 20px; 
-      backdrop-filter: blur(10px);
-    }
-    
-    .tab-button { 
-      flex: 1; 
-      padding: 12px 16px; 
-      border: none; 
-      background: transparent; 
-      color: #94a3b8; 
-      font-weight: 500; 
-      border-radius: 8px; 
-      cursor: pointer; 
-      transition: all 0.3s ease;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      min-height: 48px;
-    }
-    
-    .tab-button.active { 
-      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
-      color: white; 
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-      transform: translateY(-1px);
-    }
-    
-    .tab-button:hover:not(.active) {
-      background: rgba(59, 130, 246, 0.1);
-      color: #3b82f6;
-    }
-    
-    .finalization-section { 
-      background: rgba(15, 23, 42, 0.8); 
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 12px; 
-      padding: 20px; 
-      margin-bottom: 16px; 
-      backdrop-filter: blur(10px);
-    }
-    
-    .section-title { 
-      font-size: 18px; 
-      font-weight: bold; 
-      margin-bottom: 16px; 
-      color: #ffffff !important; 
-      display: flex; 
-      align-items: center; 
-      gap: 8px; 
-    }
-    
-    .workers-grid { 
-      display: grid; 
-      gap: 16px; 
-    }
-    
-    .worker-card { 
-      border: 2px solid rgba(148, 163, 184, 0.2); 
-      border-radius: 12px; 
-      padding: 16px; 
-      background: rgba(30, 41, 59, 0.6); 
-      transition: all 0.3s ease;
-      backdrop-filter: blur(5px);
-    }
-    
-    .worker-card:hover { 
-      border-color: #3b82f6; 
-      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
-      transform: translateY(-2px);
-    }
-    
-    .worker-header { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: flex-start; 
-      margin-bottom: 12px; 
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    
-    .worker-name { 
-      font-size: 16px; 
-      font-weight: bold; 
-      color: #ffffff !important; 
-    }
-    
-    .worker-company { 
-      color: #94a3b8 !important; 
-      font-size: 14px; 
-    }
-    
-    .consent-section { 
-      background: rgba(51, 65, 85, 0.6); 
-      border: 1px solid rgba(148, 163, 184, 0.2); 
-      border-radius: 8px; 
-      padding: 16px; 
-      margin-top: 12px; 
-      backdrop-filter: blur(5px);
-    }
-    
-    .consent-checkbox { 
-      display: flex; 
-      align-items: center; 
-      gap: 12px; 
-      margin-bottom: 12px; 
-      cursor: pointer; 
-      padding: 8px;
-      border-radius: 6px;
-      transition: background 0.3s ease;
-    }
-    
-    .consent-checkbox:hover {
-      background: rgba(59, 130, 246, 0.1);
-    }
-    
-    .consent-checkbox input { 
-      width: 20px; 
-      height: 20px; 
-      cursor: pointer; 
-      accent-color: #3b82f6;
-    }
-    
-    .consent-text { 
-      font-weight: 500; 
-      color: #e2e8f0 !important; 
-      flex: 1;
-    }
-    
-    .consent-timestamp { 
-      font-size: 12px; 
-      color: #94a3b8 !important; 
-      font-style: italic; 
-    }
-    
-    .approbation-section { 
-      display: flex; 
-      gap: 8px; 
-      margin-top: 12px; 
-      flex-wrap: wrap;
-    }
-    
-    .approbation-btn { 
-      padding: 10px 16px; 
-      border: none; 
-      border-radius: 6px; 
-      cursor: pointer; 
-      font-weight: 500; 
-      transition: all 0.3s ease;
-      min-height: 44px;
-      flex: 1;
-      min-width: 120px;
-    }
-    
-    .approbation-approve { 
-      background: rgba(16, 185, 129, 0.2); 
-      color: #10b981; 
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-    
-    .approbation-approve:hover { 
-      background: rgba(16, 185, 129, 0.3); 
-      transform: translateY(-1px);
-    }
-    
-    .approbation-reject { 
-      background: rgba(239, 68, 68, 0.2); 
-      color: #ef4444; 
-      border: 1px solid rgba(239, 68, 68, 0.3);
-    }
-    
-    .approbation-reject:hover { 
-      background: rgba(239, 68, 68, 0.3); 
-      transform: translateY(-1px);
-    }
-    
-    .premium-button { 
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
-      color: white; 
-      border: none; 
-      padding: 12px 20px; 
-      border-radius: 8px; 
-      font-weight: 600; 
-      cursor: pointer; 
-      transition: all 0.3s ease; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center;
-      gap: 8px; 
-      min-height: 48px;
-      font-size: 14px;
-    }
-    
-    .premium-button:hover { 
-      background: linear-gradient(135deg, #d97706 0%, #b45309 100%); 
-      transform: translateY(-2px); 
-      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3); 
-    }
-    
-    .premium-button:disabled { 
-      opacity: 0.5; 
-      cursor: not-allowed; 
-      transform: none; 
-    }
-    
-    .share-buttons { 
-      display: grid; 
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
-      gap: 12px; 
-      margin-top: 16px; 
-    }
-    
-    .share-btn { 
-      padding: 16px 12px; 
-      border: 2px solid rgba(148, 163, 184, 0.2); 
-      border-radius: 8px; 
-      background: rgba(30, 41, 59, 0.6); 
-      cursor: pointer; 
-      text-align: center; 
-      transition: all 0.3s ease;
-      backdrop-filter: blur(5px);
-      min-height: 80px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-    
-    .share-btn:hover { 
-      border-color: #3b82f6; 
-      background: rgba(59, 130, 246, 0.1);
-      transform: translateY(-2px);
-    }
-    
-    .modal-overlay { 
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      right: 0; 
-      bottom: 0; 
-      background: rgba(0, 0, 0, 0.8); 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      z-index: 1000; 
-      backdrop-filter: blur(4px);
-    }
-    
-    .modal-content { 
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 12px; 
-      padding: 24px; 
-      max-width: 500px; 
-      width: 90%; 
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-      color: #ffffff !important;
-    }
-    
-    .form-group { 
-      margin-bottom: 16px; 
-    }
-    
-    .form-label { 
-      display: block; 
-      margin-bottom: 6px; 
-      font-weight: 600; 
-      color: #e2e8f0 !important; 
-    }
-    
-    .form-input { 
-      width: 100%; 
-      padding: 14px; 
-      border: 2px solid rgba(148, 163, 184, 0.2); 
-      border-radius: 8px; 
-      font-size: 16px; 
-      transition: border-color 0.3s ease;
-      background: rgba(51, 65, 85, 0.6) !important;
-      color: #ffffff !important;
-      backdrop-filter: blur(5px);
-    }
-    
-    .form-input:focus { 
-      outline: none; 
-      border-color: #3b82f6; 
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
-    
-    .form-input::placeholder {
-      color: #94a3b8 !important;
-    }
-    
-    .checkbox-field { 
-      display: flex; 
-      align-items: center; 
-      gap: 12px; 
-      padding: 16px; 
-      border: 2px solid rgba(148, 163, 184, 0.2); 
-      border-radius: 8px; 
-      cursor: pointer; 
-      transition: all 0.3s ease; 
-      background: rgba(30, 41, 59, 0.6) !important;
-      backdrop-filter: blur(5px);
-    }
-    
-    .checkbox-field:hover { 
-      border-color: #3b82f6; 
-      background: rgba(59, 130, 246, 0.1) !important; 
-    }
-    
-    .checkbox-field.checked { 
-      border-color: #10b981; 
-      background: rgba(16, 185, 129, 0.1) !important; 
-    }
-    
-    .checkbox-field span { 
-      color: #e2e8f0 !important; 
-      font-weight: 500 !important; 
-    }
-    
-    .progress-bar { 
-      width: 100%; 
-      height: 8px; 
-      background: rgba(55, 65, 81, 0.6); 
-      border-radius: 4px; 
-      overflow: hidden; 
-      margin-bottom: 16px; 
-    }
-    
-    .progress-fill { 
-      height: 100%; 
-      background: linear-gradient(90deg, #10b981, #059669); 
-      transition: width 0.5s ease; 
-    }
-    
-    .stats-grid { 
-      display: grid; 
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
-      gap: 12px; 
-      margin-bottom: 20px; 
-    }
-    
-    .stat-card { 
-      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
-      color: white; 
-      padding: 16px; 
-      border-radius: 8px; 
-      text-align: center;
-      border: 1px solid rgba(59, 130, 246, 0.3);
-    }
-    
-    .stat-number { 
-      font-size: 20px; 
-      font-weight: bold; 
-      margin-bottom: 4px; 
-    }
-    
-    .stat-label { 
-      font-size: 11px; 
-      opacity: 0.9; 
-    }
-    
-    @keyframes spin { 
-      0% { transform: rotate(0deg); } 
-      100% { transform: rotate(360deg); } 
-    }
-    
-    .spinning { 
-      animation: spin 1s linear infinite; 
-    }
-    
-    /* RESPONSIVE MOBILE */
+    .step6-container { padding: 0; background: transparent; min-height: 100vh; color: #ffffff !important; }
+    .finalization-header { text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.2); backdrop-filter: blur(10px); }
+    .finalization-title { font-size: 24px; margin-bottom: 8px; font-weight: bold; color: #ffffff !important; }
+    .finalization-subtitle { font-size: 14px; opacity: 0.9; color: #e2e8f0 !important; }
+    .tabs-container { display: flex; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 6px; margin-bottom: 20px; backdrop-filter: blur(10px); }
+    .tab-button { flex: 1; padding: 12px 16px; border: none; background: transparent; color: #94a3b8; font-weight: 500; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; }
+    .tab-button.active { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); transform: translateY(-1px); }
+    .tab-button:hover:not(.active) { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .finalization-section { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 20px; margin-bottom: 16px; backdrop-filter: blur(10px); }
+    .section-title { font-size: 18px; font-weight: bold; margin-bottom: 16px; color: #ffffff !important; display: flex; align-items: center; gap: 8px; }
+    .workers-grid { display: grid; gap: 16px; }
+    .worker-card { border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 16px; background: rgba(30, 41, 59, 0.6); transition: all 0.3s ease; backdrop-filter: blur(5px); }
+    .worker-card:hover { border-color: #3b82f6; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15); transform: translateY(-2px); }
+    .worker-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+    .worker-name { font-size: 16px; font-weight: bold; color: #ffffff !important; }
+    .worker-company { color: #94a3b8 !important; font-size: 14px; }
+    .consent-section { background: rgba(51, 65, 85, 0.6); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; padding: 16px; margin-top: 12px; backdrop-filter: blur(5px); }
+    .consent-checkbox { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; cursor: pointer; padding: 8px; border-radius: 6px; transition: background 0.3s ease; }
+    .consent-checkbox:hover { background: rgba(59, 130, 246, 0.1); }
+    .consent-checkbox input { width: 20px; height: 20px; cursor: pointer; accent-color: #3b82f6; }
+    .consent-text { font-weight: 500; color: #e2e8f0 !important; flex: 1; }
+    .consent-timestamp { font-size: 12px; color: #94a3b8 !important; font-style: italic; }
+    .approbation-section { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .approbation-btn { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.3s ease; min-height: 44px; flex: 1; min-width: 120px; }
+    .approbation-approve { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .approbation-approve:hover { background: rgba(16, 185, 129, 0.3); transform: translateY(-1px); }
+    .approbation-reject { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .approbation-reject:hover { background: rgba(239, 68, 68, 0.3); transform: translateY(-1px); }
+    .premium-button { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; font-size: 14px; }
+    .premium-button:hover { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3); }
+    .premium-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .share-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 16px; }
+    .share-btn { padding: 16px 12px; border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 8px; background: rgba(30, 41, 59, 0.6); cursor: pointer; text-align: center; transition: all 0.3s ease; backdrop-filter: blur(5px); min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+    .share-btn:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); transform: translateY(-2px); }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
+    .modal-content { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); color: #ffffff !important; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; margin-bottom: 6px; font-weight: 600; color: #e2e8f0 !important; }
+    .form-input { width: 100%; padding: 14px; border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 8px; font-size: 16px; transition: border-color 0.3s ease; background: rgba(51, 65, 85, 0.6) !important; color: #ffffff !important; backdrop-filter: blur(5px); }
+    .form-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .form-input::placeholder { color: #94a3b8 !important; }
+    .checkbox-field { display: flex; align-items: center; gap: 12px; padding: 16px; border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; background: rgba(30, 41, 59, 0.6) !important; backdrop-filter: blur(5px); }
+    .checkbox-field:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1) !important; }
+    .checkbox-field.checked { border-color: #10b981; background: rgba(16, 185, 129, 0.1) !important; }
+    .checkbox-field span { color: #e2e8f0 !important; font-weight: 500 !important; }
+    .progress-bar { width: 100%; height: 8px; background: rgba(55, 65, 81, 0.6); border-radius: 4px; overflow: hidden; margin-bottom: 16px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.5s ease; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 16px; border-radius: 8px; text-align: center; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .stat-number { font-size: 20px; font-weight: bold; margin-bottom: 4px; }
+    .stat-label { font-size: 11px; opacity: 0.9; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .spinning { animation: spin 1s linear infinite; }
     @media (max-width: 768px) {
-      .finalization-header {
-        padding: 16px;
-        margin-bottom: 16px;
-      }
-      
-      .finalization-title {
-        font-size: 20px;
-      }
-      
-      .tabs-container {
-        flex-direction: column;
-        gap: 4px;
-      }
-      
-      .tab-button {
-        padding: 14px 16px;
-        font-size: 16px;
-        min-height: 52px;
-      }
-      
-      .finalization-section {
-        padding: 16px;
-        margin-bottom: 12px;
-      }
-      
-      .section-title {
-        font-size: 16px;
-        margin-bottom: 12px;
-      }
-      
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-      }
-      
-      .stat-card {
-        padding: 12px;
-      }
-      
-      .stat-number {
-        font-size: 18px;
-      }
-      
-      .worker-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-      }
-      
-      .approbation-section {
-        flex-direction: column;
-        gap: 6px;
-      }
-      
-      .approbation-btn {
-        min-width: 100%;
-      }
-      
-      .share-buttons {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-      }
-      
-      .share-btn {
-        padding: 12px 8px;
-        min-height: 70px;
-        font-size: 13px;
-      }
-      
-      .modal-content {
-        padding: 20px;
-        margin: 16px;
-        width: calc(100% - 32px);
-      }
-      
-      .form-input {
-        padding: 16px;
-        font-size: 16px;
-      }
+      .finalization-header { padding: 16px; margin-bottom: 16px; }
+      .finalization-title { font-size: 20px; }
+      .tabs-container { flex-direction: column; gap: 4px; }
+      .tab-button { padding: 14px 16px; font-size: 16px; min-height: 52px; }
+      .finalization-section { padding: 16px; margin-bottom: 12px; }
+      .section-title { font-size: 16px; margin-bottom: 12px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .stat-card { padding: 12px; }
+      .stat-number { font-size: 18px; }
+      .worker-header { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .approbation-section { flex-direction: column; gap: 6px; }
+      .approbation-btn { min-width: 100%; }
+      .share-buttons { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .share-btn { padding: 12px 8px; min-height: 70px; font-size: 13px; }
+      .modal-content { padding: 20px; margin: 16px; width: calc(100% - 32px); }
+      .form-input { padding: 16px; font-size: 16px; }
     }
-    
     @media (max-width: 480px) {
-      .tabs-container {
-        padding: 4px;
-      }
-      
-      .tab-button {
-        padding: 12px 8px;
-        font-size: 14px;
-        flex-direction: column;
-        gap: 4px;
-      }
-      
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      .share-buttons {
-        grid-template-columns: 1fr;
-      }
+      .tabs-container { padding: 4px; }
+      .tab-button { padding: 12px 8px; font-size: 14px; flex-direction: column; gap: 4px; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .share-buttons { grid-template-columns: 1fr; }
     }
   `;
-
   return (
     <>
       {/* Injection CSS thème sombre optimisé */}
       <style dangerouslySetInnerHTML={{ __html: darkThemeCSS }} />
+      
       <div className="step6-container">
         {/* Header avec logo */}
         <div className="finalization-header">
@@ -1697,6 +966,7 @@ Lien d'accès: ${shareLink}`);
             </div>
           </div>
         )}
+
         {/* MODAL AJOUT TRAVAILLEUR OPTIMISÉ */}
         {showAddWorker && (
           <div className="modal-overlay">
@@ -1774,12 +1044,12 @@ Lien d'accès: ${shareLink}`);
                     gap: '8px'
                   }}
                   onMouseEnter={(e) => {
-                    e.target.style.borderColor = '#ef4444';
-                    e.target.style.background = 'rgba(239, 68, 68, 0.1)';
+                    (e.target as HTMLButtonElement).style.borderColor = '#ef4444';
+                    (e.target as HTMLButtonElement).style.background = 'rgba(239, 68, 68, 0.1)';
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.borderColor = 'rgba(148, 163, 184, 0.3)';
-                    e.target.style.background = 'rgba(51, 65, 85, 0.6)';
+                    (e.target as HTMLButtonElement).style.borderColor = 'rgba(148, 163, 184, 0.3)';
+                    (e.target as HTMLButtonElement).style.background = 'rgba(51, 65, 85, 0.6)';
                   }}
                 >
                   <X size={18} />
@@ -1896,12 +1166,12 @@ Lien d'accès: ${shareLink}`);
                     gap: '8px'
                   }}
                   onMouseEnter={(e) => {
-                    e.target.style.background = 'rgba(254, 242, 242, 0.2)';
-                    e.target.style.borderColor = 'rgba(252, 165, 165, 0.5)';
+                    (e.target as HTMLButtonElement).style.background = 'rgba(254, 242, 242, 0.2)';
+                    (e.target as HTMLButtonElement).style.borderColor = 'rgba(252, 165, 165, 0.5)';
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.background = 'rgba(254, 242, 242, 0.1)';
-                    e.target.style.borderColor = 'rgba(252, 165, 165, 0.3)';
+                    (e.target as HTMLButtonElement).style.background = 'rgba(254, 242, 242, 0.1)';
+                    (e.target as HTMLButtonElement).style.borderColor = 'rgba(252, 165, 165, 0.3)';
                   }}
                 >
                   <X size={18} />
