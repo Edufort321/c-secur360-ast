@@ -969,1283 +969,576 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     }
   };
 
-  // =================== COMPOSANT FORMULAIRE AVEC VALIDATION ===================
-  const PermitForm = ({ permit }: { permit: Permit }) => {
-    const isExpanded = expandedForms[permit.id];
-    if (!isExpanded) return null;
+  return { permits, filteredPermits, stats, criticalAlerts, complianceChecks, expandedForms, handlePermitToggle, handleFormFieldChange, toggleFormExpansion, validateCompliance, getCategoryIcon, getPriorityColor, getStatusColor, getComplianceColor, searchTerm, setSearchTerm, selectedCategory, setSelectedCategory, selectedProvince, setSelectedProvince, categories, provinces, t };
+};
 
-    const fieldsBySection = permit.formFields?.reduce((acc, field) => {
-      const section = field.section || 'general';
-      if (!acc[section]) acc[section] = [];
-      acc[section].push(field);
-      return acc;
-    }, {} as { [key: string]: FormField[] }) || {};
+export default Step4Permits;
+"use client";
+import React, { useState } from 'react';
+import { FileText, CheckCircle, AlertTriangle, Clock, Download, Eye, Shield, Users, MapPin, Calendar, Building, Phone, User, Briefcase, Search, Filter, Plus, BarChart3, Star, Award, Zap, HardHat, Camera, Save, X, ChevronLeft, ChevronRight, Upload, UserPlus, UserMinus, Grid, List } from 'lucide-react';
 
-    const permitChecks = complianceChecks[permit.id] || [];
-    const hasViolations = permitChecks.some(check => check.status === 'non-compliant');
+// Section 3B - Rendu Final avec Multi-travailleurs et Carrousel
+const Step4PermitsSection3B = () => {
+  const [selectedPermit, setSelectedPermit] = useState('confined_space');
+  const [formData, setFormData] = useState({});
+  const [workers, setWorkers] = useState([{ id: 1, name: '', age: '', over18: false, certification: '' }]);
+  const [photos, setPhotos] = useState([]);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [viewMode, setViewMode] = useState('carousel'); // 'carousel' ou 'grid'
+  const [language, setLanguage] = useState('fr');
 
-    const renderField = (field: FormField) => {
-      const value = permit.formData?.[field.id] || '';
-      const hasError = field.validation?.critical && !value;
-      
-      // Rendu des champs selon type avec validation
-      switch (field.type) {
-        case 'gas_meter':
-          const numValue = parseFloat(value) || 0;
-          const isCompliant = field.validation ? 
-            numValue >= (field.validation.min || 0) && 
-            numValue <= (field.validation.max || 100) : true;
-          
-          return (
-            <div className="gas-meter-container">
-              <div className="gas-meter-display">
-                <input
-                  type="number"
-                  step="0.1"
-                  id={field.id}
-                  value={value}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    handleFormFieldChange(permit.id, field.id, e.target.value);
-                  }}
-                  className={`gas-meter-input ${!isCompliant ? 'critical-violation' : 'compliant'}`}
-                  placeholder={field.placeholder}
-                  required={field.required}
-                />
-                <div className={`gas-status ${!isCompliant ? 'non-compliant' : 'compliant'}`}>
-                  {!isCompliant ? (
-                    <AlertTriangle size={16} />
-                  ) : (
-                    <CheckCircle size={16} />
-                  )}
-                  <span>{!isCompliant ? t.gasMeasurements.nonCompliant : t.gasMeasurements.compliant}</span>
-                </div>
-              </div>
-              {!isCompliant && field.validation?.message && (
-                <div className="critical-alert">
-                  <AlertCircle size={14} />
-                  {field.validation.message}
-                </div>
-              )}
-            </div>
-          );
-
-        case 'calculation':
-          const calculatedValue = field.calculation?.autoCalculate ? 'AUTO' : value;
-          return (
-            <div className="calculation-field">
-              <div className="calculation-display">
-                <span className="calculation-label">{calculatedValue}</span>
-                <button
-                  type="button"
-                  className="calculate-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Trigger calculation
-                    if (field.calculation?.autoCalculate) {
-                      // Auto-calculation logic here
-                    }
-                  }}
-                >
-                  {t.actions.calculate}
-                </button>
-              </div>
-            </div>
-          );
-
-        case 'compliance_check':
-          const isChecked = !!value;
-          return (
-            <div className="compliance-check">
-              <label className="compliance-label">
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    handleFormFieldChange(permit.id, field.id, e.target.checked);
-                  }}
-                  required={field.required}
-                />
-                <span className={`compliance-text ${isChecked ? 'compliant' : 'pending'}`}>
-                  {field.label}
-                </span>
-                {field.complianceRef && (
-                  <span className="compliance-ref">({field.complianceRef})</span>
-                )}
-              </label>
-            </div>
-          );
-
-        case 'alert_indicator':
-          return (
-            <div className={`alert-indicator ${field.alert?.level || 'info'}`}>
-              <AlertTriangle size={16} />
-              <span>{field.alert?.message || field.label}</span>
-            </div>
-          );
-
-        // Types de champs standards (text, number, etc.)
-        default:
-          return (
-            <input
-              type={field.type}
-              id={field.id}
-              value={value}
-              onChange={(e) => {
-                e.stopPropagation();
-                handleFormFieldChange(permit.id, field.id, e.target.value);
-              }}
-              placeholder={field.placeholder}
-              required={field.required}
-              className={`form-input ${hasError ? 'error' : ''}`}
-            />
-          );
-      }
+  // Gestion des travailleurs
+  const addWorker = () => {
+    const newWorker = {
+      id: workers.length + 1,
+      name: '',
+      age: '',
+      over18: false,
+      certification: ''
     };
-
-    return (
-      <div className="permit-form">
-        <div className="form-header">
-          <div className="form-title-section">
-            <h3>{permit.name}</h3>
-            <div className="compliance-badges">
-              <span className={`compliance-badge ${permit.complianceLevel}`}>
-                {(t.complianceLevels as any)[permit.complianceLevel]}
-              </span>
-              <span className="last-updated">
-                Mis à jour: {permit.lastUpdated}
-              </span>
-            </div>
-          </div>
-          <div className="form-actions">
-            <button className="form-action-btn validate" onClick={() => validateCompliance()}>
-              <Shield size={16} />
-              {t.actions.validate}
-            </button>
-            <button className="form-action-btn save">
-              <Save size={16} />
-              {t.actions.save}
-            </button>
-            <button className="form-action-btn submit">
-              <Mail size={16} />
-              {t.actions.submit}
-            </button>
-          </div>
-        </div>
-
-        {/* Alertes critiques */}
-        {hasViolations && (
-          <div className="critical-violations-panel">
-            <div className="violations-header">
-              <AlertTriangle size={20} />
-              <span>{t.alerts.critical}</span>
-            </div>
-            {permitChecks.filter(check => check.status === 'non-compliant').map((check, index) => (
-              <div key={index} className="violation-item">
-                <span className="violation-requirement">{check.requirement}</span>
-                <span className="violation-details">{check.details}</span>
-                <span className="violation-reference">{check.reference}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Vérifications de conformité */}
-        {permitChecks.length > 0 && (
-          <div className="compliance-panel">
-            <h4>📋 Vérifications de conformité</h4>
-            <div className="compliance-grid">
-              {permitChecks.map((check, index) => (
-                <div key={index} className={`compliance-item ${check.status}`}>
-                  <div className="compliance-status">
-                    {check.status === 'compliant' ? 
-                      <CheckCircle size={16} /> : 
-                      <AlertTriangle size={16} />
-                    }
-                  </div>
-                  <div className="compliance-details">
-                    <span className="compliance-requirement">{check.requirement}</span>
-                    <span className="compliance-reference">{check.reference}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="form-content">
-          {Object.entries(fieldsBySection).map(([sectionName, fields]: [string, FormField[]]) => (
-            <div key={sectionName} className="form-section-group">
-              <h4 className="form-section-title">
-                {(t.sections as any)[sectionName] || sectionName}
-              </h4>
-              <div className="form-fields">
-                {fields.map((field: FormField) => (
-                  <div key={field.id} className="form-field">
-                    <label className="form-label" htmlFor={field.id}>
-                      {field.label}
-                      {field.required && <span className="required">*</span>}
-                      {field.validation?.legalRequirement && (
-                        <span className="legal-requirement">⚖️ LÉGAL</span>
-                      )}
-                      {field.validation?.critical && (
-                        <span className="critical-requirement">🚨 CRITIQUE</span>
-                      )}
-                    </label>
-                    {renderField(field)}
-                    {field.validation?.message && (
-                      <div className="field-help">{field.validation.message}</div>
-                    )}
-                    {field.complianceRef && (
-                      <div className="compliance-reference">
-                        📖 Réf: {field.complianceRef}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+    setWorkers([...workers, newWorker]);
   };
 
-  // =================== RENDU PRINCIPAL ===================
-  return (
-    <>
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .step4-container { padding: 0; color: #ffffff; scroll-behavior: auto !important; }
-          
-          /* =================== HEADER PREMIUM =================== */
-          .permits-header { 
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(147, 51, 234, 0.1)); 
-            border: 1px solid rgba(59, 130, 246, 0.3); 
-            border-radius: 20px; 
-            padding: 24px; 
-            margin-bottom: 28px; 
-            backdrop-filter: blur(20px);
-            position: relative;
-            overflow: hidden;
-          }
-          .permits-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
-            border-radius: 20px 20px 0 0;
-          }
-          .permits-title { 
-            color: #ffffff; 
-            font-size: 24px; 
-            font-weight: 800; 
-            margin-bottom: 8px; 
-            display: flex; 
-            align-items: center; 
-            gap: 12px;
-            background: linear-gradient(135deg, #60a5fa, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-          }
-          
-          /* =================== ALERTES CRITIQUES PREMIUM =================== */
-          .critical-alerts { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1)); 
-            border: 2px solid #ef4444; 
-            border-radius: 16px; 
-            padding: 20px; 
-            margin-bottom: 24px; 
-            backdrop-filter: blur(20px);
-            box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
-            animation: pulse-critical 2s infinite;
-          }
-          @keyframes pulse-critical {
-            0%, 100% { box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3); }
-            50% { box-shadow: 0 12px 40px rgba(239, 68, 68, 0.5); }
-          }
-          .critical-alerts h3 { 
-            color: #ff6b6b; 
-            margin: 0 0 16px; 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            font-size: 18px;
-            font-weight: 700;
-          }
-          .alert-item { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
-            padding: 12px 16px; 
-            border-radius: 10px; 
-            margin-bottom: 10px; 
-            color: #fee2e2; 
-            font-size: 14px; 
-            font-weight: 500;
-            border-left: 4px solid #ef4444;
-          }
-          
-          /* =================== STATISTIQUES PREMIUM =================== */
-          .permits-stats { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
-            gap: 20px; 
-            margin-top: 20px; 
-          }
-          .stat-item { 
-            text-align: center; 
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6)); 
-            padding: 20px 16px; 
-            border-radius: 16px; 
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            backdrop-filter: blur(20px);
-            transition: all 0.4s ease;
-            position: relative;
-            overflow: hidden;
-          }
-          .stat-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-          }
-          .stat-item:hover::before { opacity: 1; }
-          .stat-item:hover { 
-            transform: translateY(-4px); 
-            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
-            border-color: rgba(59, 130, 246, 0.5);
-          }
-          .stat-item.compliant { 
-            border: 2px solid #22c55e; 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.1));
-          }
-          .stat-item.non-compliant { 
-            border: 2px solid #ef4444; 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.1));
-          }
-          .stat-value { 
-            font-size: 28px; 
-            font-weight: 800; 
-            background: linear-gradient(135deg, #60a5fa, #34d399);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 8px; 
-          }
-          .stat-label { 
-            font-size: 12px; 
-            color: #94a3b8; 
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          
-          /* =================== SECTION RECHERCHE PREMIUM =================== */
-          .search-section { 
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6)); 
-            backdrop-filter: blur(20px); 
-            border: 1px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 20px; 
-            padding: 24px; 
-            margin-bottom: 28px; 
-          }
-          .search-grid { 
-            display: grid; 
-            grid-template-columns: 1fr auto auto; 
-            gap: 16px; 
-            align-items: end; 
-          }
-          .search-input-wrapper { position: relative; }
-          .search-icon { 
-            position: absolute; 
-            left: 16px; 
-            top: 50%; 
-            transform: translateY(-50%); 
-            color: #94a3b8; 
-            z-index: 10; 
-          }
-          .search-field { 
-            width: 100%; 
-            padding: 16px 16px 16px 48px; 
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8)); 
-            border: 2px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 16px; 
-            color: #ffffff; 
-            font-size: 16px; 
-            transition: all 0.3s ease; 
-          }
-          .search-field:focus { 
-            outline: none; 
-            border-color: #3b82f6; 
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9)); 
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-          }
-          .filter-select { 
-            padding: 16px 20px; 
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8)); 
-            border: 2px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 16px; 
-            color: #ffffff; 
-            font-size: 14px; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            min-width: 180px; 
-          }
-          .filter-select:focus { 
-            outline: none; 
-            border-color: #3b82f6; 
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-          }
-          
-          /* =================== CARTES PERMIS PREMIUM =================== */
-          .permits-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); 
-            gap: 24px; 
-          }
-          .permit-card { 
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6)); 
-            backdrop-filter: blur(20px); 
-            border: 1px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 20px; 
-            padding: 24px; 
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
-            position: relative; 
-            overflow: hidden;
-          }
-          .permit-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-          }
-          .permit-card:hover::before { opacity: 1; }
-          .permit-card:hover { 
-            transform: translateY(-8px) scale(1.02); 
-            border-color: rgba(59, 130, 246, 0.5); 
-            box-shadow: 
-              0 20px 40px rgba(0, 0, 0, 0.3),
-              0 0 0 1px rgba(59, 130, 246, 0.2);
-          }
-          .permit-card.selected { 
-            border-color: #3b82f6; 
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(30, 41, 59, 0.8)); 
-            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
-          }
-          .permit-card.critical::before { 
-            content: ''; 
-            position: absolute; 
-            left: 0; 
-            top: 0; 
-            bottom: 0; 
-            width: 4px; 
-            background: linear-gradient(180deg, #ef4444, #dc2626); 
-            border-radius: 20px 0 0 20px; 
-          }
-          .permit-card.non-compliant {
-            border-color: #ef4444;
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(30, 41, 59, 0.8));
-            animation: pulse-violation 3s infinite;
-          }
-          @keyframes pulse-violation {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-            50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.1); }
-          }
-          
-          /* =================== HEADER CARTE PERMIS =================== */
-          .permit-header { 
-            display: flex; 
-            align-items: flex-start; 
-            gap: 16px; 
-            margin-bottom: 20px; 
-            cursor: pointer; 
-          }
-          .permit-icon { 
-            font-size: 32px; 
-            width: 48px; 
-            text-align: center; 
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-          }
-          .permit-content { flex: 1; }
-          .permit-name { 
-            color: #ffffff; 
-            font-size: 18px; 
-            font-weight: 700; 
-            margin: 0 0 6px; 
-            line-height: 1.3;
-          }
-          .permit-category { 
-            color: #94a3b8; 
-            font-size: 12px; 
-            font-weight: 600; 
-            margin-bottom: 6px; 
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          .permit-description { 
-            color: #cbd5e1; 
-            font-size: 14px; 
-            line-height: 1.5; 
-            margin-bottom: 8px; 
-          }
-          .permit-authority { 
-            color: #60a5fa; 
-            font-size: 12px; 
-            font-weight: 600; 
-          }
-          .compliance-info {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            margin-top: 8px;
-          }
-          .permit-checkbox { 
-            width: 28px; 
-            height: 28px; 
-            border: 2px solid rgba(100, 116, 139, 0.5); 
-            border-radius: 8px; 
-            background: rgba(15, 23, 42, 0.8); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: all 0.3s ease; 
-          }
-          .permit-checkbox.checked { 
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
-            border-color: #3b82f6; 
-            color: white; 
-            transform: scale(1.1);
-          }
-          
-          /* =================== METADATA PREMIUM =================== */
-          .permit-meta { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
-            gap: 12px; 
-            margin-bottom: 20px; 
-          }
-          .meta-item { 
-            display: flex; 
-            align-items: center; 
-            gap: 6px; 
-            font-size: 11px; 
-            color: #94a3b8; 
-          }
-          .priority-badge, .status-badge, .violation-badge { 
-            padding: 4px 8px; 
-            border-radius: 6px; 
-            font-size: 10px; 
-            font-weight: 700; 
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          .compliance-badge { 
-            padding: 3px 8px; 
-            border-radius: 12px; 
-            font-size: 10px; 
-            font-weight: 700; 
-          }
-          .compliance-badge.critical { 
-            background: linear-gradient(135deg, #dc2626, #991b1b); 
-            color: white; 
-          }
-          .compliance-badge.enhanced { 
-            background: linear-gradient(135deg, #059669, #047857); 
-            color: white; 
-          }
-          .compliance-badge.standard { 
-            background: linear-gradient(135deg, #2563eb, #1d4ed8); 
-            color: white; 
-          }
-          .last-updated-small { 
-            font-size: 9px; 
-            color: #64748b; 
-          }
-          
-          /* =================== ACTIONS PREMIUM =================== */
-          .permit-actions { 
-            display: flex; 
-            gap: 12px; 
-            margin-top: 20px; 
-          }
-          .action-btn { 
-            padding: 12px 16px; 
-            border-radius: 12px; 
-            border: none; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            font-size: 13px; 
-            font-weight: 600; 
-            flex: 1;
-            justify-content: center;
-          }
-          .action-btn.primary { 
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
-            color: white; 
-          }
-          .action-btn.primary:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
-          }
-          .action-btn.secondary { 
-            background: linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2)); 
-            color: #cbd5e1; 
-            border: 1px solid rgba(100, 116, 139, 0.3); 
-          }
-          .action-btn.secondary:hover { 
-            transform: translateY(-2px); 
-            background: linear-gradient(135deg, rgba(100, 116, 139, 0.4), rgba(71, 85, 105, 0.3));
-          }
-          
-          /* =================== FORMULAIRE PREMIUM =================== */
-          .permit-form { 
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8)); 
-            border: 1px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 16px; 
-            margin-top: 20px; 
-            overflow: hidden; 
-            backdrop-filter: blur(20px);
-          }
-          .form-header { 
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(30, 41, 59, 0.8)); 
-            padding: 20px; 
-            border-bottom: 1px solid rgba(100, 116, 139, 0.3); 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: flex-start; 
-          }
-          .form-header h3 { 
-            color: #ffffff; 
-            margin: 0; 
-            font-size: 18px; 
-            font-weight: 700; 
-          }
-          .form-actions { 
-            display: flex; 
-            gap: 8px; 
-          }
-          .form-action-btn { 
-            padding: 8px 12px; 
-            border-radius: 8px; 
-            border: none; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            display: flex; 
-            align-items: center; 
-            gap: 6px; 
-            font-size: 12px; 
-            font-weight: 600; 
-          }
-          .form-action-btn.save { 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2)); 
-            color: #4ade80; 
-          }
-          .form-action-btn.print { 
-            background: linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2)); 
-            color: #cbd5e1; 
-          }
-          .form-action-btn.submit { 
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2)); 
-            color: #60a5fa; 
-          }
-          .form-action-btn.validate { 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2)); 
-            color: #22c55e; 
-          }
-          .form-action-btn:hover { 
-            transform: translateY(-1px); 
-          }
-          
-          /* =================== CHAMPS FORMULAIRE PREMIUM =================== */
-          .form-content { 
-            padding: 24px; 
-            max-height: 600px; 
-            overflow-y: auto; 
-          }
-          .form-section-group { 
-            margin-bottom: 28px; 
-          }
-          .form-section-title { 
-            color: #3b82f6; 
-            font-size: 16px; 
-            font-weight: 700; 
-            margin: 0 0 16px; 
-            padding-bottom: 12px; 
-            border-bottom: 2px solid rgba(59, 130, 246, 0.3); 
-            position: relative;
-          }
-          .form-section-title::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            width: 60px;
-            height: 2px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-          }
-          .form-fields { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
-            gap: 20px; 
-          }
-          .form-field { 
-            display: flex; 
-            flex-direction: column; 
-          }
-          .form-label { 
-            color: #e2e8f0; 
-            font-size: 13px; 
-            font-weight: 600; 
-            margin-bottom: 6px; 
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-          .required { 
-            color: #ef4444; 
-            margin-left: 4px; 
-          }
-          .legal-requirement { 
-            background: linear-gradient(135deg, #059669, #047857); 
-            color: white; 
-            padding: 2px 6px; 
-            border-radius: 4px; 
-            font-size: 8px; 
-            font-weight: 700;
-            text-transform: uppercase;
-          }
-          .critical-requirement { 
-            background: linear-gradient(135deg, #dc2626, #991b1b); 
-            color: white; 
-            padding: 2px 6px; 
-            border-radius: 4px; 
-            font-size: 8px; 
-            font-weight: 700;
-            text-transform: uppercase;
-          }
-          .form-input, .form-textarea, .form-select { 
-            padding: 12px 16px; 
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8)); 
-            border: 2px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 12px; 
-            color: #ffffff; 
-            font-size: 14px; 
-            transition: all 0.3s ease; 
-          }
-          .form-input:focus, .form-textarea:focus, .form-select:focus { 
-            outline: none; 
-            border-color: #3b82f6; 
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-          }
-          .form-input.error {
-            border-color: #ef4444;
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(15, 23, 42, 0.9));
-          }
-          
-          /* =================== COMPOSANTS SPÉCIALISÉS =================== */
-          .gas-meter-container { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 12px; 
-          }
-          .gas-meter-display { 
-            display: flex; 
-            align-items: center; 
-            gap: 16px; 
-          }
-          .gas-meter-input { 
-            flex: 1; 
-            padding: 12px 16px; 
-            border-radius: 12px; 
-            font-size: 16px;
-            font-weight: 600;
-            font-family: monospace;
-          }
-          .gas-meter-input.critical-violation { 
-            border: 2px solid #ef4444; 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(15, 23, 42, 0.9)); 
-            color: #fee2e2;
-            animation: pulse-critical 1s infinite;
-          }
-          .gas-meter-input.compliant { 
-            border: 2px solid #22c55e; 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(15, 23, 42, 0.9)); 
-            color: #dcfce7;
-          }
-          .gas-status { 
-            display: flex; 
-            align-items: center; 
-            gap: 6px; 
-            font-size: 13px; 
-            font-weight: 700; 
-            padding: 8px 12px;
-            border-radius: 8px;
-            min-width: 120px;
-            justify-content: center;
-          }
-          .gas-status.non-compliant { 
-            color: #fee2e2; 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2));
-          }
-          .gas-status.compliant { 
-            color: #dcfce7; 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2));
-          }
-          
-          .critical-alert { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
-            color: #fee2e2; 
-            padding: 12px; 
-            border-radius: 8px; 
-            font-size: 12px; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            margin-top: 8px;
-            border-left: 4px solid #ef4444;
-          }
-          
-          .compliance-check { 
-            margin: 12px 0; 
-          }
-          .compliance-label { 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            cursor: pointer; 
-            padding: 8px;
-            border-radius: 8px;
-            transition: background 0.3s ease;
-          }
-          .compliance-label:hover {
-            background: rgba(100, 116, 139, 0.1);
-          }
-          .compliance-text.compliant { 
-            color: #22c55e; 
-            font-weight: 600;
-          }
-          .compliance-text.pending { 
-            color: #eab308; 
-            font-weight: 600;
-          }
-          .compliance-ref { 
-            font-size: 10px; 
-            color: #94a3b8; 
-            font-style: italic;
-          }
-          
-          .calculation-field { 
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6)); 
-            border-radius: 12px; 
-            padding: 16px; 
-            border: 1px solid rgba(100, 116, 139, 0.3);
-          }
-          .calculation-display { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-          }
-          .calculation-label { 
-            font-family: monospace; 
-            color: #22c55e; 
-            font-weight: 700; 
-            font-size: 16px;
-          }
-          .calculate-btn { 
-            padding: 8px 12px; 
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            font-size: 12px; 
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-          }
-          .calculate-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-          }
-          
-          /* =================== PANNEAUX CONFORMITÉ =================== */
-          .critical-violations-panel { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1)); 
-            border: 2px solid #ef4444; 
-            border-radius: 12px; 
-            padding: 20px; 
-            margin-bottom: 24px; 
-            backdrop-filter: blur(20px);
-          }
-          .violations-header { 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            color: #ff6b6b; 
-            font-weight: 800; 
-            margin-bottom: 16px; 
-            font-size: 16px;
-          }
-          .violation-item { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
-            padding: 12px; 
-            border-radius: 8px; 
-            margin-bottom: 12px; 
-            border-left: 4px solid #ef4444;
-          }
-          .violation-requirement { 
-            display: block; 
-            font-weight: 700; 
-            color: #fee2e2; 
-            margin-bottom: 4px;
-          }
-          .violation-details { 
-            display: block; 
-            font-size: 13px; 
-            color: #fca5a5; 
-            margin-bottom: 4px;
-          }
-          .violation-reference { 
-            display: block; 
-            font-size: 11px; 
-            color: #f87171; 
-            font-style: italic;
-          }
-          
-          .compliance-panel { 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1)); 
-            border: 1px solid #22c55e; 
-            border-radius: 12px; 
-            padding: 20px; 
-            margin-bottom: 24px; 
-            backdrop-filter: blur(20px);
-          }
-          .compliance-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-            gap: 12px; 
-          }
-          .compliance-item { 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            padding: 12px; 
-            border-radius: 8px; 
-            transition: all 0.3s ease;
-          }
-          .compliance-item:hover {
-            transform: translateX(4px);
-          }
-          .compliance-item.compliant { 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2)); 
-          }
-          .compliance-item.non-compliant { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
-          }
-          .compliance-status { 
-            color: #22c55e; 
-          }
-          .compliance-item.non-compliant .compliance-status { 
-            color: #ef4444; 
-          }
-          .compliance-requirement { 
-            font-size: 13px; 
-            font-weight: 600; 
-            color: #e2e8f0;
-          }
-          .compliance-reference { 
-            font-size: 10px; 
-            color: #94a3b8; 
-            margin-top: 2px;
-            display: block;
-          }
-          
-          .field-help { 
-            font-size: 11px; 
-            color: #64748b; 
-            margin-top: 4px; 
-            font-style: italic; 
-          }
-          .compliance-reference { 
-            font-size: 10px; 
-            color: #3b82f6; 
-            margin-top: 4px; 
-          }
-          
-          .form-title-section { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 8px; 
-          }
-          .compliance-badges { 
-            display: flex; 
-            gap: 8px; 
-            align-items: center; 
-            flex-wrap: wrap;
-          }
-          .last-updated { 
-            font-size: 10px; 
-            color: #94a3b8; 
-          }
-          
-          .alert-indicator { 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            padding: 12px; 
-            border-radius: 8px; 
-            font-size: 13px; 
-            font-weight: 600;
-          }
-          .alert-indicator.critical { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
-            color: #fee2e2; 
-            border-left: 4px solid #ef4444;
-          }
-          .alert-indicator.warning { 
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(217, 119, 6, 0.2)); 
-            color: #fde68a; 
-            border-left: 4px solid #f59e0b;
-          }
-          .alert-indicator.info { 
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2)); 
-            color: #dbeafe; 
-            border-left: 4px solid #3b82f6;
-          }
-          
-          /* =================== RESPONSIVE DESIGN =================== */
-          @media (max-width: 768px) {
-            .permits-grid { grid-template-columns: 1fr; gap: 20px; }
-            .search-grid { grid-template-columns: 1fr; gap: 12px; }
-            .permits-stats { grid-template-columns: repeat(2, 1fr); }
-            .form-fields { grid-template-columns: 1fr; }
-            .permit-actions { flex-direction: column; }
-            .compliance-grid { grid-template-columns: 1fr; }
-            .form-title-section { align-items: flex-start; }
-            .compliance-badges { flex-wrap: wrap; }
-            .permit-card { padding: 20px; }
-            .permits-header { padding: 20px; }
-            .search-section { padding: 20px; }
-          }
-        `
-      }} />
+  const removeWorker = (id) => {
+    if (workers.length > 1) {
+      setWorkers(workers.filter(w => w.id !== id));
+    }
+  };
 
-      <div className="step4-container">
-        {/* Alertes critiques */}
-        {criticalAlerts.length > 0 && (
-          <div className="critical-alerts">
-            <h3>
-              <AlertTriangle size={20} />
-              {t.alerts.critical}
-            </h3>
-            {criticalAlerts.map((alert, index) => (
-              <div key={index} className="alert-item">
-                {alert}
-              </div>
-            ))}
-          </div>
-        )}
+  const updateWorker = (id, field, value) => {
+    setWorkers(workers.map(w => 
+      w.id === id ? { ...w, [field]: value } : w
+    ));
+  };
 
-        {/* En-tête avec résumé de conformité */}
-        <div className="permits-header">
-          <div className="permits-title">
-            <FileText size={24} />
-            📋 {t.title}
-          </div>
-          <p style={{ color: '#3b82f6', margin: '0 0 8px', fontSize: '14px' }}>
-            {t.subtitle}
-          </p>
-          
-          <div className="permits-stats">
-            <div className="stat-item">
-              <div className="stat-value">{stats.totalPermits}</div>
-              <div className="stat-label">{t.stats.available}</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-value">{stats.selected}</div>
-              <div className="stat-label">{t.stats.selected}</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-value">{stats.critical}</div>
-              <div className="stat-label">{t.stats.critical}</div>
-            </div>
-            <div className={`stat-item ${stats.compliant === stats.selected && stats.selected > 0 ? 'compliant' : stats.nonCompliant > 0 ? 'non-compliant' : ''}`}>
-              <div className="stat-value">{stats.compliant}/{stats.selected}</div>
-              <div className="stat-label">{t.stats.compliant}</div>
-            </div>
-          </div>
-        </div>
+  // Gestion des photos
+  const handlePhotoUpload = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const newPhoto = {
+          id: photos.length + 1,
+          url: event.target.result,
+          name: file.name,
+          timestamp: new Date().toISOString()
+        };
+        setPhotos(prev => [...prev, newPhoto]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
-        {/* Section de recherche et filtres */}
-        <div className="search-section">
-          <div className="search-grid">
-            <div className="search-input-wrapper">
-              <Search className="search-icon" size={18} />
+  const removePhoto = (id) => {
+    setPhotos(photos.filter(p => p.id !== id));
+    if (currentPhotoIndex >= photos.length - 1) {
+      setCurrentPhotoIndex(Math.max(0, photos.length - 2));
+    }
+  };
+
+  const nextPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
+  };
+
+  const prevPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
+  };
+
+  // Données des permis
+  const permits = {
+    confined_space: {
+      title: { fr: "Permis Espace Clos", en: "Confined Space Permit" },
+      icon: Shield,
+      color: "red",
+      fields: [
+        { id: 'location', type: 'text', label: { fr: 'Lieu de travail', en: 'Work Location' }, required: true },
+        { id: 'entry_date', type: 'date', label: { fr: 'Date d\'entrée', en: 'Entry Date' }, required: true },
+        { id: 'entry_time', type: 'time', label: { fr: 'Heure d\'entrée', en: 'Entry Time' }, required: true },
+        { id: 'exit_time', type: 'time', label: { fr: 'Heure de sortie prévue', en: 'Planned Exit Time' }, required: true },
+        { id: 'o2_level', type: 'gas_meter', label: { fr: 'Niveau O2 (%)', en: 'O2 Level (%)' }, required: true, min: 19.5, max: 23.5 },
+        { id: 'co_level', type: 'gas_meter', label: { fr: 'Niveau CO (ppm)', en: 'CO Level (ppm)' }, required: true, max: 35 },
+        { id: 'h2s_level', type: 'gas_meter', label: { fr: 'Niveau H2S (ppm)', en: 'H2S Level (ppm)' }, required: true, max: 10 },
+        { id: 'lie_level', type: 'gas_meter', label: { fr: 'Niveau LIE (%)', en: 'LEL Level (%)' }, required: true, max: 10 },
+        { id: 'rescue_plan', type: 'textarea', label: { fr: 'Plan de sauvetage', en: 'Rescue Plan' }, required: true },
+        { id: 'attendant', type: 'text', label: { fr: 'Surveillant externe', en: 'External Attendant' }, required: true },
+        { id: 'communication', type: 'select', label: { fr: 'Moyen de communication', en: 'Communication Method' }, options: [
+          { value: 'radio', label: { fr: 'Radio', en: 'Radio' } },
+          { value: 'phone', label: { fr: 'Téléphone', en: 'Phone' } },
+          { value: 'visual', label: { fr: 'Signaux visuels', en: 'Visual Signals' } }
+        ], required: true }
+      ]
+    },
+    hot_work: {
+      title: { fr: "Permis Travail à Chaud", en: "Hot Work Permit" },
+      icon: Zap,
+      color: "orange",
+      fields: [
+        { id: 'work_type', type: 'select', label: { fr: 'Type de travail', en: 'Work Type' }, options: [
+          { value: 'welding', label: { fr: 'Soudage', en: 'Welding' } },
+          { value: 'cutting', label: { fr: 'Découpage', en: 'Cutting' } },
+          { value: 'grinding', label: { fr: 'Meulage', en: 'Grinding' } }
+        ], required: true },
+        { id: 'location', type: 'text', label: { fr: 'Lieu de travail', en: 'Work Location' }, required: true },
+        { id: 'start_date', type: 'date', label: { fr: 'Date de début', en: 'Start Date' }, required: true },
+        { id: 'start_time', type: 'time', label: { fr: 'Heure de début', en: 'Start Time' }, required: true },
+        { id: 'end_time', type: 'time', label: { fr: 'Heure de fin', en: 'End Time' }, required: true },
+        { id: 'fire_extinguisher', type: 'text', label: { fr: 'Extincteur disponible', en: 'Fire Extinguisher Available' }, required: true },
+        { id: 'fire_watch', type: 'text', label: { fr: 'Surveillant incendie', en: 'Fire Watch' }, required: true },
+        { id: 'watch_duration', type: 'number', label: { fr: 'Durée surveillance (min)', en: 'Watch Duration (min)' }, required: true, min: 60 },
+        { id: 'combustible_removal', type: 'checkbox', label: { fr: 'Matières combustibles retirées', en: 'Combustible Materials Removed' }, required: true }
+      ]
+    },
+    excavation: {
+      title: { fr: "Permis d'Excavation", en: "Excavation Permit" },
+      icon: HardHat,
+      color: "yellow",
+      fields: [
+        { id: 'location', type: 'text', label: { fr: 'Lieu d\'excavation', en: 'Excavation Location' }, required: true },
+        { id: 'depth', type: 'number', label: { fr: 'Profondeur prévue (m)', en: 'Planned Depth (m)' }, required: true },
+        { id: 'width', type: 'number', label: { fr: 'Largeur (m)', en: 'Width (m)' }, required: true },
+        { id: 'length', type: 'number', label: { fr: 'Longueur (m)', en: 'Length (m)' }, required: true },
+        { id: 'start_date', type: 'date', label: { fr: 'Date de début', en: 'Start Date' }, required: true },
+        { id: 'end_date', type: 'date', label: { fr: 'Date de fin', en: 'End Date' }, required: true },
+        { id: 'info_excavation', type: 'checkbox', label: { fr: 'Info-Excavation contacté', en: 'Dig Safe Contacted' }, required: true },
+        { id: 'utilities_marked', type: 'checkbox', label: { fr: 'Services publics marqués', en: 'Utilities Marked' }, required: true },
+        { id: 'shoring_required', type: 'checkbox', label: { fr: 'Étaiement requis', en: 'Shoring Required' } },
+        { id: 'insurance_amount', type: 'calculated', label: { fr: 'Assurance requise', en: 'Required Insurance' }, 
+          calculation: (depth) => depth > 3 ? '2M$' : '1M$' }
+      ]
+    }
+  };
+
+  const currentPermit = permits[selectedPermit];
+
+  const renderField = (field) => {
+    const label = field.label[language];
+    const fieldId = `${selectedPermit}_${field.id}`;
+    
+    switch (field.type) {
+      case 'text':
+      case 'number':
+      case 'date':
+      case 'time':
+        return (
+          <div key={field.id} className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700 select-none">
+              {label} {field.required && <span className="text-red-500">*</span>}
+            </label>
+            <input
+              type={field.type}
+              id={fieldId}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              required={field.required}
+              min={field.min}
+              max={field.max}
+              value={formData[fieldId] || ''}
+              onChange={(e) => setFormData({...formData, [fieldId]: e.target.value})}
+              onFocus={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        );
+
+      case 'textarea':
+        return (
+          <div key={field.id} className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700 select-none">
+              {label} {field.required && <span className="text-red-500">*</span>}
+            </label>
+            <textarea
+              id={fieldId}
+              rows={4}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
+              required={field.required}
+              value={formData[fieldId] || ''}
+              onChange={(e) => setFormData({...formData, [fieldId]: e.target.value})}
+              onFocus={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        );
+
+      case 'select':
+        return (
+          <div key={field.id} className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700 select-none">
+              {label} {field.required && <span className="text-red-500">*</span>}
+            </label>
+            <select
+              id={fieldId}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              required={field.required}
+              value={formData[fieldId] || ''}
+              onChange={(e) => setFormData({...formData, [fieldId]: e.target.value})}
+              onFocus={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="">Sélectionner...</option>
+              {field.options.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label[language]}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+
+      case 'checkbox':
+        return (
+          <div key={field.id} className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id={fieldId}
+              className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              required={field.required}
+              checked={formData[fieldId] || false}
+              onChange={(e) => setFormData({...formData, [fieldId]: e.target.checked})}
+              onFocus={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <label htmlFor={fieldId} className="text-sm font-medium text-gray-700 select-none">
+              {label} {field.required && <span className="text-red-500">*</span>}
+            </label>
+          </div>
+        );
+
+      case 'gas_meter':
+        const value = parseFloat(formData[fieldId]) || 0;
+        const isInRange = value >= (field.min || 0) && value <= (field.max || 100);
+        
+        return (
+          <div key={field.id} className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700 select-none">
+              {label} {field.required && <span className="text-red-500">*</span>}
+            </label>
+            <div className="relative">
               <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={t.searchPlaceholder}
-                className="search-field"
+                type="number"
+                id={fieldId}
+                step="0.1"
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-blue-500 transition-all duration-200 ${
+                  isInRange ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
+                }`}
+                required={field.required}
+                value={formData[fieldId] || ''}
+                onChange={(e) => setFormData({...formData, [fieldId]: e.target.value})}
+                onFocus={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
               />
+              <div className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-sm font-bold ${
+                isInRange ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {isInRange ? '✓' : '⚠️'}
+              </div>
             </div>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">{t.allCategories}</option>
-              {categories.map((category: any) => (
-                <option key={category} value={category}>
-                  {getCategoryIcon(category)} {(t.categories as any)[category] || category}
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedProvince}
-              onChange={(e) => setSelectedProvince(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">{t.allProvinces}</option>
-              {provinces.map((province: string) => (
-                <option key={province} value={province}>
-                  {province}
-                </option>
-              ))}
-            </select>
+            <div className="text-xs text-gray-500">
+              Range: {field.min || 0} - {field.max || 100}
+            </div>
           </div>
+        );
+
+      case 'calculated':
+        const calculatedValue = field.calculation ? field.calculation(formData[`${selectedPermit}_depth`]) : '';
+        return (
+          <div key={field.id} className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700 select-none">
+              {label}
+            </label>
+            <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl text-gray-700 font-mono">
+              {calculatedValue}
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            Step4Permits - Conforme 2024-2025
+          </h1>
+          <p className="text-gray-600">Système de permis avec conformité légale garantie</p>
         </div>
 
-        {/* Grille des permis avec conformité */}
-        <div className="permits-grid">
-          {filteredPermits.map((permit: Permit) => {
-            const isSelected = permit.selected;
-            const isFormExpanded = expandedForms[permit.id];
-            const permitChecks = complianceChecks[permit.id] || [];
-            const hasViolations = permitChecks.some(check => check.status === 'non-compliant');
-            
+        {/* Sélection du permis */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {Object.entries(permits).map(([key, permit]) => {
+            const Icon = permit.icon;
             return (
-              <div 
-                key={permit.id} 
-                className={`permit-card ${isSelected ? 'selected' : ''} ${permit.priority} ${hasViolations ? 'non-compliant' : ''}`}
+              <div
+                key={key}
+                className={`relative p-6 rounded-2xl cursor-pointer transition-all duration-300 transform hover:scale-105 ${
+                  selectedPermit === key
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-2xl'
+                    : 'bg-white hover:bg-gray-50 shadow-lg'
+                }`}
+                onClick={() => setSelectedPermit(key)}
               >
-                {/* Header avec sélection */}
-                <div className="permit-header" onClick={() => handlePermitToggle(permit.id)}>
-                  <div className="permit-icon">{getCategoryIcon(permit.category)}</div>
-                  <div className="permit-content">
-                    <h3 className="permit-name">{permit.name}</h3>
-                    <div className="permit-category">{(t.categories as any)[permit.category] || permit.category}</div>
-                    <div className="permit-description">{permit.description}</div>
-                    <div className="permit-authority">{permit.authority}</div>
-                    <div className="compliance-info">
-                      <span 
-                        className="compliance-badge" 
-                        style={{ 
-                          backgroundColor: `${getComplianceColor(permit.complianceLevel)}20`, 
-                          color: getComplianceColor(permit.complianceLevel) 
-                        }}
-                      >
-                        {(t.complianceLevels as any)[permit.complianceLevel]}
-                      </span>
-                      <span className="last-updated-small">
-                        {permit.lastUpdated}
-                      </span>
-                    </div>
-                  </div>
-                  <div className={`permit-checkbox ${isSelected ? 'checked' : ''}`}>
-                    {isSelected && <CheckCircle size={18} />}
+                <div className="flex items-center space-x-4">
+                  <Icon className="w-8 h-8" />
+                  <div>
+                    <h3 className="text-lg font-semibold">{permit.title[language]}</h3>
+                    <p className={`text-sm ${selectedPermit === key ? 'text-blue-100' : 'text-gray-500'}`}>
+                      Conforme 2024-2025
+                    </p>
                   </div>
                 </div>
-
-                {/* Métadonnées avec conformité */}
-                <div className="permit-meta">
-                  <div className="meta-item">
-                    <span className="priority-badge" style={{ backgroundColor: `${getPriorityColor(permit.priority)}20`, color: getPriorityColor(permit.priority) }}>
-                      {(t.priorities as any)[permit.priority]}
-                    </span>
-                  </div>
-                  <div className="meta-item">
-                    <span className="status-badge" style={{ backgroundColor: `${getStatusColor(permit.status)}20`, color: getStatusColor(permit.status) }}>
-                      {(t.statuses as any)[permit.status]}
-                    </span>
-                  </div>
-                  {hasViolations && (
-                    <div className="meta-item">
-                      <span className="violation-badge" style={{ backgroundColor: '#ef444420', color: '#ef4444' }}>
-                        ⚠️ Non conforme
-                      </span>
-                    </div>
-                  )}
-                  <div className="meta-item">
-                    <Clock size={12} />
-                    {permit.processingTime}
-                  </div>
-                </div>
-
-                {/* Actions du permis */}
-                {isSelected && (
-                  <div className="permit-actions">
-                    <button 
-                      className="action-btn primary"
-                      onClick={() => toggleFormExpansion(permit.id)}
-                    >
-                      <Edit size={14} />
-                      {isFormExpanded ? t.actions.close : t.actions.fill}
-                      {isFormExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
-                    <button 
-                      className="action-btn secondary"
-                      onClick={() => validateCompliance()}
-                    >
-                      <Shield size={14} />
-                      {t.actions.validate}
-                    </button>
-                    <button className="action-btn secondary">
-                      <Download size={14} />
-                      {t.actions.download}
-                    </button>
-                  </div>
-                )}
-
-                {/* Formulaire du permis avec conformité */}
-                {isSelected && <PermitForm permit={permit} />}
               </div>
             );
           })}
         </div>
 
-        {/* Message si aucun résultat */}
-        {filteredPermits.length === 0 && (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '60px 20px', 
-            color: '#94a3b8', 
-            background: 'rgba(30, 41, 59, 0.6)', 
-            borderRadius: '16px', 
-            border: '1px solid rgba(100, 116, 139, 0.3)' 
-          }}>
-            <FileText size={48} style={{ margin: '0 auto 16px', color: '#64748b' }} />
-            <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>{t.messages.noResults}</h3>
-            <p style={{ margin: 0 }}>{t.messages.modifySearch}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Formulaire principal */}
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+              <currentPermit.icon className="w-6 h-6 mr-3" />
+              {currentPermit.title[language]}
+            </h2>
+
+            <div className="space-y-6">
+              {currentPermit.fields.map(renderField)}
+            </div>
           </div>
-        )}
+
+          {/* Section Travailleurs */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                  <Users className="w-6 h-6 mr-3" />
+                  Travailleurs Autorisés
+                </h3>
+                <button
+                  type="button"
+                  onClick={addWorker}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-xl hover:from-green-600 hover:to-blue-600 transition-all duration-200"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Ajouter</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {workers.map((worker, index) => (
+                  <div key={worker.id} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-gray-700">Travailleur #{index + 1}</h4>
+                      {workers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeWorker(worker.id)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                        >
+                          <UserMinus className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet</label>
+                        <input
+                          type="text"
+                          value={worker.name}
+                          onChange={(e) => updateWorker(worker.id, 'name', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Nom du travailleur"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Âge</label>
+                        <input
+                          type="number"
+                          value={worker.age}
+                          onChange={(e) => updateWorker(worker.id, 'age', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Âge"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            id={`worker-${worker.id}-18plus`}
+                            checked={worker.over18}
+                            onChange={(e) => updateWorker(worker.id, 'over18', e.target.checked)}
+                            className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <label htmlFor={`worker-${worker.id}-18plus`} className="text-sm font-medium text-gray-700">
+                            <span className="text-red-500">*</span> Je certifie que ce travailleur a 18 ans ou plus (OBLIGATOIRE - Art. 298 RSST)
+                          </label>
+                        </div>
+                        {worker.age && parseInt(worker.age) < 18 && (
+                          <div className="mt-2 p-3 bg-red-100 border border-red-300 rounded-lg">
+                            <p className="text-sm text-red-700 font-medium">
+                              ⚠️ VIOLATION LÉGALE: Travailleur mineur détecté. Accès en espace clos interdit par l'Article 298 RSST.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Certification</label>
+                        <select
+                          value={worker.certification}
+                          onChange={(e) => updateWorker(worker.id, 'certification', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Sélectionner certification</option>
+                          <option value="basic">Formation de base</option>
+                          <option value="advanced">Formation avancée</option>
+                          <option value="supervisor">Superviseur</option>
+                          <option value="rescue">Sauveteur</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Section Photos */}
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                  <Camera className="w-6 h-6 mr-3" />
+                  Photos du Site ({photos.length})
+                </h3>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode(viewMode === 'carousel' ? 'grid' : 'carousel')}
+                    className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    {viewMode === 'carousel' ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
+                  </button>
+                  <label className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200 cursor-pointer">
+                    <Upload className="w-4 h-4" />
+                    <span>Ajouter Photos</span>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {photos.length > 0 ? (
+                viewMode === 'carousel' ? (
+                  <div className="relative">
+                    <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden">
+                      <img
+                        src={photos[currentPhotoIndex]?.url}
+                        alt={`Photo ${currentPhotoIndex + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => removePhoto(photos[currentPhotoIndex]?.id)}
+                        className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-4">
+                      <button
+                        onClick={prevPhoto}
+                        className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+                        disabled={photos.length <= 1}
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      
+                      <div className="flex space-x-2">
+                        {photos.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setCurrentPhotoIndex(index)}
+                            className={`w-3 h-3 rounded-full transition-colors ${
+                              index === currentPhotoIndex ? 'bg-blue-500' : 'bg-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      
+                      <button
+                        onClick={nextPhoto}
+                        className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+                        disabled={photos.length <= 1}
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                    
+                    <div className="text-center mt-2">
+                      <p className="text-sm text-gray-600">
+                        {photos[currentPhotoIndex]?.name} • {new Date(photos[currentPhotoIndex]?.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {photos.map((photo) => (
+                      <div key={photo.id} className="relative group">
+                        <img
+                          src={photo.url}
+                          alt={photo.name}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => removePhoto(photo.id)}
+                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <Camera className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <p>Aucune photo ajoutée</p>
+                  <p className="text-sm">Cliquez sur "Ajouter Photos" pour commencer</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Boutons d'action */}
+        <div className="flex justify-center space-x-4 mt-8">
+          <button
+            type="button"
+            className="flex items-center space-x-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <Save className="w-5 h-5" />
+            <span>Sauvegarder le Permis</span>
+          </button>
+          
+          <button
+            type="button"
+            className="flex items-center space-x-2 px-8 py-4 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-xl hover:from-green-600 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <Download className="w-5 h-5" />
+            <span>Télécharger PDF</span>
+          </button>
+        </div>
       </div>
-    </>
+    </div>
   );
 };
 
-export default Step4Permits;
+export default Step4PermitsSection3B;
