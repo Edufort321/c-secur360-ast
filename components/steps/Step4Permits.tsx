@@ -389,7 +389,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     const translatedPermits = translatePermitsDatabase(language);
     // Préserver les sélections et données de formulaire existantes
     const updatedPermits = translatedPermits.map(translatedPermit => {
-      const existingPermit = permits.find(p => p.id === translatedPermit.id);
+      const existingPermit = permits.find((p: Permit) => p.id === translatedPermit.id);
       if (existingPermit) {
         return {
           ...translatedPermit,
