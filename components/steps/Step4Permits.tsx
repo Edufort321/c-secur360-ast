@@ -1371,8 +1371,39 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     t
   };
 };
-// =================== SECTION 4: RENDU JSX ET CSS COMPLET ===================
-// À coller après la Section 3 pour compléter le composant
+// =================== CORRECTION SYNTAXE STEP4PERMITS ===================
+// Remplacez la fin de la Section 3 par ceci :
+
+  // Initialiser les états au premier rendu
+  useEffect(() => {
+    // Initialiser workers et photos pour les permis déjà sélectionnés
+    permits.forEach(permit => {
+      if (permit.selected) {
+        if (!workers[permit.id]) {
+          setWorkers(prev => ({
+            ...prev,
+            [permit.id]: [{
+              id: 1,
+              name: '',
+              age: 0,
+              certification: '',
+              entryTime: '',
+              exitTime: null,
+              date: new Date().toISOString().split('T')[0],
+              over18: false
+            }]
+          }));
+        }
+        
+        if (!photos[permit.id]) {
+          setPhotos(prev => ({
+            ...prev,
+            [permit.id]: []
+          }));
+        }
+      }
+    });
+  }, []);
 
   // =================== RENDU DU COMPOSANT PRINCIPAL ===================
   return (
@@ -1485,7 +1516,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
           </div>
         </div>
 
-        {/* =================== LISTE DES PERMIS =================== */}
+        {/* =================== LISTE DES PERMIS SIMPLIFIÉE =================== */}
         <div className="space-y-6">
           {filteredPermits.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-2xl shadow-lg">
@@ -1495,730 +1526,234 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
             </div>
           ) : (
             filteredPermits.map((permit: Permit) => (
-              <PermitCard
-                key={permit.id}
-                permit={permit}
-                isSelected={permit.selected}
-                isExpanded={expandedForms[permit.id]}
-                complianceChecks={complianceChecks[permit.id] || []}
-                workers={workers[permit.id] || []}
-                photos={photos[permit.id] || []}
-                currentPhotoIndex={currentPhotoIndex[permit.id] || 0}
-                viewMode={viewMode[permit.id] || 'carousel'}
-                onToggle={() => handlePermitToggle(permit.id)}
-                onExpand={() => toggleFormExpansion(permit.id)}
-                onFieldChange={(fieldId, value) => handleFormFieldChange(permit.id, fieldId, value)}
-                onAddWorker={() => addWorker(permit.id)}
-                onRemoveWorker={(workerId) => removeWorker(permit.id, workerId)}
-                onUpdateWorker={(workerId, field, value) => updateWorker(permit.id, workerId, field, value)}
-                onPhotoUpload={(files) => handlePhotoUpload(permit.id, files)}
-                onRemovePhoto={(photoId) => removePhoto(permit.id, photoId)}
-                onNextPhoto={() => nextPhoto(permit.id)}
-                onPrevPhoto={() => prevPhoto(permit.id)}
-                onToggleViewMode={() => toggleViewMode(permit.id)}
-                getPriorityColor={getPriorityColor}
-                getStatusColor={getStatusColor}
-                getComplianceColor={getComplianceColor}
-                getCategoryIcon={getCategoryIcon}
-                t={t}
-              />
+              <div key={permit.id} className={`bg-white rounded-2xl shadow-xl border-2 transition-all duration-300 transform hover:scale-[1.02] ${
+                permit.selected ? 'border-blue-500 shadow-2xl' : 'border-gray-200'
+              }`}>
+                
+                {/* En-tête de la carte */}
+                <div className="p-6 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="text-2xl">{getCategoryIcon(permit.category)}</div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-800">{permit.name}</h3>
+                        <p className="text-gray-600 text-sm mt-1">{permit.description}</p>
+                        <div className="flex items-center space-x-3 mt-2">
+                          <span 
+                            className="px-3 py-1 rounded-full text-xs font-semibold text-white"
+                            style={{ backgroundColor: getPriorityColor(permit.priority) }}
+                          >
+                            {t.priorities[permit.priority]}
+                          </span>
+                          <span 
+                            className="px-3 py-1 rounded-full text-xs font-semibold text-white"
+                            style={{ backgroundColor: getStatusColor(permit.status) }}
+                          >
+                            {t.statuses[permit.status]}
+                          </span>
+                          <span 
+                            className="px-3 py-1 rounded-full text-xs font-semibold text-white"
+                            style={{ backgroundColor: getComplianceColor(permit.complianceLevel) }}
+                          >
+                            {t.complianceLevels[permit.complianceLevel]}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={() => handlePermitToggle(permit.id)}
+                        className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+                          permit.selected 
+                            ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
+                            : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600'
+                        }`}
+                      >
+                        {permit.selected ? (
+                          <>
+                            <X className="w-4 h-4" />
+                            <span>Retirer</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4" />
+                            <span>Sélectionner</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contenu simplifié pour éviter les erreurs */}
+                {permit.selected && (
+                  <div className="p-6 space-y-6">
+                    
+                    {/* Vérifications de conformité */}
+                    {complianceChecks[permit.id] && complianceChecks[permit.id].length > 0 && (
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                          <Shield className="w-5 h-5 mr-2" />
+                          Vérifications de Conformité
+                        </h4>
+                        <div className="space-y-2">
+                          {complianceChecks[permit.id].map((check, index) => (
+                            <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${
+                              check.status === 'compliant' ? 'bg-green-100' : 'bg-red-100'
+                            }`}>
+                              <div className="flex items-center space-x-3">
+                                {check.status === 'compliant' ? (
+                                  <CheckCircle className="w-5 h-5 text-green-600" />
+                                ) : (
+                                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                                )}
+                                <div>
+                                  <div className="font-medium text-gray-800">{check.requirement}</div>
+                                  <div className="text-sm text-gray-600">{check.details}</div>
+                                </div>
+                              </div>
+                              <div className="text-xs text-gray-500">{check.reference}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bouton pour étendre/réduire le formulaire */}
+                    <button
+                      onClick={() => toggleFormExpansion(permit.id)}
+                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all duration-200"
+                    >
+                      {expandedForms[permit.id] ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                      <span>{expandedForms[permit.id] ? 'Réduire le formulaire' : 'Remplir le formulaire'}</span>
+                    </button>
+
+                    {/* Formulaire étendu */}
+                    {expandedForms[permit.id] && (
+                      <div className="space-y-8">
+                        
+                        {/* Champs du formulaire */}
+                        <div className="space-y-6">
+                          <h4 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                            Informations du Permis
+                          </h4>
+                          
+                          {permit.formFields?.map((field) => (
+                            <div key={field.id} className="space-y-2">
+                              <label className="block text-sm font-semibold text-gray-700">
+                                {field.label} {field.required && <span className="text-red-500">*</span>}
+                                {field.validation?.legalRequirement && (
+                                  <span className="ml-2 px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">LÉGAL</span>
+                                )}
+                              </label>
+                              
+                              {field.type === 'text' || field.type === 'number' || field.type === 'date' || field.type === 'time' ? (
+                                <input
+                                  type={field.type}
+                                  value={permit.formData?.[field.id] || ''}
+                                  onChange={(e) => handleFormFieldChange(permit.id, field.id, e.target.value)}
+                                  placeholder={field.placeholder}
+                                  required={field.required}
+                                  min={field.validation?.min}
+                                  max={field.validation?.max}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                />
+                              ) : field.type === 'textarea' ? (
+                                <textarea
+                                  value={permit.formData?.[field.id] || ''}
+                                  onChange={(e) => handleFormFieldChange(permit.id, field.id, e.target.value)}
+                                  placeholder={field.placeholder}
+                                  required={field.required}
+                                  rows={4}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
+                                />
+                              ) : field.type === 'select' ? (
+                                <select
+                                  value={permit.formData?.[field.id] || ''}
+                                  onChange={(e) => handleFormFieldChange(permit.id, field.id, e.target.value)}
+                                  required={field.required}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                >
+                                  <option value="">{t.messages.select}</option>
+                                  {field.options?.map(option => (
+                                    <option key={option} value={option}>{option}</option>
+                                  ))}
+                                </select>
+                              ) : field.type === 'checkbox' ? (
+                                <div className="flex items-center space-x-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={permit.formData?.[field.id] || false}
+                                    onChange={(e) => handleFormFieldChange(permit.id, field.id, e.target.checked)}
+                                    required={field.required}
+                                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  />
+                                  <span className="text-sm text-gray-700">
+                                    {field.label} {field.required && <span className="text-red-500">*</span>}
+                                  </span>
+                                </div>
+                              ) : field.type === 'gas_meter' ? (
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    value={permit.formData?.[field.id] || ''}
+                                    onChange={(e) => handleFormFieldChange(permit.id, field.id, e.target.value)}
+                                    required={field.required}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                  />
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    Range: {field.validation?.min || 0} - {field.validation?.max || 100}
+                                    {field.validation?.critical && (
+                                      <span className="text-red-600 font-medium"> (CRITIQUE)</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={permit.formData?.[field.id] || ''}
+                                  onChange={(e) => handleFormFieldChange(permit.id, field.id, e.target.value)}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                />
+                              )}
+                              
+                              {field.validation?.message && (
+                                <div className={`text-xs ${field.validation.critical ? 'text-red-600' : 'text-gray-500'}`}>
+                                  {field.validation.message}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Actions du formulaire */}
+                        <div className="flex justify-center space-x-4 pt-6 border-t border-gray-200">
+                          <button className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+                            <Save className="w-5 h-5" />
+                            <span>{t.actions.save}</span>
+                          </button>
+                          
+                          <button className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-xl hover:from-green-600 hover:to-teal-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+                            <Download className="w-5 h-5" />
+                            <span>{t.actions.download}</span>
+                          </button>
+                          
+                          <button className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+                            <Eye className="w-5 h-5" />
+                            <span>{t.actions.preview}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             ))
           )}
         </div>
       </div>
-    </div>
-  );
-};
-
-// =================== COMPOSANT CARTE PERMIS =================== 
-interface PermitCardProps {
-  permit: Permit;
-  isSelected: boolean;
-  isExpanded: boolean;
-  complianceChecks: ComplianceCheck[];
-  workers: WorkerEntry[];
-  photos: PhotoEntry[];
-  currentPhotoIndex: number;
-  viewMode: 'carousel' | 'grid';
-  onToggle: () => void;
-  onExpand: () => void;
-  onFieldChange: (fieldId: string, value: any) => void;
-  onAddWorker: () => void;
-  onRemoveWorker: (workerId: number) => void;
-  onUpdateWorker: (workerId: number, field: keyof WorkerEntry, value: any) => void;
-  onPhotoUpload: (files: FileList) => void;
-  onRemovePhoto: (photoId: number) => void;
-  onNextPhoto: () => void;
-  onPrevPhoto: () => void;
-  onToggleViewMode: () => void;
-  getPriorityColor: (priority: string) => string;
-  getStatusColor: (status: string) => string;
-  getComplianceColor: (level: string) => string;
-  getCategoryIcon: (category: string) => string;
-  t: any;
-}
-
-const PermitCard: React.FC<PermitCardProps> = ({
-  permit,
-  isSelected,
-  isExpanded,
-  complianceChecks,
-  workers,
-  photos,
-  currentPhotoIndex,
-  viewMode,
-  onToggle,
-  onExpand,
-  onFieldChange,
-  onAddWorker,
-  onRemoveWorker,
-  onUpdateWorker,
-  onPhotoUpload,
-  onRemovePhoto,
-  onNextPhoto,
-  onPrevPhoto,
-  onToggleViewMode,
-  getPriorityColor,
-  getStatusColor,
-  getComplianceColor,
-  getCategoryIcon,
-  t
-}) => {
-  const nonCompliantChecks = complianceChecks.filter(check => check.status === 'non-compliant');
-  const hasViolations = nonCompliantChecks.length > 0;
-
-  return (
-    <div className={`bg-white rounded-2xl shadow-xl border-2 transition-all duration-300 transform hover:scale-[1.02] ${
-      isSelected ? 'border-blue-500 shadow-2xl' : 'border-gray-200'
-    } ${hasViolations ? 'border-red-500 bg-red-50' : ''}`}>
-      
-      {/* En-tête de la carte */}
-      <div className="p-6 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="text-2xl">{getCategoryIcon(permit.category)}</div>
-            <div className="flex-1">
-              <h3 className="text-xl font-bold text-gray-800">{permit.name}</h3>
-              <p className="text-gray-600 text-sm mt-1">{permit.description}</p>
-              <div className="flex items-center space-x-3 mt-2">
-                <span 
-                  className="px-3 py-1 rounded-full text-xs font-semibold text-white"
-                  style={{ backgroundColor: getPriorityColor(permit.priority) }}
-                >
-                  {t.priorities[permit.priority]}
-                </span>
-                <span 
-                  className="px-3 py-1 rounded-full text-xs font-semibold text-white"
-                  style={{ backgroundColor: getStatusColor(permit.status) }}
-                >
-                  {t.statuses[permit.status]}
-                </span>
-                <span 
-                  className="px-3 py-1 rounded-full text-xs font-semibold text-white"
-                  style={{ backgroundColor: getComplianceColor(permit.complianceLevel) }}
-                >
-                  {t.complianceLevels[permit.complianceLevel]}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            {hasViolations && (
-              <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold animate-pulse">
-                {nonCompliantChecks.length} violation(s)
-              </div>
-            )}
-            
-            <button
-              onClick={onToggle}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
-                isSelected 
-                  ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
-                  : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600'
-              }`}
-            >
-              {isSelected ? (
-                <>
-                  <X className="w-4 h-4" />
-                  <span>Retirer</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  <span>Sélectionner</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Contenu expansible */}
-      {isSelected && (
-        <div className="p-6 space-y-6">
-          
-          {/* Vérifications de conformité */}
-          {complianceChecks.length > 0 && (
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                <Shield className="w-5 h-5 mr-2" />
-                Vérifications de Conformité
-              </h4>
-              <div className="space-y-2">
-                {complianceChecks.map((check, index) => (
-                  <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${
-                    check.status === 'compliant' ? 'bg-green-100' : 'bg-red-100'
-                  }`}>
-                    <div className="flex items-center space-x-3">
-                      {check.status === 'compliant' ? (
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <AlertTriangle className="w-5 h-5 text-red-600" />
-                      )}
-                      <div>
-                        <div className="font-medium text-gray-800">{check.requirement}</div>
-                        <div className="text-sm text-gray-600">{check.details}</div>
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500">{check.reference}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Bouton pour étendre/réduire le formulaire */}
-          <button
-            onClick={onExpand}
-            className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all duration-200"
-          >
-            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-            <span>{isExpanded ? 'Réduire le formulaire' : 'Remplir le formulaire'}</span>
-          </button>
-
-          {/* Formulaire étendu */}
-          {isExpanded && (
-            <div className="space-y-8">
-              
-              {/* Grille des champs de formulaire */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                
-                {/* Colonne gauche - Champs du formulaire */}
-                <div className="space-y-6">
-                  <h4 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
-                    Informations du Permis
-                  </h4>
-                  
-                  {permit.formFields?.map((field) => (
-                    <FormField
-                      key={field.id}
-                      field={field}
-                      value={permit.formData?.[field.id] || ''}
-                      onChange={(value) => onFieldChange(field.id, value)}
-                      t={t}
-                    />
-                  ))}
-                </div>
-
-                {/* Colonne droite - Travailleurs et Photos */}
-                <div className="space-y-6">
-                  
-                  {/* Section Travailleurs */}
-                  <div className="bg-gray-50 rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-lg font-semibold text-gray-800 flex items-center">
-                        <Users className="w-5 h-5 mr-2" />
-                        {t.messages.authorizedWorkers} ({workers.length})
-                      </h4>
-                      <button
-                        onClick={onAddWorker}
-                        className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 transition-all duration-200 text-sm"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                        <span>{t.messages.addWorker}</span>
-                      </button>
-                    </div>
-
-                    <div className="space-y-4 max-h-64 overflow-y-auto">
-                      {workers.map((worker, index) => (
-                        <WorkerCard
-                          key={worker.id}
-                          worker={worker}
-                          index={index}
-                          canRemove={workers.length > 1}
-                          onUpdate={(field, value) => onUpdateWorker(worker.id, field, value)}
-                          onRemove={() => onRemoveWorker(worker.id)}
-                          t={t}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Section Photos */}
-                  <div className="bg-gray-50 rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-lg font-semibold text-gray-800 flex items-center">
-                        <Camera className="w-5 h-5 mr-2" />
-                        {t.messages.sitePhotos} ({photos.length})
-                      </h4>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={onToggleViewMode}
-                          className="p-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
-                          title={t.messages.toggleView}
-                        >
-                          {viewMode === 'carousel' ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
-                        </button>
-                        <label className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 cursor-pointer text-sm">
-                          <Upload className="w-4 h-4" />
-                          <span>{t.messages.addPhotos}</span>
-                          <input
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            onChange={(e) => e.target.files && onPhotoUpload(e.target.files)}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-                    </div>
-
-                    <PhotoGallery
-                      photos={photos}
-                      currentIndex={currentPhotoIndex}
-                      viewMode={viewMode}
-                      onNext={onNextPhoto}
-                      onPrev={onPrevPhoto}
-                      onRemove={onRemovePhoto}
-                      t={t}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions du formulaire */}
-              <div className="flex justify-center space-x-4 pt-6 border-t border-gray-200">
-                <button
-                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  <Save className="w-5 h-5" />
-                  <span>{t.actions.save}</span>
-                </button>
-                
-                <button
-                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-xl hover:from-green-600 hover:to-teal-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  <Download className="w-5 h-5" />
-                  <span>{t.actions.download}</span>
-                </button>
-                
-                <button
-                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  <Eye className="w-5 h-5" />
-                  <span>{t.actions.preview}</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// =================== COMPOSANT CHAMP DE FORMULAIRE ===================
-interface FormFieldProps {
-  field: FormField;
-  value: any;
-  onChange: (value: any) => void;
-  t: any;
-}
-
-const FormField: React.FC<FormFieldProps> = ({ field, value, onChange, t }) => {
-  const getFieldComponent = () => {
-    switch (field.type) {
-      case 'text':
-      case 'number':
-      case 'date':
-      case 'time':
-        return (
-          <input
-            type={field.type}
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={field.placeholder}
-            required={field.required}
-            min={field.validation?.min}
-            max={field.validation?.max}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-          />
-        );
-
-      case 'textarea':
-        return (
-          <textarea
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={field.placeholder}
-            required={field.required}
-            rows={4}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
-          />
-        );
-
-      case 'select':
-        return (
-          <select
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            required={field.required}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-          >
-            <option value="">{t.messages.select}</option>
-            {field.options?.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        );
-
-      case 'checkbox':
-        return (
-          <div className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              checked={value || false}
-              onChange={(e) => onChange(e.target.checked)}
-              required={field.required}
-              className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </span>
-          </div>
-        );
-
-      case 'radio':
-        return (
-          <div className="space-y-2">
-            {field.options?.map(option => (
-              <div key={option} className="flex items-center space-x-3">
-                <input
-                  type="radio"
-                  name={field.id}
-                  value={option}
-                  checked={value === option}
-                  onChange={(e) => onChange(e.target.value)}
-                  required={field.required}
-                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700">{option}</span>
-              </div>
-            ))}
-          </div>
-        );
-
-      case 'gas_meter':
-        const numValue = parseFloat(value) || 0;
-        const isInRange = numValue >= (field.validation?.min || 0) && numValue <= (field.validation?.max || 100);
-        
-        return (
-          <div className="relative">
-            <input
-              type="number"
-              step="0.1"
-              value={value || ''}
-              onChange={(e) => onChange(e.target.value)}
-              required={field.required}
-              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-blue-500 transition-all duration-200 ${
-                isInRange ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
-              }`}
-            />
-            <div className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-lg ${
-              isInRange ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {isInRange ? '✓' : '⚠️'}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Range: {field.validation?.min || 0} - {field.validation?.max || 100}
-              {field.validation?.critical && (
-                <span className="text-red-600 font-medium"> (CRITIQUE)</span>
-              )}
-            </div>
-          </div>
-        );
-
-      case 'compliance_check':
-        return (
-          <div className={`p-4 rounded-xl border-2 ${
-            value ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
-          }`}>
-            <div className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                checked={value || false}
-                onChange={(e) => onChange(e.target.checked)}
-                required={field.required}
-                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className={`font-medium ${value ? 'text-green-700' : 'text-red-700'}`}>
-                {field.label} {field.required && <span className="text-red-500">*</span>}
-              </span>
-            </div>
-            {field.complianceRef && (
-              <div className="text-xs text-gray-600 mt-2">{field.complianceRef}</div>
-            )}
-          </div>
-        );
-
-      case 'file':
-        return (
-          <label className="block w-full p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-400 cursor-pointer transition-colors">
-            <div className="text-center">
-              <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-              <span className="text-sm text-gray-600">Cliquer pour sélectionner un fichier</span>
-              {value && <div className="text-xs text-blue-600 mt-1">{value.name || value}</div>}
-            </div>
-            <input
-              type="file"
-              onChange={(e) => onChange(e.target.files?.[0])}
-              required={field.required}
-              className="hidden"
-            />
-          </label>
-        );
-
-      default:
-        return (
-          <input
-            type="text"
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-          />
-        );
-    }
-  };
-
-  if (field.type === 'checkbox' || field.type === 'radio' || field.type === 'compliance_check') {
-    return (
-      <div className="space-y-2">
-        {getFieldComponent()}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <label className="block text-sm font-semibold text-gray-700">
-        {field.label} {field.required && <span className="text-red-500">*</span>}
-        {field.validation?.legalRequirement && (
-          <span className="ml-2 px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">LÉGAL</span>
-        )}
-      </label>
-      {getFieldComponent()}
-      {field.validation?.message && (
-        <div className={`text-xs ${field.validation.critical ? 'text-red-600' : 'text-gray-500'}`}>
-          {field.validation.message}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// =================== COMPOSANT CARTE TRAVAILLEUR ===================
-interface WorkerCardProps {
-  worker: WorkerEntry;
-  index: number;
-  canRemove: boolean;
-  onUpdate: (field: keyof WorkerEntry, value: any) => void;
-  onRemove: () => void;
-  t: any;
-}
-
-const WorkerCard: React.FC<WorkerCardProps> = ({ worker, index, canRemove, onUpdate, onRemove, t }) => {
-  const isUnderage = worker.age > 0 && worker.age < 18;
-
-  return (
-    <div className={`border rounded-lg p-4 ${isUnderage ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'}`}>
-      <div className="flex items-center justify-between mb-3">
-        <h5 className="font-medium text-gray-700">{t.messages.workerNumber}{index + 1}</h5>
-        {canRemove && (
-          <button
-            onClick={onRemove}
-            className="text-red-500 hover:text-red-700 transition-colors"
-          >
-            <UserMinus className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">{t.messages.fullName}</label>
-          <input
-            type="text"
-            value={worker.name}
-            onChange={(e) => onUpdate('name', e.target.value)}
-            placeholder={t.messages.workerName}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">{t.messages.age}</label>
-          <input
-            type="number"
-            value={worker.age || ''}
-            onChange={(e) => onUpdate('age', parseInt(e.target.value) || 0)}
-            placeholder={t.messages.workerAge}
-            min="16"
-            max="70"
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500 text-sm ${
-              isUnderage ? 'border-red-300 bg-red-50' : 'border-gray-300'
-            }`}
-          />
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">{t.messages.certification}</label>
-          <select
-            value={worker.certification}
-            onChange={(e) => onUpdate('certification', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-          >
-            <option value="">{t.messages.selectCertification}</option>
-            <option value="basic">{t.messages.basicTraining}</option>
-            <option value="advanced">{t.messages.advancedTraining}</option>
-            <option value="supervisor">{t.messages.supervisor}</option>
-            <option value="rescuer">{t.messages.rescuer}</option>
-          </select>
-        </div>
-
-        <div className="md:col-span-2">
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id={`worker-${worker.id}-18plus`}
-              checked={worker.over18}
-              onChange={(e) => onUpdate('over18', e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label htmlFor={`worker-${worker.id}-18plus`} className="text-xs text-gray-700">
-              <span className="text-red-500">*</span> {t.messages.certifyOver18}
-            </label>
-          </div>
-          
-          {isUnderage && (
-            <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-lg">
-              <p className="text-xs text-red-700 font-medium">
-                ⚠️ {t.messages.legalViolationMinor}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// =================== COMPOSANT GALERIE PHOTOS ===================
-interface PhotoGalleryProps {
-  photos: PhotoEntry[];
-  currentIndex: number;
-  viewMode: 'carousel' | 'grid';
-  onNext: () => void;
-  onPrev: () => void;
-  onRemove: (photoId: number) => void;
-  t: any;
-}
-
-const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, currentIndex, viewMode, onNext, onPrev, onRemove, t }) => {
-  if (photos.length === 0) {
-    return (
-      <div className="text-center py-8 text-gray-500">
-        <Camera className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-        <p className="text-sm">{t.messages.noPhotosAdded}</p>
-        <p className="text-xs text-gray-400">{t.messages.clickToAddPhotos}</p>
-      </div>
-    );
-  }
-
-  if (viewMode === 'carousel') {
-    const currentPhoto = photos[currentIndex];
-    
-    return (
-      <div className="space-y-3">
-        <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
-          <img
-            src={currentPhoto?.url}
-            alt={`Photo ${currentIndex + 1}`}
-            className="w-full h-full object-cover"
-          />
-          <button
-            onClick={() => onRemove(currentPhoto?.id)}
-            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <button
-            onClick={onPrev}
-            disabled={photos.length <= 1}
-            className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors disabled:opacity-50"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          
-          <div className="flex space-x-1">
-            {photos.map((_, index) => (
-              <button
-                key={index}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  index === currentIndex ? 'bg-blue-500' : 'bg-gray-300'
-                }`}
-              />
-            ))}
-          </div>
-          
-          <button
-            onClick={onNext}
-            disabled={photos.length <= 1}
-            className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors disabled:opacity-50"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-        
-        <div className="text-center">
-          <p className="text-xs text-gray-600">
-            {currentPhoto?.name} • {new Date(currentPhoto?.timestamp).toLocaleString()}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-      {photos.map((photo) => (
-        <div key={photo.id} className="relative group">
-          <img
-            src={photo.url}
-            alt={photo.name}
-            className="w-full h-20 object-cover rounded-lg"
-          />
-          <button
-            onClick={() => onRemove(photo.id)}
-            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
-      ))}
     </div>
   );
 };
