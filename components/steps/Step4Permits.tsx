@@ -3474,8 +3474,39 @@ const getCategoryIcon = (category: string) => {
   };
   
 const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
-  const [permits, setPermits] = useState([]);
-  const [selectedPermits, setSelectedPermits] = useState([]);
+  const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
+  // ======= TOUS LES ÉTATS NÉCESSAIRES =======
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedProvince, setSelectedProvince] = useState(formData.province || 'QC');
+  const [expandedForms, setExpandedForms] = useState<{ [key: string]: boolean }>({});
+  const [permits, setPermits] = useState(() => {
+    if (formData.permits?.list && formData.permits.list.length > 0) {
+      return formData.permits.list;
+    }
+    return getProvincialPermitsDatabase(language, selectedProvince);
+  });
+  
+  // ======= USEMEMO POUR LES PERMIS SÉLECTIONNÉS =======
+  const selectedPermits = useMemo(() => 
+    permits.filter((p: any) => p.selected), 
+    [permits]
+  );
+
+  const stats = useMemo(() => ({
+    totalPermits: permits.length,
+    selected: selectedPermits.length,
+    critical: selectedPermits.filter((p: any) => p.priority === 'critical').length,
+    compliant: selectedPermits.length
+  }), [permits, selectedPermits]);
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Sécurité': case 'Safety': return '🛡️';
+      case 'Construction': return '🏗️';
+      default: return '📋';
+    }
+  };
 
   return (
     <div style={{ padding: '0', color: '#ffffff' }}>
