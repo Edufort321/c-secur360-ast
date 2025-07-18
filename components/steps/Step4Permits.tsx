@@ -3737,8 +3737,8 @@ const Step4PermitsComplete: React.FC<Step4PermitsProps> = ({ formData, onDataCha
                     <h4 style={{ color: '#3b82f6', margin: '0 0 16px', fontSize: '16px', fontWeight: '700' }}>
                       📝 Formulaire Intégré
                     </h4>
-// =================== COMPOSANT FORMULAIRE DÉTAILLÉ - COLLER APRÈS LIGNE ~800 ===================
-// À ajouter APRÈS les autres composants mais AVANT le composant Step4Permits principal
+// =================== COMPOSANT FORMULAIRE DÉTAILLÉ PERMIS ===================
+// À ajouter dans votre fichier Step4Permits.tsx APRÈS les autres composants
 
 const DetailedPermitForm: React.FC<{
   permit: Permit;
@@ -3841,8 +3841,7 @@ const DetailedPermitForm: React.FC<{
         borderRadius: '12px',
         padding: '24px',
         border: '1px solid rgba(100, 116, 139, 0.3)',
-        marginTop: '16px',
-        marginBottom: '16px'
+        marginTop: '16px'
       }}>
         <h4 style={{ 
           color: '#3b82f6', 
