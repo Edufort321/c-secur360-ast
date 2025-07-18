@@ -1819,11 +1819,42 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
 const PermitCard: React.FC<{
   permit: Permit;
   isSelected: boolean;
+  isExpanded: boolean;
+  complianceChecks: ComplianceCheck[];
+  workers: WorkerEntry[];
+  photos: PhotoEntry[];
+  currentSection: string;
   onSelect: () => void;
   onFill: () => void;
   onValidate: () => void;
   onGeneratePDF: () => void;
-}> = ({ permit, isSelected, onSelect, onFill, onValidate, onGeneratePDF }) => {
+  onExpand: () => void;
+  onSectionChange: (section: string) => void;
+  onComplianceUpdate: (checks: ComplianceCheck[]) => void;
+  onWorkersUpdate: (workers: WorkerEntry[]) => void;
+  onPhotosUpdate: (photos: PhotoEntry[]) => void;
+  onSaveProgress: () => void;
+  t: any;
+}> = ({ 
+  permit, 
+  isSelected, 
+  isExpanded, 
+  complianceChecks,
+  workers,
+  photos,
+  currentSection,
+  onSelect, 
+  onFill, 
+  onValidate, 
+  onGeneratePDF,
+  onExpand,
+  onSectionChange,
+  onComplianceUpdate,
+  onWorkersUpdate,
+  onPhotosUpdate,
+  onSaveProgress,
+  t
+}) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'En Attente': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
@@ -1843,80 +1874,311 @@ const PermitCard: React.FC<{
     }
   };
 
+  if (!isExpanded) {
+    // Vue carte compacte
+    return (
+      <div className={`relative bg-slate-800/50 backdrop-blur-sm border rounded-xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10 ${
+        isSelected 
+          ? 'border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/20' 
+          : 'border-slate-700/50 hover:border-slate-600/50'
+      }`}>
+        {/* Header de la carte */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="text-3xl">{getIconForType(permit.type)}</div>
+            <div>
+              <h3 className="font-semibold text-white text-lg">{permit.type}</h3>
+              <p className="text-gray-400 text-sm">{permit.norm}</p>
+            </div>
+          </div>
+          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(permit.status)}`}>
+            {permit.status}
+          </span>
+        </div>
+
+        {/* Description */}
+        <p className="text-gray-300 text-sm mb-4 leading-relaxed">
+          {permit.description}
+        </p>
+
+        {/* Champs obligatoires */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-blue-400 text-sm font-medium">
+            {permit.requiredFields} champs obligatoires
+          </span>
+          <div className="flex-1 h-px bg-slate-700"></div>
+        </div>
+
+        {/* Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <button
+            onClick={onFill}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
+          >
+            <FileText className="h-4 w-4" />
+            <span className="text-sm font-medium">Remplir</span>
+          </button>
+          
+          <button
+            onClick={onValidate}
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 shadow-lg ${
+              permit.status === 'Validé'
+                ? 'bg-green-500 hover:bg-green-600 text-white'
+                : 'bg-slate-700 hover:bg-slate-600 text-gray-300'
+            }`}
+            disabled={permit.status !== 'En Cours'}
+          >
+            <CheckCircle className="h-4 w-4" />
+            <span className="text-sm font-medium">Valider</span>
+          </button>
+          
+          <button
+            onClick={onGeneratePDF}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
+            disabled={permit.status === 'En Attente'}
+          >
+            <Download className="h-4 w-4" />
+            <span className="text-sm font-medium">PDF</span>
+          </button>
+        </div>
+
+        {/* Indicateur de sélection */}
+        {isSelected && (
+          <div className="absolute -top-2 -right-2 bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center">
+            <CheckCircle className="h-4 w-4" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Vue formulaire étendue
   return (
-    <div className={`relative bg-slate-800/50 backdrop-blur-sm border rounded-xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10 ${
-      isSelected 
-        ? 'border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/20' 
-        : 'border-slate-700/50 hover:border-slate-600/50'
-    }`}>
-      {/* Header de la carte */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="text-3xl">{getIconForType(permit.type)}</div>
-          <div>
-            <h3 className="font-semibold text-white text-lg">{permit.type}</h3>
-            <p className="text-gray-400 text-sm">{permit.norm}</p>
+    <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl">
+      {/* Header mobile avec navigation */}
+      <div className="lg:hidden bg-slate-900/80 px-4 py-3 rounded-t-xl border-b border-slate-700/50">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => onExpand()}
+            className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            <ChevronLeft className="h-5 w-5" />
+            <span>Retour</span>
+          </button>
+          
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 bg-green-400 rounded-full"></div>
+            <span className="text-sm text-gray-300">Sauvegarde auto</span>
           </div>
         </div>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(permit.status)}`}>
-          {permit.status}
-        </span>
       </div>
 
-      {/* Description */}
-      <p className="text-gray-300 text-sm mb-4 leading-relaxed">
-        {permit.description}
-      </p>
-
-      {/* Champs obligatoires */}
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-blue-400 text-sm font-medium">
-          {permit.requiredFields} champs obligatoires
-        </span>
-        <div className="flex-1 h-px bg-slate-700"></div>
-      </div>
-
-      {/* Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <button
-          onClick={onFill}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
-        >
-          <FileText className="h-4 w-4" />
-          <span className="text-sm font-medium">Remplir</span>
-        </button>
-        
-        <button
-          onClick={onValidate}
-          className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 shadow-lg ${
-            permit.status === 'Validé'
-              ? 'bg-green-500 hover:bg-green-600 text-white'
-              : 'bg-slate-700 hover:bg-slate-600 text-gray-300'
-          }`}
-          disabled={permit.status !== 'En Cours'}
-        >
-          <CheckCircle className="h-4 w-4" />
-          <span className="text-sm font-medium">Valider</span>
-        </button>
-        
-        <button
-          onClick={onGeneratePDF}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
-          disabled={permit.status === 'En Attente'}
-        >
-          <Download className="h-4 w-4" />
-          <span className="text-sm font-medium">PDF</span>
-        </button>
-      </div>
-
-      {/* Indicateur de sélection */}
-      {isSelected && (
-        <div className="absolute -top-2 -right-2 bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center">
-          <CheckCircle className="h-4 w-4" />
+      <div className="p-6">
+        {/* Titre du formulaire */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="text-3xl">{getIconForType(permit.type)}</div>
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold text-white">{permit.type}</h2>
+            <p className="text-gray-400">{permit.norm}</p>
+          </div>
+          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(permit.status)}`}>
+            {permit.status}
+          </span>
         </div>
-      )}
+
+        {/* Boutons d'action principaux */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <button
+            onClick={onValidate}
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
+          >
+            <CheckCircle className="h-5 w-5" />
+            <span>Valider conformité</span>
+          </button>
+          
+          <button
+            onClick={onSaveProgress}
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
+          >
+            <Clock className="h-5 w-5" />
+            <span>Sauvegarder</span>
+          </button>
+          
+          <button
+            onClick={onGeneratePDF}
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
+          >
+            <Download className="h-5 w-5" />
+            <span>Soumettre</span>
+          </button>
+        </div>
+
+        {/* Navigation des sections */}
+        <div className="flex flex-wrap gap-2 mb-6 p-2 bg-slate-900/50 rounded-lg">
+          {Object.keys((permit as any).sections || {}).map((sectionKey) => (
+            <button
+              key={sectionKey}
+              onClick={() => onSectionChange(sectionKey)}
+              className={`px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                currentSection === sectionKey
+                  ? 'bg-blue-500 text-white shadow-lg'
+                  : 'text-gray-400 hover:text-white hover:bg-slate-700'
+              }`}
+            >
+              {sectionKey.replace(/([A-Z])/g, ' $1').trim()}
+            </button>
+          ))}
+        </div>
+
+        {/* Contenu du formulaire selon la section */}
+        <div className="space-y-6">
+          {renderFormSection(permit, currentSection, complianceChecks, onComplianceUpdate, t)}
+          
+          {/* Section Travailleurs */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                👷 Travailleurs Autorisés
+                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-sm rounded-full">
+                  {workers.length}
+                </span>
+              </h3>
+              <button
+                onClick={() => {
+                  const newWorker: WorkerEntry = {
+                    name: '',
+                    age: 18,
+                    certification: '',
+                    phone: ''
+                  };
+                  onWorkersUpdate([...workers, newWorker]);
+                }}
+                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Ajouter Travailleur
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {workers.map((worker, index) => (
+                <WorkerCard
+                  key={index}
+                  worker={worker}
+                  index={index}
+                  onUpdate={(idx, updatedWorker) => {
+                    const newWorkers = [...workers];
+                    newWorkers[idx] = updatedWorker;
+                    onWorkersUpdate(newWorkers);
+                  }}
+                  onRemove={(idx) => {
+                    const newWorkers = workers.filter((_, i) => i !== idx);
+                    onWorkersUpdate(newWorkers);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Section Photos */}
+          <PhotoGallery
+            photos={photos}
+            currentIndex={0}
+            viewMode="grid"
+            onViewModeChange={() => {}}
+            onNavigate={() => {}}
+            onRemove={(index) => {
+              const newPhotos = photos.filter((_, i) => i !== index);
+              onPhotosUpdate(newPhotos);
+            }}
+            onAdd={(files) => {
+              const newPhotos = files.map(file => ({
+                url: URL.createObjectURL(file),
+                name: file.name,
+                size: file.size,
+                uploadedAt: new Date().toISOString()
+              }));
+              onPhotosUpdate([...photos, ...newPhotos]);
+            }}
+          />
+        </div>
+
+        {/* Navigation bas de page */}
+        <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-700/50">
+          <button
+            onClick={() => onExpand()}
+            className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Précédent
+          </button>
+          
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <div className="h-2 w-2 bg-green-400 rounded-full"></div>
+            Sauvegarde automatique
+          </div>
+          
+          <button className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white transition-colors">
+            Suivant
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
     </div>
   );
+};
+
+// Fonction helper pour rendre les sections du formulaire
+const renderFormSection = (
+  permit: Permit, 
+  currentSection: string, 
+  complianceChecks: ComplianceCheck[], 
+  onComplianceUpdate: (checks: ComplianceCheck[]) => void,
+  t: any
+) => {
+  const sectionData = (permit as any).sections?.[currentSection];
+  if (!sectionData) return null;
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold text-white mb-4">
+        {currentSection.replace(/([A-Z])/g, ' $1').trim()}
+      </h3>
+      
+      {sectionData.fields?.map((field: any, index: number) => {
+        const checkKey = `${permit.id}_${currentSection}_${field.key}`;
+        const existingCheck = complianceChecks.find(c => c.key === checkKey);
+        
+        return (
+          <FormField
+            key={field.key}
+            label={field.label}
+            value={existingCheck?.value || ''}
+            onChange={(value) => {
+              const updatedChecks = complianceChecks.filter(c => c.key !== checkKey);
+              updatedChecks.push({
+                key: checkKey,
+                value,
+                isValid: field.validation ? field.validation(value) : true,
+                section: currentSection
+              });
+              onComplianceUpdate(updatedChecks);
+            }}
+            type={field.type || 'text'}
+            required={field.required}
+            placeholder={field.placeholder}
+            options={field.options}
+            isValid={existingCheck?.isValid}
+            errorMessage={field.errorMessage}
+            legalRef={field.legalRef}
+            isLegal={field.isLegal}
+            isCritical={field.isCritical}
+          />
+        );
+      })}
+    </div>
+  );
+};
 };
 
 // Composant FormField avec validation premium
