@@ -2179,7 +2179,6 @@ const renderFormSection = (
     </div>
   );
 };
-};
 
 // Composant FormField avec validation premium
 const FormField: React.FC<{
