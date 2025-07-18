@@ -3472,6 +3472,10 @@ const getCategoryIcon = (category: string) => {
       default: return '📋';
     }
   };
+  
+const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
+  const [permits, setPermits] = useState([]);
+  const [selectedPermits, setSelectedPermits] = useState([]);
 
   return (
     <div style={{ padding: '0', color: '#ffffff' }}>
