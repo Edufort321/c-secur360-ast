@@ -18,6 +18,7 @@ interface Step4PermitsProps {
   language: 'fr' | 'en';
   tenant: string;
   errors?: Record<string, string>;
+} 
 
 // =================== INTERFACES PHOTOS CONFORMES PROVINCES CANADIENNES ===================
 interface PhotoCarouselEntry {
