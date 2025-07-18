@@ -2039,7 +2039,12 @@ const FormField: React.FC<{
           <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
-              checked={Boolean(value === "true" || value === true || value === "1" || value === 1)}
+              checked={(() => {
+                if (typeof value === 'boolean') return value;
+                if (typeof value === 'string') return value === "true" || value === "1";
+                if (typeof value === 'number') return value === 1;
+                return false;
+              })()}
               onChange={(e) => onChange(e.target.checked ? "true" : "false")}
               disabled={disabled}
               className="w-5 h-5 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500 focus:ring-2"
