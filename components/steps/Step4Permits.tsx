@@ -1833,7 +1833,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   // NOUVELLE FONCTION: Archiver un permis
   const archivePermit = (permitId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    const permit = permits.find(p => p.id === permitId);
+    const permit = permits.find((p: Permit) => p.id === permitId);
     if (permit && permit.selected) {
       const archivedPermit: ArchivedPermit = {
         ...permit,
