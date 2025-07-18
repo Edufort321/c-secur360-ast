@@ -1607,7 +1607,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
                 <div key={field.id}>
                   {isNewSection && currentSection && (
                     <h3 className="text-blue-400 text-lg font-semibold mb-4 pb-2 border-b border-slate-700">
-                      {t.sections[currentSection] || currentSection}
+                      {(t.sections as any)[currentSection] || currentSection}
                     </h3>
                   )}
                   
