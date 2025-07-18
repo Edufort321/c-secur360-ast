@@ -2967,6 +2967,87 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
 // =================== SECTION 4B FINALE: BASE DONNÉES + CARTES PERMIS + EXPORT ===================
 // À coller après la Section 4A pour compléter le fichier
 
+// =================== IMPORTS SUPPLÉMENTAIRES ===================
+import { Plus, Search, Edit, Download, CheckCircle, FileText } from 'lucide-react';
+
+// =================== INTERFACES TYPESCRIPT ===================
+interface ConfinedSpaceDatabase {
+  id: string;
+  company: string;
+  equipmentNumber: string;
+  spaceNumber: string;
+  spaceName: string;
+  location: string;
+  description: string;
+  hazards: string[];
+  dimensions: {
+    length: number;
+    width: number;
+    height: number;
+    volume: number;
+  };
+  accessPoints: Array<{
+    type: string;
+    size: string;
+    location: string;
+  }>;
+  lastInspection: string;
+  nextInspection: string;
+  permits: string[];
+  photos: string[];
+  workers: string[];
+  supervisors: string[];
+  province: string;
+  status: 'active' | 'inactive' | 'maintenance';
+  compliance: { [province: string]: boolean };
+  createdAt: string;
+  updatedAt: string;
+  tenant: string;
+}
+
+interface PhotoCarouselEntry {
+  id: string;
+  url: string;
+  description: string;
+  timestamp: string;
+  category: string;
+}
+
+interface WorkerEntryQuick {
+  id: string;
+  name: string;
+  age: number;
+  certification: string;
+  experience: string;
+}
+
+interface SupervisorQuick {
+  id: string;
+  name: string;
+  certification: string;
+  experience: string;
+}
+
+interface Permit {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  authority: string;
+  province: string[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  selected: boolean;
+  formData?: any;
+}
+
+interface Step4PermitsProps {
+  formData: any;
+  onDataChange: (section: string, data: any) => void;
+  language: 'fr' | 'en';
+  tenant: string;
+  errors?: Record<string, string>;
+}
+
 // =================== COMPOSANT BASE DONNÉES SUPABASE ===================
 const ConfinedSpaceManager: React.FC<{
   tenant: string;
@@ -3159,12 +3240,12 @@ const ConfinedSpaceManager: React.FC<{
           </h4>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-            {['company', 'equipmentNumber', 'spaceNumber', 'spaceName', 'location'].map(field => (
+            {(['company', 'equipmentNumber', 'spaceNumber', 'spaceName', 'location'] as const).map(field => (
               <input
                 key={field}
                 type="text"
-                placeholder={t[field as keyof typeof t] as string}
-                value={newSpace[field as keyof typeof newSpace]}
+                placeholder={t[field] as string}
+                value={newSpace[field]}
                 onChange={(e) => setNewSpace({ ...newSpace, [field]: e.target.value })}
                 style={{
                   padding: '12px 16px',
@@ -3198,13 +3279,13 @@ const ConfinedSpaceManager: React.FC<{
               📐 {t.dimensions}
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '12px', alignItems: 'end' }}>
-              {['length', 'width', 'height'].map(dim => (
+              {(['length', 'width', 'height'] as const).map(dim => (
                 <input
                   key={dim}
                   type="number"
                   step="0.1"
                   placeholder={dim === 'length' ? 'Longueur' : dim === 'width' ? 'Largeur' : 'Hauteur'}
-                  value={newSpace[dim as keyof typeof newSpace]}
+                  value={newSpace[dim]}
                   onChange={(e) => setNewSpace({ ...newSpace, [dim]: e.target.value })}
                   style={{
                     padding: '10px 12px',
@@ -3459,7 +3540,12 @@ const Step4PermitsComplete: React.FC<Step4PermitsProps> = ({ formData, onDataCha
     });
   }, [permits, searchTerm, selectedCategory, selectedProvince]);
 
-  const categories = useMemo(() => Array.from(new Set(permits.map((p: Permit) => p.category))), [permits]);
+  // =================== CATÉGORIES AVEC TYPE CORRECT ===================
+  const categories = useMemo(() => 
+    Array.from(new Set(permits.map((p: Permit) => p.category))) as string[], 
+    [permits]
+  );
+  
   const provinces = ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'];
   const selectedPermits = useMemo(() => permits.filter((p: Permit) => p.selected), [permits]);
 
