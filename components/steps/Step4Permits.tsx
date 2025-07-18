@@ -1745,3 +1745,4 @@ const renderPhotoCarousel = (permit: Permit) => {
     </>
   );
 };
+export default Step4Permits;
