@@ -3536,37 +3536,35 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
         <p style={{ color: '#3b82f6', margin: '0 0 20px', fontSize: '14px' }}>{t.subtitle}</p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px' }}>
-          {[
-            { key: 'available', value: stats.totalPermits, icon: '📊' },
-            { key: 'selected', value: stats.selected, icon: '✅' },
-            { key: 'critical', value: stats.critical, icon: '🚨' },
-            { key: 'compliant', value: `${stats.compliant}/${stats.selected}`, icon: '🛡️' }
-          ].map(stat => (
-            <div key={stat.key} style={{
-              textAlign: 'center',
-              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
-              padding: '20px 16px',
-              borderRadius: '16px',
-              border: '1px solid rgba(100, 116, 139, 0.3)'
-            }}>
-              <div style={{ fontSize: '28px', marginBottom: '8px' }}>{stat.icon}</div>
-              <div style={{
-                fontSize: '28px',
-                fontWeight: '800',
-                background: 'linear-gradient(135deg, #60a5fa, #34d399)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                marginBottom: '8px'
-              }}>
-                {stat.value}
-              </div>
-              <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>
-                {t.stats[stat.key as keyof typeof t.stats]}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+{[
+  { key: 'available', value: stats.totalPermits, icon: '📊' },
+  { key: 'selected', value: stats.selected, icon: '✅' },
+  { key: 'critical', value: stats.critical, icon: '🚨' },
+  { key: 'compliant', value: `${stats.compliant}/${stats.selected}`, icon: '🛡️' }
+].map(stat => (
+  <div key={stat.key} style={{
+    textAlign: 'center',
+    background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
+    padding: '20px 16px',
+    borderRadius: '16px',
+    border: '1px solid rgba(100, 116, 139, 0.3)'
+  }}>
+    <div style={{ fontSize: '28px', marginBottom: '8px' }}>{stat.icon}</div>
+    <div style={{
+      fontSize: '28px',
+      fontWeight: '800',
+      background: 'linear-gradient(135deg, #60a5fa, #34d399)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      marginBottom: '8px'
+    }}>
+      {stat.value}
+    </div>
+    <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>
+      {t.stats[stat.key as keyof typeof t.stats]}
+    </div>
+  </div>
+))}
 
       {/* Base de données espaces clos */}
       <ConfinedSpaceManager
