@@ -839,7 +839,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
   );
 
   const stats = useMemo(() => {
-    const compliantCount = selectedPermits.filter(p => {
+    const compliantCount = selectedPermits.filter((p: Permit) => {
       const checks = complianceChecks[p.id] || [];
       return checks.length === 0 || checks.every(check => check.status === 'compliant');
     }).length;
