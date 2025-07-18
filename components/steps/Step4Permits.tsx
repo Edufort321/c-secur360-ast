@@ -788,12 +788,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
               className="form-file"
             />
           );
-        
-        default:
-          return null;
-      }
-    };
-    case 'workers_tracking':
+          case 'workers_tracking':
           const workersLog: WorkerEntry[] = Array.isArray(value) ? value : [];
           return (
             <div className="workers-tracking-container">
@@ -1268,6 +1263,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
               </div>
             </div>
           );
+
+        default:
+          return null;
       }
     };
 
