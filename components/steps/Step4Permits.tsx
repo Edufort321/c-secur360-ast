@@ -1125,8 +1125,8 @@ const PermitCard: React.FC<PermitCardProps> = ({
     </>
   );
 };
-// =================== SECTION 5: COMPOSANTS FORMULAIRE ULTRA-PREMIUM ===================
-// À coller après la Section 4
+// =================== SECTION 5 CORRIGÉE: COMPOSANTS FORMULAIRE ULTRA-PREMIUM ===================
+// À coller après la Section 4 - VERSION SANS ERREURS DE SYNTAXE
 
 // =================== COMPOSANT FORM SECTION ===================
 const FormSection: React.FC<{
@@ -1364,7 +1364,7 @@ const WorkerSection: React.FC<{
         <div className="text-center py-12 bg-gradient-to-r from-slate-800/30 to-slate-700/20 rounded-2xl border border-white/10">
           <Users size={48} className="mx-auto text-gray-400 mb-4 opacity-50" />
           <p className="text-gray-400 mb-2">Aucun travailleur enregistré</p>
-          <p className="text-gray-500 text-sm">Cliquez sur "Ajouter Travailleur" pour commencer</p>
+          <p className="text-gray-500 text-sm">Cliquez sur &quot;Ajouter Travailleur&quot; pour commencer</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -1383,7 +1383,7 @@ const WorkerSection: React.FC<{
   );
 };
 
-// =================== COMPOSANT WORKER CARD ===================
+// =================== COMPOSANT WORKER CARD CORRIGÉ ===================
 const WorkerCard: React.FC<{
   worker: WorkerEntry;
   onUpdate: (field: keyof WorkerEntry, value: any) => void;
@@ -1393,11 +1393,13 @@ const WorkerCard: React.FC<{
   const isMinor = worker.age > 0 && worker.age < 18;
   
   return (
-    <div className={`p-6 rounded-2xl backdrop-blur-sm transition-all duration-300 ${
-      isMinor 
-        ? 'bg-gradient-to-r from-red-500/20 to-pink-500/10 border-2 border-red-500/50 animate-pulse' 
-        : 'bg-gradient-to-r from-slate-800/50 to-slate-700/30 border border-white/10 hover:border-blue-500/30'
-    }`}>
+    <div 
+      className={`p-6 rounded-2xl backdrop-blur-sm transition-all duration-300 ${
+        isMinor 
+          ? 'bg-gradient-to-r from-red-500/20 to-pink-500/10 border-2 border-red-500/50 animate-pulse' 
+          : 'bg-gradient-to-r from-slate-800/50 to-slate-700/30 border border-white/10 hover:border-blue-500/30'
+      }`}
+    >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
@@ -1446,7 +1448,7 @@ const WorkerCard: React.FC<{
         
         <div>
           <label className="block text-xs font-semibold text-gray-300 mb-2">
-            Âge {isMinor && <span className="text-red-400 font-bold">(⚠️ < 18 ans)</span>}
+            Âge {isMinor && <span className="text-red-400 font-bold">(⚠️ moins de 18 ans)</span>}
           </label>
           <input
             type="number"
@@ -1479,7 +1481,7 @@ const WorkerCard: React.FC<{
         </div>
         
         <div>
-          <label className="block text-xs font-semibold text-gray-300 mb-2">Heure d'entrée</label>
+          <label className="block text-xs font-semibold text-gray-300 mb-2">Heure d entrée</label>
           <input
             type="time"
             value={worker.entryTime || ''}
@@ -1493,7 +1495,7 @@ const WorkerCard: React.FC<{
         <div className="mt-4 p-4 bg-gradient-to-r from-red-500/20 to-pink-500/10 border border-red-500/30 rounded-xl">
           <div className="flex items-center gap-2 text-red-400 font-bold text-sm">
             <AlertTriangle size={16} />
-            VIOLATION LÉGALE: L'entrée en espace clos est interdite aux mineurs (RSST Art. 298)
+            VIOLATION LÉGALE: L entrée en espace clos est interdite aux mineurs (RSST Art. 298)
           </div>
         </div>
       )}
@@ -1570,7 +1572,7 @@ const PhotoSection: React.FC<{
         <div className="text-center py-12 bg-gradient-to-r from-slate-800/30 to-slate-700/20 rounded-2xl border border-white/10">
           <Camera size={48} className="mx-auto text-gray-400 mb-4 opacity-50" />
           <p className="text-gray-400 mb-2">Aucune photo ajoutée</p>
-          <p className="text-gray-500 text-sm">Glissez des photos ou cliquez sur "Parcourir"</p>
+          <p className="text-gray-500 text-sm">Glissez des photos ou cliquez sur &quot;Parcourir&quot;</p>
         </div>
       )}
     </div>
@@ -1579,4 +1581,3 @@ const PhotoSection: React.FC<{
 
 // =================== EXPORT DU COMPOSANT PRINCIPAL ===================
 export default Step4Permits;
-      
