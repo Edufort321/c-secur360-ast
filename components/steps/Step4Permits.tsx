@@ -12,6 +12,12 @@ import {
   AlertCircle, ThermometerSun, Gauge, Wind, Hammer, ChevronLeft,
   ChevronRight, Upload, Trash2, UserPlus, UserCheck, Grid, List
 } from 'lucide-react';
+interface Step4PermitsProps {
+  formData: any;
+  onDataChange: (section: string, data: any) => void;
+  language: 'fr' | 'en';
+  tenant: string;
+  errors?: Record<string, string>;
 
 // =================== INTERFACES PHOTOS CONFORMES PROVINCES CANADIENNES ===================
 interface PhotoCarouselEntry {
