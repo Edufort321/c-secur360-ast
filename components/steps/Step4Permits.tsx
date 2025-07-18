@@ -3500,6 +3500,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     compliant: selectedPermits.length
   }), [permits, selectedPermits]);
 
+const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
+  
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'Sécurité': case 'Safety': return '🛡️';
