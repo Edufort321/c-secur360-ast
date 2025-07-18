@@ -1564,10 +1564,10 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
               className="filter-select"
             >
               <option value="all">{t.allCategories}</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {getCategoryIcon(category)} {(t.categories as any)[category] || category}
-                </option>
+              {categories.map((category: any) => (
+  <option key={category} value={category}>
+    {getCategoryIcon(category)} {(t.categories as any)[category] || category}
+  </option>
               ))}
             </select>
             <select
