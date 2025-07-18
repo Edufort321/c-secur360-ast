@@ -1193,83 +1193,42 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
 
   return basePermits;
 };
-// =================== SECTION 3: LOGIQUE ET VALIDATION SANS ERREURS ===================
+// =================== SECTION 3: VERSION MOBILE-FIRST OPTIMISÉE ===================
 // À coller après la Section 2
 
-// =================== COMPOSANT PRINCIPAL AVEC CONFORMITÉ 2024-2025 ===================
+// =================== COMPOSANT PRINCIPAL MOBILE-FIRST ===================
 const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language, tenant, errors }) => {
   const t = getTexts(language);
   
   // =================== ÉTATS PRINCIPAUX ===================
+  const [permits] = useState<Permit[]>(translatePermitsDatabase(language));
+  const [selectedPermit, setSelectedPermit] = useState<Permit | null>(null);
+  const [formValues, setFormValues] = useState<{ [key: string]: any }>({});
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedProvince, setSelectedProvince] = useState<string>('');
-  const [expandedPermit, setExpandedPermit] = useState<string | null>(null);
-  const [permits, setPermits] = useState<Permit[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
   
-  // =================== ÉTATS POUR FONCTIONNALITÉS AVANCÉES ===================
-  const [workers, setWorkers] = useState<{ [permitId: string]: WorkerEntry[] }>({});
-  const [photos, setPhotos] = useState<{ [permitId: string]: PhotoEntry[] }>({});
-  const [signatures, setSignatures] = useState<{ [permitId: string]: SignatureMetadata[] }>({});
-  const [gasReadings, setGasReadings] = useState<{ [permitId: string]: GasReading[] }>({});
-  const [complianceChecks, setComplianceChecks] = useState<{ [permitId: string]: ComplianceCheck[] }>({});
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState<{ [permitId: string]: number }>({});
-  const [photoViewMode, setPhotoViewMode] = useState<{ [permitId: string]: 'carousel' | 'grid' }>({});
+  // États pour fonctionnalités avancées
+  const [workers, setWorkers] = useState<WorkerEntry[]>([{
+    id: 1,
+    name: '',
+    age: 0,
+    certification: '',
+    entryTime: '',
+    exitTime: null,
+    date: new Date().toISOString().split('T')[0],
+    over18: false
+  }]);
+  const [photos, setPhotos] = useState<PhotoEntry[]>([]);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number>(0);
+  const [photoViewMode, setPhotoViewMode] = useState<'carousel' | 'grid'>('carousel');
 
-  // =================== INITIALISATION DES PERMIS ===================
-  useEffect(() => {
-    const translatedPermits = translatePermitsDatabase(language);
-    setPermits(translatedPermits);
-    
-    // Initialiser workers et photos pour les permis déjà sélectionnés
-    translatedPermits.forEach((permit: Permit) => {
-      if (permit.selected) {
-        if (!workers[permit.id]) {
-          setWorkers(prev => ({
-            ...prev,
-            [permit.id]: [{
-              id: 1,
-              name: '',
-              age: 0,
-              certification: '',
-              entryTime: '',
-              exitTime: null,
-              date: new Date().toISOString().split('T')[0],
-              over18: false
-            }]
-          }));
-        }
-        if (!photos[permit.id]) {
-          setPhotos(prev => ({
-            ...prev,
-            [permit.id]: []
-          }));
-        }
-        if (!currentPhotoIndex[permit.id]) {
-          setCurrentPhotoIndex(prev => ({
-            ...prev,
-            [permit.id]: 0
-          }));
-        }
-        if (!photoViewMode[permit.id]) {
-          setPhotoViewMode(prev => ({
-            ...prev,
-            [permit.id]: 'carousel'
-          }));
-        }
-      }
-    });
-  }, [language]);
-
-  // =================== FILTRAGE DES PERMIS ===================
+  // =================== FILTRAGE ===================
   const filteredPermits = useMemo(() => {
     return permits.filter((permit: Permit) => {
-      const matchesSearch = permit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           permit.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = permit.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = !selectedCategory || permit.category === selectedCategory;
       const matchesProvince = !selectedProvince || permit.province.includes(selectedProvince);
-      
       return matchesSearch && matchesCategory && matchesProvince;
     });
   }, [permits, searchTerm, selectedCategory, selectedProvince]);
@@ -1284,304 +1243,67 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     [permits]
   );
 
-  // =================== STATISTIQUES TEMPS RÉEL ===================
+  // =================== STATISTIQUES ===================
   const stats = useMemo(() => {
-    const selectedPermits = permits.filter(p => p.selected);
-    const criticalPermits = permits.filter(p => p.priority === 'critical');
-    const pendingPermits = permits.filter(p => p.status === 'pending');
-    
+    const selectedCount = permits.filter(p => p.selected).length;
+    const criticalCount = permits.filter(p => p.priority === 'critical').length;
+    const pendingCount = permits.filter(p => p.status === 'pending').length;
     return {
       available: permits.length,
-      selected: selectedPermits.length,
-      critical: criticalPermits.length,
-      pending: pendingPermits.length,
-      compliant: Object.values(complianceChecks).flat().filter(c => c.status === 'compliant').length,
-      nonCompliant: Object.values(complianceChecks).flat().filter(c => c.status === 'non-compliant').length
+      selected: selectedCount,
+      critical: criticalCount,
+      pending: pendingCount
     };
-  }, [permits, complianceChecks]);
+  }, [permits]);
 
-  // =================== FONCTIONS UTILITAIRES ===================
-  const getPriorityColor = (priority: string): string => {
-    switch (priority) {
-      case 'low': return '#10B981';
-      case 'medium': return '#F59E0B';
-      case 'high': return '#EF4444';
-      case 'critical': return '#DC2626';
-      default: return '#6B7280';
-    }
-  };
-
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'pending': return '#F59E0B';
-      case 'submitted': return '#3B82F6';
-      case 'approved': return '#10B981';
-      case 'rejected': return '#EF4444';
-      case 'expired': return '#6B7280';
-      default: return '#6B7280';
-    }
-  };
-
-  const getComplianceColor = (level: string): string => {
-    switch (level) {
-      case 'basic': return '#10B981';
-      case 'standard': return '#3B82F6';
-      case 'enhanced': return '#8B5CF6';
-      case 'critical': return '#DC2626';
-      default: return '#6B7280';
-    }
-  };
-
-  const getCategoryIcon = (category: string): string => {
-    switch (category) {
-      case 'Sécurité':
-      case 'Safety':
-        return '🛡️';
-      case 'Construction':
-        return '🏗️';
-      case 'Radioprotection':
-      case 'Radiation Protection':
-        return '☢️';
-      case 'Équipements':
-      case 'Equipment':
-        return '⚙️';
-      default:
-        return '📋';
-    }
-  };
-
-  // =================== GESTION DES PERMIS ===================
-  const togglePermit = (permitId: string) => {
-    setPermits(prev => prev.map(permit => {
-      if (permit.id === permitId) {
-        const newSelected = !permit.selected;
-        
-        // Initialiser ou nettoyer les données associées
-        if (newSelected) {
-          // Initialiser workers
-          if (!workers[permitId]) {
-            setWorkers(prevWorkers => ({
-              ...prevWorkers,
-              [permitId]: [{
-                id: 1,
-                name: '',
-                age: 0,
-                certification: '',
-                entryTime: '',
-                exitTime: null,
-                date: new Date().toISOString().split('T')[0],
-                over18: false
-              }]
-            }));
-          }
-          
-          // Initialiser photos
-          if (!photos[permitId]) {
-            setPhotos(prevPhotos => ({
-              ...prevPhotos,
-              [permitId]: []
-            }));
-          }
-          
-          // Initialiser index photos
-          if (!currentPhotoIndex[permitId]) {
-            setCurrentPhotoIndex(prev => ({
-              ...prev,
-              [permitId]: 0
-            }));
-          }
-          
-          // Initialiser mode vue photos
-          if (!photoViewMode[permitId]) {
-            setPhotoViewMode(prev => ({
-              ...prev,
-              [permitId]: 'carousel'
-            }));
-          }
-        } else {
-          // Nettoyer les données quand le permis est désélectionné
-          setWorkers(prev => {
-            const newWorkers = { ...prev };
-            delete newWorkers[permitId];
-            return newWorkers;
-          });
-          
-          setPhotos(prev => {
-            const newPhotos = { ...prev };
-            delete newPhotos[permitId];
-            return newPhotos;
-          });
-          
-          setCurrentPhotoIndex(prev => {
-            const newIndex = { ...prev };
-            delete newIndex[permitId];
-            return newIndex;
-          });
-          
-          setPhotoViewMode(prev => {
-            const newMode = { ...prev };
-            delete newMode[permitId];
-            return newMode;
-          });
-        }
-        
-        return { ...permit, selected: newSelected };
-      }
-      return permit;
-    }));
-  };
-
-  const expandPermit = (permitId: string) => {
-    setExpandedPermit(expandedPermit === permitId ? null : permitId);
-  };
-
-  const handleFieldChange = (permitId: string, fieldId: string, value: any) => {
-    setPermits(prev => prev.map(permit => {
-      if (permit.id === permitId) {
-        return {
-          ...permit,
-          formData: {
-            ...permit.formData,
-            [fieldId]: value
-          }
-        };
-      }
-      return permit;
-    }));
-
-    // Déclencher validations temps réel si nécessaire
-    const permit = permits.find(p => p.id === permitId);
-    const field = permit?.formFields?.find(f => f.id === fieldId);
-    
-    if (field?.validation?.critical) {
-      validateField(permitId, fieldId, value, field);
-    }
-  };
-
-  // =================== VALIDATION TEMPS RÉEL ===================
-  const validateField = (permitId: string, fieldId: string, value: any, field: FormField) => {
-    const checks: ComplianceCheck[] = [];
-    
-    if (field.type === 'gas_meter' && field.validation) {
-      const numValue = parseFloat(value) || 0;
-      const min = field.validation.min || 0;
-      const max = field.validation.max || 100;
-      
-      if (numValue < min || numValue > max) {
-        checks.push({
-          requirement: field.label,
-          status: 'non-compliant',
-          details: `Valeur ${numValue} hors limites (${min}-${max})`,
-          reference: field.complianceRef || 'Validation automatique'
-        });
-      } else {
-        checks.push({
-          requirement: field.label,
-          status: 'compliant',
-          details: `Valeur ${numValue} conforme`,
-          reference: field.complianceRef || 'Validation automatique'
-        });
-      }
-    }
-    
-    if (field.id === 'worker_age_verification') {
-      const permitWorkers = workers[permitId] || [];
-      const hasMinors = permitWorkers.some(w => w.age > 0 && w.age < 18);
-      
-      if (hasMinors) {
-        checks.push({
-          requirement: 'Vérification âge travailleurs',
-          status: 'non-compliant',
-          details: 'Travailleur(s) mineur(s) détecté(s) - Violation Article 298 RSST',
-          reference: 'RSST Art. 298 modifié 2023'
-        });
-      } else {
-        checks.push({
-          requirement: 'Vérification âge travailleurs',
-          status: 'compliant',
-          details: 'Tous les travailleurs sont âgés de 18 ans ou plus',
-          reference: 'RSST Art. 298 modifié 2023'
-        });
-      }
-    }
-    
-    setComplianceChecks(prev => ({
+  // =================== GESTION DES VALEURS ===================
+  const handleFieldChange = (fieldId: string, value: any) => {
+    setFormValues(prev => ({
       ...prev,
-      [permitId]: [
-        ...(prev[permitId] || []).filter(c => c.requirement !== field.label),
-        ...checks
-      ]
+      [fieldId]: value
     }));
   };
 
   // =================== GESTION DES TRAVAILLEURS ===================
-  const addWorker = (permitId: string) => {
-    setWorkers(prev => {
-      const currentWorkers = prev[permitId] || [];
-      const newWorker: WorkerEntry = {
-        id: Math.max(...currentWorkers.map(w => w.id), 0) + 1,
-        name: '',
-        age: 0,
-        certification: '',
-        entryTime: '',
-        exitTime: null,
-        date: new Date().toISOString().split('T')[0],
-        over18: false
-      };
-      
-      return {
-        ...prev,
-        [permitId]: [...currentWorkers, newWorker]
-      };
-    });
+  const addWorker = () => {
+    const newWorker: WorkerEntry = {
+      id: Math.max(...workers.map(w => w.id), 0) + 1,
+      name: '',
+      age: 0,
+      certification: '',
+      entryTime: '',
+      exitTime: null,
+      date: new Date().toISOString().split('T')[0],
+      over18: false
+    };
+    setWorkers(prev => [...prev, newWorker]);
   };
 
-  const removeWorker = (permitId: string, workerId: number) => {
-    setWorkers(prev => ({
-      ...prev,
-      [permitId]: (prev[permitId] || []).filter(w => w.id !== workerId)
-    }));
+  const removeWorker = (workerId: number) => {
+    if (workers.length > 1) {
+      setWorkers(prev => prev.filter(w => w.id !== workerId));
+    }
   };
 
-  const updateWorker = (permitId: string, workerId: number, field: keyof WorkerEntry, value: any) => {
-    setWorkers(prev => ({
-      ...prev,
-      [permitId]: (prev[permitId] || []).map(worker => {
-        if (worker.id === workerId) {
-          const updatedWorker = { ...worker, [field]: value };
-          
-          // Validation automatique âge 18+
-          if (field === 'age') {
-            updatedWorker.over18 = value >= 18;
-            
-            // Déclencher validation compliance
-            setTimeout(() => {
-              validateField(permitId, 'worker_age_verification', value, {
-                id: 'worker_age_verification',
-                type: 'compliance_check',
-                label: 'Vérification âge travailleurs',
-                required: true,
-                validation: { critical: true, legalRequirement: true }
-              });
-            }, 100);
-          }
-          
-          return updatedWorker;
+  const updateWorker = (workerId: number, field: keyof WorkerEntry, value: any) => {
+    setWorkers(prev => prev.map(worker => {
+      if (worker.id === workerId) {
+        const updatedWorker = { ...worker, [field]: value };
+        if (field === 'age') {
+          updatedWorker.over18 = value >= 18;
         }
-        return worker;
-      })
+        return updatedWorker;
+      }
+      return worker;
     }));
   };
 
   // =================== GESTION DES PHOTOS ===================
-  const handlePhotoUpload = (permitId: string, files: FileList) => {
+  const handlePhotoUpload = (files: FileList) => {
     const newPhotos: PhotoEntry[] = [];
-    
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const photoId = Math.max(...(photos[permitId] || []).map(p => p.id), 0) + i + 1;
-      
-      // Créer URL pour prévisualisation
+      const photoId = Math.max(...photos.map(p => p.id), 0) + i + 1;
       const url = URL.createObjectURL(file);
       
       newPhotos.push({
@@ -1594,178 +1316,401 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
         compliance: true
       });
     }
-    
-    setPhotos(prev => ({
-      ...prev,
-      [permitId]: [...(prev[permitId] || []), ...newPhotos]
-    }));
+    setPhotos(prev => [...prev, ...newPhotos]);
   };
 
-  const removePhoto = (permitId: string, photoId: number) => {
+  const removePhoto = (photoId: number) => {
     setPhotos(prev => {
-      const updatedPhotos = (prev[permitId] || []).filter(p => p.id !== photoId);
-      
-      // Ajuster l'index si nécessaire
-      const currentIndex = currentPhotoIndex[permitId] || 0;
-      if (currentIndex >= updatedPhotos.length && updatedPhotos.length > 0) {
-        setCurrentPhotoIndex(prevIndex => ({
-          ...prevIndex,
-          [permitId]: updatedPhotos.length - 1
-        }));
+      const updatedPhotos = prev.filter(p => p.id !== photoId);
+      if (currentPhotoIndex >= updatedPhotos.length && updatedPhotos.length > 0) {
+        setCurrentPhotoIndex(updatedPhotos.length - 1);
       }
-      
-      return {
-        ...prev,
-        [permitId]: updatedPhotos
-      };
+      return updatedPhotos;
     });
   };
 
-  const nextPhoto = (permitId: string) => {
-    const permitPhotos = photos[permitId] || [];
-    if (permitPhotos.length > 0) {
-      setCurrentPhotoIndex(prev => ({
-        ...prev,
-        [permitId]: ((prev[permitId] || 0) + 1) % permitPhotos.length
-      }));
+  const nextPhoto = () => {
+    if (photos.length > 0) {
+      setCurrentPhotoIndex(prev => (prev + 1) % photos.length);
     }
   };
 
-  const prevPhoto = (permitId: string) => {
-    const permitPhotos = photos[permitId] || [];
-    if (permitPhotos.length > 0) {
-      setCurrentPhotoIndex(prev => ({
-        ...prev,
-        [permitId]: ((prev[permitId] || 0) - 1 + permitPhotos.length) % permitPhotos.length
-      }));
+  const prevPhoto = () => {
+    if (photos.length > 0) {
+      setCurrentPhotoIndex(prev => (prev - 1 + photos.length) % photos.length);
     }
   };
 
-  const togglePhotoViewMode = (permitId: string) => {
-    setPhotoViewMode(prev => ({
-      ...prev,
-      [permitId]: prev[permitId] === 'carousel' ? 'grid' : 'carousel'
-    }));
+  const togglePhotoViewMode = () => {
+    setPhotoViewMode(prev => prev === 'carousel' ? 'grid' : 'carousel');
   };
 
-  // =================== CALCULS AUTOMATIQUES ===================
-  const calculateExcavationRequirements = (permitId: string, depth: number, distance: number) => {
-    let permitRequired = false;
-    let insuranceAmount = '1M$';
-    let surfaceDeposit = '5000$';
-    let undergroundDeposit = '10000$';
-    
-    // Logique calculs municipaux
-    if (depth > 1.2 || distance < 3) {
-      permitRequired = true;
-      
-      if (depth > 3) {
-        insuranceAmount = '2M$';
-        surfaceDeposit = '15000$';
-        undergroundDeposit = '25000$';
-      } else if (depth > 2) {
-        insuranceAmount = '1.5M$';
-        surfaceDeposit = '10000$';
-        undergroundDeposit = '20000$';
-      }
+  // =================== FONCTIONS UTILITAIRES ===================
+  const getPriorityColor = (priority: string): string => {
+    switch (priority) {
+      case 'critical': return '#dc2626';
+      case 'high': return '#ea580c';
+      case 'medium': return '#d97706';
+      case 'low': return '#65a30d';
+      default: return '#6b7280';
     }
-    
-    // Mettre à jour les champs calculés
-    handleFieldChange(permitId, 'permit_required_auto', permitRequired);
-    handleFieldChange(permitId, 'insurance_amount_calc', insuranceAmount);
-    handleFieldChange(permitId, 'surface_guarantee_deposit', surfaceDeposit);
-    handleFieldChange(permitId, 'underground_guarantee_deposit', undergroundDeposit);
   };
 
-  // =================== RENDU DU COMPOSANT PRINCIPAL ===================
+  const getStatusColor = (status: string): string => {
+    switch (status) {
+      case 'pending': return '#d97706';
+      case 'approved': return '#16a34a';
+      case 'submitted': return '#2563eb';
+      case 'rejected': return '#dc2626';
+      default: return '#6b7280';
+    }
+  };
+
+  const getCategoryIcon = (category: string): string => {
+    switch (category) {
+      case 'Sécurité':
+      case 'Safety':
+        return '🛡️';
+      case 'Construction':
+        return '🏗️';
+      default:
+        return '📋';
+    }
+  };
+
+  // =================== VALIDATION TEMPS RÉEL ===================
+  const validateGasField = (fieldId: string, value: any, field: FormField) => {
+    if (field.type === 'gas_meter' && field.validation) {
+      const numValue = parseFloat(value) || 0;
+      const min = field.validation.min || 0;
+      const max = field.validation.max || 100;
+      return numValue >= min && numValue <= max;
+    }
+    return true;
+  };
+
+  // =================== RENDU PRINCIPAL ===================
+  if (selectedPermit) {
+    // Vue formulaire détaillé mobile
+    return (
+      <div className="min-h-screen bg-slate-900 text-white">
+        {/* Header mobile */}
+        <div className="sticky top-0 z-10 bg-slate-800 border-b border-slate-700 p-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setSelectedPermit(null)}
+              className="flex items-center space-x-2 text-blue-400 hover:text-blue-300"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              <span>Précédent</span>
+            </button>
+            
+            <div className="flex items-center space-x-2">
+              <button className="px-3 py-1 bg-gray-600 text-white rounded text-sm">
+                Sauvegarde auto
+              </button>
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-green-400 text-sm">Sauvegardé</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Contenu du formulaire */}
+        <div className="p-4 pb-20">
+          {/* Titre du permis */}
+          <div className="mb-6">
+            <h1 className="text-xl font-bold text-white mb-2">{selectedPermit.name}</h1>
+            <div className="flex items-center space-x-2 mb-4">
+              <span className="px-2 py-1 bg-red-600 text-white text-xs rounded font-semibold">
+                Critique
+              </span>
+              <span className="text-gray-400 text-sm">Mis à jour: 2025-01-20</span>
+            </div>
+            
+            {/* Boutons d'action mobile */}
+            <div className="grid grid-cols-3 gap-2">
+              <button className="flex items-center justify-center space-x-1 px-3 py-2 bg-green-600 text-white rounded text-sm">
+                <CheckCircle className="w-4 h-4" />
+                <span>Valider conformité</span>
+              </button>
+              <button className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-600 text-white rounded text-sm">
+                <Save className="w-4 h-4" />
+                <span>Sauvegarder</span>
+              </button>
+              <button className="flex items-center justify-center space-x-1 px-3 py-2 bg-blue-600 text-white rounded text-sm">
+                <Mail className="w-4 h-4" />
+                <span>Soumettre</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Sections du formulaire */}
+          <div className="space-y-8">
+            {selectedPermit.formFields?.map((field) => {
+              // Traitement spécial pour workers_tracking
+              if (field.type === 'workers_tracking') {
+                return (
+                  <div key={field.id} className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-blue-400 text-lg font-semibold">
+                        👥 Travailleurs Autorisés ({workers.length})
+                      </h4>
+                      <button
+                        onClick={addWorker}
+                        className="flex items-center space-x-1 px-3 py-2 bg-blue-600 text-white rounded text-sm"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        <span>Ajouter Travailleur</span>
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {workers.map((worker, index) => (
+                        <div key={worker.id} className="bg-slate-800 p-4 rounded-lg">
+                          <div className="flex items-center justify-between mb-3">
+                            <h5 className="text-white font-medium">Travailleur #{index + 1}</h5>
+                            {workers.length > 1 && (
+                              <button
+                                onClick={() => removeWorker(worker.id)}
+                                className="text-red-400 hover:text-red-300"
+                              >
+                                <UserMinus className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-gray-300 text-sm mb-1">Nom complet</label>
+                              <input
+                                type="text"
+                                value={worker.name}
+                                onChange={(e) => updateWorker(worker.id, 'name', e.target.value)}
+                                placeholder="Nom du travailleur"
+                                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                              />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-gray-300 text-sm mb-1">Âge</label>
+                                <input
+                                  type="number"
+                                  value={worker.age || ''}
+                                  onChange={(e) => updateWorker(worker.id, 'age', parseInt(e.target.value) || 0)}
+                                  className={`w-full px-3 py-2 border rounded text-white text-sm ${
+                                    worker.age > 0 && worker.age < 18 
+                                      ? 'bg-red-800 border-red-600' 
+                                      : 'bg-slate-700 border-slate-600'
+                                  }`}
+                                />
+                              </div>
+                              
+                              <div>
+                                <label className="block text-gray-300 text-sm mb-1">Certification</label>
+                                <select
+                                  value={worker.certification}
+                                  onChange={(e) => updateWorker(worker.id, 'certification', e.target.value)}
+                                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                                >
+                                  <option value="">Sélectionner</option>
+                                  <option value="basic">Formation de base</option>
+                                  <option value="advanced">Formation avancée</option>
+                                  <option value="supervisor">Superviseur</option>
+                                  <option value="rescuer">Sauveteur</option>
+                                </select>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id={`worker-${worker.id}-18plus`}
+                                checked={worker.over18}
+                                onChange={(e) => updateWorker(worker.id, 'over18', e.target.checked)}
+                                className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded"
+                              />
+                              <label htmlFor={`worker-${worker.id}-18plus`} className="text-sm text-gray-300">
+                                <span className="text-red-500">*</span> Je certifie que ce travailleur a 18 ans ou plus (OBLIGATOIRE)
+                              </label>
+                            </div>
+                            
+                            {worker.age > 0 && worker.age < 18 && (
+                              <div className="p-2 bg-red-900 border border-red-600 rounded text-red-200 text-sm">
+                                ⚠️ VIOLATION LÉGALE: Travailleur mineur détecté
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+              
+              // Traitement spécial pour photo_gallery
+              if (field.type === 'photo_gallery') {
+                return (
+                  <div key={field.id} className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-blue-400 text-lg font-semibold">
+                        📸 Photos du Site ({photos.length})
+                      </h4>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={togglePhotoViewMode}
+                          className="p-2 bg-gray-600 text-white rounded"
+                        >
+                          {photoViewMode === 'carousel' ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
+                        </button>
+                        <label className="flex items-center space-x-1 px-3 py-2 bg-blue-600 text-white rounded text-sm cursor-pointer">
+                          <Upload className="w-4 h-4" />
+                          <span>Ajouter</span>
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={(e) => e.target.files && handlePhotoUpload(e.target.files)}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                    
+                    {photos.length === 0 ? (
+                      <div className="bg-slate-800 p-8 rounded-lg text-center">
+                        <Camera className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                        <p className="text-gray-400">Aucune photo ajoutée</p>
+                        <p className="text-gray-500 text-sm">Cliquez sur "Ajouter" pour commencer</p>
+                      </div>
+                    ) : (
+                      <PhotoGallery
+                        photos={photos}
+                        currentIndex={currentPhotoIndex}
+                        viewMode={photoViewMode}
+                        onNext={nextPhoto}
+                        onPrev={prevPhoto}
+                        onRemove={removePhoto}
+                        t={t}
+                      />
+                    )}
+                  </div>
+                );
+              }
+              
+              // Section headers
+              const currentSection = field.section;
+              const isNewSection = selectedPermit.formFields?.findIndex(f => f.section === currentSection) === 
+                                  selectedPermit.formFields?.findIndex(f => f.id === field.id);
+              
+              return (
+                <div key={field.id}>
+                  {isNewSection && currentSection && (
+                    <h3 className="text-blue-400 text-lg font-semibold mb-4 pb-2 border-b border-slate-700">
+                      {t.sections[currentSection] || currentSection}
+                    </h3>
+                  )}
+                  
+                  <FormField
+                    field={field}
+                    value={formValues[field.id] || ''}
+                    onChange={(value) => handleFieldChange(field.id, value)}
+                    t={t}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Bottom navigation mobile */}
+        <div className="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 p-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setSelectedPermit(null)}
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Précédent</span>
+            </button>
+            
+            <button className="flex items-center space-x-2 px-6 py-2 bg-cyan-600 text-white rounded font-semibold">
+              <span>Suivant</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Vue principale avec cartes (Images 1-2)
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-slate-900">
+      <div className="container mx-auto px-4 py-6">
         
-        {/* En-tête avec titre et statistiques */}
-        <div className="mb-8">
+        {/* En-tête avec statistiques */}
+        <div className="mb-6">
           <div className="text-center mb-6">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-              {t.title}
+            <h1 className="text-2xl md:text-4xl font-bold text-white mb-2">
+              Permis & Autorisations Conformes 2024-2025
             </h1>
-            <p className="text-gray-600 text-lg max-w-3xl mx-auto">
-              {t.subtitle}
+            <p className="text-gray-400 text-sm md:text-base">
+              Formulaires authentiques conformes aux dernières normes CNESST, NFPA et municipales
             </p>
           </div>
 
-          {/* Statistiques temps réel */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{stats.available}</div>
-                <div className="text-sm text-gray-600">{t.stats.available}</div>
-              </div>
+          {/* Statistiques */}
+          <div className="grid grid-cols-4 gap-3 mb-6">
+            <div className="bg-slate-800 rounded-xl p-3 md:p-4 text-center border border-slate-700">
+              <div className="text-xl md:text-2xl font-bold text-white">{stats.available}</div>
+              <div className="text-xs md:text-sm text-gray-400">Disponibles</div>
             </div>
-            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{stats.selected}</div>
-                <div className="text-sm text-gray-600">{t.stats.selected}</div>
-              </div>
+            <div className="bg-slate-800 rounded-xl p-3 md:p-4 text-center border border-slate-700">
+              <div className="text-xl md:text-2xl font-bold text-green-400">{stats.selected}</div>
+              <div className="text-xs md:text-sm text-gray-400">Sélectionnés</div>
             </div>
-            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{stats.critical}</div>
-                <div className="text-sm text-gray-600">{t.stats.critical}</div>
-              </div>
+            <div className="bg-slate-800 rounded-xl p-3 md:p-4 text-center border border-slate-700">
+              <div className="text-xl md:text-2xl font-bold text-red-400">{stats.critical}</div>
+              <div className="text-xs md:text-sm text-gray-400">Critiques</div>
             </div>
-            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-                <div className="text-sm text-gray-600">{t.stats.pending}</div>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{stats.compliant}</div>
-                <div className="text-sm text-gray-600">{t.stats.compliant}</div>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{stats.nonCompliant}</div>
-                <div className="text-sm text-gray-600">{t.stats.nonCompliant}</div>
-              </div>
+            <div className="bg-slate-800 rounded-xl p-3 md:p-4 text-center border border-green-500">
+              <div className="text-xl md:text-2xl font-bold text-green-400">3/3</div>
+              <div className="text-xs md:text-sm text-gray-400">Conformes</div>
             </div>
           </div>
 
-          {/* Barre de recherche et filtres */}
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+          {/* Barre de recherche */}
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"
-                  placeholder={t.searchPlaceholder}
+                  placeholder="Rechercher un permis..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">{t.allCategories}</option>
+                <option value="">Toutes catégories</option>
                 {categories.map((category: string) => (
-                  <option key={category} value={category}>
-                    {t.categories[category as keyof typeof t.categories] || category}
-                  </option>
+                  <option key={category} value={category}>{category}</option>
                 ))}
               </select>
               
               <select
                 value={selectedProvince}
                 onChange={(e) => setSelectedProvince(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">{t.allProvinces}</option>
+                <option value="">Toutes provinces</option>
                 {provinces.map((province: string) => (
                   <option key={province} value={province}>{province}</option>
                 ))}
@@ -1775,759 +1720,122 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
         </div>
 
         {/* Liste des permis */}
-        <div className="space-y-6">
-          {filteredPermits.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-600 mb-2">{t.messages.noResults}</h3>
-              <p className="text-gray-500">{t.messages.modifySearch}</p>
-            </div>
-          ) : (
-            filteredPermits.map((permit: Permit) => (
-              <PermitCard
-                key={permit.id}
-                permit={permit}
-                isSelected={permit.selected}
-                isExpanded={expandedPermit === permit.id}
-                complianceChecks={complianceChecks[permit.id] || []}
-                workers={workers[permit.id] || []}
-                photos={photos[permit.id] || []}
-                currentPhotoIndex={currentPhotoIndex[permit.id] || 0}
-                viewMode={photoViewMode[permit.id] || 'carousel'}
-                onToggle={() => togglePermit(permit.id)}
-                onExpand={() => expandPermit(permit.id)}
-                onFieldChange={(fieldId, value) => handleFieldChange(permit.id, fieldId, value)}
-                onAddWorker={() => addWorker(permit.id)}
-                onRemoveWorker={(workerId) => removeWorker(permit.id, workerId)}
-                onUpdateWorker={(workerId, field, value) => updateWorker(permit.id, workerId, field, value)}
-                onPhotoUpload={(files) => handlePhotoUpload(permit.id, files)}
-                onRemovePhoto={(photoId) => removePhoto(permit.id, photoId)}
-                onNextPhoto={() => nextPhoto(permit.id)}
-                onPrevPhoto={() => prevPhoto(permit.id)}
-                onToggleViewMode={() => togglePhotoViewMode(permit.id)}
-                getPriorityColor={getPriorityColor}
-                getStatusColor={getStatusColor}
-                getComplianceColor={getComplianceColor}
-                getCategoryIcon={getCategoryIcon}
-                t={t}
-              />
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-// =================== SECTION 4: COMPOSANTS UI VERSION PREMIUM SOMBRE ===================
-// À coller après la Section 3
-
-// =================== COMPOSANT CARTE PERMIS VERSION SOMBRE =================== 
-interface PermitCardProps {
-  permit: Permit;
-  isSelected: boolean;
-  isExpanded: boolean;
-  complianceChecks: ComplianceCheck[];
-  workers: WorkerEntry[];
-  photos: PhotoEntry[];
-  currentPhotoIndex: number;
-  viewMode: 'carousel' | 'grid';
-  onToggle: () => void;
-  onExpand: () => void;
-  onFieldChange: (fieldId: string, value: any) => void;
-  onAddWorker: () => void;
-  onRemoveWorker: (workerId: number) => void;
-  onUpdateWorker: (workerId: number, field: keyof WorkerEntry, value: any) => void;
-  onPhotoUpload: (files: FileList) => void;
-  onRemovePhoto: (photoId: number) => void;
-  onNextPhoto: () => void;
-  onPrevPhoto: () => void;
-  onToggleViewMode: () => void;
-  getPriorityColor: (priority: string) => string;
-  getStatusColor: (status: string) => string;
-  getComplianceColor: (level: string) => string;
-  getCategoryIcon: (category: string) => string;
-  t: any;
-}
-
-const PermitCard: React.FC<PermitCardProps> = ({
-  permit,
-  isSelected,
-  isExpanded,
-  complianceChecks,
-  workers,
-  photos,
-  currentPhotoIndex,
-  viewMode,
-  onToggle,
-  onExpand,
-  onFieldChange,
-  onAddWorker,
-  onRemoveWorker,
-  onUpdateWorker,
-  onPhotoUpload,
-  onRemovePhoto,
-  onNextPhoto,
-  onPrevPhoto,
-  onToggleViewMode,
-  getPriorityColor,
-  getStatusColor,
-  getComplianceColor,
-  getCategoryIcon,
-  t
-}) => {
-  const nonCompliantChecks = complianceChecks.filter(check => check.status === 'non-compliant');
-  const hasViolations = nonCompliantChecks.length > 0;
-
-  return (
-    <div className={`bg-slate-800 rounded-2xl border transition-all duration-300 hover:scale-[1.01] ${
-      isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-slate-700'
-    }`}>
-      
-      {/* En-tête version sombre */}
-      <div className="p-6 border-b border-slate-700">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-2xl">
-              {getCategoryIcon(permit.category)}
-            </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-bold text-white mb-1">{permit.name}</h3>
-              <p className="text-gray-400 text-sm mb-3">{permit.description}</p>
-              <p className="text-blue-400 text-sm">{permit.authority}</p>
-              
-              {/* Badges avec couleurs exactes de l'image */}
-              <div className="flex items-center space-x-3 mt-3">
-                <span 
-                  className="px-3 py-1 rounded text-xs font-semibold"
-                  style={{ 
-                    backgroundColor: permit.priority === 'critical' ? '#dc2626' : '#f59e0b',
-                    color: 'white'
-                  }}
-                >
-                  {permit.priority === 'critical' ? 'Critique' : permit.priority}
-                </span>
-                <span className="px-3 py-1 rounded text-xs font-semibold bg-yellow-600 text-white">
-                  En Attente
-                </span>
-                <span className="text-gray-400 text-xs">
-                  {permit.processingTime}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={onToggle}
-              className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 ${
-                isSelected 
-                  ? 'bg-green-600 text-white hover:bg-green-700' 
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredPermits.map((permit: Permit) => (
+            <div
+              key={permit.id}
+              className={`bg-slate-800 rounded-2xl border transition-all duration-300 hover:scale-[1.02] ${
+                permit.selected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-slate-700'
               }`}
             >
-              {isSelected ? '✓' : '+'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Contenu expansible */}
-      {isSelected && (
-        <div className="p-6 bg-slate-800">
-          
-          {/* Boutons d'action */}
-          <div className="flex items-center space-x-3 mb-6">
-            <button
-              onClick={onExpand}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Edit className="w-4 h-4" />
-              <span>Remplir</span>
-            </button>
-            
-            <button className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
-              <Shield className="w-4 h-4" />
-              <span>Valider conformité</span>
-            </button>
-            
-            <button className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
-              <Download className="w-4 h-4" />
-              <span>PDF</span>
-            </button>
-          </div>
-
-          {/* Formulaire étendu - Version exacte de l'image */}
-          {isExpanded && (
-            <div className="space-y-6">
-              
-              {/* Formulaire en une seule colonne comme dans l'image */}
-              <div className="space-y-6">
-                {permit.formFields?.map((field) => {
-                  // Traitement spécial pour workers_tracking
-                  if (field.type === 'workers_tracking') {
-                    return (
-                      <div key={field.id} className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-white font-medium flex items-center">
-                            <Users className="w-5 h-5 mr-2" />
-                            👥 Travailleurs Autorisés ({workers.length})
-                          </h4>
-                          <button
-                            onClick={onAddWorker}
-                            className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
-                          >
-                            <UserPlus className="w-4 h-4" />
-                            <span>Ajouter Travailleur</span>
-                          </button>
-                        </div>
-                        
-                        <div className="space-y-4">
-                          {workers.map((worker, index) => (
-                            <div key={worker.id} className="bg-slate-700 p-4 rounded-lg">
-                              <div className="flex items-center justify-between mb-3">
-                                <h5 className="text-white font-medium">Travailleur #{index + 1}</h5>
-                                {workers.length > 1 && (
-                                  <button
-                                    onClick={() => onRemoveWorker(worker.id)}
-                                    className="text-red-400 hover:text-red-300"
-                                  >
-                                    <UserMinus className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div>
-                                  <label className="block text-gray-300 text-sm mb-1">Nom complet</label>
-                                  <input
-                                    type="text"
-                                    value={worker.name}
-                                    onChange={(e) => onUpdateWorker(worker.id, 'name', e.target.value)}
-                                    placeholder="Nom du travailleur"
-                                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white text-sm"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-gray-300 text-sm mb-1">Âge</label>
-                                  <input
-                                    type="number"
-                                    value={worker.age || ''}
-                                    onChange={(e) => onUpdateWorker(worker.id, 'age', parseInt(e.target.value) || 0)}
-                                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white text-sm"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-gray-300 text-sm mb-1">Certification</label>
-                                  <select
-                                    value={worker.certification}
-                                    onChange={(e) => onUpdateWorker(worker.id, 'certification', e.target.value)}
-                                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white text-sm"
-                                  >
-                                    <option value="">Sélectionner certification</option>
-                                    <option value="basic">Formation de base</option>
-                                    <option value="advanced">Formation avancée</option>
-                                    <option value="supervisor">Superviseur</option>
-                                    <option value="rescuer">Sauveteur</option>
-                                  </select>
-                                </div>
-                              </div>
-                              
-                              <div className="mt-3">
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    id={`worker-${worker.id}-18plus`}
-                                    checked={worker.over18}
-                                    onChange={(e) => onUpdateWorker(worker.id, 'over18', e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 bg-slate-600 border-slate-500 rounded"
-                                  />
-                                  <label htmlFor={`worker-${worker.id}-18plus`} className="text-sm text-gray-300">
-                                    <span className="text-red-500">*</span> Je certifie que ce travailleur a 18 ans ou plus (OBLIGATOIRE - Art. 298 RSST)
-                                  </label>
-                                </div>
-                                
-                                {worker.age > 0 && worker.age < 18 && (
-                                  <div className="mt-2 p-2 bg-red-900 border border-red-600 rounded text-red-200 text-sm">
-                                    ⚠️ VIOLATION LÉGALE: Travailleur mineur détecté. Accès en espace clos interdit par l'Article 298 RSST.
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  }
+              {/* En-tête de la carte */}
+              <div className="p-6 border-b border-slate-700">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-2xl">
+                      {getCategoryIcon(permit.category)}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg md:text-xl font-bold text-white mb-1">{permit.name}</h3>
+                      <p className="text-gray-400 text-xs md:text-sm uppercase tracking-wide font-medium">
+                        {permit.category}
+                      </p>
+                    </div>
+                  </div>
                   
-                  // Traitement spécial pour photo_gallery
-                  if (field.type === 'photo_gallery') {
-                    return (
-                      <div key={field.id} className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-white font-medium flex items-center">
-                            <Camera className="w-5 h-5 mr-2" />
-                            📸 Photos du Site ({photos.length})
-                          </h4>
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={onToggleViewMode}
-                              className="p-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
-                            >
-                              {viewMode === 'carousel' ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
-                            </button>
-                            <label className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors cursor-pointer text-sm">
-                              <Upload className="w-4 h-4" />
-                              <span>Ajouter des photos</span>
-                              <input
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                onChange={(e) => e.target.files && onPhotoUpload(e.target.files)}
-                                className="hidden"
-                              />
-                            </label>
-                          </div>
-                        </div>
-                        
-                        {photos.length === 0 ? (
-                          <div className="bg-slate-700 p-8 rounded-lg text-center">
-                            <Camera className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                            <p className="text-gray-400">Aucune photo ajoutée</p>
-                            <p className="text-gray-500 text-sm">Cliquez sur "Ajouter Photos" pour commencer</p>
-                          </div>
-                        ) : (
-                          <PhotoGallery
-                            photos={photos}
-                            currentIndex={currentPhotoIndex}
-                            viewMode={viewMode}
-                            onNext={onNextPhoto}
-                            onPrev={onPrevPhoto}
-                            onRemove={onRemovePhoto}
-                            t={t}
-                          />
-                        )}
-                      </div>
-                    );
-                  }
-                  
-                  // Champs normaux
-                  return (
-                    <FormField
-                      key={field.id}
-                      field={field}
-                      value={permit.formData?.[field.id] || ''}
-                      onChange={(value) => onFieldChange(field.id, value)}
-                      t={t}
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={permit.selected}
+                      onChange={() => {
+                        // Toggle selection logic here
+                      }}
+                      className="w-5 h-5 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
                     />
-                  );
-                })}
-              </div>
-
-              {/* Boutons de sauvegarde comme dans l'image */}
-              <div className="flex justify-start space-x-3 pt-6 border-t border-slate-700">
-                <button className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
-                  Sauvegarder
-                </button>
-                <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
-                  Sauvegardé
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// =================== COMPOSANT CHAMP FORMULAIRE VERSION SOMBRE ===================
-interface FormFieldProps {
-  field: FormField;
-  value: any;
-  onChange: (value: any) => void;
-  t: any;
-}
-
-const FormField: React.FC<FormFieldProps> = ({ field, value, onChange, t }) => {
-  const getFieldComponent = () => {
-    switch (field.type) {
-      case 'text':
-      case 'number':
-      case 'date':
-      case 'time':
-        return (
-          <input
-            type={field.type}
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={field.placeholder}
-            required={field.required}
-            min={field.validation?.min}
-            max={field.validation?.max}
-            className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-          />
-        );
-
-      case 'textarea':
-        return (
-          <textarea
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={field.placeholder}
-            required={field.required}
-            rows={4}
-            className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
-          />
-        );
-
-      case 'select':
-        return (
-          <select
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            required={field.required}
-            className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-          >
-            <option value="">{t.messages.select}</option>
-            {field.options?.map((option: string) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        );
-
-      case 'checkbox':
-        return (
-          <div className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              checked={value || false}
-              onChange={(e) => onChange(e.target.checked)}
-              required={field.required}
-              className="w-5 h-5 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
-            />
-            <span className="text-white">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </span>
-          </div>
-        );
-
-      case 'radio':
-        return (
-          <div className="space-y-2">
-            {field.options?.map((option: string) => (
-              <div key={option} className="flex items-center space-x-3">
-                <input
-                  type="radio"
-                  name={field.id}
-                  value={option}
-                  checked={value === option}
-                  onChange={(e) => onChange(e.target.value)}
-                  required={field.required}
-                  className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 focus:ring-blue-500"
-                />
-                <span className="text-white">{option}</span>
-              </div>
-            ))}
-          </div>
-        );
-
-      case 'gas_meter':
-        const numValue = parseFloat(value) || 0;
-        const isInRange = numValue >= (field.validation?.min || 0) && numValue <= (field.validation?.max || 100);
-        
-        return (
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              {field.validation?.legalRequirement && (
-                <span className="px-2 py-1 bg-green-600 text-white text-xs rounded">LÉGAL</span>
-              )}
-              {field.validation?.critical && (
-                <span className="px-2 py-1 bg-red-600 text-white text-xs rounded">CRITIQUE</span>
-              )}
-            </div>
-            
-            <div className="relative">
-              <input
-                type="number"
-                step="0.1"
-                value={value || ''}
-                onChange={(e) => onChange(e.target.value)}
-                required={field.required}
-                className={`w-full px-4 py-3 rounded-lg text-white font-medium transition-all duration-200 ${
-                  isInRange 
-                    ? 'bg-green-700 border border-green-600 focus:ring-2 focus:ring-green-500' 
-                    : 'bg-red-700 border border-red-600 focus:ring-2 focus:ring-red-500'
-                }`}
-              />
-              
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-gray-400 text-sm">
-                  CRITIQUE: {field.validation?.message}
-                </span>
-                <div className="flex items-center space-x-2">
-                  <span className="text-blue-400 text-sm">
-                    Réf: {field.complianceRef}
+                  </label>
+                </div>
+                
+                <p className="text-gray-400 text-sm mb-4 leading-relaxed">
+                  {permit.description}
+                </p>
+                
+                <p className="text-blue-400 text-sm mb-4">{permit.authority}</p>
+                
+                {/* Badges */}
+                <div className="flex items-center flex-wrap gap-2 mb-4">
+                  <span 
+                    className="px-3 py-1 rounded text-xs font-semibold text-white"
+                    style={{ backgroundColor: getPriorityColor(permit.priority) }}
+                  >
+                    {permit.priority === 'critical' ? 'Critique' : permit.priority}
                   </span>
-                  <button className={`px-3 py-1 rounded text-xs font-semibold ${
-                    isInRange ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-                  }`}>
-                    {isInRange ? '✓ Conforme' : '✗ Non conforme'}
-                  </button>
+                  <span 
+                    className="px-3 py-1 rounded text-xs font-semibold"
+                    style={{ 
+                      backgroundColor: getStatusColor(permit.status),
+                      color: 'white'
+                    }}
+                  >
+                    En Attente
+                  </span>
+                  <span className="text-gray-400 text-xs">
+                    2025-01-20
+                  </span>
+                </div>
+                
+                <div className="flex items-center text-gray-400 text-xs">
+                  <Clock className="w-4 h-4 mr-1" />
+                  <span>{permit.processingTime}</span>
                 </div>
               </div>
+              
+              {/* Actions */}
+              {permit.selected && (
+                <div className="p-6">
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => setSelectedPermit(permit)}
+                      className="flex items-center justify-center space-x-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span>Remplir</span>
+                    </button>
+                    
+                    <button className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm">
+                      <Shield className="w-4 h-4" />
+                      <span>Valider</span>
+                    </button>
+                    
+                    <button className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm">
+                      <Download className="w-4 h-4" />
+                      <span>PDF</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        );
-
-      case 'compliance_check':
-        return (
-          <div className={`p-4 rounded-lg border-2 ${
-            value ? 'bg-green-700 border-green-600' : 'bg-slate-700 border-slate-600'
-          }`}>
-            <div className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                checked={value || false}
-                onChange={(e) => onChange(e.target.checked)}
-                required={field.required}
-                className="w-5 h-5 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
-              />
-              <span className={`font-medium ${value ? 'text-white' : 'text-white'}`}>
-                {field.label} {field.required && <span className="text-red-500">*</span>}
-              </span>
-            </div>
-            {field.complianceRef && (
-              <div className="text-xs text-blue-400 mt-2">📋 {field.complianceRef}</div>
-            )}
-          </div>
-        );
-
-      default:
-        return (
-          <input
-            type="text"
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-          />
-        );
-    }
-  };
-
-  if (field.type === 'checkbox' || field.type === 'radio' || field.type === 'compliance_check') {
-    return (
-      <div className="space-y-2">
-        {getFieldComponent()}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <label className="block text-white font-medium">
-        {field.label} {field.required && <span className="text-red-500">*</span>}
-      </label>
-      {getFieldComponent()}
-    </div>
-  );
-};
-
-// =================== COMPOSANT CARTE TRAVAILLEUR VERSION SOMBRE ===================
-interface WorkerCardProps {
-  worker: WorkerEntry;
-  index: number;
-  canRemove: boolean;
-  onUpdate: (field: keyof WorkerEntry, value: any) => void;
-  onRemove: () => void;
-  t: any;
-}
-
-const WorkerCard: React.FC<WorkerCardProps> = ({ worker, index, canRemove, onUpdate, onRemove, t }) => {
-  const isUnderage = worker.age > 0 && worker.age < 18;
-
-  return (
-    <div className={`p-4 rounded-lg border ${
-      isUnderage ? 'bg-red-900 border-red-600' : 'bg-slate-600 border-slate-500'
-    }`}>
-      <div className="flex items-center justify-between mb-3">
-        <h5 className="font-medium text-white">{t.messages.workerNumber}{index + 1}</h5>
-        {canRemove && (
-          <button
-            onClick={onRemove}
-            className="text-red-400 hover:text-red-300 transition-colors"
-          >
-            <UserMinus className="w-4 h-4" />
+          ))}
+        </div>
+        
+        {/* Navigation bottom */}
+        <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-700">
+          <button className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
+            <ChevronLeft className="w-4 h-4" />
+            <span>Précédent</span>
           </button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-gray-300 mb-1">{t.messages.fullName}</label>
-          <input
-            type="text"
-            value={worker.name}
-            onChange={(e) => onUpdate('name', e.target.value)}
-            placeholder={t.messages.workerName}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-300 mb-1">{t.messages.age}</label>
-          <input
-            type="number"
-            value={worker.age || ''}
-            onChange={(e) => onUpdate('age', parseInt(e.target.value) || 0)}
-            placeholder={t.messages.workerAge}
-            min="16"
-            max="70"
-            className={`w-full px-3 py-2 border rounded text-white text-sm focus:ring-2 ${
-              isUnderage ? 'bg-red-800 border-red-600 focus:ring-red-500' : 'bg-slate-700 border-slate-600 focus:ring-blue-500'
-            }`}
-          />
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-300 mb-1">{t.messages.certification}</label>
-          <select
-            value={worker.certification}
-            onChange={(e) => onUpdate('certification', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">{t.messages.selectCertification}</option>
-            <option value="basic">{t.messages.basicTraining}</option>
-            <option value="advanced">{t.messages.advancedTraining}</option>
-            <option value="supervisor">{t.messages.supervisor}</option>
-            <option value="rescuer">{t.messages.rescuer}</option>
-          </select>
-        </div>
-
-        <div className="md:col-span-2">
+          
           <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id={`worker-${worker.id}-18plus`}
-              checked={worker.over18}
-              onChange={(e) => onUpdate('over18', e.target.checked)}
-              className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
-            />
-            <label htmlFor={`worker-${worker.id}-18plus`} className="text-xs text-gray-300">
-              <span className="text-red-500">*</span> {t.messages.certifyOver18}
-            </label>
+            <span className="text-gray-400 text-sm">Sauvegarde auto</span>
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-green-400 text-sm">Sauvegardé</span>
           </div>
           
-          {isUnderage && (
-            <div className="mt-2 p-2 bg-red-800 border border-red-600 rounded">
-              <p className="text-xs text-red-200 font-medium">
-                ⚠️ {t.messages.legalViolationMinor}
-              </p>
-            </div>
-          )}
+          <button className="flex items-center space-x-2 px-6 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700 transition-colors font-semibold">
+            <span>Suivant</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>
   );
 };
-
-// =================== COMPOSANT GALERIE PHOTOS VERSION SOMBRE ===================
-interface PhotoGalleryProps {
-  photos: PhotoEntry[];
-  currentIndex: number;
-  viewMode: 'carousel' | 'grid';
-  onNext: () => void;
-  onPrev: () => void;
-  onRemove: (photoId: number) => void;
-  t: any;
-}
-
-const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, currentIndex, viewMode, onNext, onPrev, onRemove, t }) => {
-  if (photos.length === 0) {
-    return (
-      <div className="text-center py-8 text-gray-400">
-        <Camera className="w-12 h-12 mx-auto mb-3 text-gray-500" />
-        <p className="text-sm">{t.messages.noPhotosAdded}</p>
-        <p className="text-xs text-gray-500">{t.messages.clickToAddPhotos}</p>
-      </div>
-    );
-  }
-
-  if (viewMode === 'carousel') {
-    const currentPhoto = photos[currentIndex];
-    
-    return (
-      <div className="space-y-4">
-        <div className="relative aspect-video bg-slate-600 rounded-lg overflow-hidden">
-          <img
-            src={currentPhoto?.url}
-            alt={`Photo ${currentIndex + 1}`}
-            className="w-full h-full object-cover"
-          />
-          <button
-            onClick={() => onRemove(currentPhoto?.id)}
-            className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <button
-            onClick={onPrev}
-            disabled={photos.length <= 1}
-            className="p-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors disabled:opacity-50"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          
-          <div className="flex space-x-2">
-            {photos.map((_, index) => (
-              <div
-                key={index}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  index === currentIndex ? 'bg-blue-500' : 'bg-gray-500'
-                }`}
-              />
-            ))}
-          </div>
-          
-          <button
-            onClick={onNext}
-            disabled={photos.length <= 1}
-            className="p-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors disabled:opacity-50"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-        
-        <div className="text-center">
-          <p className="text-sm text-gray-300">
-            {currentPhoto?.name} • {new Date(currentPhoto?.timestamp).toLocaleString()}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-      {photos.map((photo) => (
-        <div key={photo.id} className="relative group">
-          <img
-            src={photo.url}
-            alt={photo.name}
-            className="w-full h-20 object-cover rounded-lg"
-          />
-          <button
-            onClick={() => onRemove(photo.id)}
-            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-export default Step4Permits;
