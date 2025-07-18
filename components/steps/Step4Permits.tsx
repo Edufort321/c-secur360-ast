@@ -1788,7 +1788,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
   // Initialiser les états au premier rendu
   useEffect(() => {
     // Initialiser workers et photos pour les permis déjà sélectionnés
-    permits.forEach(permit => {
+    permits.forEach((permit: Permit) => {
       if (permit.selected) {
         if (!workers[permit.id]) {
           setWorkers(prev => ({
