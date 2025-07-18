@@ -1524,10 +1524,10 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     </div>
   );
 };
-// =================== SECTION 4: COMPOSANTS UI PREMIUM MOBILE ===================
+// =================== SECTION 4: COMPOSANTS UI ULTRA-PREMIUM ===================
 // À coller après la Section 3 dans votre fichier Step4Permits.tsx
 
-// Composant PermitCard premium avec vue mobile/desktop
+// Composant PermitCard ultra-premium avec glassmorphisme
 const PermitCard: React.FC<{
   permit: Permit;
   isSelected: boolean;
@@ -1593,18 +1593,18 @@ const PermitCard: React.FC<{
     switch (status) {
       case 'Critique': 
       case 'Critical': 
-        return 'bg-red-500/20 text-red-400 border-red-500/30 animate-pulse';
+        return 'bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-red-500/50 animate-pulse border-red-400/50';
       case 'En Attente': 
       case 'Pending': 
-        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+        return 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-yellow-500/50 border-yellow-400/50';
       case 'En Cours': 
       case 'In Progress': 
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+        return 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-blue-500/50 border-blue-400/50';
       case 'Validé': 
       case 'Approved': 
-        return 'bg-green-500/20 text-green-400 border-green-500/30';
+        return 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-green-500/50 border-green-400/50';
       default: 
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+        return 'bg-gradient-to-r from-gray-500 to-slate-500 text-white shadow-gray-500/50 border-gray-400/50';
     }
   };
 
@@ -1624,243 +1624,322 @@ const PermitCard: React.FC<{
   };
 
   if (!isExpanded) {
-    // Vue carte compacte - Mobile optimisée
+    // Vue carte compacte ULTRA-PREMIUM
     return (
-      <div className={`relative bg-slate-800/50 backdrop-blur-sm border rounded-xl lg:rounded-2xl p-4 lg:p-6 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10 ${
-        isSelected 
-          ? 'border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/20' 
-          : 'border-slate-700/50 hover:border-slate-600/50'
-      }`}>
-        {/* Header de la carte */}
-        <div className="flex items-start justify-between mb-3 lg:mb-4">
-          <div className="flex items-center gap-2 lg:gap-3 flex-1">
-            <div className="text-2xl lg:text-3xl flex-shrink-0">{getIconForType(permit.type)}</div>
-            <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-white text-base lg:text-lg truncate">{permit.type}</h3>
-              <p className="text-gray-400 text-xs lg:text-sm truncate">{permit.norm}</p>
+      <div className="group relative">
+        {/* Effet de brillance premium */}
+        <div className={`absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
+          isSelected ? 'opacity-60' : ''
+        }`}></div>
+        
+        <div className={`relative bg-gradient-to-br from-slate-800/80 via-slate-900/80 to-black/80 backdrop-blur-2xl border-2 rounded-3xl p-8 transition-all duration-500 transform group-hover:scale-[1.02] group-hover:shadow-2xl ${
+          isSelected 
+            ? 'border-cyan-400/60 bg-gradient-to-br from-cyan-900/40 via-blue-900/40 to-purple-900/40 shadow-2xl shadow-cyan-500/30' 
+            : 'border-slate-600/40 hover:border-slate-500/60'
+        }`}>
+          
+          {/* Header avec effet glassmorphisme */}
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center gap-4 flex-1">
+              <div className="relative">
+                <div className="text-5xl drop-shadow-lg transform group-hover:scale-110 transition-transform duration-300">
+                  {getIconForType(permit.type)}
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full blur-xl opacity-20"></div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-white text-2xl mb-2 bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
+                  {permit.type}
+                </h3>
+                <p className="text-cyan-300 text-base font-medium">{permit.norm}</p>
+              </div>
+            </div>
+            <div className={`px-6 py-3 rounded-2xl font-bold text-lg shadow-lg border-2 ${getStatusColor(permit.status)}`}>
+              {permit.status}
             </div>
           </div>
-          <span className={`px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm font-medium border flex-shrink-0 ${getStatusColor(permit.status)}`}>
-            {permit.status}
-          </span>
-        </div>
 
-        {/* Description - Collapsible sur mobile */}
-        <p className="text-gray-300 text-sm lg:text-base mb-3 lg:mb-4 leading-relaxed line-clamp-2 lg:line-clamp-none">
-          {permit.description}
-        </p>
-
-        {/* Champs obligatoires */}
-        <div className="flex items-center gap-2 mb-3 lg:mb-4">
-          <span className="text-blue-400 text-xs lg:text-sm font-medium">
-            {permit.requiredFields} champs obligatoires
-          </span>
-          <div className="flex-1 h-px bg-slate-700"></div>
-        </div>
-
-        {/* Actions - Layout mobile empilé */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 lg:gap-3">
-          <button
-            onClick={onFill}
-            className="flex items-center justify-center gap-2 px-3 lg:px-4 py-2 lg:py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg text-sm lg:text-base"
-          >
-            <FileText className="h-4 w-4" />
-            <span className="font-medium">Remplir</span>
-          </button>
-          
-          <button
-            onClick={onValidate}
-            className={`flex items-center justify-center gap-2 px-3 lg:px-4 py-2 lg:py-3 rounded-lg transition-all duration-200 hover:scale-105 shadow-lg text-sm lg:text-base ${
-              permit.status === 'Validé' || permit.status === 'Approved'
-                ? 'bg-green-500 hover:bg-green-600 text-white'
-                : 'bg-slate-700 hover:bg-slate-600 text-gray-300'
-            }`}
-          >
-            <CheckCircle className="h-4 w-4" />
-            <span className="font-medium">Valider</span>
-          </button>
-          
-          <button
-            onClick={onGeneratePDF}
-            className="flex items-center justify-center gap-2 px-3 lg:px-4 py-2 lg:py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg text-sm lg:text-base"
-            disabled={permit.status === 'En Attente' || permit.status === 'Pending'}
-          >
-            <Download className="h-4 w-4" />
-            <span className="font-medium">PDF</span>
-          </button>
-        </div>
-
-        {/* Indicateur de sélection */}
-        {isSelected && (
-          <div className="absolute -top-2 -right-2 bg-blue-500 text-white w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center">
-            <CheckCircle className="h-3 w-3 lg:h-4 lg:w-4" />
+          {/* Description avec effet dégradé */}
+          <div className="relative mb-6">
+            <p className="text-gray-300 text-lg leading-relaxed">
+              {permit.description}
+            </p>
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent"></div>
           </div>
-        )}
+
+          {/* Métriques premium avec brillance */}
+          <div className="flex items-center gap-6 mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full shadow-lg shadow-cyan-400/50"></div>
+              <span className="text-cyan-300 text-lg font-semibold">
+                {permit.requiredFields} champs obligatoires
+              </span>
+            </div>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-600 to-transparent"></div>
+          </div>
+
+          {/* Actions ultra-premium avec effets 3D */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <button
+              onClick={onFill}
+              className="group/btn relative overflow-hidden bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/40 active:scale-95"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex items-center justify-center gap-3">
+                <FileText className="h-6 w-6" />
+                <span>Remplir</span>
+              </div>
+            </button>
+            
+            <button
+              onClick={onValidate}
+              className={`group/btn relative overflow-hidden px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl active:scale-95 ${
+                permit.status === 'Validé' || permit.status === 'Approved'
+                  ? 'bg-gradient-to-r from-green-600 via-green-500 to-emerald-500 text-white shadow-green-500/40'
+                  : 'bg-gradient-to-r from-slate-700 via-slate-600 to-slate-500 text-gray-300 shadow-slate-500/40'
+              }`}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex items-center justify-center gap-3">
+                <CheckCircle className="h-6 w-6" />
+                <span>Valider</span>
+              </div>
+            </button>
+            
+            <button
+              onClick={onGeneratePDF}
+              className="group/btn relative overflow-hidden bg-gradient-to-r from-purple-600 via-purple-500 to-violet-500 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/40 active:scale-95"
+              disabled={permit.status === 'En Attente' || permit.status === 'Pending'}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex items-center justify-center gap-3">
+                <Download className="h-6 w-6" />
+                <span>PDF</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Indicateur de sélection ultra-premium */}
+          {isSelected && (
+            <div className="absolute -top-4 -right-4">
+              <div className="relative">
+                <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center shadow-2xl shadow-cyan-500/50 animate-pulse">
+                  <CheckCircle className="h-7 w-7 text-white" />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full blur-lg opacity-60"></div>
+              </div>
+            </div>
+          )}
+
+          {/* Effet de particules premium */}
+          <div className="absolute top-4 right-4 w-2 h-2 bg-cyan-400 rounded-full opacity-60 animate-ping"></div>
+          <div className="absolute bottom-4 left-4 w-1 h-1 bg-blue-400 rounded-full opacity-40 animate-ping" style={{animationDelay: '1s'}}></div>
+        </div>
       </div>
     );
   }
 
-  // Vue formulaire étendue - Mobile-first
+  // Vue formulaire étendue ULTRA-PREMIUM
   return (
-    <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl lg:rounded-2xl overflow-hidden">
-      {/* Header mobile avec navigation */}
-      <div className="bg-slate-900/80 px-4 py-3 border-b border-slate-700/50">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={onExpand}
-            className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors touch-target"
-          >
-            <ChevronLeft className="h-5 w-5" />
-            <span className="text-sm lg:text-base">Retour</span>
-          </button>
-          
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-xs lg:text-sm text-gray-300">Sauvegarde auto</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-4 lg:p-6">
-        {/* Titre du formulaire */}
-        <div className="flex items-center gap-3 mb-4 lg:mb-6">
-          <div className="text-2xl lg:text-3xl">{getIconForType(permit.type)}</div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-xl lg:text-2xl font-bold text-white truncate">{permit.type}</h2>
-            <p className="text-gray-400 text-sm lg:text-base truncate">{permit.norm}</p>
-          </div>
-          <span className={`px-3 py-1 rounded-full text-xs lg:text-sm font-medium border flex-shrink-0 ${getStatusColor(permit.status)}`}>
-            {permit.status}
-          </span>
-        </div>
-
-        {/* Boutons d'action principaux - Mobile stack */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4 mb-6 lg:mb-8">
-          <button
-            onClick={onValidate}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg touch-target"
-          >
-            <CheckCircle className="h-5 w-5" />
-            <span className="text-sm lg:text-base font-medium">Valider conformité</span>
-          </button>
-          
-          <button
-            onClick={onSaveProgress}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg touch-target"
-          >
-            <Clock className="h-5 w-5" />
-            <span className="text-sm lg:text-base font-medium">Sauvegarder</span>
-          </button>
-          
-          <button
-            onClick={onGeneratePDF}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg touch-target"
-          >
-            <Download className="h-5 w-5" />
-            <span className="text-sm lg:text-base font-medium">Soumettre</span>
-          </button>
-        </div>
-
-        {/* Navigation des sections - Horizontal scroll sur mobile */}
-        <div className="mb-6 lg:mb-8">
-          <div className="flex gap-2 p-2 bg-slate-900/50 rounded-lg overflow-x-auto scrollbar-thin">
-            {Object.keys(permit.sections || {}).map((sectionKey) => (
-              <button
-                key={sectionKey}
-                onClick={() => onSectionChange(sectionKey)}
-                className={`px-3 py-2 rounded-lg text-xs lg:text-sm transition-all duration-200 whitespace-nowrap flex-shrink-0 touch-target ${
-                  currentSection === sectionKey
-                    ? 'bg-blue-500 text-white shadow-lg'
-                    : 'text-gray-400 hover:text-white hover:bg-slate-700'
-                }`}
-              >
-                {sectionKey.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim()}
-              </button>
-            ))}
+    <div className="relative">
+      {/* Arrière-plan avec effet de profondeur */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-blue-900/95 to-purple-900/95 backdrop-blur-3xl rounded-3xl"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-purple-500/5 rounded-3xl"></div>
+      
+      <div className="relative border-2 border-slate-600/40 rounded-3xl overflow-hidden shadow-2xl">
+        {/* Header mobile ultra-premium */}
+        <div className="bg-gradient-to-r from-slate-900/90 via-blue-900/90 to-purple-900/90 backdrop-blur-xl px-6 py-4 border-b border-slate-600/40">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={onExpand}
+              className="group flex items-center gap-3 text-cyan-400 hover:text-cyan-300 transition-all duration-300 transform hover:scale-105"
+            >
+              <div className="w-10 h-10 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-full flex items-center justify-center group-hover:from-cyan-500/30 group-hover:to-blue-500/30 transition-all duration-300">
+                <ChevronLeft className="h-5 w-5" />
+              </div>
+              <span className="text-lg font-semibold">Retour</span>
+            </button>
+            
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+              <span className="text-green-300 text-lg font-medium">Sauvegarde auto</span>
+            </div>
           </div>
         </div>
 
-        {/* Contenu du formulaire selon la section */}
-        <div className="space-y-4 lg:space-y-6">
-          {renderFormSection(permit, currentSection, complianceChecks, onComplianceUpdate, onFieldChange, t)}
-          
-          {/* Section Travailleurs */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base lg:text-lg font-semibold text-white flex items-center gap-2">
-                👷 {t.messages.authorizedWorkers}
-                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs lg:text-sm rounded-full">
-                  {workers.length}
-                </span>
-              </h3>
-              <button
-                onClick={onAddWorker}
-                className="px-3 lg:px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg flex items-center gap-2 text-xs lg:text-sm touch-target"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">{t.messages.addWorker}</span>
-                <span className="sm:hidden">+</span>
-              </button>
+        <div className="p-8">
+          {/* Titre du formulaire avec effet spectaculaire */}
+          <div className="relative mb-10">
+            <div className="flex items-center gap-6 mb-6">
+              <div className="relative">
+                <div className="text-6xl drop-shadow-2xl">{getIconForType(permit.type)}</div>
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full blur-2xl opacity-30"></div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-white via-cyan-200 to-blue-200 bg-clip-text text-transparent">
+                  {permit.type}
+                </h2>
+                <p className="text-cyan-300 text-xl font-medium">{permit.norm}</p>
+              </div>
+              <div className={`px-8 py-4 rounded-2xl font-bold text-xl shadow-2xl border-2 ${getStatusColor(permit.status)}`}>
+                {permit.status}
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent"></div>
+          </div>
+
+          {/* Boutons d'action principaux ultra-premium */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+            <button
+              onClick={onValidate}
+              className="group relative overflow-hidden bg-gradient-to-r from-green-600 via-green-500 to-emerald-500 text-white px-10 py-6 rounded-2xl font-bold text-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-green-500/40 active:scale-95"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex items-center justify-center gap-4">
+                <CheckCircle className="h-7 w-7" />
+                <span>Valider conformité</span>
+              </div>
+            </button>
+            
+            <button
+              onClick={onSaveProgress}
+              className="group relative overflow-hidden bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white px-10 py-6 rounded-2xl font-bold text-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/40 active:scale-95"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex items-center justify-center gap-4">
+                <Clock className="h-7 w-7" />
+                <span>Sauvegarder</span>
+              </div>
+            </button>
+            
+            <button
+              onClick={onGeneratePDF}
+              className="group relative overflow-hidden bg-gradient-to-r from-purple-600 via-purple-500 to-violet-500 text-white px-10 py-6 rounded-2xl font-bold text-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/40 active:scale-95"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex items-center justify-center gap-4">
+                <Download className="h-7 w-7" />
+                <span>Soumettre</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Navigation des sections ultra-premium */}
+          <div className="mb-12">
+            <div className="relative">
+              <div className="flex gap-3 p-4 bg-gradient-to-r from-slate-800/60 via-slate-900/60 to-slate-800/60 backdrop-blur-xl rounded-2xl border border-slate-600/40 overflow-x-auto scrollbar-thin">
+                {Object.keys(permit.sections || {}).map((sectionKey) => (
+                  <button
+                    key={sectionKey}
+                    onClick={() => onSectionChange(sectionKey)}
+                    className={`relative px-6 py-3 rounded-xl font-semibold text-lg transition-all duration-300 whitespace-nowrap flex-shrink-0 transform hover:scale-105 ${
+                      currentSection === sectionKey
+                        ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/40'
+                        : 'text-gray-400 hover:text-white hover:bg-gradient-to-r hover:from-slate-700/60 hover:to-slate-600/60'
+                    }`}
+                  >
+                    <div className="relative z-10">
+                      {sectionKey.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim()}
+                    </div>
+                    {currentSection === sectionKey && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl blur-lg opacity-50"></div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Contenu du formulaire avec glassmorphisme */}
+          <div className="space-y-10">
+            {renderFormSection(permit, currentSection, complianceChecks, onComplianceUpdate, onFieldChange, t)}
+            
+            {/* Section Travailleurs ultra-premium */}
+            <div className="space-y-8">
+              <div className="relative">
+                <div className="flex items-center justify-between p-6 bg-gradient-to-r from-slate-800/60 via-slate-900/60 to-slate-800/60 backdrop-blur-xl rounded-2xl border border-slate-600/40">
+                  <h3 className="text-2xl font-bold text-white flex items-center gap-4">
+                    <span className="text-4xl">👷</span>
+                    {t.messages.authorizedWorkers}
+                    <div className="px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 rounded-full border border-cyan-500/40">
+                      {workers.length}
+                    </div>
+                  </h3>
+                  <button
+                    onClick={onAddWorker}
+                    className="group relative overflow-hidden bg-gradient-to-r from-green-600 via-green-500 to-emerald-500 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-green-500/40 active:scale-95"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="relative flex items-center gap-3">
+                      <Plus className="h-6 w-6" />
+                      <span>{t.messages.addWorker}</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="space-y-6">
+                {workers.map((worker, index) => (
+                  <WorkerCard
+                    key={worker.id || index}
+                    worker={worker}
+                    index={index}
+                    onUpdate={(idx, updatedWorker) => {
+                      onUpdateWorker(worker.id || idx, 'name', updatedWorker.name);
+                      onUpdateWorker(worker.id || idx, 'age', updatedWorker.age);
+                      onUpdateWorker(worker.id || idx, 'certification', updatedWorker.certification);
+                      onUpdateWorker(worker.id || idx, 'phone', updatedWorker.phone);
+                    }}
+                    onRemove={() => onRemoveWorker(worker.id || index)}
+                    t={t}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Section Photos ultra-premium */}
+            <PhotoGallery
+              photos={photos}
+              currentIndex={currentPhotoIndex}
+              viewMode={viewMode}
+              onViewModeChange={onViewModeChange}
+              onNavigate={(direction) => {
+                if (direction === 'prev') {
+                  onPhotoIndexChange(currentPhotoIndex > 0 ? currentPhotoIndex - 1 : photos.length - 1);
+                } else {
+                  onPhotoIndexChange(currentPhotoIndex < photos.length - 1 ? currentPhotoIndex + 1 : 0);
+                }
+              }}
+              onRemove={onRemovePhoto}
+              onAdd={onPhotoUpload}
+              t={t}
+            />
+          </div>
+
+          {/* Navigation bas de page ultra-premium */}
+          <div className="flex justify-between items-center mt-16 pt-8 border-t border-gradient-to-r from-transparent via-slate-600/40 to-transparent">
+            <button
+              onClick={onExpand}
+              className="group flex items-center gap-3 text-gray-400 hover:text-white transition-all duration-300 transform hover:scale-105"
+            >
+              <div className="w-12 h-12 bg-gradient-to-r from-slate-700/60 to-slate-600/60 rounded-full flex items-center justify-center group-hover:from-slate-600/80 group-hover:to-slate-500/80 transition-all duration-300">
+                <ChevronLeft className="h-6 w-6" />
+              </div>
+              <span className="text-lg font-semibold">Précédent</span>
+            </button>
+            
+            <div className="flex items-center gap-3">
+              <div className="w-4 h-4 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+              <span className="text-green-300 text-lg font-medium">Sauvegarde automatique</span>
             </div>
             
-            <div className="space-y-3 lg:space-y-4">
-              {workers.map((worker, index) => (
-                <WorkerCard
-                  key={worker.id || index}
-                  worker={worker}
-                  index={index}
-                  onUpdate={(idx, updatedWorker) => {
-                    onUpdateWorker(worker.id || idx, 'name', updatedWorker.name);
-                    onUpdateWorker(worker.id || idx, 'age', updatedWorker.age);
-                    onUpdateWorker(worker.id || idx, 'certification', updatedWorker.certification);
-                    onUpdateWorker(worker.id || idx, 'phone', updatedWorker.phone);
-                  }}
-                  onRemove={() => onRemoveWorker(worker.id || index)}
-                  t={t}
-                />
-              ))}
-            </div>
+            <button className="group flex items-center gap-3 text-gray-400 hover:text-white transition-all duration-300 transform hover:scale-105">
+              <span className="text-lg font-semibold">Suivant</span>
+              <div className="w-12 h-12 bg-gradient-to-r from-slate-700/60 to-slate-600/60 rounded-full flex items-center justify-center group-hover:from-slate-600/80 group-hover:to-slate-500/80 transition-all duration-300">
+                <ChevronRight className="h-6 w-6" />
+              </div>
+            </button>
           </div>
-
-          {/* Section Photos */}
-          <PhotoGallery
-            photos={photos}
-            currentIndex={currentPhotoIndex}
-            viewMode={viewMode}
-            onViewModeChange={onViewModeChange}
-            onNavigate={(direction) => {
-              if (direction === 'prev') {
-                onPhotoIndexChange(currentPhotoIndex > 0 ? currentPhotoIndex - 1 : photos.length - 1);
-              } else {
-                onPhotoIndexChange(currentPhotoIndex < photos.length - 1 ? currentPhotoIndex + 1 : 0);
-              }
-            }}
-            onRemove={onRemovePhoto}
-            onAdd={onPhotoUpload}
-            t={t}
-          />
-        </div>
-
-        {/* Navigation bas de page - Mobile optimisée */}
-        <div className="flex justify-between items-center mt-6 lg:mt-8 pt-4 lg:pt-6 border-t border-slate-700/50">
-          <button
-            onClick={onExpand}
-            className="flex items-center gap-2 px-3 lg:px-4 py-2 text-gray-400 hover:text-white transition-colors touch-target"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="text-xs lg:text-sm">Précédent</span>
-          </button>
-          
-          <div className="flex items-center gap-2 text-xs lg:text-sm text-gray-400">
-            <div className="h-2 w-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="hidden sm:inline">Sauvegarde automatique</span>
-            <span className="sm:hidden">Auto-save</span>
-          </div>
-          
-          <button className="flex items-center gap-2 px-3 lg:px-4 py-2 text-gray-400 hover:text-white transition-colors touch-target">
-            <span className="text-xs lg:text-sm">Suivant</span>
-            <ChevronRight className="h-4 w-4" />
-          </button>
         </div>
       </div>
     </div>
@@ -1880,48 +1959,53 @@ const renderFormSection = (
   if (!sectionData) return null;
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-base lg:text-lg font-semibold text-white mb-3 lg:mb-4">
-        {sectionData.title || currentSection.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim()}
-      </h3>
+    <div className="space-y-8">
+      <div className="relative">
+        <h3 className="text-3xl font-bold text-white mb-8 bg-gradient-to-r from-white via-cyan-200 to-blue-200 bg-clip-text text-transparent">
+          {sectionData.title || currentSection.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim()}
+        </h3>
+        <div className="absolute bottom-0 left-0 w-32 h-px bg-gradient-to-r from-cyan-400 to-blue-400"></div>
+      </div>
       
-      {sectionData.fields?.map((field: any, index: number) => {
-        const checkKey = `${permit.id}_${currentSection}_${field.key}`;
-        const existingCheck = complianceChecks.find(c => c.key === checkKey);
-        
-        return (
-          <FormField
-            key={field.key}
-            label={field.label}
-            value={existingCheck?.value || ''}
-            onChange={(value) => {
-              onFieldChange(field.key, value);
-              
-              const updatedChecks = complianceChecks.filter(c => c.key !== checkKey);
-              updatedChecks.push({
-                key: checkKey,
-                requirement: field.label,
-                value,
-                isValid: field.validation ? validateFieldValue(value, field.validation) : true,
-                status: field.validation && validateFieldValue(value, field.validation) ? 'compliant' : 'non-compliant',
-                section: currentSection,
-                details: '',
-                reference: field.legalRef || ''
-              });
-              onComplianceUpdate(updatedChecks);
-            }}
-            type={field.type || 'text'}
-            required={field.required}
-            placeholder={field.placeholder}
-            options={field.options}
-            isValid={existingCheck?.isValid}
-            errorMessage={field.validation?.message}
-            legalRef={field.legalRef}
-            isLegal={field.isLegal}
-            isCritical={field.isCritical}
-          />
-        );
-      })}
+      <div className="grid gap-8">
+        {sectionData.fields?.map((field: any, index: number) => {
+          const checkKey = `${permit.id}_${currentSection}_${field.key}`;
+          const existingCheck = complianceChecks.find(c => c.key === checkKey);
+          
+          return (
+            <FormField
+              key={field.key}
+              label={field.label}
+              value={existingCheck?.value || ''}
+              onChange={(value) => {
+                onFieldChange(field.key, value);
+                
+                const updatedChecks = complianceChecks.filter(c => c.key !== checkKey);
+                updatedChecks.push({
+                  key: checkKey,
+                  requirement: field.label,
+                  value,
+                  isValid: field.validation ? validateFieldValue(value, field.validation) : true,
+                  status: field.validation && validateFieldValue(value, field.validation) ? 'compliant' : 'non-compliant',
+                  section: currentSection,
+                  details: '',
+                  reference: field.legalRef || ''
+                });
+                onComplianceUpdate(updatedChecks);
+              }}
+              type={field.type || 'text'}
+              required={field.required}
+              placeholder={field.placeholder}
+              options={field.options}
+              isValid={existingCheck?.isValid}
+              errorMessage={field.validation?.message}
+              legalRef={field.legalRef}
+              isLegal={field.isLegal}
+              isCritical={field.isCritical}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -1942,7 +2026,7 @@ const validateFieldValue = (value: any, validation: any): boolean => {
   return true;
 };
 
-// Composant FormField avec validation premium - Mobile optimisé
+// Composant FormField ultra-premium avec glassmorphisme
 const FormField: React.FC<{
   label: string;
   value: string;
@@ -1975,47 +2059,47 @@ const FormField: React.FC<{
   const hasValidation = isValid !== undefined;
   
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2 flex-wrap">
-        <label className="text-sm lg:text-base font-medium text-white">
+    <div className="space-y-4">
+      <div className="flex items-center gap-4 flex-wrap">
+        <label className="text-xl font-bold text-white">
           {label}
-          {required && <span className="text-red-400 ml-1">*</span>}
+          {required && <span className="text-red-400 ml-2 text-2xl">*</span>}
         </label>
         {isLegal && (
-          <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-500/30">
-            LÉGAL
-          </span>
+          <div className="px-4 py-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 rounded-full border border-green-500/40 font-bold shadow-lg shadow-green-500/20">
+            ⚖️ LÉGAL
+          </div>
         )}
         {isCritical && (
-          <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full border border-red-500/30 animate-pulse">
-            CRITIQUE
-          </span>
+          <div className="px-4 py-2 bg-gradient-to-r from-red-500/20 to-rose-500/20 text-red-300 rounded-full border border-red-500/40 animate-pulse font-bold shadow-lg shadow-red-500/20">
+            🚨 CRITIQUE
+          </div>
         )}
       </div>
       
       {legalRef && (
-        <p className="text-xs text-gray-400 italic">
-          Référence: {legalRef}
+        <p className="text-cyan-300 text-base italic font-medium bg-gradient-to-r from-cyan-500/10 to-blue-500/10 px-4 py-2 rounded-lg border border-cyan-500/20">
+          📚 Référence légale: {legalRef}
         </p>
       )}
       
-      <div className="relative">
+      <div className="relative group">
         {type === "select" && options.length > 0 ? (
           <select
             value={value}
             onChange={(e) => onChange(e.target.value)}
             disabled={disabled}
-            className={`w-full px-4 py-3 bg-slate-700/50 backdrop-blur-sm border rounded-xl text-white placeholder-gray-400 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 text-sm lg:text-base touch-target ${
+            className={`w-full px-6 py-4 bg-gradient-to-r from-slate-800/60 via-slate-900/60 to-slate-800/60 backdrop-blur-xl border-2 rounded-2xl text-white placeholder-gray-400 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-cyan-500/30 focus:border-cyan-400/60 text-lg font-medium shadow-xl ${
               hasValidation
                 ? isValid
-                  ? 'border-green-500/50 bg-green-500/10'
-                  : 'border-red-500/50 bg-red-500/10'
-                : 'border-slate-600/50 hover:border-slate-500/50'
-            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  ? 'border-green-500/60 bg-gradient-to-r from-green-900/20 via-emerald-900/20 to-green-900/20 shadow-green-500/20'
+                  : 'border-red-500/60 bg-gradient-to-r from-red-900/20 via-rose-900/20 to-red-900/20 shadow-red-500/20'
+                : 'border-slate-600/60 hover:border-slate-500/80 group-hover:shadow-cyan-500/20'
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] transform transition-transform'}`}
           >
             <option value="">{placeholder || `Sélectionner ${label.toLowerCase()}`}</option>
             {options.map((option, index) => (
-              <option key={index} value={option} className="bg-slate-700 text-white">
+              <option key={index} value={option} className="bg-slate-800 text-white">
                 {option}
               </option>
             ))}
@@ -2027,29 +2111,32 @@ const FormField: React.FC<{
             placeholder={placeholder}
             disabled={disabled}
             rows={4}
-            className={`w-full px-4 py-3 bg-slate-700/50 backdrop-blur-sm border rounded-xl text-white placeholder-gray-400 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 resize-none text-sm lg:text-base ${
+            className={`w-full px-6 py-4 bg-gradient-to-r from-slate-800/60 via-slate-900/60 to-slate-800/60 backdrop-blur-xl border-2 rounded-2xl text-white placeholder-gray-400 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-cyan-500/30 focus:border-cyan-400/60 resize-none text-lg font-medium shadow-xl ${
               hasValidation
                 ? isValid
-                  ? 'border-green-500/50 bg-green-500/10'
-                  : 'border-red-500/50 bg-red-500/10'
-                : 'border-slate-600/50 hover:border-slate-500/50'
-            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  ? 'border-green-500/60 bg-gradient-to-r from-green-900/20 via-emerald-900/20 to-green-900/20 shadow-green-500/20'
+                  : 'border-red-500/60 bg-gradient-to-r from-red-900/20 via-rose-900/20 to-red-900/20 shadow-red-500/20'
+                : 'border-slate-600/60 hover:border-slate-500/80 group-hover:shadow-cyan-500/20'
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] transform transition-transform'}`}
           />
         ) : type === "checkbox" ? (
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={(() => {
-                if (typeof value === 'boolean') return value;
-                if (typeof value === 'string') return value === "true" || value === "1";
-                if (typeof value === 'number') return value === 1;
-                return false;
-              })()}
-              onChange={(e) => onChange(e.target.checked ? "true" : "false")}
-              disabled={disabled}
-              className="w-5 h-5 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500 focus:ring-2"
-            />
-            <span className="text-sm lg:text-base text-white">{placeholder}</span>
+          <label className="group/check flex items-center gap-4 cursor-pointer">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={(() => {
+                  if (typeof value === 'boolean') return value;
+                  if (typeof value === 'string') return value === "true" || value === "1";
+                  if (typeof value === 'number') return value === 1;
+                  return false;
+                })()}
+                onChange={(e) => onChange(e.target.checked ? "true" : "false")}
+                disabled={disabled}
+                className="w-7 h-7 text-cyan-500 bg-slate-800/60 border-2 border-slate-600/60 rounded-lg focus:ring-4 focus:ring-cyan-500/30 transition-all duration-300 transform group-hover/check:scale-110"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-lg opacity-0 group-hover/check:opacity-100 transition-opacity duration-300"></div>
+            </div>
+            <span className="text-lg font-medium text-white">{placeholder}</span>
           </label>
         ) : (
           <input
@@ -2058,38 +2145,44 @@ const FormField: React.FC<{
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             disabled={disabled}
-            className={`w-full px-4 py-3 bg-slate-700/50 backdrop-blur-sm border rounded-xl text-white placeholder-gray-400 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 text-sm lg:text-base touch-target ${
+            className={`w-full px-6 py-4 bg-gradient-to-r from-slate-800/60 via-slate-900/60 to-slate-800/60 backdrop-blur-xl border-2 rounded-2xl text-white placeholder-gray-400 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-cyan-500/30 focus:border-cyan-400/60 text-lg font-medium shadow-xl ${
               hasValidation
                 ? isValid
-                  ? 'border-green-500/50 bg-green-500/10'
-                  : 'border-red-500/50 bg-red-500/10'
-                : 'border-slate-600/50 hover:border-slate-500/50'
-            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  ? 'border-green-500/60 bg-gradient-to-r from-green-900/20 via-emerald-900/20 to-green-900/20 shadow-green-500/20'
+                  : 'border-red-500/60 bg-gradient-to-r from-red-900/20 via-rose-900/20 to-red-900/20 shadow-red-500/20'
+                : 'border-slate-600/60 hover:border-slate-500/80 group-hover:shadow-cyan-500/20'
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] transform transition-transform'}`}
           />
         )}
         
         {hasValidation && type !== "checkbox" && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+          <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
             {isValid ? (
-              <CheckCircle className="h-5 w-5 text-green-400" />
+              <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/50">
+                <CheckCircle className="h-5 w-5 text-white" />
+              </div>
             ) : (
-              <AlertTriangle className="h-5 w-5 text-red-400" />
+              <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-rose-500 rounded-full flex items-center justify-center shadow-lg shadow-red-500/50 animate-pulse">
+                <AlertTriangle className="h-5 w-5 text-white" />
+              </div>
             )}
           </div>
         )}
       </div>
       
       {hasValidation && !isValid && errorMessage && (
-        <p className="text-sm text-red-400 flex items-center gap-1">
-          <AlertTriangle className="h-4 w-4" />
-          {errorMessage}
-        </p>
+        <div className="p-4 bg-gradient-to-r from-red-900/40 via-rose-900/40 to-red-900/40 border border-red-500/40 rounded-xl">
+          <p className="text-red-300 text-lg font-medium flex items-center gap-3">
+            <AlertTriangle className="h-6 w-6" />
+            {errorMessage}
+          </p>
+        </div>
       )}
     </div>
   );
 };
 
-// Composant PhotoGallery avec carousel et grille premium - Mobile optimisé
+// Composant PhotoGallery ultra-premium
 const PhotoGallery: React.FC<{
   photos: PhotoEntry[];
   currentIndex: number;
@@ -2110,50 +2203,55 @@ const PhotoGallery: React.FC<{
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header avec contrôles - Mobile optimisé */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-base lg:text-lg font-semibold text-white flex items-center gap-2">
-          📸 {t.messages.sitePhotos}
-          <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs lg:text-sm rounded-full">
-            {photos.length}
-          </span>
-        </h3>
-        
-        <div className="flex items-center gap-2">
-          {/* Sélecteur de vue - Hidden sur très petit écran */}
-          <div className="hidden sm:flex bg-slate-700/50 rounded-lg p-1">
+    <div className="space-y-8">
+      {/* Header ultra-premium */}
+      <div className="relative">
+        <div className="flex items-center justify-between p-6 bg-gradient-to-r from-slate-800/60 via-slate-900/60 to-slate-800/60 backdrop-blur-xl rounded-2xl border border-slate-600/40">
+          <h3 className="text-2xl font-bold text-white flex items-center gap-4">
+            <span className="text-4xl">📸</span>
+            {t.messages.sitePhotos}
+            <div className="px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 rounded-full border border-cyan-500/40">
+              {photos.length}
+            </div>
+          </h3>
+          
+          <div className="flex items-center gap-4">
+            {/* Sélecteur de vue premium */}
+            <div className="flex bg-gradient-to-r from-slate-700/60 to-slate-600/60 rounded-xl p-2 border border-slate-500/40">
+              <button
+                onClick={() => onViewModeChange('carousel')}
+                className={`px-4 py-2 rounded-lg text-lg font-semibold transition-all duration-300 ${
+                  viewMode === 'carousel'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/40'
+                    : 'text-gray-300 hover:text-white hover:bg-slate-600/60'
+                }`}
+              >
+                Carrousel
+              </button>
+              <button
+                onClick={() => onViewModeChange('grid')}
+                className={`px-4 py-2 rounded-lg text-lg font-semibold transition-all duration-300 ${
+                  viewMode === 'grid'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/40'
+                    : 'text-gray-300 hover:text-white hover:bg-slate-600/60'
+                }`}
+              >
+                Grille
+              </button>
+            </div>
+            
+            {/* Bouton d'ajout premium */}
             <button
-              onClick={() => onViewModeChange('carousel')}
-              className={`px-2 lg:px-3 py-1 rounded text-xs lg:text-sm transition-all duration-200 touch-target ${
-                viewMode === 'carousel'
-                  ? 'bg-blue-500 text-white shadow-lg'
-                  : 'text-gray-400 hover:text-white'
-              }`}
+              onClick={() => fileInputRef.current?.click()}
+              className="group relative overflow-hidden bg-gradient-to-r from-green-600 via-green-500 to-emerald-500 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-green-500/40 active:scale-95"
             >
-              Carrousel
-            </button>
-            <button
-              onClick={() => onViewModeChange('grid')}
-              className={`px-2 lg:px-3 py-1 rounded text-xs lg:text-sm transition-all duration-200 touch-target ${
-                viewMode === 'grid'
-                  ? 'bg-blue-500 text-white shadow-lg'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Grille
+              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex items-center gap-3">
+                <Plus className="h-6 w-6" />
+                <span>Ajouter</span>
+              </div>
             </button>
           </div>
-          
-          {/* Bouton d'ajout */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="px-3 lg:px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transform hover:scale-105 transition-all duration-200 shadow-lg flex items-center gap-2 text-xs lg:text-sm touch-target"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Ajouter</span>
-            <span className="sm:hidden">+</span>
-          </button>
         </div>
       </div>
 
@@ -2168,73 +2266,84 @@ const PhotoGallery: React.FC<{
       />
 
       {photos.length === 0 ? (
-        /* Zone de drop vide - Mobile optimisée */
+        /* Zone de drop ultra-premium */
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-slate-600 rounded-xl p-6 lg:p-8 text-center cursor-pointer hover:border-blue-500 transition-colors duration-200 bg-slate-800/30 touch-target"
+          className="group relative border-4 border-dashed border-slate-600/60 rounded-3xl p-16 text-center cursor-pointer hover:border-cyan-500/80 transition-all duration-500 bg-gradient-to-br from-slate-800/40 via-slate-900/40 to-slate-800/40 backdrop-blur-xl"
         >
-          <div className="space-y-3">
-            <Camera className="h-10 w-10 lg:h-12 lg:w-12 text-gray-400 mx-auto" />
-            <p className="text-gray-400 text-sm lg:text-base">{t.messages.clickToAddPhotos}</p>
-            <p className="text-xs lg:text-sm text-gray-500">JPG, PNG jusqu'à 10MB</p>
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-blue-500/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div className="relative space-y-6">
+            <div className="relative">
+              <Camera className="h-24 w-24 text-gray-400 mx-auto group-hover:text-cyan-400 transition-colors duration-300 transform group-hover:scale-110" />
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full blur-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+            </div>
+            <p className="text-gray-300 text-2xl font-semibold group-hover:text-white transition-colors duration-300">
+              {t.messages.clickToAddPhotos}
+            </p>
+            <p className="text-gray-500 text-lg group-hover:text-gray-400 transition-colors duration-300">
+              JPG, PNG jusqu'à 10MB • Glisser-déposer supporté
+            </p>
           </div>
         </div>
       ) : (
-        /* Galerie photos */
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-3 lg:p-4">
+        /* Galerie photos ultra-premium */
+        <div className="relative bg-gradient-to-br from-slate-800/60 via-slate-900/60 to-slate-800/60 backdrop-blur-xl border border-slate-600/40 rounded-3xl p-8 shadow-2xl">
           {viewMode === 'carousel' ? (
-            /* Mode Carrousel - Mobile optimisé */
-            <div className="space-y-3 lg:space-y-4">
-              {/* Image principale */}
-              <div className="relative aspect-video bg-slate-900 rounded-lg overflow-hidden">
+            /* Mode Carrousel ultra-premium */
+            <div className="space-y-8">
+              {/* Image principale avec effets */}
+              <div className="relative aspect-video bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl overflow-hidden shadow-2xl">
                 <img
                   src={photos[currentIndex]?.url}
                   alt={photos[currentIndex]?.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                 />
                 
-                {/* Contrôles de navigation - Plus gros sur mobile */}
+                {/* Overlay dégradé */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20"></div>
+                
+                {/* Contrôles de navigation premium */}
                 {photos.length > 1 && (
                   <>
                     <button
                       onClick={() => onNavigate('prev')}
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 lg:p-3 rounded-full hover:bg-black/70 transition-colors touch-target"
+                      className="absolute left-4 top-1/2 transform -translate-y-1/2 w-16 h-16 bg-gradient-to-r from-black/80 to-black/60 backdrop-blur-xl text-white rounded-full hover:from-black/90 hover:to-black/80 transition-all duration-300 flex items-center justify-center group shadow-2xl"
                     >
-                      <ChevronLeft className="h-4 w-4 lg:h-5 lg:w-5" />
+                      <ChevronLeft className="h-8 w-8 group-hover:scale-110 transition-transform" />
                     </button>
                     <button
                       onClick={() => onNavigate('next')}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 lg:p-3 rounded-full hover:bg-black/70 transition-colors touch-target"
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 w-16 h-16 bg-gradient-to-r from-black/80 to-black/60 backdrop-blur-xl text-white rounded-full hover:from-black/90 hover:to-black/80 transition-all duration-300 flex items-center justify-center group shadow-2xl"
                     >
-                      <ChevronRight className="h-4 w-4 lg:h-5 lg:w-5" />
+                      <ChevronRight className="h-8 w-8 group-hover:scale-110 transition-transform" />
                     </button>
                   </>
                 )}
                 
-                {/* Bouton suppression */}
+                {/* Bouton suppression premium */}
                 <button
                   onClick={() => onRemove(currentIndex)}
-                  className="absolute top-2 right-2 bg-red-500/80 text-white p-2 lg:p-3 rounded-full hover:bg-red-600 transition-colors touch-target"
+                  className="absolute top-4 right-4 w-12 h-12 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-full hover:from-red-700 hover:to-red-600 transition-all duration-300 flex items-center justify-center shadow-2xl shadow-red-500/50 group"
                 >
-                  <X className="h-3 w-3 lg:h-4 lg:w-4" />
+                  <X className="h-6 w-6 group-hover:scale-110 transition-transform" />
                 </button>
                 
-                {/* Indicateur position */}
-                <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-xs lg:text-sm">
+                {/* Indicateur position premium */}
+                <div className="absolute bottom-4 left-4 px-4 py-2 bg-gradient-to-r from-black/80 to-black/60 backdrop-blur-xl text-white rounded-xl font-semibold text-lg shadow-2xl">
                   {currentIndex + 1} / {photos.length}
                 </div>
               </div>
               
-              {/* Miniatures - Scroll horizontal sur mobile */}
+              {/* Miniatures premium */}
               {photos.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-cyan-500/60 scrollbar-track-slate-700/40">
                   {photos.map((photo, index) => (
                     <button
                       key={index}
                       onClick={() => onNavigate(index === currentIndex ? 'next' : index > currentIndex ? 'next' : 'prev')}
-                      className={`flex-shrink-0 w-12 h-12 lg:w-16 lg:h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 touch-target ${
+                      className={`relative flex-shrink-0 w-24 h-24 rounded-2xl overflow-hidden border-4 transition-all duration-300 transform hover:scale-110 ${
                         index === currentIndex
-                          ? 'border-blue-500 shadow-lg scale-110'
+                          ? 'border-cyan-500 shadow-2xl shadow-cyan-500/60 scale-110'
                           : 'border-transparent hover:border-slate-500'
                       }`}
                     >
@@ -2243,38 +2352,41 @@ const PhotoGallery: React.FC<{
                         alt={photo.name}
                         className="w-full h-full object-cover"
                       />
+                      {index === currentIndex && (
+                        <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/20 to-transparent"></div>
+                      )}
                     </button>
                   ))}
                 </div>
               )}
             </div>
           ) : (
-            /* Mode Grille - Responsive grid */
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
+            /* Mode Grille ultra-premium */
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {photos.map((photo, index) => (
                 <div
                   key={index}
-                  className="group relative aspect-square bg-slate-900 rounded-lg overflow-hidden hover:scale-105 transition-transform duration-200"
+                  className="group relative aspect-square bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105"
                 >
                   <img
                     src={photo.url}
                     alt={photo.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                   
-                  {/* Overlay au hover - Plus visible sur mobile */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                  {/* Overlay avec effet glassmorphisme */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
                     <button
                       onClick={() => onRemove(index)}
-                      className="bg-red-500 text-white p-2 lg:p-3 rounded-full hover:bg-red-600 transition-colors touch-target"
+                      className="w-16 h-16 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-full hover:from-red-700 hover:to-red-600 transition-all duration-300 flex items-center justify-center shadow-2xl shadow-red-500/50 transform hover:scale-110"
                     >
-                      <X className="h-3 w-3 lg:h-4 lg:w-4" />
+                      <X className="h-8 w-8" />
                     </button>
                   </div>
                   
-                  {/* Info photo */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                    <p className="text-white text-xs truncate">{photo.name}</p>
+                  {/* Info photo avec glassmorphisme */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent backdrop-blur-xl p-4">
+                    <p className="text-white font-semibold text-sm truncate">{photo.name}</p>
                   </div>
                 </div>
               ))}
@@ -2286,7 +2398,7 @@ const PhotoGallery: React.FC<{
   );
 };
 
-// Composant WorkerCard premium - Mobile optimisé
+// Composant WorkerCard ultra-premium
 const WorkerCard: React.FC<{
   worker: WorkerEntry;
   index: number;
@@ -2297,87 +2409,101 @@ const WorkerCard: React.FC<{
   const isMinor = worker.age < 18;
   
   return (
-    <div className={`bg-slate-800/50 backdrop-blur-sm border rounded-xl p-3 lg:p-4 space-y-3 lg:space-y-4 transition-all duration-300 ${
-      isMinor 
-        ? 'border-red-500/50 bg-red-500/10 shadow-red-500/20 shadow-lg' 
-        : 'border-slate-700/50 hover:border-slate-600/50'
-    }`}>
-      {/* Header de la carte */}
-      <div className="flex items-center justify-between">
-        <h4 className="font-semibold text-white flex items-center gap-2 text-sm lg:text-base">
-          👷 {t.messages.workerNumber} {index + 1}
-          {isMinor && (
-            <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full border border-red-500/30 animate-pulse">
-              MINEUR INTERDIT
-            </span>
-          )}
-        </h4>
-        <button
-          onClick={() => onRemove(index)}
-          className="text-red-400 hover:text-red-300 transition-colors p-1 touch-target"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Alerte mineur */}
-      {isMinor && (
-        <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3">
-          <p className="text-red-400 text-xs lg:text-sm font-medium flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            LÉGALEMENT INTERDIT: Travailleur mineur (moins de 18 ans)
-          </p>
-          <p className="text-red-300 text-xs mt-1">
-            RSST Art. 53: Accès interdit aux espaces clos pour les mineurs
-          </p>
+    <div className="group relative">
+      {/* Effet de brillance */}
+      <div className={`absolute inset-0 bg-gradient-to-r ${
+        isMinor 
+          ? 'from-red-500/30 via-rose-500/30 to-red-500/30' 
+          : 'from-cyan-500/20 via-blue-500/20 to-purple-500/20'
+      } rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+      
+      <div className={`relative bg-gradient-to-br from-slate-800/80 via-slate-900/80 to-black/80 backdrop-blur-2xl border-2 rounded-3xl p-8 transition-all duration-500 transform group-hover:scale-[1.02] ${
+        isMinor 
+          ? 'border-red-500/60 bg-gradient-to-br from-red-900/40 via-rose-900/40 to-red-900/40 shadow-2xl shadow-red-500/30' 
+          : 'border-slate-600/40 hover:border-slate-500/60 shadow-xl'
+      }`}>
+        
+        {/* Header ultra-premium */}
+        <div className="flex items-center justify-between mb-6">
+          <h4 className="font-bold text-white flex items-center gap-4 text-2xl">
+            <span className="text-4xl">👷</span>
+            {t.messages.workerNumber} {index + 1}
+            {isMinor && (
+              <div className="px-4 py-2 bg-gradient-to-r from-red-500/20 to-rose-500/20 text-red-300 rounded-full border border-red-500/40 animate-pulse font-bold shadow-lg shadow-red-500/20">
+                🚨 MINEUR INTERDIT
+              </div>
+            )}
+          </h4>
+          <button
+            onClick={() => onRemove(index)}
+            className="group/btn w-12 h-12 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-full hover:from-red-700 hover:to-red-600 transition-all duration-300 flex items-center justify-center shadow-xl shadow-red-500/50 transform hover:scale-110"
+          >
+            <X className="h-6 w-6 group-hover/btn:scale-110 transition-transform" />
+          </button>
         </div>
-      )}
 
-      {/* Formulaire travailleur - Grid responsive */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
-        <FormField
-          label={t.messages.fullName}
-          value={worker.name}
-          onChange={(value) => onUpdate(index, { ...worker, name: value })}
-          placeholder="Nom du travailleur"
-          required
-          isValid={worker.name.length >= 2}
-          errorMessage="Nom requis (minimum 2 caractères)"
-        />
-        
-        <FormField
-          label={t.messages.age}
-          type="number"
-          value={worker.age.toString()}
-          onChange={(value) => onUpdate(index, { ...worker, age: parseInt(value) || 0 })}
-          placeholder="Âge en années"
-          required
-          isValid={worker.age >= 18}
-          errorMessage={worker.age < 18 ? "Âge minimum 18 ans légalement requis" : ""}
-          isCritical={worker.age < 18}
-          legalRef="RSST Art. 53"
-        />
-        
-        <FormField
-          label={t.messages.certification}
-          type="select"
-          value={worker.certification}
-          onChange={(value) => onUpdate(index, { ...worker, certification: value })}
-          options={[t.messages.basicTraining, t.messages.advancedTraining, t.messages.supervisor, t.messages.rescuer]}
-          required
-          isValid={worker.certification !== ''}
-          isLegal={worker.certification === t.messages.rescuer}
-        />
-        
-        <FormField
-          label="Téléphone d'urgence"
-          value={worker.phone}
-          onChange={(value) => onUpdate(index, { ...worker, phone: value })}
-          placeholder="(514) 555-0123"
-          required
-          isValid={worker.phone.length >= 10}
-          errorMessage="Numéro de téléphone requis"
-        />
+        {/* Alerte mineur ultra-premium */}
+        {isMinor && (
+          <div className="relative mb-8">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-rose-500/20 rounded-2xl blur-xl"></div>
+            <div className="relative p-6 bg-gradient-to-r from-red-900/60 via-rose-900/60 to-red-900/60 border-2 border-red-500/60 rounded-2xl backdrop-blur-xl">
+              <p className="text-red-200 text-lg font-bold flex items-center gap-4 mb-3">
+                <AlertTriangle className="h-8 w-8 animate-pulse" />
+                LÉGALEMENT INTERDIT: Travailleur mineur (moins de 18 ans)
+              </p>
+              <p className="text-red-300 text-base">
+                📚 RSST Art. 53: Accès interdit aux espaces clos pour les mineurs
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Formulaire ultra-premium */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <FormField
+            label={t.messages.fullName}
+            value={worker.name}
+            onChange={(value) => onUpdate(index, { ...worker, name: value })}
+            placeholder="Nom complet du travailleur"
+            required
+            isValid={worker.name.length >= 2}
+            errorMessage="Nom requis (minimum 2 caractères)"
+          />
+          
+          <FormField
+            label={t.messages.age}
+            type="number"
+            value={worker.age.toString()}
+            onChange={(value) => onUpdate(index, { ...worker, age: parseInt(value) || 0 })}
+            placeholder="Âge en années"
+            required
+            isValid={worker.age >= 18}
+            errorMessage={worker.age < 18 ? "Âge minimum 18 ans légalement requis" : ""}
+            isCritical={worker.age < 18}
+            legalRef="RSST Art. 53"
+          />
+          
+          <FormField
+            label={t.messages.certification}
+            type="select"
+            value={worker.certification}
+            onChange={(value) => onUpdate(index, { ...worker, certification: value })}
+            options={[t.messages.basicTraining, t.messages.advancedTraining, t.messages.supervisor, t.messages.rescuer]}
+            required
+            isValid={worker.certification !== ''}
+            isLegal={worker.certification === t.messages.rescuer}
+          />
+          
+          <FormField
+            label="Téléphone d'urgence"
+            value={worker.phone}
+            onChange={(value) => onUpdate(index, { ...worker, phone: value })}
+            placeholder="(514) 555-0123"
+            required
+            isValid={worker.phone.length >= 10}
+            errorMessage="Numéro de téléphone requis pour contact d'urgence"
+          />
+        </div>
       </div>
     </div>
   );
