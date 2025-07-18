@@ -3365,19 +3365,15 @@ const ConfinedSpaceManager: React.FC<{
   );
 };
 
-// =================== MISE À JOUR STEP4PERMITS AVEC TOUTES LES INTÉGRATIONS ===================
-// Remplacer le placeholder dans Section 4A par ce code complet :
-
+// =================== COMPOSANT PRINCIPAL FINAL PROPRE ===================
 const Step4PermitsComplete: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
   const t = getTexts(language);
   
-  // États
+  // =================== ÉTATS ===================
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedProvince, setSelectedProvince] = useState(formData.province || 'QC');
   const [expandedForms, setExpandedForms] = useState<{ [key: string]: boolean }>({});
-  const [complianceChecks, setComplianceChecks] = useState<{ [key: string]: ComplianceCheck[] }>({});
-  const [criticalAlerts, setCriticalAlerts] = useState<string[]>([]);
   const [selectedConfinedSpace, setSelectedConfinedSpace] = useState<ConfinedSpaceDatabase | null>(null);
   
   const [permitPhotos, setPermitPhotos] = useState<{ [permitId: string]: PhotoCarouselEntry[] }>({});
@@ -3391,7 +3387,16 @@ const Step4PermitsComplete: React.FC<Step4PermitsProps> = ({ formData, onDataCha
     return getProvincialPermitsDatabase(language, selectedProvince);
   });
 
-  // Handlers
+  // =================== FONCTIONS UTILITAIRES ===================
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Sécurité': case 'Safety': return '🛡️';
+      case 'Construction': return '🏗️';
+      default: return '📋';
+    }
+  };
+
+  // =================== HANDLERS ===================
   const handlePermitToggle = (permitId: string) => {
     const updatedPermits = permits.map((permit: Permit) => 
       permit.id === permitId ? { ...permit, selected: !permit.selected } : permit
@@ -3443,7 +3448,7 @@ const Step4PermitsComplete: React.FC<Step4PermitsProps> = ({ formData, onDataCha
     updateFormData(updatedPermits);
   };
 
-  // Filtrage
+  // =================== FILTRAGE ===================
   const filteredPermits = useMemo(() => {
     return permits.filter((permit: Permit) => {
       const matchesSearch = permit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -3464,51 +3469,6 @@ const Step4PermitsComplete: React.FC<Step4PermitsProps> = ({ formData, onDataCha
     critical: selectedPermits.filter((p: Permit) => p.priority === 'critical').length,
     compliant: selectedPermits.length
   }), [permits, selectedPermits]);
-
-const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Sécurité': case 'Safety': return '🛡️';
-      case 'Construction': return '🏗️';
-      default: return '📋';
-    }
-  };
-  
-const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
-  const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
-  // ======= TOUS LES ÉTATS NÉCESSAIRES =======
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedProvince, setSelectedProvince] = useState(formData.province || 'QC');
-  const [expandedForms, setExpandedForms] = useState<{ [key: string]: boolean }>({});
-  const [permits, setPermits] = useState(() => {
-    if (formData.permits?.list && formData.permits.list.length > 0) {
-      return formData.permits.list;
-    }
-    return getProvincialPermitsDatabase(language, selectedProvince);
-  });
-  
-  // ======= USEMEMO POUR LES PERMIS SÉLECTIONNÉS =======
-  const selectedPermits = useMemo(() => 
-    permits.filter((p: any) => p.selected), 
-    [permits]
-  );
-
-  const stats = useMemo(() => ({
-    totalPermits: permits.length,
-    selected: selectedPermits.length,
-    critical: selectedPermits.filter((p: any) => p.priority === 'critical').length,
-    compliant: selectedPermits.length
-  }), [permits, selectedPermits]);
-
-const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
-  
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Sécurité': case 'Safety': return '🛡️';
-      case 'Construction': return '🏗️';
-      default: return '📋';
-    }
-  };
 
   return (
     <div style={{ padding: '0', color: '#ffffff' }}>
@@ -3538,35 +3498,37 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
         <p style={{ color: '#3b82f6', margin: '0 0 20px', fontSize: '14px' }}>{t.subtitle}</p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px' }}>
-{[
-  { key: 'available', value: stats.totalPermits, icon: '📊' },
-  { key: 'selected', value: stats.selected, icon: '✅' },
-  { key: 'critical', value: stats.critical, icon: '🚨' },
-  { key: 'compliant', value: `${stats.compliant}/${stats.selected}`, icon: '🛡️' }
-].map(stat => (
-  <div key={stat.key} style={{
-    textAlign: 'center',
-    background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
-    padding: '20px 16px',
-    borderRadius: '16px',
-    border: '1px solid rgba(100, 116, 139, 0.3)'
-  }}>
-    <div style={{ fontSize: '28px', marginBottom: '8px' }}>{stat.icon}</div>
-    <div style={{
-      fontSize: '28px',
-      fontWeight: '800',
-      background: 'linear-gradient(135deg, #60a5fa, #34d399)',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent',
-      marginBottom: '8px'
-    }}>
-      {stat.value}
-    </div>
-    <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>
-      {t.stats[stat.key as keyof typeof t.stats]}
-    </div>
-  </div>
-))}
+          {[
+            { key: 'available', value: stats.totalPermits, icon: '📊' },
+            { key: 'selected', value: stats.selected, icon: '✅' },
+            { key: 'critical', value: stats.critical, icon: '🚨' },
+            { key: 'compliant', value: `${stats.compliant}/${stats.selected}`, icon: '🛡️' }
+          ].map(stat => (
+            <div key={stat.key} style={{
+              textAlign: 'center',
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
+              padding: '20px 16px',
+              borderRadius: '16px',
+              border: '1px solid rgba(100, 116, 139, 0.3)'
+            }}>
+              <div style={{ fontSize: '28px', marginBottom: '8px' }}>{stat.icon}</div>
+              <div style={{
+                fontSize: '28px',
+                fontWeight: '800',
+                background: 'linear-gradient(135deg, #60a5fa, #34d399)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                marginBottom: '8px'
+              }}>
+                {stat.value}
+              </div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>
+                {t.stats[stat.key as keyof typeof t.stats]}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Base de données espaces clos */}
       <ConfinedSpaceManager
@@ -3640,7 +3602,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
             }}
           >
             <option value="all">{t.allCategories}</option>
-            {(categories as string[]).map((category: string) => (
+            {categories.map((category: string) => (
               <option key={category} value={category}>
                 {getCategoryIcon(category)} {(t.categories as any)[category] || category}
               </option>
@@ -3772,645 +3734,28 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
                     <h4 style={{ color: '#3b82f6', margin: '0 0 16px', fontSize: '16px', fontWeight: '700' }}>
                       📝 Formulaire Intégré
                     </h4>
-// =================== COMPOSANT FORMULAIRE DÉTAILLÉ PERMIS ===================
-// À ajouter dans votre fichier Step4Permits.tsx APRÈS les autres composants
 
-const DetailedPermitForm: React.FC<{
-  permit: Permit;
-  onFormDataChange: (permitId: string, data: any) => void;
-  language: 'fr' | 'en';
-  selectedProvince: string;
-}> = ({ permit, onFormDataChange, language, selectedProvince }) => {
-  const [formData, setFormData] = useState(permit.formData || {});
-  
-  const texts = {
-    fr: {
-      gasLevels: 'Niveaux de Gaz Critiques',
-      oxygenLevel: 'Oxygène (%)',
-      combustibleGas: 'Gaz combustibles (% LIE)',
-      carbonMonoxide: 'Monoxyde de carbone (ppm)',
-      hydrogenSulfide: 'Sulfure d\'hydrogène (ppm)',
-      spaceDetails: 'Détails Espace Clos',
-      spaceId: 'Identification espace',
-      location: 'Localisation précise',
-      description: 'Description des travaux',
-      entryTime: 'Heure d\'entrée prévue',
-      exitTime: 'Heure de sortie prévue',
-      equipmentInfo: 'Équipements de Sécurité',
-      ventilation: 'Ventilation mécanique',
-      gasDetector: 'Détecteur de gaz',
-      rescueEquipment: 'Équipement de sauvetage',
-      communicationDevice: 'Moyen de communication',
-      authorizations: 'Autorisations et Signatures',
-      supervisorName: 'Nom du superviseur',
-      supervisorCert: 'Certification superviseur',
-      entrantName: 'Nom de l\'entrant',
-      attendantName: 'Nom du surveillant',
-      permitNumber: 'Numéro de permis',
-      validUntil: 'Valide jusqu\'à',
-      emergencyPlan: 'Plan d\'Urgence',
-      emergencyContact: 'Contact d\'urgence',
-      rescueProcedure: 'Procédure de sauvetage',
-      medicalContact: 'Contact médical',
-      save: 'Sauvegarder',
-      validate: 'Valider le permis'
-    },
-    en: {
-      gasLevels: 'Critical Gas Levels',
-      oxygenLevel: 'Oxygen (%)',
-      combustibleGas: 'Combustible gas (% LEL)',
-      carbonMonoxide: 'Carbon monoxide (ppm)',
-      hydrogenSulfide: 'Hydrogen sulfide (ppm)',
-      spaceDetails: 'Confined Space Details',
-      spaceId: 'Space identification',
-      location: 'Precise location',
-      description: 'Work description',
-      entryTime: 'Planned entry time',
-      exitTime: 'Planned exit time',
-      equipmentInfo: 'Safety Equipment',
-      ventilation: 'Mechanical ventilation',
-      gasDetector: 'Gas detector',
-      rescueEquipment: 'Rescue equipment',
-      communicationDevice: 'Communication device',
-      authorizations: 'Authorizations and Signatures',
-      supervisorName: 'Supervisor name',
-      supervisorCert: 'Supervisor certification',
-      entrantName: 'Entrant name',
-      attendantName: 'Attendant name',
-      permitNumber: 'Permit number',
-      validUntil: 'Valid until',
-      emergencyPlan: 'Emergency Plan',
-      emergencyContact: 'Emergency contact',
-      rescueProcedure: 'Rescue procedure',
-      medicalContact: 'Medical contact',
-      save: 'Save',
-      validate: 'Validate permit'
-    }
-  };
-
-  const t = texts[language];
-
-  const updateField = (field: string, value: any) => {
-    const updatedData = { ...formData, [field]: value };
-    setFormData(updatedData);
-    onFormDataChange(permit.id, updatedData);
-  };
-
-  const validateGasLevels = () => {
-    const oxygen = parseFloat(formData.oxygen_level || '0');
-    const combustible = parseFloat(formData.combustible_gas || '0');
-    
-    return {
-      oxygenOK: oxygen >= 19.5 && oxygen <= 23.5,
-      combustibleOK: combustible <= 10,
-      allOK: (oxygen >= 19.5 && oxygen <= 23.5) && (combustible <= 10)
-    };
-  };
-
-  const validation = validateGasLevels();
-
-  if (permit.id.includes('confined-space')) {
-    return (
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9))',
-        borderRadius: '12px',
-        padding: '24px',
-        border: '1px solid rgba(100, 116, 139, 0.3)',
-        marginTop: '16px'
-      }}>
-        <h4 style={{ 
-          color: '#3b82f6', 
-          margin: '0 0 20px', 
-          fontSize: '18px', 
-          fontWeight: '700',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          📋 Formulaire Détaillé - {permit.name}
-        </h4>
-
-        {/* SECTION GAZ CRITIQUES */}
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1))',
-          border: validation.allOK ? '2px solid #22c55e' : '2px solid #ef4444',
-          borderRadius: '12px',
-          padding: '20px',
-          marginBottom: '20px'
-        }}>
-          <h5 style={{ 
-            color: validation.allOK ? '#22c55e' : '#ef4444', 
-            margin: '0 0 16px', 
-            fontSize: '16px', 
-            fontWeight: '700',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            🌬️ {t.gasLevels} {validation.allOK ? '✅' : '⚠️'}
-          </h5>
-          
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '16px' 
-          }}>
-            <div>
-              <label style={{ 
-                color: '#e2e8f0', 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                marginBottom: '4px', 
-                display: 'block' 
-              }}>
-                {t.oxygenLevel} (19.5-23.5%)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="100"
-                placeholder="21.0"
-                value={formData.oxygen_level || ''}
-                onChange={(e) => updateField('oxygen_level', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: validation.oxygenOK ? '2px solid #22c55e' : '2px solid #ef4444',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '14px'
-                }}
-              />
-              {formData.oxygen_level && (
-                <div style={{ 
-                  fontSize: '10px', 
-                  color: validation.oxygenOK ? '#22c55e' : '#ef4444',
-                  marginTop: '4px'
-                }}>
-                  {validation.oxygenOK ? '✅ Conforme' : '⚠️ Non conforme'}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label style={{ 
-                color: '#e2e8f0', 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                marginBottom: '4px', 
-                display: 'block' 
-              }}>
-                {t.combustibleGas} (≤10%)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="100"
-                placeholder="0.0"
-                value={formData.combustible_gas || ''}
-                onChange={(e) => updateField('combustible_gas', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: validation.combustibleOK ? '2px solid #22c55e' : '2px solid #ef4444',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '14px'
-                }}
-              />
-              {formData.combustible_gas && (
-                <div style={{ 
-                  fontSize: '10px', 
-                  color: validation.combustibleOK ? '#22c55e' : '#ef4444',
-                  marginTop: '4px'
-                }}>
-                  {validation.combustibleOK ? '✅ Conforme' : '⚠️ Non conforme'}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label style={{ 
-                color: '#e2e8f0', 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                marginBottom: '4px', 
-                display: 'block' 
-              }}>
-                {t.carbonMonoxide} (≤50ppm)
-              </label>
-              <input
-                type="number"
-                step="1"
-                min="0"
-                placeholder="0"
-                value={formData.carbon_monoxide || ''}
-                onChange={(e) => updateField('carbon_monoxide', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid rgba(100, 116, 139, 0.3)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ 
-                color: '#e2e8f0', 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                marginBottom: '4px', 
-                display: 'block' 
-              }}>
-                {t.hydrogenSulfide} (≤10ppm)
-              </label>
-              <input
-                type="number"
-                step="1"
-                min="0"
-                placeholder="0"
-                value={formData.hydrogen_sulfide || ''}
-                onChange={(e) => updateField('hydrogen_sulfide', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid rgba(100, 116, 139, 0.3)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION DÉTAILS ESPACE */}
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          borderRadius: '12px',
-          padding: '20px',
-          marginBottom: '20px'
-        }}>
-          <h5 style={{ 
-            color: '#3b82f6', 
-            margin: '0 0 16px', 
-            fontSize: '16px', 
-            fontWeight: '700',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            🏗️ {t.spaceDetails}
-          </h5>
-          
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-            gap: '16px' 
-          }}>
-            <div>
-              <label style={{ 
-                color: '#e2e8f0', 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                marginBottom: '4px', 
-                display: 'block' 
-              }}>
-                {t.spaceId}
-              </label>
-              <input
-                type="text"
-                placeholder="EX: EC-001-2025"
-                value={formData.space_id || ''}
-                onChange={(e) => updateField('space_id', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid rgba(100, 116, 139, 0.3)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ 
-                color: '#e2e8f0', 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                marginBottom: '4px', 
-                display: 'block' 
-              }}>
-                {t.location}
-              </label>
-              <input
-                type="text"
-                placeholder="Bâtiment A, Sous-sol, Réservoir #3"
-                value={formData.precise_location || ''}
-                onChange={(e) => updateField('precise_location', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid rgba(100, 116, 139, 0.3)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-
-            <div style={{ gridColumn: 'span 2' }}>
-              <label style={{ 
-                color: '#e2e8f0', 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                marginBottom: '4px', 
-                display: 'block' 
-              }}>
-                {t.description}
-              </label>
-              <textarea
-                placeholder="Description détaillée des travaux à effectuer..."
-                value={formData.work_description || ''}
-                onChange={(e) => updateField('work_description', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid rgba(100, 116, 139, 0.3)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  minHeight: '80px',
-                  resize: 'vertical'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ 
-                color: '#e2e8f0', 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                marginBottom: '4px', 
-                display: 'block' 
-              }}>
-                {t.entryTime}
-              </label>
-              <input
-                type="datetime-local"
-                value={formData.planned_entry_time || ''}
-                onChange={(e) => updateField('planned_entry_time', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid rgba(100, 116, 139, 0.3)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ 
-                color: '#e2e8f0', 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                marginBottom: '4px', 
-                display: 'block' 
-              }}>
-                {t.exitTime}
-              </label>
-              <input
-                type="datetime-local"
-                value={formData.planned_exit_time || ''}
-                onChange={(e) => updateField('planned_exit_time', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid rgba(100, 116, 139, 0.3)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION ÉQUIPEMENTS */}
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
-          border: '1px solid rgba(34, 197, 94, 0.3)',
-          borderRadius: '12px',
-          padding: '20px',
-          marginBottom: '20px'
-        }}>
-          <h5 style={{ 
-            color: '#22c55e', 
-            margin: '0 0 16px', 
-            fontSize: '16px', 
-            fontWeight: '700',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            ⚙️ {t.equipmentInfo}
-          </h5>
-          
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '12px' 
-          }}>
-            {[
-              { key: 'ventilation', label: t.ventilation },
-              { key: 'gas_detector', label: t.gasDetector },
-              { key: 'rescue_equipment', label: t.rescueEquipment },
-              { key: 'communication_device', label: t.communicationDevice }
-            ].map(item => (
-              <label key={item.key} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                color: '#e2e8f0',
-                fontSize: '14px',
-                cursor: 'pointer'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={formData[item.key] || false}
-                  onChange={(e) => updateField(item.key, e.target.checked)}
-                  style={{ 
-                    width: '16px', 
-                    height: '16px',
-                    accentColor: '#22c55e'
-                  }}
-                />
-                {item.label}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* BOUTONS D'ACTION */}
-        <div style={{ 
-          display: 'flex', 
-          gap: '12px', 
-          justifyContent: 'flex-end',
-          marginTop: '24px'
-        }}>
-          <button
-            onClick={() => alert('Données sauvegardées!')}
-            style={{
-              padding: '12px 20px',
-              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            💾 {t.save}
-          </button>
-          
-          <button
-            onClick={() => alert(validation.allOK ? 'Permis validé!' : 'Veuillez corriger les niveaux de gaz')}
-            disabled={!validation.allOK}
-            style={{
-              padding: '12px 20px',
-              background: validation.allOK ? 
-                'linear-gradient(135deg, #22c55e, #16a34a)' : 
-                'rgba(100, 116, 139, 0.3)',
-              color: validation.allOK ? 'white' : '#64748b',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: validation.allOK ? 'pointer' : 'not-allowed',
-              fontSize: '14px',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            {validation.allOK ? '✅' : '⚠️'} {t.validate}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Pour les autres types de permis, formulaire simplifié
-  return (
-    <div style={{
-      background: 'rgba(15, 23, 42, 0.8)',
-      borderRadius: '8px',
-      padding: '16px',
-      marginTop: '16px'
-    }}>
-      <p style={{ color: '#94a3b8', textAlign: 'center', margin: 0 }}>
-        Formulaire détaillé pour {permit.name} - En développement
-      </p>
-    </div>
-  );
-};
-
-// =================== INTÉGRATION DANS LE FORMULAIRE EXISTANT ===================
-// Cherchez cette section dans votre code (vers ligne 3730-3750) :
-// <h4 style={{ color: '#3b82f6', margin: '0 0 16px' }}>📝 Formulaire Intégré</h4>
-// 
-// Et ajoutez APRÈS les autres composants existants et AVANT la div de "nextStep" :
-
-/*
-{expandedForms[permit.id] && (
-  <div style={{ ... }}>
-    <h4 style={{ color: '#3b82f6', margin: '0 0 16px', fontSize: '16px', fontWeight: '700' }}>
-      📝 Formulaire Intégré
-    </h4>
-
-    // ======= AJOUTEZ ICI LE COMPOSANT FORMULAIRE DÉTAILLÉ =======
-    <DetailedPermitForm
-      permit={permit}
-      onFormDataChange={(permitId, data) => {
-        const updatedPermits = permits.map(p => 
-          p.id === permitId ? { ...p, formData: data } : p
-        );
-        setPermits(updatedPermits);
-        updateFormData(updatedPermits);
-      }}
-      language={language}
-      selectedProvince={selectedProvince}
-    />
-
-    // Carrousel Photos (GARDEZ L'EXISTANT)
-    <ProvincialPhotoCarousel ... />
-    
-    // Workers Manager (GARDEZ L'EXISTANT)
-    <EasyWorkerManager ... />
-    
-    // Supervisors Manager (GARDEZ L'EXISTANT)
-    <EasySupervisorManager ... />
-
-    <div style={{ background: '...' }}>
-      <p style={{ color: '#22c55e' }}>✅ {t.messages.nextStep}</p>
-    </div>
-  </div>
-)}
-*/
-                    {/* Carrousel Photos */}
-                    <ProvincialPhotoCarousel
-                      permitId={permit.id}
-                      province={selectedProvince}
-                      photos={permitPhotos[permit.id] || []}
-                      onPhotosChange={(photos) => setPermitPhotos(prev => ({ ...prev, [permit.id]: photos }))}
-                      language={language}
-                    />
-
-                    {/* Gestion Workers */}
-                    <EasyWorkerManager
-                      permitId={permit.id}
-                      province={selectedProvince}
-                      workers={permitWorkers[permit.id] || []}
-                      onWorkersChange={(workers) => setPermitWorkers(prev => ({ ...prev, [permit.id]: workers }))}
-                      language={language}
-                    />
-
-                    {/* Gestion Supervisors */}
-                    <EasySupervisorManager
-                      permitId={permit.id}
-                      province={selectedProvince}
-                      supervisors={permitSupervisors[permit.id] || []}
-                      onSupervisorsChange={(supervisors) => setPermitSupervisors(prev => ({ ...prev, [permit.id]: supervisors }))}
-                      language={language}
-                    />
+                    {/* Placeholder pour les composants intégrés */}
+                    <div style={{
+                      background: 'rgba(30, 41, 59, 0.6)',
+                      borderRadius: '8px',
+                      padding: '20px',
+                      textAlign: 'center',
+                      marginBottom: '16px'
+                    }}>
+                      <p style={{ color: '#94a3b8', margin: '0 0 8px' }}>
+                        🚧 Formulaire détaillé pour {permit.name}
+                      </p>
+                      <p style={{ color: '#64748b', margin: '0', fontSize: '12px' }}>
+                        Carrousel photos + Workers + Supervisors à intégrer
+                      </p>
+                    </div>
 
                     <div style={{
                       background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
                       border: '1px solid rgba(34, 197, 94, 0.3)',
                       borderRadius: '8px',
                       padding: '12px',
-                      marginTop: '16px',
                       textAlign: 'center'
                     }}>
                       <p style={{ color: '#22c55e', margin: '0', fontSize: '12px', fontWeight: '600' }}>
