@@ -1718,10 +1718,66 @@ const ConfinedSpaceManager: React.FC<{
     </div>
   );
 };
-
-// CONTINUEZ AVEC LA SECTION 4...
-// =================== SECTION 4/4 RÉVISÉE - COMPOSANT PRINCIPAL + EXPORT FINAL ===================
+// =================== SECTION 4/4 CORRIGÉE - COMPOSANT PRINCIPAL + EXPORT FINAL ===================
 // Remplacez ENTIÈREMENT votre SECTION 4 par cette version corrigée
+
+// =================== DONNÉES PERMIS RÉELLES SEULEMENT ===================
+const getProvincialPermits = (language: 'fr' | 'en', province: string = 'QC'): Permit[] => {
+  return [
+    {
+      id: 'confined-space-entry',
+      name: language === 'fr' ? 
+        `Permis Entrée Espace Clos - ${province}` : 
+        `Confined Space Entry Permit - ${province}`,
+      category: language === 'fr' ? 'Sécurité' : 'Safety',
+      description: language === 'fr' ? 
+        `Permis conforme aux normes ${province} avec surveillance atmosphérique continue` : 
+        `${province} compliant permit with continuous atmospheric monitoring`,
+      authority: `Autorité ${province}`,
+      province: [province],
+      priority: 'critical' as const,
+      selected: false,
+      formData: {}
+    },
+    {
+      id: 'hot-work-permit',
+      name: language === 'fr' ? 
+        `Permis Travail à Chaud - ${province}` : 
+        `Hot Work Permit - ${province}`,
+      category: language === 'fr' ? 'Sécurité' : 'Safety',
+      description: language === 'fr' ? 
+        `Permis travaux à chaud avec surveillance incendie selon ${province}` : 
+        `Hot work permit with fire watch per ${province} standards`,
+      authority: `Autorité ${province}`,
+      province: [province],
+      priority: 'critical' as const,
+      selected: false,
+      formData: {}
+    },
+    {
+      id: 'excavation-permit',
+      name: language === 'fr' ? 
+        `Permis Excavation - ${province}` : 
+        `Excavation Permit - ${province}`,
+      category: language === 'fr' ? 'Construction' : 'Construction',
+      description: language === 'fr' ? 
+        `Permis excavation municipal conforme aux normes ${province}` : 
+        `Municipal excavation permit compliant with ${province} standards`,
+      authority: `Municipal ${province}`,
+      province: [province],
+      priority: 'high' as const,
+      selected: false,
+      formData: {}
+    }
+  ];
+};
+
+// =================== INTERFACE ARCHIVE ===================
+interface ArchivedPermit extends Permit {
+  archivedDate: string;
+  completedBy: string;
+  status: 'completed' | 'expired' | 'cancelled';
+}
 
 // =================== COMPOSANT PRINCIPAL STEP4PERMITS ===================
 const Step4Permits: React.FC<Step4PermitsProps> = ({ 
@@ -1739,10 +1795,12 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   const [selectedProvince, setSelectedProvince] = useState(formData.province || 'QC');
   const [expandedForms, setExpandedForms] = useState<{ [key: string]: boolean }>({});
   const [selectedConfinedSpace, setSelectedConfinedSpace] = useState<ConfinedSpaceDatabase | null>(null);
+  const [showArchives, setShowArchives] = useState(false);
   
   const [permitPhotos, setPermitPhotos] = useState<{ [permitId: string]: PhotoCarouselEntry[] }>({});
   const [permitWorkers, setPermitWorkers] = useState<{ [permitId: string]: WorkerEntryQuick[] }>({});
   const [permitSupervisors, setPermitSupervisors] = useState<{ [permitId: string]: SupervisorQuick[] }>({});
+  const [archivedPermits, setArchivedPermits] = useState<ArchivedPermit[]>([]);
   
   const [permits, setPermits] = useState(() => {
     if (formData.permits?.list && formData.permits.list.length > 0) {
@@ -1783,6 +1841,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
       photos: permitPhotos,
       workers: permitWorkers,
       supervisors: permitSupervisors,
+      archived: archivedPermits,
       stats: {
         totalPermits: updatedPermits.length,
         selected: selectedList.length,
@@ -1791,7 +1850,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     });
   };
 
-  const toggleFormExpansion = (permitId: string) => {
+  // CORRECTION: Fonction pour ouvrir/fermer les formulaires
+  const handleFormToggle = (permitId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Empêche la propagation vers la carte parent
     setExpandedForms(prev => ({ ...prev, [permitId]: !prev[permitId] }));
   };
 
@@ -1820,6 +1881,37 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     updateFormData(updatedPermits);
   };
 
+  // NOUVELLE FONCTION: Archiver un permis
+  const archivePermit = (permitId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    const permit = permits.find(p => p.id === permitId);
+    if (permit && permit.selected) {
+      const archivedPermit: ArchivedPermit = {
+        ...permit,
+        archivedDate: new Date().toISOString(),
+        completedBy: 'Utilisateur actuel', // À remplacer par l'utilisateur connecté
+        status: 'completed'
+      };
+      
+      setArchivedPermits(prev => [archivedPermit, ...prev]);
+      
+      // Désélectionner le permis
+      const updatedPermits = permits.map(p => 
+        p.id === permitId ? { ...p, selected: false } : p
+      );
+      setPermits(updatedPermits);
+      updateFormData(updatedPermits);
+      
+      // Fermer le formulaire
+      setExpandedForms(prev => ({ ...prev, [permitId]: false }));
+      
+      alert(language === 'fr' ? 
+        '✅ Permis archivé avec succès!' : 
+        '✅ Permit archived successfully!'
+      );
+    }
+  };
+
   // =================== FILTRAGE AVEC TYPES CORRECTS ===================
   const filteredPermits = useMemo(() => {
     return permits.filter((permit: Permit) => {
@@ -1844,8 +1936,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     totalPermits: permits.length,
     selected: selectedPermits.length,
     critical: selectedPermits.filter((p: Permit) => p.priority === 'critical').length,
-    compliant: selectedPermits.length
-  }), [permits, selectedPermits]);
+    compliant: selectedPermits.length,
+    archived: archivedPermits.length
+  }), [permits, selectedPermits, archivedPermits]);
 
   // =================== EFFETS ===================
   useEffect(() => {
@@ -1865,7 +1958,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     { key: 'available', value: stats.totalPermits, icon: '📊' },
     { key: 'selected', value: stats.selected, icon: '✅' },
     { key: 'critical', value: stats.critical, icon: '🚨' },
-    { key: 'compliant', value: `${stats.compliant}/${stats.selected}`, icon: '🛡️' }
+    { key: 'archived', value: stats.archived, icon: '📦' }
   ];
 
   // =================== RENDU ===================
@@ -1880,21 +1973,49 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
         marginBottom: '28px',
         backdropFilter: 'blur(20px)'
       }}>
-        <h1 style={{
-          color: '#ffffff',
-          fontSize: '24px',
-          fontWeight: '800',
-          marginBottom: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          background: 'linear-gradient(135deg, #60a5fa, #a78bfa)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent'
-        }}>
-          📋 {t.title}
-        </h1>
-        <p style={{ color: '#3b82f6', margin: '0 0 20px', fontSize: '14px' }}>{t.subtitle}</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+          <div>
+            <h1 style={{
+              color: '#ffffff',
+              fontSize: '24px',
+              fontWeight: '800',
+              marginBottom: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              background: 'linear-gradient(135deg, #60a5fa, #a78bfa)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              📋 {t.title}
+            </h1>
+            <p style={{ color: '#3b82f6', margin: '0', fontSize: '14px' }}>{t.subtitle}</p>
+          </div>
+          
+          {/* Bouton Archives */}
+          <button
+            onClick={() => setShowArchives(!showArchives)}
+            style={{
+              padding: '12px 20px',
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              fontWeight: '600'
+            }}
+          >
+            <FileText size={16} />
+            {showArchives ? 
+              (language === 'fr' ? 'Retour aux Permis' : 'Back to Permits') :
+              (language === 'fr' ? `Archives (${stats.archived})` : `Archives (${stats.archived})`)
+            }
+          </button>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px' }}>
           {statsData.map((stat: StatItem) => (
@@ -1917,285 +2038,397 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                 {stat.value}
               </div>
               <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>
-                {t.stats[stat.key as keyof typeof t.stats]}
+                {stat.key === 'archived' ? 
+                  (language === 'fr' ? 'Archivés' : 'Archived') :
+                  (t.stats[stat.key as keyof typeof t.stats] || stat.key)
+                }
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Base de données espaces clos */}
-      <ConfinedSpaceManager
-        tenant={tenant}
-        onSpaceSelected={handleConfinedSpaceSelected}
-        language={language}
-      />
-
-      {/* Espace sélectionné */}
-      {selectedConfinedSpace && (
+      {/* Vue Archives */}
+      {showArchives ? (
         <div style={{
-          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
-          border: '1px solid rgba(34, 197, 94, 0.3)',
-          borderRadius: '12px',
-          padding: '16px',
-          marginBottom: '24px'
+          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6))',
+          borderRadius: '20px',
+          padding: '24px'
         }}>
-          <h4 style={{ color: '#22c55e', margin: '0 0 8px', fontSize: '14px', fontWeight: '700' }}>
-            ✅ Espace Clos Sélectionné
-          </h4>
-          <p style={{ color: '#dcfce7', margin: '0', fontSize: '13px' }}>
-            {selectedConfinedSpace.company} - {selectedConfinedSpace.equipmentNumber} - {selectedConfinedSpace.spaceName}
-          </p>
-        </div>
-      )}
-
-      {/* Recherche */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6))',
-        borderRadius: '20px',
-        padding: '24px',
-        marginBottom: '28px'
-      }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '16px' }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={18} style={{
-              position: 'absolute',
-              left: '16px',
-              top: '50%',
-              transform: 'translateY(-50%)',
+          <h2 style={{ color: '#f59e0b', marginBottom: '20px', fontSize: '20px', fontWeight: '700' }}>
+            📦 {language === 'fr' ? 'Permis Archivés' : 'Archived Permits'}
+          </h2>
+          
+          {archivedPermits.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
               color: '#94a3b8'
-            }} />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t.searchPlaceholder}
-              style={{
-                width: '100%',
-                padding: '16px 16px 16px 48px',
-                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
-                border: '2px solid rgba(100, 116, 139, 0.3)',
-                borderRadius: '16px',
-                color: '#ffffff',
-                fontSize: '16px'
-              }}
-            />
-          </div>
-          
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            style={{
-              padding: '16px 20px',
-              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
-              border: '2px solid rgba(100, 116, 139, 0.3)',
-              borderRadius: '16px',
-              color: '#ffffff',
-              fontSize: '14px',
-              minWidth: '180px'
-            }}
-          >
-            <option value="all">{t.allCategories}</option>
-            {categories.map((category: string) => (
-              <option key={category} value={category}>
-                {getCategoryIcon(category)} {(t.categories as any)[category] || category}
-              </option>
-            ))}
-          </select>
-          
-          <select
-            value={selectedProvince}
-            onChange={(e) => setSelectedProvince(e.target.value)}
-            style={{
-              padding: '16px 20px',
-              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
-              border: '2px solid rgba(100, 116, 139, 0.3)',
-              borderRadius: '16px',
-              color: '#ffffff',
-              fontSize: '14px',
-              minWidth: '180px'
-            }}
-          >
-            {provinces.map((province: string) => (
-              <option key={province} value={province}>🍁 {province}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Cartes des permis */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: '24px' }}>
-        {filteredPermits.map((permit: Permit) => (
-          <div
-            key={permit.id}
-            style={{
-              background: permit.selected ?
-                'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(30, 41, 59, 0.8))' :
-                'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6))',
-              border: permit.selected ? '2px solid #3b82f6' : '1px solid rgba(100, 116, 139, 0.3)',
-              borderRadius: '20px',
-              padding: '24px',
-              transition: 'all 0.4s ease',
-              cursor: 'pointer'
-            }}
-          >
-            <div
-              style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}
-              onClick={() => handlePermitToggle(permit.id)}
-            >
-              <div style={{ fontSize: '32px', width: '48px', textAlign: 'center' }}>
-                {getCategoryIcon(permit.category)}
-              </div>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ color: '#ffffff', fontSize: '18px', fontWeight: '700', margin: '0 0 6px', lineHeight: '1.3' }}>
-                  {permit.name}
-                </h3>
-                <div style={{ color: '#94a3b8', fontSize: '12px', fontWeight: '600', marginBottom: '6px', textTransform: 'uppercase' }}>
-                  {(t.categories as any)[permit.category] || permit.category}
-                </div>
-                <div style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: '1.5', marginBottom: '8px' }}>
-                  {permit.description}
-                </div>
-                <div style={{ color: '#60a5fa', fontSize: '12px', fontWeight: '600' }}>
-                  {permit.authority}
-                </div>
-              </div>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                border: '2px solid rgba(100, 116, 139, 0.5)',
-                borderRadius: '8px',
-                background: permit.selected ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : 'rgba(15, 23, 42, 0.8)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.3s ease'
-              }}>
-                {permit.selected && <CheckCircle size={18} style={{ color: 'white' }} />}
-              </div>
+            }}>
+              <FileText size={48} style={{ margin: '0 auto 16px', color: '#64748b' }} />
+              <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>
+                {language === 'fr' ? 'Aucun permis archivé' : 'No archived permits'}
+              </h3>
+              <p style={{ margin: 0 }}>
+                {language === 'fr' ? 
+                  'Les permis complétés apparaîtront ici' : 
+                  'Completed permits will appear here'
+                }
+              </p>
             </div>
-
-            {permit.selected && (
-              <div>
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+          ) : (
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {archivedPermits.map((permit) => (
+                <div
+                  key={`archived-${permit.id}`}
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
+                    border: '1px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ color: '#ffffff', margin: '0 0 8px', fontSize: '16px', fontWeight: '700' }}>
+                      {permit.name}
+                    </h4>
+                    <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#94a3b8' }}>
+                      <span>📅 {new Date(permit.archivedDate).toLocaleDateString()}</span>
+                      <span>👤 {permit.completedBy}</span>
+                      <span style={{
+                        color: permit.status === 'completed' ? '#22c55e' : '#ef4444',
+                        fontWeight: '600'
+                      }}>
+                        ● {permit.status.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
                   <button
-                    onClick={() => toggleFormExpansion(permit.id)}
                     style={{
-                      padding: '12px 16px',
+                      padding: '8px 12px',
                       background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
                       color: 'white',
                       border: 'none',
-                      borderRadius: '12px',
+                      borderRadius: '6px',
                       cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: '600',
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px'
+                      fontSize: '11px',
+                      fontWeight: '600'
                     }}
                   >
-                    <Edit size={14} />
-                    {expandedForms[permit.id] ? t.actions.close : t.actions.fill}
-                  </button>
-                  <button
-                    style={{
-                      padding: '12px 16px',
-                      background: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2))',
-                      color: '#cbd5e1',
-                      border: '1px solid rgba(100, 116, 139, 0.3)',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}
-                  >
-                    <Download size={14} />
-                    {t.actions.download}
+                    {language === 'fr' ? 'Voir Détails' : 'View Details'}
                   </button>
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Base de données espaces clos */}
+          <ConfinedSpaceManager
+            tenant={tenant}
+            onSpaceSelected={handleConfinedSpaceSelected}
+            language={language}
+          />
 
-                {expandedForms[permit.id] && (
-                  <div style={{
+          {/* Espace sélectionné */}
+          {selectedConfinedSpace && (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '24px'
+            }}>
+              <h4 style={{ color: '#22c55e', margin: '0 0 8px', fontSize: '14px', fontWeight: '700' }}>
+                ✅ Espace Clos Sélectionné
+              </h4>
+              <p style={{ color: '#dcfce7', margin: '0', fontSize: '13px' }}>
+                {selectedConfinedSpace.company} - {selectedConfinedSpace.equipmentNumber} - {selectedConfinedSpace.spaceName}
+              </p>
+            </div>
+          )}
+
+          {/* Recherche */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6))',
+            borderRadius: '20px',
+            padding: '24px',
+            marginBottom: '28px'
+          }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '16px' }}>
+              <div style={{ position: 'relative' }}>
+                <Search size={18} style={{
+                  position: 'absolute',
+                  left: '16px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#94a3b8'
+                }} />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={t.searchPlaceholder}
+                  style={{
+                    width: '100%',
+                    padding: '16px 16px 16px 48px',
                     background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
-                    borderRadius: '12px',
-                    padding: '20px',
-                    marginTop: '16px'
+                    border: '2px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '16px',
+                    color: '#ffffff',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+              
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                style={{
+                  padding: '16px 20px',
+                  background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
+                  border: '2px solid rgba(100, 116, 139, 0.3)',
+                  borderRadius: '16px',
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  minWidth: '180px'
+                }}
+              >
+                <option value="all">{t.allCategories}</option>
+                {categories.map((category: string) => (
+                  <option key={category} value={category}>
+                    {getCategoryIcon(category)} {(t.categories as any)[category] || category}
+                  </option>
+                ))}
+              </select>
+              
+              <select
+                value={selectedProvince}
+                onChange={(e) => setSelectedProvince(e.target.value)}
+                style={{
+                  padding: '16px 20px',
+                  background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
+                  border: '2px solid rgba(100, 116, 139, 0.3)',
+                  borderRadius: '16px',
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  minWidth: '180px'
+                }}
+              >
+                {provinces.map((province: string) => (
+                  <option key={province} value={province}>🍁 {province}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Cartes des permis */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: '24px' }}>
+            {filteredPermits.map((permit: Permit) => (
+              <div
+                key={permit.id}
+                style={{
+                  background: permit.selected ?
+                    'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(30, 41, 59, 0.8))' :
+                    'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6))',
+                  border: permit.selected ? '2px solid #3b82f6' : '1px solid rgba(100, 116, 139, 0.3)',
+                  borderRadius: '20px',
+                  padding: '24px',
+                  transition: 'all 0.4s ease'
+                }}
+              >
+                <div
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'flex-start', 
+                    gap: '16px', 
+                    marginBottom: '20px',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => handlePermitToggle(permit.id)}
+                >
+                  <div style={{ fontSize: '32px', width: '48px', textAlign: 'center' }}>
+                    {getCategoryIcon(permit.category)}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ color: '#ffffff', fontSize: '18px', fontWeight: '700', margin: '0 0 6px', lineHeight: '1.3' }}>
+                      {permit.name}
+                    </h3>
+                    <div style={{ color: '#94a3b8', fontSize: '12px', fontWeight: '600', marginBottom: '6px', textTransform: 'uppercase' }}>
+                      {(t.categories as any)[permit.category] || permit.category}
+                    </div>
+                    <div style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: '1.5', marginBottom: '8px' }}>
+                      {permit.description}
+                    </div>
+                    <div style={{ color: '#60a5fa', fontSize: '12px', fontWeight: '600' }}>
+                      {permit.authority}
+                    </div>
+                  </div>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    border: '2px solid rgba(100, 116, 139, 0.5)',
+                    borderRadius: '8px',
+                    background: permit.selected ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : 'rgba(15, 23, 42, 0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.3s ease'
                   }}>
-                    <h4 style={{ color: '#3b82f6', margin: '0 0 16px', fontSize: '16px', fontWeight: '700' }}>
-                      📝 Formulaire Intégré - {permit.name}
-                    </h4>
+                    {permit.selected && <CheckCircle size={18} style={{ color: 'white' }} />}
+                  </div>
+                </div>
 
-                    {/* Carrousel Photos */}
-                    <div style={{ marginBottom: '20px' }}>
-                      <AdvancedPhotoCarousel
-                        permitId={permit.id}
-                        province={selectedProvince}
-                        photos={permitPhotos[permit.id] || []}
-                        onPhotosChange={(photos) => setPermitPhotos(prev => ({ ...prev, [permit.id]: photos }))}
-                        language={language}
-                      />
+                {permit.selected && (
+                  <div>
+                    <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                      <button
+                        onClick={(e) => handleFormToggle(permit.id, e)}
+                        style={{
+                          padding: '12px 16px',
+                          background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <Edit size={14} />
+                        {expandedForms[permit.id] ? t.actions.close : t.actions.fill}
+                      </button>
+                      
+                      {expandedForms[permit.id] && (
+                        <button
+                          onClick={(e) => archivePermit(permit.id, e)}
+                          style={{
+                            padding: '12px 16px',
+                            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                        >
+                          <FileText size={14} />
+                          {language === 'fr' ? 'Archiver' : 'Archive'}
+                        </button>
+                      )}
+                      
+                      <button
+                        style={{
+                          padding: '12px 16px',
+                          background: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2))',
+                          color: '#cbd5e1',
+                          border: '1px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <Download size={14} />
+                        {t.actions.download}
+                      </button>
                     </div>
 
-                    {/* Workers Manager */}
-                    <div style={{ marginBottom: '20px' }}>
-                      <EasyWorkerManager
-                        permitId={permit.id}
-                        province={selectedProvince}
-                        workers={permitWorkers[permit.id] || []}
-                        onWorkersChange={(workers) => setPermitWorkers(prev => ({ ...prev, [permit.id]: workers }))}
-                        language={language}
-                      />
-                    </div>
+                    {expandedForms[permit.id] && (
+                      <div style={{
+                        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
+                        borderRadius: '12px',
+                        padding: '20px',
+                        marginTop: '16px'
+                      }}>
+                        <h4 style={{ color: '#3b82f6', margin: '0 0 16px', fontSize: '16px', fontWeight: '700' }}>
+                          📝 Formulaire Intégré - {permit.name}
+                        </h4>
 
-                    {/* Supervisors Manager */}
-                    <div style={{ marginBottom: '20px' }}>
-                      <EasySupervisorManager
-                        permitId={permit.id}
-                        province={selectedProvince}
-                        supervisors={permitSupervisors[permit.id] || []}
-                        onSupervisorsChange={(supervisors) => setPermitSupervisors(prev => ({ ...prev, [permit.id]: supervisors }))}
-                        language={language}
-                      />
-                    </div>
+                        {/* Carrousel Photos */}
+                        <div style={{ marginBottom: '20px' }}>
+                          <AdvancedPhotoCarousel
+                            permitId={permit.id}
+                            province={selectedProvince}
+                            photos={permitPhotos[permit.id] || []}
+                            onPhotosChange={(photos) => setPermitPhotos(prev => ({ ...prev, [permit.id]: photos }))}
+                            language={language}
+                          />
+                        </div>
 
-                    {/* Status final */}
-                    <div style={{
-                      background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
-                      borderRadius: '8px',
-                      padding: '12px',
-                      textAlign: 'center'
-                    }}>
-                      <p style={{ color: '#22c55e', margin: '0', fontSize: '12px', fontWeight: '600' }}>
-                        ✅ {t.messages.nextStep}
-                      </p>
-                    </div>
+                        {/* Workers Manager */}
+                        <div style={{ marginBottom: '20px' }}>
+                          <EasyWorkerManager
+                            permitId={permit.id}
+                            province={selectedProvince}
+                            workers={permitWorkers[permit.id] || []}
+                            onWorkersChange={(workers) => setPermitWorkers(prev => ({ ...prev, [permit.id]: workers }))}
+                            language={language}
+                          />
+                        </div>
+
+                        {/* Supervisors Manager */}
+                        <div style={{ marginBottom: '20px' }}>
+                          <EasySupervisorManager
+                            permitId={permit.id}
+                            province={selectedProvince}
+                            supervisors={permitSupervisors[permit.id] || []}
+                            onSupervisorsChange={(supervisors) => setPermitSupervisors(prev => ({ ...prev, [permit.id]: supervisors }))}
+                            language={language}
+                          />
+                        </div>
+
+                        {/* Status final */}
+                        <div style={{
+                          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
+                          border: '1px solid rgba(34, 197, 94, 0.3)',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          textAlign: 'center'
+                        }}>
+                          <p style={{ color: '#22c55e', margin: '0', fontSize: '12px', fontWeight: '600' }}>
+                            ✅ {t.messages.nextStep}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Message aucun résultat */}
-      {filteredPermits.length === 0 && (
-        <div style={{
-          textAlign: 'center',
-          padding: '60px 20px',
-          color: '#94a3b8',
-          background: 'rgba(30, 41, 59, 0.6)',
-          borderRadius: '16px',
-          border: '1px solid rgba(100, 116, 139, 0.3)'
-        }}>
-          <FileText size={48} style={{ margin: '0 auto 16px', color: '#64748b' }} />
-          <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>{t.messages.noResults}</h3>
-          <p style={{ margin: 0 }}>{t.messages.modifySearch}</p>
-        </div>
+          {/* Message aucun résultat */}
+          {filteredPermits.length === 0 && (
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: '#94a3b8',
+              background: 'rgba(30, 41, 59, 0.6)',
+              borderRadius: '16px',
+              border: '1px solid rgba(100, 116, 139, 0.3)'
+            }}>
+              <FileText size={48} style={{ margin: '0 auto 16px', color: '#64748b' }} />
+              <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>{t.messages.noResults}</h3>
+              <p style={{ margin: 0 }}>{t.messages.modifySearch}</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
