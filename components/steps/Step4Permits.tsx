@@ -1815,6 +1815,110 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
 // =================== SECTION 3B: COMPOSANTS PREMIUM =================== //
 // À coller après la Section 3 dans votre fichier Step4Permits.tsx
 
+// Composant PermitCard premium
+const PermitCard: React.FC<{
+  permit: Permit;
+  isSelected: boolean;
+  onSelect: () => void;
+  onFill: () => void;
+  onValidate: () => void;
+  onGeneratePDF: () => void;
+}> = ({ permit, isSelected, onSelect, onFill, onValidate, onGeneratePDF }) => {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'En Attente': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+      case 'En Cours': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+      case 'Validé': return 'bg-green-500/20 text-green-400 border-green-500/30';
+      case 'Critique': return 'bg-red-500/20 text-red-400 border-red-500/30 animate-pulse';
+      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+    }
+  };
+
+  const getIconForType = (type: string) => {
+    switch (type) {
+      case 'Espace Clos': return '🛡️';
+      case 'Travail à Chaud': return '🔥';
+      case 'Excavation': return '🏗️';
+      default: return '📋';
+    }
+  };
+
+  return (
+    <div className={`relative bg-slate-800/50 backdrop-blur-sm border rounded-xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10 ${
+      isSelected 
+        ? 'border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/20' 
+        : 'border-slate-700/50 hover:border-slate-600/50'
+    }`}>
+      {/* Header de la carte */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="text-3xl">{getIconForType(permit.type)}</div>
+          <div>
+            <h3 className="font-semibold text-white text-lg">{permit.type}</h3>
+            <p className="text-gray-400 text-sm">{permit.norm}</p>
+          </div>
+        </div>
+        <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(permit.status)}`}>
+          {permit.status}
+        </span>
+      </div>
+
+      {/* Description */}
+      <p className="text-gray-300 text-sm mb-4 leading-relaxed">
+        {permit.description}
+      </p>
+
+      {/* Champs obligatoires */}
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-blue-400 text-sm font-medium">
+          {permit.requiredFields} champs obligatoires
+        </span>
+        <div className="flex-1 h-px bg-slate-700"></div>
+      </div>
+
+      {/* Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <button
+          onClick={onFill}
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
+        >
+          <FileText className="h-4 w-4" />
+          <span className="text-sm font-medium">Remplir</span>
+        </button>
+        
+        <button
+          onClick={onValidate}
+          className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 shadow-lg ${
+            permit.status === 'Validé'
+              ? 'bg-green-500 hover:bg-green-600 text-white'
+              : 'bg-slate-700 hover:bg-slate-600 text-gray-300'
+          }`}
+          disabled={permit.status !== 'En Cours'}
+        >
+          <CheckCircle className="h-4 w-4" />
+          <span className="text-sm font-medium">Valider</span>
+        </button>
+        
+        <button
+          onClick={onGeneratePDF}
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
+          disabled={permit.status === 'En Attente'}
+        >
+          <Download className="h-4 w-4" />
+          <span className="text-sm font-medium">PDF</span>
+        </button>
+      </div>
+
+      {/* Indicateur de sélection */}
+      {isSelected && (
+        <div className="absolute -top-2 -right-2 bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center">
+          <CheckCircle className="h-4 w-4" />
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Composant FormField avec validation premium
 const FormField: React.FC<{
   label: string;
