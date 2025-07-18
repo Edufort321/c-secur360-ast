@@ -1,5 +1,5 @@
-// =================== SECTION 1: INTERFACES ET TRADUCTIONS COMPLÈTES ===================
-// À coller au début de votre fichier Step4Permits.js
+// =================== SECTION 1: INTERFACES ET TRADUCTIONS SANS ERREURS ===================
+// À coller au début de votre fichier Step4Permits.tsx
 
 "use client";
 import React, { useState, useMemo, useEffect } from 'react';
@@ -130,7 +130,7 @@ interface ComplianceCheck {
   reference: string;
 }
 
-// =================== FONCTION DE TRADUCTION BILINGUE COMPLETE ===================
+// =================== FONCTION DE TRADUCTION BILINGUE SANS DOUBLONS ===================
 const getTexts = (language: 'fr' | 'en') => {
   if (language === 'fr') {
     return {
@@ -256,7 +256,6 @@ const getTexts = (language: 'fr' | 'en') => {
         signedBy: 'Signé par',
         on: 'Le',
         at: 'à',
-        addPhotos: '📷 Ajouter des photos',
         takePhoto: '📸 Prendre une photo',
         photoCaptured: 'Photo capturée',
         addDescription: 'Ajouter une description à cette photo...',
@@ -289,7 +288,7 @@ const getTexts = (language: 'fr' | 'en') => {
         authorizedWorkers: 'Travailleurs Autorisés',
         sitePhotos: 'Photos du Site',
         toggleView: 'Basculer vue',
-        addPhotos: 'Ajouter Photos',
+        addPhotos: '📷 Ajouter des photos',
         noPhotosAdded: 'Aucune photo ajoutée',
         clickToAddPhotos: 'Cliquez sur "Ajouter Photos" pour commencer',
         savePermit: 'Sauvegarder le Permis',
@@ -420,7 +419,6 @@ const getTexts = (language: 'fr' | 'en') => {
         signedBy: 'Signed by',
         on: 'On',
         at: 'at',
-        addPhotos: '📷 Add photos',
         takePhoto: '📸 Take photo',
         photoCaptured: 'Photo captured',
         addDescription: 'Add description to this photo...',
@@ -453,7 +451,7 @@ const getTexts = (language: 'fr' | 'en') => {
         authorizedWorkers: 'Authorized Workers',
         sitePhotos: 'Site Photos',
         toggleView: 'Toggle view',
-        addPhotos: 'Add Photos',
+        addPhotos: '📷 Add photos',
         noPhotosAdded: 'No photos added',
         clickToAddPhotos: 'Click "Add Photos" to start',
         savePermit: 'Save Permit',
@@ -462,7 +460,7 @@ const getTexts = (language: 'fr' | 'en') => {
     };
   }
 };
-// =================== SECTION 2: BASE DE DONNÉES PERMIS CONFORMES 2024-2025 ===================
+// =================== SECTION 2: BASE DE DONNÉES PERMIS CONFORMES SANS ERREURS ===================
 // À coller après la Section 1
 
 // =================== BASE DE DONNÉES PERMIS CONFORMES AUX NORMES 2024-2025 ===================
@@ -496,48 +494,317 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
       lastUpdated: '2025-01-20',
       formFields: [
         // SECTION IDENTIFICATION
-        { id: 'space_identification', type: 'text', label: language === 'fr' ? 'Identification de l\'espace clos' : 'Confined space identification', required: true, section: 'identification', placeholder: language === 'fr' ? 'Ex: Réservoir A-12, Regard municipal...' : 'Ex: Tank A-12, Municipal manhole...', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 300' },
-        { id: 'project_name', type: 'text', label: language === 'fr' ? 'Nom du projet' : 'Project name', required: true, section: 'identification' },
-        { id: 'location_precise', type: 'text', label: language === 'fr' ? 'Localisation GPS précise' : 'Precise GPS location', required: true, section: 'identification', validation: { legalRequirement: true } },
-        { id: 'permit_date', type: 'date', label: language === 'fr' ? 'Date du permis' : 'Permit date', required: true, section: 'identification' },
-        { id: 'permit_time', type: 'time', label: language === 'fr' ? 'Heure d\'émission' : 'Issue time', required: true, section: 'identification' },
-        { id: 'permit_duration', type: 'select', label: language === 'fr' ? 'Durée validité (max 8h)' : 'Validity duration (max 8h)', required: true, section: 'identification', options: ['1h', '2h', '4h', '6h', '8h'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 300' },
+        { 
+          id: 'space_identification', 
+          type: 'text', 
+          label: language === 'fr' ? 'Identification de l\'espace clos' : 'Confined space identification', 
+          required: true, 
+          section: 'identification', 
+          placeholder: language === 'fr' ? 'Ex: Réservoir A-12, Regard municipal...' : 'Ex: Tank A-12, Municipal manhole...', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 300' 
+        },
+        { 
+          id: 'project_name', 
+          type: 'text', 
+          label: language === 'fr' ? 'Nom du projet' : 'Project name', 
+          required: true, 
+          section: 'identification' 
+        },
+        { 
+          id: 'location_precise', 
+          type: 'text', 
+          label: language === 'fr' ? 'Localisation GPS précise' : 'Precise GPS location', 
+          required: true, 
+          section: 'identification', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'permit_date', 
+          type: 'date', 
+          label: language === 'fr' ? 'Date du permis' : 'Permit date', 
+          required: true, 
+          section: 'identification' 
+        },
+        { 
+          id: 'permit_time', 
+          type: 'time', 
+          label: language === 'fr' ? 'Heure d\'émission' : 'Issue time', 
+          required: true, 
+          section: 'identification' 
+        },
+        { 
+          id: 'permit_duration', 
+          type: 'select', 
+          label: language === 'fr' ? 'Durée validité (max 8h)' : 'Validity duration (max 8h)', 
+          required: true, 
+          section: 'identification', 
+          options: ['1h', '2h', '4h', '6h', '8h'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 300' 
+        },
         
         // SECTION GAS MONITORING OBLIGATOIRE
-        { id: 'oxygen_level', type: 'gas_meter', label: language === 'fr' ? 'Niveau oxygène (%)' : 'Oxygen level (%)', required: true, section: 'gas_monitoring', validation: { min: 19.5, max: 23.5, critical: true, legalRequirement: true, message: language === 'fr' ? 'CRITIQUE: O2 doit être entre 19.5% et 23.5%' : 'CRITICAL: O2 must be between 19.5% and 23.5%' }, complianceRef: 'RSST Art. 302 modifié' },
-        { id: 'combustible_gas_level', type: 'gas_meter', label: language === 'fr' ? 'Gaz combustibles (% LIE)' : 'Combustible gas (% LEL)', required: true, section: 'gas_monitoring', validation: { min: 0, max: 10, critical: true, legalRequirement: true, message: language === 'fr' ? 'CRITIQUE: Gaz combustibles < 10% LIE obligatoire' : 'CRITICAL: Combustible gas < 10% LEL mandatory' }, complianceRef: 'RSST Art. 302' },
-        { id: 'carbon_monoxide_level', type: 'gas_meter', label: language === 'fr' ? 'Monoxyde de carbone (ppm)' : 'Carbon monoxide (ppm)', required: true, section: 'gas_monitoring', validation: { min: 0, max: 35, critical: true, legalRequirement: true, message: language === 'fr' ? 'CRITIQUE: CO < 35 ppm obligatoire' : 'CRITICAL: CO < 35 ppm mandatory' }, complianceRef: 'RSST Annexe I' },
-        { id: 'hydrogen_sulfide_level', type: 'gas_meter', label: language === 'fr' ? 'Sulfure d\'hydrogène (ppm)' : 'Hydrogen sulfide (ppm)', required: true, section: 'gas_monitoring', validation: { min: 0, max: 10, critical: true, legalRequirement: true, message: language === 'fr' ? 'CRITIQUE: H2S < 10 ppm obligatoire' : 'CRITICAL: H2S < 10 ppm mandatory' }, complianceRef: 'RSST Annexe I' },
-        { id: 'continuous_monitoring', type: 'checkbox', label: language === 'fr' ? 'Surveillance atmosphérique CONTINUE pendant travaux' : 'CONTINUOUS atmospheric monitoring during work', required: true, section: 'gas_monitoring', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 302' },
-        { id: 'detector_calibration_date', type: 'date', label: language === 'fr' ? 'Date calibration détecteur' : 'Detector calibration date', required: true, section: 'gas_monitoring', validation: { legalRequirement: true } },
-        { id: 'detector_serial_number', type: 'text', label: language === 'fr' ? 'Numéro série détecteur' : 'Detector serial number', required: true, section: 'gas_monitoring' },
+        { 
+          id: 'oxygen_level', 
+          type: 'gas_meter', 
+          label: language === 'fr' ? 'Niveau oxygène (%)' : 'Oxygen level (%)', 
+          required: true, 
+          section: 'gas_monitoring', 
+          validation: { 
+            min: 19.5, 
+            max: 23.5, 
+            critical: true, 
+            legalRequirement: true, 
+            message: language === 'fr' ? 'CRITIQUE: O2 doit être entre 19.5% et 23.5%' : 'CRITICAL: O2 must be between 19.5% and 23.5%' 
+          }, 
+          complianceRef: 'RSST Art. 302 modifié' 
+        },
+        { 
+          id: 'combustible_gas_level', 
+          type: 'gas_meter', 
+          label: language === 'fr' ? 'Gaz combustibles (% LIE)' : 'Combustible gas (% LEL)', 
+          required: true, 
+          section: 'gas_monitoring', 
+          validation: { 
+            min: 0, 
+            max: 10, 
+            critical: true, 
+            legalRequirement: true, 
+            message: language === 'fr' ? 'CRITIQUE: Gaz combustibles < 10% LIE obligatoire' : 'CRITICAL: Combustible gas < 10% LEL mandatory' 
+          }, 
+          complianceRef: 'RSST Art. 302' 
+        },
+        { 
+          id: 'carbon_monoxide_level', 
+          type: 'gas_meter', 
+          label: language === 'fr' ? 'Monoxyde de carbone (ppm)' : 'Carbon monoxide (ppm)', 
+          required: true, 
+          section: 'gas_monitoring', 
+          validation: { 
+            min: 0, 
+            max: 35, 
+            critical: true, 
+            legalRequirement: true, 
+            message: language === 'fr' ? 'CRITIQUE: CO < 35 ppm obligatoire' : 'CRITICAL: CO < 35 ppm mandatory' 
+          }, 
+          complianceRef: 'RSST Annexe I' 
+        },
+        { 
+          id: 'hydrogen_sulfide_level', 
+          type: 'gas_meter', 
+          label: language === 'fr' ? 'Sulfure d\'hydrogène (ppm)' : 'Hydrogen sulfide (ppm)', 
+          required: true, 
+          section: 'gas_monitoring', 
+          validation: { 
+            min: 0, 
+            max: 10, 
+            critical: true, 
+            legalRequirement: true, 
+            message: language === 'fr' ? 'CRITIQUE: H2S < 10 ppm obligatoire' : 'CRITICAL: H2S < 10 ppm mandatory' 
+          }, 
+          complianceRef: 'RSST Annexe I' 
+        },
+        { 
+          id: 'continuous_monitoring', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Surveillance atmosphérique CONTINUE pendant travaux' : 'CONTINUOUS atmospheric monitoring during work', 
+          required: true, 
+          section: 'gas_monitoring', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 302' 
+        },
+        { 
+          id: 'detector_calibration_date', 
+          type: 'date', 
+          label: language === 'fr' ? 'Date calibration détecteur' : 'Detector calibration date', 
+          required: true, 
+          section: 'gas_monitoring', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'detector_serial_number', 
+          type: 'text', 
+          label: language === 'fr' ? 'Numéro série détecteur' : 'Detector serial number', 
+          required: true, 
+          section: 'gas_monitoring' 
+        },
         
         // SECTION ACCÈS ET ÂGE OBLIGATOIRE
-        { id: 'entry_mandatory', type: 'radio', label: language === 'fr' ? 'L\'entrée est-elle obligatoire ?' : 'Is entry mandatory?', required: true, section: 'access', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 297.1' },
-        { id: 'external_control_possible', type: 'radio', label: language === 'fr' ? 'Contrôle depuis l\'extérieur possible ?' : 'External control possible?', required: true, section: 'access', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 297.1 nouveau' },
-        { id: 'worker_age_verification', type: 'compliance_check', label: language === 'fr' ? 'VÉRIFICATION: Tous travailleurs ≥ 18 ans' : 'VERIFICATION: All workers ≥ 18 years', required: true, section: 'access', validation: { critical: true, legalRequirement: true }, complianceRef: 'RSST Art. 298 modifié 2023' },
-        { id: 'worker_certification_check', type: 'compliance_check', label: language === 'fr' ? 'Certification formation espace clos valide' : 'Valid confined space training certification', required: true, section: 'access', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 298' },
+        { 
+          id: 'entry_mandatory', 
+          type: 'radio', 
+          label: language === 'fr' ? 'L\'entrée est-elle obligatoire ?' : 'Is entry mandatory?', 
+          required: true, 
+          section: 'access', 
+          options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 297.1' 
+        },
+        { 
+          id: 'external_control_possible', 
+          type: 'radio', 
+          label: language === 'fr' ? 'Contrôle depuis l\'extérieur possible ?' : 'External control possible?', 
+          required: true, 
+          section: 'access', 
+          options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 297.1 nouveau' 
+        },
+        { 
+          id: 'worker_age_verification', 
+          type: 'compliance_check', 
+          label: language === 'fr' ? 'VÉRIFICATION: Tous travailleurs ≥ 18 ans' : 'VERIFICATION: All workers ≥ 18 years', 
+          required: true, 
+          section: 'access', 
+          validation: { critical: true, legalRequirement: true }, 
+          complianceRef: 'RSST Art. 298 modifié 2023' 
+        },
+        { 
+          id: 'worker_certification_check', 
+          type: 'compliance_check', 
+          label: language === 'fr' ? 'Certification formation espace clos valide' : 'Valid confined space training certification', 
+          required: true, 
+          section: 'access', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 298' 
+        },
         
         // SECTION PLAN DE SAUVETAGE PERSONNALISÉ
-        { id: 'rescue_plan_personalized', type: 'textarea', label: language === 'fr' ? 'Plan de sauvetage PERSONNALISÉ pour cet espace' : 'PERSONALIZED rescue plan for this space', required: true, section: 'rescue_plan', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 309 enrichi', placeholder: language === 'fr' ? 'Décrire procédure spécifique, équipements, points d\'accès...' : 'Describe specific procedure, equipment, access points...' },
-        { id: 'rescue_responsible_person', type: 'text', label: language === 'fr' ? 'Responsable sauvetage DÉSIGNÉ' : 'DESIGNATED rescue responsible', required: true, section: 'rescue_plan', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 309' },
-        { id: 'communication_protocol', type: 'select', label: language === 'fr' ? 'Protocole communication obligatoire' : 'Mandatory communication protocol', required: true, section: 'rescue_plan', options: language === 'fr' ? ['Radio bidirectionnelle', 'Téléphone cellulaire', 'Signaux visuels/sonores', 'Système fixe'] : ['Two-way radio', 'Cell phone', 'Visual/audio signals', 'Fixed system'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 309' },
-        { id: 'rescue_equipment_onsite', type: 'checkbox', label: language === 'fr' ? 'Équipements sauvetage SUR SITE avant entrée' : 'Rescue equipment ON SITE before entry', required: true, section: 'rescue_plan', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 309' },
-        { id: 'response_time_target', type: 'select', label: language === 'fr' ? 'Temps de réponse sauvetage' : 'Rescue response time', required: true, section: 'rescue_plan', options: ['< 3 minutes', '< 5 minutes', '< 10 minutes'], validation: { legalRequirement: true } },
-        { id: 'emergency_contact_primary', type: 'text', label: language === 'fr' ? 'Contact urgence primaire (nom + tél)' : 'Primary emergency contact (name + phone)', required: true, section: 'rescue_plan', validation: { legalRequirement: true } },
-        { id: 'emergency_contact_secondary', type: 'text', label: language === 'fr' ? 'Contact urgence secondaire' : 'Secondary emergency contact', required: true, section: 'rescue_plan' },
+        { 
+          id: 'rescue_plan_personalized', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Plan de sauvetage PERSONNALISÉ pour cet espace' : 'PERSONALIZED rescue plan for this space', 
+          required: true, 
+          section: 'rescue_plan', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 309 enrichi', 
+          placeholder: language === 'fr' ? 'Décrire procédure spécifique, équipements, points d\'accès...' : 'Describe specific procedure, equipment, access points...' 
+        },
+        { 
+          id: 'rescue_responsible_person', 
+          type: 'text', 
+          label: language === 'fr' ? 'Responsable sauvetage DÉSIGNÉ' : 'DESIGNATED rescue responsible', 
+          required: true, 
+          section: 'rescue_plan', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 309' 
+        },
+        { 
+          id: 'communication_protocol', 
+          type: 'select', 
+          label: language === 'fr' ? 'Protocole communication obligatoire' : 'Mandatory communication protocol', 
+          required: true, 
+          section: 'rescue_plan', 
+          options: language === 'fr' ? ['Radio bidirectionnelle', 'Téléphone cellulaire', 'Signaux visuels/sonores', 'Système fixe'] : ['Two-way radio', 'Cell phone', 'Visual/audio signals', 'Fixed system'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 309' 
+        },
+        { 
+          id: 'rescue_equipment_onsite', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Équipements sauvetage SUR SITE avant entrée' : 'Rescue equipment ON SITE before entry', 
+          required: true, 
+          section: 'rescue_plan', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 309' 
+        },
+        { 
+          id: 'response_time_target', 
+          type: 'select', 
+          label: language === 'fr' ? 'Temps de réponse sauvetage' : 'Rescue response time', 
+          required: true, 
+          section: 'rescue_plan', 
+          options: ['< 3 minutes', '< 5 minutes', '< 10 minutes'], 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'emergency_contact_primary', 
+          type: 'text', 
+          label: language === 'fr' ? 'Contact urgence primaire (nom + tél)' : 'Primary emergency contact (name + phone)', 
+          required: true, 
+          section: 'rescue_plan', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'emergency_contact_secondary', 
+          type: 'text', 
+          label: language === 'fr' ? 'Contact urgence secondaire' : 'Secondary emergency contact', 
+          required: true, 
+          section: 'rescue_plan' 
+        },
         
         // SECTION MATIÈRES À ÉCOULEMENT LIBRE
-        { id: 'free_flowing_materials', type: 'radio', label: language === 'fr' ? 'Matières à écoulement libre présentes ?' : 'Free-flowing materials present?', required: true, section: 'safety', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 311-312 séparés' },
-        { id: 'burial_risk_assessment', type: 'textarea', label: language === 'fr' ? 'Évaluation risque ensevelissement/noyade' : 'Burial/drowning risk assessment', required: false, section: 'safety', complianceRef: 'RSST Art. 311-312' },
-        { id: 'fall_prevention_measures', type: 'checkbox', label: language === 'fr' ? 'Mesures prévention chutes installées' : 'Fall prevention measures installed', required: true, section: 'safety', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 297.1' },
+        { 
+          id: 'free_flowing_materials', 
+          type: 'radio', 
+          label: language === 'fr' ? 'Matières à écoulement libre présentes ?' : 'Free-flowing materials present?', 
+          required: true, 
+          section: 'safety', 
+          options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 311-312 séparés' 
+        },
+        { 
+          id: 'burial_risk_assessment', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Évaluation risque ensevelissement/noyade' : 'Burial/drowning risk assessment', 
+          required: false, 
+          section: 'safety', 
+          complianceRef: 'RSST Art. 311-312' 
+        },
+        { 
+          id: 'fall_prevention_measures', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Mesures prévention chutes installées' : 'Fall prevention measures installed', 
+          required: true, 
+          section: 'safety', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 297.1' 
+        },
         
         // SECTION TRAVAILLEURS AUTORISÉS
-        { id: 'authorized_workers', type: 'textarea', label: language === 'fr' ? 'Travailleurs autorisés (nom, âge, certification)' : 'Authorized workers (name, age, certification)', required: true, section: 'signatures', placeholder: language === 'fr' ? 'Format: Nom, Prénom - Âge: XX ans - Cert: XXXXX' : 'Format: Last, First - Age: XX years - Cert: XXXXX', validation: { legalRequirement: true } },
-        { id: 'workers_log', type: 'workers_tracking', label: language === 'fr' ? 'Registre entrées/sorties avec surveillance gaz' : 'Entry/exit log with gas monitoring', required: true, section: 'signatures', validation: { legalRequirement: true } },
-        { id: 'photos_documentation', type: 'photo_gallery', label: language === 'fr' ? 'Photos documentation sécurité obligatoires' : 'Mandatory safety documentation photos', required: true, section: 'atmosphere', validation: { legalRequirement: true } },
-        { id: 'supervisor_signature', type: 'signature', label: language === 'fr' ? 'Signature surveillant qualifié' : 'Qualified supervisor signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
-        { id: 'attendant_signature', type: 'signature', label: language === 'fr' ? 'Signature préposé à l\'entrée' : 'Entry attendant signature', required: true, section: 'signatures', validation: { legalRequirement: true } }
+        { 
+          id: 'authorized_workers', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Travailleurs autorisés (nom, âge, certification)' : 'Authorized workers (name, age, certification)', 
+          required: true, 
+          section: 'signatures', 
+          placeholder: language === 'fr' ? 'Format: Nom, Prénom - Âge: XX ans - Cert: XXXXX' : 'Format: Last, First - Age: XX years - Cert: XXXXX', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'workers_log', 
+          type: 'workers_tracking', 
+          label: language === 'fr' ? 'Registre entrées/sorties avec surveillance gaz' : 'Entry/exit log with gas monitoring', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'photos_documentation', 
+          type: 'photo_gallery', 
+          label: language === 'fr' ? 'Photos documentation sécurité obligatoires' : 'Mandatory safety documentation photos', 
+          required: true, 
+          section: 'atmosphere', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'supervisor_signature', 
+          type: 'signature', 
+          label: language === 'fr' ? 'Signature surveillant qualifié' : 'Qualified supervisor signature', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'attendant_signature', 
+          type: 'signature', 
+          label: language === 'fr' ? 'Signature préposé à l\'entrée' : 'Entry attendant signature', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        }
       ]
     },
 
@@ -567,49 +834,187 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
       lastUpdated: '2025-01-20',
       formFields: [
         // SECTION IDENTIFICATION
-        { id: 'permit_number_hot', type: 'text', label: language === 'fr' ? 'Numéro de permis unique' : 'Unique permit number', required: true, section: 'identification', validation: { legalRequirement: true } },
-        { id: 'work_location_precise', type: 'text', label: language === 'fr' ? 'Lieu précis des travaux' : 'Precise work location', required: true, section: 'identification', validation: { legalRequirement: true } },
-        { id: 'contractor_company', type: 'text', label: language === 'fr' ? 'Entreprise contractante' : 'Contracting company', required: true, section: 'identification' },
-        { id: 'work_order_number', type: 'text', label: language === 'fr' ? 'Numéro bon de travail' : 'Work order number', required: true, section: 'identification' },
+        { 
+          id: 'permit_number_hot', 
+          type: 'text', 
+          label: language === 'fr' ? 'Numéro de permis unique' : 'Unique permit number', 
+          required: true, 
+          section: 'identification', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'work_location_precise', 
+          type: 'text', 
+          label: language === 'fr' ? 'Lieu précis des travaux' : 'Precise work location', 
+          required: true, 
+          section: 'identification', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'contractor_company', 
+          type: 'text', 
+          label: language === 'fr' ? 'Entreprise contractante' : 'Contracting company', 
+          required: true, 
+          section: 'identification' 
+        },
+        { 
+          id: 'work_order_number', 
+          type: 'text', 
+          label: language === 'fr' ? 'Numéro bon de travail' : 'Work order number', 
+          required: true, 
+          section: 'identification' 
+        },
         
         // SECTION TYPE DE TRAVAIL À CHAUD
-        { id: 'work_type_hot', type: 'select', label: language === 'fr' ? 'Type de travail à chaud principal' : 'Primary hot work type', required: true, section: 'work_type', options: language === 'fr' ? ['Soudage à l\'arc électrique', 'Soudage au gaz (oxyacétylénique)', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage avec étincelles', 'Perçage métaux', 'Brasage/Soudage tendre', 'Travaux de toiture à chaud', 'Autre (spécifier)'] : ['Electric arc welding', 'Gas welding (oxyacetylene)', 'Torch cutting', 'Plasma cutting', 'Grinding with sparks', 'Metal drilling', 'Brazing/Soft soldering', 'Hot roofing work', 'Other (specify)'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019' },
-        { id: 'work_description_detailed', type: 'textarea', label: language === 'fr' ? 'Description détaillée des travaux et équipements' : 'Detailed work and equipment description', required: true, section: 'work_type', validation: { legalRequirement: true } },
-        { id: 'start_date_time', type: 'date', label: language === 'fr' ? 'Date début prévue' : 'Planned start date', required: true, section: 'work_type' },
-        { id: 'start_time', type: 'time', label: language === 'fr' ? 'Heure début' : 'Start time', required: true, section: 'work_type' },
-        { id: 'end_date_time', type: 'date', label: language === 'fr' ? 'Date fin prévue' : 'Planned end date', required: true, section: 'work_type' },
-        { id: 'end_time', type: 'time', label: language === 'fr' ? 'Heure fin' : 'End time', required: true, section: 'work_type' },
+        { 
+          id: 'work_type_hot', 
+          type: 'select', 
+          label: language === 'fr' ? 'Type de travail à chaud principal' : 'Primary hot work type', 
+          required: true, 
+          section: 'work_type', 
+          options: language === 'fr' ? ['Soudage à l\'arc électrique', 'Soudage au gaz (oxyacétylénique)', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage avec étincelles', 'Perçage métaux', 'Brasage/Soudage tendre', 'Travaux de toiture à chaud', 'Autre (spécifier)'] : ['Electric arc welding', 'Gas welding (oxyacetylene)', 'Torch cutting', 'Plasma cutting', 'Grinding with sparks', 'Metal drilling', 'Brazing/Soft soldering', 'Hot roofing work', 'Other (specify)'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'NFPA 51B-2019' 
+        },
+        { 
+          id: 'work_description_detailed', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Description détaillée des travaux et équipements' : 'Detailed work and equipment description', 
+          required: true, 
+          section: 'work_type', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'start_date_time', 
+          type: 'date', 
+          label: language === 'fr' ? 'Date début prévue' : 'Planned start date', 
+          required: true, 
+          section: 'work_type' 
+        },
+        { 
+          id: 'start_time', 
+          type: 'time', 
+          label: language === 'fr' ? 'Heure début' : 'Start time', 
+          required: true, 
+          section: 'work_type' 
+        },
+        { 
+          id: 'end_date_time', 
+          type: 'date', 
+          label: language === 'fr' ? 'Date fin prévue' : 'Planned end date', 
+          required: true, 
+          section: 'work_type' 
+        },
+        { 
+          id: 'end_time', 
+          type: 'time', 
+          label: language === 'fr' ? 'Heure fin' : 'End time', 
+          required: true, 
+          section: 'work_type' 
+        },
         
         // SECTION SURVEILLANCE INCENDIE NFPA 51B-2019
-        { id: 'fire_watch_duration', type: 'select', label: language === 'fr' ? 'Durée surveillance incendie POST-TRAVAUX (OBLIGATOIRE)' : 'POST-WORK fire watch duration (MANDATORY)', required: true, section: 'fire_watch', options: ['1 heure (NFPA 51B-2019)', '2 heures', 'Plus de 2 heures'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Modif majeure: 1h au lieu de 30min' },
-        { id: 'continuous_vs_spot_watch', type: 'radio', label: language === 'fr' ? 'Type de surveillance incendie' : 'Fire watch type', required: true, section: 'fire_watch', options: language === 'fr' ? ['Surveillance CONTINUE', 'Surveillance PONCTUELLE'] : ['CONTINUOUS monitoring', 'SPOT monitoring'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Distinction formelle' },
-        { id: 'fire_watch_person_assigned', type: 'text', label: language === 'fr' ? 'Préposé surveillance incendie désigné' : 'Designated fire watch person', required: true, section: 'fire_watch', validation: { legalRequirement: true } },
-        { id: 'fire_watch_training_valid', type: 'checkbox', label: language === 'fr' ? 'Formation surveillance incendie valide' : 'Valid fire watch training', required: true, section: 'fire_watch', validation: { legalRequirement: true } },
+        { 
+          id: 'fire_watch_duration', 
+          type: 'select', 
+          label: language === 'fr' ? 'Durée surveillance incendie POST-TRAVAUX (OBLIGATOIRE)' : 'POST-WORK fire watch duration (MANDATORY)', 
+          required: true, 
+          section: 'fire_watch', 
+          options: ['1 heure (NFPA 51B-2019)', '2 heures', 'Plus de 2 heures'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'NFPA 51B-2019 - Modif majeure: 1h au lieu de 30min' 
+        },
+        { 
+          id: 'continuous_vs_spot_watch', 
+          type: 'radio', 
+          label: language === 'fr' ? 'Type de surveillance incendie' : 'Fire watch type', 
+          required: true, 
+          section: 'fire_watch', 
+          options: language === 'fr' ? ['Surveillance CONTINUE', 'Surveillance PONCTUELLE'] : ['CONTINUOUS monitoring', 'SPOT monitoring'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'NFPA 51B-2019 - Distinction formelle' 
+        },
+        { 
+          id: 'fire_watch_person_assigned', 
+          type: 'text', 
+          label: language === 'fr' ? 'Préposé surveillance incendie désigné' : 'Designated fire watch person', 
+          required: true, 
+          section: 'fire_watch', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'fire_watch_training_valid', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Formation surveillance incendie valide' : 'Valid fire watch training', 
+          required: true, 
+          section: 'fire_watch', 
+          validation: { legalRequirement: true } 
+        },
         
-        // SECTION RÉINSPECTION PAR QUART (NOUVEAU NFPA)
-        { id: 'shift_reinspection', type: 'compliance_check', label: language === 'fr' ? 'Réinspection OBLIGATOIRE à chaque quart' : 'MANDATORY reinspection each shift', required: true, section: 'fire_watch', validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Nouvelle annexe' },
-        { id: 'reinspection_documentation', type: 'textarea', label: language === 'fr' ? 'Documentation des réinspections par quart' : 'Shift reinspection documentation', required: true, section: 'fire_watch', placeholder: language === 'fr' ? 'Heure, responsable, observations, actions...' : 'Time, responsible person, observations, actions...', validation: { legalRequirement: true } },
+        // SECTION RÉINSPECTION PAR QUART
+        { 
+          id: 'shift_reinspection', 
+          type: 'compliance_check', 
+          label: language === 'fr' ? 'Réinspection OBLIGATOIRE à chaque quart' : 'MANDATORY reinspection each shift', 
+          required: true, 
+          section: 'fire_watch', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'NFPA 51B-2019 - Nouvelle annexe' 
+        },
+        { 
+          id: 'reinspection_documentation', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Documentation des réinspections par quart' : 'Shift reinspection documentation', 
+          required: true, 
+          section: 'fire_watch', 
+          placeholder: language === 'fr' ? 'Heure, responsable, observations, actions...' : 'Time, responsible person, observations, actions...', 
+          validation: { legalRequirement: true } 
+        },
         
-        // SECTION EXTINCTEURS HARMONISÉS NFPA 10
-        { id: 'extinguisher_class_a', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe A (combustibles ordinaires)' : 'Class A extinguisher (ordinary combustibles)', required: false, section: 'precautions', complianceRef: 'NFPA 51B harmonisé avec NFPA 10' },
-        { id: 'extinguisher_class_b', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe B (liquides inflammables)' : 'Class B extinguisher (flammable liquids)', required: false, section: 'precautions', complianceRef: 'NFPA 10' },
-        { id: 'extinguisher_class_c', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe C (équipements électriques)' : 'Class C extinguisher (electrical equipment)', required: false, section: 'precautions', complianceRef: 'NFPA 10' },
-        { id: 'extinguisher_positioning', type: 'textarea', label: language === 'fr' ? 'Positionnement et accessibilité extincteurs' : 'Extinguisher positioning and accessibility', required: true, section: 'precautions', validation: { legalRequirement: true }, complianceRef: 'NFPA 10' },
-        
-        // SECTION ZONES NON PERMISSIBLES
-        { id: 'non_permissible_zone_prep', type: 'textarea', label: language === 'fr' ? 'Préparation zones non permissibles' : 'Non-permissible zone preparation', required: true, section: 'precautions', validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Précisions annexes' },
-        { id: 'protection_system_compromise', type: 'radio', label: language === 'fr' ? 'Systèmes de protection incendie compromis ?' : 'Fire protection systems compromised?', required: true, section: 'precautions', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true } },
-        { id: 'material_ignition_points', type: 'textarea', label: language === 'fr' ? 'Points d\'inflammation matériaux présents' : 'Ignition points of present materials', required: true, section: 'precautions', validation: { legalRequirement: true } },
-        { id: 'temperature_vs_ignition_table', type: 'compliance_check', label: language === 'fr' ? 'Tableau températures vs points inflammation consulté' : 'Temperature vs ignition points table consulted', required: true, section: 'precautions', validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Nouvelles comparaisons' },
-        
-        // SECTION PHOTOS ET DOCUMENTATION
-        { id: 'photos_precautions', type: 'photo_gallery', label: language === 'fr' ? 'Photos mesures précaution et zones' : 'Precautionary measures and zone photos', required: true, section: 'precautions', validation: { legalRequirement: true } },
-        { id: 'area_clearance_radius', type: 'number', label: language === 'fr' ? 'Rayon dégagement sécuritaire (m)' : 'Safety clearance radius (m)', required: true, section: 'precautions', validation: { min: 10, legalRequirement: true } },
+        // SECTION EXTINCTEURS
+        { 
+          id: 'extinguisher_class_a', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Extincteur Classe A (combustibles ordinaires)' : 'Class A extinguisher (ordinary combustibles)', 
+          required: false, 
+          section: 'precautions', 
+          complianceRef: 'NFPA 51B harmonisé avec NFPA 10' 
+        },
+        { 
+          id: 'extinguisher_class_b', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Extincteur Classe B (liquides inflammables)' : 'Class B extinguisher (flammable liquids)', 
+          required: false, 
+          section: 'precautions', 
+          complianceRef: 'NFPA 10' 
+        },
+        { 
+          id: 'extinguisher_positioning', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Positionnement et accessibilité extincteurs' : 'Extinguisher positioning and accessibility', 
+          required: true, 
+          section: 'precautions', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'NFPA 10' 
+        },
         
         // SECTION SIGNATURES
-        { id: 'applicant_signature', type: 'signature', label: language === 'fr' ? 'Signature demandeur/contractant' : 'Applicant/contractor signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
-        { id: 'fire_marshal_signature', type: 'signature', label: language === 'fr' ? 'Signature autorité incendie' : 'Fire authority signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
-        { id: 'safety_officer_signature', type: 'signature', label: language === 'fr' ? 'Signature responsable sécurité' : 'Safety officer signature', required: true, section: 'signatures', validation: { legalRequirement: true } }
+        { 
+          id: 'applicant_signature', 
+          type: 'signature', 
+          label: language === 'fr' ? 'Signature demandeur/contractant' : 'Applicant/contractor signature', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'fire_marshal_signature', 
+          type: 'signature', 
+          label: language === 'fr' ? 'Signature autorité incendie' : 'Fire authority signature', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        }
       ]
     },
 
@@ -639,66 +1044,157 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
       lastUpdated: '2025-01-20',
       formFields: [
         // SECTION DEMANDEUR
-        { id: 'applicant_name_excavation', type: 'text', label: language === 'fr' ? 'Nom du demandeur' : 'Applicant name', required: true, section: 'applicant', validation: { legalRequirement: true } },
-        { id: 'applicant_company', type: 'text', label: language === 'fr' ? 'Entreprise/Organisation' : 'Company/Organization', required: true, section: 'applicant' },
-        { id: 'professional_engineer', type: 'text', label: language === 'fr' ? 'Ingénieur responsable (OIQ)' : 'Responsible engineer (OIQ)', required: true, section: 'applicant', validation: { legalRequirement: true } },
-        { id: 'contractor_excavator', type: 'text', label: language === 'fr' ? 'Entreprise excavatrice' : 'Excavating company', required: true, section: 'applicant', validation: { legalRequirement: true } },
+        { 
+          id: 'applicant_name_excavation', 
+          type: 'text', 
+          label: language === 'fr' ? 'Nom du demandeur' : 'Applicant name', 
+          required: true, 
+          section: 'applicant', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'applicant_company', 
+          type: 'text', 
+          label: language === 'fr' ? 'Entreprise/Organisation' : 'Company/Organization', 
+          required: true, 
+          section: 'applicant' 
+        },
+        { 
+          id: 'professional_engineer', 
+          type: 'text', 
+          label: language === 'fr' ? 'Ingénieur responsable (OIQ)' : 'Responsible engineer (OIQ)', 
+          required: true, 
+          section: 'applicant', 
+          validation: { legalRequirement: true } 
+        },
         
-        // SECTION CALCULS AUTOMATIQUES OBLIGATOIRES
-        { id: 'excavation_depth_calc', type: 'number', label: language === 'fr' ? 'Profondeur excavation (m)' : 'Excavation depth (m)', required: true, section: 'excavation', validation: { min: 0, legalRequirement: true } },
-        { id: 'domain_public_distance', type: 'number', label: language === 'fr' ? 'Distance domaine public (m)' : 'Public domain distance (m)', required: true, section: 'excavation', validation: { min: 0, legalRequirement: true } },
-        { id: 'permit_required_auto', type: 'compliance_check', label: language === 'fr' ? 'PERMIS REQUIS (auto-calculé)' : 'PERMIT REQUIRED (auto-calculated)', required: true, section: 'excavation', validation: { legalRequirement: true }, complianceRef: 'Règlement municipal excavation' },
+        // SECTION CALCULS AUTOMATIQUES
+        { 
+          id: 'excavation_depth_calc', 
+          type: 'number', 
+          label: language === 'fr' ? 'Profondeur excavation (m)' : 'Excavation depth (m)', 
+          required: true, 
+          section: 'excavation', 
+          validation: { min: 0, legalRequirement: true } 
+        },
+        { 
+          id: 'domain_public_distance', 
+          type: 'number', 
+          label: language === 'fr' ? 'Distance domaine public (m)' : 'Public domain distance (m)', 
+          required: true, 
+          section: 'excavation', 
+          validation: { min: 0, legalRequirement: true } 
+        },
+        { 
+          id: 'permit_required_auto', 
+          type: 'compliance_check', 
+          label: language === 'fr' ? 'PERMIS REQUIS (auto-calculé)' : 'PERMIT REQUIRED (auto-calculated)', 
+          required: true, 
+          section: 'excavation', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'Règlement municipal excavation' 
+        },
         
-        // SECTION ASSURANCES OBLIGATOIRES SPÉCIFIQUES
-        { id: 'insurance_amount_calc', type: 'text', label: language === 'fr' ? 'Montant assurance OBLIGATOIRE (auto-calculé)' : 'MANDATORY insurance amount (auto-calculated)', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, complianceRef: 'Règlement municipal assurances' },
-        { id: 'co_insurance_city', type: 'checkbox', label: language === 'fr' ? 'Co-assurance Ville AJOUTÉE à la police' : 'City co-insurance ADDED to policy', required: true, section: 'municipal_requirements', validation: { legalRequirement: true, critical: true }, complianceRef: 'Avenant obligatoire Ville' },
-        { id: 'insurance_certificate', type: 'file', label: language === 'fr' ? 'Certificat assurance avec avenant' : 'Insurance certificate with endorsement', required: true, section: 'municipal_requirements', validation: { legalRequirement: true } },
+        // SECTION ASSURANCES OBLIGATOIRES
+        { 
+          id: 'insurance_amount_calc', 
+          type: 'text', 
+          label: language === 'fr' ? 'Montant assurance OBLIGATOIRE (auto-calculé)' : 'MANDATORY insurance amount (auto-calculated)', 
+          required: true, 
+          section: 'municipal_requirements', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'Règlement municipal assurances' 
+        },
+        { 
+          id: 'co_insurance_city', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Co-assurance Ville AJOUTÉE à la police' : 'City co-insurance ADDED to policy', 
+          required: true, 
+          section: 'municipal_requirements', 
+          validation: { legalRequirement: true, critical: true }, 
+          complianceRef: 'Avenant obligatoire Ville' 
+        },
         
-        // SECTION ÉTUDES TECHNIQUES OBLIGATOIRES
-        { id: 'geotechnical_study', type: 'file', label: language === 'fr' ? 'Étude géotechnique par ingénieur (≥2m)' : 'Geotechnical study by engineer (≥2m)', required: true, section: 'documents', validation: { legalRequirement: true }, complianceRef: 'Code construction' },
-        { id: 'shoring_plan_engineer', type: 'file', label: language === 'fr' ? 'Plan étançonnement signé ingénieur' : 'Shoring plan signed by engineer', required: true, section: 'documents', validation: { legalRequirement: true } },
-        { id: 'calculation_notes_engineer', type: 'file', label: language === 'fr' ? 'Notes de calculs ingénieur' : 'Engineer calculation notes', required: true, section: 'documents', validation: { legalRequirement: true } },
-        { id: 'blasting_plan_if_rock', type: 'file', label: language === 'fr' ? 'Plan dynamitage (si roc)' : 'Blasting plan (if rock)', required: false, section: 'documents', complianceRef: 'Règlement dynamitage municipal' },
+        // SECTION INFO-EXCAVATION
+        { 
+          id: 'info_excavation_request', 
+          type: 'compliance_check', 
+          label: language === 'fr' ? 'Demande Info-Excavation COMPLÉTÉE' : 'Info-Excavation request COMPLETED', 
+          required: true, 
+          section: 'safety', 
+          validation: { legalRequirement: true, critical: true }, 
+          complianceRef: 'https://www.info-ex.com - Loi fédérale' 
+        },
+        { 
+          id: 'municipal_networks_located', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Réseaux municipaux localisés (aqueduc/égout)' : 'Municipal networks located (water/sewer)', 
+          required: true, 
+          section: 'safety', 
+          validation: { legalRequirement: true } 
+        },
         
-        // SECTION LOCALISATION INFRASTRUCTURES OBLIGATOIRE
-        { id: 'info_excavation_request', type: 'compliance_check', label: language === 'fr' ? 'Demande Info-Excavation COMPLÉTÉE' : 'Info-Excavation request COMPLETED', required: true, section: 'safety', validation: { legalRequirement: true, critical: true }, complianceRef: 'https://www.info-ex.com - Loi fédérale' },
-        { id: 'municipal_networks_located', type: 'checkbox', label: language === 'fr' ? 'Réseaux municipaux localisés (aqueduc/égout)' : 'Municipal networks located (water/sewer)', required: true, section: 'safety', validation: { legalRequirement: true } },
-        { id: 'bell_energir_hydro_located', type: 'checkbox', label: language === 'fr' ? 'Bell/Énergir/Hydro-Québec localisés' : 'Bell/Energir/Hydro-Quebec located', required: true, section: 'safety', validation: { legalRequirement: true } },
-        { id: 'location_plans_provided', type: 'file', label: language === 'fr' ? 'Plans localisation infrastructures' : 'Infrastructure location plans', required: true, section: 'safety', validation: { legalRequirement: true } },
+        // SECTION PROJET
+        { 
+          id: 'work_address_complete', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Adresse complète des travaux' : 'Complete work address', 
+          required: true, 
+          section: 'project', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'project_description_detailed', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Description détaillée du projet' : 'Detailed project description', 
+          required: true, 
+          section: 'project', 
+          validation: { legalRequirement: true } 
+        },
         
-        // SECTION PROJET ET DESCRIPTION
-        { id: 'work_address_complete', type: 'textarea', label: language === 'fr' ? 'Adresse complète des travaux' : 'Complete work address', required: true, section: 'project', validation: { legalRequirement: true } },
-        { id: 'project_description_detailed', type: 'textarea', label: language === 'fr' ? 'Description détaillée du projet' : 'Detailed project description', required: true, section: 'project', validation: { legalRequirement: true } },
-        { id: 'soil_type_identified', type: 'select', label: language === 'fr' ? 'Type de sol identifié' : 'Identified soil type', required: true, section: 'excavation', options: language === 'fr' ? ['Argile', 'Sable fin', 'Sable grossier', 'Gravier', 'Roc altéré', 'Roc massif', 'Remblai', 'Sol mixte', 'Sol contaminé'] : ['Clay', 'Fine sand', 'Coarse sand', 'Gravel', 'Weathered rock', 'Solid rock', 'Fill', 'Mixed soil', 'Contaminated soil'], validation: { legalRequirement: true } },
-        { id: 'contamination_risk', type: 'radio', label: language === 'fr' ? 'Risque de contamination identifié ?' : 'Contamination risk identified?', required: true, section: 'excavation', options: language === 'fr' ? ['Oui', 'Non', 'Inconnu'] : ['Yes', 'No', 'Unknown'], validation: { legalRequirement: true } },
-        
-        // SECTION DÉPÔTS DE GARANTIE CALCULÉS
-        { id: 'surface_guarantee_deposit', type: 'text', label: language === 'fr' ? 'Dépôt garantie SURFACE (auto-calculé)' : 'SURFACE guarantee deposit (auto-calculated)', required: true, section: 'municipal_requirements', validation: { legalRequirement: true } },
-        { id: 'underground_guarantee_deposit', type: 'text', label: language === 'fr' ? 'Dépôt garantie SOUTERRAIN (auto-calculé)' : 'UNDERGROUND guarantee deposit (auto-calculated)', required: true, section: 'municipal_requirements', validation: { legalRequirement: true } },
-        { id: 'seasonal_rate_applied', type: 'radio', label: language === 'fr' ? 'Période des travaux (tarifs différents)' : 'Work period (different rates)', required: true, section: 'municipal_requirements', options: language === 'fr' ? ['Été (1 avril - 30 nov)', 'Hiver (1 déc - 31 mars)'] : ['Summer (Apr 1 - Nov 30)', 'Winter (Dec 1 - Mar 31)'], validation: { legalRequirement: true } },
-        { id: 'material_type_repair', type: 'select', label: language === 'fr' ? 'Type matériau réparation' : 'Repair material type', required: true, section: 'municipal_requirements', options: language === 'fr' ? ['Asphalte enrobé', 'Béton standard', 'Pavé béton', 'Trottoir asphalte', 'Gazon/Terre', 'Piste cyclable'] : ['Asphalt pavement', 'Standard concrete', 'Concrete pavers', 'Asphalt sidewalk', 'Grass/Soil', 'Bike path'], validation: { legalRequirement: true } },
-        
-        // SECTION PLAN DE SÉCURITÉ
-        { id: 'safety_plan_detailed', type: 'radio', label: language === 'fr' ? 'Plan de sécurité détaillé préparé' : 'Detailed safety plan prepared', required: true, section: 'safety', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true } },
-        { id: 'safety_fencing', type: 'checkbox', label: language === 'fr' ? 'Clôturage sécuritaire installé' : 'Safety fencing installed', required: true, section: 'safety', validation: { legalRequirement: true } },
-        { id: 'municipal_inspection_scheduled', type: 'compliance_check', label: language === 'fr' ? 'Inspection municipale PLANIFIÉE' : 'Municipal inspection SCHEDULED', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, complianceRef: 'Obligation inspection avant/pendant/après' },
-        
-        // SECTION PHOTOS ET DOCUMENTATION
-        { id: 'photos_safety_site', type: 'photo_gallery', label: language === 'fr' ? 'Photos sécurité et état initial du site' : 'Safety and initial site condition photos', required: true, section: 'safety', validation: { legalRequirement: true } },
-        { id: 'site_plan_implementation', type: 'file', label: language === 'fr' ? 'Plan d\'implantation du site' : 'Site implementation plan', required: true, section: 'documents', validation: { legalRequirement: true } },
+        // SECTION DÉPÔTS DE GARANTIE
+        { 
+          id: 'surface_guarantee_deposit', 
+          type: 'text', 
+          label: language === 'fr' ? 'Dépôt garantie SURFACE (auto-calculé)' : 'SURFACE guarantee deposit (auto-calculated)', 
+          required: true, 
+          section: 'municipal_requirements', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'underground_guarantee_deposit', 
+          type: 'text', 
+          label: language === 'fr' ? 'Dépôt garantie SOUTERRAIN (auto-calculé)' : 'UNDERGROUND guarantee deposit (auto-calculated)', 
+          required: true, 
+          section: 'municipal_requirements', 
+          validation: { legalRequirement: true } 
+        },
         
         // SECTION SIGNATURES
-        { id: 'applicant_signature_excavation', type: 'signature', label: language === 'fr' ? 'Signature demandeur' : 'Applicant signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
-        { id: 'engineer_signature', type: 'signature', label: language === 'fr' ? 'Signature ingénieur responsable' : 'Responsible engineer signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
-        { id: 'municipal_approval_signature', type: 'signature', label: language === 'fr' ? 'Approbation municipale' : 'Municipal approval', required: false, section: 'signatures' }
+        { 
+          id: 'applicant_signature_excavation', 
+          type: 'signature', 
+          label: language === 'fr' ? 'Signature demandeur' : 'Applicant signature', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'engineer_signature', 
+          type: 'signature', 
+          label: language === 'fr' ? 'Signature ingénieur responsable' : 'Responsible engineer signature', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        }
       ]
     }
   ];
 
   return basePermits;
 };
-// =================== SECTION 3 COMPLÈTE CORRIGÉE: LOGIQUE ET VALIDATION ===================
-// Remplacez TOUTE votre Section 3 par ce code complet
+// =================== SECTION 3: LOGIQUE ET VALIDATION SANS ERREURS ===================
+// À coller après la Section 2
 
 // =================== COMPOSANT PRINCIPAL AVEC CONFORMITÉ 2024-2025 ===================
 const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
@@ -776,7 +1272,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
               details: `Niveau actuel: ${o2Level}%`,
               reference: 'RSST Art. 302 modifié'
             });
-          } else {
+          } else if (o2Level > 0) {
             permitChecks.push({
               requirement: 'Oxygène 19.5-23.5%',
               status: 'compliant',
@@ -794,7 +1290,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
               details: `Niveau critique: ${gasLevel}%`,
               reference: 'RSST Art. 302'
             });
-          } else {
+          } else if (gasLevel >= 0) {
             permitChecks.push({
               requirement: 'Gaz combustibles < 10% LIE',
               status: 'compliant',
@@ -827,7 +1323,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
 
           // Validation âge travailleurs
           const permitWorkers = workers[permit.id] || [];
-          const underageWorkers = permitWorkers.filter(w => w.age < 18);
+          const underageWorkers = permitWorkers.filter(w => w.age < 18 && w.age > 0);
           if (underageWorkers.length > 0) {
             alerts.push(`CRITIQUE: ${underageWorkers.length} travailleur(s) mineur(s) détecté(s) - Violation Art. 298 RSST`);
             permitChecks.push({
@@ -1475,6 +1971,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     </div>
   );
 };
+// =================== SECTION 4: COMPOSANTS UI SANS ERREURS ===================
+// À coller après la Section 3
 
 // =================== COMPOSANT CARTE PERMIS =================== 
 interface PermitCardProps {
