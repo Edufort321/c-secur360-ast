@@ -2957,7 +2957,6 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
   );
 };
 
-export default Step4Permits;
 // =================== SECTION 4B FINALE: BASE DONNÉES + CARTES PERMIS + EXPORT ===================
 // À coller après la Section 4A pour compléter le fichier
 
