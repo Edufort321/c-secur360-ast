@@ -3421,7 +3421,7 @@ const Step4PermitsComplete: React.FC<Step4PermitsProps> = ({ formData, onDataCha
     setSelectedConfinedSpace(space);
     
     // Pré-remplir les permis avec les infos de l'espace
-    const updatedPermits = permits.map(permit => {
+    const updatedPermits = permits.map((permit: Permit) => {
       if (permit.id.includes('confined-space') && permit.selected) {
         return {
           ...permit,
