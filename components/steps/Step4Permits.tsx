@@ -1,12 +1,15 @@
-"use client";
+// =================== SECTION 1: INTERFACES ET TRADUCTIONS COMPLÈTES ===================
+// À coller au début de votre fichier Step4Permits.js
 
+"use client";
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   FileText, CheckCircle, AlertTriangle, Clock, Download, Eye,
   Shield, Users, MapPin, Calendar, Building, Phone, User, Briefcase,
   Search, Filter, Plus, BarChart3, Star, Award, Zap, HardHat,
   Camera, Save, X, Edit, ChevronDown, ChevronUp, Printer, Mail,
-  AlertCircle, ThermometerSun, Gauge, Wind, Hammer
+  AlertCircle, ThermometerSun, Gauge, Wind, Hammer, ChevronLeft, 
+  ChevronRight, Upload, UserPlus, UserMinus, Grid, List
 } from 'lucide-react';
 
 // =================== INTERFACES CONFORMES NORMES 2024-2025 ===================
@@ -85,6 +88,7 @@ interface WorkerEntry {
   date: string;
   oxygenLevel?: number;
   gasLevel?: number;
+  over18: boolean;
 }
 
 interface PhotoEntry {
@@ -268,7 +272,28 @@ const getTexts = (language: 'fr' | 'en') => {
         emergencyContact: 'Contact d\'urgence',
         rescueTeamReady: 'Équipe de sauvetage prête',
         fireWatchActive: 'Surveillance incendie active',
-        municipalNotified: 'Municipalité avisée'
+        municipalNotified: 'Municipalité avisée',
+        addWorker: 'Ajouter Travailleur',
+        removeWorker: 'Retirer Travailleur',
+        workerNumber: 'Travailleur #',
+        fullName: 'Nom complet',
+        age: 'Âge',
+        certification: 'Certification',
+        certifyOver18: 'Je certifie que ce travailleur a 18 ans ou plus (OBLIGATOIRE - Art. 298 RSST)',
+        legalViolationMinor: 'VIOLATION LÉGALE: Travailleur mineur détecté. Accès en espace clos interdit par l\'Article 298 RSST.',
+        selectCertification: 'Sélectionner certification',
+        basicTraining: 'Formation de base',
+        advancedTraining: 'Formation avancée',
+        supervisor: 'Superviseur',
+        rescuer: 'Sauveteur',
+        authorizedWorkers: 'Travailleurs Autorisés',
+        sitePhotos: 'Photos du Site',
+        toggleView: 'Basculer vue',
+        addPhotos: 'Ajouter Photos',
+        noPhotosAdded: 'Aucune photo ajoutée',
+        clickToAddPhotos: 'Cliquez sur "Ajouter Photos" pour commencer',
+        savePermit: 'Sauvegarder le Permis',
+        downloadPDF: 'Télécharger PDF'
       }
     };
   } else {
@@ -411,11 +436,35 @@ const getTexts = (language: 'fr' | 'en') => {
         emergencyContact: 'Emergency contact',
         rescueTeamReady: 'Rescue team ready',
         fireWatchActive: 'Fire watch active',
-        municipalNotified: 'Municipality notified'
+        municipalNotified: 'Municipality notified',
+        addWorker: 'Add Worker',
+        removeWorker: 'Remove Worker',
+        workerNumber: 'Worker #',
+        fullName: 'Full name',
+        age: 'Age',
+        certification: 'Certification',
+        certifyOver18: 'I certify this worker is 18+ years old (MANDATORY - Art. 298 RSST)',
+        legalViolationMinor: 'LEGAL VIOLATION: Minor worker detected. Confined space access prohibited by Article 298 RSST.',
+        selectCertification: 'Select certification',
+        basicTraining: 'Basic training',
+        advancedTraining: 'Advanced training',
+        supervisor: 'Supervisor',
+        rescuer: 'Rescuer',
+        authorizedWorkers: 'Authorized Workers',
+        sitePhotos: 'Site Photos',
+        toggleView: 'Toggle view',
+        addPhotos: 'Add Photos',
+        noPhotosAdded: 'No photos added',
+        clickToAddPhotos: 'Click "Add Photos" to start',
+        savePermit: 'Save Permit',
+        downloadPDF: 'Download PDF'
       }
     };
   }
 };
+// =================== SECTION 2: BASE DE DONNÉES PERMIS CONFORMES 2024-2025 ===================
+// À coller après la Section 1
+
 // =================== BASE DE DONNÉES PERMIS CONFORMES AUX NORMES 2024-2025 ===================
 const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
   const basePermits: Permit[] = [
@@ -451,7 +500,7 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
         { id: 'project_name', type: 'text', label: language === 'fr' ? 'Nom du projet' : 'Project name', required: true, section: 'identification' },
         { id: 'location_precise', type: 'text', label: language === 'fr' ? 'Localisation GPS précise' : 'Precise GPS location', required: true, section: 'identification', validation: { legalRequirement: true } },
         { id: 'permit_date', type: 'date', label: language === 'fr' ? 'Date du permis' : 'Permit date', required: true, section: 'identification' },
-        { id: 'permit_time', type: 'time_picker', label: language === 'fr' ? 'Heure d\'émission' : 'Issue time', required: true, section: 'identification' },
+        { id: 'permit_time', type: 'time', label: language === 'fr' ? 'Heure d\'émission' : 'Issue time', required: true, section: 'identification' },
         { id: 'permit_duration', type: 'select', label: language === 'fr' ? 'Durée validité (max 8h)' : 'Validity duration (max 8h)', required: true, section: 'identification', options: ['1h', '2h', '4h', '6h', '8h'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 300' },
         
         // SECTION GAS MONITORING OBLIGATOIRE
@@ -524,13 +573,15 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
         { id: 'work_order_number', type: 'text', label: language === 'fr' ? 'Numéro bon de travail' : 'Work order number', required: true, section: 'identification' },
         
         // SECTION TYPE DE TRAVAIL À CHAUD
-        { id: 'work_type_hot', type: 'checkbox', label: language === 'fr' ? 'Type de travail à chaud (sélection multiple)' : 'Hot work type (multiple selection)', required: true, section: 'work_type', options: language === 'fr' ? ['Soudage à l\'arc électrique', 'Soudage au gaz (oxyacétylénique)', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage avec étincelles', 'Perçage métaux', 'Brasage/Soudage tendre', 'Travaux de toiture à chaud', 'Autre (spécifier)'] : ['Electric arc welding', 'Gas welding (oxyacetylene)', 'Torch cutting', 'Plasma cutting', 'Grinding with sparks', 'Metal drilling', 'Brazing/Soft soldering', 'Hot roofing work', 'Other (specify)'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019' },
+        { id: 'work_type_hot', type: 'select', label: language === 'fr' ? 'Type de travail à chaud principal' : 'Primary hot work type', required: true, section: 'work_type', options: language === 'fr' ? ['Soudage à l\'arc électrique', 'Soudage au gaz (oxyacétylénique)', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage avec étincelles', 'Perçage métaux', 'Brasage/Soudage tendre', 'Travaux de toiture à chaud', 'Autre (spécifier)'] : ['Electric arc welding', 'Gas welding (oxyacetylene)', 'Torch cutting', 'Plasma cutting', 'Grinding with sparks', 'Metal drilling', 'Brazing/Soft soldering', 'Hot roofing work', 'Other (specify)'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019' },
         { id: 'work_description_detailed', type: 'textarea', label: language === 'fr' ? 'Description détaillée des travaux et équipements' : 'Detailed work and equipment description', required: true, section: 'work_type', validation: { legalRequirement: true } },
-        { id: 'start_date_time', type: 'time_picker', label: language === 'fr' ? 'Date et heure début prévues' : 'Planned start date and time', required: true, section: 'work_type' },
-        { id: 'end_date_time', type: 'time_picker', label: language === 'fr' ? 'Date et heure fin prévues' : 'Planned end date and time', required: true, section: 'work_type' },
+        { id: 'start_date_time', type: 'date', label: language === 'fr' ? 'Date début prévue' : 'Planned start date', required: true, section: 'work_type' },
+        { id: 'start_time', type: 'time', label: language === 'fr' ? 'Heure début' : 'Start time', required: true, section: 'work_type' },
+        { id: 'end_date_time', type: 'date', label: language === 'fr' ? 'Date fin prévue' : 'Planned end date', required: true, section: 'work_type' },
+        { id: 'end_time', type: 'time', label: language === 'fr' ? 'Heure fin' : 'End time', required: true, section: 'work_type' },
         
         // SECTION SURVEILLANCE INCENDIE NFPA 51B-2019
-        { id: 'fire_watch_duration', type: 'select', label: language === 'fr' ? 'Durée surveillance incendie POST-TRAVAUX' : 'POST-WORK fire watch duration', required: true, section: 'fire_watch', options: ['1 heure (NFPA 51B-2019)', '2 heures', 'Plus de 2 heures'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Modif majeure: 1h au lieu de 30min' },
+        { id: 'fire_watch_duration', type: 'select', label: language === 'fr' ? 'Durée surveillance incendie POST-TRAVAUX (OBLIGATOIRE)' : 'POST-WORK fire watch duration (MANDATORY)', required: true, section: 'fire_watch', options: ['1 heure (NFPA 51B-2019)', '2 heures', 'Plus de 2 heures'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Modif majeure: 1h au lieu de 30min' },
         { id: 'continuous_vs_spot_watch', type: 'radio', label: language === 'fr' ? 'Type de surveillance incendie' : 'Fire watch type', required: true, section: 'fire_watch', options: language === 'fr' ? ['Surveillance CONTINUE', 'Surveillance PONCTUELLE'] : ['CONTINUOUS monitoring', 'SPOT monitoring'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Distinction formelle' },
         { id: 'fire_watch_person_assigned', type: 'text', label: language === 'fr' ? 'Préposé surveillance incendie désigné' : 'Designated fire watch person', required: true, section: 'fire_watch', validation: { legalRequirement: true } },
         { id: 'fire_watch_training_valid', type: 'checkbox', label: language === 'fr' ? 'Formation surveillance incendie valide' : 'Valid fire watch training', required: true, section: 'fire_watch', validation: { legalRequirement: true } },
@@ -540,9 +591,9 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
         { id: 'reinspection_documentation', type: 'textarea', label: language === 'fr' ? 'Documentation des réinspections par quart' : 'Shift reinspection documentation', required: true, section: 'fire_watch', placeholder: language === 'fr' ? 'Heure, responsable, observations, actions...' : 'Time, responsible person, observations, actions...', validation: { legalRequirement: true } },
         
         // SECTION EXTINCTEURS HARMONISÉS NFPA 10
-        { id: 'extinguisher_type_class_a', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe A (combustibles ordinaires)' : 'Class A extinguisher (ordinary combustibles)', required: false, section: 'precautions', complianceRef: 'NFPA 51B harmonisé avec NFPA 10' },
-        { id: 'extinguisher_type_class_b', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe B (liquides inflammables)' : 'Class B extinguisher (flammable liquids)', required: false, section: 'precautions', complianceRef: 'NFPA 10' },
-        { id: 'extinguisher_type_class_c', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe C (équipements électriques)' : 'Class C extinguisher (electrical equipment)', required: false, section: 'precautions', complianceRef: 'NFPA 10' },
+        { id: 'extinguisher_class_a', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe A (combustibles ordinaires)' : 'Class A extinguisher (ordinary combustibles)', required: false, section: 'precautions', complianceRef: 'NFPA 51B harmonisé avec NFPA 10' },
+        { id: 'extinguisher_class_b', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe B (liquides inflammables)' : 'Class B extinguisher (flammable liquids)', required: false, section: 'precautions', complianceRef: 'NFPA 10' },
+        { id: 'extinguisher_class_c', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe C (équipements électriques)' : 'Class C extinguisher (electrical equipment)', required: false, section: 'precautions', complianceRef: 'NFPA 10' },
         { id: 'extinguisher_positioning', type: 'textarea', label: language === 'fr' ? 'Positionnement et accessibilité extincteurs' : 'Extinguisher positioning and accessibility', required: true, section: 'precautions', validation: { legalRequirement: true }, complianceRef: 'NFPA 10' },
         
         // SECTION ZONES NON PERMISSIBLES
@@ -594,12 +645,12 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
         { id: 'contractor_excavator', type: 'text', label: language === 'fr' ? 'Entreprise excavatrice' : 'Excavating company', required: true, section: 'applicant', validation: { legalRequirement: true } },
         
         // SECTION CALCULS AUTOMATIQUES OBLIGATOIRES
-        { id: 'excavation_depth_calc', type: 'calculation', label: language === 'fr' ? 'Profondeur excavation (m)' : 'Excavation depth (m)', required: true, section: 'excavation', validation: { min: 0, legalRequirement: true }, calculation: { autoCalculate: true } },
-        { id: 'domain_public_distance', type: 'calculation', label: language === 'fr' ? 'Distance domaine public (m)' : 'Public domain distance (m)', required: true, section: 'excavation', validation: { min: 0, legalRequirement: true }, calculation: { autoCalculate: true } },
-        { id: 'permit_required_auto', type: 'compliance_check', label: language === 'fr' ? 'PERMIS REQUIS (auto-calculé)' : 'PERMIT REQUIRED (auto-calculated)', required: true, section: 'excavation', validation: { legalRequirement: true }, calculation: { formula: 'if(depth < 2 && distance < 2) OR (depth >= 2 && distance < depth*2) then REQUIRED', dependencies: ['excavation_depth_calc', 'domain_public_distance'], autoCalculate: true }, complianceRef: 'Règlement municipal excavation' },
+        { id: 'excavation_depth_calc', type: 'number', label: language === 'fr' ? 'Profondeur excavation (m)' : 'Excavation depth (m)', required: true, section: 'excavation', validation: { min: 0, legalRequirement: true } },
+        { id: 'domain_public_distance', type: 'number', label: language === 'fr' ? 'Distance domaine public (m)' : 'Public domain distance (m)', required: true, section: 'excavation', validation: { min: 0, legalRequirement: true } },
+        { id: 'permit_required_auto', type: 'compliance_check', label: language === 'fr' ? 'PERMIS REQUIS (auto-calculé)' : 'PERMIT REQUIRED (auto-calculated)', required: true, section: 'excavation', validation: { legalRequirement: true }, complianceRef: 'Règlement municipal excavation' },
         
         // SECTION ASSURANCES OBLIGATOIRES SPÉCIFIQUES
-        { id: 'insurance_amount_calc', type: 'calculation', label: language === 'fr' ? 'Montant assurance OBLIGATOIRE' : 'MANDATORY insurance amount', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, calculation: { formula: 'if(depth <= 4.5) then 1000000 else if(depth > 4.5) then 2000000 else 5000000', dependencies: ['excavation_depth_calc'], autoCalculate: true }, complianceRef: 'Règlement municipal assurances' },
+        { id: 'insurance_amount_calc', type: 'text', label: language === 'fr' ? 'Montant assurance OBLIGATOIRE (auto-calculé)' : 'MANDATORY insurance amount (auto-calculated)', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, complianceRef: 'Règlement municipal assurances' },
         { id: 'co_insurance_city', type: 'checkbox', label: language === 'fr' ? 'Co-assurance Ville AJOUTÉE à la police' : 'City co-insurance ADDED to policy', required: true, section: 'municipal_requirements', validation: { legalRequirement: true, critical: true }, complianceRef: 'Avenant obligatoire Ville' },
         { id: 'insurance_certificate', type: 'file', label: language === 'fr' ? 'Certificat assurance avec avenant' : 'Insurance certificate with endorsement', required: true, section: 'municipal_requirements', validation: { legalRequirement: true } },
         
@@ -622,8 +673,8 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
         { id: 'contamination_risk', type: 'radio', label: language === 'fr' ? 'Risque de contamination identifié ?' : 'Contamination risk identified?', required: true, section: 'excavation', options: language === 'fr' ? ['Oui', 'Non', 'Inconnu'] : ['Yes', 'No', 'Unknown'], validation: { legalRequirement: true } },
         
         // SECTION DÉPÔTS DE GARANTIE CALCULÉS
-        { id: 'surface_guarantee_deposit', type: 'calculation', label: language === 'fr' ? 'Dépôt garantie SURFACE (trottoir, arbres)' : 'SURFACE guarantee deposit (sidewalk, trees)', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, calculation: { formula: 'superficie * tarif_saison', autoCalculate: true } },
-        { id: 'underground_guarantee_deposit', type: 'calculation', label: language === 'fr' ? 'Dépôt garantie SOUTERRAIN (égout, aqueduc)' : 'UNDERGROUND guarantee deposit (sewer, water)', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, calculation: { formula: 'longueur * profondeur * tarif', autoCalculate: true } },
+        { id: 'surface_guarantee_deposit', type: 'text', label: language === 'fr' ? 'Dépôt garantie SURFACE (auto-calculé)' : 'SURFACE guarantee deposit (auto-calculated)', required: true, section: 'municipal_requirements', validation: { legalRequirement: true } },
+        { id: 'underground_guarantee_deposit', type: 'text', label: language === 'fr' ? 'Dépôt garantie SOUTERRAIN (auto-calculé)' : 'UNDERGROUND guarantee deposit (auto-calculated)', required: true, section: 'municipal_requirements', validation: { legalRequirement: true } },
         { id: 'seasonal_rate_applied', type: 'radio', label: language === 'fr' ? 'Période des travaux (tarifs différents)' : 'Work period (different rates)', required: true, section: 'municipal_requirements', options: language === 'fr' ? ['Été (1 avril - 30 nov)', 'Hiver (1 déc - 31 mars)'] : ['Summer (Apr 1 - Nov 30)', 'Winter (Dec 1 - Mar 31)'], validation: { legalRequirement: true } },
         { id: 'material_type_repair', type: 'select', label: language === 'fr' ? 'Type matériau réparation' : 'Repair material type', required: true, section: 'municipal_requirements', options: language === 'fr' ? ['Asphalte enrobé', 'Béton standard', 'Pavé béton', 'Trottoir asphalte', 'Gazon/Terre', 'Piste cyclable'] : ['Asphalt pavement', 'Standard concrete', 'Concrete pavers', 'Asphalt sidewalk', 'Grass/Soil', 'Bike path'], validation: { legalRequirement: true } },
         
@@ -646,18 +697,29 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
 
   return basePermits;
 };
+// =================== SECTION 3: LOGIQUE ET VALIDATION COMPLÈTE ===================
+// À coller après la Section 2
+
 // =================== COMPOSANT PRINCIPAL AVEC CONFORMITÉ 2024-2025 ===================
 const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
   // =================== TRADUCTIONS ET CONFIGURATION ===================
   const t = getTexts(language);
   
-  // =================== ÉTATS ===================
+  // =================== ÉTATS PRINCIPAUX ===================
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedProvince, setSelectedProvince] = useState('all');
   const [expandedForms, setExpandedForms] = useState<{ [key: string]: boolean }>({});
   const [complianceChecks, setComplianceChecks] = useState<{ [key: string]: ComplianceCheck[] }>({});
   const [criticalAlerts, setCriticalAlerts] = useState<string[]>([]);
+  
+  // ÉTATS MULTI-TRAVAILLEURS
+  const [workers, setWorkers] = useState<{ [permitId: string]: WorkerEntry[] }>({});
+  
+  // ÉTATS PHOTOS AVEC CARROUSEL
+  const [photos, setPhotos] = useState<{ [permitId: string]: PhotoEntry[] }>({});
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState<{ [permitId: string]: number }>({});
+  const [viewMode, setViewMode] = useState<{ [permitId: string]: 'carousel' | 'grid' }>({});
   
   // =================== GESTION DES DONNÉES AVEC CONFORMITÉ ===================
   const [permits, setPermits] = useState(() => {
@@ -688,7 +750,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
   // =================== VALIDATION CONFORMITÉ EN TEMPS RÉEL ===================
   useEffect(() => {
     validateCompliance();
-  }, [permits]);
+  }, [permits, workers]);
 
   const validateCompliance = () => {
     const alerts: string[] = [];
@@ -700,18 +762,19 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
 
         // Validation espace clos
         if (permit.id === 'confined-space-entry-2025') {
-          const o2Level = parseFloat(permit.formData.oxygen_level);
-          const gasLevel = parseFloat(permit.formData.combustible_gas_level);
-          const coLevel = parseFloat(permit.formData.carbon_monoxide_level);
-          const h2sLevel = parseFloat(permit.formData.hydrogen_sulfide_level);
+          const o2Level = parseFloat(permit.formData.oxygen_level || '0');
+          const gasLevel = parseFloat(permit.formData.combustible_gas_level || '0');
+          const coLevel = parseFloat(permit.formData.carbon_monoxide_level || '0');
+          const h2sLevel = parseFloat(permit.formData.hydrogen_sulfide_level || '0');
 
+          // Validation O2
           if (o2Level < 19.5 || o2Level > 23.5) {
             alerts.push(`CRITIQUE: Niveau O2 non conforme (${o2Level}%) - ARRÊT TRAVAUX REQUIS`);
             permitChecks.push({
               requirement: 'Oxygène 19.5-23.5%',
               status: 'non-compliant',
               details: `Niveau actuel: ${o2Level}%`,
-              reference: 'RSST Art. 302'
+              reference: 'RSST Art. 302 modifié'
             });
           } else {
             permitChecks.push({
@@ -722,6 +785,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
             });
           }
 
+          // Validation gaz combustibles
           if (gasLevel >= 10) {
             alerts.push(`CRITIQUE: Gaz combustibles trop élevés (${gasLevel}% LIE) - ÉVACUATION IMMÉDIATE`);
             permitChecks.push({
@@ -730,15 +794,65 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
               details: `Niveau critique: ${gasLevel}%`,
               reference: 'RSST Art. 302'
             });
+          } else {
+            permitChecks.push({
+              requirement: 'Gaz combustibles < 10% LIE',
+              status: 'compliant',
+              details: `Niveau sécuritaire: ${gasLevel}%`,
+              reference: 'RSST Art. 302'
+            });
           }
 
-          if (!permit.formData.worker_age_verification) {
-            alerts.push('CRITIQUE: Vérification âge 18+ manquante - Obligation légale RSST Art. 298');
+          // Validation CO
+          if (coLevel > 35) {
+            alerts.push(`CRITIQUE: Monoxyde de carbone trop élevé (${coLevel} ppm) - ÉVACUATION IMMÉDIATE`);
+            permitChecks.push({
+              requirement: 'CO < 35 ppm',
+              status: 'non-compliant',
+              details: `Niveau critique: ${coLevel} ppm`,
+              reference: 'RSST Annexe I'
+            });
+          }
+
+          // Validation H2S
+          if (h2sLevel > 10) {
+            alerts.push(`CRITIQUE: Sulfure d'hydrogène trop élevé (${h2sLevel} ppm) - ÉVACUATION IMMÉDIATE`);
+            permitChecks.push({
+              requirement: 'H2S < 10 ppm',
+              status: 'non-compliant',
+              details: `Niveau critique: ${h2sLevel} ppm`,
+              reference: 'RSST Annexe I'
+            });
+          }
+
+          // Validation âge travailleurs
+          const permitWorkers = workers[permit.id] || [];
+          const underageWorkers = permitWorkers.filter(w => w.age < 18);
+          if (underageWorkers.length > 0) {
+            alerts.push(`CRITIQUE: ${underageWorkers.length} travailleur(s) mineur(s) détecté(s) - Violation Art. 298 RSST`);
             permitChecks.push({
               requirement: 'Âge minimum 18 ans',
               status: 'non-compliant',
-              details: 'Vérification non effectuée',
+              details: `${underageWorkers.length} travailleur(s) mineur(s)`,
               reference: 'RSST Art. 298 modifié 2023'
+            });
+          } else if (permitWorkers.length > 0) {
+            permitChecks.push({
+              requirement: 'Âge minimum 18 ans',
+              status: 'compliant',
+              details: `Tous les travailleurs ≥ 18 ans`,
+              reference: 'RSST Art. 298'
+            });
+          }
+
+          // Validation surveillance continue
+          if (!permit.formData.continuous_monitoring) {
+            alerts.push('CRITIQUE: Surveillance atmosphérique continue manquante - Obligation RSST Art. 302');
+            permitChecks.push({
+              requirement: 'Surveillance continue',
+              status: 'non-compliant',
+              details: 'Surveillance non activée',
+              reference: 'RSST Art. 302'
             });
           }
         }
@@ -753,10 +867,33 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
               details: 'Durée non conforme NFPA 51B-2019',
               reference: 'NFPA 51B-2019'
             });
+          } else {
+            permitChecks.push({
+              requirement: 'Surveillance incendie 1 heure',
+              status: 'compliant',
+              details: 'Conforme NFPA 51B-2019',
+              reference: 'NFPA 51B-2019'
+            });
           }
 
           if (!permit.formData.shift_reinspection) {
             alerts.push('REQUIS: Réinspection par quart obligatoire selon NFPA 51B-2019');
+            permitChecks.push({
+              requirement: 'Réinspection par quart',
+              status: 'non-compliant',
+              details: 'Réinspection non planifiée',
+              reference: 'NFPA 51B-2019'
+            });
+          }
+
+          if (!permit.formData.fire_watch_training_valid) {
+            alerts.push('REQUIS: Formation surveillance incendie valide obligatoire');
+            permitChecks.push({
+              requirement: 'Formation surveillance incendie',
+              status: 'non-compliant',
+              details: 'Formation non validée',
+              reference: 'NFPA 51B-2019'
+            });
           }
         }
 
@@ -765,10 +902,16 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
           const depth = parseFloat(permit.formData.excavation_depth_calc || '0');
           const distance = parseFloat(permit.formData.domain_public_distance || '0');
           
-          const requiresPermit = (depth < 2 && distance < 2) || (depth >= 2 && distance < depth * 2);
+          const requiresPermit = depth >= 2 || distance < 2;
           
           if (requiresPermit && !permit.formData.permit_required_auto) {
             alerts.push('REQUIS: Permis excavation obligatoire selon calculs profondeur/distance');
+            permitChecks.push({
+              requirement: 'Permis excavation requis',
+              status: 'non-compliant',
+              details: `Profondeur: ${depth}m, Distance: ${distance}m`,
+              reference: 'Règlement municipal'
+            });
           }
 
           if (!permit.formData.info_excavation_request) {
@@ -778,6 +921,23 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
               status: 'non-compliant',
               details: 'Demande non effectuée',
               reference: 'Loi fédérale'
+            });
+          } else {
+            permitChecks.push({
+              requirement: 'Info-Excavation complétée',
+              status: 'compliant',
+              details: 'Demande complétée',
+              reference: 'Loi fédérale'
+            });
+          }
+
+          if (!permit.formData.co_insurance_city) {
+            alerts.push('CRITIQUE: Co-assurance Ville manquante - Obligation municipale');
+            permitChecks.push({
+              requirement: 'Co-assurance Ville',
+              status: 'non-compliant',
+              details: 'Avenant non ajouté',
+              reference: 'Règlement municipal'
             });
           }
         }
@@ -794,8 +954,16 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
   const calculateExcavationRequirements = (permitId: string, depth: number, distance: number) => {
     const updatedPermits = permits.map((permit: Permit) => {
       if (permit.id === permitId) {
-        const requiresPermit = (depth < 2 && distance < 2) || (depth >= 2 && distance < depth * 2);
-        const insuranceAmount = depth <= 4.5 ? 1000000 : depth > 4.5 ? 2000000 : 5000000;
+        const requiresPermit = depth >= 2 || distance < 2;
+        const insuranceAmount = depth <= 4.5 ? '1 000 000$' : depth > 4.5 ? '2 000 000$' : '5 000 000$';
+        
+        // Calculs dépôts garantie (tarifs réels municipaux)
+        const summerRate = 73; // $/m²
+        const winterRate = 95; // $/m²
+        const undergroundRate = 500; // $/m linéaire
+        
+        const surfaceDeposit = Math.round(depth * distance * summerRate);
+        const undergroundDeposit = Math.round(depth * undergroundRate);
         
         return {
           ...permit,
@@ -803,8 +971,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
             ...permit.formData,
             permit_required_auto: requiresPermit,
             insurance_amount_calc: insuranceAmount,
-            surface_guarantee_deposit: Math.round(depth * distance * 73), // Tarif été
-            underground_guarantee_deposit: Math.round(depth * 500) // Estimation
+            surface_guarantee_deposit: `${surfaceDeposit}$ (été) / ${Math.round(depth * distance * winterRate)}$ (hiver)`,
+            underground_guarantee_deposit: `${undergroundDeposit}$ estimé`
           }
         };
       }
@@ -812,6 +980,113 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     });
     setPermits(updatedPermits);
     updateFormData(updatedPermits);
+  };
+
+  // =================== GESTION MULTI-TRAVAILLEURS ===================
+  const addWorker = (permitId: string) => {
+    const permitWorkers = workers[permitId] || [];
+    const newWorker: WorkerEntry = {
+      id: permitWorkers.length + 1,
+      name: '',
+      age: 0,
+      certification: '',
+      entryTime: '',
+      exitTime: null,
+      date: new Date().toISOString().split('T')[0],
+      over18: false
+    };
+    
+    setWorkers(prev => ({
+      ...prev,
+      [permitId]: [...permitWorkers, newWorker]
+    }));
+  };
+
+  const removeWorker = (permitId: string, workerId: number) => {
+    const permitWorkers = workers[permitId] || [];
+    if (permitWorkers.length > 1) {
+      setWorkers(prev => ({
+        ...prev,
+        [permitId]: permitWorkers.filter(w => w.id !== workerId)
+      }));
+    }
+  };
+
+  const updateWorker = (permitId: string, workerId: number, field: keyof WorkerEntry, value: any) => {
+    const permitWorkers = workers[permitId] || [];
+    setWorkers(prev => ({
+      ...prev,
+      [permitId]: permitWorkers.map(w => 
+        w.id === workerId ? { ...w, [field]: value } : w
+      )
+    }));
+  };
+
+  // =================== GESTION PHOTOS AVEC CARROUSEL ===================
+  const handlePhotoUpload = (permitId: string, files: FileList) => {
+    const permitPhotos = photos[permitId] || [];
+    
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const newPhoto: PhotoEntry = {
+          id: Date.now() + Math.random(),
+          url: event.target?.result as string,
+          name: file.name,
+          timestamp: new Date().toISOString(),
+          description: '',
+          gpsLocation: '', // TODO: Ajouter géolocalisation
+          compliance: true
+        };
+        
+        setPhotos(prev => ({
+          ...prev,
+          [permitId]: [...(prev[permitId] || []), newPhoto]
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removePhoto = (permitId: string, photoId: number) => {
+    const permitPhotos = photos[permitId] || [];
+    setPhotos(prev => ({
+      ...prev,
+      [permitId]: permitPhotos.filter(p => p.id !== photoId)
+    }));
+    
+    // Ajuster l'index du carrousel
+    const currentIndex = currentPhotoIndex[permitId] || 0;
+    if (currentIndex >= permitPhotos.length - 1) {
+      setCurrentPhotoIndex(prev => ({
+        ...prev,
+        [permitId]: Math.max(0, permitPhotos.length - 2)
+      }));
+    }
+  };
+
+  const nextPhoto = (permitId: string) => {
+    const permitPhotos = photos[permitId] || [];
+    setCurrentPhotoIndex(prev => ({
+      ...prev,
+      [permitId]: ((prev[permitId] || 0) + 1) % permitPhotos.length
+    }));
+  };
+
+  const prevPhoto = (permitId: string) => {
+    const permitPhotos = photos[permitId] || [];
+    const currentIndex = currentPhotoIndex[permitId] || 0;
+    setCurrentPhotoIndex(prev => ({
+      ...prev,
+      [permitId]: (currentIndex - 1 + permitPhotos.length) % permitPhotos.length
+    }));
+  };
+
+  const toggleViewMode = (permitId: string) => {
+    setViewMode(prev => ({
+      ...prev,
+      [permitId]: prev[permitId] === 'carousel' ? 'grid' : 'carousel'
+    }));
   };
 
   // =================== FILTRAGE DES PERMIS ===================
@@ -854,13 +1129,53 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     };
   }, [permits, selectedPermits, complianceChecks]);
 
-  // =================== HANDLERS ===================
+  // =================== HANDLERS PRINCIPAUX ===================
   const handlePermitToggle = (permitId: string) => {
-    const updatedPermits = permits.map((permit: Permit) => 
-      permit.id === permitId 
-        ? { ...permit, selected: !permit.selected }
-        : permit
-    );
+    const updatedPermits = permits.map((permit: Permit) => {
+      if (permit.id === permitId) {
+        const newSelected = !permit.selected;
+        
+        // Initialiser travailleurs et photos si sélectionné
+        if (newSelected) {
+          if (!workers[permitId]) {
+            setWorkers(prev => ({
+              ...prev,
+              [permitId]: [{
+                id: 1,
+                name: '',
+                age: 0,
+                certification: '',
+                entryTime: '',
+                exitTime: null,
+                date: new Date().toISOString().split('T')[0],
+                over18: false
+              }]
+            }));
+          }
+          
+          if (!photos[permitId]) {
+            setPhotos(prev => ({
+              ...prev,
+              [permitId]: []
+            }));
+          }
+          
+          setViewMode(prev => ({
+            ...prev,
+            [permitId]: 'carousel'
+          }));
+          
+          setCurrentPhotoIndex(prev => ({
+            ...prev,
+            [permitId]: 0
+          }));
+        }
+        
+        return { ...permit, selected: newSelected };
+      }
+      return permit;
+    });
+    
     setPermits(updatedPermits);
     updateFormData(updatedPermits);
   };
@@ -870,11 +1185,15 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     const permitsData = {
       list: updatedPermits,
       selected: selectedList,
+      workers: workers,
+      photos: photos,
       stats: {
         totalPermits: updatedPermits.length,
         selected: selectedList.length,
         critical: selectedList.filter((p: Permit) => p.priority === 'critical').length,
-        pending: selectedList.filter((p: Permit) => p.status === 'pending').length
+        pending: selectedList.filter((p: Permit) => p.status === 'pending').length,
+        compliant: stats.compliant,
+        nonCompliant: stats.nonCompliant
       },
       compliance: {
         criticalAlerts: criticalAlerts,
@@ -898,7 +1217,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
             const depth = parseFloat(fieldId === 'excavation_depth_calc' ? value : permit.formData?.excavation_depth_calc || '0');
             const distance = parseFloat(fieldId === 'domain_public_distance' ? value : permit.formData?.domain_public_distance || '0');
             
-            if (depth > 0 && distance >= 0) {
+            if (depth >= 0 && distance >= 0) {
               setTimeout(() => calculateExcavationRequirements(permitId, depth, distance), 100);
             }
           }
@@ -911,6 +1230,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
       }
       return permit;
     });
+    
     setPermits(updatedPermits);
     updateFormData(updatedPermits);
   };
@@ -969,576 +1289,938 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     }
   };
 
-  return { permits, filteredPermits, stats, criticalAlerts, complianceChecks, expandedForms, handlePermitToggle, handleFormFieldChange, toggleFormExpansion, validateCompliance, getCategoryIcon, getPriorityColor, getStatusColor, getComplianceColor, searchTerm, setSearchTerm, selectedCategory, setSelectedCategory, selectedProvince, setSelectedProvince, categories, provinces, t };
-};
-
-export default Step4Permits;
-"use client";
-import React, { useState } from 'react';
-import { FileText, CheckCircle, AlertTriangle, Clock, Download, Eye, Shield, Users, MapPin, Calendar, Building, Phone, User, Briefcase, Search, Filter, Plus, BarChart3, Star, Award, Zap, HardHat, Camera, Save, X, ChevronLeft, ChevronRight, Upload, UserPlus, UserMinus, Grid, List } from 'lucide-react';
-
-// Section 3B - Rendu Final avec Multi-travailleurs et Carrousel
-const Step4PermitsSection3B = () => {
-  const [selectedPermit, setSelectedPermit] = useState('confined_space');
-  const [formData, setFormData] = useState({});
-  const [workers, setWorkers] = useState([{ id: 1, name: '', age: '', over18: false, certification: '' }]);
-  const [photos, setPhotos] = useState([]);
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [viewMode, setViewMode] = useState('carousel'); // 'carousel' ou 'grid'
-  const [language, setLanguage] = useState('fr');
-
-  // Gestion des travailleurs
-  const addWorker = () => {
-    const newWorker = {
-      id: workers.length + 1,
-      name: '',
-      age: '',
-      over18: false,
-      certification: ''
-    };
-    setWorkers([...workers, newWorker]);
-  };
-
-  const removeWorker = (id) => {
-    if (workers.length > 1) {
-      setWorkers(workers.filter(w => w.id !== id));
-    }
-  };
-
-  const updateWorker = (id, field, value) => {
-    setWorkers(workers.map(w => 
-      w.id === id ? { ...w, [field]: value } : w
-    ));
-  };
-
-  // Gestion des photos
-  const handlePhotoUpload = (e) => {
-    const files = Array.from(e.target.files);
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const newPhoto = {
-          id: photos.length + 1,
-          url: event.target.result,
-          name: file.name,
-          timestamp: new Date().toISOString()
-        };
-        setPhotos(prev => [...prev, newPhoto]);
-      };
-      reader.readAsDataURL(file);
+  // Initialiser les états au premier rendu
+  useEffect(() => {
+    // Initialiser workers et photos pour les permis déjà sélectionnés
+    permits.forEach(permit => {
+      if (permit.selected) {
+        if (!workers[permit.id]) {
+          setWorkers(prev => ({
+            ...prev,
+            [permit.id]: [{
+              id: 1,
+              name: '',
+              age: 0,
+              certification: '',
+              entryTime: '',
+              exitTime: null,
+              date: new Date().toISOString().split('T')[0],
+              over18: false
+            }]
+          }));
+        }
+        
+        if (!photos[permit.id]) {
+          setPhotos(prev => ({
+            ...prev,
+            [permit.id]: []
+          }));
+        }
+      }
     });
-  };
+  }, []);
 
-  const removePhoto = (id) => {
-    setPhotos(photos.filter(p => p.id !== id));
-    if (currentPhotoIndex >= photos.length - 1) {
-      setCurrentPhotoIndex(Math.max(0, photos.length - 2));
-    }
-  };
-
-  const nextPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
-  };
-
-  const prevPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
-  };
-
-  // Données des permis
-  const permits = {
-    confined_space: {
-      title: { fr: "Permis Espace Clos", en: "Confined Space Permit" },
-      icon: Shield,
-      color: "red",
-      fields: [
-        { id: 'location', type: 'text', label: { fr: 'Lieu de travail', en: 'Work Location' }, required: true },
-        { id: 'entry_date', type: 'date', label: { fr: 'Date d\'entrée', en: 'Entry Date' }, required: true },
-        { id: 'entry_time', type: 'time', label: { fr: 'Heure d\'entrée', en: 'Entry Time' }, required: true },
-        { id: 'exit_time', type: 'time', label: { fr: 'Heure de sortie prévue', en: 'Planned Exit Time' }, required: true },
-        { id: 'o2_level', type: 'gas_meter', label: { fr: 'Niveau O2 (%)', en: 'O2 Level (%)' }, required: true, min: 19.5, max: 23.5 },
-        { id: 'co_level', type: 'gas_meter', label: { fr: 'Niveau CO (ppm)', en: 'CO Level (ppm)' }, required: true, max: 35 },
-        { id: 'h2s_level', type: 'gas_meter', label: { fr: 'Niveau H2S (ppm)', en: 'H2S Level (ppm)' }, required: true, max: 10 },
-        { id: 'lie_level', type: 'gas_meter', label: { fr: 'Niveau LIE (%)', en: 'LEL Level (%)' }, required: true, max: 10 },
-        { id: 'rescue_plan', type: 'textarea', label: { fr: 'Plan de sauvetage', en: 'Rescue Plan' }, required: true },
-        { id: 'attendant', type: 'text', label: { fr: 'Surveillant externe', en: 'External Attendant' }, required: true },
-        { id: 'communication', type: 'select', label: { fr: 'Moyen de communication', en: 'Communication Method' }, options: [
-          { value: 'radio', label: { fr: 'Radio', en: 'Radio' } },
-          { value: 'phone', label: { fr: 'Téléphone', en: 'Phone' } },
-          { value: 'visual', label: { fr: 'Signaux visuels', en: 'Visual Signals' } }
-        ], required: true }
-      ]
-    },
-    hot_work: {
-      title: { fr: "Permis Travail à Chaud", en: "Hot Work Permit" },
-      icon: Zap,
-      color: "orange",
-      fields: [
-        { id: 'work_type', type: 'select', label: { fr: 'Type de travail', en: 'Work Type' }, options: [
-          { value: 'welding', label: { fr: 'Soudage', en: 'Welding' } },
-          { value: 'cutting', label: { fr: 'Découpage', en: 'Cutting' } },
-          { value: 'grinding', label: { fr: 'Meulage', en: 'Grinding' } }
-        ], required: true },
-        { id: 'location', type: 'text', label: { fr: 'Lieu de travail', en: 'Work Location' }, required: true },
-        { id: 'start_date', type: 'date', label: { fr: 'Date de début', en: 'Start Date' }, required: true },
-        { id: 'start_time', type: 'time', label: { fr: 'Heure de début', en: 'Start Time' }, required: true },
-        { id: 'end_time', type: 'time', label: { fr: 'Heure de fin', en: 'End Time' }, required: true },
-        { id: 'fire_extinguisher', type: 'text', label: { fr: 'Extincteur disponible', en: 'Fire Extinguisher Available' }, required: true },
-        { id: 'fire_watch', type: 'text', label: { fr: 'Surveillant incendie', en: 'Fire Watch' }, required: true },
-        { id: 'watch_duration', type: 'number', label: { fr: 'Durée surveillance (min)', en: 'Watch Duration (min)' }, required: true, min: 60 },
-        { id: 'combustible_removal', type: 'checkbox', label: { fr: 'Matières combustibles retirées', en: 'Combustible Materials Removed' }, required: true }
-      ]
-    },
-    excavation: {
-      title: { fr: "Permis d'Excavation", en: "Excavation Permit" },
-      icon: HardHat,
-      color: "yellow",
-      fields: [
-        { id: 'location', type: 'text', label: { fr: 'Lieu d\'excavation', en: 'Excavation Location' }, required: true },
-        { id: 'depth', type: 'number', label: { fr: 'Profondeur prévue (m)', en: 'Planned Depth (m)' }, required: true },
-        { id: 'width', type: 'number', label: { fr: 'Largeur (m)', en: 'Width (m)' }, required: true },
-        { id: 'length', type: 'number', label: { fr: 'Longueur (m)', en: 'Length (m)' }, required: true },
-        { id: 'start_date', type: 'date', label: { fr: 'Date de début', en: 'Start Date' }, required: true },
-        { id: 'end_date', type: 'date', label: { fr: 'Date de fin', en: 'End Date' }, required: true },
-        { id: 'info_excavation', type: 'checkbox', label: { fr: 'Info-Excavation contacté', en: 'Dig Safe Contacted' }, required: true },
-        { id: 'utilities_marked', type: 'checkbox', label: { fr: 'Services publics marqués', en: 'Utilities Marked' }, required: true },
-        { id: 'shoring_required', type: 'checkbox', label: { fr: 'Étaiement requis', en: 'Shoring Required' } },
-        { id: 'insurance_amount', type: 'calculated', label: { fr: 'Assurance requise', en: 'Required Insurance' }, 
-          calculation: (depth) => depth > 3 ? '2M$' : '1M$' }
-      ]
-    }
-  };
-
-  const currentPermit = permits[selectedPermit];
-
-  const renderField = (field) => {
-    const label = field.label[language];
-    const fieldId = `${selectedPermit}_${field.id}`;
+  return {
+    // Données
+    permits,
+    filteredPermits,
+    stats,
+    criticalAlerts,
+    complianceChecks,
+    workers,
+    photos,
+    currentPhotoIndex,
+    viewMode,
     
-    switch (field.type) {
-      case 'text':
-      case 'number':
-      case 'date':
-      case 'time':
-        return (
-          <div key={field.id} className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700 select-none">
-              {label} {field.required && <span className="text-red-500">*</span>}
-            </label>
-            <input
-              type={field.type}
-              id={fieldId}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              required={field.required}
-              min={field.min}
-              max={field.max}
-              value={formData[fieldId] || ''}
-              onChange={(e) => setFormData({...formData, [fieldId]: e.target.value})}
-              onFocus={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-        );
+    // États UI
+    expandedForms,
+    searchTerm,
+    setSearchTerm,
+    selectedCategory,
+    setSelectedCategory,
+    selectedProvince,
+    setSelectedProvince,
+    categories,
+    provinces,
+    
+    // Handlers
+    handlePermitToggle,
+    handleFormFieldChange,
+    toggleFormExpansion,
+    validateCompliance,
+    
+    // Multi-travailleurs
+    addWorker,
+    removeWorker,
+    updateWorker,
+    
+    // Photos
+    handlePhotoUpload,
+    removePhoto,
+    nextPhoto,
+    prevPhoto,
+    toggleViewMode,
+    
+    // Utilitaires
+    getCategoryIcon,
+    getPriorityColor,
+    getStatusColor,
+    getComplianceColor,
+    
+    // Traductions
+    t
+  };
+};
+// =================== SECTION 4: RENDU JSX ET CSS COMPLET ===================
+// À coller après la Section 3 pour compléter le composant
 
-      case 'textarea':
-        return (
-          <div key={field.id} className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700 select-none">
-              {label} {field.required && <span className="text-red-500">*</span>}
-            </label>
-            <textarea
-              id={fieldId}
-              rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
-              required={field.required}
-              value={formData[fieldId] || ''}
-              onChange={(e) => setFormData({...formData, [fieldId]: e.target.value})}
-              onFocus={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            />
+  // =================== RENDU DU COMPOSANT PRINCIPAL ===================
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* =================== HEADER AVEC TITRE ET STATS =================== */}
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            {t.title}
+          </h1>
+          <p className="text-gray-600 text-lg">{t.subtitle}</p>
+          
+          {/* Statistiques conformité */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-6">
+            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
+              <div className="text-2xl font-bold text-blue-600">{stats.totalPermits}</div>
+              <div className="text-sm text-gray-500">{t.stats.available}</div>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
+              <div className="text-2xl font-bold text-green-600">{stats.selected}</div>
+              <div className="text-sm text-gray-500">{t.stats.selected}</div>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
+              <div className="text-2xl font-bold text-red-600">{stats.critical}</div>
+              <div className="text-sm text-gray-500">{t.stats.critical}</div>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
+              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+              <div className="text-sm text-gray-500">{t.stats.pending}</div>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
+              <div className="text-2xl font-bold text-emerald-600">{stats.compliant}</div>
+              <div className="text-sm text-gray-500">{t.stats.compliant}</div>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
+              <div className="text-2xl font-bold text-rose-600">{stats.nonCompliant}</div>
+              <div className="text-sm text-gray-500">{t.stats.nonCompliant}</div>
+            </div>
           </div>
-        );
+        </div>
 
-      case 'select':
-        return (
-          <div key={field.id} className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700 select-none">
-              {label} {field.required && <span className="text-red-500">*</span>}
-            </label>
+        {/* =================== ALERTES CRITIQUES =================== */}
+        {criticalAlerts.length > 0 && (
+          <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-2xl shadow-2xl animate-pulse">
+            <div className="flex items-center space-x-3 mb-4">
+              <AlertTriangle className="w-8 h-8" />
+              <h3 className="text-xl font-bold">{t.alerts.critical}</h3>
+            </div>
+            <div className="space-y-2">
+              {criticalAlerts.map((alert, index) => (
+                <div key={index} className="flex items-start space-x-2">
+                  <span className="text-red-200">•</span>
+                  <span className="text-sm">{alert}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* =================== FILTRES ET RECHERCHE =================== */}
+        <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder={t.searchPlaceholder}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              />
+            </div>
+            
             <select
-              id={fieldId}
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              required={field.required}
-              value={formData[fieldId] || ''}
-              onChange={(e) => setFormData({...formData, [fieldId]: e.target.value})}
-              onFocus={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
             >
-              <option value="">Sélectionner...</option>
-              {field.options.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label[language]}
+              <option value="all">{t.allCategories}</option>
+              {categories.map(category => (
+                <option key={category} value={category}>
+                  {getCategoryIcon(category)} {t.categories[category] || category}
                 </option>
               ))}
             </select>
+            
+            <select
+              value={selectedProvince}
+              onChange={(e) => setSelectedProvince(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+            >
+              <option value="all">{t.allProvinces}</option>
+              {provinces.map(province => (
+                <option key={province} value={province}>{province}</option>
+              ))}
+            </select>
+            
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedCategory('all');
+                setSelectedProvince('all');
+              }}
+              className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all duration-200"
+            >
+              <X className="w-4 h-4" />
+              <span>Reset</span>
+            </button>
           </div>
-        );
+        </div>
 
-      case 'checkbox':
-        return (
-          <div key={field.id} className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              id={fieldId}
-              className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              required={field.required}
-              checked={formData[fieldId] || false}
-              onChange={(e) => setFormData({...formData, [fieldId]: e.target.checked})}
-              onFocus={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <label htmlFor={fieldId} className="text-sm font-medium text-gray-700 select-none">
-              {label} {field.required && <span className="text-red-500">*</span>}
-            </label>
-          </div>
-        );
-
-      case 'gas_meter':
-        const value = parseFloat(formData[fieldId]) || 0;
-        const isInRange = value >= (field.min || 0) && value <= (field.max || 100);
-        
-        return (
-          <div key={field.id} className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700 select-none">
-              {label} {field.required && <span className="text-red-500">*</span>}
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                id={fieldId}
-                step="0.1"
-                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-blue-500 transition-all duration-200 ${
-                  isInRange ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
-                }`}
-                required={field.required}
-                value={formData[fieldId] || ''}
-                onChange={(e) => setFormData({...formData, [fieldId]: e.target.value})}
-                onFocus={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
+        {/* =================== LISTE DES PERMIS =================== */}
+        <div className="space-y-6">
+          {filteredPermits.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-2xl shadow-lg">
+              <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">{t.messages.noResults}</h3>
+              <p className="text-gray-500">{t.messages.modifySearch}</p>
+            </div>
+          ) : (
+            filteredPermits.map((permit: Permit) => (
+              <PermitCard
+                key={permit.id}
+                permit={permit}
+                isSelected={permit.selected}
+                isExpanded={expandedForms[permit.id]}
+                complianceChecks={complianceChecks[permit.id] || []}
+                workers={workers[permit.id] || []}
+                photos={photos[permit.id] || []}
+                currentPhotoIndex={currentPhotoIndex[permit.id] || 0}
+                viewMode={viewMode[permit.id] || 'carousel'}
+                onToggle={() => handlePermitToggle(permit.id)}
+                onExpand={() => toggleFormExpansion(permit.id)}
+                onFieldChange={(fieldId, value) => handleFormFieldChange(permit.id, fieldId, value)}
+                onAddWorker={() => addWorker(permit.id)}
+                onRemoveWorker={(workerId) => removeWorker(permit.id, workerId)}
+                onUpdateWorker={(workerId, field, value) => updateWorker(permit.id, workerId, field, value)}
+                onPhotoUpload={(files) => handlePhotoUpload(permit.id, files)}
+                onRemovePhoto={(photoId) => removePhoto(permit.id, photoId)}
+                onNextPhoto={() => nextPhoto(permit.id)}
+                onPrevPhoto={() => prevPhoto(permit.id)}
+                onToggleViewMode={() => toggleViewMode(permit.id)}
+                getPriorityColor={getPriorityColor}
+                getStatusColor={getStatusColor}
+                getComplianceColor={getComplianceColor}
+                getCategoryIcon={getCategoryIcon}
+                t={t}
               />
-              <div className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-sm font-bold ${
-                isInRange ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {isInRange ? '✓' : '⚠️'}
-              </div>
-            </div>
-            <div className="text-xs text-gray-500">
-              Range: {field.min || 0} - {field.max || 100}
-            </div>
-          </div>
-        );
-
-      case 'calculated':
-        const calculatedValue = field.calculation ? field.calculation(formData[`${selectedPermit}_depth`]) : '';
-        return (
-          <div key={field.id} className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700 select-none">
-              {label}
-            </label>
-            <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl text-gray-700 font-mono">
-              {calculatedValue}
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            Step4Permits - Conforme 2024-2025
-          </h1>
-          <p className="text-gray-600">Système de permis avec conformité légale garantie</p>
-        </div>
-
-        {/* Sélection du permis */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {Object.entries(permits).map(([key, permit]) => {
-            const Icon = permit.icon;
-            return (
-              <div
-                key={key}
-                className={`relative p-6 rounded-2xl cursor-pointer transition-all duration-300 transform hover:scale-105 ${
-                  selectedPermit === key
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-2xl'
-                    : 'bg-white hover:bg-gray-50 shadow-lg'
-                }`}
-                onClick={() => setSelectedPermit(key)}
-              >
-                <div className="flex items-center space-x-4">
-                  <Icon className="w-8 h-8" />
-                  <div>
-                    <h3 className="text-lg font-semibold">{permit.title[language]}</h3>
-                    <p className={`text-sm ${selectedPermit === key ? 'text-blue-100' : 'text-gray-500'}`}>
-                      Conforme 2024-2025
-                    </p>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Formulaire principal */}
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-              <currentPermit.icon className="w-6 h-6 mr-3" />
-              {currentPermit.title[language]}
-            </h2>
-
-            <div className="space-y-6">
-              {currentPermit.fields.map(renderField)}
-            </div>
-          </div>
-
-          {/* Section Travailleurs */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-xl p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                  <Users className="w-6 h-6 mr-3" />
-                  Travailleurs Autorisés
-                </h3>
-                <button
-                  type="button"
-                  onClick={addWorker}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-xl hover:from-green-600 hover:to-blue-600 transition-all duration-200"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  <span>Ajouter</span>
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {workers.map((worker, index) => (
-                  <div key={worker.id} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-gray-700">Travailleur #{index + 1}</h4>
-                      {workers.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeWorker(worker.id)}
-                          className="text-red-500 hover:text-red-700 transition-colors"
-                        >
-                          <UserMinus className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet</label>
-                        <input
-                          type="text"
-                          value={worker.name}
-                          onChange={(e) => updateWorker(worker.id, 'name', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Nom du travailleur"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Âge</label>
-                        <input
-                          type="number"
-                          value={worker.age}
-                          onChange={(e) => updateWorker(worker.id, 'age', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Âge"
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <div className="flex items-center space-x-3">
-                          <input
-                            type="checkbox"
-                            id={`worker-${worker.id}-18plus`}
-                            checked={worker.over18}
-                            onChange={(e) => updateWorker(worker.id, 'over18', e.target.checked)}
-                            className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                          <label htmlFor={`worker-${worker.id}-18plus`} className="text-sm font-medium text-gray-700">
-                            <span className="text-red-500">*</span> Je certifie que ce travailleur a 18 ans ou plus (OBLIGATOIRE - Art. 298 RSST)
-                          </label>
-                        </div>
-                        {worker.age && parseInt(worker.age) < 18 && (
-                          <div className="mt-2 p-3 bg-red-100 border border-red-300 rounded-lg">
-                            <p className="text-sm text-red-700 font-medium">
-                              ⚠️ VIOLATION LÉGALE: Travailleur mineur détecté. Accès en espace clos interdit par l'Article 298 RSST.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Certification</label>
-                        <select
-                          value={worker.certification}
-                          onChange={(e) => updateWorker(worker.id, 'certification', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="">Sélectionner certification</option>
-                          <option value="basic">Formation de base</option>
-                          <option value="advanced">Formation avancée</option>
-                          <option value="supervisor">Superviseur</option>
-                          <option value="rescue">Sauveteur</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Section Photos */}
-            <div className="bg-white rounded-2xl shadow-xl p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                  <Camera className="w-6 h-6 mr-3" />
-                  Photos du Site ({photos.length})
-                </h3>
-                <div className="flex items-center space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode(viewMode === 'carousel' ? 'grid' : 'carousel')}
-                    className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    {viewMode === 'carousel' ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
-                  </button>
-                  <label className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200 cursor-pointer">
-                    <Upload className="w-4 h-4" />
-                    <span>Ajouter Photos</span>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={handlePhotoUpload}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {photos.length > 0 ? (
-                viewMode === 'carousel' ? (
-                  <div className="relative">
-                    <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden">
-                      <img
-                        src={photos[currentPhotoIndex]?.url}
-                        alt={`Photo ${currentPhotoIndex + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                      <button
-                        onClick={() => removePhoto(photos[currentPhotoIndex]?.id)}
-                        className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    
-                    <div className="flex items-center justify-between mt-4">
-                      <button
-                        onClick={prevPhoto}
-                        className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
-                        disabled={photos.length <= 1}
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      
-                      <div className="flex space-x-2">
-                        {photos.map((_, index) => (
-                          <button
-                            key={index}
-                            onClick={() => setCurrentPhotoIndex(index)}
-                            className={`w-3 h-3 rounded-full transition-colors ${
-                              index === currentPhotoIndex ? 'bg-blue-500' : 'bg-gray-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      
-                      <button
-                        onClick={nextPhoto}
-                        className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
-                        disabled={photos.length <= 1}
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </div>
-                    
-                    <div className="text-center mt-2">
-                      <p className="text-sm text-gray-600">
-                        {photos[currentPhotoIndex]?.name} • {new Date(photos[currentPhotoIndex]?.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {photos.map((photo) => (
-                      <div key={photo.id} className="relative group">
-                        <img
-                          src={photo.url}
-                          alt={photo.name}
-                          className="w-full h-24 object-cover rounded-lg"
-                        />
-                        <button
-                          onClick={() => removePhoto(photo.id)}
-                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <Camera className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                  <p>Aucune photo ajoutée</p>
-                  <p className="text-sm">Cliquez sur "Ajouter Photos" pour commencer</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Boutons d'action */}
-        <div className="flex justify-center space-x-4 mt-8">
-          <button
-            type="button"
-            className="flex items-center space-x-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-          >
-            <Save className="w-5 h-5" />
-            <span>Sauvegarder le Permis</span>
-          </button>
-          
-          <button
-            type="button"
-            className="flex items-center space-x-2 px-8 py-4 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-xl hover:from-green-600 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-          >
-            <Download className="w-5 h-5" />
-            <span>Télécharger PDF</span>
-          </button>
+            ))
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-export default Step4PermitsSection3B;
+// =================== COMPOSANT CARTE PERMIS =================== 
+interface PermitCardProps {
+  permit: Permit;
+  isSelected: boolean;
+  isExpanded: boolean;
+  complianceChecks: ComplianceCheck[];
+  workers: WorkerEntry[];
+  photos: PhotoEntry[];
+  currentPhotoIndex: number;
+  viewMode: 'carousel' | 'grid';
+  onToggle: () => void;
+  onExpand: () => void;
+  onFieldChange: (fieldId: string, value: any) => void;
+  onAddWorker: () => void;
+  onRemoveWorker: (workerId: number) => void;
+  onUpdateWorker: (workerId: number, field: keyof WorkerEntry, value: any) => void;
+  onPhotoUpload: (files: FileList) => void;
+  onRemovePhoto: (photoId: number) => void;
+  onNextPhoto: () => void;
+  onPrevPhoto: () => void;
+  onToggleViewMode: () => void;
+  getPriorityColor: (priority: string) => string;
+  getStatusColor: (status: string) => string;
+  getComplianceColor: (level: string) => string;
+  getCategoryIcon: (category: string) => string;
+  t: any;
+}
+
+const PermitCard: React.FC<PermitCardProps> = ({
+  permit,
+  isSelected,
+  isExpanded,
+  complianceChecks,
+  workers,
+  photos,
+  currentPhotoIndex,
+  viewMode,
+  onToggle,
+  onExpand,
+  onFieldChange,
+  onAddWorker,
+  onRemoveWorker,
+  onUpdateWorker,
+  onPhotoUpload,
+  onRemovePhoto,
+  onNextPhoto,
+  onPrevPhoto,
+  onToggleViewMode,
+  getPriorityColor,
+  getStatusColor,
+  getComplianceColor,
+  getCategoryIcon,
+  t
+}) => {
+  const nonCompliantChecks = complianceChecks.filter(check => check.status === 'non-compliant');
+  const hasViolations = nonCompliantChecks.length > 0;
+
+  return (
+    <div className={`bg-white rounded-2xl shadow-xl border-2 transition-all duration-300 transform hover:scale-[1.02] ${
+      isSelected ? 'border-blue-500 shadow-2xl' : 'border-gray-200'
+    } ${hasViolations ? 'border-red-500 bg-red-50' : ''}`}>
+      
+      {/* En-tête de la carte */}
+      <div className="p-6 border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="text-2xl">{getCategoryIcon(permit.category)}</div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-gray-800">{permit.name}</h3>
+              <p className="text-gray-600 text-sm mt-1">{permit.description}</p>
+              <div className="flex items-center space-x-3 mt-2">
+                <span 
+                  className="px-3 py-1 rounded-full text-xs font-semibold text-white"
+                  style={{ backgroundColor: getPriorityColor(permit.priority) }}
+                >
+                  {t.priorities[permit.priority]}
+                </span>
+                <span 
+                  className="px-3 py-1 rounded-full text-xs font-semibold text-white"
+                  style={{ backgroundColor: getStatusColor(permit.status) }}
+                >
+                  {t.statuses[permit.status]}
+                </span>
+                <span 
+                  className="px-3 py-1 rounded-full text-xs font-semibold text-white"
+                  style={{ backgroundColor: getComplianceColor(permit.complianceLevel) }}
+                >
+                  {t.complianceLevels[permit.complianceLevel]}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            {hasViolations && (
+              <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold animate-pulse">
+                {nonCompliantChecks.length} violation(s)
+              </div>
+            )}
+            
+            <button
+              onClick={onToggle}
+              className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+                isSelected 
+                  ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
+                  : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600'
+              }`}
+            >
+              {isSelected ? (
+                <>
+                  <X className="w-4 h-4" />
+                  <span>Retirer</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  <span>Sélectionner</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenu expansible */}
+      {isSelected && (
+        <div className="p-6 space-y-6">
+          
+          {/* Vérifications de conformité */}
+          {complianceChecks.length > 0 && (
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                <Shield className="w-5 h-5 mr-2" />
+                Vérifications de Conformité
+              </h4>
+              <div className="space-y-2">
+                {complianceChecks.map((check, index) => (
+                  <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${
+                    check.status === 'compliant' ? 'bg-green-100' : 'bg-red-100'
+                  }`}>
+                    <div className="flex items-center space-x-3">
+                      {check.status === 'compliant' ? (
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <AlertTriangle className="w-5 h-5 text-red-600" />
+                      )}
+                      <div>
+                        <div className="font-medium text-gray-800">{check.requirement}</div>
+                        <div className="text-sm text-gray-600">{check.details}</div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500">{check.reference}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Bouton pour étendre/réduire le formulaire */}
+          <button
+            onClick={onExpand}
+            className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all duration-200"
+          >
+            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            <span>{isExpanded ? 'Réduire le formulaire' : 'Remplir le formulaire'}</span>
+          </button>
+
+          {/* Formulaire étendu */}
+          {isExpanded && (
+            <div className="space-y-8">
+              
+              {/* Grille des champs de formulaire */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                {/* Colonne gauche - Champs du formulaire */}
+                <div className="space-y-6">
+                  <h4 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                    Informations du Permis
+                  </h4>
+                  
+                  {permit.formFields?.map((field) => (
+                    <FormField
+                      key={field.id}
+                      field={field}
+                      value={permit.formData?.[field.id] || ''}
+                      onChange={(value) => onFieldChange(field.id, value)}
+                      t={t}
+                    />
+                  ))}
+                </div>
+
+                {/* Colonne droite - Travailleurs et Photos */}
+                <div className="space-y-6">
+                  
+                  {/* Section Travailleurs */}
+                  <div className="bg-gray-50 rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold text-gray-800 flex items-center">
+                        <Users className="w-5 h-5 mr-2" />
+                        {t.messages.authorizedWorkers} ({workers.length})
+                      </h4>
+                      <button
+                        onClick={onAddWorker}
+                        className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 transition-all duration-200 text-sm"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        <span>{t.messages.addWorker}</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-4 max-h-64 overflow-y-auto">
+                      {workers.map((worker, index) => (
+                        <WorkerCard
+                          key={worker.id}
+                          worker={worker}
+                          index={index}
+                          canRemove={workers.length > 1}
+                          onUpdate={(field, value) => onUpdateWorker(worker.id, field, value)}
+                          onRemove={() => onRemoveWorker(worker.id)}
+                          t={t}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Section Photos */}
+                  <div className="bg-gray-50 rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold text-gray-800 flex items-center">
+                        <Camera className="w-5 h-5 mr-2" />
+                        {t.messages.sitePhotos} ({photos.length})
+                      </h4>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={onToggleViewMode}
+                          className="p-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                          title={t.messages.toggleView}
+                        >
+                          {viewMode === 'carousel' ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
+                        </button>
+                        <label className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 cursor-pointer text-sm">
+                          <Upload className="w-4 h-4" />
+                          <span>{t.messages.addPhotos}</span>
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={(e) => e.target.files && onPhotoUpload(e.target.files)}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <PhotoGallery
+                      photos={photos}
+                      currentIndex={currentPhotoIndex}
+                      viewMode={viewMode}
+                      onNext={onNextPhoto}
+                      onPrev={onPrevPhoto}
+                      onRemove={onRemovePhoto}
+                      t={t}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions du formulaire */}
+              <div className="flex justify-center space-x-4 pt-6 border-t border-gray-200">
+                <button
+                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <Save className="w-5 h-5" />
+                  <span>{t.actions.save}</span>
+                </button>
+                
+                <button
+                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-xl hover:from-green-600 hover:to-teal-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <Download className="w-5 h-5" />
+                  <span>{t.actions.download}</span>
+                </button>
+                
+                <button
+                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <Eye className="w-5 h-5" />
+                  <span>{t.actions.preview}</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// =================== COMPOSANT CHAMP DE FORMULAIRE ===================
+interface FormFieldProps {
+  field: FormField;
+  value: any;
+  onChange: (value: any) => void;
+  t: any;
+}
+
+const FormField: React.FC<FormFieldProps> = ({ field, value, onChange, t }) => {
+  const getFieldComponent = () => {
+    switch (field.type) {
+      case 'text':
+      case 'number':
+      case 'date':
+      case 'time':
+        return (
+          <input
+            type={field.type}
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder}
+            required={field.required}
+            min={field.validation?.min}
+            max={field.validation?.max}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+          />
+        );
+
+      case 'textarea':
+        return (
+          <textarea
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder}
+            required={field.required}
+            rows={4}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
+          />
+        );
+
+      case 'select':
+        return (
+          <select
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            required={field.required}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+          >
+            <option value="">{t.messages.select}</option>
+            {field.options?.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        );
+
+      case 'checkbox':
+        return (
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={value || false}
+              onChange={(e) => onChange(e.target.checked)}
+              required={field.required}
+              className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
+            </span>
+          </div>
+        );
+
+      case 'radio':
+        return (
+          <div className="space-y-2">
+            {field.options?.map(option => (
+              <div key={option} className="flex items-center space-x-3">
+                <input
+                  type="radio"
+                  name={field.id}
+                  value={option}
+                  checked={value === option}
+                  onChange={(e) => onChange(e.target.value)}
+                  required={field.required}
+                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">{option}</span>
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'gas_meter':
+        const numValue = parseFloat(value) || 0;
+        const isInRange = numValue >= (field.validation?.min || 0) && numValue <= (field.validation?.max || 100);
+        
+        return (
+          <div className="relative">
+            <input
+              type="number"
+              step="0.1"
+              value={value || ''}
+              onChange={(e) => onChange(e.target.value)}
+              required={field.required}
+              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-blue-500 transition-all duration-200 ${
+                isInRange ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
+              }`}
+            />
+            <div className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-lg ${
+              isInRange ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {isInRange ? '✓' : '⚠️'}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Range: {field.validation?.min || 0} - {field.validation?.max || 100}
+              {field.validation?.critical && (
+                <span className="text-red-600 font-medium"> (CRITIQUE)</span>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'compliance_check':
+        return (
+          <div className={`p-4 rounded-xl border-2 ${
+            value ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
+          }`}>
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={value || false}
+                onChange={(e) => onChange(e.target.checked)}
+                required={field.required}
+                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className={`font-medium ${value ? 'text-green-700' : 'text-red-700'}`}>
+                {field.label} {field.required && <span className="text-red-500">*</span>}
+              </span>
+            </div>
+            {field.complianceRef && (
+              <div className="text-xs text-gray-600 mt-2">{field.complianceRef}</div>
+            )}
+          </div>
+        );
+
+      case 'file':
+        return (
+          <label className="block w-full p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-400 cursor-pointer transition-colors">
+            <div className="text-center">
+              <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+              <span className="text-sm text-gray-600">Cliquer pour sélectionner un fichier</span>
+              {value && <div className="text-xs text-blue-600 mt-1">{value.name || value}</div>}
+            </div>
+            <input
+              type="file"
+              onChange={(e) => onChange(e.target.files?.[0])}
+              required={field.required}
+              className="hidden"
+            />
+          </label>
+        );
+
+      default:
+        return (
+          <input
+            type="text"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+          />
+        );
+    }
+  };
+
+  if (field.type === 'checkbox' || field.type === 'radio' || field.type === 'compliance_check') {
+    return (
+      <div className="space-y-2">
+        {getFieldComponent()}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-semibold text-gray-700">
+        {field.label} {field.required && <span className="text-red-500">*</span>}
+        {field.validation?.legalRequirement && (
+          <span className="ml-2 px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">LÉGAL</span>
+        )}
+      </label>
+      {getFieldComponent()}
+      {field.validation?.message && (
+        <div className={`text-xs ${field.validation.critical ? 'text-red-600' : 'text-gray-500'}`}>
+          {field.validation.message}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// =================== COMPOSANT CARTE TRAVAILLEUR ===================
+interface WorkerCardProps {
+  worker: WorkerEntry;
+  index: number;
+  canRemove: boolean;
+  onUpdate: (field: keyof WorkerEntry, value: any) => void;
+  onRemove: () => void;
+  t: any;
+}
+
+const WorkerCard: React.FC<WorkerCardProps> = ({ worker, index, canRemove, onUpdate, onRemove, t }) => {
+  const isUnderage = worker.age > 0 && worker.age < 18;
+
+  return (
+    <div className={`border rounded-lg p-4 ${isUnderage ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'}`}>
+      <div className="flex items-center justify-between mb-3">
+        <h5 className="font-medium text-gray-700">{t.messages.workerNumber}{index + 1}</h5>
+        {canRemove && (
+          <button
+            onClick={onRemove}
+            className="text-red-500 hover:text-red-700 transition-colors"
+          >
+            <UserMinus className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t.messages.fullName}</label>
+          <input
+            type="text"
+            value={worker.name}
+            onChange={(e) => onUpdate('name', e.target.value)}
+            placeholder={t.messages.workerName}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t.messages.age}</label>
+          <input
+            type="number"
+            value={worker.age || ''}
+            onChange={(e) => onUpdate('age', parseInt(e.target.value) || 0)}
+            placeholder={t.messages.workerAge}
+            min="16"
+            max="70"
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500 text-sm ${
+              isUnderage ? 'border-red-300 bg-red-50' : 'border-gray-300'
+            }`}
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t.messages.certification}</label>
+          <select
+            value={worker.certification}
+            onChange={(e) => onUpdate('certification', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+          >
+            <option value="">{t.messages.selectCertification}</option>
+            <option value="basic">{t.messages.basicTraining}</option>
+            <option value="advanced">{t.messages.advancedTraining}</option>
+            <option value="supervisor">{t.messages.supervisor}</option>
+            <option value="rescuer">{t.messages.rescuer}</option>
+          </select>
+        </div>
+
+        <div className="md:col-span-2">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id={`worker-${worker.id}-18plus`}
+              checked={worker.over18}
+              onChange={(e) => onUpdate('over18', e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor={`worker-${worker.id}-18plus`} className="text-xs text-gray-700">
+              <span className="text-red-500">*</span> {t.messages.certifyOver18}
+            </label>
+          </div>
+          
+          {isUnderage && (
+            <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-lg">
+              <p className="text-xs text-red-700 font-medium">
+                ⚠️ {t.messages.legalViolationMinor}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// =================== COMPOSANT GALERIE PHOTOS ===================
+interface PhotoGalleryProps {
+  photos: PhotoEntry[];
+  currentIndex: number;
+  viewMode: 'carousel' | 'grid';
+  onNext: () => void;
+  onPrev: () => void;
+  onRemove: (photoId: number) => void;
+  t: any;
+}
+
+const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, currentIndex, viewMode, onNext, onPrev, onRemove, t }) => {
+  if (photos.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        <Camera className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+        <p className="text-sm">{t.messages.noPhotosAdded}</p>
+        <p className="text-xs text-gray-400">{t.messages.clickToAddPhotos}</p>
+      </div>
+    );
+  }
+
+  if (viewMode === 'carousel') {
+    const currentPhoto = photos[currentIndex];
+    
+    return (
+      <div className="space-y-3">
+        <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+          <img
+            src={currentPhoto?.url}
+            alt={`Photo ${currentIndex + 1}`}
+            className="w-full h-full object-cover"
+          />
+          <button
+            onClick={() => onRemove(currentPhoto?.id)}
+            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onPrev}
+            disabled={photos.length <= 1}
+            className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors disabled:opacity-50"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          
+          <div className="flex space-x-1">
+            {photos.map((_, index) => (
+              <button
+                key={index}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === currentIndex ? 'bg-blue-500' : 'bg-gray-300'
+                }`}
+              />
+            ))}
+          </div>
+          
+          <button
+            onClick={onNext}
+            disabled={photos.length <= 1}
+            className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors disabled:opacity-50"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        
+        <div className="text-center">
+          <p className="text-xs text-gray-600">
+            {currentPhoto?.name} • {new Date(currentPhoto?.timestamp).toLocaleString()}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      {photos.map((photo) => (
+        <div key={photo.id} className="relative group">
+          <img
+            src={photo.url}
+            alt={photo.name}
+            className="w-full h-20 object-cover rounded-lg"
+          />
+          <button
+            onClick={() => onRemove(photo.id)}
+            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default Step4Permits;
