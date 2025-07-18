@@ -50,6 +50,352 @@ interface Standard {
   description: string;
   mandatory: boolean;
 }
+
+// =================== TRADUCTIONS BILINGUES ===================
+const getTexts = (language: 'fr' | 'en') => {
+  if (language === 'en') {
+    return {
+      title: "⚠️ Hazard & Risk Identification",
+      subtitle: "Select potential hazards and define required control measures",
+      searchPlaceholder: "Search for a hazard...",
+      allCategories: "All categories",
+      hazardsIdentified: "Hazards identified",
+      highRisks: "High risks", 
+      controlsImplemented: "Controls implemented",
+      implementationRate: "Implementation rate",
+      controlMeasures: "Control measures",
+      noHazardsFound: "No hazards found",
+      noHazardsMessage: "Modify your search criteria to see more hazards",
+      responsible: "Responsible...",
+      standardsReferences: "📋 Standards & References:",
+      mandatory: "Mandatory",
+      recommended: "Recommended",
+      riskLevels: {
+        critical: "🔴 Critical",
+        high: "🟠 High",
+        medium: "🟡 Medium",
+        low: "🟢 Low"
+      },
+      controlCategories: {
+        elimination: "❌ Elimination",
+        substitution: "🔄 Substitution", 
+        engineering: "🔧 Engineering",
+        administrative: "📋 Administrative",
+        ppe: "🛡️ PPE"
+      },
+      categories: {
+        'Électrique': 'Electrical',
+        'Mécanique': 'Mechanical',
+        'Physique': 'Physical', 
+        'Chimique': 'Chemical',
+        'Ergonomique': 'Ergonomic',
+        'Environnemental': 'Environmental',
+        'Psychosocial': 'Psychosocial',
+        'Incendie': 'Fire',
+        'Transport': 'Transport'
+      }
+    };
+  }
+  
+  return {
+    title: "⚠️ Identification des Dangers & Risques",
+    subtitle: "Sélectionnez les dangers potentiels et définissez les moyens de contrôle requis",
+    searchPlaceholder: "Rechercher un danger...",
+    allCategories: "Toutes catégories",
+    hazardsIdentified: "Dangers identifiés",
+    highRisks: "Risques élevés",
+    controlsImplemented: "Contrôles implantés", 
+    implementationRate: "Taux d'implantation",
+    controlMeasures: "Moyens de contrôle",
+    noHazardsFound: "Aucun danger trouvé",
+    noHazardsMessage: "Modifiez vos critères de recherche pour voir plus de dangers",
+    responsible: "Responsable...",
+    standardsReferences: "📋 Normes & Références :",
+    mandatory: "Obligatoire",
+    recommended: "Recommandé",
+    riskLevels: {
+      critical: "🔴 Critique",
+      high: "🟠 Élevé",
+      medium: "🟡 Moyen", 
+      low: "🟢 Faible"
+    },
+    controlCategories: {
+      elimination: "❌ Élimination",
+      substitution: "🔄 Substitution",
+      engineering: "🔧 Ingénierie", 
+      administrative: "📋 Administrative",
+      ppe: "🛡️ EPI"
+    },
+    categories: {
+      'Électrique': 'Électrique',
+      'Mécanique': 'Mécanique',
+      'Physique': 'Physique',
+      'Chimique': 'Chimique', 
+      'Ergonomique': 'Ergonomique',
+      'Environnemental': 'Environnemental',
+      'Psychosocial': 'Psychosocial',
+      'Incendie': 'Incendie',
+      'Transport': 'Transport'
+    }
+  };
+};
+
+// =================== FONCTION POUR TRADUIRE LES DANGERS ===================
+const translateHazards = (hazards: Hazard[], language: 'fr' | 'en'): Hazard[] => {
+  if (language === 'fr') return hazards; // Déjà en français
+  
+  // Traductions EN pour les dangers
+  const translations: { [key: string]: { name: string; description: string; category: string; controls: { [key: string]: { name: string; description: string } } } } = {
+    'elec-shock': {
+      name: 'Electrocution / Electric shock',
+      description: 'Direct or indirect contact with live parts',
+      category: 'Electrical',
+      controls: {
+        'cm-elec-1': { name: 'Complete LOTO lockout', description: 'Complete isolation of energy sources' },
+        'cm-elec-2': { name: 'Voltage absence verification (VAV)', description: 'Test with certified voltmeter' },
+        'cm-elec-3': { name: 'Appropriate class insulating gloves', description: 'Tested dielectric gloves' },
+        'cm-elec-4': { name: 'Qualified electrical training', description: 'Certified electrical work personnel' }
+      }
+    },
+    'arc-flash': {
+      name: 'Arc flash',
+      description: 'Electric arc during live work operations',
+      category: 'Electrical',
+      controls: {
+        'cm-arc-1': { name: 'Arc flash analysis', description: 'Incident energy calculation' },
+        'cm-arc-2': { name: 'Arc-resistant clothing', description: 'Certified arc-flash suit' },
+        'cm-arc-3': { name: 'Safety distance respected', description: 'Protection perimeter' }
+      }
+    },
+    'overhead-lines': {
+      name: 'Overhead power lines',
+      description: 'Contact with external power lines',
+      category: 'Electrical',
+      controls: {
+        'cm-lines-1': { name: 'Minimum safety distance', description: 'Respect protection zones' },
+        'cm-lines-2': { name: 'Dedicated surveillance', description: 'Specialized spotter' },
+        'cm-lines-3': { name: 'Isolation/de-energization', description: 'Coordination with utilities' }
+      }
+    },
+    'moving-parts': {
+      name: 'Moving parts',
+      description: 'Crushing, pinching by moving parts',
+      category: 'Mechanical',
+      controls: {
+        'cm-mech-1': { name: 'Complete equipment shutdown', description: 'Total immobilization' },
+        'cm-mech-2': { name: 'Mechanical lockout', description: 'Physical blocking' },
+        'cm-mech-3': { name: 'Mechanical guards', description: 'Physical barriers' }
+      }
+    },
+    'pressure': {
+      name: 'Pressure systems',
+      description: 'Explosion, projection due to pressure',
+      category: 'Mechanical',
+      controls: {
+        'cm-press-1': { name: 'Complete depressurization', description: 'Total pressure evacuation' },
+        'cm-press-2': { name: 'Safety valves', description: 'Overpressure protection' }
+      }
+    },
+    'lifting-equipment': {
+      name: 'Lifting equipment',
+      description: 'Load drop, equipment tipping',
+      category: 'Mechanical',
+      controls: {
+        'cm-lift-1': { name: 'Daily inspection', description: 'Pre-use verification' },
+        'cm-lift-2': { name: 'Equipment certification', description: 'Certified annual inspection' },
+        'cm-lift-3': { name: 'Operator training', description: 'Specialized certification' }
+      }
+    },
+    'falls': {
+      name: 'Falls from height',
+      description: 'Falls from more than 3 meters',
+      category: 'Physical',
+      controls: {
+        'cm-fall-1': { name: 'Permanent guardrails', description: 'Protection barriers' },
+        'cm-fall-2': { name: 'Safety harness', description: 'Fall arrest system' },
+        'cm-fall-3': { name: 'Certified anchor points', description: 'Structural anchors' }
+      }
+    },
+    'scaffolding': {
+      name: 'Scaffolding',
+      description: 'Collapse, instability of scaffolding',
+      category: 'Physical',
+      controls: {
+        'cm-scaf-1': { name: 'Assembly by competent person', description: 'Scaffolding certification' },
+        'cm-scaf-2': { name: 'Daily inspection', description: 'Stability verification' }
+      }
+    },
+    'struck-objects': {
+      name: 'Falling objects',
+      description: 'Impact from falling objects',
+      category: 'Physical',
+      controls: {
+        'cm-obj-1': { name: 'Protective helmet', description: 'Head protection' },
+        'cm-obj-2': { name: 'Safety perimeter', description: 'Exclusion zone' }
+      }
+    },
+    'confined-spaces': {
+      name: 'Confined spaces',
+      description: 'Dangerous atmospheres, engulfment',
+      category: 'Physical',
+      controls: {
+        'cm-conf-1': { name: 'Entry permit', description: 'Documented authorization' },
+        'cm-conf-2': { name: 'Atmospheric testing', description: 'Minimum 4-gas detection' },
+        'cm-conf-3': { name: 'Forced ventilation', description: 'Air renewal' }
+      }
+    },
+    'toxic-vapors': {
+      name: 'Toxic vapors',
+      description: 'Inhalation of hazardous substances',
+      category: 'Chemical',
+      controls: {
+        'cm-chem-1': { name: 'Mechanical ventilation', description: 'Air extraction' },
+        'cm-chem-2': { name: 'Respiratory equipment', description: 'Respiratory protection' }
+      }
+    },
+    'chemical-burns': {
+      name: 'Chemical burns',
+      description: 'Contact with corrosive substances',
+      category: 'Chemical',
+      controls: {
+        'cm-burn-1': { name: 'Chemical gloves', description: 'Skin protection' },
+        'cm-burn-2': { name: 'Emergency shower', description: 'Immediate rinsing' }
+      }
+    },
+    'asbestos': {
+      name: 'Asbestos',
+      description: 'Exposure to asbestos fibers',
+      category: 'Chemical',
+      controls: {
+        'cm-asb-1': { name: 'Prior characterization', description: 'Material identification' },
+        'cm-asb-2': { name: 'Zone containment', description: 'Sealed isolation' },
+        'cm-asb-3': { name: 'P100 respirator', description: 'Respiratory protection' }
+      }
+    },
+    'manual-handling': {
+      name: 'Manual handling',
+      description: 'Musculoskeletal disorders',
+      category: 'Ergonomic',
+      controls: {
+        'cm-man-1': { name: 'Lifting aids', description: 'Lifting tools' },
+        'cm-man-2': { name: 'Lifting techniques', description: 'Posture training' }
+      }
+    },
+    'repetitive-work': {
+      name: 'Repetitive work',
+      description: 'Repetitive movements, awkward postures',
+      category: 'Ergonomic',
+      controls: {
+        'cm-rep-1': { name: 'Job rotation', description: 'Task alternation' },
+        'cm-rep-2': { name: 'Active breaks', description: 'Regular recovery' }
+      }
+    },
+    'extreme-weather': {
+      name: 'Extreme weather conditions',
+      description: 'Exposure to severe weather',
+      category: 'Environmental',
+      controls: {
+        'cm-weather-1': { name: 'Weather monitoring', description: 'Condition surveillance' },
+        'cm-weather-2': { name: 'Work stoppage if necessary', description: 'Suspension protocol' }
+      }
+    },
+    'heat-stress': {
+      name: 'Heat stress',
+      description: 'Heat stroke, exhaustion',
+      category: 'Environmental',
+      controls: {
+        'cm-heat-1': { name: 'Temperature monitoring', description: 'WBGT measurement' },
+        'cm-heat-2': { name: 'Frequent hydration', description: 'Drinking breaks' }
+      }
+    },
+    'noise': {
+      name: 'Noise exposure',
+      description: 'Hearing damage',
+      category: 'Environmental',
+      controls: {
+        'cm-noise-1': { name: 'Hearing protection', description: 'Plugs/earmuffs' },
+        'cm-noise-2': { name: 'Sound measurement', description: 'Exposure evaluation' }
+      }
+    },
+    'spills': {
+      name: 'Spills',
+      description: 'Fluid spills (oil, fuel, chemicals)',
+      category: 'Environmental',
+      controls: {
+        'cm-spill-1': { name: 'Primary containment', description: 'Containment trays, sealed platforms' },
+        'cm-spill-2': { name: 'Spill kit', description: 'Absorbents, barriers, containers' }
+      }
+    },
+    'environmental-contamination': {
+      name: 'Environmental contamination',
+      description: 'Soil, water, air pollution by hazardous substances',
+      category: 'Environmental',
+      controls: {
+        'cm-env-1': { name: 'Environmental characterization', description: 'Existing soil/water analysis' }
+      }
+    },
+    'workplace-violence': {
+      name: 'Workplace violence',
+      description: 'Physical or psychological violence',
+      category: 'Psychosocial',
+      controls: {
+        'cm-viol-1': { name: 'Zero tolerance policy', description: 'Clear disciplinary framework' }
+      }
+    },
+    'harassment': {
+      name: 'Psychological harassment',
+      description: 'Repeated vexatious conduct',
+      category: 'Psychosocial',
+      controls: {
+        'cm-har-1': { name: 'Anti-harassment policy', description: 'Preventive framework' }
+      }
+    },
+    'fire-explosion': {
+      name: 'Fire/Explosion',
+      description: 'Fire, explosion of flammable materials',
+      category: 'Fire',
+      controls: {
+        'cm-fire-1': { name: 'Hot work permit', description: 'Welding/cutting authorization' },
+        'cm-fire-2': { name: 'Fire watch', description: 'Specialized fire guard' }
+      }
+    },
+    'vehicle-traffic': {
+      name: 'Vehicle traffic',
+      description: 'Collision with vehicles, equipment',
+      category: 'Transport',
+      controls: {
+        'cm-traf-1': { name: 'Temporary signaling', description: 'Cones, signs, lights' },
+        'cm-traf-2': { name: 'High-visibility clothing', description: 'Reflective vests' },
+        'cm-traf-3': { name: 'Zone separation', description: 'Physical barriers' }
+      }
+    }
+  };
+
+  return hazards.map(hazard => {
+    const translation = translations[hazard.id];
+    if (translation) {
+      return {
+        ...hazard,
+        name: translation.name,
+        description: translation.description,
+        category: translation.category,
+        controlMeasures: hazard.controlMeasures.map(control => {
+          const controlTranslation = translation.controls[control.id];
+          if (controlTranslation) {
+            return {
+              ...control,
+              name: controlTranslation.name,
+              description: controlTranslation.description
+            };
+          }
+          return control;
+        })
+      };
+    }
+    return hazard;
+  });
+};
+
 // =================== DANGERS ÉLECTRIQUES ===================
 const electricalHazards: Hazard[] = [
   {
@@ -200,7 +546,6 @@ const electricalHazards: Hazard[] = [
     ]
   }
 ];
-
 // =================== DANGERS MÉCANIQUES ===================
 const mechanicalHazards: Hazard[] = [
   {
@@ -328,6 +673,7 @@ const mechanicalHazards: Hazard[] = [
     ]
   }
 ];
+
 // =================== DANGERS PHYSIQUES ===================
 const physicalHazards: Hazard[] = [
   {
@@ -606,6 +952,7 @@ const chemicalHazards: Hazard[] = [
     ]
   }
 ];
+
 // =================== DANGERS ERGONOMIQUES ===================
 const ergonomicHazards: Hazard[] = [
   {
@@ -990,6 +1337,8 @@ const hazardsList: Hazard[] = [
   ...fireHazards,
   ...transportHazards
 ];
+
+// =================== COMPOSANT PRINCIPAL ===================
 const Step3Hazards: React.FC<Step3HazardsProps> = ({
   formData,
   onDataChange,
@@ -997,13 +1346,18 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
   tenant,
   errors
 }) => {
+  const texts = getTexts(language);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  
+  // Initialiser avec les dangers traduits
   const [hazards, setHazards] = useState<Hazard[]>(() => {
     if (formData.hazards?.list && formData.hazards.list.length > 0) {
-      return formData.hazards.list;
+      // Appliquer les traductions aux données sauvegardées
+      return translateHazards(formData.hazards.list, language);
     }
-    return hazardsList;
+    return translateHazards(hazardsList, language);
   });
 
   // Filtrage des dangers
@@ -1015,7 +1369,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
     return matchesSearch && matchesCategory;
   });
 
-  // Categories uniques
+  // Categories uniques (traduites)
   const categories = Array.from(new Set(hazards.map(h => h.category)));
   
   // Dangers sélectionnés
@@ -1089,6 +1443,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
     onDataChange('hazards', hazardsData);
   };
 
+  // =================== FONCTIONS UTILITAIRES ===================
   const getRiskColor = (level: string) => {
     switch (level) {
       case 'critical': return 'red';
@@ -1100,28 +1455,22 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
   };
 
   const getRiskLabel = (level: string) => {
-    switch (level) {
-      case 'critical': return '🔴 Critique';
-      case 'high': return '🟠 Élevé';
-      case 'medium': return '🟡 Moyen';
-      case 'low': return '🟢 Faible';
-      default: return '⚪ Indéterminé';
-    }
+    return texts.riskLevels[level as keyof typeof texts.riskLevels] || '⚪ Indéterminé';
   };
 
   const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Électrique': return '⚡';
-      case 'Mécanique': return '⚙️';
-      case 'Physique': return '🏗️';
-      case 'Chimique': return '🧪';
-      case 'Ergonomique': return '🏋️';
-      case 'Environnemental': return '🌪️';
-      case 'Psychosocial': return '🧠';
-      case 'Incendie': return '🔥';
-      case 'Transport': return '🚛';
-      default: return '⚠️';
-    }
+    const iconMap: { [key: string]: string } = {
+      'Électrique': '⚡', 'Electrical': '⚡',
+      'Mécanique': '⚙️', 'Mechanical': '⚙️',
+      'Physique': '🏗️', 'Physical': '🏗️',
+      'Chimique': '🧪', 'Chemical': '🧪',
+      'Ergonomique': '🏋️', 'Ergonomic': '🏋️',
+      'Environnemental': '🌪️', 'Environmental': '🌪️',
+      'Psychosocial': '🧠',
+      'Incendie': '🔥', 'Fire': '🔥',
+      'Transport': '🚛'
+    };
+    return iconMap[category] || '⚠️';
   };
 
   const getControlCategoryColor = (category: string) => {
@@ -1136,19 +1485,17 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
   };
 
   const getControlCategoryLabel = (category: string) => {
-    switch (category) {
-      case 'elimination': return '❌ Élimination';
-      case 'substitution': return '🔄 Substitution';
-      case 'engineering': return '🔧 Ingénierie';
-      case 'administrative': return '📋 Administrative';
-      case 'ppe': return '🛡️ EPI';
-      default: return '❓ Autre';
-    }
+    return texts.controlCategories[category as keyof typeof texts.controlCategories] || '❓ Autre';
   };
 
+  // Effet pour mettre à jour les traductions quand la langue change
+  React.useEffect(() => {
+    const translatedHazards = translateHazards(hazards, language);
+    setHazards(translatedHazards);
+  }, [language]);
   return (
     <>
-      {/* CSS pour Step 3 */}
+      {/* CSS pour Step 3 - Design optimisé et responsive */}
       <style dangerouslySetInnerHTML={{
         __html: `
           .step3-container { padding: 0; }
@@ -1265,27 +1612,27 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
         <div className="summary-header">
           <div className="summary-title">
             <AlertTriangle size={24} />
-            ⚠️ Identification des Dangers & Risques
+            {texts.title}
           </div>
           <p style={{ color: '#d97706', margin: '0 0 8px', fontSize: '14px' }}>
-            Sélectionnez les dangers potentiels et définissez les moyens de contrôle requis
+            {texts.subtitle}
           </p>
           
           {selectedHazards.length > 0 && (
             <div className="summary-stats">
               <div className="stat-item">
                 <div className="stat-value">{selectedHazards.length}</div>
-                <div className="stat-label">Dangers identifiés</div>
+                <div className="stat-label">{texts.hazardsIdentified}</div>
               </div>
               <div className="stat-item">
                 <div className="stat-value">{selectedHazards.filter(h => h.riskLevel === 'critical' || h.riskLevel === 'high').length}</div>
-                <div className="stat-label">Risques élevés</div>
+                <div className="stat-label">{texts.highRisks}</div>
               </div>
               <div className="stat-item">
                 <div className="stat-value">
                   {selectedHazards.reduce((sum, h) => sum + h.controlMeasures.filter(c => c.implemented).length, 0)}
                 </div>
-                <div className="stat-label">Contrôles implantés</div>
+                <div className="stat-label">{texts.controlsImplemented}</div>
               </div>
               <div className="stat-item">
                 <div className="stat-value">
@@ -1294,7 +1641,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                         selectedHazards.reduce((sum, h) => sum + h.controlMeasures.length, 0)) * 100)
                     : 0}%
                 </div>
-                <div className="stat-label">Taux d'implantation</div>
+                <div className="stat-label">{texts.implementationRate}</div>
               </div>
             </div>
           )}
@@ -1309,7 +1656,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Rechercher un danger..."
+                placeholder={texts.searchPlaceholder}
                 className="search-field"
               />
             </div>
@@ -1318,7 +1665,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="category-select"
             >
-              <option value="all">Toutes catégories ({hazards.length})</option>
+              <option value="all">{texts.allCategories} ({hazards.length})</option>
               {categories.map(category => {
                 const count = hazards.filter(h => h.category === category).length;
                 return (
@@ -1377,7 +1724,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                   <div className="controls-section">
                     <div className="controls-header">
                       <Shield size={16} />
-                      Moyens de contrôle ({hazard.controlMeasures.filter(c => c.implemented).length}/{hazard.controlMeasures.length})
+                      {texts.controlMeasures} ({hazard.controlMeasures.filter(c => c.implemented).length}/{hazard.controlMeasures.length})
                     </div>
                     
                     <div className="controls-grid">
@@ -1416,14 +1763,14 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                                 </div>
                                 <div 
                                   className={`priority-indicator priority-${control.priority}`}
-                                  title={`Priorité ${control.priority}`}
+                                  title={`${language === 'fr' ? 'Priorité' : 'Priority'} ${control.priority}`}
                                 />
                               </div>
 
                               {/* Standards/Normes associées */}
                               {control.standards && control.standards.length > 0 && (
                                 <div className="control-standards">
-                                  <div className="standards-label">📋 Normes & Références :</div>
+                                  <div className="standards-label">{texts.standardsReferences}</div>
                                   <div className="standards-list">
                                     {control.standards.map((standard, index) => (
                                       <div key={standard.id} className="standard-item">
@@ -1443,7 +1790,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                                         <div className="standard-tooltip">
                                           <strong>{standard.fullName}</strong><br/>
                                           {standard.description}<br/>
-                                          <em>{standard.mandatory ? 'Obligatoire' : 'Recommandé'}</em>
+                                          <em>{standard.mandatory ? texts.mandatory : texts.recommended}</em>
                                         </div>
                                       </div>
                                     ))}
@@ -1458,7 +1805,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                                     type="text"
                                     value={control.responsible || ''}
                                     onChange={(e) => updateControlMeasure(hazard.id, control.id, 'responsible', e.target.value)}
-                                    placeholder="Responsable..."
+                                    placeholder={texts.responsible}
                                     className="control-input"
                                   />
                                   <input
@@ -1484,8 +1831,8 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
         {filteredHazards.length === 0 && (
           <div className="no-results">
             <AlertTriangle size={48} style={{ margin: '0 auto 16px', color: '#64748b' }} />
-            <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>Aucun danger trouvé</h3>
-            <p style={{ margin: 0 }}>Modifiez vos critères de recherche pour voir plus de dangers</p>
+            <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>{texts.noHazardsFound}</h3>
+            <p style={{ margin: 0 }}>{texts.noHazardsMessage}</p>
           </div>
         )}
       </div>
