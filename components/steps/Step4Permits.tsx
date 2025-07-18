@@ -3465,7 +3465,7 @@ const Step4PermitsComplete: React.FC<Step4PermitsProps> = ({ formData, onDataCha
     compliant: selectedPermits.length
   }), [permits, selectedPermits]);
 
-  const getCategoryIcon = (category: string) => {
+const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'Sécurité': case 'Safety': return '🛡️';
       case 'Construction': return '🏗️';
