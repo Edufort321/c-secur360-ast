@@ -1,4 +1,4 @@
-// =================== SECTION 1: INTERFACES ET TRADUCTIONS SANS ERREURS ===================
+// =================== SECTION 1: INTERFACES ET TRADUCTIONS COMPLÈTES ===================
 // À coller au début de votre fichier Step4Permits.tsx
 
 "use client";
@@ -1193,393 +1193,630 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
 
   return basePermits;
 };
-// =================== SECTION 2: BASE DE DONNÉES PERMIS CONFORMES SANS ERREURS ===================
-// À coller après la Section 1
+// =================== SECTION 3: LOGIQUE ET VALIDATION SANS ERREURS ===================
+// À coller après la Section 2
 
-    // 2. PERMIS TRAVAIL À CHAUD CONFORME NFPA 51B-2019
-    {
-      id: 'hot-work-permit-nfpa2019',
-      name: language === 'fr' ? 'Permis Travail à Chaud Conforme NFPA 51B-2019' : 'Hot Work Permit NFPA 51B-2019 Compliant',
-      category: language === 'fr' ? 'Sécurité' : 'Safety',
-      description: language === 'fr' ? 'Permis conforme NFPA 51B-2019 avec surveillance incendie 1 heure et réinspection par quart' : 'NFPA 51B-2019 compliant permit with 1-hour fire watch and shift reinspection',
-      authority: language === 'fr' ? 'Service incendie / Employeur / NFPA' : 'Fire Department / Employer / NFPA',
-      province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-      required: true,
-      priority: 'critical',
-      duration: language === 'fr' ? '24 heures maximum + surveillance 1h post-travaux' : '24 hours maximum + 1h post-work monitoring',
-      cost: language === 'fr' ? 'Variable selon municipalité + équipements' : 'Variable by municipality + equipment',
-      processingTime: language === 'fr' ? 'Immédiat à 24h + inspections' : 'Immediate to 24h + inspections',
-      renewalRequired: true,
-      renewalPeriod: language === 'fr' ? 'Quotidien avec réinspection par quart' : 'Daily with shift reinspection',
-      legislation: 'NFPA 51B-2019, CNPI Section 5.2, CAN/CSA W117.2-M87, RSST Art. 313-332',
-      contactInfo: {
-        phone: language === 'fr' ? 'Service incendie local' : 'Local fire department',
-        website: 'https://www.nfpa.org/codes-and-standards/all-codes-and-standards/list-of-codes-and-standards/detail?code=51B'
-      },
-      selected: false,
-      status: 'pending',
-      complianceLevel: 'critical',
-      lastUpdated: '2025-01-20',
-      formFields: [
-        // SECTION IDENTIFICATION
-        { 
-          id: 'permit_number_hot', 
-          type: 'text', 
-          label: language === 'fr' ? 'Numéro de permis unique' : 'Unique permit number', 
-          required: true, 
-          section: 'identification', 
-          validation: { legalRequirement: true } 
-        },
-        { 
-          id: 'work_location_precise', 
-          type: 'text', 
-          label: language === 'fr' ? 'Lieu précis des travaux' : 'Precise work location', 
-          required: true, 
-          section: 'identification', 
-          validation: { legalRequirement: true } 
-        },
-        { 
-          id: 'contractor_company', 
-          type: 'text', 
-          label: language === 'fr' ? 'Entreprise contractante' : 'Contracting company', 
-          required: true, 
-          section: 'identification' 
-        },
-        { 
-          id: 'work_order_number', 
-          type: 'text', 
-          label: language === 'fr' ? 'Numéro bon de travail' : 'Work order number', 
-          required: true, 
-          section: 'identification' 
-        },
-        
-        // SECTION TYPE DE TRAVAIL À CHAUD
-        { 
-          id: 'work_type_hot', 
-          type: 'select', 
-          label: language === 'fr' ? 'Type de travail à chaud principal' : 'Primary hot work type', 
-          required: true, 
-          section: 'work_type', 
-          options: language === 'fr' ? ['Soudage à l\'arc électrique', 'Soudage au gaz (oxyacétylénique)', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage avec étincelles', 'Perçage métaux', 'Brasage/Soudage tendre', 'Travaux de toiture à chaud', 'Autre (spécifier)'] : ['Electric arc welding', 'Gas welding (oxyacetylene)', 'Torch cutting', 'Plasma cutting', 'Grinding with sparks', 'Metal drilling', 'Brazing/Soft soldering', 'Hot roofing work', 'Other (specify)'], 
-          validation: { legalRequirement: true }, 
-          complianceRef: 'NFPA 51B-2019' 
-        },
-        { 
-          id: 'work_description_detailed', 
-          type: 'textarea', 
-          label: language === 'fr' ? 'Description détaillée des travaux et équipements' : 'Detailed work and equipment description', 
-          required: true, 
-          section: 'work_type', 
-          validation: { legalRequirement: true } 
-        },
-        { 
-          id: 'start_date_time', 
-          type: 'date', 
-          label: language === 'fr' ? 'Date début prévue' : 'Planned start date', 
-          required: true, 
-          section: 'work_type' 
-        },
-        { 
-          id: 'start_time', 
-          type: 'time', 
-          label: language === 'fr' ? 'Heure début' : 'Start time', 
-          required: true, 
-          section: 'work_type' 
-        },
-        { 
-          id: 'end_date_time', 
-          type: 'date', 
-          label: language === 'fr' ? 'Date fin prévue' : 'Planned end date', 
-          required: true, 
-          section: 'work_type' 
-        },
-        { 
-          id: 'end_time', 
-          type: 'time', 
-          label: language === 'fr' ? 'Heure fin' : 'End time', 
-          required: true, 
-          section: 'work_type' 
-        },
-        
-        // SECTION SURVEILLANCE INCENDIE NFPA 51B-2019
-        { 
-          id: 'fire_watch_duration', 
-          type: 'select', 
-          label: language === 'fr' ? 'Durée surveillance incendie POST-TRAVAUX (OBLIGATOIRE)' : 'POST-WORK fire watch duration (MANDATORY)', 
-          required: true, 
-          section: 'fire_watch', 
-          options: ['1 heure (NFPA 51B-2019)', '2 heures', 'Plus de 2 heures'], 
-          validation: { legalRequirement: true }, 
-          complianceRef: 'NFPA 51B-2019 - Modif majeure: 1h au lieu de 30min' 
-        },
-        { 
-          id: 'continuous_vs_spot_watch', 
-          type: 'radio', 
-          label: language === 'fr' ? 'Type de surveillance incendie' : 'Fire watch type', 
-          required: true, 
-          section: 'fire_watch', 
-          options: language === 'fr' ? ['Surveillance CONTINUE', 'Surveillance PONCTUELLE'] : ['CONTINUOUS monitoring', 'SPOT monitoring'], 
-          validation: { legalRequirement: true }, 
-          complianceRef: 'NFPA 51B-2019 - Distinction formelle' 
-        },
-        { 
-          id: 'fire_watch_person_assigned', 
-          type: 'text', 
-          label: language === 'fr' ? 'Préposé surveillance incendie désigné' : 'Designated fire watch person', 
-          required: true, 
-          section: 'fire_watch', 
-          validation: { legalRequirement: true } 
-        },
-        { 
-          id: 'fire_watch_training_valid', 
-          type: 'checkbox', 
-          label: language === 'fr' ? 'Formation surveillance incendie valide' : 'Valid fire watch training', 
-          required: true, 
-          section: 'fire_watch', 
-          validation: { legalRequirement: true } 
-        },
-        
-        // SECTION RÉINSPECTION PAR QUART
-        { 
-          id: 'shift_reinspection', 
-          type: 'compliance_check', 
-          label: language === 'fr' ? 'Réinspection OBLIGATOIRE à chaque quart' : 'MANDATORY reinspection each shift', 
-          required: true, 
-          section: 'fire_watch', 
-          validation: { legalRequirement: true }, 
-          complianceRef: 'NFPA 51B-2019 - Nouvelle annexe' 
-        },
-        { 
-          id: 'reinspection_documentation', 
-          type: 'textarea', 
-          label: language === 'fr' ? 'Documentation des réinspections par quart' : 'Shift reinspection documentation', 
-          required: true, 
-          section: 'fire_watch', 
-          placeholder: language === 'fr' ? 'Heure, responsable, observations, actions...' : 'Time, responsible person, observations, actions...', 
-          validation: { legalRequirement: true } 
-        },
-        
-        // SECTION EXTINCTEURS
-        { 
-          id: 'extinguisher_class_a', 
-          type: 'checkbox', 
-          label: language === 'fr' ? 'Extincteur Classe A (combustibles ordinaires)' : 'Class A extinguisher (ordinary combustibles)', 
-          required: false, 
-          section: 'precautions', 
-          complianceRef: 'NFPA 51B harmonisé avec NFPA 10' 
-        },
-        { 
-          id: 'extinguisher_class_b', 
-          type: 'checkbox', 
-          label: language === 'fr' ? 'Extincteur Classe B (liquides inflammables)' : 'Class B extinguisher (flammable liquids)', 
-          required: false, 
-          section: 'precautions', 
-          complianceRef: 'NFPA 10' 
-        },
-        { 
-          id: 'extinguisher_positioning', 
-          type: 'textarea', 
-          label: language === 'fr' ? 'Positionnement et accessibilité extincteurs' : 'Extinguisher positioning and accessibility', 
-          required: true, 
-          section: 'precautions', 
-          validation: { legalRequirement: true }, 
-          complianceRef: 'NFPA 10' 
-        },
-        
-        // SECTION SIGNATURES
-        { 
-          id: 'applicant_signature', 
-          type: 'signature', 
-          label: language === 'fr' ? 'Signature demandeur/contractant' : 'Applicant/contractor signature', 
-          required: true, 
-          section: 'signatures', 
-          validation: { legalRequirement: true } 
-        },
-        { 
-          id: 'fire_marshal_signature', 
-          type: 'signature', 
-          label: language === 'fr' ? 'Signature autorité incendie' : 'Fire authority signature', 
-          required: true, 
-          section: 'signatures', 
-          validation: { legalRequirement: true } 
-        }
-      ]
-    },
+// =================== COMPOSANT PRINCIPAL AVEC CONFORMITÉ 2024-2025 ===================
+const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language, tenant, errors }) => {
+  const t = getTexts(language);
+  
+  // =================== ÉTATS PRINCIPAUX ===================
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedProvince, setSelectedProvince] = useState<string>('');
+  const [expandedPermit, setExpandedPermit] = useState<string | null>(null);
+  const [permits, setPermits] = useState<Permit[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  
+  // =================== ÉTATS POUR FONCTIONNALITÉS AVANCÉES ===================
+  const [workers, setWorkers] = useState<{ [permitId: string]: WorkerEntry[] }>({});
+  const [photos, setPhotos] = useState<{ [permitId: string]: PhotoEntry[] }>({});
+  const [signatures, setSignatures] = useState<{ [permitId: string]: SignatureMetadata[] }>({});
+  const [gasReadings, setGasReadings] = useState<{ [permitId: string]: GasReading[] }>({});
+  const [complianceChecks, setComplianceChecks] = useState<{ [permitId: string]: ComplianceCheck[] }>({});
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState<{ [permitId: string]: number }>({});
+  const [photoViewMode, setPhotoViewMode] = useState<{ [permitId: string]: 'carousel' | 'grid' }>({});
 
-    // 3. PERMIS EXCAVATION CONFORME MUNICIPAL 2024
-    {
-      id: 'excavation-permit-municipal-2024',
-      name: language === 'fr' ? 'Permis d\'Excavation Conforme Municipal 2024' : 'Municipal Excavation Permit 2024 Compliant',
-      category: language === 'fr' ? 'Construction' : 'Construction',
-      description: language === 'fr' ? 'Permis conforme réglements municipaux 2024 avec calculs automatiques profondeur/distance et assurances obligatoires' : 'Municipal regulations 2024 compliant permit with automatic depth/distance calculations and mandatory insurance',
-      authority: language === 'fr' ? 'Municipal / Ville de Montréal / MAMH' : 'Municipal / City of Montreal / MAMH',
-      province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
-      required: true,
-      priority: 'high',
-      duration: language === 'fr' ? 'Durée des travaux + période garantie' : 'Work duration + warranty period',
-      cost: language === 'fr' ? '200$ - 2000$ + dépôts garantie selon ampleur' : '$200 - $2000 + guarantee deposits by scope',
-      processingTime: language === 'fr' ? '2-4 semaines + inspections obligatoires' : '2-4 weeks + mandatory inspections',
-      renewalRequired: false,
-      legislation: language === 'fr' ? 'Règlements municipaux 2024, Code construction Québec, Règlement excavation domaine public' : 'Municipal regulations 2024, Quebec Building Code, Public domain excavation regulation',
-      contactInfo: {
-        website: language === 'fr' ? 'Bureau des permis municipal' : 'Municipal permit office',
-        phone: '311',
-        email: 'permis@montreal.ca'
-      },
-      selected: false,
-      status: 'pending',
-      complianceLevel: 'enhanced',
-      lastUpdated: '2025-01-20',
-      formFields: [
-        // SECTION DEMANDEUR
-        { 
-          id: 'applicant_name_excavation', 
-          type: 'text', 
-          label: language === 'fr' ? 'Nom du demandeur' : 'Applicant name', 
-          required: true, 
-          section: 'applicant', 
-          validation: { legalRequirement: true } 
-        },
-        { 
-          id: 'applicant_company', 
-          type: 'text', 
-          label: language === 'fr' ? 'Entreprise/Organisation' : 'Company/Organization', 
-          required: true, 
-          section: 'applicant' 
-        },
-        { 
-          id: 'professional_engineer', 
-          type: 'text', 
-          label: language === 'fr' ? 'Ingénieur responsable (OIQ)' : 'Responsible engineer (OIQ)', 
-          required: true, 
-          section: 'applicant', 
-          validation: { legalRequirement: true } 
-        },
-        
-        // SECTION CALCULS AUTOMATIQUES
-        { 
-          id: 'excavation_depth_calc', 
-          type: 'number', 
-          label: language === 'fr' ? 'Profondeur excavation (m)' : 'Excavation depth (m)', 
-          required: true, 
-          section: 'excavation', 
-          validation: { min: 0, legalRequirement: true } 
-        },
-        { 
-          id: 'domain_public_distance', 
-          type: 'number', 
-          label: language === 'fr' ? 'Distance domaine public (m)' : 'Public domain distance (m)', 
-          required: true, 
-          section: 'excavation', 
-          validation: { min: 0, legalRequirement: true } 
-        },
-        { 
-          id: 'permit_required_auto', 
-          type: 'compliance_check', 
-          label: language === 'fr' ? 'PERMIS REQUIS (auto-calculé)' : 'PERMIT REQUIRED (auto-calculated)', 
-          required: true, 
-          section: 'excavation', 
-          validation: { legalRequirement: true }, 
-          complianceRef: 'Règlement municipal excavation' 
-        },
-        
-        // SECTION ASSURANCES OBLIGATOIRES
-        { 
-          id: 'insurance_amount_calc', 
-          type: 'text', 
-          label: language === 'fr' ? 'Montant assurance OBLIGATOIRE (auto-calculé)' : 'MANDATORY insurance amount (auto-calculated)', 
-          required: true, 
-          section: 'municipal_requirements', 
-          validation: { legalRequirement: true }, 
-          complianceRef: 'Règlement municipal assurances' 
-        },
-        { 
-          id: 'co_insurance_city', 
-          type: 'checkbox', 
-          label: language === 'fr' ? 'Co-assurance Ville AJOUTÉE à la police' : 'City co-insurance ADDED to policy', 
-          required: true, 
-          section: 'municipal_requirements', 
-          validation: { legalRequirement: true, critical: true }, 
-          complianceRef: 'Avenant obligatoire Ville' 
-        },
-        
-        // SECTION INFO-EXCAVATION
-        { 
-          id: 'info_excavation_request', 
-          type: 'compliance_check', 
-          label: language === 'fr' ? 'Demande Info-Excavation COMPLÉTÉE' : 'Info-Excavation request COMPLETED', 
-          required: true, 
-          section: 'safety', 
-          validation: { legalRequirement: true, critical: true }, 
-          complianceRef: 'https://www.info-ex.com - Loi fédérale' 
-        },
-        { 
-          id: 'municipal_networks_located', 
-          type: 'checkbox', 
-          label: language === 'fr' ? 'Réseaux municipaux localisés (aqueduc/égout)' : 'Municipal networks located (water/sewer)', 
-          required: true, 
-          section: 'safety', 
-          validation: { legalRequirement: true } 
-        },
-        
-        // SECTION PROJET
-        { 
-          id: 'work_address_complete', 
-          type: 'textarea', 
-          label: language === 'fr' ? 'Adresse complète des travaux' : 'Complete work address', 
-          required: true, 
-          section: 'project', 
-          validation: { legalRequirement: true } 
-        },
-        { 
-          id: 'project_description_detailed', 
-          type: 'textarea', 
-          label: language === 'fr' ? 'Description détaillée du projet' : 'Detailed project description', 
-          required: true, 
-          section: 'project', 
-          validation: { legalRequirement: true } 
-        },
-        
-        // SECTION DÉPÔTS DE GARANTIE
-        { 
-          id: 'surface_guarantee_deposit', 
-          type: 'text', 
-          label: language === 'fr' ? 'Dépôt garantie SURFACE (auto-calculé)' : 'SURFACE guarantee deposit (auto-calculated)', 
-          required: true, 
-          section: 'municipal_requirements', 
-          validation: { legalRequirement: true } 
-        },
-        { 
-          id: 'underground_guarantee_deposit', 
-          type: 'text', 
-          label: language === 'fr' ? 'Dépôt garantie SOUTERRAIN (auto-calculé)' : 'UNDERGROUND guarantee deposit (auto-calculated)', 
-          required: true, 
-          section: 'municipal_requirements', 
-          validation: { legalRequirement: true } 
-        },
-        
-        // SECTION SIGNATURES
-        { 
-          id: 'applicant_signature_excavation', 
-          type: 'signature', 
-          label: language === 'fr' ? 'Signature demandeur' : 'Applicant signature', 
-          required: true, 
-          section: 'signatures', 
-          validation: { legalRequirement: true } 
-        },
-        { 
-          id: 'engineer_signature', 
-          type: 'signature', 
-          label: language === 'fr' ? 'Signature ingénieur responsable' : 'Responsible engineer signature', 
-          required: true, 
-          section: 'signatures', 
-          validation: { legalRequirement: true } 
+  // =================== INITIALISATION DES PERMIS ===================
+  useEffect(() => {
+    const translatedPermits = translatePermitsDatabase(language);
+    setPermits(translatedPermits);
+    
+    // Initialiser workers et photos pour les permis déjà sélectionnés
+    translatedPermits.forEach((permit: Permit) => {
+      if (permit.selected) {
+        if (!workers[permit.id]) {
+          setWorkers(prev => ({
+            ...prev,
+            [permit.id]: [{
+              id: 1,
+              name: '',
+              age: 0,
+              certification: '',
+              entryTime: '',
+              exitTime: null,
+              date: new Date().toISOString().split('T')[0],
+              over18: false
+            }]
+          }));
         }
-      ]
+        if (!photos[permit.id]) {
+          setPhotos(prev => ({
+            ...prev,
+            [permit.id]: []
+          }));
+        }
+        if (!currentPhotoIndex[permit.id]) {
+          setCurrentPhotoIndex(prev => ({
+            ...prev,
+            [permit.id]: 0
+          }));
+        }
+        if (!photoViewMode[permit.id]) {
+          setPhotoViewMode(prev => ({
+            ...prev,
+            [permit.id]: 'carousel'
+          }));
+        }
+      }
+    });
+  }, [language]);
+
+  // =================== FILTRAGE DES PERMIS ===================
+  const filteredPermits = useMemo(() => {
+    return permits.filter((permit: Permit) => {
+      const matchesSearch = permit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           permit.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = !selectedCategory || permit.category === selectedCategory;
+      const matchesProvince = !selectedProvince || permit.province.includes(selectedProvince);
+      
+      return matchesSearch && matchesCategory && matchesProvince;
+    });
+  }, [permits, searchTerm, selectedCategory, selectedProvince]);
+
+  const categories = useMemo(() => 
+    Array.from(new Set(permits.map((p: Permit) => p.category))) as string[], 
+    [permits]
+  );
+
+  const provinces = useMemo(() => 
+    Array.from(new Set(permits.flatMap((p: Permit) => p.province))) as string[], 
+    [permits]
+  );
+
+  // =================== STATISTIQUES TEMPS RÉEL ===================
+  const stats = useMemo(() => {
+    const selectedPermits = permits.filter(p => p.selected);
+    const criticalPermits = permits.filter(p => p.priority === 'critical');
+    const pendingPermits = permits.filter(p => p.status === 'pending');
+    
+    return {
+      available: permits.length,
+      selected: selectedPermits.length,
+      critical: criticalPermits.length,
+      pending: pendingPermits.length,
+      compliant: Object.values(complianceChecks).flat().filter(c => c.status === 'compliant').length,
+      nonCompliant: Object.values(complianceChecks).flat().filter(c => c.status === 'non-compliant').length
+    };
+  }, [permits, complianceChecks]);
+
+  // =================== FONCTIONS UTILITAIRES ===================
+  const getPriorityColor = (priority: string): string => {
+    switch (priority) {
+      case 'low': return '#10B981';
+      case 'medium': return '#F59E0B';
+      case 'high': return '#EF4444';
+      case 'critical': return '#DC2626';
+      default: return '#6B7280';
     }
-  ];
+  };
 
-  return basePermits;
+  const getStatusColor = (status: string): string => {
+    switch (status) {
+      case 'pending': return '#F59E0B';
+      case 'submitted': return '#3B82F6';
+      case 'approved': return '#10B981';
+      case 'rejected': return '#EF4444';
+      case 'expired': return '#6B7280';
+      default: return '#6B7280';
+    }
+  };
+
+  const getComplianceColor = (level: string): string => {
+    switch (level) {
+      case 'basic': return '#10B981';
+      case 'standard': return '#3B82F6';
+      case 'enhanced': return '#8B5CF6';
+      case 'critical': return '#DC2626';
+      default: return '#6B7280';
+    }
+  };
+
+  const getCategoryIcon = (category: string): string => {
+    switch (category) {
+      case 'Sécurité':
+      case 'Safety':
+        return '🛡️';
+      case 'Construction':
+        return '🏗️';
+      case 'Radioprotection':
+      case 'Radiation Protection':
+        return '☢️';
+      case 'Équipements':
+      case 'Equipment':
+        return '⚙️';
+      default:
+        return '📋';
+    }
+  };
+
+  // =================== GESTION DES PERMIS ===================
+  const togglePermit = (permitId: string) => {
+    setPermits(prev => prev.map(permit => {
+      if (permit.id === permitId) {
+        const newSelected = !permit.selected;
+        
+        // Initialiser ou nettoyer les données associées
+        if (newSelected) {
+          // Initialiser workers
+          if (!workers[permitId]) {
+            setWorkers(prevWorkers => ({
+              ...prevWorkers,
+              [permitId]: [{
+                id: 1,
+                name: '',
+                age: 0,
+                certification: '',
+                entryTime: '',
+                exitTime: null,
+                date: new Date().toISOString().split('T')[0],
+                over18: false
+              }]
+            }));
+          }
+          
+          // Initialiser photos
+          if (!photos[permitId]) {
+            setPhotos(prevPhotos => ({
+              ...prevPhotos,
+              [permitId]: []
+            }));
+          }
+          
+          // Initialiser index photos
+          if (!currentPhotoIndex[permitId]) {
+            setCurrentPhotoIndex(prev => ({
+              ...prev,
+              [permitId]: 0
+            }));
+          }
+          
+          // Initialiser mode vue photos
+          if (!photoViewMode[permitId]) {
+            setPhotoViewMode(prev => ({
+              ...prev,
+              [permitId]: 'carousel'
+            }));
+          }
+        } else {
+          // Nettoyer les données quand le permis est désélectionné
+          setWorkers(prev => {
+            const newWorkers = { ...prev };
+            delete newWorkers[permitId];
+            return newWorkers;
+          });
+          
+          setPhotos(prev => {
+            const newPhotos = { ...prev };
+            delete newPhotos[permitId];
+            return newPhotos;
+          });
+          
+          setCurrentPhotoIndex(prev => {
+            const newIndex = { ...prev };
+            delete newIndex[permitId];
+            return newIndex;
+          });
+          
+          setPhotoViewMode(prev => {
+            const newMode = { ...prev };
+            delete newMode[permitId];
+            return newMode;
+          });
+        }
+        
+        return { ...permit, selected: newSelected };
+      }
+      return permit;
+    }));
+  };
+
+  const expandPermit = (permitId: string) => {
+    setExpandedPermit(expandedPermit === permitId ? null : permitId);
+  };
+
+  const handleFieldChange = (permitId: string, fieldId: string, value: any) => {
+    setPermits(prev => prev.map(permit => {
+      if (permit.id === permitId) {
+        return {
+          ...permit,
+          formData: {
+            ...permit.formData,
+            [fieldId]: value
+          }
+        };
+      }
+      return permit;
+    }));
+
+    // Déclencher validations temps réel si nécessaire
+    const permit = permits.find(p => p.id === permitId);
+    const field = permit?.formFields?.find(f => f.id === fieldId);
+    
+    if (field?.validation?.critical) {
+      validateField(permitId, fieldId, value, field);
+    }
+  };
+
+  // =================== VALIDATION TEMPS RÉEL ===================
+  const validateField = (permitId: string, fieldId: string, value: any, field: FormField) => {
+    const checks: ComplianceCheck[] = [];
+    
+    if (field.type === 'gas_meter' && field.validation) {
+      const numValue = parseFloat(value) || 0;
+      const min = field.validation.min || 0;
+      const max = field.validation.max || 100;
+      
+      if (numValue < min || numValue > max) {
+        checks.push({
+          requirement: field.label,
+          status: 'non-compliant',
+          details: `Valeur ${numValue} hors limites (${min}-${max})`,
+          reference: field.complianceRef || 'Validation automatique'
+        });
+      } else {
+        checks.push({
+          requirement: field.label,
+          status: 'compliant',
+          details: `Valeur ${numValue} conforme`,
+          reference: field.complianceRef || 'Validation automatique'
+        });
+      }
+    }
+    
+    if (field.id === 'worker_age_verification') {
+      const permitWorkers = workers[permitId] || [];
+      const hasMinors = permitWorkers.some(w => w.age > 0 && w.age < 18);
+      
+      if (hasMinors) {
+        checks.push({
+          requirement: 'Vérification âge travailleurs',
+          status: 'non-compliant',
+          details: 'Travailleur(s) mineur(s) détecté(s) - Violation Article 298 RSST',
+          reference: 'RSST Art. 298 modifié 2023'
+        });
+      } else {
+        checks.push({
+          requirement: 'Vérification âge travailleurs',
+          status: 'compliant',
+          details: 'Tous les travailleurs sont âgés de 18 ans ou plus',
+          reference: 'RSST Art. 298 modifié 2023'
+        });
+      }
+    }
+    
+    setComplianceChecks(prev => ({
+      ...prev,
+      [permitId]: [
+        ...(prev[permitId] || []).filter(c => c.requirement !== field.label),
+        ...checks
+      ]
+    }));
+  };
+
+  // =================== GESTION DES TRAVAILLEURS ===================
+  const addWorker = (permitId: string) => {
+    setWorkers(prev => {
+      const currentWorkers = prev[permitId] || [];
+      const newWorker: WorkerEntry = {
+        id: Math.max(...currentWorkers.map(w => w.id), 0) + 1,
+        name: '',
+        age: 0,
+        certification: '',
+        entryTime: '',
+        exitTime: null,
+        date: new Date().toISOString().split('T')[0],
+        over18: false
+      };
+      
+      return {
+        ...prev,
+        [permitId]: [...currentWorkers, newWorker]
+      };
+    });
+  };
+
+  const removeWorker = (permitId: string, workerId: number) => {
+    setWorkers(prev => ({
+      ...prev,
+      [permitId]: (prev[permitId] || []).filter(w => w.id !== workerId)
+    }));
+  };
+
+  const updateWorker = (permitId: string, workerId: number, field: keyof WorkerEntry, value: any) => {
+    setWorkers(prev => ({
+      ...prev,
+      [permitId]: (prev[permitId] || []).map(worker => {
+        if (worker.id === workerId) {
+          const updatedWorker = { ...worker, [field]: value };
+          
+          // Validation automatique âge 18+
+          if (field === 'age') {
+            updatedWorker.over18 = value >= 18;
+            
+            // Déclencher validation compliance
+            setTimeout(() => {
+              validateField(permitId, 'worker_age_verification', value, {
+                id: 'worker_age_verification',
+                type: 'compliance_check',
+                label: 'Vérification âge travailleurs',
+                required: true,
+                validation: { critical: true, legalRequirement: true }
+              });
+            }, 100);
+          }
+          
+          return updatedWorker;
+        }
+        return worker;
+      })
+    }));
+  };
+
+  // =================== GESTION DES PHOTOS ===================
+  const handlePhotoUpload = (permitId: string, files: FileList) => {
+    const newPhotos: PhotoEntry[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const photoId = Math.max(...(photos[permitId] || []).map(p => p.id), 0) + i + 1;
+      
+      // Créer URL pour prévisualisation
+      const url = URL.createObjectURL(file);
+      
+      newPhotos.push({
+        id: photoId,
+        url: url,
+        name: file.name,
+        timestamp: new Date().toISOString(),
+        description: '',
+        gpsLocation: '',
+        compliance: true
+      });
+    }
+    
+    setPhotos(prev => ({
+      ...prev,
+      [permitId]: [...(prev[permitId] || []), ...newPhotos]
+    }));
+  };
+
+  const removePhoto = (permitId: string, photoId: number) => {
+    setPhotos(prev => {
+      const updatedPhotos = (prev[permitId] || []).filter(p => p.id !== photoId);
+      
+      // Ajuster l'index si nécessaire
+      const currentIndex = currentPhotoIndex[permitId] || 0;
+      if (currentIndex >= updatedPhotos.length && updatedPhotos.length > 0) {
+        setCurrentPhotoIndex(prevIndex => ({
+          ...prevIndex,
+          [permitId]: updatedPhotos.length - 1
+        }));
+      }
+      
+      return {
+        ...prev,
+        [permitId]: updatedPhotos
+      };
+    });
+  };
+
+  const nextPhoto = (permitId: string) => {
+    const permitPhotos = photos[permitId] || [];
+    if (permitPhotos.length > 0) {
+      setCurrentPhotoIndex(prev => ({
+        ...prev,
+        [permitId]: ((prev[permitId] || 0) + 1) % permitPhotos.length
+      }));
+    }
+  };
+
+  const prevPhoto = (permitId: string) => {
+    const permitPhotos = photos[permitId] || [];
+    if (permitPhotos.length > 0) {
+      setCurrentPhotoIndex(prev => ({
+        ...prev,
+        [permitId]: ((prev[permitId] || 0) - 1 + permitPhotos.length) % permitPhotos.length
+      }));
+    }
+  };
+
+  const togglePhotoViewMode = (permitId: string) => {
+    setPhotoViewMode(prev => ({
+      ...prev,
+      [permitId]: prev[permitId] === 'carousel' ? 'grid' : 'carousel'
+    }));
+  };
+
+  // =================== CALCULS AUTOMATIQUES ===================
+  const calculateExcavationRequirements = (permitId: string, depth: number, distance: number) => {
+    let permitRequired = false;
+    let insuranceAmount = '1M$';
+    let surfaceDeposit = '5000$';
+    let undergroundDeposit = '10000$';
+    
+    // Logique calculs municipaux
+    if (depth > 1.2 || distance < 3) {
+      permitRequired = true;
+      
+      if (depth > 3) {
+        insuranceAmount = '2M$';
+        surfaceDeposit = '15000$';
+        undergroundDeposit = '25000$';
+      } else if (depth > 2) {
+        insuranceAmount = '1.5M$';
+        surfaceDeposit = '10000$';
+        undergroundDeposit = '20000$';
+      }
+    }
+    
+    // Mettre à jour les champs calculés
+    handleFieldChange(permitId, 'permit_required_auto', permitRequired);
+    handleFieldChange(permitId, 'insurance_amount_calc', insuranceAmount);
+    handleFieldChange(permitId, 'surface_guarantee_deposit', surfaceDeposit);
+    handleFieldChange(permitId, 'underground_guarantee_deposit', undergroundDeposit);
+  };
+
+  // =================== RENDU DU COMPOSANT PRINCIPAL ===================
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="container mx-auto px-4 py-8">
+        
+        {/* En-tête avec titre et statistiques */}
+        <div className="mb-8">
+          <div className="text-center mb-6">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+              {t.title}
+            </h1>
+            <p className="text-gray-600 text-lg max-w-3xl mx-auto">
+              {t.subtitle}
+            </p>
+          </div>
+
+          {/* Statistiques temps réel */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{stats.available}</div>
+                <div className="text-sm text-gray-600">{t.stats.available}</div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{stats.selected}</div>
+                <div className="text-sm text-gray-600">{t.stats.selected}</div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">{stats.critical}</div>
+                <div className="text-sm text-gray-600">{t.stats.critical}</div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+                <div className="text-sm text-gray-600">{t.stats.pending}</div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{stats.compliant}</div>
+                <div className="text-sm text-gray-600">{t.stats.compliant}</div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">{stats.nonCompliant}</div>
+                <div className="text-sm text-gray-600">{t.stats.nonCompliant}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Barre de recherche et filtres */}
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder={t.searchPlaceholder}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                />
+              </div>
+              
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              >
+                <option value="">{t.allCategories}</option>
+                {categories.map((category: string) => (
+                  <option key={category} value={category}>
+                    {t.categories[category as keyof typeof t.categories] || category}
+                  </option>
+                ))}
+              </select>
+              
+              <select
+                value={selectedProvince}
+                onChange={(e) => setSelectedProvince(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              >
+                <option value="">{t.allProvinces}</option>
+                {provinces.map((province: string) => (
+                  <option key={province} value={province}>{province}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Liste des permis */}
+        <div className="space-y-6">
+          {filteredPermits.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">{t.messages.noResults}</h3>
+              <p className="text-gray-500">{t.messages.modifySearch}</p>
+            </div>
+          ) : (
+            filteredPermits.map((permit: Permit) => (
+              <PermitCard
+                key={permit.id}
+                permit={permit}
+                isSelected={permit.selected}
+                isExpanded={expandedPermit === permit.id}
+                complianceChecks={complianceChecks[permit.id] || []}
+                workers={workers[permit.id] || []}
+                photos={photos[permit.id] || []}
+                currentPhotoIndex={currentPhotoIndex[permit.id] || 0}
+                viewMode={photoViewMode[permit.id] || 'carousel'}
+                onToggle={() => togglePermit(permit.id)}
+                onExpand={() => expandPermit(permit.id)}
+                onFieldChange={(fieldId, value) => handleFieldChange(permit.id, fieldId, value)}
+                onAddWorker={() => addWorker(permit.id)}
+                onRemoveWorker={(workerId) => removeWorker(permit.id, workerId)}
+                onUpdateWorker={(workerId, field, value) => updateWorker(permit.id, workerId, field, value)}
+                onPhotoUpload={(files) => handlePhotoUpload(permit.id, files)}
+                onRemovePhoto={(photoId) => removePhoto(permit.id, photoId)}
+                onNextPhoto={() => nextPhoto(permit.id)}
+                onPrevPhoto={() => prevPhoto(permit.id)}
+                onToggleViewMode={() => togglePhotoViewMode(permit.id)}
+                getPriorityColor={getPriorityColor}
+                getStatusColor={getStatusColor}
+                getComplianceColor={getComplianceColor}
+                getCategoryIcon={getCategoryIcon}
+                t={t}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
 // =================== SECTION 4: COMPOSANTS UI SANS ERREURS ===================
 // À coller après la Section 3
@@ -1931,7 +2168,7 @@ const FormField: React.FC<FormFieldProps> = ({ field, value, onChange, t }) => {
             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
           >
             <option value="">{t.messages.select}</option>
-            {field.options?.map(option => (
+            {field.options?.map((option: string) => (
               <option key={option} value={option}>{option}</option>
             ))}
           </select>
@@ -1956,7 +2193,7 @@ const FormField: React.FC<FormFieldProps> = ({ field, value, onChange, t }) => {
       case 'radio':
         return (
           <div className="space-y-2">
-            {field.options?.map(option => (
+            {field.options?.map((option: string) => (
               <div key={option} className="flex items-center space-x-3">
                 <input
                   type="radio"
