@@ -3508,8 +3508,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     }
   };
 
-  const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
-    
+const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
+ 
   return (
     <div style={{ padding: '0', color: '#ffffff' }}>
       {/* Header */}
