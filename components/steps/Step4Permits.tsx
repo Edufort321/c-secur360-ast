@@ -1720,8 +1720,8 @@ const ConfinedSpaceManager: React.FC<{
 };
 
 // CONTINUEZ AVEC LA SECTION 4...
-// =================== SECTION 4/4 - COMPOSANT PRINCIPAL + EXPORT FINAL ===================
-// Ajoutez cette section À LA SUITE des SECTIONS 1, 2 et 3 pour TERMINER le fichier
+// =================== SECTION 4/4 RÉVISÉE - COMPOSANT PRINCIPAL + EXPORT FINAL ===================
+// Remplacez ENTIÈREMENT votre SECTION 4 par cette version corrigée
 
 // =================== COMPOSANT PRINCIPAL STEP4PERMITS ===================
 const Step4Permits: React.FC<Step4PermitsProps> = ({ 
@@ -1752,11 +1752,15 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   });
 
   // =================== FONCTIONS UTILITAIRES ===================
-  const getCategoryIcon = (category: string) => {
+  const getCategoryIcon = (category: string): string => {
     switch (category) {
-      case 'Sécurité': case 'Safety': return '🛡️';
-      case 'Construction': return '🏗️';
-      default: return '📋';
+      case 'Sécurité': 
+      case 'Safety': 
+        return '🛡️';
+      case 'Construction': 
+        return '🏗️';
+      default: 
+        return '📋';
     }
   };
 
@@ -1816,7 +1820,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     updateFormData(updatedPermits);
   };
 
-  // =================== FILTRAGE ===================
+  // =================== FILTRAGE AVEC TYPES CORRECTS ===================
   const filteredPermits = useMemo(() => {
     return permits.filter((permit: Permit) => {
       const matchesSearch = permit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1827,12 +1831,13 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     });
   }, [permits, searchTerm, selectedCategory, selectedProvince]);
 
-  const categories = useMemo(() => 
+  // CORRECTION TYPESCRIPT : Typage explicite des catégories
+  const categories: string[] = useMemo(() => 
     Array.from(new Set(permits.map((p: Permit) => p.category))), 
     [permits]
   );
   
-  const provinces = ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'];
+  const provinces: string[] = ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'];
   const selectedPermits = useMemo(() => permits.filter((p: Permit) => p.selected), [permits]);
 
   const stats = useMemo(() => ({
@@ -1848,6 +1853,20 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     const newPermits = getProvincialPermits(language, selectedProvince);
     setPermits(newPermits);
   }, [selectedProvince, language]);
+
+  // =================== INTERFACE DE RENDU ===================
+  interface StatItem {
+    key: string;
+    value: string | number;
+    icon: string;
+  }
+
+  const statsData: StatItem[] = [
+    { key: 'available', value: stats.totalPermits, icon: '📊' },
+    { key: 'selected', value: stats.selected, icon: '✅' },
+    { key: 'critical', value: stats.critical, icon: '🚨' },
+    { key: 'compliant', value: `${stats.compliant}/${stats.selected}`, icon: '🛡️' }
+  ];
 
   // =================== RENDU ===================
   return (
@@ -1878,12 +1897,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
         <p style={{ color: '#3b82f6', margin: '0 0 20px', fontSize: '14px' }}>{t.subtitle}</p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px' }}>
-          {[
-            { key: 'available', value: stats.totalPermits, icon: '📊' },
-            { key: 'selected', value: stats.selected, icon: '✅' },
-            { key: 'critical', value: stats.critical, icon: '🚨' },
-            { key: 'compliant', value: `${stats.compliant}/${stats.selected}`, icon: '🛡️' }
-          ].map(stat => (
+          {statsData.map((stat: StatItem) => (
             <div key={stat.key} style={{
               textAlign: 'center',
               background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
@@ -1982,7 +1996,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             }}
           >
             <option value="all">{t.allCategories}</option>
-            {categories.map((category) => (
+            {categories.map((category: string) => (
               <option key={category} value={category}>
                 {getCategoryIcon(category)} {(t.categories as any)[category] || category}
               </option>
@@ -2002,7 +2016,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               minWidth: '180px'
             }}
           >
-            {provinces.map(province => (
+            {provinces.map((province: string) => (
               <option key={province} value={province}>🍁 {province}</option>
             ))}
           </select>
