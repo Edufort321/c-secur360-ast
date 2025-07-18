@@ -1217,83 +1217,829 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     <>
       <style dangerouslySetInnerHTML={{
         __html: `
-          .step4-container { padding: 0; color: #ffffff; }
-          .permits-header { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+          .step4-container { padding: 0; color: #ffffff; scroll-behavior: auto !important; }
           
-          .critical-alerts { background: rgba(239, 68, 68, 0.1); border: 2px solid #ef4444; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
-          .critical-alerts h3 { color: #ef4444; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
-          .alert-item { background: rgba(239, 68, 68, 0.2); padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; color: #fee2e2; font-size: 14px; }
+          /* =================== HEADER PREMIUM =================== */
+          .permits-header { 
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(147, 51, 234, 0.1)); 
+            border: 1px solid rgba(59, 130, 246, 0.3); 
+            border-radius: 20px; 
+            padding: 24px; 
+            margin-bottom: 28px; 
+            backdrop-filter: blur(20px);
+            position: relative;
+            overflow: hidden;
+          }
+          .permits-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+            border-radius: 20px 20px 0 0;
+          }
+          .permits-title { 
+            color: #ffffff; 
+            font-size: 24px; 
+            font-weight: 800; 
+            margin-bottom: 8px; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+          }
           
-          .permits-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; margin-top: 16px; }
-          .stat-item { text-align: center; background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px; }
-          .stat-item.compliant { border: 2px solid #22c55e; }
-          .stat-item.non-compliant { border: 2px solid #ef4444; }
+          /* =================== ALERTES CRITIQUES PREMIUM =================== */
+          .critical-alerts { 
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1)); 
+            border: 2px solid #ef4444; 
+            border-radius: 16px; 
+            padding: 20px; 
+            margin-bottom: 24px; 
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
+            animation: pulse-critical 2s infinite;
+          }
+          @keyframes pulse-critical {
+            0%, 100% { box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3); }
+            50% { box-shadow: 0 12px 40px rgba(239, 68, 68, 0.5); }
+          }
+          .critical-alerts h3 { 
+            color: #ff6b6b; 
+            margin: 0 0 16px; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            font-size: 18px;
+            font-weight: 700;
+          }
+          .alert-item { 
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
+            padding: 12px 16px; 
+            border-radius: 10px; 
+            margin-bottom: 10px; 
+            color: #fee2e2; 
+            font-size: 14px; 
+            font-weight: 500;
+            border-left: 4px solid #ef4444;
+          }
           
-          .permit-card.critical::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #ef4444; border-radius: 16px 0 0 16px; }
-          .compliance-badge { padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
-          .compliance-badge.critical { background: #dc2626; color: white; }
-          .compliance-badge.enhanced { background: #059669; color: white; }
-          .compliance-badge.standard { background: #2563eb; color: white; }
+          /* =================== STATISTIQUES PREMIUM =================== */
+          .permits-stats { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+            gap: 20px; 
+            margin-top: 20px; 
+          }
+          .stat-item { 
+            text-align: center; 
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6)); 
+            padding: 20px 16px; 
+            border-radius: 16px; 
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            backdrop-filter: blur(20px);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+          }
+          .stat-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+          }
+          .stat-item:hover::before { opacity: 1; }
+          .stat-item:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
+            border-color: rgba(59, 130, 246, 0.5);
+          }
+          .stat-item.compliant { 
+            border: 2px solid #22c55e; 
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.1));
+          }
+          .stat-item.non-compliant { 
+            border: 2px solid #ef4444; 
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.1));
+          }
+          .stat-value { 
+            font-size: 28px; 
+            font-weight: 800; 
+            background: linear-gradient(135deg, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px; 
+          }
+          .stat-label { 
+            font-size: 12px; 
+            color: #94a3b8; 
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
           
-          .gas-meter-container { display: flex; flex-direction: column; gap: 8px; }
-          .gas-meter-display { display: flex; align-items: center; gap: 12px; }
-          .gas-meter-input { flex: 1; }
-          .gas-meter-input.critical-violation { border: 2px solid #ef4444; background: rgba(239, 68, 68, 0.1); }
-          .gas-meter-input.compliant { border: 2px solid #22c55e; background: rgba(34, 197, 94, 0.1); }
-          .gas-status { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; }
-          .gas-status.non-compliant { color: #ef4444; }
-          .gas-status.compliant { color: #22c55e; }
+          /* =================== SECTION RECHERCHE PREMIUM =================== */
+          .search-section { 
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6)); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(100, 116, 139, 0.3); 
+            border-radius: 20px; 
+            padding: 24px; 
+            margin-bottom: 28px; 
+          }
+          .search-grid { 
+            display: grid; 
+            grid-template-columns: 1fr auto auto; 
+            gap: 16px; 
+            align-items: end; 
+          }
+          .search-input-wrapper { position: relative; }
+          .search-icon { 
+            position: absolute; 
+            left: 16px; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            color: #94a3b8; 
+            z-index: 10; 
+          }
+          .search-field { 
+            width: 100%; 
+            padding: 16px 16px 16px 48px; 
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8)); 
+            border: 2px solid rgba(100, 116, 139, 0.3); 
+            border-radius: 16px; 
+            color: #ffffff; 
+            font-size: 16px; 
+            transition: all 0.3s ease; 
+          }
+          .search-field:focus { 
+            outline: none; 
+            border-color: #3b82f6; 
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9)); 
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+          }
+          .filter-select { 
+            padding: 16px 20px; 
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8)); 
+            border: 2px solid rgba(100, 116, 139, 0.3); 
+            border-radius: 16px; 
+            color: #ffffff; 
+            font-size: 14px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            min-width: 180px; 
+          }
+          .filter-select:focus { 
+            outline: none; 
+            border-color: #3b82f6; 
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+          }
           
-          .critical-alert { background: rgba(239, 68, 68, 0.2); color: #fee2e2; padding: 8px; border-radius: 4px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+          /* =================== CARTES PERMIS PREMIUM =================== */
+          .permits-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); 
+            gap: 24px; 
+          }
+          .permit-card { 
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6)); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(100, 116, 139, 0.3); 
+            border-radius: 20px; 
+            padding: 24px; 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            position: relative; 
+            overflow: hidden;
+          }
+          .permit-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+          }
+          .permit-card:hover::before { opacity: 1; }
+          .permit-card:hover { 
+            transform: translateY(-8px) scale(1.02); 
+            border-color: rgba(59, 130, 246, 0.5); 
+            box-shadow: 
+              0 20px 40px rgba(0, 0, 0, 0.3),
+              0 0 0 1px rgba(59, 130, 246, 0.2);
+          }
+          .permit-card.selected { 
+            border-color: #3b82f6; 
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(30, 41, 59, 0.8)); 
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+          }
+          .permit-card.critical::before { 
+            content: ''; 
+            position: absolute; 
+            left: 0; 
+            top: 0; 
+            bottom: 0; 
+            width: 4px; 
+            background: linear-gradient(180deg, #ef4444, #dc2626); 
+            border-radius: 20px 0 0 20px; 
+          }
+          .permit-card.non-compliant {
+            border-color: #ef4444;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(30, 41, 59, 0.8));
+            animation: pulse-violation 3s infinite;
+          }
+          @keyframes pulse-violation {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.1); }
+          }
           
-          .compliance-check { margin: 8px 0; }
-          .compliance-label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-          .compliance-text.compliant { color: #22c55e; }
-          .compliance-text.pending { color: #eab308; }
-          .compliance-ref { font-size: 10px; color: #94a3b8; }
+          /* =================== HEADER CARTE PERMIS =================== */
+          .permit-header { 
+            display: flex; 
+            align-items: flex-start; 
+            gap: 16px; 
+            margin-bottom: 20px; 
+            cursor: pointer; 
+          }
+          .permit-icon { 
+            font-size: 32px; 
+            width: 48px; 
+            text-align: center; 
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+          }
+          .permit-content { flex: 1; }
+          .permit-name { 
+            color: #ffffff; 
+            font-size: 18px; 
+            font-weight: 700; 
+            margin: 0 0 6px; 
+            line-height: 1.3;
+          }
+          .permit-category { 
+            color: #94a3b8; 
+            font-size: 12px; 
+            font-weight: 600; 
+            margin-bottom: 6px; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .permit-description { 
+            color: #cbd5e1; 
+            font-size: 14px; 
+            line-height: 1.5; 
+            margin-bottom: 8px; 
+          }
+          .permit-authority { 
+            color: #60a5fa; 
+            font-size: 12px; 
+            font-weight: 600; 
+          }
+          .compliance-info {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 8px;
+          }
+          .permit-checkbox { 
+            width: 28px; 
+            height: 28px; 
+            border: 2px solid rgba(100, 116, 139, 0.5); 
+            border-radius: 8px; 
+            background: rgba(15, 23, 42, 0.8); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: all 0.3s ease; 
+          }
+          .permit-checkbox.checked { 
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
+            border-color: #3b82f6; 
+            color: white; 
+            transform: scale(1.1);
+          }
           
-          .calculation-field { background: rgba(30, 41, 59, 0.6); border-radius: 8px; padding: 12px; }
-          .calculation-display { display: flex; justify-content: space-between; align-items: center; }
-          .calculation-label { font-family: monospace; color: #22c55e; font-weight: 600; }
-          .calculate-btn { padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 10px; }
+          /* =================== METADATA PREMIUM =================== */
+          .permit-meta { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
+            gap: 12px; 
+            margin-bottom: 20px; 
+          }
+          .meta-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            font-size: 11px; 
+            color: #94a3b8; 
+          }
+          .priority-badge, .status-badge, .violation-badge { 
+            padding: 4px 8px; 
+            border-radius: 6px; 
+            font-size: 10px; 
+            font-weight: 700; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .compliance-badge { 
+            padding: 3px 8px; 
+            border-radius: 12px; 
+            font-size: 10px; 
+            font-weight: 700; 
+          }
+          .compliance-badge.critical { 
+            background: linear-gradient(135deg, #dc2626, #991b1b); 
+            color: white; 
+          }
+          .compliance-badge.enhanced { 
+            background: linear-gradient(135deg, #059669, #047857); 
+            color: white; 
+          }
+          .compliance-badge.standard { 
+            background: linear-gradient(135deg, #2563eb, #1d4ed8); 
+            color: white; 
+          }
+          .last-updated-small { 
+            font-size: 9px; 
+            color: #64748b; 
+          }
           
-          .critical-violations-panel { background: rgba(239, 68, 68, 0.1); border: 2px solid #ef4444; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
-          .violations-header { display: flex; align-items: center; gap: 8px; color: #ef4444; font-weight: 700; margin-bottom: 12px; }
-          .violation-item { background: rgba(239, 68, 68, 0.2); padding: 8px; border-radius: 4px; margin-bottom: 8px; }
-          .violation-requirement { display: block; font-weight: 600; color: #fee2e2; }
-          .violation-details { display: block; font-size: 12px; color: #fca5a5; }
-          .violation-reference { display: block; font-size: 10px; color: #f87171; }
+          /* =================== ACTIONS PREMIUM =================== */
+          .permit-actions { 
+            display: flex; 
+            gap: 12px; 
+            margin-top: 20px; 
+          }
+          .action-btn { 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            border: none; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            font-size: 13px; 
+            font-weight: 600; 
+            flex: 1;
+            justify-content: center;
+          }
+          .action-btn.primary { 
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
+            color: white; 
+          }
+          .action-btn.primary:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+          }
+          .action-btn.secondary { 
+            background: linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2)); 
+            color: #cbd5e1; 
+            border: 1px solid rgba(100, 116, 139, 0.3); 
+          }
+          .action-btn.secondary:hover { 
+            transform: translateY(-2px); 
+            background: linear-gradient(135deg, rgba(100, 116, 139, 0.4), rgba(71, 85, 105, 0.3));
+          }
           
-          .compliance-panel { background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
-          .compliance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 8px; }
-          .compliance-item { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 4px; }
-          .compliance-item.compliant { background: rgba(34, 197, 94, 0.2); }
-          .compliance-item.non-compliant { background: rgba(239, 68, 68, 0.2); }
-          .compliance-status { color: #22c55e; }
-          .compliance-item.non-compliant .compliance-status { color: #ef4444; }
-          .compliance-requirement { font-size: 12px; font-weight: 600; }
-          .compliance-reference { font-size: 10px; color: #94a3b8; }
+          /* =================== FORMULAIRE PREMIUM =================== */
+          .permit-form { 
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8)); 
+            border: 1px solid rgba(100, 116, 139, 0.3); 
+            border-radius: 16px; 
+            margin-top: 20px; 
+            overflow: hidden; 
+            backdrop-filter: blur(20px);
+          }
+          .form-header { 
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(30, 41, 59, 0.8)); 
+            padding: 20px; 
+            border-bottom: 1px solid rgba(100, 116, 139, 0.3); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+          }
+          .form-header h3 { 
+            color: #ffffff; 
+            margin: 0; 
+            font-size: 18px; 
+            font-weight: 700; 
+          }
+          .form-actions { 
+            display: flex; 
+            gap: 8px; 
+          }
+          .form-action-btn { 
+            padding: 8px 12px; 
+            border-radius: 8px; 
+            border: none; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            font-size: 12px; 
+            font-weight: 600; 
+          }
+          .form-action-btn.save { 
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2)); 
+            color: #4ade80; 
+          }
+          .form-action-btn.print { 
+            background: linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2)); 
+            color: #cbd5e1; 
+          }
+          .form-action-btn.submit { 
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2)); 
+            color: #60a5fa; 
+          }
+          .form-action-btn.validate { 
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2)); 
+            color: #22c55e; 
+          }
+          .form-action-btn:hover { 
+            transform: translateY(-1px); 
+          }
           
-          .legal-requirement { background: #059669; color: white; padding: 1px 4px; border-radius: 3px; font-size: 8px; margin-left: 4px; }
-          .critical-requirement { background: #dc2626; color: white; padding: 1px 4px; border-radius: 3px; font-size: 8px; margin-left: 4px; }
-          .compliance-reference { font-size: 10px; color: #3b82f6; margin-top: 2px; }
+          /* =================== CHAMPS FORMULAIRE PREMIUM =================== */
+          .form-content { 
+            padding: 24px; 
+            max-height: 600px; 
+            overflow-y: auto; 
+          }
+          .form-section-group { 
+            margin-bottom: 28px; 
+          }
+          .form-section-title { 
+            color: #3b82f6; 
+            font-size: 16px; 
+            font-weight: 700; 
+            margin: 0 0 16px; 
+            padding-bottom: 12px; 
+            border-bottom: 2px solid rgba(59, 130, 246, 0.3); 
+            position: relative;
+          }
+          .form-section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+          }
+          .form-fields { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 20px; 
+          }
+          .form-field { 
+            display: flex; 
+            flex-direction: column; 
+          }
+          .form-label { 
+            color: #e2e8f0; 
+            font-size: 13px; 
+            font-weight: 600; 
+            margin-bottom: 6px; 
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          .required { 
+            color: #ef4444; 
+            margin-left: 4px; 
+          }
+          .legal-requirement { 
+            background: linear-gradient(135deg, #059669, #047857); 
+            color: white; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-size: 8px; 
+            font-weight: 700;
+            text-transform: uppercase;
+          }
+          .critical-requirement { 
+            background: linear-gradient(135deg, #dc2626, #991b1b); 
+            color: white; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-size: 8px; 
+            font-weight: 700;
+            text-transform: uppercase;
+          }
+          .form-input, .form-textarea, .form-select { 
+            padding: 12px 16px; 
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8)); 
+            border: 2px solid rgba(100, 116, 139, 0.3); 
+            border-radius: 12px; 
+            color: #ffffff; 
+            font-size: 14px; 
+            transition: all 0.3s ease; 
+          }
+          .form-input:focus, .form-textarea:focus, .form-select:focus { 
+            outline: none; 
+            border-color: #3b82f6; 
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+          }
+          .form-input.error {
+            border-color: #ef4444;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(15, 23, 42, 0.9));
+          }
           
-          .form-title-section { display: flex; flex-direction: column; gap: 8px; }
-          .compliance-badges { display: flex; gap: 8px; align-items: center; }
-          .last-updated { font-size: 10px; color: #94a3b8; }
+          /* =================== COMPOSANTS SPÉCIALISÉS =================== */
+          .gas-meter-container { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+          }
+          .gas-meter-display { 
+            display: flex; 
+            align-items: center; 
+            gap: 16px; 
+          }
+          .gas-meter-input { 
+            flex: 1; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 16px;
+            font-weight: 600;
+            font-family: monospace;
+          }
+          .gas-meter-input.critical-violation { 
+            border: 2px solid #ef4444; 
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(15, 23, 42, 0.9)); 
+            color: #fee2e2;
+            animation: pulse-critical 1s infinite;
+          }
+          .gas-meter-input.compliant { 
+            border: 2px solid #22c55e; 
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(15, 23, 42, 0.9)); 
+            color: #dcfce7;
+          }
+          .gas-status { 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            font-size: 13px; 
+            font-weight: 700; 
+            padding: 8px 12px;
+            border-radius: 8px;
+            min-width: 120px;
+            justify-content: center;
+          }
+          .gas-status.non-compliant { 
+            color: #fee2e2; 
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2));
+          }
+          .gas-status.compliant { 
+            color: #dcfce7; 
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2));
+          }
           
-          .form-action-btn.validate { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+          .critical-alert { 
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
+            color: #fee2e2; 
+            padding: 12px; 
+            border-radius: 8px; 
+            font-size: 12px; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            margin-top: 8px;
+            border-left: 4px solid #ef4444;
+          }
           
-          .alert-indicator { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 4px; font-size: 12px; }
-          .alert-indicator.critical { background: rgba(239, 68, 68, 0.2); color: #fee2e2; }
-          .alert-indicator.warning { background: rgba(245, 158, 11, 0.2); color: #fde68a; }
-          .alert-indicator.info { background: rgba(59, 130, 246, 0.2); color: #dbeafe; }
+          .compliance-check { 
+            margin: 12px 0; 
+          }
+          .compliance-label { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            cursor: pointer; 
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.3s ease;
+          }
+          .compliance-label:hover {
+            background: rgba(100, 116, 139, 0.1);
+          }
+          .compliance-text.compliant { 
+            color: #22c55e; 
+            font-weight: 600;
+          }
+          .compliance-text.pending { 
+            color: #eab308; 
+            font-weight: 600;
+          }
+          .compliance-ref { 
+            font-size: 10px; 
+            color: #94a3b8; 
+            font-style: italic;
+          }
           
+          .calculation-field { 
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6)); 
+            border-radius: 12px; 
+            padding: 16px; 
+            border: 1px solid rgba(100, 116, 139, 0.3);
+          }
+          .calculation-display { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+          }
+          .calculation-label { 
+            font-family: monospace; 
+            color: #22c55e; 
+            font-weight: 700; 
+            font-size: 16px;
+          }
+          .calculate-btn { 
+            padding: 8px 12px; 
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 12px; 
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+          }
+          .calculate-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+          }
+          
+          /* =================== PANNEAUX CONFORMITÉ =================== */
+          .critical-violations-panel { 
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1)); 
+            border: 2px solid #ef4444; 
+            border-radius: 12px; 
+            padding: 20px; 
+            margin-bottom: 24px; 
+            backdrop-filter: blur(20px);
+          }
+          .violations-header { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            color: #ff6b6b; 
+            font-weight: 800; 
+            margin-bottom: 16px; 
+            font-size: 16px;
+          }
+          .violation-item { 
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
+            padding: 12px; 
+            border-radius: 8px; 
+            margin-bottom: 12px; 
+            border-left: 4px solid #ef4444;
+          }
+          .violation-requirement { 
+            display: block; 
+            font-weight: 700; 
+            color: #fee2e2; 
+            margin-bottom: 4px;
+          }
+          .violation-details { 
+            display: block; 
+            font-size: 13px; 
+            color: #fca5a5; 
+            margin-bottom: 4px;
+          }
+          .violation-reference { 
+            display: block; 
+            font-size: 11px; 
+            color: #f87171; 
+            font-style: italic;
+          }
+          
+          .compliance-panel { 
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1)); 
+            border: 1px solid #22c55e; 
+            border-radius: 12px; 
+            padding: 20px; 
+            margin-bottom: 24px; 
+            backdrop-filter: blur(20px);
+          }
+          .compliance-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 12px; 
+          }
+          .compliance-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px; 
+            border-radius: 8px; 
+            transition: all 0.3s ease;
+          }
+          .compliance-item:hover {
+            transform: translateX(4px);
+          }
+          .compliance-item.compliant { 
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2)); 
+          }
+          .compliance-item.non-compliant { 
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
+          }
+          .compliance-status { 
+            color: #22c55e; 
+          }
+          .compliance-item.non-compliant .compliance-status { 
+            color: #ef4444; 
+          }
+          .compliance-requirement { 
+            font-size: 13px; 
+            font-weight: 600; 
+            color: #e2e8f0;
+          }
+          .compliance-reference { 
+            font-size: 10px; 
+            color: #94a3b8; 
+            margin-top: 2px;
+            display: block;
+          }
+          
+          .field-help { 
+            font-size: 11px; 
+            color: #64748b; 
+            margin-top: 4px; 
+            font-style: italic; 
+          }
+          .compliance-reference { 
+            font-size: 10px; 
+            color: #3b82f6; 
+            margin-top: 4px; 
+          }
+          
+          .form-title-section { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+          }
+          .compliance-badges { 
+            display: flex; 
+            gap: 8px; 
+            align-items: center; 
+            flex-wrap: wrap;
+          }
+          .last-updated { 
+            font-size: 10px; 
+            color: #94a3b8; 
+          }
+          
+          .alert-indicator { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            padding: 12px; 
+            border-radius: 8px; 
+            font-size: 13px; 
+            font-weight: 600;
+          }
+          .alert-indicator.critical { 
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
+            color: #fee2e2; 
+            border-left: 4px solid #ef4444;
+          }
+          .alert-indicator.warning { 
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(217, 119, 6, 0.2)); 
+            color: #fde68a; 
+            border-left: 4px solid #f59e0b;
+          }
+          .alert-indicator.info { 
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2)); 
+            color: #dbeafe; 
+            border-left: 4px solid #3b82f6;
+          }
+          
+          /* =================== RESPONSIVE DESIGN =================== */
           @media (max-width: 768px) {
+            .permits-grid { grid-template-columns: 1fr; gap: 20px; }
+            .search-grid { grid-template-columns: 1fr; gap: 12px; }
             .permits-stats { grid-template-columns: repeat(2, 1fr); }
+            .form-fields { grid-template-columns: 1fr; }
+            .permit-actions { flex-direction: column; }
             .compliance-grid { grid-template-columns: 1fr; }
             .form-title-section { align-items: flex-start; }
             .compliance-badges { flex-wrap: wrap; }
+            .permit-card { padding: 20px; }
+            .permits-header { padding: 20px; }
+            .search-section { padding: 20px; }
           }
         `
       }} />
