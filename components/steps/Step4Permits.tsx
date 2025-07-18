@@ -1,12 +1,15 @@
-"use client";
+// =================== SECTION 1: INTERFACES ET TRADUCTIONS CORRIGÉES ===================
+// À coller au début de votre fichier Step4Permits.tsx
 
-import React, { useState, useMemo, useEffect } from 'react';
+"use client";
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   FileText, CheckCircle, AlertTriangle, Clock, Download, Eye,
   Shield, Users, MapPin, Calendar, Building, Phone, User, Briefcase,
   Search, Filter, Plus, BarChart3, Star, Award, Zap, HardHat,
   Camera, Save, X, Edit, ChevronDown, ChevronUp, Printer, Mail,
-  AlertCircle, ThermometerSun, Gauge, Wind, Hammer
+  AlertCircle, ThermometerSun, Gauge, Wind, Hammer, ChevronLeft, 
+  ChevronRight, Upload, UserPlus, UserMinus, Grid, List
 } from 'lucide-react';
 
 // =================== INTERFACES CONFORMES NORMES 2024-2025 ===================
@@ -21,6 +24,9 @@ interface Step4PermitsProps {
 interface Permit {
   id: string;
   name: string;
+  type: string;
+  norm: string;
+  status: string;
   category: string;
   description: string;
   authority: string;
@@ -39,11 +45,12 @@ interface Permit {
     website?: string;
   };
   selected: boolean;
-  status: 'pending' | 'submitted' | 'approved' | 'rejected' | 'expired';
-  formData?: any;
-  formFields?: FormField[];
   complianceLevel: 'basic' | 'standard' | 'enhanced' | 'critical';
   lastUpdated: string;
+  requiredFields: number;
+  sections?: any;
+  formData?: any;
+  formFields?: FormField[];
 }
 
 interface FormField {
@@ -75,26 +82,56 @@ interface FormField {
   };
 }
 
-interface WorkerEntry {
-  id: number;
+interface Worker {
+  id?: number;
   name: string;
   age: number;
   certification: string;
-  entryTime: string;
-  exitTime: string | null;
-  date: string;
+  phone: string;
+  entryTime?: string;
+  exitTime?: string | null;
+  date?: string;
   oxygenLevel?: number;
   gasLevel?: number;
+  over18?: boolean;
+}
+
+interface WorkerEntry {
+  id?: number;
+  name: string;
+  age: number;
+  certification: string;
+  phone: string;
+  entryTime?: string;
+  exitTime?: string | null;
+  date?: string;
+  oxygenLevel?: number;
+  gasLevel?: number;
+  over18?: boolean;
+}
+
+interface Photo {
+  id?: number;
+  url: string;
+  name: string;
+  timestamp?: string;
+  description?: string;
+  gpsLocation?: string;
+  compliance?: boolean;
+  size?: number;
+  uploadedAt?: string;
 }
 
 interface PhotoEntry {
-  id: number;
+  id?: number;
   url: string;
   name: string;
-  timestamp: string;
-  description: string;
+  timestamp?: string;
+  description?: string;
   gpsLocation?: string;
   compliance?: boolean;
+  size?: number;
+  uploadedAt?: string;
 }
 
 interface SignatureMetadata {
@@ -120,13 +157,17 @@ interface GasReading {
 }
 
 interface ComplianceCheck {
+  key?: string;
   requirement: string;
   status: 'compliant' | 'non-compliant' | 'pending';
   details: string;
   reference: string;
+  value?: any;
+  isValid?: boolean;
+  section?: string;
 }
 
-// =================== FONCTION DE TRADUCTION BILINGUE COMPLETE ===================
+// =================== FONCTION DE TRADUCTION BILINGUE OPTIMISÉE MOBILE ===================
 const getTexts = (language: 'fr' | 'en') => {
   if (language === 'fr') {
     return {
@@ -179,7 +220,7 @@ const getTexts = (language: 'fr' | 'en') => {
         municipal_requirements: 'Exigences Municipales'
       },
       stats: {
-        available: 'Permis disponibles',
+        available: 'Disponibles',
         selected: 'Sélectionnés',
         critical: 'Critiques',
         pending: 'En attente',
@@ -231,7 +272,7 @@ const getTexts = (language: 'fr' | 'en') => {
       },
       messages: {
         noResults: 'Aucun permis trouvé',
-        modifySearch: 'Modifiez vos critères de recherche pour voir plus de permis',
+        modifySearch: 'Modifiez vos critères de recherche',
         workerName: 'Nom du travailleur',
         workerAge: 'Âge du travailleur',
         workerCertification: 'Certification SST',
@@ -252,23 +293,43 @@ const getTexts = (language: 'fr' | 'en') => {
         signedBy: 'Signé par',
         on: 'Le',
         at: 'à',
-        addPhotos: '📷 Ajouter des photos',
         takePhoto: '📸 Prendre une photo',
         photoCaptured: 'Photo capturée',
-        addDescription: 'Ajouter une description à cette photo...',
+        addDescription: 'Ajouter une description...',
         photo: 'photo',
         photos: 'photos',
         photoOf: 'Photo',
         of: 'sur',
         provinces: 'provinces',
-        criticalViolation: 'VIOLATION CRITIQUE - Arrêt des travaux requis',
-        complianceCheck: 'Vérification de conformité en cours...',
+        criticalViolation: 'VIOLATION CRITIQUE',
+        complianceCheck: 'Vérification de conformité...',
         gasReadingTaken: 'Lecture de gaz effectuée',
         calibrationRequired: 'Calibration détecteur requise',
         emergencyContact: 'Contact d\'urgence',
         rescueTeamReady: 'Équipe de sauvetage prête',
         fireWatchActive: 'Surveillance incendie active',
-        municipalNotified: 'Municipalité avisée'
+        municipalNotified: 'Municipalité avisée',
+        addWorker: 'Ajouter Travailleur',
+        removeWorker: 'Retirer Travailleur',
+        workerNumber: 'Travailleur #',
+        fullName: 'Nom complet',
+        age: 'Âge',
+        certification: 'Certification',
+        certifyOver18: 'Je certifie que ce travailleur a 18 ans ou plus',
+        legalViolationMinor: 'VIOLATION LÉGALE: Travailleur mineur détecté',
+        selectCertification: 'Sélectionner certification',
+        basicTraining: 'Formation de base',
+        advancedTraining: 'Formation avancée',
+        supervisor: 'Superviseur',
+        rescuer: 'Sauveteur',
+        authorizedWorkers: 'Travailleurs Autorisés',
+        sitePhotos: 'Photos du Site',
+        toggleView: 'Basculer vue',
+        addPhotos: '📷 Ajouter photos',
+        noPhotosAdded: 'Aucune photo ajoutée',
+        clickToAddPhotos: 'Cliquez pour ajouter des photos',
+        savePermit: 'Sauvegarder le Permis',
+        downloadPDF: 'Télécharger PDF'
       }
     };
   } else {
@@ -322,7 +383,7 @@ const getTexts = (language: 'fr' | 'en') => {
         municipal_requirements: 'Municipal Requirements'
       },
       stats: {
-        available: 'Available permits',
+        available: 'Available',
         selected: 'Selected',
         critical: 'Critical',
         pending: 'Pending',
@@ -374,7 +435,7 @@ const getTexts = (language: 'fr' | 'en') => {
       },
       messages: {
         noResults: 'No permits found',
-        modifySearch: 'Modify your search criteria to see more permits',
+        modifySearch: 'Modify your search criteria',
         workerName: 'Worker name',
         workerAge: 'Worker age',
         workerCertification: 'HSE certification',
@@ -395,27 +456,50 @@ const getTexts = (language: 'fr' | 'en') => {
         signedBy: 'Signed by',
         on: 'On',
         at: 'at',
-        addPhotos: '📷 Add photos',
         takePhoto: '📸 Take photo',
         photoCaptured: 'Photo captured',
-        addDescription: 'Add description to this photo...',
+        addDescription: 'Add description...',
         photo: 'photo',
         photos: 'photos',
         photoOf: 'Photo',
         of: 'of',
         provinces: 'provinces',
-        criticalViolation: 'CRITICAL VIOLATION - Work stoppage required',
-        complianceCheck: 'Compliance verification in progress...',
+        criticalViolation: 'CRITICAL VIOLATION',
+        complianceCheck: 'Compliance verification...',
         gasReadingTaken: 'Gas reading taken',
         calibrationRequired: 'Detector calibration required',
         emergencyContact: 'Emergency contact',
         rescueTeamReady: 'Rescue team ready',
         fireWatchActive: 'Fire watch active',
-        municipalNotified: 'Municipality notified'
+        municipalNotified: 'Municipality notified',
+        addWorker: 'Add Worker',
+        removeWorker: 'Remove Worker',
+        workerNumber: 'Worker #',
+        fullName: 'Full name',
+        age: 'Age',
+        certification: 'Certification',
+        certifyOver18: 'I certify this worker is 18+ years old',
+        legalViolationMinor: 'LEGAL VIOLATION: Minor worker detected',
+        selectCertification: 'Select certification',
+        basicTraining: 'Basic training',
+        advancedTraining: 'Advanced training',
+        supervisor: 'Supervisor',
+        rescuer: 'Rescuer',
+        authorizedWorkers: 'Authorized Workers',
+        sitePhotos: 'Site Photos',
+        toggleView: 'Toggle view',
+        addPhotos: '📷 Add photos',
+        noPhotosAdded: 'No photos added',
+        clickToAddPhotos: 'Click to add photos',
+        savePermit: 'Save Permit',
+        downloadPDF: 'Download PDF'
       }
     };
   }
 };
+// =================== SECTION 2: BASE DE DONNÉES PERMIS CONFORMES 2024-2025 ===================
+// À coller après la Section 1
+
 // =================== BASE DE DONNÉES PERMIS CONFORMES AUX NORMES 2024-2025 ===================
 const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
   const basePermits: Permit[] = [
@@ -423,9 +507,12 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
     // 1. PERMIS ESPACE CLOS CONFORME RSST 2023-2025
     {
       id: 'confined-space-entry-2025',
-      name: language === 'fr' ? 'Permis d\'Entrée en Espace Clos Conforme RSST 2023' : 'Confined Space Entry Permit RSST 2023 Compliant',
+      name: language === 'fr' ? 'Permis d\'Entrée en Espace Clos RSST 2023' : 'Confined Space Entry Permit RSST 2023',
+      type: language === 'fr' ? 'Espace Clos' : 'Confined Space',
+      norm: 'RSST 2023 Art. 297-312',
+      status: language === 'fr' ? 'Critique' : 'Critical',
       category: language === 'fr' ? 'Sécurité' : 'Safety',
-      description: language === 'fr' ? 'Permis conforme aux modifications RSST 2023-2025 avec surveillance atmosphérique continue et plan de sauvetage personnalisé' : 'Permit compliant with RSST 2023-2025 modifications including continuous atmospheric monitoring and personalized rescue plan',
+      description: language === 'fr' ? 'Permis conforme RSST 2023-2025 avec surveillance atmosphérique continue et plan de sauvetage personnalisé' : 'RSST 2023-2025 compliant permit with continuous atmospheric monitoring and personalized rescue plan',
       authority: language === 'fr' ? 'CNESST / Employeur / ASP Construction' : 'CNESST / Employer / ASP Construction',
       province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
       required: true,
@@ -442,60 +529,182 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
         email: 'info@asp-construction.org'
       },
       selected: false,
-      status: 'pending',
       complianceLevel: 'critical',
       lastUpdated: '2025-01-20',
-      formFields: [
-        // SECTION IDENTIFICATION
-        { id: 'space_identification', type: 'text', label: language === 'fr' ? 'Identification de l\'espace clos' : 'Confined space identification', required: true, section: 'identification', placeholder: language === 'fr' ? 'Ex: Réservoir A-12, Regard municipal...' : 'Ex: Tank A-12, Municipal manhole...', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 300' },
-        { id: 'project_name', type: 'text', label: language === 'fr' ? 'Nom du projet' : 'Project name', required: true, section: 'identification' },
-        { id: 'location_precise', type: 'text', label: language === 'fr' ? 'Localisation GPS précise' : 'Precise GPS location', required: true, section: 'identification', validation: { legalRequirement: true } },
-        { id: 'permit_date', type: 'date', label: language === 'fr' ? 'Date du permis' : 'Permit date', required: true, section: 'identification' },
-        { id: 'permit_time', type: 'time_picker', label: language === 'fr' ? 'Heure d\'émission' : 'Issue time', required: true, section: 'identification' },
-        { id: 'permit_duration', type: 'select', label: language === 'fr' ? 'Durée validité (max 8h)' : 'Validity duration (max 8h)', required: true, section: 'identification', options: ['1h', '2h', '4h', '6h', '8h'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 300' },
-        
-        // SECTION GAS MONITORING OBLIGATOIRE
-        { id: 'oxygen_level', type: 'gas_meter', label: language === 'fr' ? 'Niveau oxygène (%)' : 'Oxygen level (%)', required: true, section: 'gas_monitoring', validation: { min: 19.5, max: 23.5, critical: true, legalRequirement: true, message: language === 'fr' ? 'CRITIQUE: O2 doit être entre 19.5% et 23.5%' : 'CRITICAL: O2 must be between 19.5% and 23.5%' }, complianceRef: 'RSST Art. 302 modifié' },
-        { id: 'combustible_gas_level', type: 'gas_meter', label: language === 'fr' ? 'Gaz combustibles (% LIE)' : 'Combustible gas (% LEL)', required: true, section: 'gas_monitoring', validation: { min: 0, max: 10, critical: true, legalRequirement: true, message: language === 'fr' ? 'CRITIQUE: Gaz combustibles < 10% LIE obligatoire' : 'CRITICAL: Combustible gas < 10% LEL mandatory' }, complianceRef: 'RSST Art. 302' },
-        { id: 'carbon_monoxide_level', type: 'gas_meter', label: language === 'fr' ? 'Monoxyde de carbone (ppm)' : 'Carbon monoxide (ppm)', required: true, section: 'gas_monitoring', validation: { min: 0, max: 35, critical: true, legalRequirement: true, message: language === 'fr' ? 'CRITIQUE: CO < 35 ppm obligatoire' : 'CRITICAL: CO < 35 ppm mandatory' }, complianceRef: 'RSST Annexe I' },
-        { id: 'hydrogen_sulfide_level', type: 'gas_meter', label: language === 'fr' ? 'Sulfure d\'hydrogène (ppm)' : 'Hydrogen sulfide (ppm)', required: true, section: 'gas_monitoring', validation: { min: 0, max: 10, critical: true, legalRequirement: true, message: language === 'fr' ? 'CRITIQUE: H2S < 10 ppm obligatoire' : 'CRITICAL: H2S < 10 ppm mandatory' }, complianceRef: 'RSST Annexe I' },
-        { id: 'continuous_monitoring', type: 'checkbox', label: language === 'fr' ? 'Surveillance atmosphérique CONTINUE pendant travaux' : 'CONTINUOUS atmospheric monitoring during work', required: true, section: 'gas_monitoring', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 302' },
-        { id: 'detector_calibration_date', type: 'date', label: language === 'fr' ? 'Date calibration détecteur' : 'Detector calibration date', required: true, section: 'gas_monitoring', validation: { legalRequirement: true } },
-        { id: 'detector_serial_number', type: 'text', label: language === 'fr' ? 'Numéro série détecteur' : 'Detector serial number', required: true, section: 'gas_monitoring' },
-        
-        // SECTION ACCÈS ET ÂGE OBLIGATOIRE
-        { id: 'entry_mandatory', type: 'radio', label: language === 'fr' ? 'L\'entrée est-elle obligatoire ?' : 'Is entry mandatory?', required: true, section: 'access', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 297.1' },
-        { id: 'external_control_possible', type: 'radio', label: language === 'fr' ? 'Contrôle depuis l\'extérieur possible ?' : 'External control possible?', required: true, section: 'access', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 297.1 nouveau' },
-        { id: 'worker_age_verification', type: 'compliance_check', label: language === 'fr' ? 'VÉRIFICATION: Tous travailleurs ≥ 18 ans' : 'VERIFICATION: All workers ≥ 18 years', required: true, section: 'access', validation: { critical: true, legalRequirement: true }, complianceRef: 'RSST Art. 298 modifié 2023' },
-        { id: 'worker_certification_check', type: 'compliance_check', label: language === 'fr' ? 'Certification formation espace clos valide' : 'Valid confined space training certification', required: true, section: 'access', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 298' },
-        
-        // SECTION PLAN DE SAUVETAGE PERSONNALISÉ
-        { id: 'rescue_plan_personalized', type: 'textarea', label: language === 'fr' ? 'Plan de sauvetage PERSONNALISÉ pour cet espace' : 'PERSONALIZED rescue plan for this space', required: true, section: 'rescue_plan', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 309 enrichi', placeholder: language === 'fr' ? 'Décrire procédure spécifique, équipements, points d\'accès...' : 'Describe specific procedure, equipment, access points...' },
-        { id: 'rescue_responsible_person', type: 'text', label: language === 'fr' ? 'Responsable sauvetage DÉSIGNÉ' : 'DESIGNATED rescue responsible', required: true, section: 'rescue_plan', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 309' },
-        { id: 'communication_protocol', type: 'select', label: language === 'fr' ? 'Protocole communication obligatoire' : 'Mandatory communication protocol', required: true, section: 'rescue_plan', options: language === 'fr' ? ['Radio bidirectionnelle', 'Téléphone cellulaire', 'Signaux visuels/sonores', 'Système fixe'] : ['Two-way radio', 'Cell phone', 'Visual/audio signals', 'Fixed system'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 309' },
-        { id: 'rescue_equipment_onsite', type: 'checkbox', label: language === 'fr' ? 'Équipements sauvetage SUR SITE avant entrée' : 'Rescue equipment ON SITE before entry', required: true, section: 'rescue_plan', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 309' },
-        { id: 'response_time_target', type: 'select', label: language === 'fr' ? 'Temps de réponse sauvetage' : 'Rescue response time', required: true, section: 'rescue_plan', options: ['< 3 minutes', '< 5 minutes', '< 10 minutes'], validation: { legalRequirement: true } },
-        { id: 'emergency_contact_primary', type: 'text', label: language === 'fr' ? 'Contact urgence primaire (nom + tél)' : 'Primary emergency contact (name + phone)', required: true, section: 'rescue_plan', validation: { legalRequirement: true } },
-        { id: 'emergency_contact_secondary', type: 'text', label: language === 'fr' ? 'Contact urgence secondaire' : 'Secondary emergency contact', required: true, section: 'rescue_plan' },
-        
-        // SECTION MATIÈRES À ÉCOULEMENT LIBRE
-        { id: 'free_flowing_materials', type: 'radio', label: language === 'fr' ? 'Matières à écoulement libre présentes ?' : 'Free-flowing materials present?', required: true, section: 'safety', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 311-312 séparés' },
-        { id: 'burial_risk_assessment', type: 'textarea', label: language === 'fr' ? 'Évaluation risque ensevelissement/noyade' : 'Burial/drowning risk assessment', required: false, section: 'safety', complianceRef: 'RSST Art. 311-312' },
-        { id: 'fall_prevention_measures', type: 'checkbox', label: language === 'fr' ? 'Mesures prévention chutes installées' : 'Fall prevention measures installed', required: true, section: 'safety', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 297.1' },
-        
-        // SECTION TRAVAILLEURS AUTORISÉS
-        { id: 'authorized_workers', type: 'textarea', label: language === 'fr' ? 'Travailleurs autorisés (nom, âge, certification)' : 'Authorized workers (name, age, certification)', required: true, section: 'signatures', placeholder: language === 'fr' ? 'Format: Nom, Prénom - Âge: XX ans - Cert: XXXXX' : 'Format: Last, First - Age: XX years - Cert: XXXXX', validation: { legalRequirement: true } },
-        { id: 'workers_log', type: 'workers_tracking', label: language === 'fr' ? 'Registre entrées/sorties avec surveillance gaz' : 'Entry/exit log with gas monitoring', required: true, section: 'signatures', validation: { legalRequirement: true } },
-        { id: 'photos_documentation', type: 'photo_gallery', label: language === 'fr' ? 'Photos documentation sécurité obligatoires' : 'Mandatory safety documentation photos', required: true, section: 'atmosphere', validation: { legalRequirement: true } },
-        { id: 'supervisor_signature', type: 'signature', label: language === 'fr' ? 'Signature surveillant qualifié' : 'Qualified supervisor signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
-        { id: 'attendant_signature', type: 'signature', label: language === 'fr' ? 'Signature préposé à l\'entrée' : 'Entry attendant signature', required: true, section: 'signatures', validation: { legalRequirement: true } }
-      ]
+      requiredFields: 27,
+      sections: {
+        identification: {
+          title: language === 'fr' ? 'Identification' : 'Identification',
+          fields: [
+            {
+              key: 'space_identification',
+              label: language === 'fr' ? 'Identification de l\'espace clos' : 'Confined space identification',
+              type: 'text',
+              required: true,
+              placeholder: language === 'fr' ? 'Ex: Réservoir A-12, Regard municipal...' : 'Ex: Tank A-12, Municipal manhole...',
+              validation: { legalRequirement: true },
+              legalRef: 'RSST Art. 300',
+              isLegal: true
+            },
+            {
+              key: 'project_name',
+              label: language === 'fr' ? 'Nom du projet' : 'Project name',
+              type: 'text',
+              required: true
+            },
+            {
+              key: 'location_precise',
+              label: language === 'fr' ? 'Localisation GPS précise' : 'Precise GPS location',
+              type: 'text',
+              required: true,
+              validation: { legalRequirement: true }
+            },
+            {
+              key: 'permit_date',
+              label: language === 'fr' ? 'Date du permis' : 'Permit date',
+              type: 'date',
+              required: true
+            },
+            {
+              key: 'permit_time',
+              label: language === 'fr' ? 'Heure d\'émission' : 'Issue time',
+              type: 'time',
+              required: true
+            },
+            {
+              key: 'permit_duration',
+              label: language === 'fr' ? 'Durée validité (max 8h)' : 'Validity duration (max 8h)',
+              type: 'select',
+              required: true,
+              options: ['1h', '2h', '4h', '6h', '8h'],
+              validation: { legalRequirement: true },
+              legalRef: 'RSST Art. 300',
+              isLegal: true
+            }
+          ]
+        },
+        gas_monitoring: {
+          title: language === 'fr' ? 'Surveillance Gaz' : 'Gas Monitoring',
+          fields: [
+            {
+              key: 'oxygen_level',
+              label: language === 'fr' ? 'Niveau oxygène (%)' : 'Oxygen level (%)',
+              type: 'number',
+              required: true,
+              validation: {
+                min: 19.5,
+                max: 23.5,
+                critical: true,
+                legalRequirement: true,
+                message: language === 'fr' ? 'CRITIQUE: O2 doit être entre 19.5% et 23.5%' : 'CRITICAL: O2 must be between 19.5% and 23.5%'
+              },
+              legalRef: 'RSST Art. 302 modifié',
+              isCritical: true
+            },
+            {
+              key: 'combustible_gas_level',
+              label: language === 'fr' ? 'Gaz combustibles (% LIE)' : 'Combustible gas (% LEL)',
+              type: 'number',
+              required: true,
+              validation: {
+                min: 0,
+                max: 10,
+                critical: true,
+                legalRequirement: true,
+                message: language === 'fr' ? 'CRITIQUE: Gaz combustibles < 10% LIE obligatoire' : 'CRITICAL: Combustible gas < 10% LEL mandatory'
+              },
+              legalRef: 'RSST Art. 302',
+              isCritical: true
+            },
+            {
+              key: 'carbon_monoxide_level',
+              label: language === 'fr' ? 'Monoxyde de carbone (ppm)' : 'Carbon monoxide (ppm)',
+              type: 'number',
+              required: true,
+              validation: {
+                min: 0,
+                max: 35,
+                critical: true,
+                legalRequirement: true,
+                message: language === 'fr' ? 'CRITIQUE: CO < 35 ppm obligatoire' : 'CRITICAL: CO < 35 ppm mandatory'
+              },
+              legalRef: 'RSST Annexe I',
+              isCritical: true
+            },
+            {
+              key: 'hydrogen_sulfide_level',
+              label: language === 'fr' ? 'Sulfure d\'hydrogène (ppm)' : 'Hydrogen sulfide (ppm)',
+              type: 'number',
+              required: true,
+              validation: {
+                min: 0,
+                max: 10,
+                critical: true,
+                legalRequirement: true,
+                message: language === 'fr' ? 'CRITIQUE: H2S < 10 ppm obligatoire' : 'CRITICAL: H2S < 10 ppm mandatory'
+              },
+              legalRef: 'RSST Annexe I',
+              isCritical: true
+            }
+          ]
+        },
+        access: {
+          title: language === 'fr' ? 'Accès' : 'Access',
+          fields: [
+            {
+              key: 'worker_age_verification',
+              label: language === 'fr' ? 'VÉRIFICATION: Tous travailleurs ≥ 18 ans' : 'VERIFICATION: All workers ≥ 18 years',
+              type: 'checkbox',
+              required: true,
+              validation: { critical: true, legalRequirement: true },
+              legalRef: 'RSST Art. 298 modifié 2023',
+              isCritical: true
+            },
+            {
+              key: 'worker_certification_check',
+              label: language === 'fr' ? 'Certification formation espace clos valide' : 'Valid confined space training certification',
+              type: 'checkbox',
+              required: true,
+              validation: { legalRequirement: true },
+              legalRef: 'RSST Art. 298',
+              isLegal: true
+            }
+          ]
+        },
+        rescue_plan: {
+          title: language === 'fr' ? 'Plan de Sauvetage' : 'Rescue Plan',
+          fields: [
+            {
+              key: 'rescue_plan_personalized',
+              label: language === 'fr' ? 'Plan de sauvetage PERSONNALISÉ pour cet espace' : 'PERSONALIZED rescue plan for this space',
+              type: 'textarea',
+              required: true,
+              validation: { legalRequirement: true },
+              legalRef: 'RSST Art. 309 enrichi',
+              placeholder: language === 'fr' ? 'Décrire procédure spécifique, équipements, points d\'accès...' : 'Describe specific procedure, equipment, access points...',
+              isLegal: true
+            },
+            {
+              key: 'rescue_responsible_person',
+              label: language === 'fr' ? 'Responsable sauvetage DÉSIGNÉ' : 'DESIGNATED rescue responsible',
+              type: 'text',
+              required: true,
+              validation: { legalRequirement: true },
+              legalRef: 'RSST Art. 309',
+              isLegal: true
+            }
+          ]
+        }
+      }
     },
 
     // 2. PERMIS TRAVAIL À CHAUD CONFORME NFPA 51B-2019
     {
       id: 'hot-work-permit-nfpa2019',
-      name: language === 'fr' ? 'Permis Travail à Chaud Conforme NFPA 51B-2019' : 'Hot Work Permit NFPA 51B-2019 Compliant',
+      name: language === 'fr' ? 'Permis Travail à Chaud NFPA 51B-2019' : 'Hot Work Permit NFPA 51B-2019',
+      type: language === 'fr' ? 'Travail à Chaud' : 'Hot Work',
+      norm: 'NFPA 51B-2019',
+      status: language === 'fr' ? 'En Attente' : 'Pending',
       category: language === 'fr' ? 'Sécurité' : 'Safety',
       description: language === 'fr' ? 'Permis conforme NFPA 51B-2019 avec surveillance incendie 1 heure et réinspection par quart' : 'NFPA 51B-2019 compliant permit with 1-hour fire watch and shift reinspection',
       authority: language === 'fr' ? 'Service incendie / Employeur / NFPA' : 'Fire Department / Employer / NFPA',
@@ -513,421 +722,855 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
         website: 'https://www.nfpa.org/codes-and-standards/all-codes-and-standards/list-of-codes-and-standards/detail?code=51B'
       },
       selected: false,
-      status: 'pending',
       complianceLevel: 'critical',
       lastUpdated: '2025-01-20',
-      formFields: [
-        // SECTION IDENTIFICATION
-        { id: 'permit_number_hot', type: 'text', label: language === 'fr' ? 'Numéro de permis unique' : 'Unique permit number', required: true, section: 'identification', validation: { legalRequirement: true } },
-        { id: 'work_location_precise', type: 'text', label: language === 'fr' ? 'Lieu précis des travaux' : 'Precise work location', required: true, section: 'identification', validation: { legalRequirement: true } },
-        { id: 'contractor_company', type: 'text', label: language === 'fr' ? 'Entreprise contractante' : 'Contracting company', required: true, section: 'identification' },
-        { id: 'work_order_number', type: 'text', label: language === 'fr' ? 'Numéro bon de travail' : 'Work order number', required: true, section: 'identification' },
-        
-        // SECTION TYPE DE TRAVAIL À CHAUD
-        { id: 'work_type_hot', type: 'checkbox', label: language === 'fr' ? 'Type de travail à chaud (sélection multiple)' : 'Hot work type (multiple selection)', required: true, section: 'work_type', options: language === 'fr' ? ['Soudage à l\'arc électrique', 'Soudage au gaz (oxyacétylénique)', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage avec étincelles', 'Perçage métaux', 'Brasage/Soudage tendre', 'Travaux de toiture à chaud', 'Autre (spécifier)'] : ['Electric arc welding', 'Gas welding (oxyacetylene)', 'Torch cutting', 'Plasma cutting', 'Grinding with sparks', 'Metal drilling', 'Brazing/Soft soldering', 'Hot roofing work', 'Other (specify)'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019' },
-        { id: 'work_description_detailed', type: 'textarea', label: language === 'fr' ? 'Description détaillée des travaux et équipements' : 'Detailed work and equipment description', required: true, section: 'work_type', validation: { legalRequirement: true } },
-        { id: 'start_date_time', type: 'time_picker', label: language === 'fr' ? 'Date et heure début prévues' : 'Planned start date and time', required: true, section: 'work_type' },
-        { id: 'end_date_time', type: 'time_picker', label: language === 'fr' ? 'Date et heure fin prévues' : 'Planned end date and time', required: true, section: 'work_type' },
-        
-        // SECTION SURVEILLANCE INCENDIE NFPA 51B-2019
-        { id: 'fire_watch_duration', type: 'select', label: language === 'fr' ? 'Durée surveillance incendie POST-TRAVAUX' : 'POST-WORK fire watch duration', required: true, section: 'fire_watch', options: ['1 heure (NFPA 51B-2019)', '2 heures', 'Plus de 2 heures'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Modif majeure: 1h au lieu de 30min' },
-        { id: 'continuous_vs_spot_watch', type: 'radio', label: language === 'fr' ? 'Type de surveillance incendie' : 'Fire watch type', required: true, section: 'fire_watch', options: language === 'fr' ? ['Surveillance CONTINUE', 'Surveillance PONCTUELLE'] : ['CONTINUOUS monitoring', 'SPOT monitoring'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Distinction formelle' },
-        { id: 'fire_watch_person_assigned', type: 'text', label: language === 'fr' ? 'Préposé surveillance incendie désigné' : 'Designated fire watch person', required: true, section: 'fire_watch', validation: { legalRequirement: true } },
-        { id: 'fire_watch_training_valid', type: 'checkbox', label: language === 'fr' ? 'Formation surveillance incendie valide' : 'Valid fire watch training', required: true, section: 'fire_watch', validation: { legalRequirement: true } },
-        
-        // SECTION RÉINSPECTION PAR QUART (NOUVEAU NFPA)
-        { id: 'shift_reinspection', type: 'compliance_check', label: language === 'fr' ? 'Réinspection OBLIGATOIRE à chaque quart' : 'MANDATORY reinspection each shift', required: true, section: 'fire_watch', validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Nouvelle annexe' },
-        { id: 'reinspection_documentation', type: 'textarea', label: language === 'fr' ? 'Documentation des réinspections par quart' : 'Shift reinspection documentation', required: true, section: 'fire_watch', placeholder: language === 'fr' ? 'Heure, responsable, observations, actions...' : 'Time, responsible person, observations, actions...', validation: { legalRequirement: true } },
-        
-        // SECTION EXTINCTEURS HARMONISÉS NFPA 10
-        { id: 'extinguisher_type_class_a', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe A (combustibles ordinaires)' : 'Class A extinguisher (ordinary combustibles)', required: false, section: 'precautions', complianceRef: 'NFPA 51B harmonisé avec NFPA 10' },
-        { id: 'extinguisher_type_class_b', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe B (liquides inflammables)' : 'Class B extinguisher (flammable liquids)', required: false, section: 'precautions', complianceRef: 'NFPA 10' },
-        { id: 'extinguisher_type_class_c', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe C (équipements électriques)' : 'Class C extinguisher (electrical equipment)', required: false, section: 'precautions', complianceRef: 'NFPA 10' },
-        { id: 'extinguisher_positioning', type: 'textarea', label: language === 'fr' ? 'Positionnement et accessibilité extincteurs' : 'Extinguisher positioning and accessibility', required: true, section: 'precautions', validation: { legalRequirement: true }, complianceRef: 'NFPA 10' },
-        
-        // SECTION ZONES NON PERMISSIBLES
-        { id: 'non_permissible_zone_prep', type: 'textarea', label: language === 'fr' ? 'Préparation zones non permissibles' : 'Non-permissible zone preparation', required: true, section: 'precautions', validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Précisions annexes' },
-        { id: 'protection_system_compromise', type: 'radio', label: language === 'fr' ? 'Systèmes de protection incendie compromis ?' : 'Fire protection systems compromised?', required: true, section: 'precautions', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true } },
-        { id: 'material_ignition_points', type: 'textarea', label: language === 'fr' ? 'Points d\'inflammation matériaux présents' : 'Ignition points of present materials', required: true, section: 'precautions', validation: { legalRequirement: true } },
-        { id: 'temperature_vs_ignition_table', type: 'compliance_check', label: language === 'fr' ? 'Tableau températures vs points inflammation consulté' : 'Temperature vs ignition points table consulted', required: true, section: 'precautions', validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Nouvelles comparaisons' },
-        
-        // SECTION PHOTOS ET DOCUMENTATION
-        { id: 'photos_precautions', type: 'photo_gallery', label: language === 'fr' ? 'Photos mesures précaution et zones' : 'Precautionary measures and zone photos', required: true, section: 'precautions', validation: { legalRequirement: true } },
-        { id: 'area_clearance_radius', type: 'number', label: language === 'fr' ? 'Rayon dégagement sécuritaire (m)' : 'Safety clearance radius (m)', required: true, section: 'precautions', validation: { min: 10, legalRequirement: true } },
-        
-        // SECTION SIGNATURES
-        { id: 'applicant_signature', type: 'signature', label: language === 'fr' ? 'Signature demandeur/contractant' : 'Applicant/contractor signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
-        { id: 'fire_marshal_signature', type: 'signature', label: language === 'fr' ? 'Signature autorité incendie' : 'Fire authority signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
-        { id: 'safety_officer_signature', type: 'signature', label: language === 'fr' ? 'Signature responsable sécurité' : 'Safety officer signature', required: true, section: 'signatures', validation: { legalRequirement: true } }
-      ]
+      requiredFields: 18,
+      sections: {
+        identification: {
+          title: language === 'fr' ? 'Identification' : 'Identification',
+          fields: [
+            {
+              key: 'permit_number_hot',
+              label: language === 'fr' ? 'Numéro de permis unique' : 'Unique permit number',
+              type: 'text',
+              required: true,
+              validation: { legalRequirement: true }
+            },
+            {
+              key: 'work_location_precise',
+              label: language === 'fr' ? 'Lieu précis des travaux' : 'Precise work location',
+              type: 'text',
+              required: true,
+              validation: { legalRequirement: true }
+            },
+            {
+              key: 'contractor_company',
+              label: language === 'fr' ? 'Entreprise contractante' : 'Contracting company',
+              type: 'text',
+              required: true
+            }
+          ]
+        },
+        work_type: {
+          title: language === 'fr' ? 'Type de Travail' : 'Work Type',
+          fields: [
+            {
+              key: 'work_type_hot',
+              label: language === 'fr' ? 'Type de travail à chaud principal' : 'Primary hot work type',
+              type: 'select',
+              required: true,
+              options: language === 'fr' ? 
+                ['Soudage à l\'arc électrique', 'Soudage au gaz', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage avec étincelles', 'Autre'] :
+                ['Electric arc welding', 'Gas welding', 'Torch cutting', 'Plasma cutting', 'Grinding with sparks', 'Other'],
+              validation: { legalRequirement: true },
+              legalRef: 'NFPA 51B-2019'
+            },
+            {
+              key: 'work_description_detailed',
+              label: language === 'fr' ? 'Description détaillée des travaux' : 'Detailed work description',
+              type: 'textarea',
+              required: true,
+              validation: { legalRequirement: true }
+            }
+          ]
+        },
+        fire_watch: {
+          title: language === 'fr' ? 'Surveillance Incendie' : 'Fire Watch',
+          fields: [
+            {
+              key: 'fire_watch_duration',
+              label: language === 'fr' ? 'Durée surveillance incendie POST-TRAVAUX' : 'POST-WORK fire watch duration',
+              type: 'select',
+              required: true,
+              options: ['1 heure (NFPA 51B-2019)', '2 heures', 'Plus de 2 heures'],
+              validation: { legalRequirement: true },
+              legalRef: 'NFPA 51B-2019',
+              isCritical: true
+            },
+            {
+              key: 'fire_watch_person_assigned',
+              label: language === 'fr' ? 'Préposé surveillance incendie désigné' : 'Designated fire watch person',
+              type: 'text',
+              required: true,
+              validation: { legalRequirement: true },
+              isLegal: true
+            }
+          ]
+        }
+      }
     },
 
     // 3. PERMIS EXCAVATION CONFORME MUNICIPAL 2024
     {
       id: 'excavation-permit-municipal-2024',
-      name: language === 'fr' ? 'Permis d\'Excavation Conforme Municipal 2024' : 'Municipal Excavation Permit 2024 Compliant',
+      name: language === 'fr' ? 'Permis d\'Excavation Municipal 2024' : 'Municipal Excavation Permit 2024',
+      type: language === 'fr' ? 'Excavation' : 'Excavation',
+      norm: 'Municipal 2024',
+      status: language === 'fr' ? 'En Cours' : 'In Progress',
       category: language === 'fr' ? 'Construction' : 'Construction',
-      description: language === 'fr' ? 'Permis conforme réglements municipaux 2024 avec calculs automatiques profondeur/distance et assurances obligatoires' : 'Municipal regulations 2024 compliant permit with automatic depth/distance calculations and mandatory insurance',
+      description: language === 'fr' ? 'Permis conforme réglements municipaux 2024 avec calculs automatiques et assurances obligatoires' : 'Municipal regulations 2024 compliant permit with automatic calculations and mandatory insurance',
       authority: language === 'fr' ? 'Municipal / Ville de Montréal / MAMH' : 'Municipal / City of Montreal / MAMH',
       province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
       required: true,
       priority: 'high',
       duration: language === 'fr' ? 'Durée des travaux + période garantie' : 'Work duration + warranty period',
-      cost: language === 'fr' ? '200$ - 2000$ + dépôts garantie selon ampleur' : '$200 - $2000 + guarantee deposits by scope',
-      processingTime: language === 'fr' ? '2-4 semaines + inspections obligatoires' : '2-4 weeks + mandatory inspections',
+      cost: language === 'fr' ? '200$ - 2000$ + dépôts garantie' : '$200 - $2000 + guarantee deposits',
+      processingTime: language === 'fr' ? '2-4 semaines + inspections' : '2-4 weeks + inspections',
       renewalRequired: false,
-      legislation: language === 'fr' ? 'Règlements municipaux 2024, Code construction Québec, Règlement excavation domaine public' : 'Municipal regulations 2024, Quebec Building Code, Public domain excavation regulation',
+      legislation: language === 'fr' ? 'Règlements municipaux 2024, Code construction Québec' : 'Municipal regulations 2024, Quebec Building Code',
       contactInfo: {
         website: language === 'fr' ? 'Bureau des permis municipal' : 'Municipal permit office',
         phone: '311',
         email: 'permis@montreal.ca'
       },
       selected: false,
-      status: 'pending',
       complianceLevel: 'enhanced',
       lastUpdated: '2025-01-20',
-      formFields: [
-        // SECTION DEMANDEUR
-        { id: 'applicant_name_excavation', type: 'text', label: language === 'fr' ? 'Nom du demandeur' : 'Applicant name', required: true, section: 'applicant', validation: { legalRequirement: true } },
-        { id: 'applicant_company', type: 'text', label: language === 'fr' ? 'Entreprise/Organisation' : 'Company/Organization', required: true, section: 'applicant' },
-        { id: 'professional_engineer', type: 'text', label: language === 'fr' ? 'Ingénieur responsable (OIQ)' : 'Responsible engineer (OIQ)', required: true, section: 'applicant', validation: { legalRequirement: true } },
-        { id: 'contractor_excavator', type: 'text', label: language === 'fr' ? 'Entreprise excavatrice' : 'Excavating company', required: true, section: 'applicant', validation: { legalRequirement: true } },
-        
-        // SECTION CALCULS AUTOMATIQUES OBLIGATOIRES
-        { id: 'excavation_depth_calc', type: 'calculation', label: language === 'fr' ? 'Profondeur excavation (m)' : 'Excavation depth (m)', required: true, section: 'excavation', validation: { min: 0, legalRequirement: true }, calculation: { autoCalculate: true } },
-        { id: 'domain_public_distance', type: 'calculation', label: language === 'fr' ? 'Distance domaine public (m)' : 'Public domain distance (m)', required: true, section: 'excavation', validation: { min: 0, legalRequirement: true }, calculation: { autoCalculate: true } },
-        { id: 'permit_required_auto', type: 'compliance_check', label: language === 'fr' ? 'PERMIS REQUIS (auto-calculé)' : 'PERMIT REQUIRED (auto-calculated)', required: true, section: 'excavation', validation: { legalRequirement: true }, calculation: { formula: 'if(depth < 2 && distance < 2) OR (depth >= 2 && distance < depth*2) then REQUIRED', dependencies: ['excavation_depth_calc', 'domain_public_distance'], autoCalculate: true }, complianceRef: 'Règlement municipal excavation' },
-        
-        // SECTION ASSURANCES OBLIGATOIRES SPÉCIFIQUES
-        { id: 'insurance_amount_calc', type: 'calculation', label: language === 'fr' ? 'Montant assurance OBLIGATOIRE' : 'MANDATORY insurance amount', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, calculation: { formula: 'if(depth <= 4.5) then 1000000 else if(depth > 4.5) then 2000000 else 5000000', dependencies: ['excavation_depth_calc'], autoCalculate: true }, complianceRef: 'Règlement municipal assurances' },
-        { id: 'co_insurance_city', type: 'checkbox', label: language === 'fr' ? 'Co-assurance Ville AJOUTÉE à la police' : 'City co-insurance ADDED to policy', required: true, section: 'municipal_requirements', validation: { legalRequirement: true, critical: true }, complianceRef: 'Avenant obligatoire Ville' },
-        { id: 'insurance_certificate', type: 'file', label: language === 'fr' ? 'Certificat assurance avec avenant' : 'Insurance certificate with endorsement', required: true, section: 'municipal_requirements', validation: { legalRequirement: true } },
-        
-        // SECTION ÉTUDES TECHNIQUES OBLIGATOIRES
-        { id: 'geotechnical_study', type: 'file', label: language === 'fr' ? 'Étude géotechnique par ingénieur (≥2m)' : 'Geotechnical study by engineer (≥2m)', required: true, section: 'documents', validation: { legalRequirement: true }, complianceRef: 'Code construction' },
-        { id: 'shoring_plan_engineer', type: 'file', label: language === 'fr' ? 'Plan étançonnement signé ingénieur' : 'Shoring plan signed by engineer', required: true, section: 'documents', validation: { legalRequirement: true } },
-        { id: 'calculation_notes_engineer', type: 'file', label: language === 'fr' ? 'Notes de calculs ingénieur' : 'Engineer calculation notes', required: true, section: 'documents', validation: { legalRequirement: true } },
-        { id: 'blasting_plan_if_rock', type: 'file', label: language === 'fr' ? 'Plan dynamitage (si roc)' : 'Blasting plan (if rock)', required: false, section: 'documents', complianceRef: 'Règlement dynamitage municipal' },
-        
-        // SECTION LOCALISATION INFRASTRUCTURES OBLIGATOIRE
-        { id: 'info_excavation_request', type: 'compliance_check', label: language === 'fr' ? 'Demande Info-Excavation COMPLÉTÉE' : 'Info-Excavation request COMPLETED', required: true, section: 'safety', validation: { legalRequirement: true, critical: true }, complianceRef: 'https://www.info-ex.com - Loi fédérale' },
-        { id: 'municipal_networks_located', type: 'checkbox', label: language === 'fr' ? 'Réseaux municipaux localisés (aqueduc/égout)' : 'Municipal networks located (water/sewer)', required: true, section: 'safety', validation: { legalRequirement: true } },
-        { id: 'bell_energir_hydro_located', type: 'checkbox', label: language === 'fr' ? 'Bell/Énergir/Hydro-Québec localisés' : 'Bell/Energir/Hydro-Quebec located', required: true, section: 'safety', validation: { legalRequirement: true } },
-        { id: 'location_plans_provided', type: 'file', label: language === 'fr' ? 'Plans localisation infrastructures' : 'Infrastructure location plans', required: true, section: 'safety', validation: { legalRequirement: true } },
-        
-        // SECTION PROJET ET DESCRIPTION
-        { id: 'work_address_complete', type: 'textarea', label: language === 'fr' ? 'Adresse complète des travaux' : 'Complete work address', required: true, section: 'project', validation: { legalRequirement: true } },
-        { id: 'project_description_detailed', type: 'textarea', label: language === 'fr' ? 'Description détaillée du projet' : 'Detailed project description', required: true, section: 'project', validation: { legalRequirement: true } },
-        { id: 'soil_type_identified', type: 'select', label: language === 'fr' ? 'Type de sol identifié' : 'Identified soil type', required: true, section: 'excavation', options: language === 'fr' ? ['Argile', 'Sable fin', 'Sable grossier', 'Gravier', 'Roc altéré', 'Roc massif', 'Remblai', 'Sol mixte', 'Sol contaminé'] : ['Clay', 'Fine sand', 'Coarse sand', 'Gravel', 'Weathered rock', 'Solid rock', 'Fill', 'Mixed soil', 'Contaminated soil'], validation: { legalRequirement: true } },
-        { id: 'contamination_risk', type: 'radio', label: language === 'fr' ? 'Risque de contamination identifié ?' : 'Contamination risk identified?', required: true, section: 'excavation', options: language === 'fr' ? ['Oui', 'Non', 'Inconnu'] : ['Yes', 'No', 'Unknown'], validation: { legalRequirement: true } },
-        
-        // SECTION DÉPÔTS DE GARANTIE CALCULÉS
-        { id: 'surface_guarantee_deposit', type: 'calculation', label: language === 'fr' ? 'Dépôt garantie SURFACE (trottoir, arbres)' : 'SURFACE guarantee deposit (sidewalk, trees)', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, calculation: { formula: 'superficie * tarif_saison', autoCalculate: true } },
-        { id: 'underground_guarantee_deposit', type: 'calculation', label: language === 'fr' ? 'Dépôt garantie SOUTERRAIN (égout, aqueduc)' : 'UNDERGROUND guarantee deposit (sewer, water)', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, calculation: { formula: 'longueur * profondeur * tarif', autoCalculate: true } },
-        { id: 'seasonal_rate_applied', type: 'radio', label: language === 'fr' ? 'Période des travaux (tarifs différents)' : 'Work period (different rates)', required: true, section: 'municipal_requirements', options: language === 'fr' ? ['Été (1 avril - 30 nov)', 'Hiver (1 déc - 31 mars)'] : ['Summer (Apr 1 - Nov 30)', 'Winter (Dec 1 - Mar 31)'], validation: { legalRequirement: true } },
-        { id: 'material_type_repair', type: 'select', label: language === 'fr' ? 'Type matériau réparation' : 'Repair material type', required: true, section: 'municipal_requirements', options: language === 'fr' ? ['Asphalte enrobé', 'Béton standard', 'Pavé béton', 'Trottoir asphalte', 'Gazon/Terre', 'Piste cyclable'] : ['Asphalt pavement', 'Standard concrete', 'Concrete pavers', 'Asphalt sidewalk', 'Grass/Soil', 'Bike path'], validation: { legalRequirement: true } },
-        
-        // SECTION PLAN DE SÉCURITÉ
-        { id: 'safety_plan_detailed', type: 'radio', label: language === 'fr' ? 'Plan de sécurité détaillé préparé' : 'Detailed safety plan prepared', required: true, section: 'safety', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true } },
-        { id: 'safety_fencing', type: 'checkbox', label: language === 'fr' ? 'Clôturage sécuritaire installé' : 'Safety fencing installed', required: true, section: 'safety', validation: { legalRequirement: true } },
-        { id: 'municipal_inspection_scheduled', type: 'compliance_check', label: language === 'fr' ? 'Inspection municipale PLANIFIÉE' : 'Municipal inspection SCHEDULED', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, complianceRef: 'Obligation inspection avant/pendant/après' },
-        
-        // SECTION PHOTOS ET DOCUMENTATION
-        { id: 'photos_safety_site', type: 'photo_gallery', label: language === 'fr' ? 'Photos sécurité et état initial du site' : 'Safety and initial site condition photos', required: true, section: 'safety', validation: { legalRequirement: true } },
-        { id: 'site_plan_implementation', type: 'file', label: language === 'fr' ? 'Plan d\'implantation du site' : 'Site implementation plan', required: true, section: 'documents', validation: { legalRequirement: true } },
-        
-        // SECTION SIGNATURES
-        { id: 'applicant_signature_excavation', type: 'signature', label: language === 'fr' ? 'Signature demandeur' : 'Applicant signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
-        { id: 'engineer_signature', type: 'signature', label: language === 'fr' ? 'Signature ingénieur responsable' : 'Responsible engineer signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
-        { id: 'municipal_approval_signature', type: 'signature', label: language === 'fr' ? 'Approbation municipale' : 'Municipal approval', required: false, section: 'signatures' }
-      ]
+      requiredFields: 15,
+      sections: {
+        applicant: {
+          title: language === 'fr' ? 'Demandeur' : 'Applicant',
+          fields: [
+            {
+              key: 'applicant_name_excavation',
+              label: language === 'fr' ? 'Nom du demandeur' : 'Applicant name',
+              type: 'text',
+              required: true,
+              validation: { legalRequirement: true }
+            },
+            {
+              key: 'applicant_company',
+              label: language === 'fr' ? 'Entreprise/Organisation' : 'Company/Organization',
+              type: 'text',
+              required: true
+            },
+            {
+              key: 'professional_engineer',
+              label: language === 'fr' ? 'Ingénieur responsable (OIQ)' : 'Responsible engineer (OIQ)',
+              type: 'text',
+              required: true,
+              validation: { legalRequirement: true },
+              isLegal: true
+            }
+          ]
+        },
+        excavation: {
+          title: language === 'fr' ? 'Excavation' : 'Excavation',
+          fields: [
+            {
+              key: 'excavation_depth_calc',
+              label: language === 'fr' ? 'Profondeur excavation (m)' : 'Excavation depth (m)',
+              type: 'number',
+              required: true,
+              validation: { min: 0, legalRequirement: true }
+            },
+            {
+              key: 'domain_public_distance',
+              label: language === 'fr' ? 'Distance domaine public (m)' : 'Public domain distance (m)',
+              type: 'number',
+              required: true,
+              validation: { min: 0, legalRequirement: true }
+            }
+          ]
+        },
+        municipal_requirements: {
+          title: language === 'fr' ? 'Exigences Municipales' : 'Municipal Requirements',
+          fields: [
+            {
+              key: 'co_insurance_city',
+              label: language === 'fr' ? 'Co-assurance Ville AJOUTÉE à la police' : 'City co-insurance ADDED to policy',
+              type: 'checkbox',
+              required: true,
+              validation: { legalRequirement: true, critical: true },
+              legalRef: 'Avenant obligatoire Ville',
+              isCritical: true
+            },
+            {
+              key: 'info_excavation_request',
+              label: language === 'fr' ? 'Demande Info-Excavation COMPLÉTÉE' : 'Info-Excavation request COMPLETED',
+              type: 'checkbox',
+              required: true,
+              validation: { legalRequirement: true, critical: true },
+              legalRef: 'https://www.info-ex.com',
+              isCritical: true
+            }
+          ]
+        }
+      }
     }
   ];
 
   return basePermits;
 };
-// =================== COMPOSANT PRINCIPAL AVEC CONFORMITÉ 2024-2025 ===================
-const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
-  // =================== TRADUCTIONS ET CONFIGURATION ===================
+// =================== SECTION 3: LOGIQUE COMPLÈTE PREMIUM MOBILE ===================
+// À coller après la Section 2
+
+// =================== COMPOSANT PRINCIPAL PREMIUM OPTIMISÉ MOBILE ===================
+const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language, tenant, errors }) => {
   const t = getTexts(language);
   
-  // =================== ÉTATS ===================
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedProvince, setSelectedProvince] = useState('all');
-  const [expandedForms, setExpandedForms] = useState<{ [key: string]: boolean }>({});
-  const [complianceChecks, setComplianceChecks] = useState<{ [key: string]: ComplianceCheck[] }>({});
-  const [criticalAlerts, setCriticalAlerts] = useState<string[]>([]);
+  // =================== ÉTATS PRINCIPAUX ===================
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedProvince, setSelectedProvince] = useState<string>('');
+  const [expandedPermit, setExpandedPermit] = useState<string | null>(null);
+  const [permits, setPermits] = useState<Permit[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [currentSection, setCurrentSection] = useState<{ [permitId: string]: string }>({});
   
-  // =================== GESTION DES DONNÉES AVEC CONFORMITÉ ===================
-  const [permits, setPermits] = useState(() => {
-    if (formData.permits?.list && formData.permits.list.length > 0) {
-      return formData.permits.list;
-    }
-    return translatePermitsDatabase(language);
-  });
+  // =================== ÉTATS POUR FONCTIONNALITÉS AVANCÉES ===================
+  const [workers, setWorkers] = useState<{ [permitId: string]: WorkerEntry[] }>({});
+  const [photos, setPhotos] = useState<{ [permitId: string]: PhotoEntry[] }>({});
+  const [signatures, setSignatures] = useState<{ [permitId: string]: SignatureMetadata[] }>({});
+  const [gasReadings, setGasReadings] = useState<{ [permitId: string]: GasReading[] }>({});
+  const [complianceChecks, setComplianceChecks] = useState<{ [permitId: string]: ComplianceCheck[] }>({});
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState<{ [permitId: string]: number }>({});
+  const [photoViewMode, setPhotoViewMode] = useState<{ [permitId: string]: 'carousel' | 'grid' }>({});
 
-  // =================== TRADUCTION DYNAMIQUE AVEC CONFORMITÉ ===================
+  // =================== INITIALISATION DES PERMIS ===================
   useEffect(() => {
     const translatedPermits = translatePermitsDatabase(language);
-    const updatedPermits = translatedPermits.map(translatedPermit => {
-      const existingPermit = permits.find((p: Permit) => p.id === translatedPermit.id);
-      if (existingPermit) {
-        return {
-          ...translatedPermit,
-          selected: existingPermit.selected,
-          formData: existingPermit.formData,
-          status: existingPermit.status
-        };
+    setPermits(translatedPermits);
+    
+    // Initialiser les sections par défaut
+    translatedPermits.forEach((permit: Permit) => {
+      if (permit.sections) {
+        const firstSectionKey = Object.keys(permit.sections)[0];
+        setCurrentSection(prev => ({
+          ...prev,
+          [permit.id]: firstSectionKey
+        }));
       }
-      return translatedPermit;
+      
+      if (permit.selected) {
+        initializePermitData(permit.id);
+      }
     });
-    setPermits(updatedPermits);
   }, [language]);
 
-  // =================== VALIDATION CONFORMITÉ EN TEMPS RÉEL ===================
-  useEffect(() => {
-    validateCompliance();
-  }, [permits]);
-
-  const validateCompliance = () => {
-    const alerts: string[] = [];
-    const checks: { [key: string]: ComplianceCheck[] } = {};
-
-    permits.forEach((permit: Permit) => {
-      if (permit.selected && permit.formData) {
-        const permitChecks: ComplianceCheck[] = [];
-
-        // Validation espace clos
-        if (permit.id === 'confined-space-entry-2025') {
-          const o2Level = parseFloat(permit.formData.oxygen_level);
-          const gasLevel = parseFloat(permit.formData.combustible_gas_level);
-          const coLevel = parseFloat(permit.formData.carbon_monoxide_level);
-          const h2sLevel = parseFloat(permit.formData.hydrogen_sulfide_level);
-
-          if (o2Level < 19.5 || o2Level > 23.5) {
-            alerts.push(`CRITIQUE: Niveau O2 non conforme (${o2Level}%) - ARRÊT TRAVAUX REQUIS`);
-            permitChecks.push({
-              requirement: 'Oxygène 19.5-23.5%',
-              status: 'non-compliant',
-              details: `Niveau actuel: ${o2Level}%`,
-              reference: 'RSST Art. 302'
-            });
-          } else {
-            permitChecks.push({
-              requirement: 'Oxygène 19.5-23.5%',
-              status: 'compliant',
-              details: `Niveau conforme: ${o2Level}%`,
-              reference: 'RSST Art. 302'
-            });
-          }
-
-          if (gasLevel >= 10) {
-            alerts.push(`CRITIQUE: Gaz combustibles trop élevés (${gasLevel}% LIE) - ÉVACUATION IMMÉDIATE`);
-            permitChecks.push({
-              requirement: 'Gaz combustibles < 10% LIE',
-              status: 'non-compliant',
-              details: `Niveau critique: ${gasLevel}%`,
-              reference: 'RSST Art. 302'
-            });
-          }
-
-          if (!permit.formData.worker_age_verification) {
-            alerts.push('CRITIQUE: Vérification âge 18+ manquante - Obligation légale RSST Art. 298');
-            permitChecks.push({
-              requirement: 'Âge minimum 18 ans',
-              status: 'non-compliant',
-              details: 'Vérification non effectuée',
-              reference: 'RSST Art. 298 modifié 2023'
-            });
-          }
-        }
-
-        // Validation travail à chaud
-        if (permit.id === 'hot-work-permit-nfpa2019') {
-          if (permit.formData.fire_watch_duration !== '1 heure (NFPA 51B-2019)') {
-            alerts.push('ATTENTION: Surveillance incendie doit être 1 heure selon NFPA 51B-2019');
-            permitChecks.push({
-              requirement: 'Surveillance incendie 1 heure',
-              status: 'non-compliant',
-              details: 'Durée non conforme NFPA 51B-2019',
-              reference: 'NFPA 51B-2019'
-            });
-          }
-
-          if (!permit.formData.shift_reinspection) {
-            alerts.push('REQUIS: Réinspection par quart obligatoire selon NFPA 51B-2019');
-          }
-        }
-
-        // Validation excavation
-        if (permit.id === 'excavation-permit-municipal-2024') {
-          const depth = parseFloat(permit.formData.excavation_depth_calc || '0');
-          const distance = parseFloat(permit.formData.domain_public_distance || '0');
-          
-          const requiresPermit = (depth < 2 && distance < 2) || (depth >= 2 && distance < depth * 2);
-          
-          if (requiresPermit && !permit.formData.permit_required_auto) {
-            alerts.push('REQUIS: Permis excavation obligatoire selon calculs profondeur/distance');
-          }
-
-          if (!permit.formData.info_excavation_request) {
-            alerts.push('CRITIQUE: Info-Excavation obligatoire - Risque d\'accident grave');
-            permitChecks.push({
-              requirement: 'Info-Excavation complétée',
-              status: 'non-compliant',
-              details: 'Demande non effectuée',
-              reference: 'Loi fédérale'
-            });
-          }
-        }
-
-        checks[permit.id] = permitChecks;
-      }
-    });
-
-    setCriticalAlerts(alerts);
-    setComplianceChecks(checks);
-  };
-
-  // =================== CALCULS AUTOMATIQUES ===================
-  const calculateExcavationRequirements = (permitId: string, depth: number, distance: number) => {
-    const updatedPermits = permits.map((permit: Permit) => {
-      if (permit.id === permitId) {
-        const requiresPermit = (depth < 2 && distance < 2) || (depth >= 2 && distance < depth * 2);
-        const insuranceAmount = depth <= 4.5 ? 1000000 : depth > 4.5 ? 2000000 : 5000000;
-        
-        return {
-          ...permit,
-          formData: {
-            ...permit.formData,
-            permit_required_auto: requiresPermit,
-            insurance_amount_calc: insuranceAmount,
-            surface_guarantee_deposit: Math.round(depth * distance * 73), // Tarif été
-            underground_guarantee_deposit: Math.round(depth * 500) // Estimation
-          }
-        };
-      }
-      return permit;
-    });
-    setPermits(updatedPermits);
-    updateFormData(updatedPermits);
+  // =================== INITIALISATION DES DONNÉES PERMIS ===================
+  const initializePermitData = (permitId: string) => {
+    // Initialiser workers
+    if (!workers[permitId]) {
+      setWorkers(prev => ({
+        ...prev,
+        [permitId]: [{
+          id: 1,
+          name: '',
+          age: 0,
+          certification: '',
+          phone: '',
+          entryTime: '',
+          exitTime: null,
+          date: new Date().toISOString().split('T')[0],
+          over18: false
+        }]
+      }));
+    }
+    
+    // Initialiser photos
+    if (!photos[permitId]) {
+      setPhotos(prev => ({
+        ...prev,
+        [permitId]: []
+      }));
+    }
+    
+    // Initialiser index photos
+    if (!currentPhotoIndex[permitId]) {
+      setCurrentPhotoIndex(prev => ({
+        ...prev,
+        [permitId]: 0
+      }));
+    }
+    
+    // Initialiser mode vue photos
+    if (!photoViewMode[permitId]) {
+      setPhotoViewMode(prev => ({
+        ...prev,
+        [permitId]: 'carousel'
+      }));
+    }
   };
 
   // =================== FILTRAGE DES PERMIS ===================
   const filteredPermits = useMemo(() => {
     return permits.filter((permit: Permit) => {
       const matchesSearch = permit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           permit.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           permit.authority.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || permit.category === selectedCategory;
-      const matchesProvince = selectedProvince === 'all' || permit.province.includes(selectedProvince);
+                           permit.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = !selectedCategory || permit.category === selectedCategory;
+      const matchesProvince = !selectedProvince || permit.province.includes(selectedProvince);
+      
       return matchesSearch && matchesCategory && matchesProvince;
     });
   }, [permits, searchTerm, selectedCategory, selectedProvince]);
 
   const categories = useMemo(() => 
-    Array.from(new Set(permits.map((p: Permit) => p.category))), 
-    [permits]
-  );
-  
-  const provinces = ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'];
-  
-  const selectedPermits = useMemo(() => 
-    permits.filter((p: Permit) => p.selected), 
+    Array.from(new Set(permits.map((p: Permit) => p.category))) as string[], 
     [permits]
   );
 
+  const provinces = useMemo(() => 
+    Array.from(new Set(permits.flatMap((p: Permit) => p.province))) as string[], 
+    [permits]
+  );
+
+  // =================== STATISTIQUES TEMPS RÉEL ===================
   const stats = useMemo(() => {
-    const compliantCount = selectedPermits.filter((p: Permit) => {
-      const checks = complianceChecks[p.id] || [];
-      return checks.length === 0 || checks.every(check => check.status === 'compliant');
-    }).length;
-
+    const selectedPermits = permits.filter(p => p.selected);
+    const criticalPermits = permits.filter(p => p.priority === 'critical');
+    const pendingPermits = permits.filter(p => p.status === 'pending');
+    
     return {
-      totalPermits: permits.length,
+      available: permits.length,
       selected: selectedPermits.length,
-      critical: selectedPermits.filter((p: Permit) => p.priority === 'critical').length,
-      pending: selectedPermits.filter((p: Permit) => p.status === 'pending').length,
-      compliant: compliantCount,
-      nonCompliant: selectedPermits.length - compliantCount
+      critical: criticalPermits.length,
+      pending: pendingPermits.length,
+      compliant: Object.values(complianceChecks).flat().filter(c => c.status === 'compliant').length,
+      nonCompliant: Object.values(complianceChecks).flat().filter(c => c.status === 'non-compliant').length
     };
-  }, [permits, selectedPermits, complianceChecks]);
+  }, [permits, complianceChecks]);
 
-  // =================== HANDLERS ===================
-  const handlePermitToggle = (permitId: string) => {
-    const updatedPermits = permits.map((permit: Permit) => 
-      permit.id === permitId 
-        ? { ...permit, selected: !permit.selected }
-        : permit
-    );
-    setPermits(updatedPermits);
-    updateFormData(updatedPermits);
+  // =================== FONCTIONS UTILITAIRES ===================
+  const getPriorityColor = (priority: string): string => {
+    switch (priority) {
+      case 'low': return '#10B981';
+      case 'medium': return '#F59E0B';
+      case 'high': return '#EF4444';
+      case 'critical': return '#DC2626';
+      default: return '#6B7280';
+    }
   };
 
-  const updateFormData = (updatedPermits: Permit[]) => {
-    const selectedList = updatedPermits.filter((p: Permit) => p.selected);
-    const permitsData = {
-      list: updatedPermits,
-      selected: selectedList,
-      stats: {
-        totalPermits: updatedPermits.length,
-        selected: selectedList.length,
-        critical: selectedList.filter((p: Permit) => p.priority === 'critical').length,
-        pending: selectedList.filter((p: Permit) => p.status === 'pending').length
-      },
-      compliance: {
-        criticalAlerts: criticalAlerts,
-        checks: complianceChecks
-      }
-    };
-    onDataChange('permits', permitsData);
+  const getStatusColor = (status: string): string => {
+    switch (status) {
+      case 'pending': return '#F59E0B';
+      case 'submitted': return '#3B82F6';
+      case 'approved': return '#10B981';
+      case 'rejected': return '#EF4444';
+      case 'expired': return '#6B7280';
+      default: return '#6B7280';
+    }
   };
 
-  const handleFormFieldChange = (permitId: string, fieldId: string, value: any) => {
-    const updatedPermits = permits.map((permit: Permit) => {
+  const getComplianceColor = (level: string): string => {
+    switch (level) {
+      case 'basic': return '#10B981';
+      case 'standard': return '#3B82F6';
+      case 'enhanced': return '#8B5CF6';
+      case 'critical': return '#DC2626';
+      default: return '#6B7280';
+    }
+  };
+
+  const getCategoryIcon = (category: string): string => {
+    switch (category) {
+      case 'Sécurité':
+      case 'Safety':
+        return '🛡️';
+      case 'Construction':
+        return '🏗️';
+      case 'Radioprotection':
+      case 'Radiation Protection':
+        return '☢️';
+      case 'Équipements':
+      case 'Equipment':
+        return '⚙️';
+      default:
+        return '📋';
+    }
+  };
+
+  // =================== GESTION DES PERMIS ===================
+  const togglePermit = (permitId: string) => {
+    setPermits(prev => prev.map(permit => {
       if (permit.id === permitId) {
-        const updatedFormData = {
-          ...permit.formData,
-          [fieldId]: value
-        };
-
-        // Calculs automatiques pour excavation
-        if (permit.id === 'excavation-permit-municipal-2024') {
-          if (fieldId === 'excavation_depth_calc' || fieldId === 'domain_public_distance') {
-            const depth = parseFloat(fieldId === 'excavation_depth_calc' ? value : permit.formData?.excavation_depth_calc || '0');
-            const distance = parseFloat(fieldId === 'domain_public_distance' ? value : permit.formData?.domain_public_distance || '0');
-            
-            if (depth > 0 && distance >= 0) {
-              setTimeout(() => calculateExcavationRequirements(permitId, depth, distance), 100);
-            }
-          }
+        const newSelected = !permit.selected;
+        
+        if (newSelected) {
+          initializePermitData(permitId);
+        } else {
+          // Nettoyer les données quand désélectionné
+          cleanupPermitData(permitId);
         }
-
-        return {
-          ...permit,
-          formData: updatedFormData
-        };
+        
+        return { ...permit, selected: newSelected };
       }
       return permit;
-    });
-    setPermits(updatedPermits);
-    updateFormData(updatedPermits);
-  };
-
-  const toggleFormExpansion = (permitId: string) => {
-    setExpandedForms(prev => ({
-      ...prev,
-      [permitId]: !prev[permitId]
     }));
   };
 
-  // =================== FONCTIONS UTILITAIRES ===================
-  const getCategoryIcon = (category: string) => {
-    const categoryKey = category === 'Safety' ? 'Sécurité' : 
-                       category === 'Construction' ? 'Construction' :
-                       category === 'Radiation Protection' ? 'Radioprotection' :
-                       category === 'Equipment' ? 'Équipements' : category;
+  const cleanupPermitData = (permitId: string) => {
+    setWorkers(prev => {
+      const newWorkers = { ...prev };
+      delete newWorkers[permitId];
+      return newWorkers;
+    });
+    
+    setPhotos(prev => {
+      const newPhotos = { ...prev };
+      delete newPhotos[permitId];
+      return newPhotos;
+    });
+    
+    setCurrentPhotoIndex(prev => {
+      const newIndex = { ...prev };
+      delete newIndex[permitId];
+      return newIndex;
+    });
+    
+    setPhotoViewMode(prev => {
+      const newMode = { ...prev };
+      delete newMode[permitId];
+      return newMode;
+    });
+  };
+
+  const expandPermit = (permitId: string) => {
+    setExpandedPermit(expandedPermit === permitId ? null : permitId);
+  };
+
+  const handleFieldChange = (permitId: string, fieldId: string, value: any) => {
+    setPermits(prev => prev.map(permit => {
+      if (permit.id === permitId) {
+        return {
+          ...permit,
+          formData: {
+            ...permit.formData,
+            [fieldId]: value
+          }
+        };
+      }
+      return permit;
+    }));
+
+    // Déclencher validations temps réel si nécessaire
+    const permit = permits.find(p => p.id === permitId);
+    if (permit?.sections) {
+      const currentSectionData = permit.sections[currentSection[permitId]];
+      const field = currentSectionData?.fields?.find((f: any) => f.key === fieldId);
+      
+      if (field?.validation?.critical) {
+        validateField(permitId, fieldId, value, field);
+      }
+    }
+  };
+
+  // =================== VALIDATION TEMPS RÉEL ===================
+  const validateField = (permitId: string, fieldId: string, value: any, field: any) => {
+    const checks: ComplianceCheck[] = [];
+    
+    if (field.type === 'number' && field.validation) {
+      const numValue = parseFloat(value) || 0;
+      const min = field.validation.min || 0;
+      const max = field.validation.max || 100;
+      
+      if (numValue < min || numValue > max) {
+        checks.push({
+          key: `${permitId}_${fieldId}`,
+          requirement: field.label,
+          status: 'non-compliant',
+          details: `Valeur ${numValue} hors limites (${min}-${max})`,
+          reference: field.legalRef || 'Validation automatique'
+        });
+      } else {
+        checks.push({
+          key: `${permitId}_${fieldId}`,
+          requirement: field.label,
+          status: 'compliant',
+          details: `Valeur ${numValue} conforme`,
+          reference: field.legalRef || 'Validation automatique'
+        });
+      }
+    }
+    
+    if (fieldId === 'worker_age_verification') {
+      const permitWorkers = workers[permitId] || [];
+      const hasMinors = permitWorkers.some(w => w.age > 0 && w.age < 18);
+      
+      if (hasMinors) {
+        checks.push({
+          key: `${permitId}_age_check`,
+          requirement: 'Vérification âge travailleurs',
+          status: 'non-compliant',
+          details: 'Travailleur(s) mineur(s) détecté(s) - Violation Article 298 RSST',
+          reference: 'RSST Art. 298 modifié 2023'
+        });
+      } else {
+        checks.push({
+          key: `${permitId}_age_check`,
+          requirement: 'Vérification âge travailleurs',
+          status: 'compliant',
+          details: 'Tous les travailleurs sont âgés de 18 ans ou plus',
+          reference: 'RSST Art. 298 modifié 2023'
+        });
+      }
+    }
+    
+    setComplianceChecks(prev => ({
+      ...prev,
+      [permitId]: [
+        ...(prev[permitId] || []).filter(c => c.key !== `${permitId}_${fieldId}` && c.key !== `${permitId}_age_check`),
+        ...checks
+      ]
+    }));
+  };
+
+  // =================== GESTION DES TRAVAILLEURS ===================
+  const addWorker = (permitId: string) => {
+    setWorkers(prev => {
+      const currentWorkers = prev[permitId] || [];
+      const newWorker: WorkerEntry = {
+        id: Math.max(...currentWorkers.map(w => w.id || 0), 0) + 1,
+        name: '',
+        age: 0,
+        certification: '',
+        phone: '',
+        entryTime: '',
+        exitTime: null,
+        date: new Date().toISOString().split('T')[0],
+        over18: false
+      };
+      
+      return {
+        ...prev,
+        [permitId]: [...currentWorkers, newWorker]
+      };
+    });
+  };
+
+  const removeWorker = (permitId: string, workerId: number) => {
+    setWorkers(prev => ({
+      ...prev,
+      [permitId]: (prev[permitId] || []).filter(w => w.id !== workerId)
+    }));
+  };
+
+  const updateWorker = (permitId: string, workerId: number, field: keyof WorkerEntry, value: any) => {
+    setWorkers(prev => ({
+      ...prev,
+      [permitId]: (prev[permitId] || []).map(worker => {
+        if (worker.id === workerId) {
+          const updatedWorker = { ...worker, [field]: value };
+          
+          // Validation automatique âge 18+
+          if (field === 'age') {
+            updatedWorker.over18 = value >= 18;
+            
+            // Déclencher validation compliance
+            setTimeout(() => {
+              validateField(permitId, 'worker_age_verification', value, {
+                key: 'worker_age_verification',
+                label: 'Vérification âge travailleurs',
+                validation: { critical: true, legalRequirement: true }
+              });
+            }, 100);
+          }
+          
+          return updatedWorker;
+        }
+        return worker;
+      })
+    }));
+  };
+
+  // =================== GESTION DES PHOTOS ===================
+  const handlePhotoUpload = (permitId: string, files: File[]) => {
+    const newPhotos: PhotoEntry[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const photoId = Math.max(...(photos[permitId] || []).map(p => p.id || 0), 0) + i + 1;
+      
+      // Créer URL pour prévisualisation
+      const url = URL.createObjectURL(file);
+      
+      newPhotos.push({
+        id: photoId,
+        url: url,
+        name: file.name,
+        timestamp: new Date().toISOString(),
+        description: '',
+        gpsLocation: '',
+        compliance: true,
+        size: file.size,
+        uploadedAt: new Date().toISOString()
+      });
+    }
+    
+    setPhotos(prev => ({
+      ...prev,
+      [permitId]: [...(prev[permitId] || []), ...newPhotos]
+    }));
+  };
+
+  const removePhoto = (permitId: string, photoId: number) => {
+    setPhotos(prev => {
+      const updatedPhotos = (prev[permitId] || []).filter(p => p.id !== photoId);
+      
+      // Ajuster l'index si nécessaire
+      const currentIndex = currentPhotoIndex[permitId] || 0;
+      if (currentIndex >= updatedPhotos.length && updatedPhotos.length > 0) {
+        setCurrentPhotoIndex(prevIndex => ({
+          ...prevIndex,
+          [permitId]: updatedPhotos.length - 1
+        }));
+      }
+      
+      return {
+        ...prev,
+        [permitId]: updatedPhotos
+      };
+    });
+  };
+
+  const updatePhotoIndex = (permitId: string, index: number) => {
+    setCurrentPhotoIndex(prev => ({
+      ...prev,
+      [permitId]: index
+    }));
+  };
+
+  const updateViewMode = (permitId: string, mode: 'carousel' | 'grid') => {
+    setPhotoViewMode(prev => ({
+      ...prev,
+      [permitId]: mode
+    }));
+  };
+
+  // =================== CALCULS AUTOMATIQUES ===================
+  const calculateExcavationRequirements = (permitId: string, depth: number, distance: number) => {
+    let permitRequired = false;
+    let insuranceAmount = '1M$';
+    let surfaceDeposit = '5000$';
+    let undergroundDeposit = '10000$';
+    
+    // Logique calculs municipaux
+    if (depth > 1.2 || distance < 3) {
+      permitRequired = true;
+      
+      if (depth > 3) {
+        insuranceAmount = '2M$';
+        surfaceDeposit = '15000$';
+        undergroundDeposit = '25000$';
+      } else if (depth > 2) {
+        insuranceAmount = '1.5M$';
+        surfaceDeposit = '10000$';
+        undergroundDeposit = '20000$';
+      }
+    }
+    
+    // Mettre à jour les champs calculés
+    handleFieldChange(permitId, 'permit_required_auto', permitRequired);
+    handleFieldChange(permitId, 'insurance_amount_calc', insuranceAmount);
+    handleFieldChange(permitId, 'surface_guarantee_deposit', surfaceDeposit);
+    handleFieldChange(permitId, 'underground_guarantee_deposit', undergroundDeposit);
+  };
+
+  // =================== SAUVEGARDE DES DONNÉES ===================
+  const saveProgress = (permitId: string) => {
+    const permitData = {
+      workers: workers[permitId] || [],
+      photos: photos[permitId] || [],
+      complianceChecks: complianceChecks[permitId] || [],
+      currentSection: currentSection[permitId] || 'identification',
+      lastSaved: new Date().toISOString()
+    };
+    
+    // Sauvegarder via la prop onDataChange
+    onDataChange('permits', {
+      ...formData.permits,
+      [permitId]: permitData
+    });
+  };
+
+  // =================== RENDU DU COMPOSANT PRINCIPAL ===================
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      <div className="container mx-auto px-4 py-4 lg:py-8">
+        
+        {/* En-tête avec titre et statistiques PREMIUM */}
+        <div className="mb-6 lg:mb-8">
+          <div className="text-center mb-6 lg:mb-8">
+            <div className="relative inline-block">
+              <h1 className="text-2xl lg:text-5xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent mb-2 lg:mb-3">
+                {t.title}
+              </h1>
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 blur-3xl opacity-20 -z-10"></div>
+            </div>
+            <p className="text-gray-300 text-sm lg:text-lg max-w-4xl mx-auto leading-relaxed px-4">
+              {t.subtitle}
+            </p>
+          </div>
+
+          {/* Statistiques temps réel PREMIUM - Layout mobile optimisé */}
+          <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 lg:gap-4 mb-6 lg:mb-8">
+            {[
+              { value: stats.available, label: t.stats.available, color: 'from-blue-500 to-cyan-500', icon: '📊' },
+              { value: stats.selected, label: t.stats.selected, color: 'from-green-500 to-emerald-500', icon: '✅' },
+              { value: stats.critical, label: t.stats.critical, color: 'from-red-500 to-rose-500', icon: '🚨' },
+              { value: stats.pending, label: t.stats.pending, color: 'from-yellow-500 to-orange-500', icon: '⏳' },
+              { value: stats.compliant, label: t.stats.compliant, color: 'from-green-500 to-teal-500', icon: '🛡️' },
+              { value: stats.nonCompliant, label: t.stats.nonCompliant, color: 'from-red-500 to-pink-500', icon: '⚠️' }
+            ].map((stat, index) => (
+              <div key={index} className="group relative">
+                <div className={`absolute inset-0 bg-gradient-to-r ${stat.color} rounded-xl lg:rounded-2xl blur-lg lg:blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-300`}></div>
+                <div className="relative bg-white/10 backdrop-blur-xl rounded-xl lg:rounded-2xl p-3 lg:p-6 border border-white/20 hover:border-white/30 transition-all duration-300 transform hover:scale-105">
+                  <div className="text-center">
+                    <div className="text-lg lg:text-4xl mb-1 lg:mb-2">{stat.icon}</div>
+                    <div className={`text-xl lg:text-3xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>
+                      {stat.value}
+                    </div>
+                    <div className="text-xs lg:text-sm text-gray-300 font-medium">{stat.label}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Barre de recherche PREMIUM - Mobile optimisée */}
+          <div className="relative group mb-6 lg:mb-8">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 rounded-2xl lg:rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
+            <div className="relative bg-white/10 backdrop-blur-xl rounded-2xl lg:rounded-3xl border border-white/20 p-4 lg:p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+                <div className="relative group/search">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 lg:w-5 lg:h-5 group-hover/search:text-blue-400 transition-colors" />
+                  <input
+                    type="text"
+                    placeholder={t.searchPlaceholder}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 lg:pl-12 pr-4 py-3 lg:py-4 bg-white/10 border border-white/20 rounded-xl lg:rounded-2xl text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-300 backdrop-blur-sm text-sm lg:text-base"
+                  />
+                </div>
+                
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-4 py-3 lg:py-4 bg-white/10 border border-white/20 rounded-xl lg:rounded-2xl text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-300 backdrop-blur-sm text-sm lg:text-base"
+                >
+                  <option value="" className="bg-slate-800">{t.allCategories}</option>
+                  {categories.map((category: string) => (
+                    <option key={category} value={category} className="bg-slate-800">
+                      {(t.categories as any)[category] || category}
+                    </option>
+                  ))}
+                </select>
+                
+                <select
+                  value={selectedProvince}
+                  onChange={(e) => setSelectedProvince(e.target.value)}
+                  className="w-full px-4 py-3 lg:py-4 bg-white/10 border border-white/20 rounded-xl lg:rounded-2xl text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-300 backdrop-blur-sm text-sm lg:text-base"
+                >
+                  <option value="" className="bg-slate-800">{t.allProvinces}</option>
+                  {provinces.map((province: string) => (
+                    <option key={province} value={province} className="bg-slate-800">{province}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Liste des permis PREMIUM */}
+        <div className="space-y-4 lg:space-y-8">
+          {filteredPermits.length === 0 ? (
+            <div className="text-center py-12 lg:py-16">
+              <div className="relative inline-block">
+                <FileText className="w-16 h-16 lg:w-24 lg:h-24 mx-auto text-gray-400 mb-4 lg:mb-6" />
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 blur-2xl opacity-20"></div>
+              </div>
+              <h3 className="text-xl lg:text-2xl font-semibold text-gray-300 mb-2 lg:mb-3">{t.messages.noResults}</h3>
+              <p className="text-gray-400 text-base lg:text-lg">{t.messages.modifySearch}</p>
+            </div>
+          ) : (
+            filteredPermits.map((permit: Permit) => (
+              <PermitCard
+                key={permit.id}
+                permit={permit}
+                isSelected={permit.selected}
+                isExpanded={expandedPermit === permit.id}
+                complianceChecks={complianceChecks[permit.id] || []}
+                workers={workers[permit.id] || []}
+                photos={photos[permit.id] || []}
+                currentSection={currentSection[permit.id] || 'identification'}
+                currentPhotoIndex={currentPhotoIndex[permit.id] || 0}
+                viewMode={photoViewMode[permit.id] || 'carousel'}
+                onSelect={() => togglePermit(permit.id)}
+                onFill={() => expandPermit(permit.id)}
+                onValidate={() => {/* Logique validation */}}
+                onGeneratePDF={() => {/* Logique PDF */}}
+                onExpand={() => expandPermit(permit.id)}
+                onToggle={() => togglePermit(permit.id)}
+                onSectionChange={(section) => setCurrentSection(prev => ({ ...prev, [permit.id]: section }))}
+                onComplianceUpdate={(checks) => setComplianceChecks(prev => ({ ...prev, [permit.id]: checks }))}
+                onWorkersUpdate={(newWorkers) => setWorkers(prev => ({ ...prev, [permit.id]: newWorkers }))}
+                onPhotosUpdate={(newPhotos) => setPhotos(prev => ({ ...prev, [permit.id]: newPhotos }))}
+                onPhotoIndexChange={(index) => updatePhotoIndex(permit.id, index)}
+                onViewModeChange={(mode) => updateViewMode(permit.id, mode)}
+                onSaveProgress={() => saveProgress(permit.id)}
+                onFieldChange={(fieldId, value) => handleFieldChange(permit.id, fieldId, value)}
+                onAddWorker={() => addWorker(permit.id)}
+                onRemoveWorker={(workerId) => removeWorker(permit.id, workerId)}
+                onUpdateWorker={(workerId, field, value) => updateWorker(permit.id, workerId, field, value)}
+                onPhotoUpload={(files) => handlePhotoUpload(permit.id, files)}
+                onRemovePhoto={(photoId) => removePhoto(permit.id, photoId)}
+                t={t}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+// =================== SECTION 4A: PermitCard Ultra-Premium ===================
+// À coller après votre Section 3 dans Step4Permits.tsx
+
+// Composant PermitCard ultra-premium (COMPATIBLE avec votre code existant)
+const PermitCardUltraPremium: React.FC<{
+  permit: Permit;
+  isSelected: boolean;
+  isExpanded: boolean;
+  complianceChecks: ComplianceCheck[];
+  workers: WorkerEntry[];
+  photos: PhotoEntry[];
+  currentSection: string;
+  currentPhotoIndex: number;
+  viewMode: 'carousel' | 'grid';
+  onToggle: () => void;
+  onFieldChange: (fieldId: string, value: any) => void;
+  onAddWorker: (worker: WorkerEntry) => void;
+  onRemoveWorker: (workerId: number) => void;
+  onPhotoIndexChange: (index: number) => void;
+  onViewModeChange: (mode: 'carousel' | 'grid') => void;
+}> = ({ 
+  permit, 
+  isSelected, 
+  isExpanded, 
+  complianceChecks, 
+  workers, 
+  photos, 
+  currentSection,
+  currentPhotoIndex,
+  viewMode,
+  onToggle, 
+  onFieldChange,
+  onAddWorker,
+  onRemoveWorker,
+  onPhotoIndexChange,
+  onViewModeChange
+}) => {
+  // État local pour la gestion du formulaire
+  const [currentFormSection, setCurrentFormSection] = useState('identification');
+  const hasViolations = complianceChecks.some(check => check.status === 'non-compliant');
+
+  // IMPORTANT: Utilise EXACTEMENT votre logique existante
+  const getCategoryIcon = () => {
+    const categoryKey = permit.category === 'Safety' ? 'Sécurité' : 
+                       permit.category === 'Construction' ? 'Construction' :
+                       permit.category === 'Radiation Protection' ? 'Radioprotection' :
+                       permit.category === 'Equipment' ? 'Équipements' : permit.category;
     
     switch (categoryKey) {
       case 'Sécurité': return '🛡️';
@@ -938,8 +1581,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
+  const getPriorityColor = () => {
+    switch (permit.priority) {
       case 'critical': return '#ef4444';
       case 'high': return '#f97316';
       case 'medium': return '#eab308';
@@ -948,8 +1591,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = () => {
+    switch (permit.status) {
       case 'approved': return '#22c55e';
       case 'submitted': return '#3b82f6';
       case 'pending': return '#eab308';
@@ -959,8 +1602,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     }
   };
 
-  const getComplianceColor = (level: string) => {
-    switch (level) {
+  const getComplianceColor = () => {
+    switch (permit.complianceLevel) {
       case 'critical': return '#dc2626';
       case 'enhanced': return '#059669';
       case 'standard': return '#2563eb';
@@ -969,1283 +1612,1843 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     }
   };
 
-  // =================== COMPOSANT FORMULAIRE AVEC VALIDATION ===================
-  const PermitForm = ({ permit }: { permit: Permit }) => {
-    const isExpanded = expandedForms[permit.id];
+  // Sections disponibles pour le formulaire
+  const formSections = {
+    identification: ['space_identification', 'project_name', 'location_precise', 'permit_date'],
+    gas_monitoring: ['oxygen_level', 'combustible_gas_level', 'carbon_monoxide_level', 'continuous_monitoring'],
+    workers: ['worker_age_verification', 'authorized_workers'],
+    photos: ['photos_documentation'],
+    signatures: ['supervisor_signature', 'attendant_signature']
+  };
+
+  // Fonction pour rendre le modal du formulaire avec VOTRE style glassmorphisme
+  const renderFormModal = () => {
     if (!isExpanded) return null;
 
-    const fieldsBySection = permit.formFields?.reduce((acc, field) => {
-      const section = field.section || 'general';
-      if (!acc[section]) acc[section] = [];
-      acc[section].push(field);
-      return acc;
-    }, {} as { [key: string]: FormField[] }) || {};
-
-    const permitChecks = complianceChecks[permit.id] || [];
-    const hasViolations = permitChecks.some(check => check.status === 'non-compliant');
-
-    const renderField = (field: FormField) => {
-      const value = permit.formData?.[field.id] || '';
-      const hasError = field.validation?.critical && !value;
-      
-      // Rendu des champs selon type avec validation
-      switch (field.type) {
-        case 'gas_meter':
-          const numValue = parseFloat(value) || 0;
-          const isCompliant = field.validation ? 
-            numValue >= (field.validation.min || 0) && 
-            numValue <= (field.validation.max || 100) : true;
-          
-          return (
-            <div className="gas-meter-container">
-              <div className="gas-meter-display">
-                <input
-                  type="number"
-                  step="0.1"
-                  id={field.id}
-                  value={value}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    handleFormFieldChange(permit.id, field.id, e.target.value);
-                  }}
-                  className={`gas-meter-input ${!isCompliant ? 'critical-violation' : 'compliant'}`}
-                  placeholder={field.placeholder}
-                  required={field.required}
-                />
-                <div className={`gas-status ${!isCompliant ? 'non-compliant' : 'compliant'}`}>
-                  {!isCompliant ? (
-                    <AlertTriangle size={16} />
-                  ) : (
-                    <CheckCircle size={16} />
-                  )}
-                  <span>{!isCompliant ? t.gasMeasurements.nonCompliant : t.gasMeasurements.compliant}</span>
+    return (
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-50 flex items-center justify-center p-4">
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(51, 65, 85, 0.95) 100%)',
+          backdropFilter: 'blur(30px)',
+          border: '1px solid rgba(100, 116, 139, 0.3)',
+          borderRadius: '24px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+          width: '100%',
+          maxWidth: '1200px',
+          maxHeight: '90vh',
+          overflow: 'hidden'
+        }}>
+          {/* Header Premium avec glassmorphisme */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(147, 51, 234, 0.1) 100%)',
+            backdropFilter: 'blur(20px)',
+            borderBottom: '1px solid rgba(100, 116, 139, 0.3)',
+            padding: '24px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ fontSize: '40px' }}>{getCategoryIcon()}</div>
+                <div>
+                  <h2 style={{
+                    fontSize: '24px',
+                    fontWeight: '800',
+                    background: 'linear-gradient(135deg, #60a5fa, #a78bfa)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    margin: '0 0 8px'
+                  }}>
+                    {permit.name}
+                  </h2>
+                  <p style={{ color: '#cbd5e1', fontSize: '14px', margin: 0 }}>{permit.description}</p>
                 </div>
               </div>
-              {!isCompliant && field.validation?.message && (
-                <div className="critical-alert">
-                  <AlertCircle size={14} />
-                  {field.validation.message}
-                </div>
-              )}
+              <button
+                onClick={onToggle}
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.1))',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#fca5a5',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'scale(1.1)';
+                  e.target.style.boxShadow = '0 8px 25px rgba(239, 68, 68, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'scale(1)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              >
+                <X size={24} />
+              </button>
             </div>
-          );
-
-        case 'calculation':
-          const calculatedValue = field.calculation?.autoCalculate ? 'AUTO' : value;
-          return (
-            <div className="calculation-field">
-              <div className="calculation-display">
-                <span className="calculation-label">{calculatedValue}</span>
+            
+            {/* Navigation par sections avec design premium */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
+              {Object.keys(formSections).map((section) => (
                 <button
-                  type="button"
-                  className="calculate-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Trigger calculation
-                    if (field.calculation?.autoCalculate) {
-                      // Auto-calculation logic here
+                  key={section}
+                  onClick={() => setCurrentFormSection(section)}
+                  style={{
+                    padding: '12px 20px',
+                    borderRadius: '12px',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.3s ease',
+                    border: 'none',
+                    cursor: 'pointer',
+                    ...(currentFormSection === section ? {
+                      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))',
+                      color: '#60a5fa',
+                      border: '1px solid rgba(59, 130, 246, 0.5)',
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+                    } : {
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      color: '#94a3b8',
+                      border: '1px solid rgba(100, 116, 139, 0.3)'
+                    })
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentFormSection !== section) {
+                      e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                      e.target.style.color = '#ffffff';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentFormSection !== section) {
+                      e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+                      e.target.style.color = '#94a3b8';
                     }
                   }}
                 >
-                  {t.actions.calculate}
+                  {section.charAt(0).toUpperCase() + section.slice(1).replace('_', ' ')}
                 </button>
-              </div>
-            </div>
-          );
-
-        case 'compliance_check':
-          const isChecked = !!value;
-          return (
-            <div className="compliance-check">
-              <label className="compliance-label">
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    handleFormFieldChange(permit.id, field.id, e.target.checked);
-                  }}
-                  required={field.required}
-                />
-                <span className={`compliance-text ${isChecked ? 'compliant' : 'pending'}`}>
-                  {field.label}
-                </span>
-                {field.complianceRef && (
-                  <span className="compliance-ref">({field.complianceRef})</span>
-                )}
-              </label>
-            </div>
-          );
-
-        case 'alert_indicator':
-          return (
-            <div className={`alert-indicator ${field.alert?.level || 'info'}`}>
-              <AlertTriangle size={16} />
-              <span>{field.alert?.message || field.label}</span>
-            </div>
-          );
-
-        // Types de champs standards (text, number, etc.)
-        default:
-          return (
-            <input
-              type={field.type}
-              id={field.id}
-              value={value}
-              onChange={(e) => {
-                e.stopPropagation();
-                handleFormFieldChange(permit.id, field.id, e.target.value);
-              }}
-              placeholder={field.placeholder}
-              required={field.required}
-              className={`form-input ${hasError ? 'error' : ''}`}
-            />
-          );
-      }
-    };
-
-    return (
-      <div className="permit-form">
-        <div className="form-header">
-          <div className="form-title-section">
-            <h3>{permit.name}</h3>
-            <div className="compliance-badges">
-              <span className={`compliance-badge ${permit.complianceLevel}`}>
-                {(t.complianceLevels as any)[permit.complianceLevel]}
-              </span>
-              <span className="last-updated">
-                Mis à jour: {permit.lastUpdated}
-              </span>
-            </div>
-          </div>
-          <div className="form-actions">
-            <button className="form-action-btn validate" onClick={() => validateCompliance()}>
-              <Shield size={16} />
-              {t.actions.validate}
-            </button>
-            <button className="form-action-btn save">
-              <Save size={16} />
-              {t.actions.save}
-            </button>
-            <button className="form-action-btn submit">
-              <Mail size={16} />
-              {t.actions.submit}
-            </button>
-          </div>
-        </div>
-
-        {/* Alertes critiques */}
-        {hasViolations && (
-          <div className="critical-violations-panel">
-            <div className="violations-header">
-              <AlertTriangle size={20} />
-              <span>{t.alerts.critical}</span>
-            </div>
-            {permitChecks.filter(check => check.status === 'non-compliant').map((check, index) => (
-              <div key={index} className="violation-item">
-                <span className="violation-requirement">{check.requirement}</span>
-                <span className="violation-details">{check.details}</span>
-                <span className="violation-reference">{check.reference}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Vérifications de conformité */}
-        {permitChecks.length > 0 && (
-          <div className="compliance-panel">
-            <h4>📋 Vérifications de conformité</h4>
-            <div className="compliance-grid">
-              {permitChecks.map((check, index) => (
-                <div key={index} className={`compliance-item ${check.status}`}>
-                  <div className="compliance-status">
-                    {check.status === 'compliant' ? 
-                      <CheckCircle size={16} /> : 
-                      <AlertTriangle size={16} />
-                    }
-                  </div>
-                  <div className="compliance-details">
-                    <span className="compliance-requirement">{check.requirement}</span>
-                    <span className="compliance-reference">{check.reference}</span>
-                  </div>
-                </div>
               ))}
             </div>
           </div>
-        )}
 
-        <div className="form-content">
-          {Object.entries(fieldsBySection).map(([sectionName, fields]: [string, FormField[]]) => (
-            <div key={sectionName} className="form-section-group">
-              <h4 className="form-section-title">
-                {(t.sections as any)[sectionName] || sectionName}
-              </h4>
-              <div className="form-fields">
-                {fields.map((field: FormField) => (
-                  <div key={field.id} className="form-field">
-                    <label className="form-label" htmlFor={field.id}>
-                      {field.label}
-                      {field.required && <span className="required">*</span>}
-                      {field.validation?.legalRequirement && (
-                        <span className="legal-requirement">⚖️ LÉGAL</span>
-                      )}
-                      {field.validation?.critical && (
-                        <span className="critical-requirement">🚨 CRITIQUE</span>
-                      )}
-                    </label>
-                    {renderField(field)}
-                    {field.validation?.message && (
-                      <div className="field-help">{field.validation.message}</div>
-                    )}
-                    {field.complianceRef && (
-                      <div className="compliance-reference">
-                        📖 Réf: {field.complianceRef}
-                      </div>
-                    )}
-                  </div>
-                ))}
+          {/* Contenu du formulaire - sera complété dans Section 4B */}
+          <div style={{ padding: '24px', overflowY: 'auto', maxHeight: '60vh' }}>
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px', 
+              color: '#94a3b8' 
+            }}>
+              <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+              <p>Section {currentFormSection} - Composants en cours de développement...</p>
+              <p style={{ fontSize: '12px', marginTop: '8px' }}>
+                FormField, PhotoGallery et WorkerCard seront ajoutés en Section 4B
+              </p>
+            </div>
+          </div>
+
+          {/* Footer avec actions */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
+            backdropFilter: 'blur(20px)',
+            borderTop: '1px solid rgba(100, 116, 139, 0.3)',
+            padding: '24px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button style={{
+                padding: '12px 24px',
+                background: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2))',
+                color: '#cbd5e1',
+                borderRadius: '12px',
+                border: '1px solid rgba(100, 116, 139, 0.3)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Save size={18} />
+                Précédent
+              </button>
+              
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button style={{
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(14, 165, 233, 0.2))',
+                  color: '#22d3ee',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(6, 182, 212, 0.3)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <Save size={18} />
+                  Sauvegarder
+                </button>
+                <button style={{
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2))',
+                  color: '#4ade80',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <CheckCircle size={18} />
+                  Suivant
+                </button>
               </div>
             </div>
-          ))}
+          </div>
         </div>
       </div>
     );
   };
 
-  // =================== RENDU PRINCIPAL ===================
+  // Interface de la carte principale (UTILISE VOS STYLES EXISTANTS)
   return (
     <>
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .step4-container { padding: 0; color: #ffffff; scroll-behavior: auto !important; }
-          
-          /* =================== HEADER PREMIUM =================== */
-          .permits-header { 
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(147, 51, 234, 0.1)); 
-            border: 1px solid rgba(59, 130, 246, 0.3); 
-            border-radius: 20px; 
-            padding: 24px; 
-            margin-bottom: 28px; 
-            backdrop-filter: blur(20px);
-            position: relative;
-            overflow: hidden;
-          }
-          .permits-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
-            border-radius: 20px 20px 0 0;
-          }
-          .permits-title { 
-            color: #ffffff; 
-            font-size: 24px; 
-            font-weight: 800; 
-            margin-bottom: 8px; 
-            display: flex; 
-            align-items: center; 
-            gap: 12px;
-            background: linear-gradient(135deg, #60a5fa, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-          }
-          
-          /* =================== ALERTES CRITIQUES PREMIUM =================== */
-          .critical-alerts { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1)); 
-            border: 2px solid #ef4444; 
-            border-radius: 16px; 
-            padding: 20px; 
-            margin-bottom: 24px; 
-            backdrop-filter: blur(20px);
-            box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
-            animation: pulse-critical 2s infinite;
-          }
-          @keyframes pulse-critical {
-            0%, 100% { box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3); }
-            50% { box-shadow: 0 12px 40px rgba(239, 68, 68, 0.5); }
-          }
-          .critical-alerts h3 { 
-            color: #ff6b6b; 
-            margin: 0 0 16px; 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            font-size: 18px;
-            font-weight: 700;
-          }
-          .alert-item { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
-            padding: 12px 16px; 
-            border-radius: 10px; 
-            margin-bottom: 10px; 
-            color: #fee2e2; 
-            font-size: 14px; 
-            font-weight: 500;
-            border-left: 4px solid #ef4444;
-          }
-          
-          /* =================== STATISTIQUES PREMIUM =================== */
-          .permits-stats { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
-            gap: 20px; 
-            margin-top: 20px; 
-          }
-          .stat-item { 
-            text-align: center; 
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6)); 
-            padding: 20px 16px; 
-            border-radius: 16px; 
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            backdrop-filter: blur(20px);
-            transition: all 0.4s ease;
-            position: relative;
-            overflow: hidden;
-          }
-          .stat-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-          }
-          .stat-item:hover::before { opacity: 1; }
-          .stat-item:hover { 
-            transform: translateY(-4px); 
-            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
-            border-color: rgba(59, 130, 246, 0.5);
-          }
-          .stat-item.compliant { 
-            border: 2px solid #22c55e; 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.1));
-          }
-          .stat-item.non-compliant { 
-            border: 2px solid #ef4444; 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.1));
-          }
-          .stat-value { 
-            font-size: 28px; 
-            font-weight: 800; 
-            background: linear-gradient(135deg, #60a5fa, #34d399);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 8px; 
-          }
-          .stat-label { 
-            font-size: 12px; 
-            color: #94a3b8; 
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          
-          /* =================== SECTION RECHERCHE PREMIUM =================== */
-          .search-section { 
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6)); 
-            backdrop-filter: blur(20px); 
-            border: 1px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 20px; 
-            padding: 24px; 
-            margin-bottom: 28px; 
-          }
-          .search-grid { 
-            display: grid; 
-            grid-template-columns: 1fr auto auto; 
-            gap: 16px; 
-            align-items: end; 
-          }
-          .search-input-wrapper { position: relative; }
-          .search-icon { 
-            position: absolute; 
-            left: 16px; 
-            top: 50%; 
-            transform: translateY(-50%); 
-            color: #94a3b8; 
-            z-index: 10; 
-          }
-          .search-field { 
-            width: 100%; 
-            padding: 16px 16px 16px 48px; 
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8)); 
-            border: 2px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 16px; 
-            color: #ffffff; 
-            font-size: 16px; 
-            transition: all 0.3s ease; 
-          }
-          .search-field:focus { 
-            outline: none; 
-            border-color: #3b82f6; 
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9)); 
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-          }
-          .filter-select { 
-            padding: 16px 20px; 
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8)); 
-            border: 2px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 16px; 
-            color: #ffffff; 
-            font-size: 14px; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            min-width: 180px; 
-          }
-          .filter-select:focus { 
-            outline: none; 
-            border-color: #3b82f6; 
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-          }
-          
-          /* =================== CARTES PERMIS PREMIUM =================== */
-          .permits-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); 
-            gap: 24px; 
-          }
-          .permit-card { 
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6)); 
-            backdrop-filter: blur(20px); 
-            border: 1px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 20px; 
-            padding: 24px; 
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
-            position: relative; 
-            overflow: hidden;
-          }
-          .permit-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-          }
-          .permit-card:hover::before { opacity: 1; }
-          .permit-card:hover { 
-            transform: translateY(-8px) scale(1.02); 
-            border-color: rgba(59, 130, 246, 0.5); 
-            box-shadow: 
-              0 20px 40px rgba(0, 0, 0, 0.3),
-              0 0 0 1px rgba(59, 130, 246, 0.2);
-          }
-          .permit-card.selected { 
-            border-color: #3b82f6; 
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(30, 41, 59, 0.8)); 
-            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
-          }
-          .permit-card.critical::before { 
-            content: ''; 
-            position: absolute; 
-            left: 0; 
-            top: 0; 
-            bottom: 0; 
-            width: 4px; 
-            background: linear-gradient(180deg, #ef4444, #dc2626); 
-            border-radius: 20px 0 0 20px; 
-          }
-          .permit-card.non-compliant {
-            border-color: #ef4444;
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(30, 41, 59, 0.8));
-            animation: pulse-violation 3s infinite;
-          }
-          @keyframes pulse-violation {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-            50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.1); }
-          }
-          
-          /* =================== HEADER CARTE PERMIS =================== */
-          .permit-header { 
-            display: flex; 
-            align-items: flex-start; 
-            gap: 16px; 
-            margin-bottom: 20px; 
-            cursor: pointer; 
-          }
-          .permit-icon { 
-            font-size: 32px; 
-            width: 48px; 
-            text-align: center; 
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-          }
-          .permit-content { flex: 1; }
-          .permit-name { 
-            color: #ffffff; 
-            font-size: 18px; 
-            font-weight: 700; 
-            margin: 0 0 6px; 
-            line-height: 1.3;
-          }
-          .permit-category { 
-            color: #94a3b8; 
-            font-size: 12px; 
-            font-weight: 600; 
-            margin-bottom: 6px; 
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          .permit-description { 
-            color: #cbd5e1; 
-            font-size: 14px; 
-            line-height: 1.5; 
-            margin-bottom: 8px; 
-          }
-          .permit-authority { 
-            color: #60a5fa; 
-            font-size: 12px; 
-            font-weight: 600; 
-          }
-          .compliance-info {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            margin-top: 8px;
-          }
-          .permit-checkbox { 
-            width: 28px; 
-            height: 28px; 
-            border: 2px solid rgba(100, 116, 139, 0.5); 
-            border-radius: 8px; 
-            background: rgba(15, 23, 42, 0.8); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: all 0.3s ease; 
-          }
-          .permit-checkbox.checked { 
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
-            border-color: #3b82f6; 
-            color: white; 
-            transform: scale(1.1);
-          }
-          
-          /* =================== METADATA PREMIUM =================== */
-          .permit-meta { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
-            gap: 12px; 
-            margin-bottom: 20px; 
-          }
-          .meta-item { 
-            display: flex; 
-            align-items: center; 
-            gap: 6px; 
-            font-size: 11px; 
-            color: #94a3b8; 
-          }
-          .priority-badge, .status-badge, .violation-badge { 
-            padding: 4px 8px; 
-            border-radius: 6px; 
-            font-size: 10px; 
-            font-weight: 700; 
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          .compliance-badge { 
-            padding: 3px 8px; 
-            border-radius: 12px; 
-            font-size: 10px; 
-            font-weight: 700; 
-          }
-          .compliance-badge.critical { 
-            background: linear-gradient(135deg, #dc2626, #991b1b); 
-            color: white; 
-          }
-          .compliance-badge.enhanced { 
-            background: linear-gradient(135deg, #059669, #047857); 
-            color: white; 
-          }
-          .compliance-badge.standard { 
-            background: linear-gradient(135deg, #2563eb, #1d4ed8); 
-            color: white; 
-          }
-          .last-updated-small { 
-            font-size: 9px; 
-            color: #64748b; 
-          }
-          
-          /* =================== ACTIONS PREMIUM =================== */
-          .permit-actions { 
-            display: flex; 
-            gap: 12px; 
-            margin-top: 20px; 
-          }
-          .action-btn { 
-            padding: 12px 16px; 
-            border-radius: 12px; 
-            border: none; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            font-size: 13px; 
-            font-weight: 600; 
-            flex: 1;
-            justify-content: center;
-          }
-          .action-btn.primary { 
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
-            color: white; 
-          }
-          .action-btn.primary:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
-          }
-          .action-btn.secondary { 
-            background: linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2)); 
-            color: #cbd5e1; 
-            border: 1px solid rgba(100, 116, 139, 0.3); 
-          }
-          .action-btn.secondary:hover { 
-            transform: translateY(-2px); 
-            background: linear-gradient(135deg, rgba(100, 116, 139, 0.4), rgba(71, 85, 105, 0.3));
-          }
-          
-          /* =================== FORMULAIRE PREMIUM =================== */
-          .permit-form { 
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8)); 
-            border: 1px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 16px; 
-            margin-top: 20px; 
-            overflow: hidden; 
-            backdrop-filter: blur(20px);
-          }
-          .form-header { 
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(30, 41, 59, 0.8)); 
-            padding: 20px; 
-            border-bottom: 1px solid rgba(100, 116, 139, 0.3); 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: flex-start; 
-          }
-          .form-header h3 { 
-            color: #ffffff; 
-            margin: 0; 
-            font-size: 18px; 
-            font-weight: 700; 
-          }
-          .form-actions { 
-            display: flex; 
-            gap: 8px; 
-          }
-          .form-action-btn { 
-            padding: 8px 12px; 
-            border-radius: 8px; 
-            border: none; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            display: flex; 
-            align-items: center; 
-            gap: 6px; 
-            font-size: 12px; 
-            font-weight: 600; 
-          }
-          .form-action-btn.save { 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2)); 
-            color: #4ade80; 
-          }
-          .form-action-btn.print { 
-            background: linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2)); 
-            color: #cbd5e1; 
-          }
-          .form-action-btn.submit { 
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2)); 
-            color: #60a5fa; 
-          }
-          .form-action-btn.validate { 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2)); 
-            color: #22c55e; 
-          }
-          .form-action-btn:hover { 
-            transform: translateY(-1px); 
-          }
-          
-          /* =================== CHAMPS FORMULAIRE PREMIUM =================== */
-          .form-content { 
-            padding: 24px; 
-            max-height: 600px; 
-            overflow-y: auto; 
-          }
-          .form-section-group { 
-            margin-bottom: 28px; 
-          }
-          .form-section-title { 
-            color: #3b82f6; 
-            font-size: 16px; 
-            font-weight: 700; 
-            margin: 0 0 16px; 
-            padding-bottom: 12px; 
-            border-bottom: 2px solid rgba(59, 130, 246, 0.3); 
-            position: relative;
-          }
-          .form-section-title::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            width: 60px;
-            height: 2px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-          }
-          .form-fields { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
-            gap: 20px; 
-          }
-          .form-field { 
-            display: flex; 
-            flex-direction: column; 
-          }
-          .form-label { 
-            color: #e2e8f0; 
-            font-size: 13px; 
-            font-weight: 600; 
-            margin-bottom: 6px; 
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-          .required { 
-            color: #ef4444; 
-            margin-left: 4px; 
-          }
-          .legal-requirement { 
-            background: linear-gradient(135deg, #059669, #047857); 
-            color: white; 
-            padding: 2px 6px; 
-            border-radius: 4px; 
-            font-size: 8px; 
-            font-weight: 700;
-            text-transform: uppercase;
-          }
-          .critical-requirement { 
-            background: linear-gradient(135deg, #dc2626, #991b1b); 
-            color: white; 
-            padding: 2px 6px; 
-            border-radius: 4px; 
-            font-size: 8px; 
-            font-weight: 700;
-            text-transform: uppercase;
-          }
-          .form-input, .form-textarea, .form-select { 
-            padding: 12px 16px; 
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8)); 
-            border: 2px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 12px; 
-            color: #ffffff; 
-            font-size: 14px; 
-            transition: all 0.3s ease; 
-          }
-          .form-input:focus, .form-textarea:focus, .form-select:focus { 
-            outline: none; 
-            border-color: #3b82f6; 
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-          }
-          .form-input.error {
-            border-color: #ef4444;
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(15, 23, 42, 0.9));
-          }
-          
-          /* =================== COMPOSANTS SPÉCIALISÉS =================== */
-          .gas-meter-container { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 12px; 
-          }
-          .gas-meter-display { 
-            display: flex; 
-            align-items: center; 
-            gap: 16px; 
-          }
-          .gas-meter-input { 
-            flex: 1; 
-            padding: 12px 16px; 
-            border-radius: 12px; 
-            font-size: 16px;
-            font-weight: 600;
-            font-family: monospace;
-          }
-          .gas-meter-input.critical-violation { 
-            border: 2px solid #ef4444; 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(15, 23, 42, 0.9)); 
-            color: #fee2e2;
-            animation: pulse-critical 1s infinite;
-          }
-          .gas-meter-input.compliant { 
-            border: 2px solid #22c55e; 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(15, 23, 42, 0.9)); 
-            color: #dcfce7;
-          }
-          .gas-status { 
-            display: flex; 
-            align-items: center; 
-            gap: 6px; 
-            font-size: 13px; 
-            font-weight: 700; 
-            padding: 8px 12px;
-            border-radius: 8px;
-            min-width: 120px;
-            justify-content: center;
-          }
-          .gas-status.non-compliant { 
-            color: #fee2e2; 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2));
-          }
-          .gas-status.compliant { 
-            color: #dcfce7; 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2));
-          }
-          
-          .critical-alert { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
-            color: #fee2e2; 
-            padding: 12px; 
-            border-radius: 8px; 
-            font-size: 12px; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            margin-top: 8px;
-            border-left: 4px solid #ef4444;
-          }
-          
-          .compliance-check { 
-            margin: 12px 0; 
-          }
-          .compliance-label { 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            cursor: pointer; 
-            padding: 8px;
-            border-radius: 8px;
-            transition: background 0.3s ease;
-          }
-          .compliance-label:hover {
-            background: rgba(100, 116, 139, 0.1);
-          }
-          .compliance-text.compliant { 
-            color: #22c55e; 
-            font-weight: 600;
-          }
-          .compliance-text.pending { 
-            color: #eab308; 
-            font-weight: 600;
-          }
-          .compliance-ref { 
-            font-size: 10px; 
-            color: #94a3b8; 
-            font-style: italic;
-          }
-          
-          .calculation-field { 
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6)); 
-            border-radius: 12px; 
-            padding: 16px; 
-            border: 1px solid rgba(100, 116, 139, 0.3);
-          }
-          .calculation-display { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-          }
-          .calculation-label { 
-            font-family: monospace; 
-            color: #22c55e; 
-            font-weight: 700; 
-            font-size: 16px;
-          }
-          .calculate-btn { 
-            padding: 8px 12px; 
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            font-size: 12px; 
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-          }
-          .calculate-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-          }
-          
-          /* =================== PANNEAUX CONFORMITÉ =================== */
-          .critical-violations-panel { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1)); 
-            border: 2px solid #ef4444; 
-            border-radius: 12px; 
-            padding: 20px; 
-            margin-bottom: 24px; 
-            backdrop-filter: blur(20px);
-          }
-          .violations-header { 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            color: #ff6b6b; 
-            font-weight: 800; 
-            margin-bottom: 16px; 
-            font-size: 16px;
-          }
-          .violation-item { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
-            padding: 12px; 
-            border-radius: 8px; 
-            margin-bottom: 12px; 
-            border-left: 4px solid #ef4444;
-          }
-          .violation-requirement { 
-            display: block; 
-            font-weight: 700; 
-            color: #fee2e2; 
-            margin-bottom: 4px;
-          }
-          .violation-details { 
-            display: block; 
-            font-size: 13px; 
-            color: #fca5a5; 
-            margin-bottom: 4px;
-          }
-          .violation-reference { 
-            display: block; 
-            font-size: 11px; 
-            color: #f87171; 
-            font-style: italic;
-          }
-          
-          .compliance-panel { 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1)); 
-            border: 1px solid #22c55e; 
-            border-radius: 12px; 
-            padding: 20px; 
-            margin-bottom: 24px; 
-            backdrop-filter: blur(20px);
-          }
-          .compliance-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-            gap: 12px; 
-          }
-          .compliance-item { 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            padding: 12px; 
-            border-radius: 8px; 
-            transition: all 0.3s ease;
-          }
-          .compliance-item:hover {
-            transform: translateX(4px);
-          }
-          .compliance-item.compliant { 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2)); 
-          }
-          .compliance-item.non-compliant { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
-          }
-          .compliance-status { 
-            color: #22c55e; 
-          }
-          .compliance-item.non-compliant .compliance-status { 
-            color: #ef4444; 
-          }
-          .compliance-requirement { 
-            font-size: 13px; 
-            font-weight: 600; 
-            color: #e2e8f0;
-          }
-          .compliance-reference { 
-            font-size: 10px; 
-            color: #94a3b8; 
-            margin-top: 2px;
-            display: block;
-          }
-          
-          .field-help { 
-            font-size: 11px; 
-            color: #64748b; 
-            margin-top: 4px; 
-            font-style: italic; 
-          }
-          .compliance-reference { 
-            font-size: 10px; 
-            color: #3b82f6; 
-            margin-top: 4px; 
-          }
-          
-          .form-title-section { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 8px; 
-          }
-          .compliance-badges { 
-            display: flex; 
-            gap: 8px; 
-            align-items: center; 
-            flex-wrap: wrap;
-          }
-          .last-updated { 
-            font-size: 10px; 
-            color: #94a3b8; 
-          }
-          
-          .alert-indicator { 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            padding: 12px; 
-            border-radius: 8px; 
-            font-size: 13px; 
-            font-weight: 600;
-          }
-          .alert-indicator.critical { 
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2)); 
-            color: #fee2e2; 
-            border-left: 4px solid #ef4444;
-          }
-          .alert-indicator.warning { 
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(217, 119, 6, 0.2)); 
-            color: #fde68a; 
-            border-left: 4px solid #f59e0b;
-          }
-          .alert-indicator.info { 
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2)); 
-            color: #dbeafe; 
-            border-left: 4px solid #3b82f6;
-          }
-          
-          /* =================== RESPONSIVE DESIGN =================== */
-          @media (max-width: 768px) {
-            .permits-grid { grid-template-columns: 1fr; gap: 20px; }
-            .search-grid { grid-template-columns: 1fr; gap: 12px; }
-            .permits-stats { grid-template-columns: repeat(2, 1fr); }
-            .form-fields { grid-template-columns: 1fr; }
-            .permit-actions { flex-direction: column; }
-            .compliance-grid { grid-template-columns: 1fr; }
-            .form-title-section { align-items: flex-start; }
-            .compliance-badges { flex-wrap: wrap; }
-            .permit-card { padding: 20px; }
-            .permits-header { padding: 20px; }
-            .search-section { padding: 20px; }
-          }
-        `
-      }} />
-
-      <div className="step4-container">
-        {/* Alertes critiques */}
-        {criticalAlerts.length > 0 && (
-          <div className="critical-alerts">
-            <h3>
-              <AlertTriangle size={20} />
-              {t.alerts.critical}
-            </h3>
-            {criticalAlerts.map((alert, index) => (
-              <div key={index} className="alert-item">
-                {alert}
-              </div>
-            ))}
-          </div>
+      {/* Carte Principale avec VOTRE style exact */}
+      <div 
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: '20px',
+          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          cursor: 'pointer',
+          padding: '24px',
+          backdropFilter: 'blur(20px)',
+          ...(isSelected ? {
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(30, 41, 59, 0.8))',
+            border: '1px solid #3b82f6',
+            boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)'
+          } : {
+            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6))',
+            border: '1px solid rgba(100, 116, 139, 0.3)'
+          })
+        }}
+        onClick={onToggle}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-8px) scale(1.02)';
+          e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+          e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(59, 130, 246, 0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0) scale(1)';
+          e.currentTarget.style.borderColor = isSelected ? '#3b82f6' : 'rgba(100, 116, 139, 0.3)';
+          e.currentTarget.style.boxShadow = isSelected ? '0 8px 32px rgba(59, 130, 246, 0.3)' : 'none';
+        }}
+      >
+        {/* Effet de brillance au hover */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '1px',
+          background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+          opacity: 0,
+          transition: 'opacity 0.3s ease'
+        }} />
+        
+        {/* Indicateur de priorité critique */}
+        {permit.priority === 'critical' && (
+          <div style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: '4px',
+            background: 'linear-gradient(180deg, #ef4444, #dc2626)',
+            borderRadius: '20px 0 0 20px'
+          }} />
         )}
 
-        {/* En-tête avec résumé de conformité */}
-        <div className="permits-header">
-          <div className="permits-title">
-            <FileText size={24} />
-            📋 {t.title}
+        {/* Header avec votre layout exact */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ fontSize: '32px', width: '48px', textAlign: 'center', filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' }}>
+            {getCategoryIcon()}
           </div>
-          <p style={{ color: '#3b82f6', margin: '0 0 8px', fontSize: '14px' }}>
-            {t.subtitle}
-          </p>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ 
+              color: '#ffffff', 
+              fontSize: '18px', 
+              fontWeight: '700', 
+              margin: '0 0 6px', 
+              lineHeight: 1.3,
+              transition: 'color 0.3s ease'
+            }}>
+              {permit.name}
+            </h3>
+            <div style={{ 
+              color: '#94a3b8', 
+              fontSize: '12px', 
+              fontWeight: '600', 
+              marginBottom: '6px', 
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              {permit.category}
+            </div>
+            <div style={{ 
+              color: '#cbd5e1', 
+              fontSize: '14px', 
+              lineHeight: 1.5, 
+              marginBottom: '8px' 
+            }}>
+              {permit.description}
+            </div>
+            <div style={{ 
+              color: '#60a5fa', 
+              fontSize: '12px', 
+              fontWeight: '600' 
+            }}>
+              {permit.authority}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
+              <span style={{
+                padding: '3px 8px',
+                borderRadius: '12px',
+                fontSize: '10px',
+                fontWeight: '700',
+                backgroundColor: `${getComplianceColor()}20`,
+                color: getComplianceColor()
+              }}>
+                {permit.complianceLevel.toUpperCase()}
+              </span>
+              <span style={{ fontSize: '9px', color: '#64748b' }}>
+                {permit.lastUpdated}
+              </span>
+            </div>
+          </div>
           
-          <div className="permits-stats">
-            <div className="stat-item">
-              <div className="stat-value">{stats.totalPermits}</div>
-              <div className="stat-label">{t.stats.available}</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-value">{stats.selected}</div>
-              <div className="stat-label">{t.stats.selected}</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-value">{stats.critical}</div>
-              <div className="stat-label">{t.stats.critical}</div>
-            </div>
-            <div className={`stat-item ${stats.compliant === stats.selected && stats.selected > 0 ? 'compliant' : stats.nonCompliant > 0 ? 'non-compliant' : ''}`}>
-              <div className="stat-value">{stats.compliant}/{stats.selected}</div>
-              <div className="stat-label">{t.stats.compliant}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Section de recherche et filtres */}
-        <div className="search-section">
-          <div className="search-grid">
-            <div className="search-input-wrapper">
-              <Search className="search-icon" size={18} />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={t.searchPlaceholder}
-                className="search-field"
-              />
-            </div>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">{t.allCategories}</option>
-              {categories.map((category: any) => (
-                <option key={category} value={category}>
-                  {getCategoryIcon(category)} {(t.categories as any)[category] || category}
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedProvince}
-              onChange={(e) => setSelectedProvince(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">{t.allProvinces}</option>
-              {provinces.map((province: string) => (
-                <option key={province} value={province}>
-                  {province}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Grille des permis avec conformité */}
-        <div className="permits-grid">
-          {filteredPermits.map((permit: Permit) => {
-            const isSelected = permit.selected;
-            const isFormExpanded = expandedForms[permit.id];
-            const permitChecks = complianceChecks[permit.id] || [];
-            const hasViolations = permitChecks.some(check => check.status === 'non-compliant');
-            
-            return (
-              <div 
-                key={permit.id} 
-                className={`permit-card ${isSelected ? 'selected' : ''} ${permit.priority} ${hasViolations ? 'non-compliant' : ''}`}
-              >
-                {/* Header avec sélection */}
-                <div className="permit-header" onClick={() => handlePermitToggle(permit.id)}>
-                  <div className="permit-icon">{getCategoryIcon(permit.category)}</div>
-                  <div className="permit-content">
-                    <h3 className="permit-name">{permit.name}</h3>
-                    <div className="permit-category">{(t.categories as any)[permit.category] || permit.category}</div>
-                    <div className="permit-description">{permit.description}</div>
-                    <div className="permit-authority">{permit.authority}</div>
-                    <div className="compliance-info">
-                      <span 
-                        className="compliance-badge" 
-                        style={{ 
-                          backgroundColor: `${getComplianceColor(permit.complianceLevel)}20`, 
-                          color: getComplianceColor(permit.complianceLevel) 
-                        }}
-                      >
-                        {(t.complianceLevels as any)[permit.complianceLevel]}
-                      </span>
-                      <span className="last-updated-small">
-                        {permit.lastUpdated}
-                      </span>
-                    </div>
-                  </div>
-                  <div className={`permit-checkbox ${isSelected ? 'checked' : ''}`}>
-                    {isSelected && <CheckCircle size={18} />}
-                  </div>
-                </div>
-
-                {/* Métadonnées avec conformité */}
-                <div className="permit-meta">
-                  <div className="meta-item">
-                    <span className="priority-badge" style={{ backgroundColor: `${getPriorityColor(permit.priority)}20`, color: getPriorityColor(permit.priority) }}>
-                      {(t.priorities as any)[permit.priority]}
-                    </span>
-                  </div>
-                  <div className="meta-item">
-                    <span className="status-badge" style={{ backgroundColor: `${getStatusColor(permit.status)}20`, color: getStatusColor(permit.status) }}>
-                      {(t.statuses as any)[permit.status]}
-                    </span>
-                  </div>
-                  {hasViolations && (
-                    <div className="meta-item">
-                      <span className="violation-badge" style={{ backgroundColor: '#ef444420', color: '#ef4444' }}>
-                        ⚠️ Non conforme
-                      </span>
-                    </div>
-                  )}
-                  <div className="meta-item">
-                    <Clock size={12} />
-                    {permit.processingTime}
-                  </div>
-                </div>
-
-                {/* Actions du permis */}
-                {isSelected && (
-                  <div className="permit-actions">
-                    <button 
-                      className="action-btn primary"
-                      onClick={() => toggleFormExpansion(permit.id)}
-                    >
-                      <Edit size={14} />
-                      {isFormExpanded ? t.actions.close : t.actions.fill}
-                      {isFormExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
-                    <button 
-                      className="action-btn secondary"
-                      onClick={() => validateCompliance()}
-                    >
-                      <Shield size={14} />
-                      {t.actions.validate}
-                    </button>
-                    <button className="action-btn secondary">
-                      <Download size={14} />
-                      {t.actions.download}
-                    </button>
-                  </div>
-                )}
-
-                {/* Formulaire du permis avec conformité */}
-                {isSelected && <PermitForm permit={permit} />}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Message si aucun résultat */}
-        {filteredPermits.length === 0 && (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '60px 20px', 
-            color: '#94a3b8', 
-            background: 'rgba(30, 41, 59, 0.6)', 
-            borderRadius: '16px', 
-            border: '1px solid rgba(100, 116, 139, 0.3)' 
+          {/* Checkbox premium avec votre style */}
+          <div style={{
+            width: '28px',
+            height: '28px',
+            border: '2px solid rgba(100, 116, 139, 0.5)',
+            borderRadius: '8px',
+            background: 'rgba(15, 23, 42, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.3s ease',
+            ...(isSelected && {
+              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              borderColor: '#3b82f6',
+              color: 'white',
+              transform: 'scale(1.1)'
+            })
           }}>
-            <FileText size={48} style={{ margin: '0 auto 16px', color: '#64748b' }} />
-            <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>{t.messages.noResults}</h3>
-            <p style={{ margin: 0 }}>{t.messages.modifySearch}</p>
+            {isSelected && <CheckCircle size={18} />}
+          </div>
+        </div>
+
+        {/* Métadonnées avec votre grid exact */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+          gap: '12px', 
+          marginBottom: '20px' 
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#94a3b8' }}>
+            <span style={{
+              padding: '4px 8px',
+              borderRadius: '6px',
+              fontSize: '10px',
+              fontWeight: '700',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              backgroundColor: `${getPriorityColor()}20`,
+              color: getPriorityColor()
+            }}>
+              {permit.priority}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#94a3b8' }}>
+            <span style={{
+              padding: '4px 8px',
+              borderRadius: '6px',
+              fontSize: '10px',
+              fontWeight: '700',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              backgroundColor: `${getStatusColor()}20`,
+              color: getStatusColor()
+            }}>
+              {permit.status}
+            </span>
+          </div>
+          {hasViolations && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#94a3b8' }}>
+              <span style={{
+                padding: '4px 8px',
+                borderRadius: '6px',
+                fontSize: '10px',
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                backgroundColor: '#ef444420',
+                color: '#ef4444'
+              }}>
+                ⚠️ NON CONFORME
+              </span>
+            </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#94a3b8' }}>
+            <Clock size={12} />
+            {permit.processingTime}
+          </div>
+        </div>
+
+        {/* Actions (visible si sélectionné) avec votre style exact */}
+        {isSelected && (
+          <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                // Votre logique de remplissage
+              }}
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }}
+            >
+              <Edit size={14} />
+              Remplir
+            </button>
+            
+            <button style={{
+              padding: '12px 16px',
+              borderRadius: '12px',
+              border: '1px solid rgba(100, 116, 139, 0.3)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              fontSize: '13px',
+              fontWeight: '600',
+              background: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2))',
+              color: '#cbd5e1'
+            }}>
+              <Shield size={14} />
+              Valider
+            </button>
+            
+            <button style={{
+              padding: '12px 16px',
+              borderRadius: '12px',
+              border: '1px solid rgba(100, 116, 139, 0.3)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              fontSize: '13px',
+              fontWeight: '600',
+              background: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2))',
+              color: '#cbd5e1'
+            }}>
+              <Download size={14} />
+              PDF
+            </button>
           </div>
         )}
       </div>
+
+      {/* Modal du formulaire */}
+      {renderFormModal()}
     </>
   );
 };
 
-export default Step4Permits;
+// Export du composant pour utilisation dans votre code principal
+export default PermitCardUltraPremium;
+// =================== SECTION 4A: PermitCard Ultra-Premium ===================
+// À coller après votre Section 3 dans Step4Permits.tsx
+
+// Composant PermitCard ultra-premium (COMPATIBLE avec votre code existant)
+const PermitCardUltraPremium: React.FC<{
+  permit: Permit;
+  isSelected: boolean;
+  isExpanded: boolean;
+  complianceChecks: ComplianceCheck[];
+  workers: WorkerEntry[];
+  photos: PhotoEntry[];
+  currentSection: string;
+  currentPhotoIndex: number;
+  viewMode: 'carousel' | 'grid';
+  onToggle: () => void;
+  onFieldChange: (fieldId: string, value: any) => void;
+  onAddWorker: (worker: WorkerEntry) => void;
+  onRemoveWorker: (workerId: number) => void;
+  onPhotoIndexChange: (index: number) => void;
+  onViewModeChange: (mode: 'carousel' | 'grid') => void;
+}> = ({ 
+  permit, 
+  isSelected, 
+  isExpanded, 
+  complianceChecks, 
+  workers, 
+  photos, 
+  currentSection,
+  currentPhotoIndex,
+  viewMode,
+  onToggle, 
+  onFieldChange,
+  onAddWorker,
+  onRemoveWorker,
+  onPhotoIndexChange,
+  onViewModeChange
+}) => {
+  // État local pour la gestion du formulaire
+  const [currentFormSection, setCurrentFormSection] = useState('identification');
+  const hasViolations = complianceChecks.some(check => check.status === 'non-compliant');
+
+  // IMPORTANT: Utilise EXACTEMENT votre logique existante
+  const getCategoryIcon = () => {
+    const categoryKey = permit.category === 'Safety' ? 'Sécurité' : 
+                       permit.category === 'Construction' ? 'Construction' :
+                       permit.category === 'Radiation Protection' ? 'Radioprotection' :
+                       permit.category === 'Equipment' ? 'Équipements' : permit.category;
+    
+    switch (categoryKey) {
+      case 'Sécurité': return '🛡️';
+      case 'Construction': return '🏗️';
+      case 'Radioprotection': return '☢️';
+      case 'Équipements': return '⚙️';
+      default: return '📋';
+    }
+  };
+
+  const getPriorityColor = () => {
+    switch (permit.priority) {
+      case 'critical': return '#ef4444';
+      case 'high': return '#f97316';
+      case 'medium': return '#eab308';
+      case 'low': return '#22c55e';
+      default: return '#6b7280';
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (permit.status) {
+      case 'approved': return '#22c55e';
+      case 'submitted': return '#3b82f6';
+      case 'pending': return '#eab308';
+      case 'rejected': return '#ef4444';
+      case 'expired': return '#6b7280';
+      default: return '#6b7280';
+    }
+  };
+
+  const getComplianceColor = () => {
+    switch (permit.complianceLevel) {
+      case 'critical': return '#dc2626';
+      case 'enhanced': return '#059669';
+      case 'standard': return '#2563eb';
+      case 'basic': return '#64748b';
+      default: return '#6b7280';
+    }
+  };
+
+  // Sections disponibles pour le formulaire
+  const formSections = {
+    identification: ['space_identification', 'project_name', 'location_precise', 'permit_date'],
+    gas_monitoring: ['oxygen_level', 'combustible_gas_level', 'carbon_monoxide_level', 'continuous_monitoring'],
+    workers: ['worker_age_verification', 'authorized_workers'],
+    photos: ['photos_documentation'],
+    signatures: ['supervisor_signature', 'attendant_signature']
+  };
+
+  // Fonction pour rendre le modal du formulaire avec VOTRE style glassmorphisme
+  const renderFormModal = () => {
+    if (!isExpanded) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-50 flex items-center justify-center p-4">
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(51, 65, 85, 0.95) 100%)',
+          backdropFilter: 'blur(30px)',
+          border: '1px solid rgba(100, 116, 139, 0.3)',
+          borderRadius: '24px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+          width: '100%',
+          maxWidth: '1200px',
+          maxHeight: '90vh',
+          overflow: 'hidden'
+        }}>
+          {/* Header Premium avec glassmorphisme */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(147, 51, 234, 0.1) 100%)',
+            backdropFilter: 'blur(20px)',
+            borderBottom: '1px solid rgba(100, 116, 139, 0.3)',
+            padding: '24px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ fontSize: '40px' }}>{getCategoryIcon()}</div>
+                <div>
+                  <h2 style={{
+                    fontSize: '24px',
+                    fontWeight: '800',
+                    background: 'linear-gradient(135deg, #60a5fa, #a78bfa)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    margin: '0 0 8px'
+                  }}>
+                    {permit.name}
+                  </h2>
+                  <p style={{ color: '#cbd5e1', fontSize: '14px', margin: 0 }}>{permit.description}</p>
+                </div>
+              </div>
+              <button
+                onClick={onToggle}
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.1))',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#fca5a5',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'scale(1.1)';
+                  e.target.style.boxShadow = '0 8px 25px rgba(239, 68, 68, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'scale(1)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            {/* Navigation par sections avec design premium */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
+              {Object.keys(formSections).map((section) => (
+                <button
+                  key={section}
+                  onClick={() => setCurrentFormSection(section)}
+                  style={{
+                    padding: '12px 20px',
+                    borderRadius: '12px',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.3s ease',
+                    border: 'none',
+                    cursor: 'pointer',
+                    ...(currentFormSection === section ? {
+                      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))',
+                      color: '#60a5fa',
+                      border: '1px solid rgba(59, 130, 246, 0.5)',
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+                    } : {
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      color: '#94a3b8',
+                      border: '1px solid rgba(100, 116, 139, 0.3)'
+                    })
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentFormSection !== section) {
+                      e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                      e.target.style.color = '#ffffff';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentFormSection !== section) {
+                      e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+                      e.target.style.color = '#94a3b8';
+                    }
+                  }}
+                >
+                  {section.charAt(0).toUpperCase() + section.slice(1).replace('_', ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Contenu du formulaire avec composants ultra-premium */}
+          <div style={{ padding: '24px', overflowY: 'auto', maxHeight: '60vh' }}>
+            {currentFormSection === 'workers' && (
+              <WorkerCardUltraPremium 
+                workers={workers}
+                onAddWorker={onAddWorker}
+                onRemoveWorker={onRemoveWorker}
+              />
+            )}
+            
+            {currentFormSection === 'photos' && (
+              <PhotoGalleryUltraPremium
+                photos={photos}
+                currentIndex={currentPhotoIndex}
+                viewMode={viewMode}
+                onViewModeChange={onViewModeChange}
+                onNavigate={onPhotoIndexChange}
+              />
+            )}
+            
+            {!['workers', 'photos'].includes(currentFormSection) && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+                {formSections[currentFormSection]?.map((fieldId) => (
+                  <FormFieldUltraPremium
+                    key={fieldId}
+                    label={fieldId.replace('_', ' ').charAt(0).toUpperCase() + fieldId.slice(1).replace('_', ' ')}
+                    value={permit.formData?.[fieldId] || ''}
+                    onChange={(value) => onFieldChange(fieldId, value)}
+                    type={fieldId.includes('date') ? 'date' : fieldId.includes('level') ? 'number' : 'text'}
+                    required={true}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Footer avec actions */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
+            backdropFilter: 'blur(20px)',
+            borderTop: '1px solid rgba(100, 116, 139, 0.3)',
+            padding: '24px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button style={{
+                padding: '12px 24px',
+                background: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2))',
+                color: '#cbd5e1',
+                borderRadius: '12px',
+                border: '1px solid rgba(100, 116, 139, 0.3)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Save size={18} />
+                Précédent
+              </button>
+              
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button style={{
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(14, 165, 233, 0.2))',
+                  color: '#22d3ee',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(6, 182, 212, 0.3)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <Save size={18} />
+                  Sauvegarder
+                </button>
+                <button style={{
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2))',
+                  color: '#4ade80',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <CheckCircle size={18} />
+                  Suivant
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+  };
+
+// =================== EXPORT FINAL ===================
+// Remplacez votre PermitForm existant par PermitCardUltraPremium dans votre code principal
+export default PermitCardUltraPremium;
+  };
+
+  // Interface de la carte principale (UTILISE VOS STYLES EXISTANTS)
+  return (
+    <>
+      {/* Carte Principale avec VOTRE style exact */}
+      <div 
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: '20px',
+          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          cursor: 'pointer',
+          padding: '24px',
+          backdropFilter: 'blur(20px)',
+          ...(isSelected ? {
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(30, 41, 59, 0.8))',
+            border: '1px solid #3b82f6',
+            boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)'
+          } : {
+            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6))',
+            border: '1px solid rgba(100, 116, 139, 0.3)'
+          })
+        }}
+        onClick={onToggle}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-8px) scale(1.02)';
+          e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+          e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(59, 130, 246, 0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0) scale(1)';
+          e.currentTarget.style.borderColor = isSelected ? '#3b82f6' : 'rgba(100, 116, 139, 0.3)';
+          e.currentTarget.style.boxShadow = isSelected ? '0 8px 32px rgba(59, 130, 246, 0.3)' : 'none';
+        }}
+      >
+        {/* Effet de brillance au hover */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '1px',
+          background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+          opacity: 0,
+          transition: 'opacity 0.3s ease'
+        }} />
+        
+        {/* Indicateur de priorité critique */}
+        {permit.priority === 'critical' && (
+          <div style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: '4px',
+            background: 'linear-gradient(180deg, #ef4444, #dc2626)',
+            borderRadius: '20px 0 0 20px'
+          }} />
+        )}
+
+        {/* Header avec votre layout exact */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ fontSize: '32px', width: '48px', textAlign: 'center', filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' }}>
+            {getCategoryIcon()}
+          </div>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ 
+              color: '#ffffff', 
+              fontSize: '18px', 
+              fontWeight: '700', 
+              margin: '0 0 6px', 
+              lineHeight: 1.3,
+              transition: 'color 0.3s ease'
+            }}>
+              {permit.name}
+            </h3>
+            <div style={{ 
+              color: '#94a3b8', 
+              fontSize: '12px', 
+              fontWeight: '600', 
+              marginBottom: '6px', 
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              {permit.category}
+            </div>
+            <div style={{ 
+              color: '#cbd5e1', 
+              fontSize: '14px', 
+              lineHeight: 1.5, 
+              marginBottom: '8px' 
+            }}>
+              {permit.description}
+            </div>
+            <div style={{ 
+              color: '#60a5fa', 
+              fontSize: '12px', 
+              fontWeight: '600' 
+            }}>
+              {permit.authority}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
+              <span style={{
+                padding: '3px 8px',
+                borderRadius: '12px',
+                fontSize: '10px',
+                fontWeight: '700',
+                backgroundColor: `${getComplianceColor()}20`,
+                color: getComplianceColor()
+              }}>
+                {permit.complianceLevel.toUpperCase()}
+              </span>
+              <span style={{ fontSize: '9px', color: '#64748b' }}>
+                {permit.lastUpdated}
+              </span>
+            </div>
+          </div>
+          
+          {/* Checkbox premium avec votre style */}
+          <div style={{
+            width: '28px',
+            height: '28px',
+            border: '2px solid rgba(100, 116, 139, 0.5)',
+            borderRadius: '8px',
+            background: 'rgba(15, 23, 42, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.3s ease',
+            ...(isSelected && {
+              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              borderColor: '#3b82f6',
+              color: 'white',
+              transform: 'scale(1.1)'
+            })
+          }}>
+            {isSelected && <CheckCircle size={18} />}
+          </div>
+        </div>
+
+        {/* Métadonnées avec votre grid exact */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+          gap: '12px', 
+          marginBottom: '20px' 
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#94a3b8' }}>
+            <span style={{
+              padding: '4px 8px',
+              borderRadius: '6px',
+              fontSize: '10px',
+              fontWeight: '700',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              backgroundColor: `${getPriorityColor()}20`,
+              color: getPriorityColor()
+            }}>
+              {permit.priority}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#94a3b8' }}>
+            <span style={{
+              padding: '4px 8px',
+              borderRadius: '6px',
+              fontSize: '10px',
+              fontWeight: '700',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              backgroundColor: `${getStatusColor()}20`,
+              color: getStatusColor()
+            }}>
+              {permit.status}
+            </span>
+          </div>
+          {hasViolations && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#94a3b8' }}>
+              <span style={{
+                padding: '4px 8px',
+                borderRadius: '6px',
+                fontSize: '10px',
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                backgroundColor: '#ef444420',
+                color: '#ef4444'
+              }}>
+                ⚠️ NON CONFORME
+              </span>
+            </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#94a3b8' }}>
+            <Clock size={12} />
+            {permit.processingTime}
+          </div>
+        </div>
+
+        {/* Actions (visible si sélectionné) avec votre style exact */}
+        {isSelected && (
+          <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                // Votre logique de remplissage
+              }}
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }}
+            >
+              <Edit size={14} />
+              Remplir
+            </button>
+            
+            <button style={{
+              padding: '12px 16px',
+              borderRadius: '12px',
+              border: '1px solid rgba(100, 116, 139, 0.3)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              fontSize: '13px',
+              fontWeight: '600',
+              background: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2))',
+              color: '#cbd5e1'
+            }}>
+              <Shield size={14} />
+              Valider
+            </button>
+            
+            <button style={{
+              padding: '12px 16px',
+              borderRadius: '12px',
+              border: '1px solid rgba(100, 116, 139, 0.3)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              fontSize: '13px',
+              fontWeight: '600',
+              background: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2))',
+              color: '#cbd5e1'
+            }}>
+              <Download size={14} />
+              PDF
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Modal du formulaire */}
+      {renderFormModal()}
+    </>
+  );
+};
+
+// =================== SECTION 4B: Composants Ultra-Premium ===================
+
+// Composant FormField ultra-premium (COMPATIBLE avec votre validation)
+const FormFieldUltraPremium: React.FC<{
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  required?: boolean;
+  options?: string[];
+  validation?: any;
+}> = ({ label, value, onChange, type = 'text', required = false, options, validation }) => {
+  const [isFocused, setIsFocused] = useState(false);
+  const hasError = required && !value;
+  const isValid = validation ? validation.isValid : !hasError;
+
+  return (
+    <div style={{ marginBottom: '20px' }}>
+      <label style={{ 
+        display: 'block', 
+        fontSize: '13px', 
+        fontWeight: '600', 
+        color: '#e2e8f0', 
+        marginBottom: '6px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+      }}>
+        {label}
+        {required && <span style={{ color: '#ef4444' }}>*</span>}
+        {validation?.critical && (
+          <span style={{
+            padding: '2px 6px',
+            fontSize: '8px',
+            fontWeight: '700',
+            textTransform: 'uppercase',
+            borderRadius: '4px',
+            background: 'linear-gradient(135deg, #dc2626, #991b1b)',
+            color: 'white',
+            animation: 'pulse 1s infinite'
+          }}>
+            🚨 CRITIQUE
+          </span>
+        )}
+        {validation?.legal && (
+          <span style={{
+            padding: '2px 6px',
+            fontSize: '8px',
+            fontWeight: '700',
+            textTransform: 'uppercase',
+            borderRadius: '4px',
+            background: 'linear-gradient(135deg, #059669, #047857)',
+            color: 'white'
+          }}>
+            ⚖️ LÉGAL
+          </span>
+        )}
+      </label>
+      
+      {type === 'select' && options ? (
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            borderRadius: '12px',
+            border: '2px solid rgba(100, 116, 139, 0.3)',
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
+            backdropFilter: 'blur(20px)',
+            color: '#ffffff',
+            fontSize: '14px',
+            transition: 'all 0.3s ease',
+            ...(isFocused && {
+              borderColor: '#3b82f6',
+              boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.1)'
+            }),
+            ...(hasError && {
+              borderColor: '#ef4444',
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(15, 23, 42, 0.9))'
+            })
+          }}
+          required={required}
+        >
+          <option value="" style={{ background: '#1e293b', color: '#ffffff' }}>Sélectionner...</option>
+          {options.map((option) => (
+            <option key={option} value={option} style={{ background: '#1e293b', color: '#ffffff' }}>
+              {option}
+            </option>
+          ))}
+        </select>
+      ) : type === 'textarea' ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            borderRadius: '12px',
+            border: '2px solid rgba(100, 116, 139, 0.3)',
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
+            backdropFilter: 'blur(20px)',
+            color: '#ffffff',
+            fontSize: '14px',
+            minHeight: '100px',
+            resize: 'none',
+            transition: 'all 0.3s ease',
+            ...(isFocused && {
+              borderColor: '#3b82f6',
+              boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.1)'
+            }),
+            ...(hasError && {
+              borderColor: '#ef4444',
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(15, 23, 42, 0.9))'
+            })
+          }}
+          required={required}
+        />
+      ) : type === 'checkbox' ? (
+        <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', padding: '8px', borderRadius: '8px', transition: 'background 0.3s ease' }}>
+          <input
+            type="checkbox"
+            checked={(() => {
+              if (typeof value === 'boolean') return value;
+              if (typeof value === 'string') return value === 'true' || value === '1';
+              if (typeof value === 'number') return value === 1;
+              return false;
+            })()}
+            onChange={(e) => onChange(e.target.checked ? 'true' : 'false')}
+            style={{ display: 'none' }}
+          />
+          <div style={{
+            width: '24px',
+            height: '24px',
+            borderRadius: '8px',
+            border: '2px solid',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.3s ease',
+            ...(value ? {
+              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              borderColor: '#3b82f6',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+            } : {
+              borderColor: '#64748b',
+              background: 'rgba(15, 23, 42, 0.5)'
+            })
+          }}>
+            {value && <CheckCircle size={16} style={{ color: 'white' }} />}
+          </div>
+          <span style={{ color: '#cbd5e1', fontWeight: '500' }}>{label}</span>
+        </label>
+      ) : (
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            borderRadius: '12px',
+            border: '2px solid rgba(100, 116, 139, 0.3)',
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
+            backdropFilter: 'blur(20px)',
+            color: '#ffffff',
+            fontSize: '14px',
+            transition: 'all 0.3s ease',
+            ...(isFocused && {
+              borderColor: '#3b82f6',
+              boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.1)'
+            }),
+            ...(hasError && {
+              borderColor: '#ef4444',
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(15, 23, 42, 0.9))'
+            })
+          }}
+          required={required}
+        />
+      )}
+      
+      {hasError && (
+        <p style={{ 
+          color: '#ef4444', 
+          fontSize: '12px', 
+          marginTop: '4px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '4px' 
+        }}>
+          <AlertCircle size={12} />
+          Ce champ est requis
+        </p>
+      )}
+      
+      {validation?.message && (
+        <p style={{ color: '#60a5fa', fontSize: '12px', marginTop: '4px' }}>
+          {validation.message}
+        </p>
+      )}
+    </div>
+  );
+};
+
+// Composant PhotoGallery ultra-premium avec carrousel/grille
+const PhotoGalleryUltraPremium: React.FC<{
+  photos: PhotoEntry[];
+  currentIndex: number;
+  viewMode: 'carousel' | 'grid';
+  onViewModeChange: (mode: 'carousel' | 'grid') => void;
+  onNavigate: (index: number) => void;
+}> = ({ photos, currentIndex, viewMode, onViewModeChange, onNavigate }) => {
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    // Votre logique d'upload - intégration avec votre système existant
+    console.log('Files dropped:', e.dataTransfer.files);
+  };
+
+  return (
+    <div style={{ padding: '24px 0' }}>
+      {/* Header avec contrôles premium */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <h3 style={{
+          fontSize: '20px',
+          fontWeight: '700',
+          background: 'linear-gradient(135deg, #60a5fa, #a78bfa)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          margin: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          📸 Galerie Photos ({photos.length})
+        </h3>
+        
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => onViewModeChange('carousel')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '12px',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              fontSize: '13px',
+              fontWeight: '600',
+              ...(viewMode === 'carousel' ? {
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))',
+                color: '#60a5fa',
+                border: '1px solid rgba(59, 130, 246, 0.5)',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+              } : {
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: '#94a3b8',
+                border: '1px solid rgba(100, 116, 139, 0.3)'
+              })
+            }}
+          >
+            🎠 Carrousel
+          </button>
+          <button
+            onClick={() => onViewModeChange('grid')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '12px',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              fontSize: '13px',
+              fontWeight: '600',
+              ...(viewMode === 'grid' ? {
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))',
+                color: '#60a5fa',
+                border: '1px solid rgba(59, 130, 246, 0.5)',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+              } : {
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: '#94a3b8',
+                border: '1px solid rgba(100, 116, 139, 0.3)'
+              })
+            }}
+          >
+            🏗️ Grille
+          </button>
+        </div>
+      </div>
+
+      {/* Zone de drop premium avec glassmorphisme */}
+      <div
+        onDrop={handleDrop}
+        onDragOver={(e) => e.preventDefault()}
+        style={{
+          border: '2px dashed rgba(59, 130, 246, 0.3)',
+          borderRadius: '16px',
+          padding: '32px',
+          textAlign: 'center',
+          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(37, 99, 235, 0.02))',
+          backdropFilter: 'blur(10px)',
+          marginBottom: '24px',
+          transition: 'all 0.3s ease',
+          cursor: 'pointer'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.05))';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(37, 99, 235, 0.02))';
+        }}
+      >
+        <Upload size={48} style={{ margin: '0 auto 16px', color: '#60a5fa' }} />
+        <p style={{ color: '#cbd5e1', marginBottom: '8px', fontSize: '14px' }}>
+          📁 Glissez vos photos ici ou
+        </p>
+        <button style={{
+          padding: '12px 24px',
+          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))',
+          color: '#60a5fa',
+          borderRadius: '12px',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          cursor: 'pointer',
+          transition: 'all 0.3s ease',
+          fontSize: '13px',
+          fontWeight: '600'
+        }}>
+          📂 Parcourir les fichiers
+        </button>
+      </div>
+
+      {/* Affichage des photos selon le mode */}
+      {photos.length > 0 ? (
+        <div style={viewMode === 'carousel' ? { marginBottom: '16px' } : { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          {viewMode === 'carousel' ? (
+            <div style={{ position: 'relative' }}>
+              <div style={{
+                aspectRatio: '16/9',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
+                border: '1px solid rgba(100, 116, 139, 0.3)'
+              }}>
+                <img
+                  src={photos[currentIndex]?.url || '/api/placeholder/800/450'}
+                  alt={photos[currentIndex]?.description || 'Photo'}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+              
+              {/* Navigation premium avec points illuminés */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px', gap: '8px' }}>
+                {photos.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => onNavigate(index)}
+                    style={{
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      ...(index === currentIndex ? {
+                        background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                        transform: 'scale(1.25)',
+                        boxShadow: '0 0 12px rgba(59, 130, 246, 0.6)'
+                      } : {
+                        background: 'rgba(255, 255, 255, 0.2)'
+                      })
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            photos.map((photo, index) => (
+              <div
+                key={photo.id}
+                style={{
+                  position: 'relative',
+                  aspectRatio: '1',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
+                  border: '1px solid rgba(100, 116, 139, 0.3)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onClick={() => onNavigate(index)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <img
+                  src={photo.url}
+                  alt={photo.description}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(0, 0, 0, 0.5)',
+                  opacity: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'opacity 0.3s ease'
+                }}>
+                  <button style={{
+                    padding: '8px',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: '50%',
+                    border: 'none',
+                    backdropFilter: 'blur(10px)'
+                  }}>
+                    <Eye size={20} style={{ color: 'white' }} />
+                  </button>
+                </div>
+                <button style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  padding: '6px',
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  borderRadius: '50%',
+                  border: 'none',
+                  backdropFilter: 'blur(10px)',
+                  opacity: 0,
+                  transition: 'opacity 0.3s ease'
+                }}>
+                  <Trash2 size={16} style={{ color: '#fca5a5' }} />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      ) : (
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '40px', 
+          color: '#64748b',
+          background: 'rgba(30, 41, 59, 0.3)',
+          borderRadius: '16px',
+          border: '1px dashed rgba(100, 116, 139, 0.3)'
+        }}>
+          <Camera size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+          <p style={{ margin: 0, fontSize: '14px' }}>Aucune photo ajoutée</p>
+          <p style={{ margin: '4px 0 0', fontSize: '12px', opacity: 0.7 }}>
+            Glissez des photos ou cliquez sur "Parcourir"
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Composant WorkerCard avec validation âge 18+ premium
+const WorkerCardUltraPremium: React.FC<{
+  workers: WorkerEntry[];
+  onAddWorker: (worker: WorkerEntry) => void;
+  onRemoveWorker: (workerId: number) => void;
+}> = ({ workers, onAddWorker, onRemoveWorker }) => {
+  const [showForm, setShowForm] = useState(false);
+  const [newWorker, setNewWorker] = useState({
+    name: '',
+    age: '',
+    certification: '',
+    entryTime: '',
+    date: new Date().toISOString().split('T')[0]
+  });
+
+  const handleAddWorker = () => {
+    const age = parseInt(newWorker.age);
+    if (newWorker.name && newWorker.age && age >= 18) {
+      onAddWorker({
+        id: Date.now(),
+        name: newWorker.name,
+        age: age,
+        certification: newWorker.certification,
+        entryTime: newWorker.entryTime,
+        exitTime: null,
+        date: newWorker.date
+      });
+      setNewWorker({ name: '', age: '', certification: '', entryTime: '', date: newWorker.date });
+      setShowForm(false);
+    }
+  };
+
+  return (
+    <div style={{ padding: '24px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <h3 style={{
+          fontSize: '20px',
+          fontWeight: '700',
+          background: 'linear-gradient(135deg, #60a5fa, #a78bfa)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          margin: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          👥 Travailleurs Autorisés ({workers.length})
+        </h3>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          style={{
+            padding: '10px 20px',
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2))',
+            color: '#4ade80',
+            borderRadius: '12px',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '13px',
+            fontWeight: '600'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.transform = 'scale(1.05)';
+            e.target.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.25)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.transform = 'scale(1)';
+            e.target.style.boxShadow = 'none';
+          }}
+        >
+          <Plus size={16} />
+          Ajouter Travailleur
+        </button>
+      </div>
+
+      {/* Formulaire d'ajout premium */}
+      {showForm && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(100, 116, 139, 0.3)',
+          borderRadius: '16px',
+          padding: '24px',
+          marginBottom: '24px'
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+            <FormFieldUltraPremium
+              label="Nom complet"
+              value={newWorker.name}
+              onChange={(value) => setNewWorker({...newWorker, name: value})}
+              required
+            />
+            <FormFieldUltraPremium
+              label="Âge"
+              value={newWorker.age}
+              onChange={(value) => setNewWorker({...newWorker, age: value})}
+              type="number"
+              required
+              validation={{
+                isValid: parseInt(newWorker.age) >= 18,
+                critical: parseInt(newWorker.age) < 18 && newWorker.age !== '',
+                message: parseInt(newWorker.age) < 18 && newWorker.age !== '' ? "⚠️ CRITIQUE: Âge minimum 18 ans requis (RSST Art. 298)" : ""
+              }}
+            />
+            <FormFieldUltraPremium
+              label="Certification SST"
+              value={newWorker.certification}
+              onChange={(value) => setNewWorker({...newWorker, certification: value})}
+              required
+            />
+            <FormFieldUltraPremium
+              label="Heure d'entrée"
+              value={newWorker.entryTime}
+              onChange={(value) => setNewWorker({...newWorker, entryTime: value})}
+              type="time"
+              required
+            />
+          </div>
+          
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={handleAddWorker}
+              disabled={!newWorker.name || !newWorker.age || parseInt(newWorker.age) < 18}
+              style={{
+                padding: '12px 24px',
+                background: parseInt(newWorker.age) >= 18 && newWorker.name ? 
+                  'linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.2))' : 
+                  'rgba(100, 116, 139, 0.2)',
+                color: parseInt(newWorker.age) >= 18 && newWorker.name ? '#4ade80' : '#64748b',
+                borderRadius: '12px',
+                border: `1px solid ${parseInt(newWorker.age) >= 18 && newWorker.name ? 'rgba(34, 197, 94, 0.3)' : 'rgba(100, 116, 139, 0.3)'}`,
+                cursor: parseInt(newWorker.age) >= 18 && newWorker.name ? 'pointer' : 'not-allowed',
+                transition: 'all 0.3s ease',
+                fontSize: '13px',
+                fontWeight: '600'
+              }}
+            >
+              ✅ Ajouter Travailleur
+            </button>
+            <button
+              onClick={() => setShowForm(false)}
+              style={{
+                padding: '12px 24px',
+                background: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2))',
+                color: '#cbd5e1',
+                borderRadius: '12px',
+                border: '1px solid rgba(100, 116, 139, 0.3)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                fontSize: '13px',
+                fontWeight: '600'
+              }}
+            >
+              ❌ Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Liste des travailleurs avec design premium */}
+      <div style={{ display: 'grid', gap: '16px' }}>
+        {workers.map((worker) => (
+          <div
+            key={worker.id}
+            style={{
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
+              backdropFilter: 'blur(20px)',
+              border: worker.age < 18 ? '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
+              borderRadius: '16px',
+              padding: '20px',
+              transition: 'all 0.3s ease',
+              ...(worker.age < 18 && {
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(15, 23, 42, 0.8))',
+                animation: 'pulse 2s infinite'
+              })
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = worker.age < 18 ? '#ef4444' : 'rgba(59, 130, 246, 0.5)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = worker.age < 18 ? '#ef4444' : 'rgba(100, 116, 139, 0.3)';
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  background: worker.age < 18 ? 
+                    'linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2))' :
+                    'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <User size={24} style={{ color: worker.age < 18 ? '#fca5a5' : '#60a5fa' }} />
+                </div>
+                <div>
+                  <h4 style={{ 
+                    fontWeight: '600', 
+                    color: '#ffffff', 
+                    margin: '0 0 4px',
+                    fontSize: '16px'
+                  }}>
+                    {worker.name}
+                  </h4>
+                  <p style={{ 
+                    fontSize: '13px', 
+                    color: '#cbd5e1', 
+                    margin: '0 0 2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <span>{worker.age} ans</span>
+                    <span>•</span>
+                    <span>{worker.certification}</span>
+                  </p>
+                  <p style={{ 
+                    fontSize: '12px', 
+                    color: '#94a3b8', 
+                    margin: 0 
+                  }}>
+                    Entrée: {worker.entryTime} {worker.exitTime && `• Sortie: ${worker.exitTime}`}
+                  </p>
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {worker.age < 18 && (
+                  <span style={{
+                    padding: '6px 12px',
+                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2))',
+                    color: '#fca5a5',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    animation: 'pulse 1s infinite'
+                  }}>
+                    ⚠️ MINEUR - INTERDIT
+                  </span>
+                )}
+                <button
+                  onClick={() => onRemoveWorker(worker.id)}
+                  style={{
+                    padding: '8px',
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    borderRadius: '8px',
+                    border: 'none',
+                    color: '#fca5a5',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'scale(1.1)';
+                    e.target.style.background = 'rgba(239, 68, 68, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+                  }}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {workers.length === 0 && (
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '48px 24px', 
+          color: '#64748b',
+          background: 'rgba(30, 41, 59, 0.3)',
+          borderRadius: '16px',
+          border: '1px dashed rgba(100, 116, 139, 0.3)'
+        }}>
+          <Users size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+          <p style={{ margin: '0 0 8px', fontSize: '14px' }}>Aucun travailleur enregistré</p>
+          <p style={{ margin: 0, fontSize: '12px', opacity: 0.7 }}>
+            Cliquez sur "Ajouter Travailleur" pour commencer
+          </p>
+        </div>
+      )}
+    </div>
+  );
