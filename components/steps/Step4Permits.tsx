@@ -1818,10 +1818,10 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     </div>
   );
 };
-// =================== SECTION 4: COMPOSANTS UI PREMIUM ULTRA-MODERNES ===================
+// =================== SECTION 4: COMPOSANTS UI VERSION PREMIUM SOMBRE ===================
 // À coller après la Section 3
 
-// =================== COMPOSANT CARTE PERMIS PREMIUM =================== 
+// =================== COMPOSANT CARTE PERMIS VERSION SOMBRE =================== 
 interface PermitCardProps {
   permit: Permit;
   isSelected: boolean;
@@ -1879,232 +1879,123 @@ const PermitCard: React.FC<PermitCardProps> = ({
   const hasViolations = nonCompliantChecks.length > 0;
 
   return (
-    <div className={`relative overflow-hidden bg-gradient-to-br from-white via-gray-50 to-white rounded-3xl shadow-2xl border transition-all duration-500 transform hover:scale-[1.02] hover:shadow-3xl backdrop-blur-sm ${
-      isSelected 
-        ? 'border-transparent bg-gradient-to-br from-blue-50 via-white to-purple-50 shadow-blue-200/50 ring-2 ring-blue-400/30' 
-        : 'border-gray-200/50 hover:border-gray-300/80'
-    } ${hasViolations ? 'border-red-400 bg-gradient-to-br from-red-50 via-white to-red-50 shadow-red-200/50' : ''}`}>
+    <div className={`bg-slate-800 rounded-2xl border transition-all duration-300 hover:scale-[1.01] ${
+      isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-slate-700'
+    }`}>
       
-      {/* Effet de brillance animé */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-      
-      {/* En-tête premium avec glassmorphisme */}
-      <div className="relative p-8 bg-gradient-to-r from-white/80 via-white/60 to-white/80 backdrop-blur-xl border-b border-white/20">
+      {/* En-tête version sombre */}
+      <div className="p-6 border-b border-slate-700">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <div className="relative">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg transform hover:scale-110 transition-all duration-300">
-                {getCategoryIcon(permit.category)}
-              </div>
-              <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">
-                ✓
-              </div>
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-2xl">
+              {getCategoryIcon(permit.category)}
             </div>
-            
             <div className="flex-1">
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent mb-2">
-                {permit.name}
-              </h3>
-              <p className="text-gray-600 text-base leading-relaxed mb-4 max-w-2xl">
-                {permit.description}
-              </p>
+              <h3 className="text-xl font-bold text-white mb-1">{permit.name}</h3>
+              <p className="text-gray-400 text-sm mb-3">{permit.description}</p>
+              <p className="text-blue-400 text-sm">{permit.authority}</p>
               
-              {/* Badges premium avec effets */}
-              <div className="flex items-center flex-wrap gap-3">
+              {/* Badges avec couleurs exactes de l'image */}
+              <div className="flex items-center space-x-3 mt-3">
                 <span 
-                  className="px-4 py-2 rounded-2xl text-sm font-bold text-white shadow-lg transform hover:scale-105 transition-all duration-200 backdrop-blur-sm"
+                  className="px-3 py-1 rounded text-xs font-semibold"
                   style={{ 
-                    background: `linear-gradient(135deg, ${getPriorityColor(permit.priority)}, ${getPriorityColor(permit.priority)}dd)`,
-                    boxShadow: `0 4px 15px ${getPriorityColor(permit.priority)}40`
+                    backgroundColor: permit.priority === 'critical' ? '#dc2626' : '#f59e0b',
+                    color: 'white'
                   }}
                 >
-                  ⚡ {t.priorities[permit.priority]}
+                  {permit.priority === 'critical' ? 'Critique' : permit.priority}
                 </span>
-                <span 
-                  className="px-4 py-2 rounded-2xl text-sm font-bold text-white shadow-lg transform hover:scale-105 transition-all duration-200 backdrop-blur-sm"
-                  style={{ 
-                    background: `linear-gradient(135deg, ${getStatusColor(permit.status)}, ${getStatusColor(permit.status)}dd)`,
-                    boxShadow: `0 4px 15px ${getStatusColor(permit.status)}40`
-                  }}
-                >
-                  📋 {t.statuses[permit.status]}
+                <span className="px-3 py-1 rounded text-xs font-semibold bg-yellow-600 text-white">
+                  En Attente
                 </span>
-                <span 
-                  className="px-4 py-2 rounded-2xl text-sm font-bold text-white shadow-lg transform hover:scale-105 transition-all duration-200 backdrop-blur-sm"
-                  style={{ 
-                    background: `linear-gradient(135deg, ${getComplianceColor(permit.complianceLevel)}, ${getComplianceColor(permit.complianceLevel)}dd)`,
-                    boxShadow: `0 4px 15px ${getComplianceColor(permit.complianceLevel)}40`
-                  }}
-                >
-                  🛡️ {t.complianceLevels[permit.complianceLevel]}
-                </span>
-                
-                {/* Badge workers et photos */}
-                <span className="px-4 py-2 rounded-2xl text-sm font-bold bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg backdrop-blur-sm">
-                  👥 {workers.length} {workers.length === 1 ? 'Travailleur' : 'Travailleurs'}
-                </span>
-                <span className="px-4 py-2 rounded-2xl text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg backdrop-blur-sm">
-                  📸 {photos.length} {photos.length === 1 ? 'Photo' : 'Photos'}
+                <span className="text-gray-400 text-xs">
+                  {permit.processingTime}
                 </span>
               </div>
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
-            {hasViolations && (
-              <div className="relative">
-                <div className="absolute inset-0 bg-red-400 rounded-2xl blur-lg opacity-30 animate-pulse"></div>
-                <div className="relative bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-2xl text-sm font-bold shadow-xl backdrop-blur-sm">
-                  ⚠️ {nonCompliantChecks.length} Violation{nonCompliantChecks.length > 1 ? 's' : ''}
-                </div>
-              </div>
-            )}
-            
+          <div className="flex items-center space-x-3">
             <button
               onClick={onToggle}
-              className={`group relative overflow-hidden px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-xl ${
+              className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 ${
                 isSelected 
-                  ? 'bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white hover:shadow-red-500/50' 
-                  : 'bg-gradient-to-r from-blue-500 via-purple-600 to-indigo-700 text-white hover:shadow-blue-500/50'
+                  ? 'bg-green-600 text-white hover:bg-green-700' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative flex items-center space-x-3">
-                {isSelected ? (
-                  <>
-                    <X className="w-5 h-5" />
-                    <span>Retirer</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-5 h-5" />
-                    <span>Sélectionner</span>
-                  </>
-                )}
-              </div>
+              {isSelected ? '✓' : '+'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Contenu expansible premium */}
+      {/* Contenu expansible */}
       {isSelected && (
-        <div className="relative p-8 bg-gradient-to-br from-white/90 to-gray-50/90 backdrop-blur-xl">
+        <div className="p-6 bg-slate-800">
           
-          {/* Vérifications de conformité avec design premium */}
-          {complianceChecks.length > 0 && (
-            <div className="mb-8 p-6 bg-gradient-to-br from-white/80 to-gray-50/80 backdrop-blur-xl rounded-3xl border border-white/20 shadow-xl">
-              <h4 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6 flex items-center">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-3">
-                  <Shield className="w-5 h-5 text-white" />
-                </div>
-                Vérifications de Conformité Premium
-              </h4>
-              <div className="grid gap-4">
-                {complianceChecks.map((check, index) => (
-                  <div key={index} className={`group relative overflow-hidden p-6 rounded-2xl transition-all duration-300 hover:scale-[1.02] ${
-                    check.status === 'compliant' 
-                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/50 hover:shadow-green-200/50' 
-                      : 'bg-gradient-to-r from-red-50 to-rose-50 border border-red-200/50 hover:shadow-red-200/50'
-                  } shadow-lg hover:shadow-xl`}>
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="relative flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${
-                          check.status === 'compliant' ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-gradient-to-r from-red-400 to-rose-500'
-                        }`}>
-                          {check.status === 'compliant' ? (
-                            <CheckCircle className="w-6 h-6 text-white" />
-                          ) : (
-                            <AlertTriangle className="w-6 h-6 text-white" />
-                          )}
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold text-gray-800">{check.requirement}</div>
-                          <div className="text-sm text-gray-600 mt-1">{check.details}</div>
-                        </div>
-                      </div>
-                      <div className="px-4 py-2 bg-white/60 backdrop-blur-sm rounded-xl text-xs font-medium text-gray-700 border border-gray-200/50">
-                        {check.reference}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Boutons d'action */}
+          <div className="flex items-center space-x-3 mb-6">
+            <button
+              onClick={onExpand}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Edit className="w-4 h-4" />
+              <span>Remplir</span>
+            </button>
+            
+            <button className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+              <Shield className="w-4 h-4" />
+              <span>Valider conformité</span>
+            </button>
+            
+            <button className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+              <Download className="w-4 h-4" />
+              <span>PDF</span>
+            </button>
+          </div>
 
-          {/* Bouton pour étendre/réduire le formulaire */}
-          <button
-            onClick={onExpand}
-            className="group relative overflow-hidden w-full flex items-center justify-center space-x-3 px-8 py-6 bg-gradient-to-r from-indigo-500 via-purple-600 to-indigo-700 text-white rounded-3xl hover:shadow-2xl hover:shadow-indigo-500/30 transition-all duration-300 transform hover:scale-[1.02] font-bold text-lg mb-8"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative flex items-center space-x-3">
-              <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
-                {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-              </div>
-              <span>{isExpanded ? '🔼 Réduire le formulaire premium' : '🔽 Ouvrir le formulaire premium'}</span>
-              <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse"></div>
-            </div>
-          </button>
-
-          {/* Formulaire étendu premium */}
+          {/* Formulaire étendu */}
           {isExpanded && (
-            <div className="space-y-10">
+            <div className="space-y-6">
               
-              {/* Grille premium des champs */}
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
+              {/* Grid layout comme dans l'image */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 
-                {/* Colonne gauche - Formulaire premium */}
-                <div className="space-y-8">
-                  <div className="relative p-8 bg-gradient-to-br from-white/90 to-blue-50/80 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-600 to-indigo-700 rounded-t-3xl"></div>
-                    <h4 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-8 flex items-center">
-                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mr-4">
-                        <FileText className="w-6 h-6 text-white" />
-                      </div>
-                      Formulaire Premium
-                    </h4>
-                    
-                    <div className="space-y-6">
-                      {permit.formFields?.map((field) => (
-                        <FormField
-                          key={field.id}
-                          field={field}
-                          value={permit.formData?.[field.id] || ''}
-                          onChange={(value) => onFieldChange(field.id, value)}
-                          t={t}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                {/* Colonne gauche - Formulaire */}
+                <div className="space-y-6">
+                  {permit.formFields?.map((field) => (
+                    <FormField
+                      key={field.id}
+                      field={field}
+                      value={permit.formData?.[field.id] || ''}
+                      onChange={(value) => onFieldChange(field.id, value)}
+                      t={t}
+                    />
+                  ))}
                 </div>
 
-                {/* Colonne droite - Travailleurs et Photos premium */}
-                <div className="space-y-8">
+                {/* Colonne droite - Travailleurs et Photos */}
+                <div className="space-y-6">
                   
-                  {/* Section Travailleurs Premium */}
-                  <div className="relative p-8 bg-gradient-to-br from-white/90 to-emerald-50/80 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-700 rounded-t-3xl"></div>
-                    <div className="flex items-center justify-between mb-8">
-                      <h4 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mr-4">
-                          <Users className="w-6 h-6 text-white" />
-                        </div>
-                        Équipe ({workers.length})
+                  {/* Section Travailleurs */}
+                  <div className="bg-slate-700 rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold text-white flex items-center">
+                        <Users className="w-5 h-5 mr-2" />
+                        {t.messages.authorizedWorkers} ({workers.length})
                       </h4>
                       <button
                         onClick={onAddWorker}
-                        className="group relative overflow-hidden flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300 transform hover:scale-105 font-bold"
+                        className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                       >
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                        <UserPlus className="w-5 h-5 relative z-10" />
-                        <span className="relative z-10">Ajouter</span>
+                        <UserPlus className="w-4 h-4" />
+                        <span>{t.messages.addWorker}</span>
                       </button>
                     </div>
 
-                    <div className="space-y-6 max-h-80 overflow-y-auto pr-2">
+                    <div className="space-y-4 max-h-64 overflow-y-auto">
                       {workers.map((worker, index) => (
                         <WorkerCard
                           key={worker.id}
@@ -2119,29 +2010,24 @@ const PermitCard: React.FC<PermitCardProps> = ({
                     </div>
                   </div>
 
-                  {/* Section Photos Premium */}
-                  <div className="relative p-8 bg-gradient-to-br from-white/90 to-purple-50/80 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 via-pink-600 to-rose-700 rounded-t-3xl"></div>
-                    <div className="flex items-center justify-between mb-8">
-                      <h4 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mr-4">
-                          <Camera className="w-6 h-6 text-white" />
-                        </div>
-                        Galerie ({photos.length})
+                  {/* Section Photos avec carousel */}
+                  <div className="bg-slate-700 rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold text-white flex items-center">
+                        <Camera className="w-5 h-5 mr-2" />
+                        {t.messages.sitePhotos} ({photos.length})
                       </h4>
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2">
                         <button
                           onClick={onToggleViewMode}
-                          className="group relative overflow-hidden p-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-2xl hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+                          className="p-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                           title={t.messages.toggleView}
                         >
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          {viewMode === 'carousel' ? <Grid className="w-5 h-5 relative z-10" /> : <List className="w-5 h-5 relative z-10" />}
+                          {viewMode === 'carousel' ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
                         </button>
-                        <label className="group relative overflow-hidden flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-2xl hover:shadow-xl hover:shadow-purple-500/30 transition-all duration-300 transform hover:scale-105 cursor-pointer font-bold">
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          <Upload className="w-5 h-5 relative z-10" />
-                          <span className="relative z-10">Upload</span>
+                        <label className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer text-sm">
+                          <Upload className="w-4 h-4" />
+                          <span>{t.messages.addPhotos}</span>
                           <input
                             type="file"
                             multiple
@@ -2166,24 +2052,13 @@ const PermitCard: React.FC<PermitCardProps> = ({
                 </div>
               </div>
 
-              {/* Actions premium du formulaire */}
-              <div className="flex justify-center space-x-6 pt-10 border-t border-gradient-to-r from-transparent via-gray-200 to-transparent">
-                <button className="group relative overflow-hidden flex items-center space-x-3 px-10 py-5 bg-gradient-to-r from-blue-500 via-purple-600 to-indigo-700 text-white rounded-3xl hover:shadow-2xl hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 font-bold text-lg">
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <Save className="w-6 h-6 relative z-10" />
-                  <span className="relative z-10">{t.actions.save}</span>
+              {/* Boutons de sauvegarde */}
+              <div className="flex justify-end space-x-3 pt-6 border-t border-slate-700">
+                <button className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                  Sauvegarder
                 </button>
-                
-                <button className="group relative overflow-hidden flex items-center space-x-3 px-10 py-5 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-700 text-white rounded-3xl hover:shadow-2xl hover:shadow-emerald-500/30 transition-all duration-300 transform hover:scale-105 font-bold text-lg">
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <Download className="w-6 h-6 relative z-10" />
-                  <span className="relative z-10">{t.actions.download}</span>
-                </button>
-                
-                <button className="group relative overflow-hidden flex items-center space-x-3 px-10 py-5 bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-700 text-white rounded-3xl hover:shadow-2xl hover:shadow-indigo-500/30 transition-all duration-300 transform hover:scale-105 font-bold text-lg">
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <Eye className="w-6 h-6 relative z-10" />
-                  <span className="relative z-10">{t.actions.preview}</span>
+                <button className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                  Sauvegardé
                 </button>
               </div>
             </div>
@@ -2194,7 +2069,7 @@ const PermitCard: React.FC<PermitCardProps> = ({
   );
 };
 
-// =================== COMPOSANT CHAMP FORMULAIRE PREMIUM ===================
+// =================== COMPOSANT CHAMP FORMULAIRE VERSION SOMBRE ===================
 interface FormFieldProps {
   field: FormField;
   value: any;
@@ -2204,103 +2079,82 @@ interface FormFieldProps {
 
 const FormField: React.FC<FormFieldProps> = ({ field, value, onChange, t }) => {
   const getFieldComponent = () => {
-    const baseInputClasses = "w-full px-6 py-4 border-2 border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm text-lg font-medium placeholder-gray-400 hover:border-gray-300/80";
-    
     switch (field.type) {
       case 'text':
       case 'number':
       case 'date':
       case 'time':
         return (
-          <div className="relative group">
-            <input
-              type={field.type}
-              value={value || ''}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={field.placeholder}
-              required={field.required}
-              min={field.validation?.min}
-              max={field.validation?.max}
-              className={baseInputClasses}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-          </div>
+          <input
+            type={field.type}
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder}
+            required={field.required}
+            min={field.validation?.min}
+            max={field.validation?.max}
+            className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+          />
         );
 
       case 'textarea':
         return (
-          <div className="relative group">
-            <textarea
-              value={value || ''}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={field.placeholder}
-              required={field.required}
-              rows={6}
-              className={`${baseInputClasses} resize-none`}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-          </div>
+          <textarea
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder}
+            required={field.required}
+            rows={4}
+            className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
+          />
         );
 
       case 'select':
         return (
-          <div className="relative group">
-            <select
-              value={value || ''}
-              onChange={(e) => onChange(e.target.value)}
-              required={field.required}
-              className={baseInputClasses}
-            >
-              <option value="">{t.messages.select}</option>
-              {field.options?.map((option: string) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-          </div>
+          <select
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            required={field.required}
+            className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+          >
+            <option value="">{t.messages.select}</option>
+            {field.options?.map((option: string) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
         );
 
       case 'checkbox':
         return (
-          <div className="group relative p-6 bg-gradient-to-r from-white/80 to-gray-50/80 backdrop-blur-sm rounded-2xl border-2 border-gray-200/50 hover:border-blue-300/50 transition-all duration-300">
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={value || false}
-                  onChange={(e) => onChange(e.target.checked)}
-                  required={field.required}
-                  className="w-6 h-6 text-blue-600 border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-500/20 transition-all duration-300"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-              </div>
-              <span className="text-lg font-medium text-gray-700">
-                {field.label} {field.required && <span className="text-red-500 font-bold">*</span>}
-              </span>
-            </div>
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={value || false}
+              onChange={(e) => onChange(e.target.checked)}
+              required={field.required}
+              className="w-5 h-5 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+            />
+            <span className="text-white">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
+            </span>
           </div>
         );
 
       case 'radio':
         return (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {field.options?.map((option: string) => (
-              <div key={option} className="group relative p-4 bg-gradient-to-r from-white/80 to-gray-50/80 backdrop-blur-sm rounded-2xl border-2 border-gray-200/50 hover:border-blue-300/50 transition-all duration-300">
-                <div className="flex items-center space-x-4">
-                  <div className="relative">
-                    <input
-                      type="radio"
-                      name={field.id}
-                      value={option}
-                      checked={value === option}
-                      onChange={(e) => onChange(e.target.value)}
-                      required={field.required}
-                      className="w-5 h-5 text-blue-600 border-2 border-gray-300 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                  </div>
-                  <span className="text-lg font-medium text-gray-700">{option}</span>
-                </div>
+              <div key={option} className="flex items-center space-x-3">
+                <input
+                  type="radio"
+                  name={field.id}
+                  value={option}
+                  checked={value === option}
+                  onChange={(e) => onChange(e.target.value)}
+                  required={field.required}
+                  className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 focus:ring-blue-500"
+                />
+                <span className="text-white">{option}</span>
               </div>
             ))}
           </div>
@@ -2311,38 +2165,44 @@ const FormField: React.FC<FormFieldProps> = ({ field, value, onChange, t }) => {
         const isInRange = numValue >= (field.validation?.min || 0) && numValue <= (field.validation?.max || 100);
         
         return (
-          <div className="relative group">
-            <div className={`relative p-6 rounded-3xl border-2 transition-all duration-300 backdrop-blur-sm ${
-              isInRange 
-                ? 'bg-gradient-to-r from-green-50/80 to-emerald-50/80 border-green-300/50 hover:border-green-400/60' 
-                : 'bg-gradient-to-r from-red-50/80 to-rose-50/80 border-red-300/50 hover:border-red-400/60'
-            }`}>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              {field.validation?.legalRequirement && (
+                <span className="px-2 py-1 bg-green-600 text-white text-xs rounded">LÉGAL</span>
+              )}
+              {field.validation?.critical && (
+                <span className="px-2 py-1 bg-red-600 text-white text-xs rounded">CRITIQUE</span>
+              )}
+            </div>
+            
+            <div className="relative">
               <input
                 type="number"
                 step="0.1"
                 value={value || ''}
                 onChange={(e) => onChange(e.target.value)}
                 required={field.required}
-                className={`w-full px-6 py-4 border-2 rounded-2xl focus:ring-4 focus:border-blue-500 transition-all duration-300 text-lg font-bold text-center ${
+                className={`w-full px-4 py-3 rounded-lg text-white font-medium transition-all duration-200 ${
                   isInRange 
-                    ? 'border-green-300 bg-green-50/50 text-green-700 focus:ring-green-500/20' 
-                    : 'border-red-300 bg-red-50/50 text-red-700 focus:ring-red-500/20'
+                    ? 'bg-green-700 border border-green-600 focus:ring-2 focus:ring-green-500' 
+                    : 'bg-red-700 border border-red-600 focus:ring-2 focus:ring-red-500'
                 }`}
               />
-              <div className={`absolute right-6 top-1/2 transform -translate-y-1/2 text-3xl ${
-                isInRange ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {isInRange ? '✅' : '⚠️'}
-              </div>
-              <div className="flex justify-between items-center mt-4">
-                <div className="text-sm font-medium text-gray-600">
-                  Plage: {field.validation?.min || 0} - {field.validation?.max || 100}
+              
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-gray-400 text-sm">
+                  CRITIQUE: {field.validation?.message}
+                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-blue-400 text-sm">
+                    Réf: {field.complianceRef}
+                  </span>
+                  <button className={`px-3 py-1 rounded text-xs font-semibold ${
+                    isInRange ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                  }`}>
+                    {isInRange ? '✓ Conforme' : '✗ Non conforme'}
+                  </button>
                 </div>
-                {field.validation?.critical && (
-                  <div className="px-3 py-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full animate-pulse">
-                    CRITIQUE
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -2350,119 +2210,58 @@ const FormField: React.FC<FormFieldProps> = ({ field, value, onChange, t }) => {
 
       case 'compliance_check':
         return (
-          <div className={`group relative overflow-hidden p-8 rounded-3xl border-2 transition-all duration-300 ${
-            value 
-              ? 'bg-gradient-to-br from-green-50/90 to-emerald-50/90 border-green-300/60 shadow-green-200/50' 
-              : 'bg-gradient-to-br from-red-50/90 to-rose-50/90 border-red-300/60 shadow-red-200/50'
-          } shadow-xl hover:shadow-2xl transform hover:scale-[1.02]`}>
-            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative flex items-center space-x-6">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 ${
-                value ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-gradient-to-r from-red-400 to-rose-500'
-              }`}>
-                <input
-                  type="checkbox"
-                  checked={value || false}
-                  onChange={(e) => onChange(e.target.checked)}
-                  required={field.required}
-                  className="w-6 h-6 text-white border-white rounded-lg opacity-0"
-                />
-                <div className="absolute inset-0 flex items-center justify-center text-white text-2xl font-bold">
-                  {value ? '✓' : '✗'}
-                </div>
-              </div>
-              <div className="flex-1">
-                <span className={`text-xl font-bold ${value ? 'text-green-700' : 'text-red-700'}`}>
-                  {field.label} {field.required && <span className="text-red-500">*</span>}
-                </span>
-                {field.complianceRef && (
-                  <div className="mt-2 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-xl text-sm font-medium text-gray-700 border border-gray-200/50">
-                    📋 {field.complianceRef}
-                  </div>
-                )}
-              </div>
+          <div className={`p-4 rounded-lg border-2 ${
+            value ? 'bg-green-700 border-green-600' : 'bg-slate-700 border-slate-600'
+          }`}>
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={value || false}
+                onChange={(e) => onChange(e.target.checked)}
+                required={field.required}
+                className="w-5 h-5 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+              />
+              <span className={`font-medium ${value ? 'text-white' : 'text-white'}`}>
+                {field.label} {field.required && <span className="text-red-500">*</span>}
+              </span>
             </div>
+            {field.complianceRef && (
+              <div className="text-xs text-blue-400 mt-2">📋 {field.complianceRef}</div>
+            )}
           </div>
-        );
-
-      case 'file':
-        return (
-          <label className="group relative block w-full p-10 border-2 border-dashed border-gray-300/60 rounded-3xl hover:border-blue-400/60 cursor-pointer transition-all duration-300 bg-gradient-to-br from-white/80 to-gray-50/80 backdrop-blur-sm hover:shadow-xl">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg transform group-hover:scale-110 transition-transform duration-300">
-                <Upload className="w-8 h-8 text-white" />
-              </div>
-              <span className="text-lg font-bold text-gray-700 block mb-2">Glisser-déposer ou cliquer pour sélectionner</span>
-              {value && (
-                <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl text-sm font-medium mt-2">
-                  📎 {value.name || value}
-                </div>
-              )}
-            </div>
-            <input
-              type="file"
-              onChange={(e) => onChange(e.target.files?.[0])}
-              required={field.required}
-              className="hidden"
-            />
-          </label>
         );
 
       default:
         return (
-          <div className="relative group">
-            <input
-              type="text"
-              value={value || ''}
-              onChange={(e) => onChange(e.target.value)}
-              className={baseInputClasses}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-          </div>
+          <input
+            type="text"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+          />
         );
     }
   };
 
   if (field.type === 'checkbox' || field.type === 'radio' || field.type === 'compliance_check') {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {getFieldComponent()}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <label className="block">
-        <span className="text-lg font-bold bg-gradient-to-r from-gray-700 to-gray-900 bg-clip-text text-transparent flex items-center">
-          {field.label} 
-          {field.required && <span className="text-red-500 ml-2 text-xl">*</span>}
-          {field.validation?.legalRequirement && (
-            <span className="ml-3 px-3 py-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full animate-pulse">
-              ⚖️ LÉGAL
-            </span>
-          )}
-        </span>
+    <div className="space-y-2">
+      <label className="block text-white font-medium">
+        {field.label} {field.required && <span className="text-red-500">*</span>}
       </label>
       {getFieldComponent()}
-      {field.validation?.message && (
-        <div className={`flex items-center space-x-2 px-4 py-3 rounded-2xl border ${
-          field.validation.critical 
-            ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-200 text-red-700' 
-            : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-700'
-        }`}>
-          <div className="text-lg">
-            {field.validation.critical ? '⚠️' : 'ℹ️'}
-          </div>
-          <span className="font-medium">
-            {field.validation.message}
-          </span>
-        </div>
-      )}
     </div>
   );
-};// =================== COMPOSANT CARTE TRAVAILLEUR PREMIUM ===================
+};
+
+// =================== COMPOSANT CARTE TRAVAILLEUR VERSION SOMBRE ===================
 interface WorkerCardProps {
   worker: WorkerEntry;
   index: number;
@@ -2476,140 +2275,91 @@ const WorkerCard: React.FC<WorkerCardProps> = ({ worker, index, canRemove, onUpd
   const isUnderage = worker.age > 0 && worker.age < 18;
 
   return (
-    <div className={`group relative overflow-hidden p-6 rounded-3xl border-2 transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-2xl backdrop-blur-sm ${
-      isUnderage 
-        ? 'bg-gradient-to-br from-red-50/90 to-rose-50/90 border-red-300/60 shadow-red-200/50' 
-        : 'bg-gradient-to-br from-white/90 to-gray-50/90 border-gray-200/50 hover:border-gray-300/80'
+    <div className={`p-4 rounded-lg border ${
+      isUnderage ? 'bg-red-900 border-red-600' : 'bg-slate-600 border-slate-500'
     }`}>
-      {/* Effet de brillance */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform -skew-x-12"></div>
-      
-      <div className="relative">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg font-bold text-white text-lg ${
-              isUnderage 
-                ? 'bg-gradient-to-r from-red-400 to-rose-500' 
-                : 'bg-gradient-to-r from-blue-500 to-purple-600'
-            }`}>
-              #{index + 1}
-            </div>
-            <h5 className="text-xl font-bold bg-gradient-to-r from-gray-700 to-gray-900 bg-clip-text text-transparent">
-              {t.messages.workerNumber}{index + 1}
-            </h5>
-          </div>
-          {canRemove && (
-            <button
-              onClick={onRemove}
-              className="group/btn relative overflow-hidden p-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl hover:shadow-xl hover:shadow-red-500/30 transition-all duration-300 transform hover:scale-105"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
-              <UserMinus className="w-5 h-5 relative z-10" />
-            </button>
-          )}
+      <div className="flex items-center justify-between mb-3">
+        <h5 className="font-medium text-white">{t.messages.workerNumber}{index + 1}</h5>
+        {canRemove && (
+          <button
+            onClick={onRemove}
+            className="text-red-400 hover:text-red-300 transition-colors"
+          >
+            <UserMinus className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-300 mb-1">{t.messages.fullName}</label>
+          <input
+            type="text"
+            value={worker.name}
+            onChange={(e) => onUpdate('name', e.target.value)}
+            placeholder={t.messages.workerName}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-blue-500"
+          />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <label className="block text-sm font-bold text-gray-700">{t.messages.fullName}</label>
-            <div className="relative group/input">
-              <input
-                type="text"
-                value={worker.name}
-                onChange={(e) => onUpdate('name', e.target.value)}
-                placeholder={t.messages.workerName}
-                className="w-full px-4 py-3 border-2 border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm font-medium hover:border-gray-300/80"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl opacity-0 group-hover/input:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-            </div>
-          </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-300 mb-1">{t.messages.age}</label>
+          <input
+            type="number"
+            value={worker.age || ''}
+            onChange={(e) => onUpdate('age', parseInt(e.target.value) || 0)}
+            placeholder={t.messages.workerAge}
+            min="16"
+            max="70"
+            className={`w-full px-3 py-2 border rounded text-white text-sm focus:ring-2 ${
+              isUnderage ? 'bg-red-800 border-red-600 focus:ring-red-500' : 'bg-slate-700 border-slate-600 focus:ring-blue-500'
+            }`}
+          />
+        </div>
 
-          <div className="space-y-3">
-            <label className="block text-sm font-bold text-gray-700">{t.messages.age}</label>
-            <div className="relative group/input">
-              <input
-                type="number"
-                value={worker.age || ''}
-                onChange={(e) => onUpdate('age', parseInt(e.target.value) || 0)}
-                placeholder={t.messages.workerAge}
-                min="16"
-                max="70"
-                className={`w-full px-4 py-3 border-2 rounded-2xl focus:ring-4 focus:border-blue-500 transition-all duration-300 backdrop-blur-sm font-medium text-center text-lg ${
-                  isUnderage 
-                    ? 'border-red-300 bg-red-50/80 text-red-700 focus:ring-red-500/20' 
-                    : 'border-gray-200/50 bg-white/80 hover:border-gray-300/80 focus:ring-blue-500/20'
-                }`}
-              />
-              <div className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-xl ${
-                isUnderage ? 'text-red-600' : worker.age >= 18 ? 'text-green-600' : 'text-gray-400'
-              }`}>
-                {isUnderage ? '⚠️' : worker.age >= 18 ? '✅' : '👤'}
-              </div>
-            </div>
-          </div>
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-300 mb-1">{t.messages.certification}</label>
+          <select
+            value={worker.certification}
+            onChange={(e) => onUpdate('certification', e.target.value)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">{t.messages.selectCertification}</option>
+            <option value="basic">{t.messages.basicTraining}</option>
+            <option value="advanced">{t.messages.advancedTraining}</option>
+            <option value="supervisor">{t.messages.supervisor}</option>
+            <option value="rescuer">{t.messages.rescuer}</option>
+          </select>
+        </div>
 
-          <div className="md:col-span-2 space-y-3">
-            <label className="block text-sm font-bold text-gray-700">{t.messages.certification}</label>
-            <div className="relative group/input">
-              <select
-                value={worker.certification}
-                onChange={(e) => onUpdate('certification', e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm font-medium hover:border-gray-300/80"
-              >
-                <option value="">{t.messages.selectCertification}</option>
-                <option value="basic">🟢 {t.messages.basicTraining}</option>
-                <option value="advanced">🟡 {t.messages.advancedTraining}</option>
-                <option value="supervisor">🔵 {t.messages.supervisor}</option>
-                <option value="rescuer">🔴 {t.messages.rescuer}</option>
-              </select>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl opacity-0 group-hover/input:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-            </div>
+        <div className="md:col-span-2">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id={`worker-${worker.id}-18plus`}
+              checked={worker.over18}
+              onChange={(e) => onUpdate('over18', e.target.checked)}
+              className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+            />
+            <label htmlFor={`worker-${worker.id}-18plus`} className="text-xs text-gray-300">
+              <span className="text-red-500">*</span> {t.messages.certifyOver18}
+            </label>
           </div>
-
-          <div className="md:col-span-2">
-            <div className={`p-4 rounded-2xl border-2 transition-all duration-300 ${
-              worker.over18 
-                ? 'bg-gradient-to-r from-green-50/80 to-emerald-50/80 border-green-300/50' 
-                : 'bg-gradient-to-r from-red-50/80 to-rose-50/80 border-red-300/50'
-            }`}>
-              <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <input
-                    type="checkbox"
-                    id={`worker-${worker.id}-18plus`}
-                    checked={worker.over18}
-                    onChange={(e) => onUpdate('over18', e.target.checked)}
-                    className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-500/20 transition-all duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                </div>
-                <label htmlFor={`worker-${worker.id}-18plus`} className="text-sm font-bold text-gray-700 flex items-center">
-                  <span className="text-red-500 text-lg mr-2">*</span> 
-                  <span>{t.messages.certifyOver18}</span>
-                </label>
-              </div>
+          
+          {isUnderage && (
+            <div className="mt-2 p-2 bg-red-800 border border-red-600 rounded">
+              <p className="text-xs text-red-200 font-medium">
+                ⚠️ {t.messages.legalViolationMinor}
+              </p>
             </div>
-            
-            {isUnderage && (
-              <div className="mt-4 p-4 bg-gradient-to-r from-red-100 to-rose-100 border-2 border-red-300 rounded-2xl shadow-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-xl flex items-center justify-center">
-                    <AlertTriangle className="w-5 h-5 text-white" />
-                  </div>
-                  <p className="text-sm text-red-700 font-bold">
-                    {t.messages.legalViolationMinor}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-// =================== COMPOSANT GALERIE PHOTOS PREMIUM ===================
+// =================== COMPOSANT GALERIE PHOTOS VERSION SOMBRE ===================
 interface PhotoGalleryProps {
   photos: PhotoEntry[];
   currentIndex: number;
@@ -2623,15 +2373,10 @@ interface PhotoGalleryProps {
 const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, currentIndex, viewMode, onNext, onPrev, onRemove, t }) => {
   if (photos.length === 0) {
     return (
-      <div className="relative p-12 bg-gradient-to-br from-gray-50/80 to-white/80 backdrop-blur-sm rounded-3xl border-2 border-dashed border-gray-300/60 text-center">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-3xl"></div>
-        <div className="relative">
-          <div className="w-20 h-20 bg-gradient-to-r from-gray-300 to-gray-400 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <Camera className="w-10 h-10 text-white" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-600 mb-2">{t.messages.noPhotosAdded}</h3>
-          <p className="text-gray-500">{t.messages.clickToAddPhotos}</p>
-        </div>
+      <div className="text-center py-8 text-gray-400">
+        <Camera className="w-12 h-12 mx-auto mb-3 text-gray-500" />
+        <p className="text-sm">{t.messages.noPhotosAdded}</p>
+        <p className="text-xs text-gray-500">{t.messages.clickToAddPhotos}</p>
       </div>
     );
   }
@@ -2640,42 +2385,36 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, currentIndex, viewM
     const currentPhoto = photos[currentIndex];
     
     return (
-      <div className="space-y-6">
-        <div className="relative group">
-          <div className="relative aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl overflow-hidden shadow-2xl">
-            <img
-              src={currentPhoto?.url}
-              alt={`Photo ${currentIndex + 1}`}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <button
-              onClick={() => onRemove(currentPhoto?.id)}
-              className="absolute top-4 right-4 p-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl hover:shadow-xl hover:shadow-red-500/30 transition-all duration-300 transform hover:scale-110 opacity-0 group-hover:opacity-100"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+      <div className="space-y-4">
+        <div className="relative aspect-video bg-slate-600 rounded-lg overflow-hidden">
+          <img
+            src={currentPhoto?.url}
+            alt={`Photo ${currentIndex + 1}`}
+            className="w-full h-full object-cover"
+          />
+          <button
+            onClick={() => onRemove(currentPhoto?.id)}
+            className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
         
-        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-white/80 to-gray-50/80 backdrop-blur-sm rounded-2xl border border-gray-200/50">
+        <div className="flex items-center justify-between">
           <button
             onClick={onPrev}
             disabled={photos.length <= 1}
-            className="group relative overflow-hidden p-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors disabled:opacity-50"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <ChevronLeft className="w-5 h-5 relative z-10" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex space-x-2">
             {photos.map((_, index) => (
-              <button
+              <div
                 key={index}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                  index === currentIndex 
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 scale-125' 
-                    : 'bg-gray-300 hover:bg-gray-400'
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === currentIndex ? 'bg-blue-500' : 'bg-gray-500'
                 }`}
               />
             ))}
@@ -2684,46 +2423,36 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, currentIndex, viewM
           <button
             onClick={onNext}
             disabled={photos.length <= 1}
-            className="group relative overflow-hidden p-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors disabled:opacity-50"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <ChevronRight className="w-5 h-5 relative z-10" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
         
-        <div className="text-center p-4 bg-gradient-to-r from-white/80 to-gray-50/80 backdrop-blur-sm rounded-2xl border border-gray-200/50">
-          <div className="flex items-center justify-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <Camera className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="font-bold text-gray-800">{currentPhoto?.name}</p>
-              <p className="text-sm text-gray-600">{new Date(currentPhoto?.timestamp).toLocaleString()}</p>
-            </div>
-          </div>
+        <div className="text-center">
+          <p className="text-sm text-gray-300">
+            {currentPhoto?.name} • {new Date(currentPhoto?.timestamp).toLocaleString()}
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
       {photos.map((photo) => (
-        <div key={photo.id} className="group relative">
-          <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-            <img
-              src={photo.url}
-              alt={photo.name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <button
-              onClick={() => onRemove(photo.id)}
-              className="absolute top-2 right-2 p-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/30 transition-all duration-300 transform hover:scale-110 opacity-0 group-hover:opacity-100"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+        <div key={photo.id} className="relative group">
+          <img
+            src={photo.url}
+            alt={photo.name}
+            className="w-full h-20 object-cover rounded-lg"
+          />
+          <button
+            onClick={() => onRemove(photo.id)}
+            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <X className="w-3 h-3" />
+          </button>
         </div>
       ))}
     </div>
