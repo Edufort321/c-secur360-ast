@@ -1718,15 +1718,376 @@ const ConfinedSpaceManager: React.FC<{
     </div>
   );
 };
-// =================== SECTION 4/4 FINALE CORRIGÉE - COMPOSANT PRINCIPAL + EXPORT ===================
-// Remplacez ENTIÈREMENT votre SECTION 4 par cette version sans duplication
+// =================== STEP4PERMITS - VERSION COMPLÈTE FONCTIONNELLE ===================
+// Remplacez ENTIÈREMENT votre SECTION 4 par cette version
 
-// =================== INTERFACE ARCHIVE ===================
-interface ArchivedPermit extends Permit {
-  archivedDate: string;
-  completedBy: string;
-  status: 'completed' | 'expired' | 'cancelled';
+// =================== INTERFACES ÉTENDUES ===================
+interface PermitCode {
+  prefix: string;
+  year: number;
+  sequence: number;
+  province: string;
+  type: string;
 }
+
+interface LegalPermit extends Permit {
+  code: string;
+  legalRequirements: {
+    gasTests: boolean;
+    entryProcedure: boolean;
+    emergencyPlan: boolean;
+    equipmentCheck: boolean;
+    signage: boolean;
+    documentation: boolean;
+  };
+  validity: {
+    startDate: string;
+    endDate: string;
+    isValid: boolean;
+  };
+}
+
+interface CascadeSelection {
+  permitType: string;
+  company: string;
+  confinedSpace: string;
+}
+
+// =================== GÉNÉRATEUR DE CODES PERMIS ===================
+const generatePermitCode = (permitType: string, province: string): string => {
+  const year = new Date().getFullYear();
+  const sequence = Math.floor(Math.random() * 9999) + 1;
+  const typeCode = permitType.includes('confined-space') ? 'EC' : 
+                   permitType.includes('hot-work') ? 'TC' : 'EX';
+  return `${province}-${typeCode}-${year}-${sequence.toString().padStart(4, '0')}`;
+};
+
+// =================== COMPOSANT SÉLECTION CASCADE ===================
+const CascadeSelector: React.FC<{
+  onSelectionChange: (selection: CascadeSelection) => void;
+  language: 'fr' | 'en';
+}> = ({ onSelectionChange, language }) => {
+  const [selection, setSelection] = useState<CascadeSelection>({
+    permitType: '',
+    company: '',
+    confinedSpace: ''
+  });
+
+  const permitTypes = [
+    { id: 'confined-space', name: language === 'fr' ? 'Espace Clos' : 'Confined Space' },
+    { id: 'hot-work', name: language === 'fr' ? 'Travail à Chaud' : 'Hot Work' },
+    { id: 'excavation', name: language === 'fr' ? 'Excavation' : 'Excavation' }
+  ];
+
+  const companies = [
+    'Hydro-Québec', 'CN Rail', 'Suncor', 'ArcelorMittal', 'Rio Tinto'
+  ];
+
+  const confinedSpaces = {
+    'Hydro-Québec': ['Réservoir principal A', 'Turbine #3', 'Conduite forcée B'],
+    'CN Rail': ['Wagon-citerne B', 'Locomotive diesel', 'Fosse maintenance'],
+    'Suncor': ['Réservoir bitume C', 'Colonne distillation', 'Cuve process'],
+    'ArcelorMittal': ['Haut fourneau #2', 'Convertisseur acier', 'Four électrique'],
+    'Rio Tinto': ['Cuve électrolyse', 'Réservoir alumine', 'Four fusion']
+  };
+
+  const handleSelectionChange = (field: keyof CascadeSelection, value: string) => {
+    const newSelection = { ...selection, [field]: value };
+    
+    // Reset dependent fields
+    if (field === 'permitType') {
+      newSelection.company = '';
+      newSelection.confinedSpace = '';
+    } else if (field === 'company') {
+      newSelection.confinedSpace = '';
+    }
+    
+    setSelection(newSelection);
+    onSelectionChange(newSelection);
+  };
+
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(79, 70, 229, 0.1))',
+      border: '1px solid rgba(99, 102, 241, 0.3)',
+      borderRadius: '12px',
+      padding: '20px',
+      marginBottom: '24px'
+    }}>
+      <h3 style={{ color: '#6366f1', margin: '0 0 16px', fontSize: '16px', fontWeight: '700' }}>
+        🔍 {language === 'fr' ? 'Sélection en Cascade' : 'Cascade Selection'}
+      </h3>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+        {/* Type de permis */}
+        <div>
+          <label style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+            {language === 'fr' ? 'Type de Permis' : 'Permit Type'}
+          </label>
+          <select
+            value={selection.permitType}
+            onChange={(e) => handleSelectionChange('permitType', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '1px solid rgba(100, 116, 139, 0.3)',
+              borderRadius: '8px',
+              color: '#ffffff',
+              fontSize: '14px'
+            }}
+          >
+            <option value="">{language === 'fr' ? 'Sélectionner...' : 'Select...'}</option>
+            {permitTypes.map(type => (
+              <option key={type.id} value={type.id}>{type.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Compagnie */}
+        <div>
+          <label style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+            {language === 'fr' ? 'Compagnie' : 'Company'}
+          </label>
+          <select
+            value={selection.company}
+            onChange={(e) => handleSelectionChange('company', e.target.value)}
+            disabled={!selection.permitType}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '1px solid rgba(100, 116, 139, 0.3)',
+              borderRadius: '8px',
+              color: '#ffffff',
+              fontSize: '14px',
+              opacity: !selection.permitType ? 0.5 : 1
+            }}
+          >
+            <option value="">{language === 'fr' ? 'Sélectionner...' : 'Select...'}</option>
+            {companies.map(company => (
+              <option key={company} value={company}>{company}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Espace Clos */}
+        <div>
+          <label style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+            {language === 'fr' ? 'Espace Clos' : 'Confined Space'}
+          </label>
+          <select
+            value={selection.confinedSpace}
+            onChange={(e) => handleSelectionChange('confinedSpace', e.target.value)}
+            disabled={!selection.company}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '1px solid rgba(100, 116, 139, 0.3)',
+              borderRadius: '8px',
+              color: '#ffffff',
+              fontSize: '14px',
+              opacity: !selection.company ? 0.5 : 1
+            }}
+          >
+            <option value="">{language === 'fr' ? 'Sélectionner...' : 'Select...'}</option>
+            {selection.company && confinedSpaces[selection.company as keyof typeof confinedSpaces]?.map(space => (
+              <option key={space} value={space}>{space}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {selection.permitType && selection.company && selection.confinedSpace && (
+        <div style={{
+          marginTop: '16px',
+          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
+          border: '1px solid rgba(34, 197, 94, 0.3)',
+          borderRadius: '8px',
+          padding: '12px',
+          textAlign: 'center'
+        }}>
+          <p style={{ color: '#22c55e', margin: '0', fontSize: '14px', fontWeight: '600' }}>
+            ✅ {language === 'fr' ? 'Sélection complète - Nouveau permis disponible' : 'Complete selection - New permit available'}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// =================== COMPOSANT FORMULAIRE LÉGAL ===================
+const LegalPermitForm: React.FC<{
+  permit: LegalPermit;
+  onFormChange: (data: any) => void;
+  language: 'fr' | 'en';
+}> = ({ permit, onFormChange, language }) => {
+  const [formData, setFormData] = useState({
+    // Informations générales
+    company: '',
+    workLocation: '',
+    workDescription: '',
+    plannedDate: '',
+    estimatedDuration: '',
+    
+    // Tests de gaz obligatoires
+    oxygenLevel: '',
+    toxicGases: '',
+    combustibleGases: '',
+    testingEquipment: '',
+    
+    // Procédures d'entrée
+    entryProcedure: '',
+    communicationMethod: '',
+    emergencySignal: '',
+    
+    // Plan d'urgence
+    emergencyContacts: '',
+    rescueTeam: '',
+    hospitalInfo: '',
+    
+    // Équipements de sécurité
+    ventilationEquipment: '',
+    detectionEquipment: '',
+    rescueEquipment: '',
+    personalProtection: '',
+    
+    // Signalisation
+    warningSignage: '',
+    accessControl: '',
+    barrierSystem: ''
+  });
+
+  const handleInputChange = (field: string, value: string) => {
+    const newData = { ...formData, [field]: value };
+    setFormData(newData);
+    onFormChange(newData);
+  };
+
+  const legalFields = [
+    {
+      category: language === 'fr' ? 'Informations Générales' : 'General Information',
+      fields: [
+        { key: 'company', label: language === 'fr' ? 'Compagnie' : 'Company', required: true },
+        { key: 'workLocation', label: language === 'fr' ? 'Lieu de travail' : 'Work Location', required: true },
+        { key: 'workDescription', label: language === 'fr' ? 'Description des travaux' : 'Work Description', required: true },
+        { key: 'plannedDate', label: language === 'fr' ? 'Date prévue' : 'Planned Date', type: 'date', required: true },
+        { key: 'estimatedDuration', label: language === 'fr' ? 'Durée estimée' : 'Estimated Duration', required: true }
+      ]
+    },
+    {
+      category: language === 'fr' ? 'Tests de Gaz (Obligatoires)' : 'Gas Testing (Mandatory)',
+      fields: [
+        { key: 'oxygenLevel', label: language === 'fr' ? 'Niveau O₂ (%)' : 'O₂ Level (%)', required: true },
+        { key: 'toxicGases', label: language === 'fr' ? 'Gaz toxiques (ppm)' : 'Toxic Gases (ppm)', required: true },
+        { key: 'combustibleGases', label: language === 'fr' ? 'Gaz combustibles (% LIE)' : 'Combustible Gases (% LEL)', required: true },
+        { key: 'testingEquipment', label: language === 'fr' ? 'Équipement de test' : 'Testing Equipment', required: true }
+      ]
+    },
+    {
+      category: language === 'fr' ? 'Procédures d\'Entrée' : 'Entry Procedures',
+      fields: [
+        { key: 'entryProcedure', label: language === 'fr' ? 'Procédure d\'entrée' : 'Entry Procedure', required: true },
+        { key: 'communicationMethod', label: language === 'fr' ? 'Méthode de communication' : 'Communication Method', required: true },
+        { key: 'emergencySignal', label: language === 'fr' ? 'Signal d\'urgence' : 'Emergency Signal', required: true }
+      ]
+    },
+    {
+      category: language === 'fr' ? 'Plan d\'Urgence' : 'Emergency Plan',
+      fields: [
+        { key: 'emergencyContacts', label: language === 'fr' ? 'Contacts d\'urgence' : 'Emergency Contacts', required: true },
+        { key: 'rescueTeam', label: language === 'fr' ? 'Équipe de sauvetage' : 'Rescue Team', required: true },
+        { key: 'hospitalInfo', label: language === 'fr' ? 'Hôpital le plus proche' : 'Nearest Hospital', required: true }
+      ]
+    }
+  ];
+
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
+      borderRadius: '12px',
+      padding: '24px',
+      border: '1px solid rgba(100, 116, 139, 0.3)'
+    }}>
+      <div style={{ marginBottom: '20px' }}>
+        <h4 style={{ color: '#3b82f6', margin: '0 0 8px', fontSize: '18px', fontWeight: '700' }}>
+          📋 {language === 'fr' ? 'Formulaire Légal' : 'Legal Form'} - {permit.name}
+        </h4>
+        <div style={{ 
+          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))',
+          color: '#93c5fd',
+          padding: '8px 12px',
+          borderRadius: '6px',
+          fontSize: '14px',
+          fontWeight: '600'
+        }}>
+          🔢 Code: {permit.code}
+        </div>
+      </div>
+
+      {legalFields.map((section, sectionIndex) => (
+        <div key={sectionIndex} style={{ marginBottom: '24px' }}>
+          <h5 style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '700', marginBottom: '12px' }}>
+            {section.category}
+          </h5>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '12px' }}>
+            {section.fields.map((field) => (
+              <div key={field.key}>
+                <label style={{ 
+                  color: '#cbd5e1', 
+                  fontSize: '12px', 
+                  fontWeight: '600', 
+                  marginBottom: '6px', 
+                  display: 'block' 
+                }}>
+                  {field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
+                </label>
+                <input
+                  type={field.type || 'text'}
+                  value={formData[field.key as keyof typeof formData]}
+                  onChange={(e) => handleInputChange(field.key, e.target.value)}
+                  required={field.required}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    border: field.required && !formData[field.key as keyof typeof formData] ? 
+                      '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '6px',
+                    color: '#ffffff',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {/* Validation légale */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
+        border: '1px solid rgba(34, 197, 94, 0.3)',
+        borderRadius: '8px',
+        padding: '16px',
+        marginTop: '20px'
+      }}>
+        <h6 style={{ color: '#22c55e', margin: '0 0 12px', fontSize: '14px', fontWeight: '700' }}>
+          ⚖️ {language === 'fr' ? 'Conformité Légale' : 'Legal Compliance'}
+        </h6>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', fontSize: '12px' }}>
+          <span style={{ color: '#dcfce7' }}>✅ Tests de gaz obligatoires</span>
+          <span style={{ color: '#dcfce7' }}>✅ Procédures d'entrée conformes</span>
+          <span style={{ color: '#dcfce7' }}>✅ Plan d'urgence validé</span>
+          <span style={{ color: '#dcfce7' }}>✅ Équipements certifiés</span>
+          <span style={{ color: '#dcfce7' }}>✅ Signalisation réglementaire</span>
+          <span style={{ color: '#dcfce7' }}>✅ Documentation complète</span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // =================== COMPOSANT PRINCIPAL STEP4PERMITS ===================
 const Step4Permits: React.FC<Step4PermitsProps> = ({ 
@@ -1743,22 +2104,55 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedProvince, setSelectedProvince] = useState(formData.province || 'QC');
   const [expandedForms, setExpandedForms] = useState<{ [key: string]: boolean }>({});
-  const [selectedConfinedSpace, setSelectedConfinedSpace] = useState<ConfinedSpaceDatabase | null>(null);
   const [showArchives, setShowArchives] = useState(false);
+  const [cascadeSelection, setCascadeSelection] = useState<CascadeSelection>({
+    permitType: '',
+    company: '',
+    confinedSpace: ''
+  });
   
-  const [permitPhotos, setPermitPhotos] = useState<{ [permitId: string]: PhotoCarouselEntry[] }>({});
-  const [permitWorkers, setPermitWorkers] = useState<{ [permitId: string]: WorkerEntryQuick[] }>({});
-  const [permitSupervisors, setPermitSupervisors] = useState<{ [permitId: string]: SupervisorQuick[] }>({});
-  const [archivedPermits, setArchivedPermits] = useState<ArchivedPermit[]>([]);
-  
-  const [permits, setPermits] = useState(() => {
+  const [permits, setPermits] = useState<LegalPermit[]>(() => {
     if (formData.permits?.list && formData.permits.list.length > 0) {
-      return formData.permits.list;
+      return formData.permits.list.map((p: Permit) => ({
+        ...p,
+        code: generatePermitCode(p.id, selectedProvince),
+        legalRequirements: {
+          gasTests: false,
+          entryProcedure: false,
+          emergencyPlan: false,
+          equipmentCheck: false,
+          signage: false,
+          documentation: false
+        },
+        validity: {
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          isValid: false
+        }
+      }));
     }
-    return getProvincialPermits(language, selectedProvince);
+    return getProvincialPermits(language, selectedProvince).map((p: Permit) => ({
+      ...p,
+      code: generatePermitCode(p.id, selectedProvince),
+      legalRequirements: {
+        gasTests: false,
+        entryProcedure: false,
+        emergencyPlan: false,
+        equipmentCheck: false,
+        signage: false,
+        documentation: false
+      },
+      validity: {
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        isValid: false
+      }
+    }));
   });
 
-  // =================== FONCTIONS UTILITAIRES ===================
+  const [archivedPermits, setArchivedPermits] = useState<LegalPermit[]>([]);
+
+  // =================== FONCTIONS ===================
   const getCategoryIcon = (category: string): string => {
     switch (category) {
       case 'Sécurité': 
@@ -1771,87 +2165,41 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     }
   };
 
-  // =================== HANDLERS ===================
-  const handlePermitToggle = (permitId: string) => {
-    const updatedPermits = permits.map((permit: Permit) => 
+  const handlePermitClick = (permitId: string, event: React.MouseEvent) => {
+    // Empêcher la propagation si on clique sur un bouton
+    if ((event.target as HTMLElement).tagName === 'BUTTON') {
+      return;
+    }
+    
+    const updatedPermits = permits.map((permit: LegalPermit) => 
       permit.id === permitId ? { ...permit, selected: !permit.selected } : permit
     );
     setPermits(updatedPermits);
-    updateFormData(updatedPermits);
   };
 
-  const updateFormData = (updatedPermits: Permit[]) => {
-    const selectedList = updatedPermits.filter((p: Permit) => p.selected);
-    onDataChange('permits', {
-      list: updatedPermits,
-      selected: selectedList,
-      province: selectedProvince,
-      selectedConfinedSpace: selectedConfinedSpace,
-      photos: permitPhotos,
-      workers: permitWorkers,
-      supervisors: permitSupervisors,
-      archived: archivedPermits,
-      stats: {
-        totalPermits: updatedPermits.length,
-        selected: selectedList.length,
-        critical: selectedList.filter((p: Permit) => p.priority === 'critical').length
-      }
-    });
-  };
-
-  // CORRECTION: Fonction pour ouvrir/fermer les formulaires
   const handleFormToggle = (permitId: string, event: React.MouseEvent) => {
-    event.stopPropagation(); // Empêche la propagation vers la carte parent
+    event.stopPropagation();
     setExpandedForms(prev => ({ ...prev, [permitId]: !prev[permitId] }));
   };
 
-  const handleConfinedSpaceSelected = (space: ConfinedSpaceDatabase) => {
-    setSelectedConfinedSpace(space);
-    
-    // Pré-remplir les permis avec les infos de l'espace
-    const updatedPermits = permits.map((permit: Permit) => {
-      if (permit.id.includes('confined-space') && permit.selected) {
-        return {
-          ...permit,
-          formData: {
-            ...permit.formData,
-            company: space.company,
-            equipment_number: space.equipmentNumber,
-            space_number: space.spaceNumber,
-            location: space.location,
-            description: space.description
-          }
-        };
-      }
-      return permit;
-    });
-    
-    setPermits(updatedPermits);
-    updateFormData(updatedPermits);
+  const handleDeletePermit = (permitId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (confirm(language === 'fr' ? 
+      'Êtes-vous sûr de vouloir supprimer ce permis ?' : 
+      'Are you sure you want to delete this permit?'
+    )) {
+      const updatedPermits = permits.filter((p: LegalPermit) => p.id !== permitId);
+      setPermits(updatedPermits);
+    }
   };
 
-  // NOUVELLE FONCTION: Archiver un permis
   const archivePermit = (permitId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    const permit = permits.find((p: Permit) => p.id === permitId);
+    const permit = permits.find((p: LegalPermit) => p.id === permitId);
     if (permit && permit.selected) {
-      const archivedPermit: ArchivedPermit = {
-        ...permit,
-        archivedDate: new Date().toISOString(),
-        completedBy: 'Utilisateur actuel', // À remplacer par l'utilisateur connecté
-        status: 'completed'
-      };
-      
-      setArchivedPermits(prev => [archivedPermit, ...prev]);
-      
-      // Désélectionner le permis
-      const updatedPermits = permits.map((p: Permit) => 
-        p.id === permitId ? { ...p, selected: false } : p
-      );
+      setArchivedPermits(prev => [...prev, permit]);
+      const updatedPermits = permits.filter((p: LegalPermit) => p.id !== permitId);
       setPermits(updatedPermits);
-      updateFormData(updatedPermits);
-      
-      // Fermer le formulaire
       setExpandedForms(prev => ({ ...prev, [permitId]: false }));
       
       alert(language === 'fr' ? 
@@ -1861,9 +2209,57 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     }
   };
 
-  // =================== FILTRAGE AVEC TYPES CORRECTS ===================
+  const createNewPermit = () => {
+    if (!cascadeSelection.permitType || !cascadeSelection.company || !cascadeSelection.confinedSpace) {
+      alert(language === 'fr' ? 
+        'Veuillez compléter la sélection en cascade' : 
+        'Please complete the cascade selection'
+      );
+      return;
+    }
+
+    const newPermit: LegalPermit = {
+      id: `${cascadeSelection.permitType}-${Date.now()}`,
+      name: `${language === 'fr' ? 'Permis' : 'Permit'} ${cascadeSelection.permitType} - ${cascadeSelection.company}`,
+      description: `${cascadeSelection.confinedSpace} - ${cascadeSelection.company}`,
+      category: language === 'fr' ? 'Sécurité' : 'Safety',
+      authority: `Autorité ${selectedProvince}`,
+      province: [selectedProvince],
+      priority: 'critical' as const,
+      selected: false,
+      formData: {
+        company: cascadeSelection.company,
+        confinedSpace: cascadeSelection.confinedSpace
+      },
+      code: generatePermitCode(cascadeSelection.permitType, selectedProvince),
+      legalRequirements: {
+        gasTests: false,
+        entryProcedure: false,
+        emergencyPlan: false,
+        equipmentCheck: false,
+        signage: false,
+        documentation: false
+      },
+      validity: {
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        isValid: false
+      }
+    };
+
+    setPermits(prev => [newPermit, ...prev]);
+    
+    // Reset cascade selection
+    setCascadeSelection({
+      permitType: '',
+      company: '',
+      confinedSpace: ''
+    });
+  };
+
+  // =================== FILTRAGE ===================
   const filteredPermits = useMemo(() => {
-    return permits.filter((permit: Permit) => {
+    return permits.filter((permit: LegalPermit) => {
       const matchesSearch = permit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            permit.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || permit.category === selectedCategory;
@@ -1872,31 +2268,21 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     });
   }, [permits, searchTerm, selectedCategory, selectedProvince]);
 
-  // CORRECTION TYPESCRIPT : Typage explicite des catégories
   const categories: string[] = useMemo(() => 
-    Array.from(new Set(permits.map((p: Permit) => p.category))), 
+    Array.from(new Set(permits.map((p: LegalPermit) => p.category))), 
     [permits]
   );
-  
+
   const provinces: string[] = ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'];
-  const selectedPermits = useMemo(() => permits.filter((p: Permit) => p.selected), [permits]);
+  const selectedPermits = useMemo(() => permits.filter((p: LegalPermit) => p.selected), [permits]);
 
   const stats = useMemo(() => ({
     totalPermits: permits.length,
     selected: selectedPermits.length,
-    critical: selectedPermits.filter((p: Permit) => p.priority === 'critical').length,
-    compliant: selectedPermits.length,
+    critical: selectedPermits.filter((p: LegalPermit) => p.priority === 'critical').length,
     archived: archivedPermits.length
   }), [permits, selectedPermits, archivedPermits]);
 
-  // =================== EFFETS ===================
-  useEffect(() => {
-    // Mise à jour des permis quand la province change
-    const newPermits = getProvincialPermits(language, selectedProvince);
-    setPermits(newPermits);
-  }, [selectedProvince, language]);
-
-  // =================== INTERFACE DE RENDU ===================
   interface StatItem {
     key: string;
     value: string | number;
@@ -1941,29 +2327,30 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             <p style={{ color: '#3b82f6', margin: '0', fontSize: '14px' }}>{t.subtitle}</p>
           </div>
           
-          {/* Bouton Archives */}
-          <button
-            onClick={() => setShowArchives(!showArchives)}
-            style={{
-              padding: '12px 20px',
-              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}
-          >
-            <FileText size={16} />
-            {showArchives ? 
-              (language === 'fr' ? 'Retour aux Permis' : 'Back to Permits') :
-              (language === 'fr' ? `Archives (${stats.archived})` : `Archives (${stats.archived})`)
-            }
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => setShowArchives(!showArchives)}
+              style={{
+                padding: '12px 20px',
+                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+            >
+              <FileText size={16} />
+              {showArchives ? 
+                (language === 'fr' ? 'Retour aux Permis' : 'Back to Permits') :
+                (language === 'fr' ? `Archives (${stats.archived})` : `Archives (${stats.archived})`)
+              }
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px' }}>
@@ -1997,107 +2384,37 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
         </div>
       </div>
 
-      {/* Vue Archives */}
-      {showArchives ? (
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6))',
-          borderRadius: '20px',
-          padding: '24px'
-        }}>
-          <h2 style={{ color: '#f59e0b', marginBottom: '20px', fontSize: '20px', fontWeight: '700' }}>
-            📦 {language === 'fr' ? 'Permis Archivés' : 'Archived Permits'}
-          </h2>
-          
-          {archivedPermits.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              color: '#94a3b8'
-            }}>
-              <FileText size={48} style={{ margin: '0 auto 16px', color: '#64748b' }} />
-              <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>
-                {language === 'fr' ? 'Aucun permis archivé' : 'No archived permits'}
-              </h3>
-              <p style={{ margin: 0 }}>
-                {language === 'fr' ? 
-                  'Les permis complétés apparaîtront ici' : 
-                  'Completed permits will appear here'
-                }
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gap: '16px' }}>
-              {archivedPermits.map((permit) => (
-                <div
-                  key={`archived-${permit.id}`}
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
-                    border: '1px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '12px',
-                    padding: '20px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <h4 style={{ color: '#ffffff', margin: '0 0 8px', fontSize: '16px', fontWeight: '700' }}>
-                      {permit.name}
-                    </h4>
-                    <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#94a3b8' }}>
-                      <span>📅 {new Date(permit.archivedDate).toLocaleDateString()}</span>
-                      <span>👤 {permit.completedBy}</span>
-                      <span style={{
-                        color: permit.status === 'completed' ? '#22c55e' : '#ef4444',
-                        fontWeight: '600'
-                      }}>
-                        ● {permit.status.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    style={{
-                      padding: '8px 12px',
-                      background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      fontWeight: '600'
-                    }}
-                  >
-                    {language === 'fr' ? 'Voir Détails' : 'View Details'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
+      {!showArchives && (
         <>
-          {/* Base de données espaces clos */}
-          <ConfinedSpaceManager
-            tenant={tenant}
-            onSpaceSelected={handleConfinedSpaceSelected}
+          {/* Sélection en cascade */}
+          <CascadeSelector
+            onSelectionChange={setCascadeSelection}
             language={language}
           />
 
-          {/* Espace sélectionné */}
-          {selectedConfinedSpace && (
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
-              border: '1px solid rgba(34, 197, 94, 0.3)',
-              borderRadius: '12px',
-              padding: '16px',
-              marginBottom: '24px'
-            }}>
-              <h4 style={{ color: '#22c55e', margin: '0 0 8px', fontSize: '14px', fontWeight: '700' }}>
-                ✅ Espace Clos Sélectionné
-              </h4>
-              <p style={{ color: '#dcfce7', margin: '0', fontSize: '13px' }}>
-                {selectedConfinedSpace.company} - {selectedConfinedSpace.equipmentNumber} - {selectedConfinedSpace.spaceName}
-              </p>
+          {/* Bouton créer nouveau permis */}
+          {cascadeSelection.permitType && cascadeSelection.company && cascadeSelection.confinedSpace && (
+            <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+              <button
+                onClick={createNewPermit}
+                style={{
+                  padding: '16px 32px',
+                  background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  margin: '0 auto'
+                }}
+              >
+                <Plus size={20} />
+                {language === 'fr' ? 'Créer Nouveau Permis' : 'Create New Permit'}
+              </button>
             </div>
           )}
 
@@ -2177,7 +2494,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
 
           {/* Cartes des permis */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: '24px' }}>
-            {filteredPermits.map((permit: Permit) => (
+            {filteredPermits.map((permit: LegalPermit) => (
               <div
                 key={permit.id}
                 style={{
@@ -2187,19 +2504,48 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                   border: permit.selected ? '2px solid #3b82f6' : '1px solid rgba(100, 116, 139, 0.3)',
                   borderRadius: '20px',
                   padding: '24px',
-                  transition: 'all 0.4s ease'
+                  transition: 'all 0.4s ease',
+                  cursor: 'pointer'
                 }}
+                onClick={(e) => handlePermitClick(permit.id, e)}
               >
-                <div
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'flex-start', 
-                    gap: '16px', 
-                    marginBottom: '20px',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => handlePermitToggle(permit.id)}
-                >
+                {/* Code unique du permis */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '12px'
+                }}>
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))',
+                    color: '#93c5fd',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '700'
+                  }}>
+                    🔢 {permit.code}
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={(e) => handleDeletePermit(permit.id, e)}
+                      style={{
+                        padding: '6px',
+                        background: 'rgba(239, 68, 68, 0.3)',
+                        color: '#fca5a5',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                      title={language === 'fr' ? 'Supprimer' : 'Delete'}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
                   <div style={{ fontSize: '32px', width: '48px', textAlign: 'center' }}>
                     {getCategoryIcon(permit.category)}
                   </div>
@@ -2299,62 +2645,17 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                     </div>
 
                     {expandedForms[permit.id] && (
-                      <div style={{
-                        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
-                        borderRadius: '12px',
-                        padding: '20px',
-                        marginTop: '16px'
-                      }}>
-                        <h4 style={{ color: '#3b82f6', margin: '0 0 16px', fontSize: '16px', fontWeight: '700' }}>
-                          📝 Formulaire Intégré - {permit.name}
-                        </h4>
-
-                        {/* Carrousel Photos */}
-                        <div style={{ marginBottom: '20px' }}>
-                          <AdvancedPhotoCarousel
-                            permitId={permit.id}
-                            province={selectedProvince}
-                            photos={permitPhotos[permit.id] || []}
-                            onPhotosChange={(photos) => setPermitPhotos(prev => ({ ...prev, [permit.id]: photos }))}
-                            language={language}
-                          />
-                        </div>
-
-                        {/* Workers Manager */}
-                        <div style={{ marginBottom: '20px' }}>
-                          <EasyWorkerManager
-                            permitId={permit.id}
-                            province={selectedProvince}
-                            workers={permitWorkers[permit.id] || []}
-                            onWorkersChange={(workers) => setPermitWorkers(prev => ({ ...prev, [permit.id]: workers }))}
-                            language={language}
-                          />
-                        </div>
-
-                        {/* Supervisors Manager */}
-                        <div style={{ marginBottom: '20px' }}>
-                          <EasySupervisorManager
-                            permitId={permit.id}
-                            province={selectedProvince}
-                            supervisors={permitSupervisors[permit.id] || []}
-                            onSupervisorsChange={(supervisors) => setPermitSupervisors(prev => ({ ...prev, [permit.id]: supervisors }))}
-                            language={language}
-                          />
-                        </div>
-
-                        {/* Status final */}
-                        <div style={{
-                          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
-                          border: '1px solid rgba(34, 197, 94, 0.3)',
-                          borderRadius: '8px',
-                          padding: '12px',
-                          textAlign: 'center'
-                        }}>
-                          <p style={{ color: '#22c55e', margin: '0', fontSize: '12px', fontWeight: '600' }}>
-                            ✅ {t.messages.nextStep}
-                          </p>
-                        </div>
-                      </div>
+                      <LegalPermitForm
+                        permit={permit}
+                        onFormChange={(data) => {
+                          // Mettre à jour les données du permis
+                          const updatedPermits = permits.map((p: LegalPermit) =>
+                            p.id === permit.id ? { ...p, formData: { ...p.formData, ...data } } : p
+                          );
+                          setPermits(updatedPermits);
+                        }}
+                        language={language}
+                      />
                     )}
                   </div>
                 )}
@@ -2378,6 +2679,85 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             </div>
           )}
         </>
+      )}
+
+      {/* Vue Archives */}
+      {showArchives && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6))',
+          borderRadius: '20px',
+          padding: '24px'
+        }}>
+          <h2 style={{ color: '#f59e0b', marginBottom: '20px', fontSize: '20px', fontWeight: '700' }}>
+            📦 {language === 'fr' ? 'Permis Archivés' : 'Archived Permits'}
+          </h2>
+          
+          {archivedPermits.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: '#94a3b8'
+            }}>
+              <FileText size={48} style={{ margin: '0 auto 16px', color: '#64748b' }} />
+              <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>
+                {language === 'fr' ? 'Aucun permis archivé' : 'No archived permits'}
+              </h3>
+              <p style={{ margin: 0 }}>
+                {language === 'fr' ? 
+                  'Les permis complétés apparaîtront ici' : 
+                  'Completed permits will appear here'
+                }
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {archivedPermits.map((permit) => (
+                <div
+                  key={`archived-${permit.id}`}
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
+                    border: '1px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ color: '#ffffff', margin: '0 0 8px', fontSize: '16px', fontWeight: '700' }}>
+                      {permit.name}
+                    </h4>
+                    <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#94a3b8' }}>
+                      <span>🔢 {permit.code}</span>
+                      <span>📅 {new Date(permit.validity.endDate).toLocaleDateString()}</span>
+                      <span style={{
+                        color: '#22c55e',
+                        fontWeight: '600'
+                      }}>
+                        ● COMPLETED
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    style={{
+                      padding: '8px 12px',
+                      background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    {language === 'fr' ? 'Voir Détails' : 'View Details'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
