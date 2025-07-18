@@ -1840,4 +1840,307 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
   );
 };
 
+// =================== COMPOSANT PHOTO GALLERY ===================
+interface PhotoGalleryProps {
+  photos: PhotoEntry[];
+  currentIndex: number;
+  viewMode: 'carousel' | 'grid';
+  onNext: () => void;
+  onPrev: () => void;
+  onRemove: (photoId: number) => void;
+  t: any;
+}
+
+const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, currentIndex, viewMode, onNext, onPrev, onRemove, t }) => {
+  if (photos.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-400">
+        <Camera className="w-12 h-12 mx-auto mb-3 text-gray-500" />
+        <p className="text-sm">Aucune photo ajoutée</p>
+        <p className="text-xs text-gray-500">Cliquez sur "Ajouter" pour commencer</p>
+      </div>
+    );
+  }
+
+  if (viewMode === 'carousel') {
+    const currentPhoto = photos[currentIndex];
+    
+    return (
+      <div className="space-y-4">
+        <div className="relative aspect-video bg-slate-600 rounded-lg overflow-hidden">
+          <img
+            src={currentPhoto?.url}
+            alt={`Photo ${currentIndex + 1}`}
+            className="w-full h-full object-cover"
+          />
+          <button
+            onClick={() => onRemove(currentPhoto?.id)}
+            className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onPrev}
+            disabled={photos.length <= 1}
+            className="p-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors disabled:opacity-50"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          
+          <div className="flex space-x-2">
+            {photos.map((_, index) => (
+              <div
+                key={index}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === currentIndex ? 'bg-blue-500' : 'bg-gray-500'
+                }`}
+              />
+            ))}
+          </div>
+          
+          <button
+            onClick={onNext}
+            disabled={photos.length <= 1}
+            className="p-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors disabled:opacity-50"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="text-center">
+          <p className="text-sm text-gray-300">
+            {currentPhoto?.name} • {new Date(currentPhoto?.timestamp).toLocaleString()}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      {photos.map((photo) => (
+        <div key={photo.id} className="relative group">
+          <img
+            src={photo.url}
+            alt={photo.name}
+            className="w-full h-20 object-cover rounded-lg"
+          />
+          <button
+            onClick={() => onRemove(photo.id)}
+            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// =================== COMPOSANT FORM FIELD ===================
+interface FormFieldProps {
+  field: FormField;
+  value: any;
+  onChange: (value: any) => void;
+  t: any;
+}
+
+const FormField: React.FC<FormFieldProps> = ({ field, value, onChange, t }) => {
+  const getFieldComponent = () => {
+    switch (field.type) {
+      case 'text':
+      case 'number':
+      case 'date':
+      case 'time':
+        return (
+          <input
+            type={field.type}
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder}
+            required={field.required}
+            min={field.validation?.min}
+            max={field.validation?.max}
+            className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+          />
+        );
+
+      case 'textarea':
+        return (
+          <textarea
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder}
+            required={field.required}
+            rows={4}
+            className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
+          />
+        );
+
+      case 'select':
+        return (
+          <select
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            required={field.required}
+            className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+          >
+            <option value="">Sélectionner...</option>
+            {field.options?.map((option: string) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        );
+
+      case 'checkbox':
+        return (
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={value || false}
+              onChange={(e) => onChange(e.target.checked)}
+              required={field.required}
+              className="w-5 h-5 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+            />
+            <span className="text-white">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
+            </span>
+          </div>
+        );
+
+      case 'radio':
+        return (
+          <div className="space-y-2">
+            {field.options?.map((option: string) => (
+              <div key={option} className="flex items-center space-x-3">
+                <input
+                  type="radio"
+                  name={field.id}
+                  value={option}
+                  checked={value === option}
+                  onChange={(e) => onChange(e.target.value)}
+                  required={field.required}
+                  className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 focus:ring-blue-500"
+                />
+                <span className="text-white">{option}</span>
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'gas_meter':
+        const numValue = parseFloat(value) || 0;
+        const isInRange = numValue >= (field.validation?.min || 0) && numValue <= (field.validation?.max || 100);
+        
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              {field.validation?.legalRequirement && (
+                <span className="px-2 py-1 bg-green-600 text-white text-xs rounded font-semibold">LÉGAL</span>
+              )}
+              {field.validation?.critical && (
+                <span className="px-2 py-1 bg-red-600 text-white text-xs rounded font-semibold">CRITIQUE</span>
+              )}
+            </div>
+            
+            <div className="relative">
+              <input
+                type="number"
+                step="0.1"
+                value={value || ''}
+                onChange={(e) => onChange(e.target.value)}
+                required={field.required}
+                className={`w-full px-4 py-3 rounded-lg text-white font-medium transition-all duration-200 ${
+                  isInRange 
+                    ? 'bg-green-700 border border-green-600 focus:ring-2 focus:ring-green-500' 
+                    : 'bg-red-700 border border-red-600 focus:ring-2 focus:ring-red-500'
+                }`}
+              />
+              
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-gray-400 text-sm">
+                  CRITIQUE: {field.validation?.message}
+                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-blue-400 text-sm">
+                    Réf: {field.complianceRef}
+                  </span>
+                  <button className={`px-3 py-1 rounded text-xs font-semibold ${
+                    isInRange ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                  }`}>
+                    {isInRange ? '✓ Conforme' : '✗ Non conforme'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'compliance_check':
+        return (
+          <div className={`p-4 rounded-lg border-2 ${
+            value ? 'bg-green-700 border-green-600' : 'bg-slate-700 border-slate-600'
+          }`}>
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={value || false}
+                onChange={(e) => onChange(e.target.checked)}
+                required={field.required}
+                className="w-5 h-5 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+              />
+              <span className={`font-medium ${value ? 'text-white' : 'text-white'}`}>
+                {field.label} {field.required && <span className="text-red-500">*</span>}
+              </span>
+            </div>
+            {field.complianceRef && (
+              <div className="text-xs text-blue-400 mt-2">📋 {field.complianceRef}</div>
+            )}
+          </div>
+        );
+
+      default:
+        return (
+          <input
+            type="text"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+          />
+        );
+    }
+  };
+
+  if (field.type === 'checkbox' || field.type === 'radio' || field.type === 'compliance_check') {
+    return (
+      <div className="space-y-2">
+        {getFieldComponent()}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-white font-medium">
+        {field.label} {field.required && <span className="text-red-500">*</span>}
+        {field.validation?.legalRequirement && (
+          <span className="ml-2 px-2 py-1 bg-green-600 text-white text-xs rounded font-semibold">LÉGAL</span>
+        )}
+        {field.validation?.critical && (
+          <span className="ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded font-semibold">CRITIQUE</span>
+        )}
+      </label>
+      {getFieldComponent()}
+      {field.validation?.message && (
+        <div className={`text-xs ${field.validation.critical ? 'text-red-400' : 'text-gray-400'}`}>
+          {field.validation.message}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default Step4Permits;
