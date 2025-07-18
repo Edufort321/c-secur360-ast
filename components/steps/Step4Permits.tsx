@@ -1193,783 +1193,738 @@ const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
 
   return basePermits;
 };
-// =================== SECTION 3: LOGIQUE ET VALIDATION SANS ERREURS ===================
-// À coller après la Section 2
+// =================== SECTION 2: BASE DE DONNÉES PERMIS CONFORMES SANS ERREURS ===================
+// À coller après la Section 1
 
-// =================== COMPOSANT PRINCIPAL AVEC CONFORMITÉ 2024-2025 ===================
-const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
-  // =================== TRADUCTIONS ET CONFIGURATION ===================
-  const t = getTexts(language);
-  
-  // =================== ÉTATS PRINCIPAUX ===================
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedProvince, setSelectedProvince] = useState('all');
-  const [expandedForms, setExpandedForms] = useState<{ [key: string]: boolean }>({});
-  const [complianceChecks, setComplianceChecks] = useState<{ [key: string]: ComplianceCheck[] }>({});
-  const [criticalAlerts, setCriticalAlerts] = useState<string[]>([]);
-  
-  // ÉTATS MULTI-TRAVAILLEURS
-  const [workers, setWorkers] = useState<{ [permitId: string]: WorkerEntry[] }>({});
-  
-  // ÉTATS PHOTOS AVEC CARROUSEL
-  const [photos, setPhotos] = useState<{ [permitId: string]: PhotoEntry[] }>({});
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState<{ [permitId: string]: number }>({});
-  const [viewMode, setViewMode] = useState<{ [permitId: string]: 'carousel' | 'grid' }>({});
-  
-  // =================== GESTION DES DONNÉES AVEC CONFORMITÉ ===================
-  const [permits, setPermits] = useState(() => {
-    if (formData.permits?.list && formData.permits.list.length > 0) {
-      return formData.permits.list;
-    }
-    return translatePermitsDatabase(language);
-  });
-
-  // =================== TRADUCTION DYNAMIQUE AVEC CONFORMITÉ ===================
-  useEffect(() => {
-    const translatedPermits = translatePermitsDatabase(language);
-    const updatedPermits = translatedPermits.map(translatedPermit => {
-      const existingPermit = permits.find((p: Permit) => p.id === translatedPermit.id);
-      if (existingPermit) {
-        return {
-          ...translatedPermit,
-          selected: existingPermit.selected,
-          formData: existingPermit.formData,
-          status: existingPermit.status
-        };
-      }
-      return translatedPermit;
-    });
-    setPermits(updatedPermits);
-  }, [language]);
-
-  // =================== VALIDATION CONFORMITÉ EN TEMPS RÉEL ===================
-  useEffect(() => {
-    validateCompliance();
-  }, [permits, workers]);
-
-  const validateCompliance = () => {
-    const alerts: string[] = [];
-    const checks: { [key: string]: ComplianceCheck[] } = {};
-
-    permits.forEach((permit: Permit) => {
-      if (permit.selected && permit.formData) {
-        const permitChecks: ComplianceCheck[] = [];
-
-        // Validation espace clos
-        if (permit.id === 'confined-space-entry-2025') {
-          const o2Level = parseFloat(permit.formData.oxygen_level || '0');
-          const gasLevel = parseFloat(permit.formData.combustible_gas_level || '0');
-          const coLevel = parseFloat(permit.formData.carbon_monoxide_level || '0');
-          const h2sLevel = parseFloat(permit.formData.hydrogen_sulfide_level || '0');
-
-          // Validation O2
-          if (o2Level < 19.5 || o2Level > 23.5) {
-            alerts.push(`CRITIQUE: Niveau O2 non conforme (${o2Level}%) - ARRÊT TRAVAUX REQUIS`);
-            permitChecks.push({
-              requirement: 'Oxygène 19.5-23.5%',
-              status: 'non-compliant',
-              details: `Niveau actuel: ${o2Level}%`,
-              reference: 'RSST Art. 302 modifié'
-            });
-          } else if (o2Level > 0) {
-            permitChecks.push({
-              requirement: 'Oxygène 19.5-23.5%',
-              status: 'compliant',
-              details: `Niveau conforme: ${o2Level}%`,
-              reference: 'RSST Art. 302'
-            });
-          }
-
-          // Validation gaz combustibles
-          if (gasLevel >= 10) {
-            alerts.push(`CRITIQUE: Gaz combustibles trop élevés (${gasLevel}% LIE) - ÉVACUATION IMMÉDIATE`);
-            permitChecks.push({
-              requirement: 'Gaz combustibles < 10% LIE',
-              status: 'non-compliant',
-              details: `Niveau critique: ${gasLevel}%`,
-              reference: 'RSST Art. 302'
-            });
-          } else if (gasLevel >= 0) {
-            permitChecks.push({
-              requirement: 'Gaz combustibles < 10% LIE',
-              status: 'compliant',
-              details: `Niveau sécuritaire: ${gasLevel}%`,
-              reference: 'RSST Art. 302'
-            });
-          }
-
-          // Validation CO
-          if (coLevel > 35) {
-            alerts.push(`CRITIQUE: Monoxyde de carbone trop élevé (${coLevel} ppm) - ÉVACUATION IMMÉDIATE`);
-            permitChecks.push({
-              requirement: 'CO < 35 ppm',
-              status: 'non-compliant',
-              details: `Niveau critique: ${coLevel} ppm`,
-              reference: 'RSST Annexe I'
-            });
-          }
-
-          // Validation H2S
-          if (h2sLevel > 10) {
-            alerts.push(`CRITIQUE: Sulfure d'hydrogène trop élevé (${h2sLevel} ppm) - ÉVACUATION IMMÉDIATE`);
-            permitChecks.push({
-              requirement: 'H2S < 10 ppm',
-              status: 'non-compliant',
-              details: `Niveau critique: ${h2sLevel} ppm`,
-              reference: 'RSST Annexe I'
-            });
-          }
-
-          // Validation âge travailleurs
-          const permitWorkers = workers[permit.id] || [];
-          const underageWorkers = permitWorkers.filter(w => w.age < 18 && w.age > 0);
-          if (underageWorkers.length > 0) {
-            alerts.push(`CRITIQUE: ${underageWorkers.length} travailleur(s) mineur(s) détecté(s) - Violation Art. 298 RSST`);
-            permitChecks.push({
-              requirement: 'Âge minimum 18 ans',
-              status: 'non-compliant',
-              details: `${underageWorkers.length} travailleur(s) mineur(s)`,
-              reference: 'RSST Art. 298 modifié 2023'
-            });
-          } else if (permitWorkers.length > 0) {
-            permitChecks.push({
-              requirement: 'Âge minimum 18 ans',
-              status: 'compliant',
-              details: `Tous les travailleurs ≥ 18 ans`,
-              reference: 'RSST Art. 298'
-            });
-          }
-
-          // Validation surveillance continue
-          if (!permit.formData.continuous_monitoring) {
-            alerts.push('CRITIQUE: Surveillance atmosphérique continue manquante - Obligation RSST Art. 302');
-            permitChecks.push({
-              requirement: 'Surveillance continue',
-              status: 'non-compliant',
-              details: 'Surveillance non activée',
-              reference: 'RSST Art. 302'
-            });
-          }
-        }
-
-        // Validation travail à chaud
-        if (permit.id === 'hot-work-permit-nfpa2019') {
-          if (permit.formData.fire_watch_duration !== '1 heure (NFPA 51B-2019)') {
-            alerts.push('ATTENTION: Surveillance incendie doit être 1 heure selon NFPA 51B-2019');
-            permitChecks.push({
-              requirement: 'Surveillance incendie 1 heure',
-              status: 'non-compliant',
-              details: 'Durée non conforme NFPA 51B-2019',
-              reference: 'NFPA 51B-2019'
-            });
-          } else {
-            permitChecks.push({
-              requirement: 'Surveillance incendie 1 heure',
-              status: 'compliant',
-              details: 'Conforme NFPA 51B-2019',
-              reference: 'NFPA 51B-2019'
-            });
-          }
-
-          if (!permit.formData.shift_reinspection) {
-            alerts.push('REQUIS: Réinspection par quart obligatoire selon NFPA 51B-2019');
-            permitChecks.push({
-              requirement: 'Réinspection par quart',
-              status: 'non-compliant',
-              details: 'Réinspection non planifiée',
-              reference: 'NFPA 51B-2019'
-            });
-          }
-
-          if (!permit.formData.fire_watch_training_valid) {
-            alerts.push('REQUIS: Formation surveillance incendie valide obligatoire');
-            permitChecks.push({
-              requirement: 'Formation surveillance incendie',
-              status: 'non-compliant',
-              details: 'Formation non validée',
-              reference: 'NFPA 51B-2019'
-            });
-          }
-        }
-
-        // Validation excavation
-        if (permit.id === 'excavation-permit-municipal-2024') {
-          const depth = parseFloat(permit.formData.excavation_depth_calc || '0');
-          const distance = parseFloat(permit.formData.domain_public_distance || '0');
-          
-          const requiresPermit = depth >= 2 || distance < 2;
-          
-          if (requiresPermit && !permit.formData.permit_required_auto) {
-            alerts.push('REQUIS: Permis excavation obligatoire selon calculs profondeur/distance');
-            permitChecks.push({
-              requirement: 'Permis excavation requis',
-              status: 'non-compliant',
-              details: `Profondeur: ${depth}m, Distance: ${distance}m`,
-              reference: 'Règlement municipal'
-            });
-          }
-
-          if (!permit.formData.info_excavation_request) {
-            alerts.push('CRITIQUE: Info-Excavation obligatoire - Risque d\'accident grave');
-            permitChecks.push({
-              requirement: 'Info-Excavation complétée',
-              status: 'non-compliant',
-              details: 'Demande non effectuée',
-              reference: 'Loi fédérale'
-            });
-          } else {
-            permitChecks.push({
-              requirement: 'Info-Excavation complétée',
-              status: 'compliant',
-              details: 'Demande complétée',
-              reference: 'Loi fédérale'
-            });
-          }
-
-          if (!permit.formData.co_insurance_city) {
-            alerts.push('CRITIQUE: Co-assurance Ville manquante - Obligation municipale');
-            permitChecks.push({
-              requirement: 'Co-assurance Ville',
-              status: 'non-compliant',
-              details: 'Avenant non ajouté',
-              reference: 'Règlement municipal'
-            });
-          }
-        }
-
-        checks[permit.id] = permitChecks;
-      }
-    });
-
-    setCriticalAlerts(alerts);
-    setComplianceChecks(checks);
-  };
-
-  // =================== CALCULS AUTOMATIQUES ===================
-  const calculateExcavationRequirements = (permitId: string, depth: number, distance: number) => {
-    const updatedPermits = permits.map((permit: Permit) => {
-      if (permit.id === permitId) {
-        const requiresPermit = depth >= 2 || distance < 2;
-        const insuranceAmount = depth <= 4.5 ? '1 000 000$' : depth > 4.5 ? '2 000 000$' : '5 000 000$';
-        
-        // Calculs dépôts garantie (tarifs réels municipaux)
-        const summerRate = 73; // $/m²
-        const winterRate = 95; // $/m²
-        const undergroundRate = 500; // $/m linéaire
-        
-        const surfaceDeposit = Math.round(depth * distance * summerRate);
-        const undergroundDeposit = Math.round(depth * undergroundRate);
-        
-        return {
-          ...permit,
-          formData: {
-            ...permit.formData,
-            permit_required_auto: requiresPermit,
-            insurance_amount_calc: insuranceAmount,
-            surface_guarantee_deposit: `${surfaceDeposit}$ (été) / ${Math.round(depth * distance * winterRate)}$ (hiver)`,
-            underground_guarantee_deposit: `${undergroundDeposit}$ estimé`
-          }
-        };
-      }
-      return permit;
-    });
-    setPermits(updatedPermits);
-    updateFormData(updatedPermits);
-  };
-
-  // =================== GESTION MULTI-TRAVAILLEURS ===================
-  const addWorker = (permitId: string) => {
-    const permitWorkers = workers[permitId] || [];
-    const newWorker: WorkerEntry = {
-      id: permitWorkers.length + 1,
-      name: '',
-      age: 0,
-      certification: '',
-      entryTime: '',
-      exitTime: null,
-      date: new Date().toISOString().split('T')[0],
-      over18: false
-    };
+// =================== BASE DE DONNÉES PERMIS CONFORMES AUX NORMES 2024-2025 ===================
+const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
+  const basePermits: Permit[] = [
     
-    setWorkers(prev => ({
-      ...prev,
-      [permitId]: [...permitWorkers, newWorker]
-    }));
-  };
-
-  const removeWorker = (permitId: string, workerId: number) => {
-    const permitWorkers = workers[permitId] || [];
-    if (permitWorkers.length > 1) {
-      setWorkers(prev => ({
-        ...prev,
-        [permitId]: permitWorkers.filter(w => w.id !== workerId)
-      }));
-    }
-  };
-
-  const updateWorker = (permitId: string, workerId: number, field: keyof WorkerEntry, value: any) => {
-    const permitWorkers = workers[permitId] || [];
-    setWorkers(prev => ({
-      ...prev,
-      [permitId]: permitWorkers.map(w => 
-        w.id === workerId ? { ...w, [field]: value } : w
-      )
-    }));
-  };
-
-  // =================== GESTION PHOTOS AVEC CARROUSEL ===================
-  const handlePhotoUpload = (permitId: string, files: FileList) => {
-    const permitPhotos = photos[permitId] || [];
-    
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const newPhoto: PhotoEntry = {
-          id: Date.now() + Math.random(),
-          url: event.target?.result as string,
-          name: file.name,
-          timestamp: new Date().toISOString(),
-          description: '',
-          gpsLocation: '', // TODO: Ajouter géolocalisation
-          compliance: true
-        };
-        
-        setPhotos(prev => ({
-          ...prev,
-          [permitId]: [...(prev[permitId] || []), newPhoto]
-        }));
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const removePhoto = (permitId: string, photoId: number) => {
-    const permitPhotos = photos[permitId] || [];
-    setPhotos(prev => ({
-      ...prev,
-      [permitId]: permitPhotos.filter(p => p.id !== photoId)
-    }));
-    
-    // Ajuster l'index du carrousel
-    const currentIndex = currentPhotoIndex[permitId] || 0;
-    if (currentIndex >= permitPhotos.length - 1) {
-      setCurrentPhotoIndex(prev => ({
-        ...prev,
-        [permitId]: Math.max(0, permitPhotos.length - 2)
-      }));
-    }
-  };
-
-  const nextPhoto = (permitId: string) => {
-    const permitPhotos = photos[permitId] || [];
-    setCurrentPhotoIndex(prev => ({
-      ...prev,
-      [permitId]: ((prev[permitId] || 0) + 1) % permitPhotos.length
-    }));
-  };
-
-  const prevPhoto = (permitId: string) => {
-    const permitPhotos = photos[permitId] || [];
-    const currentIndex = currentPhotoIndex[permitId] || 0;
-    setCurrentPhotoIndex(prev => ({
-      ...prev,
-      [permitId]: (currentIndex - 1 + permitPhotos.length) % permitPhotos.length
-    }));
-  };
-
-  const toggleViewMode = (permitId: string) => {
-    setViewMode(prev => ({
-      ...prev,
-      [permitId]: prev[permitId] === 'carousel' ? 'grid' : 'carousel'
-    }));
-  };
-
-  // =================== FILTRAGE DES PERMIS ===================
-  const filteredPermits = useMemo(() => {
-    return permits.filter((permit: Permit) => {
-      const matchesSearch = permit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           permit.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           permit.authority.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || permit.category === selectedCategory;
-      const matchesProvince = selectedProvince === 'all' || permit.province.includes(selectedProvince);
-      return matchesSearch && matchesCategory && matchesProvince;
-    });
-  }, [permits, searchTerm, selectedCategory, selectedProvince]);
-
-  const categories = useMemo(() => 
-    Array.from(new Set(permits.map((p: Permit) => p.category))), 
-    [permits]
-  );
-  
-  const provinces = ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'];
-  
-  const selectedPermits = useMemo(() => 
-    permits.filter((p: Permit) => p.selected), 
-    [permits]
-  );
-
-  const stats = useMemo(() => {
-    const compliantCount = selectedPermits.filter((p: Permit) => {
-      const checks = complianceChecks[p.id] || [];
-      return checks.length === 0 || checks.every(check => check.status === 'compliant');
-    }).length;
-
-    return {
-      totalPermits: permits.length,
-      selected: selectedPermits.length,
-      critical: selectedPermits.filter((p: Permit) => p.priority === 'critical').length,
-      pending: selectedPermits.filter((p: Permit) => p.status === 'pending').length,
-      compliant: compliantCount,
-      nonCompliant: selectedPermits.length - compliantCount
-    };
-  }, [permits, selectedPermits, complianceChecks]);
-
-  // =================== HANDLERS PRINCIPAUX ===================
-  const handlePermitToggle = (permitId: string) => {
-    const updatedPermits = permits.map((permit: Permit) => {
-      if (permit.id === permitId) {
-        const newSelected = !permit.selected;
-        
-        // Initialiser travailleurs et photos si sélectionné
-        if (newSelected) {
-          if (!workers[permitId]) {
-            setWorkers(prev => ({
-              ...prev,
-              [permitId]: [{
-                id: 1,
-                name: '',
-                age: 0,
-                certification: '',
-                entryTime: '',
-                exitTime: null,
-                date: new Date().toISOString().split('T')[0],
-                over18: false
-              }]
-            }));
-          }
-          
-          if (!photos[permitId]) {
-            setPhotos(prev => ({
-              ...prev,
-              [permitId]: []
-            }));
-          }
-          
-          setViewMode(prev => ({
-            ...prev,
-            [permitId]: 'carousel'
-          }));
-          
-          setCurrentPhotoIndex(prev => ({
-            ...prev,
-            [permitId]: 0
-          }));
-        }
-        
-        return { ...permit, selected: newSelected };
-      }
-      return permit;
-    });
-    
-    setPermits(updatedPermits);
-    updateFormData(updatedPermits);
-  };
-
-  const updateFormData = (updatedPermits: Permit[]) => {
-    const selectedList = updatedPermits.filter((p: Permit) => p.selected);
-    const permitsData = {
-      list: updatedPermits,
-      selected: selectedList,
-      workers: workers,
-      photos: photos,
-      stats: {
-        totalPermits: updatedPermits.length,
-        selected: selectedList.length,
-        critical: selectedList.filter((p: Permit) => p.priority === 'critical').length,
-        pending: selectedList.filter((p: Permit) => p.status === 'pending').length,
-        compliant: stats.compliant,
-        nonCompliant: stats.nonCompliant
+    // 1. PERMIS ESPACE CLOS CONFORME RSST 2023-2025
+    {
+      id: 'confined-space-entry-2025',
+      name: language === 'fr' ? 'Permis d\'Entrée en Espace Clos Conforme RSST 2023' : 'Confined Space Entry Permit RSST 2023 Compliant',
+      category: language === 'fr' ? 'Sécurité' : 'Safety',
+      description: language === 'fr' ? 'Permis conforme aux modifications RSST 2023-2025 avec surveillance atmosphérique continue et plan de sauvetage personnalisé' : 'Permit compliant with RSST 2023-2025 modifications including continuous atmospheric monitoring and personalized rescue plan',
+      authority: language === 'fr' ? 'CNESST / Employeur / ASP Construction' : 'CNESST / Employer / ASP Construction',
+      province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
+      required: true,
+      priority: 'critical',
+      duration: language === 'fr' ? 'Maximum 8 heures ou fin des travaux' : 'Maximum 8 hours or end of work',
+      cost: language === 'fr' ? 'Inclus dans formation + équipements surveillance' : 'Included in training + monitoring equipment',
+      processingTime: language === 'fr' ? 'Avant chaque entrée + tests atmosphériques' : 'Before each entry + atmospheric tests',
+      renewalRequired: true,
+      renewalPeriod: language === 'fr' ? 'Quotidien avec surveillance continue' : 'Daily with continuous monitoring',
+      legislation: 'RSST Art. 297-312 modifié 2023, Décret 43-2023, Art. 297.1 nouveau',
+      contactInfo: {
+        phone: '514-355-6190',
+        website: 'https://www.cnesst.gouv.qc.ca',
+        email: 'info@asp-construction.org'
       },
-      compliance: {
-        criticalAlerts: criticalAlerts,
-        checks: complianceChecks
-      }
-    };
-    onDataChange('permits', permitsData);
-  };
-
-  const handleFormFieldChange = (permitId: string, fieldId: string, value: any) => {
-    const updatedPermits = permits.map((permit: Permit) => {
-      if (permit.id === permitId) {
-        const updatedFormData = {
-          ...permit.formData,
-          [fieldId]: value
-        };
-
-        // Calculs automatiques pour excavation
-        if (permit.id === 'excavation-permit-municipal-2024') {
-          if (fieldId === 'excavation_depth_calc' || fieldId === 'domain_public_distance') {
-            const depth = parseFloat(fieldId === 'excavation_depth_calc' ? value : permit.formData?.excavation_depth_calc || '0');
-            const distance = parseFloat(fieldId === 'domain_public_distance' ? value : permit.formData?.domain_public_distance || '0');
-            
-            if (depth >= 0 && distance >= 0) {
-              setTimeout(() => calculateExcavationRequirements(permitId, depth, distance), 100);
-            }
-          }
-        }
-
-        return {
-          ...permit,
-          formData: updatedFormData
-        };
-      }
-      return permit;
-    });
-    
-    setPermits(updatedPermits);
-    updateFormData(updatedPermits);
-  };
-
-  const toggleFormExpansion = (permitId: string) => {
-    setExpandedForms(prev => ({
-      ...prev,
-      [permitId]: !prev[permitId]
-    }));
-  };
-
-  // =================== FONCTIONS UTILITAIRES ===================
-  const getCategoryIcon = (category: string) => {
-    const categoryKey = category === 'Safety' ? 'Sécurité' : 
-                       category === 'Construction' ? 'Construction' :
-                       category === 'Radiation Protection' ? 'Radioprotection' :
-                       category === 'Equipment' ? 'Équipements' : category;
-    
-    switch (categoryKey) {
-      case 'Sécurité': return '🛡️';
-      case 'Construction': return '🏗️';
-      case 'Radioprotection': return '☢️';
-      case 'Équipements': return '⚙️';
-      default: return '📋';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical': return '#ef4444';
-      case 'high': return '#f97316';
-      case 'medium': return '#eab308';
-      case 'low': return '#22c55e';
-      default: return '#6b7280';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return '#22c55e';
-      case 'submitted': return '#3b82f6';
-      case 'pending': return '#eab308';
-      case 'rejected': return '#ef4444';
-      case 'expired': return '#6b7280';
-      default: return '#6b7280';
-    }
-  };
-
-  const getComplianceColor = (level: string) => {
-    switch (level) {
-      case 'critical': return '#dc2626';
-      case 'enhanced': return '#059669';
-      case 'standard': return '#2563eb';
-      case 'basic': return '#64748b';
-      default: return '#6b7280';
-    }
-  };
-
-  // Initialiser les états au premier rendu
-  useEffect(() => {
-    // Initialiser workers et photos pour les permis déjà sélectionnés
-    permits.forEach((permit: Permit) => {
-      if (permit.selected) {
-        if (!workers[permit.id]) {
-          setWorkers(prev => ({
-            ...prev,
-            [permit.id]: [{
-              id: 1,
-              name: '',
-              age: 0,
-              certification: '',
-              entryTime: '',
-              exitTime: null,
-              date: new Date().toISOString().split('T')[0],
-              over18: false
-            }]
-          }));
-        }
+      selected: false,
+      status: 'pending',
+      complianceLevel: 'critical',
+      lastUpdated: '2025-01-20',
+      formFields: [
+        // SECTION IDENTIFICATION
+        { 
+          id: 'space_identification', 
+          type: 'text', 
+          label: language === 'fr' ? 'Identification de l\'espace clos' : 'Confined space identification', 
+          required: true, 
+          section: 'identification', 
+          placeholder: language === 'fr' ? 'Ex: Réservoir A-12, Regard municipal...' : 'Ex: Tank A-12, Municipal manhole...', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 300' 
+        },
+        { 
+          id: 'project_name', 
+          type: 'text', 
+          label: language === 'fr' ? 'Nom du projet' : 'Project name', 
+          required: true, 
+          section: 'identification' 
+        },
+        { 
+          id: 'location_precise', 
+          type: 'text', 
+          label: language === 'fr' ? 'Localisation GPS précise' : 'Precise GPS location', 
+          required: true, 
+          section: 'identification', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'permit_date', 
+          type: 'date', 
+          label: language === 'fr' ? 'Date du permis' : 'Permit date', 
+          required: true, 
+          section: 'identification' 
+        },
+        { 
+          id: 'permit_time', 
+          type: 'time', 
+          label: language === 'fr' ? 'Heure d\'émission' : 'Issue time', 
+          required: true, 
+          section: 'identification' 
+        },
+        { 
+          id: 'permit_duration', 
+          type: 'select', 
+          label: language === 'fr' ? 'Durée validité (max 8h)' : 'Validity duration (max 8h)', 
+          required: true, 
+          section: 'identification', 
+          options: ['1h', '2h', '4h', '6h', '8h'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 300' 
+        },
         
-        if (!photos[permit.id]) {
-          setPhotos(prev => ({
-            ...prev,
-            [permit.id]: []
-          }));
-        }
-      }
-    });
-  }, []);
-
-  // =================== RENDU JSX DU COMPOSANT ===================
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
-      <div className="max-w-7xl mx-auto space-y-8">
+        // SECTION GAS MONITORING OBLIGATOIRE
+        { 
+          id: 'oxygen_level', 
+          type: 'gas_meter', 
+          label: language === 'fr' ? 'Niveau oxygène (%)' : 'Oxygen level (%)', 
+          required: true, 
+          section: 'gas_monitoring', 
+          validation: { 
+            min: 19.5, 
+            max: 23.5, 
+            critical: true, 
+            legalRequirement: true, 
+            message: language === 'fr' ? 'CRITIQUE: O2 doit être entre 19.5% et 23.5%' : 'CRITICAL: O2 must be between 19.5% and 23.5%' 
+          }, 
+          complianceRef: 'RSST Art. 302 modifié' 
+        },
+        { 
+          id: 'combustible_gas_level', 
+          type: 'gas_meter', 
+          label: language === 'fr' ? 'Gaz combustibles (% LIE)' : 'Combustible gas (% LEL)', 
+          required: true, 
+          section: 'gas_monitoring', 
+          validation: { 
+            min: 0, 
+            max: 10, 
+            critical: true, 
+            legalRequirement: true, 
+            message: language === 'fr' ? 'CRITIQUE: Gaz combustibles < 10% LIE obligatoire' : 'CRITICAL: Combustible gas < 10% LEL mandatory' 
+          }, 
+          complianceRef: 'RSST Art. 302' 
+        },
+        { 
+          id: 'carbon_monoxide_level', 
+          type: 'gas_meter', 
+          label: language === 'fr' ? 'Monoxyde de carbone (ppm)' : 'Carbon monoxide (ppm)', 
+          required: true, 
+          section: 'gas_monitoring', 
+          validation: { 
+            min: 0, 
+            max: 35, 
+            critical: true, 
+            legalRequirement: true, 
+            message: language === 'fr' ? 'CRITIQUE: CO < 35 ppm obligatoire' : 'CRITICAL: CO < 35 ppm mandatory' 
+          }, 
+          complianceRef: 'RSST Annexe I' 
+        },
+        { 
+          id: 'hydrogen_sulfide_level', 
+          type: 'gas_meter', 
+          label: language === 'fr' ? 'Sulfure d\'hydrogène (ppm)' : 'Hydrogen sulfide (ppm)', 
+          required: true, 
+          section: 'gas_monitoring', 
+          validation: { 
+            min: 0, 
+            max: 10, 
+            critical: true, 
+            legalRequirement: true, 
+            message: language === 'fr' ? 'CRITIQUE: H2S < 10 ppm obligatoire' : 'CRITICAL: H2S < 10 ppm mandatory' 
+          }, 
+          complianceRef: 'RSST Annexe I' 
+        },
+        { 
+          id: 'continuous_monitoring', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Surveillance atmosphérique CONTINUE pendant travaux' : 'CONTINUOUS atmospheric monitoring during work', 
+          required: true, 
+          section: 'gas_monitoring', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 302' 
+        },
+        { 
+          id: 'detector_calibration_date', 
+          type: 'date', 
+          label: language === 'fr' ? 'Date calibration détecteur' : 'Detector calibration date', 
+          required: true, 
+          section: 'gas_monitoring', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'detector_serial_number', 
+          type: 'text', 
+          label: language === 'fr' ? 'Numéro série détecteur' : 'Detector serial number', 
+          required: true, 
+          section: 'gas_monitoring' 
+        },
         
-        {/* =================== HEADER AVEC TITRE ET STATS =================== */}
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            {t.title}
-          </h1>
-          <p className="text-gray-600 text-lg">{t.subtitle}</p>
-          
-          {/* Statistiques conformité */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-6">
-            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
-              <div className="text-2xl font-bold text-blue-600">{stats.totalPermits}</div>
-              <div className="text-sm text-gray-500">{t.stats.available}</div>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
-              <div className="text-2xl font-bold text-green-600">{stats.selected}</div>
-              <div className="text-sm text-gray-500">{t.stats.selected}</div>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
-              <div className="text-2xl font-bold text-red-600">{stats.critical}</div>
-              <div className="text-sm text-gray-500">{t.stats.critical}</div>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-              <div className="text-sm text-gray-500">{t.stats.pending}</div>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
-              <div className="text-2xl font-bold text-emerald-600">{stats.compliant}</div>
-              <div className="text-sm text-gray-500">{t.stats.compliant}</div>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
-              <div className="text-2xl font-bold text-rose-600">{stats.nonCompliant}</div>
-              <div className="text-sm text-gray-500">{t.stats.nonCompliant}</div>
-            </div>
-          </div>
-        </div>
+        // SECTION ACCÈS ET ÂGE OBLIGATOIRE
+        { 
+          id: 'entry_mandatory', 
+          type: 'radio', 
+          label: language === 'fr' ? 'L\'entrée est-elle obligatoire ?' : 'Is entry mandatory?', 
+          required: true, 
+          section: 'access', 
+          options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 297.1' 
+        },
+        { 
+          id: 'external_control_possible', 
+          type: 'radio', 
+          label: language === 'fr' ? 'Contrôle depuis l\'extérieur possible ?' : 'External control possible?', 
+          required: true, 
+          section: 'access', 
+          options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 297.1 nouveau' 
+        },
+        { 
+          id: 'worker_age_verification', 
+          type: 'compliance_check', 
+          label: language === 'fr' ? 'VÉRIFICATION: Tous travailleurs ≥ 18 ans' : 'VERIFICATION: All workers ≥ 18 years', 
+          required: true, 
+          section: 'access', 
+          validation: { critical: true, legalRequirement: true }, 
+          complianceRef: 'RSST Art. 298 modifié 2023' 
+        },
+        { 
+          id: 'worker_certification_check', 
+          type: 'compliance_check', 
+          label: language === 'fr' ? 'Certification formation espace clos valide' : 'Valid confined space training certification', 
+          required: true, 
+          section: 'access', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 298' 
+        },
+        
+        // SECTION PLAN DE SAUVETAGE PERSONNALISÉ
+        { 
+          id: 'rescue_plan_personalized', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Plan de sauvetage PERSONNALISÉ pour cet espace' : 'PERSONALIZED rescue plan for this space', 
+          required: true, 
+          section: 'rescue_plan', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 309 enrichi', 
+          placeholder: language === 'fr' ? 'Décrire procédure spécifique, équipements, points d\'accès...' : 'Describe specific procedure, equipment, access points...' 
+        },
+        { 
+          id: 'rescue_responsible_person', 
+          type: 'text', 
+          label: language === 'fr' ? 'Responsable sauvetage DÉSIGNÉ' : 'DESIGNATED rescue responsible', 
+          required: true, 
+          section: 'rescue_plan', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 309' 
+        },
+        { 
+          id: 'communication_protocol', 
+          type: 'select', 
+          label: language === 'fr' ? 'Protocole communication obligatoire' : 'Mandatory communication protocol', 
+          required: true, 
+          section: 'rescue_plan', 
+          options: language === 'fr' ? ['Radio bidirectionnelle', 'Téléphone cellulaire', 'Signaux visuels/sonores', 'Système fixe'] : ['Two-way radio', 'Cell phone', 'Visual/audio signals', 'Fixed system'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 309' 
+        },
+        { 
+          id: 'rescue_equipment_onsite', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Équipements sauvetage SUR SITE avant entrée' : 'Rescue equipment ON SITE before entry', 
+          required: true, 
+          section: 'rescue_plan', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 309' 
+        },
+        { 
+          id: 'response_time_target', 
+          type: 'select', 
+          label: language === 'fr' ? 'Temps de réponse sauvetage' : 'Rescue response time', 
+          required: true, 
+          section: 'rescue_plan', 
+          options: ['< 3 minutes', '< 5 minutes', '< 10 minutes'], 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'emergency_contact_primary', 
+          type: 'text', 
+          label: language === 'fr' ? 'Contact urgence primaire (nom + tél)' : 'Primary emergency contact (name + phone)', 
+          required: true, 
+          section: 'rescue_plan', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'emergency_contact_secondary', 
+          type: 'text', 
+          label: language === 'fr' ? 'Contact urgence secondaire' : 'Secondary emergency contact', 
+          required: true, 
+          section: 'rescue_plan' 
+        },
+        
+        // SECTION MATIÈRES À ÉCOULEMENT LIBRE
+        { 
+          id: 'free_flowing_materials', 
+          type: 'radio', 
+          label: language === 'fr' ? 'Matières à écoulement libre présentes ?' : 'Free-flowing materials present?', 
+          required: true, 
+          section: 'safety', 
+          options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 311-312 séparés' 
+        },
+        { 
+          id: 'burial_risk_assessment', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Évaluation risque ensevelissement/noyade' : 'Burial/drowning risk assessment', 
+          required: false, 
+          section: 'safety', 
+          complianceRef: 'RSST Art. 311-312' 
+        },
+        { 
+          id: 'fall_prevention_measures', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Mesures prévention chutes installées' : 'Fall prevention measures installed', 
+          required: true, 
+          section: 'safety', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'RSST Art. 297.1' 
+        },
+        
+        // SECTION TRAVAILLEURS AUTORISÉS
+        { 
+          id: 'authorized_workers', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Travailleurs autorisés (nom, âge, certification)' : 'Authorized workers (name, age, certification)', 
+          required: true, 
+          section: 'signatures', 
+          placeholder: language === 'fr' ? 'Format: Nom, Prénom - Âge: XX ans - Cert: XXXXX' : 'Format: Last, First - Age: XX years - Cert: XXXXX', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'workers_log', 
+          type: 'workers_tracking', 
+          label: language === 'fr' ? 'Registre entrées/sorties avec surveillance gaz' : 'Entry/exit log with gas monitoring', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'photos_documentation', 
+          type: 'photo_gallery', 
+          label: language === 'fr' ? 'Photos documentation sécurité obligatoires' : 'Mandatory safety documentation photos', 
+          required: true, 
+          section: 'atmosphere', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'supervisor_signature', 
+          type: 'signature', 
+          label: language === 'fr' ? 'Signature surveillant qualifié' : 'Qualified supervisor signature', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'attendant_signature', 
+          type: 'signature', 
+          label: language === 'fr' ? 'Signature préposé à l\'entrée' : 'Entry attendant signature', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        }
+      ]
+    },
 
-        {/* =================== ALERTES CRITIQUES =================== */}
-        {criticalAlerts.length > 0 && (
-          <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-2xl shadow-2xl animate-pulse">
-            <div className="flex items-center space-x-3 mb-4">
-              <AlertTriangle className="w-8 h-8" />
-              <h3 className="text-xl font-bold">{t.alerts.critical}</h3>
-            </div>
-            <div className="space-y-2">
-              {criticalAlerts.map((alert, index) => (
-                <div key={index} className="flex items-start space-x-2">
-                  <span className="text-red-200">•</span>
-                  <span className="text-sm">{alert}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+    // 2. PERMIS TRAVAIL À CHAUD CONFORME NFPA 51B-2019
+    {
+      id: 'hot-work-permit-nfpa2019',
+      name: language === 'fr' ? 'Permis Travail à Chaud Conforme NFPA 51B-2019' : 'Hot Work Permit NFPA 51B-2019 Compliant',
+      category: language === 'fr' ? 'Sécurité' : 'Safety',
+      description: language === 'fr' ? 'Permis conforme NFPA 51B-2019 avec surveillance incendie 1 heure et réinspection par quart' : 'NFPA 51B-2019 compliant permit with 1-hour fire watch and shift reinspection',
+      authority: language === 'fr' ? 'Service incendie / Employeur / NFPA' : 'Fire Department / Employer / NFPA',
+      province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
+      required: true,
+      priority: 'critical',
+      duration: language === 'fr' ? '24 heures maximum + surveillance 1h post-travaux' : '24 hours maximum + 1h post-work monitoring',
+      cost: language === 'fr' ? 'Variable selon municipalité + équipements' : 'Variable by municipality + equipment',
+      processingTime: language === 'fr' ? 'Immédiat à 24h + inspections' : 'Immediate to 24h + inspections',
+      renewalRequired: true,
+      renewalPeriod: language === 'fr' ? 'Quotidien avec réinspection par quart' : 'Daily with shift reinspection',
+      legislation: 'NFPA 51B-2019, CNPI Section 5.2, CAN/CSA W117.2-M87, RSST Art. 313-332',
+      contactInfo: {
+        phone: language === 'fr' ? 'Service incendie local' : 'Local fire department',
+        website: 'https://www.nfpa.org/codes-and-standards/all-codes-and-standards/list-of-codes-and-standards/detail?code=51B'
+      },
+      selected: false,
+      status: 'pending',
+      complianceLevel: 'critical',
+      lastUpdated: '2025-01-20',
+      formFields: [
+        // SECTION IDENTIFICATION
+        { 
+          id: 'permit_number_hot', 
+          type: 'text', 
+          label: language === 'fr' ? 'Numéro de permis unique' : 'Unique permit number', 
+          required: true, 
+          section: 'identification', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'work_location_precise', 
+          type: 'text', 
+          label: language === 'fr' ? 'Lieu précis des travaux' : 'Precise work location', 
+          required: true, 
+          section: 'identification', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'contractor_company', 
+          type: 'text', 
+          label: language === 'fr' ? 'Entreprise contractante' : 'Contracting company', 
+          required: true, 
+          section: 'identification' 
+        },
+        { 
+          id: 'work_order_number', 
+          type: 'text', 
+          label: language === 'fr' ? 'Numéro bon de travail' : 'Work order number', 
+          required: true, 
+          section: 'identification' 
+        },
+        
+        // SECTION TYPE DE TRAVAIL À CHAUD
+        { 
+          id: 'work_type_hot', 
+          type: 'select', 
+          label: language === 'fr' ? 'Type de travail à chaud principal' : 'Primary hot work type', 
+          required: true, 
+          section: 'work_type', 
+          options: language === 'fr' ? ['Soudage à l\'arc électrique', 'Soudage au gaz (oxyacétylénique)', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage avec étincelles', 'Perçage métaux', 'Brasage/Soudage tendre', 'Travaux de toiture à chaud', 'Autre (spécifier)'] : ['Electric arc welding', 'Gas welding (oxyacetylene)', 'Torch cutting', 'Plasma cutting', 'Grinding with sparks', 'Metal drilling', 'Brazing/Soft soldering', 'Hot roofing work', 'Other (specify)'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'NFPA 51B-2019' 
+        },
+        { 
+          id: 'work_description_detailed', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Description détaillée des travaux et équipements' : 'Detailed work and equipment description', 
+          required: true, 
+          section: 'work_type', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'start_date_time', 
+          type: 'date', 
+          label: language === 'fr' ? 'Date début prévue' : 'Planned start date', 
+          required: true, 
+          section: 'work_type' 
+        },
+        { 
+          id: 'start_time', 
+          type: 'time', 
+          label: language === 'fr' ? 'Heure début' : 'Start time', 
+          required: true, 
+          section: 'work_type' 
+        },
+        { 
+          id: 'end_date_time', 
+          type: 'date', 
+          label: language === 'fr' ? 'Date fin prévue' : 'Planned end date', 
+          required: true, 
+          section: 'work_type' 
+        },
+        { 
+          id: 'end_time', 
+          type: 'time', 
+          label: language === 'fr' ? 'Heure fin' : 'End time', 
+          required: true, 
+          section: 'work_type' 
+        },
+        
+        // SECTION SURVEILLANCE INCENDIE NFPA 51B-2019
+        { 
+          id: 'fire_watch_duration', 
+          type: 'select', 
+          label: language === 'fr' ? 'Durée surveillance incendie POST-TRAVAUX (OBLIGATOIRE)' : 'POST-WORK fire watch duration (MANDATORY)', 
+          required: true, 
+          section: 'fire_watch', 
+          options: ['1 heure (NFPA 51B-2019)', '2 heures', 'Plus de 2 heures'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'NFPA 51B-2019 - Modif majeure: 1h au lieu de 30min' 
+        },
+        { 
+          id: 'continuous_vs_spot_watch', 
+          type: 'radio', 
+          label: language === 'fr' ? 'Type de surveillance incendie' : 'Fire watch type', 
+          required: true, 
+          section: 'fire_watch', 
+          options: language === 'fr' ? ['Surveillance CONTINUE', 'Surveillance PONCTUELLE'] : ['CONTINUOUS monitoring', 'SPOT monitoring'], 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'NFPA 51B-2019 - Distinction formelle' 
+        },
+        { 
+          id: 'fire_watch_person_assigned', 
+          type: 'text', 
+          label: language === 'fr' ? 'Préposé surveillance incendie désigné' : 'Designated fire watch person', 
+          required: true, 
+          section: 'fire_watch', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'fire_watch_training_valid', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Formation surveillance incendie valide' : 'Valid fire watch training', 
+          required: true, 
+          section: 'fire_watch', 
+          validation: { legalRequirement: true } 
+        },
+        
+        // SECTION RÉINSPECTION PAR QUART
+        { 
+          id: 'shift_reinspection', 
+          type: 'compliance_check', 
+          label: language === 'fr' ? 'Réinspection OBLIGATOIRE à chaque quart' : 'MANDATORY reinspection each shift', 
+          required: true, 
+          section: 'fire_watch', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'NFPA 51B-2019 - Nouvelle annexe' 
+        },
+        { 
+          id: 'reinspection_documentation', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Documentation des réinspections par quart' : 'Shift reinspection documentation', 
+          required: true, 
+          section: 'fire_watch', 
+          placeholder: language === 'fr' ? 'Heure, responsable, observations, actions...' : 'Time, responsible person, observations, actions...', 
+          validation: { legalRequirement: true } 
+        },
+        
+        // SECTION EXTINCTEURS
+        { 
+          id: 'extinguisher_class_a', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Extincteur Classe A (combustibles ordinaires)' : 'Class A extinguisher (ordinary combustibles)', 
+          required: false, 
+          section: 'precautions', 
+          complianceRef: 'NFPA 51B harmonisé avec NFPA 10' 
+        },
+        { 
+          id: 'extinguisher_class_b', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Extincteur Classe B (liquides inflammables)' : 'Class B extinguisher (flammable liquids)', 
+          required: false, 
+          section: 'precautions', 
+          complianceRef: 'NFPA 10' 
+        },
+        { 
+          id: 'extinguisher_positioning', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Positionnement et accessibilité extincteurs' : 'Extinguisher positioning and accessibility', 
+          required: true, 
+          section: 'precautions', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'NFPA 10' 
+        },
+        
+        // SECTION SIGNATURES
+        { 
+          id: 'applicant_signature', 
+          type: 'signature', 
+          label: language === 'fr' ? 'Signature demandeur/contractant' : 'Applicant/contractor signature', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'fire_marshal_signature', 
+          type: 'signature', 
+          label: language === 'fr' ? 'Signature autorité incendie' : 'Fire authority signature', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        }
+      ]
+    },
 
-        {/* =================== FILTRES ET RECHERCHE =================== */}
-        <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder={t.searchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              />
-            </div>
-            
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-            >
-              <option value="all">{t.allCategories}</option>
-              {categories.map((category: string) => (
-  <option key={category} value={category}>
-    {getCategoryIcon(category)} {t.categories[category] || category}
-  </option>
-))}
-            </select>
-            
-            <select
-              value={selectedProvince}
-              onChange={(e) => setSelectedProvince(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-            >
-              <option value="all">{t.allProvinces}</option>
-              {provinces.map((province: string) => (
-                <option key={province} value={province}>{province}</option>
-              ))}
-            </select>
-            
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedCategory('all');
-                setSelectedProvince('all');
-              }}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all duration-200"
-            >
-              <X className="w-4 h-4" />
-              <span>Reset</span>
-            </button>
-          </div>
-        </div>
+    // 3. PERMIS EXCAVATION CONFORME MUNICIPAL 2024
+    {
+      id: 'excavation-permit-municipal-2024',
+      name: language === 'fr' ? 'Permis d\'Excavation Conforme Municipal 2024' : 'Municipal Excavation Permit 2024 Compliant',
+      category: language === 'fr' ? 'Construction' : 'Construction',
+      description: language === 'fr' ? 'Permis conforme réglements municipaux 2024 avec calculs automatiques profondeur/distance et assurances obligatoires' : 'Municipal regulations 2024 compliant permit with automatic depth/distance calculations and mandatory insurance',
+      authority: language === 'fr' ? 'Municipal / Ville de Montréal / MAMH' : 'Municipal / City of Montreal / MAMH',
+      province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
+      required: true,
+      priority: 'high',
+      duration: language === 'fr' ? 'Durée des travaux + période garantie' : 'Work duration + warranty period',
+      cost: language === 'fr' ? '200$ - 2000$ + dépôts garantie selon ampleur' : '$200 - $2000 + guarantee deposits by scope',
+      processingTime: language === 'fr' ? '2-4 semaines + inspections obligatoires' : '2-4 weeks + mandatory inspections',
+      renewalRequired: false,
+      legislation: language === 'fr' ? 'Règlements municipaux 2024, Code construction Québec, Règlement excavation domaine public' : 'Municipal regulations 2024, Quebec Building Code, Public domain excavation regulation',
+      contactInfo: {
+        website: language === 'fr' ? 'Bureau des permis municipal' : 'Municipal permit office',
+        phone: '311',
+        email: 'permis@montreal.ca'
+      },
+      selected: false,
+      status: 'pending',
+      complianceLevel: 'enhanced',
+      lastUpdated: '2025-01-20',
+      formFields: [
+        // SECTION DEMANDEUR
+        { 
+          id: 'applicant_name_excavation', 
+          type: 'text', 
+          label: language === 'fr' ? 'Nom du demandeur' : 'Applicant name', 
+          required: true, 
+          section: 'applicant', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'applicant_company', 
+          type: 'text', 
+          label: language === 'fr' ? 'Entreprise/Organisation' : 'Company/Organization', 
+          required: true, 
+          section: 'applicant' 
+        },
+        { 
+          id: 'professional_engineer', 
+          type: 'text', 
+          label: language === 'fr' ? 'Ingénieur responsable (OIQ)' : 'Responsible engineer (OIQ)', 
+          required: true, 
+          section: 'applicant', 
+          validation: { legalRequirement: true } 
+        },
+        
+        // SECTION CALCULS AUTOMATIQUES
+        { 
+          id: 'excavation_depth_calc', 
+          type: 'number', 
+          label: language === 'fr' ? 'Profondeur excavation (m)' : 'Excavation depth (m)', 
+          required: true, 
+          section: 'excavation', 
+          validation: { min: 0, legalRequirement: true } 
+        },
+        { 
+          id: 'domain_public_distance', 
+          type: 'number', 
+          label: language === 'fr' ? 'Distance domaine public (m)' : 'Public domain distance (m)', 
+          required: true, 
+          section: 'excavation', 
+          validation: { min: 0, legalRequirement: true } 
+        },
+        { 
+          id: 'permit_required_auto', 
+          type: 'compliance_check', 
+          label: language === 'fr' ? 'PERMIS REQUIS (auto-calculé)' : 'PERMIT REQUIRED (auto-calculated)', 
+          required: true, 
+          section: 'excavation', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'Règlement municipal excavation' 
+        },
+        
+        // SECTION ASSURANCES OBLIGATOIRES
+        { 
+          id: 'insurance_amount_calc', 
+          type: 'text', 
+          label: language === 'fr' ? 'Montant assurance OBLIGATOIRE (auto-calculé)' : 'MANDATORY insurance amount (auto-calculated)', 
+          required: true, 
+          section: 'municipal_requirements', 
+          validation: { legalRequirement: true }, 
+          complianceRef: 'Règlement municipal assurances' 
+        },
+        { 
+          id: 'co_insurance_city', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Co-assurance Ville AJOUTÉE à la police' : 'City co-insurance ADDED to policy', 
+          required: true, 
+          section: 'municipal_requirements', 
+          validation: { legalRequirement: true, critical: true }, 
+          complianceRef: 'Avenant obligatoire Ville' 
+        },
+        
+        // SECTION INFO-EXCAVATION
+        { 
+          id: 'info_excavation_request', 
+          type: 'compliance_check', 
+          label: language === 'fr' ? 'Demande Info-Excavation COMPLÉTÉE' : 'Info-Excavation request COMPLETED', 
+          required: true, 
+          section: 'safety', 
+          validation: { legalRequirement: true, critical: true }, 
+          complianceRef: 'https://www.info-ex.com - Loi fédérale' 
+        },
+        { 
+          id: 'municipal_networks_located', 
+          type: 'checkbox', 
+          label: language === 'fr' ? 'Réseaux municipaux localisés (aqueduc/égout)' : 'Municipal networks located (water/sewer)', 
+          required: true, 
+          section: 'safety', 
+          validation: { legalRequirement: true } 
+        },
+        
+        // SECTION PROJET
+        { 
+          id: 'work_address_complete', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Adresse complète des travaux' : 'Complete work address', 
+          required: true, 
+          section: 'project', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'project_description_detailed', 
+          type: 'textarea', 
+          label: language === 'fr' ? 'Description détaillée du projet' : 'Detailed project description', 
+          required: true, 
+          section: 'project', 
+          validation: { legalRequirement: true } 
+        },
+        
+        // SECTION DÉPÔTS DE GARANTIE
+        { 
+          id: 'surface_guarantee_deposit', 
+          type: 'text', 
+          label: language === 'fr' ? 'Dépôt garantie SURFACE (auto-calculé)' : 'SURFACE guarantee deposit (auto-calculated)', 
+          required: true, 
+          section: 'municipal_requirements', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'underground_guarantee_deposit', 
+          type: 'text', 
+          label: language === 'fr' ? 'Dépôt garantie SOUTERRAIN (auto-calculé)' : 'UNDERGROUND guarantee deposit (auto-calculated)', 
+          required: true, 
+          section: 'municipal_requirements', 
+          validation: { legalRequirement: true } 
+        },
+        
+        // SECTION SIGNATURES
+        { 
+          id: 'applicant_signature_excavation', 
+          type: 'signature', 
+          label: language === 'fr' ? 'Signature demandeur' : 'Applicant signature', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        },
+        { 
+          id: 'engineer_signature', 
+          type: 'signature', 
+          label: language === 'fr' ? 'Signature ingénieur responsable' : 'Responsible engineer signature', 
+          required: true, 
+          section: 'signatures', 
+          validation: { legalRequirement: true } 
+        }
+      ]
+    }
+  ];
 
-        {/* =================== LISTE DES PERMIS =================== */}
-        <div className="space-y-6">
-          {filteredPermits.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-2xl shadow-lg">
-              <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-600 mb-2">{t.messages.noResults}</h3>
-              <p className="text-gray-500">{t.messages.modifySearch}</p>
-            </div>
-          ) : (
-            filteredPermits.map((permit: Permit) => (
-              <PermitCard
-                key={permit.id}
-                permit={permit}
-                isSelected={permit.selected}
-                isExpanded={expandedForms[permit.id]}
-                complianceChecks={complianceChecks[permit.id] || []}
-                workers={workers[permit.id] || []}
-                photos={photos[permit.id] || []}
-                currentPhotoIndex={currentPhotoIndex[permit.id] || 0}
-                viewMode={viewMode[permit.id] || 'carousel'}
-                onToggle={() => handlePermitToggle(permit.id)}
-                onExpand={() => toggleFormExpansion(permit.id)}
-                onFieldChange={(fieldId, value) => handleFormFieldChange(permit.id, fieldId, value)}
-                onAddWorker={() => addWorker(permit.id)}
-                onRemoveWorker={(workerId) => removeWorker(permit.id, workerId)}
-                onUpdateWorker={(workerId, field, value) => updateWorker(permit.id, workerId, field, value)}
-                onPhotoUpload={(files) => handlePhotoUpload(permit.id, files)}
-                onRemovePhoto={(photoId) => removePhoto(permit.id, photoId)}
-                onNextPhoto={() => nextPhoto(permit.id)}
-                onPrevPhoto={() => prevPhoto(permit.id)}
-                onToggleViewMode={() => toggleViewMode(permit.id)}
-                getPriorityColor={getPriorityColor}
-                getStatusColor={getStatusColor}
-                getComplianceColor={getComplianceColor}
-                getCategoryIcon={getCategoryIcon}
-                t={t}
-              />
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  return basePermits;
 };
 // =================== SECTION 4: COMPOSANTS UI SANS ERREURS ===================
 // À coller après la Section 3
