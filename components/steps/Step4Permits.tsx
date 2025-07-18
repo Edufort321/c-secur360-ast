@@ -1119,7 +1119,722 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
       </div>
     );
   };
-  // Ajout des types de champs manquants dans renderField
+  "use client";
+
+import React, { useState, useMemo, useEffect } from 'react';
+import { 
+  FileText, CheckCircle, AlertTriangle, Clock, Download, Eye,
+  Shield, Users, MapPin, Calendar, Building, Phone, User, Briefcase,
+  Search, Filter, Plus, BarChart3, Star, Award, Zap, HardHat,
+  Camera, Save, X, Edit, ChevronDown, ChevronUp, Printer, Mail
+} from 'lucide-react';
+
+// =================== INTERFACES ===================
+interface Step4PermitsProps {
+  formData: any;
+  onDataChange: (section: string, data: any) => void;
+  language: 'fr' | 'en';
+  tenant: string;
+  errors?: any;
+}
+
+interface Permit {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  authority: string;
+  province: string[];
+  required: boolean;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  duration: string;
+  cost: string;
+  processingTime: string;
+  renewalRequired: boolean;
+  renewalPeriod?: string;
+  legislation: string;
+  contactInfo?: {
+    phone?: string;
+    email?: string;
+    website?: string;
+  };
+  selected: boolean;
+  status: 'pending' | 'submitted' | 'approved' | 'rejected' | 'expired';
+  formData?: any;
+  formFields?: FormField[];
+}
+
+interface FormField {
+  id: string;
+  type: 'text' | 'number' | 'date' | 'time' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file' | 'signature' | 'workers_tracking' | 'time_picker' | 'photo_gallery';
+  label: string;
+  required: boolean;
+  placeholder?: string;
+  options?: string[];
+  section?: string;
+  validation?: {
+    min?: number;
+    max?: number;
+    pattern?: string;
+    message?: string;
+  };
+}
+
+interface WorkerEntry {
+  id: number;
+  name: string;
+  entryTime: string;
+  exitTime: string | null;
+  date: string;
+}
+
+interface PhotoEntry {
+  id: number;
+  url: string;
+  name: string;
+  timestamp: string;
+  description: string;
+}
+
+interface SignatureMetadata {
+  name: string;
+  date: string;
+  time: string;
+  timestamp: string;
+  ipAddress: string;
+  userAgent: string;
+}
+
+// =================== FONCTION DE TRADUCTION BILINGUE ===================
+const getTexts = (language: 'fr' | 'en') => {
+  if (language === 'fr') {
+    return {
+      title: 'Permis & Autorisations Réels',
+      subtitle: 'Formulaires authentiques de permis utilisés au Canada',
+      searchPlaceholder: 'Rechercher un permis...',
+      allCategories: 'Toutes catégories',
+      allProvinces: 'Toutes provinces',
+      categories: {
+        'Sécurité': 'Sécurité',
+        'Construction': 'Construction',
+        'Radioprotection': 'Radioprotection',
+        'Équipements': 'Équipements'
+      },
+      priorities: {
+        low: 'Faible',
+        medium: 'Moyen',
+        high: 'Élevé',
+        critical: 'Critique'
+      },
+      statuses: {
+        pending: 'En attente',
+        submitted: 'Soumis',
+        approved: 'Approuvé',
+        rejected: 'Rejeté',
+        expired: 'Expiré'
+      },
+      sections: {
+        identification: 'Identification',
+        applicant: 'Demandeur',
+        access: 'Accès',
+        atmosphere: 'Atmosphère',
+        signatures: 'Signatures',
+        work_type: 'Type de travaux',
+        precautions: 'Précautions',
+        project: 'Projet',
+        excavation: 'Excavation',
+        safety: 'Sécurité',
+        documents: 'Documents'
+      },
+      stats: {
+        available: 'Permis disponibles',
+        selected: 'Sélectionnés',
+        critical: 'Critiques',
+        pending: 'En attente'
+      },
+      actions: {
+        fill: 'Remplir',
+        close: 'Fermer',
+        preview: 'Aperçu',
+        download: 'PDF',
+        save: 'Sauvegarder',
+        print: 'Imprimer',
+        submit: 'Soumettre'
+      },
+      messages: {
+        noResults: 'Aucun permis trouvé',
+        modifySearch: 'Modifiez vos critères de recherche pour voir plus de permis',
+        workerName: 'Nom du travailleur',
+        recordEntry: 'Enregistrer entrée',
+        exit: 'Sortie',
+        remove: 'Supprimer',
+        entryExitLog: 'Registre des entrées/sorties',
+        noEntries: 'Aucune entrée enregistrée',
+        selectTime: 'Sélectionner l\'heure',
+        now: 'Maintenant',
+        select: 'Sélectionner...',
+        signatureRequired: 'Signature électronique requise',
+        enterName: 'Entrez votre nom complet',
+        signElectronically: 'Signer électroniquement',
+        clear: 'Effacer',
+        signedBy: 'Signé par',
+        on: 'Le',
+        at: 'à',
+        addPhotos: '📷 Ajouter des photos',
+        takePhoto: '📸 Prendre une photo',
+        photoCaptured: 'Photo capturée',
+        addDescription: 'Ajouter une description à cette photo...',
+        photo: 'photo',
+        photos: 'photos',
+        photoOf: 'Photo',
+        of: 'sur',
+        provinces: 'provinces'
+      }
+    };
+  } else {
+    return {
+      title: 'Real Permits & Authorizations',
+      subtitle: 'Authentic permit forms used in Canada',
+      searchPlaceholder: 'Search permits...',
+      allCategories: 'All categories',
+      allProvinces: 'All provinces',
+      categories: {
+        'Sécurité': 'Safety',
+        'Construction': 'Construction',
+        'Radioprotection': 'Radiation Protection',
+        'Équipements': 'Equipment'
+      },
+      priorities: {
+        low: 'Low',
+        medium: 'Medium',
+        high: 'High',
+        critical: 'Critical'
+      },
+      statuses: {
+        pending: 'Pending',
+        submitted: 'Submitted',
+        approved: 'Approved',
+        rejected: 'Rejected',
+        expired: 'Expired'
+      },
+      sections: {
+        identification: 'Identification',
+        applicant: 'Applicant',
+        access: 'Access',
+        atmosphere: 'Atmosphere',
+        signatures: 'Signatures',
+        work_type: 'Work Type',
+        precautions: 'Precautions',
+        project: 'Project',
+        excavation: 'Excavation',
+        safety: 'Safety',
+        documents: 'Documents'
+      },
+      stats: {
+        available: 'Available permits',
+        selected: 'Selected',
+        critical: 'Critical',
+        pending: 'Pending'
+      },
+      actions: {
+        fill: 'Fill',
+        close: 'Close',
+        preview: 'Preview',
+        download: 'PDF',
+        save: 'Save',
+        print: 'Print',
+        submit: 'Submit'
+      },
+      messages: {
+        noResults: 'No permits found',
+        modifySearch: 'Modify your search criteria to see more permits',
+        workerName: 'Worker name',
+        recordEntry: 'Record entry',
+        exit: 'Exit',
+        remove: 'Remove',
+        entryExitLog: 'Entry/exit log',
+        noEntries: 'No entries recorded',
+        selectTime: 'Select time',
+        now: 'Now',
+        select: 'Select...',
+        signatureRequired: 'Electronic signature required',
+        enterName: 'Enter your full name',
+        signElectronically: 'Sign electronically',
+        clear: 'Clear',
+        signedBy: 'Signed by',
+        on: 'On',
+        at: 'at',
+        addPhotos: '📷 Add photos',
+        takePhoto: '📸 Take photo',
+        photoCaptured: 'Photo captured',
+        addDescription: 'Add description to this photo...',
+        photo: 'photo',
+        photos: 'photos',
+        photoOf: 'Photo',
+        of: 'of',
+        provinces: 'provinces'
+      }
+    };
+  }
+};
+
+// =================== FONCTION POUR TRADUIRE LES PERMIS ===================
+const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
+  // Votre base de données originale avec traductions ajoutées
+  const basePermits: Permit[] = [
+    // 1. PERMIS ESPACE CLOS - Basé sur ASP Construction
+    {
+      id: 'confined-space-entry',
+      name: language === 'fr' ? 'Fiche de Contrôle en Espace Clos' : 'Confined Space Entry Control Sheet',
+      category: language === 'fr' ? 'Sécurité' : 'Safety',
+      description: language === 'fr' ? 'Permis d\'entrée obligatoire pour tous travaux en espace clos selon RSST et CSTC' : 'Mandatory entry permit for all confined space work according to RSST and CSTC',
+      authority: language === 'fr' ? 'Employeur / ASP Construction' : 'Employer / ASP Construction',
+      province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
+      required: true,
+      priority: 'critical',
+      duration: language === 'fr' ? 'Maximum 8 heures ou fin des travaux' : 'Maximum 8 hours or end of work',
+      cost: language === 'fr' ? 'Inclus dans formation' : 'Included in training',
+      processingTime: language === 'fr' ? 'Avant chaque entrée' : 'Before each entry',
+      renewalRequired: true,
+      renewalPeriod: language === 'fr' ? 'Quotidien' : 'Daily',
+      legislation: 'RSST Art. 297-312, CSTC Section 3.21',
+      contactInfo: {
+        phone: '514-355-6190',
+        website: 'https://www.asp-construction.org'
+      },
+      selected: false,
+      status: 'pending',
+      formFields: [
+        { id: 'space_identification', type: 'text', label: language === 'fr' ? 'Identification de l\'espace clos' : 'Confined space identification', required: true, section: 'identification', placeholder: language === 'fr' ? 'Ex: Réservoir A-12, Regard municipal...' : 'Ex: Tank A-12, Municipal manhole...' },
+        { id: 'project_name', type: 'text', label: language === 'fr' ? 'Nom du projet' : 'Project name', required: true, section: 'identification' },
+        { id: 'location', type: 'text', label: language === 'fr' ? 'Localisation exacte' : 'Exact location', required: true, section: 'identification' },
+        { id: 'permit_date', type: 'date', label: language === 'fr' ? 'Date du permis' : 'Permit date', required: true, section: 'identification' },
+        { id: 'permit_time', type: 'time_picker', label: language === 'fr' ? 'Heure d\'émission' : 'Issue time', required: true, section: 'identification' },
+        { id: 'entry_mandatory', type: 'radio', label: language === 'fr' ? 'L\'entrée est-elle obligatoire ?' : 'Is entry mandatory?', required: true, section: 'access', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'] },
+        { id: 'entry_alternatives', type: 'textarea', label: language === 'fr' ? 'Si non, options alternatives' : 'If no, alternative options', required: false, section: 'access', placeholder: language === 'fr' ? 'Décrire les alternatives...' : 'Describe alternatives...' },
+        { id: 'entry_frequency', type: 'text', label: language === 'fr' ? 'Fréquence des entrées' : 'Entry frequency', required: false, section: 'access' },
+        { id: 'access_number', type: 'number', label: language === 'fr' ? 'Nombre d\'accès' : 'Number of access points', required: true, section: 'access', validation: { min: 1 } },
+        { id: 'access_dimensions', type: 'text', label: language === 'fr' ? 'Dimensions des accès' : 'Access dimensions', required: true, section: 'access', placeholder: language === 'fr' ? 'Ex: 60cm x 40cm' : 'Ex: 60cm x 40cm' },
+        { id: 'interior_dimensions', type: 'text', label: language === 'fr' ? 'Dimensions intérieures' : 'Interior dimensions', required: true, section: 'access' },
+        { id: 'divisions_number', type: 'number', label: language === 'fr' ? 'Nombre de divisions' : 'Number of divisions', required: false, section: 'access' },
+        { id: 'access_means', type: 'checkbox', label: language === 'fr' ? 'Moyens d\'accès' : 'Access means', required: true, section: 'access', options: language === 'fr' ? ['Échelons', 'Échelle fixe', 'Échelle portative', 'Autre'] : ['Rungs', 'Fixed ladder', 'Portable ladder', 'Other'] },
+        { id: 'signage_required', type: 'radio', label: language === 'fr' ? 'Signalisation requise ?' : 'Signage required?', required: true, section: 'access', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'] },
+        { id: 'access_control', type: 'radio', label: language === 'fr' ? 'Mesures prises pour interdire l\'entrée non autorisée ?' : 'Measures taken to prevent unauthorized entry?', required: true, section: 'access', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'] },
+        { id: 'space_contents', type: 'textarea', label: language === 'fr' ? 'Contenu de l\'espace clos' : 'Confined space contents', required: true, section: 'atmosphere', placeholder: language === 'fr' ? 'Décrire le contenu, vérifier SDS...' : 'Describe contents, check SDS...' },
+        { id: 'atmosphere_types', type: 'checkbox', label: language === 'fr' ? 'Types d\'atmosphère' : 'Atmosphere types', required: true, section: 'atmosphere', options: language === 'fr' ? ['Inflammable/combustible LIE ≥ 5%', 'Oxygène ≤ 19,5%', 'Oxygène ≥ 23%', 'Gaz toxique', 'Poussières', 'Irritante'] : ['Flammable/combustible LEL ≥ 5%', 'Oxygen ≤ 19.5%', 'Oxygen ≥ 23%', 'Toxic gas', 'Dust', 'Irritant'] },
+        { id: 'photos_documentation', type: 'photo_gallery', label: language === 'fr' ? 'Photos de documentation' : 'Documentation photos', required: false, section: 'atmosphere' },
+        { id: 'authorized_workers', type: 'textarea', label: language === 'fr' ? 'Noms des travailleurs autorisés' : 'Names of authorized workers', required: true, section: 'signatures', placeholder: language === 'fr' ? 'Un travailleur par ligne...' : 'One worker per line...' },
+        { id: 'workers_log', type: 'workers_tracking', label: language === 'fr' ? 'Registre des entrées/sorties' : 'Entry/exit log', required: true, section: 'signatures' },
+        { id: 'supervisor_name', type: 'text', label: language === 'fr' ? 'Nom du surveillant' : 'Supervisor name', required: true, section: 'signatures' },
+        { id: 'qualified_person', type: 'text', label: language === 'fr' ? 'Nom de la personne qualifiée' : 'Qualified person name', required: true, section: 'signatures' },
+        { id: 'supervisor_signature', type: 'signature', label: language === 'fr' ? 'Signature du surveillant' : 'Supervisor signature', required: true, section: 'signatures' },
+        { id: 'qualified_signature', type: 'signature', label: language === 'fr' ? 'Signature de la personne qualifiée' : 'Qualified person signature', required: true, section: 'signatures' }
+      ]
+    },
+
+    // 2. PERMIS TRAVAIL À CHAUD - Basé sur NFPA 51B et CNESST
+    {
+      id: 'hot-work-permit',
+      name: language === 'fr' ? 'Permis de Travail à Chaud' : 'Hot Work Permit',
+      category: language === 'fr' ? 'Sécurité' : 'Safety',
+      description: language === 'fr' ? 'Autorisation pour soudage, découpage, meulage et travaux générant étincelles selon NFPA 51B' : 'Authorization for welding, cutting, grinding and spark-generating work according to NFPA 51B',
+      authority: language === 'fr' ? 'Service incendie / Employeur' : 'Fire Department / Employer',
+      province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
+      required: true,
+      priority: 'critical',
+      duration: language === 'fr' ? '24 heures maximum' : '24 hours maximum',
+      cost: language === 'fr' ? 'Variable selon municipalité' : 'Variable by municipality',
+      processingTime: language === 'fr' ? 'Immédiat à 24h' : 'Immediate to 24h',
+      renewalRequired: true,
+      renewalPeriod: language === 'fr' ? 'Quotidien' : 'Daily',
+      legislation: 'NFPA 51B-2019, Code sécurité incendie, RSST',
+      contactInfo: {
+        phone: language === 'fr' ? 'Service incendie local' : 'Local fire department',
+        website: 'Municipal'
+      },
+      selected: false,
+      status: 'pending',
+      formFields: [
+        { id: 'permit_number', type: 'text', label: language === 'fr' ? 'Numéro de permis' : 'Permit number', required: true, section: 'identification' },
+        { id: 'work_location', type: 'text', label: language === 'fr' ? 'Lieu des travaux' : 'Work location', required: true, section: 'identification' },
+        { id: 'work_date', type: 'date', label: language === 'fr' ? 'Date des travaux' : 'Work date', required: true, section: 'identification' },
+        { id: 'start_time', type: 'time', label: language === 'fr' ? 'Heure de début' : 'Start time', required: true, section: 'identification' },
+        { id: 'end_time', type: 'time', label: language === 'fr' ? 'Heure de fin' : 'End time', required: true, section: 'identification' },
+        { id: 'company_name', type: 'text', label: language === 'fr' ? 'Nom de l\'entreprise' : 'Company name', required: true, section: 'identification' },
+        { id: 'work_type', type: 'checkbox', label: language === 'fr' ? 'Type de travail à chaud' : 'Type of hot work', required: true, section: 'work_type', options: language === 'fr' ? ['Soudage à l\'arc', 'Soudage au gaz', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage', 'Perçage', 'Brasage', 'Autre'] : ['Arc welding', 'Gas welding', 'Torch cutting', 'Plasma cutting', 'Grinding', 'Drilling', 'Brazing', 'Other'] },
+        { id: 'work_description', type: 'textarea', label: language === 'fr' ? 'Description détaillée des travaux' : 'Detailed work description', required: true, section: 'work_type' },
+        { id: 'fire_watch', type: 'radio', label: language === 'fr' ? 'Surveillance incendie assignée' : 'Fire watch assigned', required: true, section: 'precautions', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'] },
+        { id: 'fire_watch_name', type: 'text', label: language === 'fr' ? 'Nom du surveillant incendie' : 'Fire watch name', required: false, section: 'precautions' },
+        { id: 'combustibles_removed', type: 'radio', label: language === 'fr' ? 'Matières combustibles éloignées (11m minimum)' : 'Combustibles removed (11m minimum)', required: true, section: 'precautions', options: language === 'fr' ? ['Oui', 'Non', 'Protégées'] : ['Yes', 'No', 'Protected'] },
+        { id: 'photos_precautions', type: 'photo_gallery', label: language === 'fr' ? 'Photos des mesures de précaution' : 'Precautionary measures photos', required: false, section: 'precautions' },
+        { id: 'applicant_signature', type: 'signature', label: language === 'fr' ? 'Signature du demandeur' : 'Applicant signature', required: true, section: 'signatures' },
+        { id: 'supervisor_signature_hot', type: 'signature', label: language === 'fr' ? 'Signature du superviseur' : 'Supervisor signature', required: true, section: 'signatures' },
+        { id: 'permit_expiry', type: 'date', label: language === 'fr' ? 'Date d\'expiration du permis' : 'Permit expiry date', required: true, section: 'signatures' }
+      ]
+    },
+
+    // 3. PERMIS D'EXCAVATION - Basé sur Ville de Montréal
+    {
+      id: 'excavation-permit',
+      name: language === 'fr' ? 'Permis d\'Excavation' : 'Excavation Permit',
+      category: language === 'fr' ? 'Construction' : 'Construction',
+      description: language === 'fr' ? 'Autorisation pour travaux d\'excavation près du domaine public selon règlements municipaux' : 'Authorization for excavation work near public domain according to municipal regulations',
+      authority: language === 'fr' ? 'Municipal' : 'Municipal',
+      province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
+      required: true,
+      priority: 'high',
+      duration: language === 'fr' ? 'Durée des travaux' : 'Duration of work',
+      cost: language === 'fr' ? '200$ - 2000$ selon ampleur' : '$200 - $2000 depending on scope',
+      processingTime: language === 'fr' ? '5-15 jours ouvrables' : '5-15 business days',
+      renewalRequired: false,
+      legislation: language === 'fr' ? 'Règlements municipaux, Code de construction' : 'Municipal regulations, Building code',
+      contactInfo: {
+        website: language === 'fr' ? 'Bureau des permis municipal' : 'Municipal permit office'
+      },
+      selected: false,
+      status: 'pending',
+      formFields: [
+        { id: 'applicant_name', type: 'text', label: language === 'fr' ? 'Nom du demandeur' : 'Applicant name', required: true, section: 'applicant' },
+        { id: 'applicant_address', type: 'textarea', label: language === 'fr' ? 'Adresse du demandeur' : 'Applicant address', required: true, section: 'applicant' },
+        { id: 'applicant_phone', type: 'text', label: language === 'fr' ? 'Téléphone' : 'Phone', required: true, section: 'applicant' },
+        { id: 'applicant_email', type: 'text', label: language === 'fr' ? 'Courriel' : 'Email', required: true, section: 'applicant' },
+        { id: 'contractor_name', type: 'text', label: language === 'fr' ? 'Nom de l\'entrepreneur' : 'Contractor name', required: true, section: 'applicant' },
+        { id: 'contractor_license', type: 'text', label: language === 'fr' ? 'Numéro de licence RBQ' : 'RBQ license number', required: true, section: 'applicant' },
+        { id: 'work_address', type: 'textarea', label: language === 'fr' ? 'Adresse des travaux' : 'Work address', required: true, section: 'project' },
+        { id: 'lot_number', type: 'text', label: language === 'fr' ? 'Numéro de lot' : 'Lot number', required: false, section: 'project' },
+        { id: 'project_description', type: 'textarea', label: language === 'fr' ? 'Description du projet' : 'Project description', required: true, section: 'project' },
+        { id: 'work_start_date', type: 'date', label: language === 'fr' ? 'Date de début prévue' : 'Planned start date', required: true, section: 'project' },
+        { id: 'work_duration', type: 'number', label: language === 'fr' ? 'Durée estimée (jours)' : 'Estimated duration (days)', required: true, section: 'project' },
+        { id: 'excavation_depth', type: 'number', label: language === 'fr' ? 'Profondeur d\'excavation (m)' : 'Excavation depth (m)', required: true, section: 'excavation', validation: { min: 0 } },
+        { id: 'excavation_length', type: 'number', label: language === 'fr' ? 'Longueur (m)' : 'Length (m)', required: true, section: 'excavation', validation: { min: 0 } },
+        { id: 'excavation_width', type: 'number', label: language === 'fr' ? 'Largeur (m)' : 'Width (m)', required: true, section: 'excavation', validation: { min: 0 } },
+        { id: 'soil_type', type: 'select', label: language === 'fr' ? 'Type de sol' : 'Soil type', required: true, section: 'excavation', options: language === 'fr' ? ['Argile', 'Sable', 'Gravier', 'Roc', 'Remblai', 'Mixte'] : ['Clay', 'Sand', 'Gravel', 'Rock', 'Fill', 'Mixed'] },
+        { id: 'safety_plan', type: 'radio', label: language === 'fr' ? 'Plan de sécurité préparé' : 'Safety plan prepared', required: true, section: 'safety', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'] },
+        { id: 'traffic_control', type: 'radio', label: language === 'fr' ? 'Contrôle de circulation requis' : 'Traffic control required', required: true, section: 'safety', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'] },
+        { id: 'photos_safety', type: 'photo_gallery', label: language === 'fr' ? 'Photos de sécurité du site' : 'Site safety photos', required: false, section: 'safety' },
+        { id: 'site_plan', type: 'file', label: language === 'fr' ? 'Plan de site' : 'Site plan', required: true, section: 'documents' },
+        { id: 'excavation_plans', type: 'file', label: language === 'fr' ? 'Plans d\'excavation' : 'Excavation plans', required: true, section: 'documents' },
+        { id: 'applicant_signature_excavation', type: 'signature', label: language === 'fr' ? 'Signature du demandeur' : 'Applicant signature', required: true, section: 'signatures' },
+        { id: 'application_date', type: 'date', label: language === 'fr' ? 'Date de la demande' : 'Application date', required: true, section: 'signatures' }
+      ]
+    }
+  ];
+
+  return basePermits;
+};
+
+// =================== COMPOSANT PRINCIPAL ===================
+const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
+  // =================== TRADUCTIONS ET CONFIGURATION ===================
+  const t = getTexts(language);
+  
+  // =================== ÉTATS (gardant votre structure originale) ===================
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedProvince, setSelectedProvince] = useState('all');
+  const [expandedForms, setExpandedForms] = useState<{ [key: string]: boolean }>({});
+  
+  // =================== GESTION DES DONNÉES AVEC TRADUCTION ===================
+  const [permits, setPermits] = useState(() => {
+    if (formData.permits?.list && formData.permits.list.length > 0) {
+      return formData.permits.list;
+    }
+    return translatePermitsDatabase(language);
+  });
+
+  // =================== TRADUCTION DYNAMIQUE ===================
+  useEffect(() => {
+    const translatedPermits = translatePermitsDatabase(language);
+    // Préserver les sélections et données de formulaire existantes
+    const updatedPermits = translatedPermits.map(translatedPermit => {
+      const existingPermit = permits.find(p => p.id === translatedPermit.id);
+      if (existingPermit) {
+        return {
+          ...translatedPermit,
+          selected: existingPermit.selected,
+          formData: existingPermit.formData,
+          status: existingPermit.status
+        };
+      }
+      return translatedPermit;
+    });
+    setPermits(updatedPermits);
+  }, [language]);
+
+  // =================== FILTRAGE DES PERMIS (votre logique originale) ===================
+  const filteredPermits = permits.filter((permit: Permit) => {
+    const matchesSearch = permit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         permit.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         permit.authority.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || permit.category === selectedCategory;
+    const matchesProvince = selectedProvince === 'all' || permit.province.includes(selectedProvince);
+    return matchesSearch && matchesCategory && matchesProvince;
+  });
+
+  const categories = Array.from(new Set(permits.map((p: Permit) => p.category))) as string[];
+  const provinces = ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'];
+  const selectedPermits = permits.filter((p: Permit) => p.selected);
+
+  const stats = useMemo(() => ({
+    totalPermits: permits.length,
+    selected: selectedPermits.length,
+    critical: selectedPermits.filter((p: Permit) => p.priority === 'critical').length,
+    pending: selectedPermits.filter((p: Permit) => p.status === 'pending').length
+  }), [permits, selectedPermits]);
+
+  // =================== HANDLERS (votre logique originale) ===================
+  const handlePermitToggle = (permitId: string) => {
+    const updatedPermits = permits.map((permit: Permit) => 
+      permit.id === permitId 
+        ? { ...permit, selected: !permit.selected }
+        : permit
+    );
+    setPermits(updatedPermits);
+    updateFormData(updatedPermits);
+  };
+
+  const updateFormData = (updatedPermits: Permit[]) => {
+    const selectedList = updatedPermits.filter((p: Permit) => p.selected);
+    const permitsData = {
+      list: updatedPermits,
+      selected: selectedList,
+      stats: {
+        totalPermits: updatedPermits.length,
+        selected: selectedList.length,
+        critical: selectedList.filter((p: Permit) => p.priority === 'critical').length,
+        pending: selectedList.filter((p: Permit) => p.status === 'pending').length
+      }
+    };
+    onDataChange('permits', permitsData);
+  };
+
+  const handleFormFieldChange = (permitId: string, fieldId: string, value: any) => {
+    const updatedPermits = permits.map((permit: Permit) => {
+      if (permit.id === permitId) {
+        return {
+          ...permit,
+          formData: {
+            ...permit.formData,
+            [fieldId]: value
+          }
+        };
+      }
+      return permit;
+    });
+    setPermits(updatedPermits);
+    updateFormData(updatedPermits);
+  };
+
+  const toggleFormExpansion = (permitId: string) => {
+    setExpandedForms(prev => ({
+      ...prev,
+      [permitId]: !prev[permitId]
+    }));
+  };
+
+  // =================== FONCTIONS UTILITAIRES (votre logique originale) ===================
+  const getCategoryIcon = (category: string) => {
+    // Gestion bilingue des catégories
+    const categoryKey = category === 'Safety' ? 'Sécurité' : 
+                       category === 'Construction' ? 'Construction' :
+                       category === 'Radiation Protection' ? 'Radioprotection' :
+                       category === 'Equipment' ? 'Équipements' : category;
+    
+    switch (categoryKey) {
+      case 'Sécurité': return '🛡️';
+      case 'Construction': return '🏗️';
+      case 'Radioprotection': return '☢️';
+      case 'Équipements': return '⚙️';
+      default: return '📋';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return '#ef4444';
+      case 'high': return '#f97316';
+      case 'medium': return '#eab308';
+      case 'low': return '#22c55e';
+      default: return '#6b7280';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved': return '#22c55e';
+      case 'submitted': return '#3b82f6';
+      case 'pending': return '#eab308';
+      case 'rejected': return '#ef4444';
+      case 'expired': return '#6b7280';
+      default: return '#6b7280';
+    }
+  };
+
+  // =================== COMPOSANT FORMULAIRE ===================
+  const PermitForm = ({ permit }: { permit: Permit }) => {
+    const isExpanded = expandedForms[permit.id];
+    if (!isExpanded) return null;
+
+    const fieldsBySection = permit.formFields?.reduce((acc, field) => {
+      const section = field.section || 'general';
+      if (!acc[section]) acc[section] = [];
+      acc[section].push(field);
+      return acc;
+    }, {} as { [key: string]: FormField[] }) || {};
+
+    const renderField = (field: FormField) => {
+      const value = permit.formData?.[field.id] || '';
+      
+      switch (field.type) {
+        case 'text':
+        case 'number':
+          return (
+            <input
+              type={field.type}
+              id={field.id}
+              value={value}
+              onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleFormFieldChange(permit.id, field.id, e.target.value);
+              }}
+              onInput={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              onFocus={(e) => e.stopPropagation()}
+              placeholder={field.placeholder}
+              required={field.required}
+              min={field.validation?.min}
+              max={field.validation?.max}
+              className="form-input"
+            />
+          );
+        
+        case 'workers_tracking':
+          const workersLog: WorkerEntry[] = Array.isArray(value) ? value : [];
+          return (
+            <div className="workers-tracking-container">
+              <div className="worker-entry-form">
+                <div className="worker-entry-inputs">
+                  <input
+                    type="text"
+                    placeholder={t.messages.workerName}
+                    className="worker-name-input"
+                    onKeyPress={(e) => {
+                      e.stopPropagation();
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const container = (e.target as HTMLElement).closest('.worker-entry-form');
+                        const nameInput = container?.querySelector('.worker-name-input') as HTMLInputElement;
+                        const timeInput = container?.querySelector('.worker-time-input') as HTMLInputElement;
+                        
+                        if (nameInput?.value.trim()) {
+                          const newEntry: WorkerEntry = {
+                            id: Date.now(),
+                            name: nameInput.value.trim(),
+                            entryTime: timeInput.value || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
+                            exitTime: null,
+                            date: new Date().toLocaleDateString('fr-CA')
+                          };
+                          const updatedLog = [...workersLog, newEntry];
+                          handleFormFieldChange(permit.id, field.id, updatedLog);
+                          nameInput.value = '';
+                          timeInput.value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <input
+                    type="time"
+                    className="worker-time-input"
+                  />
+                  <button
+                    type="button"
+                    className="worker-entry-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const container = (e.target as HTMLElement).closest('.worker-entry-form');
+                      const nameInput = container?.querySelector('.worker-name-input') as HTMLInputElement;
+                      const timeInput = container?.querySelector('.worker-time-input') as HTMLInputElement;
+                      
+                      if (nameInput?.value.trim()) {
+                        const newEntry: WorkerEntry = {
+                          id: Date.now(),
+                          name: nameInput.value.trim(),
+                          entryTime: timeInput.value || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
+                          exitTime: null,
+                          date: new Date().toLocaleDateString('fr-CA')
+                        };
+                        const updatedLog = [...workersLog, newEntry];
+                        handleFormFieldChange(permit.id, field.id, updatedLog);
+                        nameInput.value = '';
+                        timeInput.value = '';
+                      }
+                    }}
+                  >
+                    {t.messages.recordEntry}
+                  </button>
+                </div>
+              </div>
+              
+              <div className="workers-log-list">
+                <h5>{t.messages.entryExitLog}</h5>
+                {workersLog.length === 0 ? (
+                  <p className="no-entries">{t.messages.noEntries}</p>
+                ) : (
+                  <div className="workers-table">
+                    <div className="workers-table-header">
+                      <span>{language === 'fr' ? 'Nom' : 'Name'}</span>
+                      <span>{language === 'fr' ? 'Entrée' : 'Entry'}</span>
+                      <span>{language === 'fr' ? 'Sortie' : 'Exit'}</span>
+                      <span>{language === 'fr' ? 'Actions' : 'Actions'}</span>
+                    </div>
+                    {workersLog.map((worker: WorkerEntry) => (
+                      <div key={worker.id} className="workers-table-row">
+                        <span className="worker-name">{worker.name}</span>
+                        <span className="worker-time">{worker.entryTime}</span>
+                        <span className="worker-time">
+                          {worker.exitTime || (
+                            <button
+                              type="button"
+                              className="exit-btn"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const updatedLog = workersLog.map((w: WorkerEntry) =>
+                                  w.id === worker.id
+                                    ? { ...w, exitTime: new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }) }
+                                    : w
+                                );
+                                handleFormFieldChange(permit.id, field.id, updatedLog);
+                              }}
+                            >
+                              {t.messages.exit}
+                            </button>
+                          )}
+                        </span>
+                        <span>
+                          <button
+                            type="button"
+                            className="remove-btn"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const updatedLog = workersLog.filter((w: WorkerEntry) => w.id !== worker.id);
+                              handleFormFieldChange(permit.id, field.id, updatedLog);
+                            }}
+                          >
+                            {t.messages.remove}
+                          </button>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        
         case 'photo_gallery':
           const photos: PhotoEntry[] = Array.isArray(value) ? value : [];
           const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
@@ -1191,7 +1906,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                         ctx.fillStyle = '#ffffff';
                         ctx.font = '24px Arial';
                         ctx.textAlign = 'center';
-                        ctx.fillText(language === 'fr' ? 'Photo capturée' : 'Photo captured', 320, 220);
+                        ctx.fillText(t.messages.photoCaptured, 320, 220);
                         ctx.font = '16px Arial';
                         ctx.fillText(new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA'), 320, 260);
                         
@@ -1321,11 +2036,11 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                   
                   <div className="photo-gallery-info">
                     <span className="photo-count">
-                      {photos.length} {language === 'fr' ? `photo${photos.length > 1 ? 's' : ''}` : `photo${photos.length > 1 ? 's' : ''}`}
+                      {photos.length} {photos.length > 1 ? t.messages.photos : t.messages.photo}
                     </span>
                     {photos.length > 1 && (
                       <span className="photo-current">
-                        {language === 'fr' ? `Photo ${currentPhotoIndex + 1} sur ${photos.length}` : `Photo ${currentPhotoIndex + 1} of ${photos.length}`}
+                        {t.messages.photoOf} {currentPhotoIndex + 1} {t.messages.of} {photos.length}
                       </span>
                     )}
                   </div>
@@ -1343,16 +2058,14 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               <div className="signature-pad">
                 {signatureValue ? (
                   <div className="signature-content">
-                    <div className="signature-text">
-                      ✓ {language === 'fr' ? 'Signé par' : 'Signed by'} : {signatureValue}
-                    </div>
+                    <div className="signature-text">✓ {t.messages.signedBy} : {signatureValue}</div>
                     <div className="signature-timestamp">
-                      {language === 'fr' ? 'Le' : 'On'} {signatureMetadata?.date || new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA')} {language === 'fr' ? 'à' : 'at'} {signatureMetadata?.time || new Date().toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', { hour: '2-digit', minute: '2-digit' })}
+                      {t.messages.on} {signatureMetadata?.date || new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA')} {t.messages.at} {signatureMetadata?.time || new Date().toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 ) : (
                   <span className="signature-placeholder">
-                    {t.messages.signRequired}
+                    {t.messages.signatureRequired}
                   </span>
                 )}
               </div>
@@ -1471,6 +2184,58 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               </div>
             </div>
           );
+        
+        default:
+          return null;
+      }
+    };
+
+    return (
+      <div className="permit-form">
+        <div className="form-header">
+          <h3>{permit.name}</h3>
+          <div className="form-actions">
+            <button className="form-action-btn save">
+              <Save size={16} />
+              {t.actions.save}
+            </button>
+            <button className="form-action-btn print">
+              <Printer size={16} />
+              {t.actions.print}
+            </button>
+            <button className="form-action-btn submit">
+              <Mail size={16} />
+              {t.actions.submit}
+            </button>
+          </div>
+        </div>
+
+        <div className="form-content">
+          {Object.entries(fieldsBySection).map(([sectionName, fields]: [string, FormField[]]) => (
+            <div key={sectionName} className="form-section-group">
+              <h4 className="form-section-title">
+                {(t.sections as any)[sectionName] || sectionName}
+              </h4>
+              <div className="form-fields">
+                {fields.map((field: FormField) => (
+                  <div key={field.id} className="form-field">
+                    <label className="form-label" htmlFor={field.id}>
+                      {field.label}
+                      {field.required && <span className="required">*</span>}
+                    </label>
+                    {renderField(field)}
+                    {field.validation?.message && (
+                      <div className="field-help">{field.validation.message}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   // =================== RENDU PRINCIPAL ===================
   return (
@@ -1784,7 +2549,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                   </div>
                   <div className="meta-item">
                     <MapPin size={12} />
-                    {permit.province.length} {language === 'fr' ? 'provinces' : 'provinces'}
+                    {permit.province.length} {t.messages.provinces}
                   </div>
                 </div>
 
@@ -1838,3 +2603,231 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
 };
 
 export default Step4Permits;
+        
+        case 'date':
+        case 'time':
+          return (
+            <input
+              type={field.type}
+              id={field.id}
+              value={value}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleFormFieldChange(permit.id, field.id, e.target.value);
+              }}
+              onInput={(e) => e.stopPropagation()}
+              required={field.required}
+              className="form-input"
+            />
+          );
+        
+        case 'time_picker':
+          const [showTimePicker, setShowTimePicker] = useState(false);
+          const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+          const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+          const currentTime = value || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
+          const [selectedHour, selectedMinute] = currentTime.split(':');
+          
+          return (
+            <div className="time-picker-container">
+              <div 
+                className="time-display"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTimePicker(!showTimePicker);
+                }}
+              >
+                <span className="time-value">{currentTime}</span>
+                <span className="time-icon">🕐</span>
+              </div>
+              
+              {showTimePicker && (
+                <div className="time-picker-dropdown">
+                  <div className="time-picker-header">
+                    <span>{t.messages.selectTime}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowTimePicker(false);
+                      }}
+                      className="time-picker-close"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  
+                  <div className="time-picker-selectors">
+                    <div className="time-selector">
+                      <div className="time-selector-label">{language === 'fr' ? 'Heure' : 'Hour'}</div>
+                      <div className="time-options">
+                        {hours.map((hour: string) => (
+                          <div
+                            key={hour}
+                            className={`time-option ${selectedHour === hour ? 'selected' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newTime = `${hour}:${selectedMinute}`;
+                              handleFormFieldChange(permit.id, field.id, newTime);
+                            }}
+                          >
+                            {hour}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="time-separator">:</div>
+                    
+                    <div className="time-selector">
+                      <div className="time-selector-label">{language === 'fr' ? 'Minutes' : 'Minutes'}</div>
+                      <div className="time-options">
+                        {minutes.filter((_, i) => i % 5 === 0).map((minute: string) => (
+                          <div
+                            key={minute}
+                            className={`time-option ${selectedMinute === minute ? 'selected' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newTime = `${selectedHour}:${minute}`;
+                              handleFormFieldChange(permit.id, field.id, newTime);
+                            }}
+                          >
+                            {minute}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="time-picker-actions">
+                    <button
+                      type="button"
+                      className="time-picker-now"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const now = new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
+                        handleFormFieldChange(permit.id, field.id, now);
+                        setShowTimePicker(false);
+                      }}
+                    >
+                      {t.messages.now}
+                    </button>
+                    <button
+                      type="button"
+                      className="time-picker-ok"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowTimePicker(false);
+                      }}
+                    >
+                      OK
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        
+        case 'textarea':
+          return (
+            <textarea
+              id={field.id}
+              value={value}
+              onChange={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleFormFieldChange(permit.id, field.id, e.target.value);
+              }}
+              onInput={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              onFocus={(e) => e.stopPropagation()}
+              placeholder={field.placeholder}
+              required={field.required}
+              rows={3}
+              className="form-textarea"
+            />
+          );
+        
+        case 'select':
+          return (
+            <select
+              id={field.id}
+              value={value}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleFormFieldChange(permit.id, field.id, e.target.value);
+              }}
+              required={field.required}
+              className="form-select"
+            >
+              <option value="">{t.messages.select}</option>
+              {field.options?.map((option: string) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          );
+        
+        case 'radio':
+          return (
+            <div className="radio-group">
+              {field.options?.map((option: string) => (
+                <label key={option} className="radio-label">
+                  <input
+                    type="radio"
+                    name={field.id}
+                    value={option}
+                    checked={value === option}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleFormFieldChange(permit.id, field.id, e.target.value);
+                    }}
+                    required={field.required}
+                  />
+                  <span>{option}</span>
+                </label>
+              ))}
+            </div>
+          );
+        
+        case 'checkbox':
+          const checkedValues: string[] = Array.isArray(value) ? value : [];
+          return (
+            <div className="checkbox-group">
+              {field.options?.map((option: string) => (
+                <label key={option} className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    value={option}
+                    checked={checkedValues.includes(option)}
+                    onChange={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const newValues = e.target.checked
+                        ? [...checkedValues, option]
+                        : checkedValues.filter((v: string) => v !== option);
+                      handleFormFieldChange(permit.id, field.id, newValues);
+                    }}
+                  />
+                  <span>{option}</span>
+                </label>
+              ))}
+            </div>
+          );
+        
+        case 'file':
+          return (
+            <input
+              type="file"
+              id={field.id}
+              onChange={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleFormFieldChange(permit.id, field.id, file.name);
+                }
+              }}
+              required={field.required}
+              className="form-file"
+            />
+          );
