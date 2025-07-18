@@ -1839,3 +1839,5 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     </div>
   );
 };
+
+export default Step4Permits;
