@@ -11,7 +11,7 @@ import {
 // =================== INTERFACES ===================
 interface Step4PermitsProps {
   formData: any;
-  onDataChange: (data: any) => void;
+  onDataChange: (section: string, data: any) => void;
   language: 'fr' | 'en';
   tenant: string;
   errors?: Record<string, string>;
@@ -454,7 +454,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     setSelectedPermits(newSelected);
     
     // Sauvegarder dans formData
-    onDataChange({
+    onDataChange('permits', {
       ...formData,
       selectedPermits: Array.from(newSelected)
     });
