@@ -1718,59 +1718,8 @@ const ConfinedSpaceManager: React.FC<{
     </div>
   );
 };
-// =================== SECTION 4/4 CORRIGÉE - COMPOSANT PRINCIPAL + EXPORT FINAL ===================
-// Remplacez ENTIÈREMENT votre SECTION 4 par cette version corrigée
-
-// =================== DONNÉES PERMIS RÉELLES SEULEMENT ===================
-const getProvincialPermits = (language: 'fr' | 'en', province: string = 'QC'): Permit[] => {
-  return [
-    {
-      id: 'confined-space-entry',
-      name: language === 'fr' ? 
-        `Permis Entrée Espace Clos - ${province}` : 
-        `Confined Space Entry Permit - ${province}`,
-      category: language === 'fr' ? 'Sécurité' : 'Safety',
-      description: language === 'fr' ? 
-        `Permis conforme aux normes ${province} avec surveillance atmosphérique continue` : 
-        `${province} compliant permit with continuous atmospheric monitoring`,
-      authority: `Autorité ${province}`,
-      province: [province],
-      priority: 'critical' as const,
-      selected: false,
-      formData: {}
-    },
-    {
-      id: 'hot-work-permit',
-      name: language === 'fr' ? 
-        `Permis Travail à Chaud - ${province}` : 
-        `Hot Work Permit - ${province}`,
-      category: language === 'fr' ? 'Sécurité' : 'Safety',
-      description: language === 'fr' ? 
-        `Permis travaux à chaud avec surveillance incendie selon ${province}` : 
-        `Hot work permit with fire watch per ${province} standards`,
-      authority: `Autorité ${province}`,
-      province: [province],
-      priority: 'critical' as const,
-      selected: false,
-      formData: {}
-    },
-    {
-      id: 'excavation-permit',
-      name: language === 'fr' ? 
-        `Permis Excavation - ${province}` : 
-        `Excavation Permit - ${province}`,
-      category: language === 'fr' ? 'Construction' : 'Construction',
-      description: language === 'fr' ? 
-        `Permis excavation municipal conforme aux normes ${province}` : 
-        `Municipal excavation permit compliant with ${province} standards`,
-      authority: `Municipal ${province}`,
-      province: [province],
-      priority: 'high' as const,
-      selected: false,
-      formData: {}
-    }
-  ];
-};
+// =================== SECTION 4/4 FINALE CORRIGÉE - COMPOSANT PRINCIPAL + EXPORT ===================
+// Remplacez ENTIÈREMENT votre SECTION 4 par cette version sans duplication
 
 // =================== INTERFACE ARCHIVE ===================
 interface ArchivedPermit extends Permit {
