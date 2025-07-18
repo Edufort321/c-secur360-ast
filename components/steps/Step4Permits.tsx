@@ -1908,7 +1908,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
             >
               <option value="all">{t.allProvinces}</option>
-              {provinces.map(province => (
+              {provinces.map((province: string) => (
                 <option key={province} value={province}>{province}</option>
               ))}
             </select>
