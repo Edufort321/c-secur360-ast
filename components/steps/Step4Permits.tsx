@@ -1845,7 +1845,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
       setArchivedPermits(prev => [archivedPermit, ...prev]);
       
       // Désélectionner le permis
-      const updatedPermits = permits.map(p => 
+      const updatedPermits = permits.map((p: Permit) => 
         p.id === permitId ? { ...p, selected: false } : p
       );
       setPermits(updatedPermits);
