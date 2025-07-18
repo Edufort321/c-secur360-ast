@@ -1956,16 +1956,162 @@ const PermitCard: React.FC<PermitCardProps> = ({
             </button>
           </div>
 
-          {/* Formulaire étendu */}
+          {/* Formulaire étendu - Version exacte de l'image */}
           {isExpanded && (
             <div className="space-y-6">
               
-              {/* Grid layout comme dans l'image */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                
-                {/* Colonne gauche - Formulaire */}
-                <div className="space-y-6">
-                  {permit.formFields?.map((field) => (
+              {/* Formulaire en une seule colonne comme dans l'image */}
+              <div className="space-y-6">
+                {permit.formFields?.map((field) => {
+                  // Traitement spécial pour workers_tracking
+                  if (field.type === 'workers_tracking') {
+                    return (
+                      <div key={field.id} className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-white font-medium flex items-center">
+                            <Users className="w-5 h-5 mr-2" />
+                            👥 Travailleurs Autorisés ({workers.length})
+                          </h4>
+                          <button
+                            onClick={onAddWorker}
+                            className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                            <span>Ajouter Travailleur</span>
+                          </button>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          {workers.map((worker, index) => (
+                            <div key={worker.id} className="bg-slate-700 p-4 rounded-lg">
+                              <div className="flex items-center justify-between mb-3">
+                                <h5 className="text-white font-medium">Travailleur #{index + 1}</h5>
+                                {workers.length > 1 && (
+                                  <button
+                                    onClick={() => onRemoveWorker(worker.id)}
+                                    className="text-red-400 hover:text-red-300"
+                                  >
+                                    <UserMinus className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                  <label className="block text-gray-300 text-sm mb-1">Nom complet</label>
+                                  <input
+                                    type="text"
+                                    value={worker.name}
+                                    onChange={(e) => onUpdateWorker(worker.id, 'name', e.target.value)}
+                                    placeholder="Nom du travailleur"
+                                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-gray-300 text-sm mb-1">Âge</label>
+                                  <input
+                                    type="number"
+                                    value={worker.age || ''}
+                                    onChange={(e) => onUpdateWorker(worker.id, 'age', parseInt(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-gray-300 text-sm mb-1">Certification</label>
+                                  <select
+                                    value={worker.certification}
+                                    onChange={(e) => onUpdateWorker(worker.id, 'certification', e.target.value)}
+                                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                                  >
+                                    <option value="">Sélectionner certification</option>
+                                    <option value="basic">Formation de base</option>
+                                    <option value="advanced">Formation avancée</option>
+                                    <option value="supervisor">Superviseur</option>
+                                    <option value="rescuer">Sauveteur</option>
+                                  </select>
+                                </div>
+                              </div>
+                              
+                              <div className="mt-3">
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`worker-${worker.id}-18plus`}
+                                    checked={worker.over18}
+                                    onChange={(e) => onUpdateWorker(worker.id, 'over18', e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 bg-slate-600 border-slate-500 rounded"
+                                  />
+                                  <label htmlFor={`worker-${worker.id}-18plus`} className="text-sm text-gray-300">
+                                    <span className="text-red-500">*</span> Je certifie que ce travailleur a 18 ans ou plus (OBLIGATOIRE - Art. 298 RSST)
+                                  </label>
+                                </div>
+                                
+                                {worker.age > 0 && worker.age < 18 && (
+                                  <div className="mt-2 p-2 bg-red-900 border border-red-600 rounded text-red-200 text-sm">
+                                    ⚠️ VIOLATION LÉGALE: Travailleur mineur détecté. Accès en espace clos interdit par l'Article 298 RSST.
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Traitement spécial pour photo_gallery
+                  if (field.type === 'photo_gallery') {
+                    return (
+                      <div key={field.id} className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-white font-medium flex items-center">
+                            <Camera className="w-5 h-5 mr-2" />
+                            📸 Photos du Site ({photos.length})
+                          </h4>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={onToggleViewMode}
+                              className="p-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                            >
+                              {viewMode === 'carousel' ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
+                            </button>
+                            <label className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors cursor-pointer text-sm">
+                              <Upload className="w-4 h-4" />
+                              <span>Ajouter des photos</span>
+                              <input
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                onChange={(e) => e.target.files && onPhotoUpload(e.target.files)}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                        
+                        {photos.length === 0 ? (
+                          <div className="bg-slate-700 p-8 rounded-lg text-center">
+                            <Camera className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                            <p className="text-gray-400">Aucune photo ajoutée</p>
+                            <p className="text-gray-500 text-sm">Cliquez sur "Ajouter Photos" pour commencer</p>
+                          </div>
+                        ) : (
+                          <PhotoGallery
+                            photos={photos}
+                            currentIndex={currentPhotoIndex}
+                            viewMode={viewMode}
+                            onNext={onNextPhoto}
+                            onPrev={onPrevPhoto}
+                            onRemove={onRemovePhoto}
+                            t={t}
+                          />
+                        )}
+                      </div>
+                    );
+                  }
+                  
+                  // Champs normaux
+                  return (
                     <FormField
                       key={field.id}
                       field={field}
@@ -1973,91 +2119,16 @@ const PermitCard: React.FC<PermitCardProps> = ({
                       onChange={(value) => onFieldChange(field.id, value)}
                       t={t}
                     />
-                  ))}
-                </div>
-
-                {/* Colonne droite - Travailleurs et Photos */}
-                <div className="space-y-6">
-                  
-                  {/* Section Travailleurs */}
-                  <div className="bg-slate-700 rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-lg font-semibold text-white flex items-center">
-                        <Users className="w-5 h-5 mr-2" />
-                        {t.messages.authorizedWorkers} ({workers.length})
-                      </h4>
-                      <button
-                        onClick={onAddWorker}
-                        className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                        <span>{t.messages.addWorker}</span>
-                      </button>
-                    </div>
-
-                    <div className="space-y-4 max-h-64 overflow-y-auto">
-                      {workers.map((worker, index) => (
-                        <WorkerCard
-                          key={worker.id}
-                          worker={worker}
-                          index={index}
-                          canRemove={workers.length > 1}
-                          onUpdate={(field, value) => onUpdateWorker(worker.id, field, value)}
-                          onRemove={() => onRemoveWorker(worker.id)}
-                          t={t}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Section Photos avec carousel */}
-                  <div className="bg-slate-700 rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-lg font-semibold text-white flex items-center">
-                        <Camera className="w-5 h-5 mr-2" />
-                        {t.messages.sitePhotos} ({photos.length})
-                      </h4>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={onToggleViewMode}
-                          className="p-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                          title={t.messages.toggleView}
-                        >
-                          {viewMode === 'carousel' ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
-                        </button>
-                        <label className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer text-sm">
-                          <Upload className="w-4 h-4" />
-                          <span>{t.messages.addPhotos}</span>
-                          <input
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            onChange={(e) => e.target.files && onPhotoUpload(e.target.files)}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-                    </div>
-
-                    <PhotoGallery
-                      photos={photos}
-                      currentIndex={currentPhotoIndex}
-                      viewMode={viewMode}
-                      onNext={onNextPhoto}
-                      onPrev={onPrevPhoto}
-                      onRemove={onRemovePhoto}
-                      t={t}
-                    />
-                  </div>
-                </div>
+                  );
+                })}
               </div>
 
-              {/* Boutons de sauvegarde */}
-              <div className="flex justify-end space-x-3 pt-6 border-t border-slate-700">
-                <button className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+              {/* Boutons de sauvegarde comme dans l'image */}
+              <div className="flex justify-start space-x-3 pt-6 border-t border-slate-700">
+                <button className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
                   Sauvegarder
                 </button>
-                <button className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
                   Sauvegardé
                 </button>
               </div>
