@@ -1824,15 +1824,20 @@ const PermitCard: React.FC<{
   workers: WorkerEntry[];
   photos: PhotoEntry[];
   currentSection: string;
+  currentPhotoIndex: number;
+  viewMode: 'carousel' | 'grid';
   onSelect: () => void;
   onFill: () => void;
   onValidate: () => void;
   onGeneratePDF: () => void;
   onExpand: () => void;
+  onToggle: () => void;
   onSectionChange: (section: string) => void;
   onComplianceUpdate: (checks: ComplianceCheck[]) => void;
   onWorkersUpdate: (workers: WorkerEntry[]) => void;
   onPhotosUpdate: (photos: PhotoEntry[]) => void;
+  onPhotoIndexChange: (index: number) => void;
+  onViewModeChange: (mode: 'carousel' | 'grid') => void;
   onSaveProgress: () => void;
   t: any;
 }> = ({ 
@@ -1843,15 +1848,20 @@ const PermitCard: React.FC<{
   workers,
   photos,
   currentSection,
+  currentPhotoIndex,
+  viewMode,
   onSelect, 
   onFill, 
   onValidate, 
   onGeneratePDF,
   onExpand,
+  onToggle,
   onSectionChange,
   onComplianceUpdate,
   onWorkersUpdate,
   onPhotosUpdate,
+  onPhotoIndexChange,
+  onViewModeChange,
   onSaveProgress,
   t
 }) => {
@@ -2083,13 +2093,22 @@ const PermitCard: React.FC<{
           {/* Section Photos */}
           <PhotoGallery
             photos={photos}
-            currentIndex={0}
-            viewMode="grid"
-            onViewModeChange={() => {}}
-            onNavigate={() => {}}
+            currentIndex={currentPhotoIndex}
+            viewMode={viewMode}
+            onViewModeChange={onViewModeChange}
+            onNavigate={(direction) => {
+              if (direction === 'prev') {
+                onPhotoIndexChange(currentPhotoIndex > 0 ? currentPhotoIndex - 1 : photos.length - 1);
+              } else {
+                onPhotoIndexChange(currentPhotoIndex < photos.length - 1 ? currentPhotoIndex + 1 : 0);
+              }
+            }}
             onRemove={(index) => {
               const newPhotos = photos.filter((_, i) => i !== index);
               onPhotosUpdate(newPhotos);
+              if (currentPhotoIndex >= newPhotos.length && newPhotos.length > 0) {
+                onPhotoIndexChange(newPhotos.length - 1);
+              }
             }}
             onAdd={(files) => {
               const newPhotos = files.map(file => ({
