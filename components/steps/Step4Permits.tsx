@@ -5,10 +5,11 @@ import {
   FileText, CheckCircle, AlertTriangle, Clock, Download, Eye,
   Shield, Users, MapPin, Calendar, Building, Phone, User, Briefcase,
   Search, Filter, Plus, BarChart3, Star, Award, Zap, HardHat,
-  Camera, Save, X, Edit, ChevronDown, ChevronUp, Printer, Mail
+  Camera, Save, X, Edit, ChevronDown, ChevronUp, Printer, Mail,
+  AlertCircle, ThermometerSun, Gauge, Wind, Hammer
 } from 'lucide-react';
 
-// =================== INTERFACES ===================
+// =================== INTERFACES CONFORMES NORMES 2024-2025 ===================
 interface Step4PermitsProps {
   formData: any;
   onDataChange: (section: string, data: any) => void;
@@ -41,11 +42,13 @@ interface Permit {
   status: 'pending' | 'submitted' | 'approved' | 'rejected' | 'expired';
   formData?: any;
   formFields?: FormField[];
+  complianceLevel: 'basic' | 'standard' | 'enhanced' | 'critical';
+  lastUpdated: string;
 }
 
 interface FormField {
   id: string;
-  type: 'text' | 'number' | 'date' | 'time' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file' | 'signature' | 'workers_tracking' | 'time_picker' | 'photo_gallery';
+  type: 'text' | 'number' | 'date' | 'time' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file' | 'signature' | 'workers_tracking' | 'time_picker' | 'photo_gallery' | 'gas_meter' | 'calculation' | 'compliance_check' | 'alert_indicator';
   label: string;
   required: boolean;
   placeholder?: string;
@@ -56,15 +59,32 @@ interface FormField {
     max?: number;
     pattern?: string;
     message?: string;
+    critical?: boolean;
+    legalRequirement?: boolean;
+  };
+  complianceRef?: string;
+  calculation?: {
+    formula?: string;
+    dependencies?: string[];
+    autoCalculate?: boolean;
+  };
+  alert?: {
+    level: 'info' | 'warning' | 'danger' | 'critical';
+    condition?: string;
+    message?: string;
   };
 }
 
 interface WorkerEntry {
   id: number;
   name: string;
+  age: number;
+  certification: string;
   entryTime: string;
   exitTime: string | null;
   date: string;
+  oxygenLevel?: number;
+  gasLevel?: number;
 }
 
 interface PhotoEntry {
@@ -73,23 +93,45 @@ interface PhotoEntry {
   name: string;
   timestamp: string;
   description: string;
+  gpsLocation?: string;
+  compliance?: boolean;
 }
 
 interface SignatureMetadata {
   name: string;
+  title: string;
+  certification: string;
   date: string;
   time: string;
   timestamp: string;
   ipAddress: string;
   userAgent: string;
+  legalBinding: boolean;
 }
 
-// =================== FONCTION DE TRADUCTION BILINGUE ===================
+interface GasReading {
+  timestamp: string;
+  oxygen: number;
+  combustibleGas: number;
+  carbonMonoxide: number;
+  hydrogenSulfide: number;
+  temperature: number;
+  calibrationValid: boolean;
+}
+
+interface ComplianceCheck {
+  requirement: string;
+  status: 'compliant' | 'non-compliant' | 'pending';
+  details: string;
+  reference: string;
+}
+
+// =================== FONCTION DE TRADUCTION BILINGUE COMPLETE ===================
 const getTexts = (language: 'fr' | 'en') => {
   if (language === 'fr') {
     return {
-      title: 'Permis & Autorisations Réels',
-      subtitle: 'Formulaires authentiques de permis utilisés au Canada',
+      title: 'Permis & Autorisations Conformes 2024-2025',
+      subtitle: 'Formulaires authentiques conformes aux dernières normes CNESST, NFPA et municipales',
       searchPlaceholder: 'Rechercher un permis...',
       allCategories: 'Toutes catégories',
       allProvinces: 'Toutes provinces',
@@ -112,6 +154,12 @@ const getTexts = (language: 'fr' | 'en') => {
         rejected: 'Rejeté',
         expired: 'Expiré'
       },
+      complianceLevels: {
+        basic: 'Basique',
+        standard: 'Standard',
+        enhanced: 'Renforcé',
+        critical: 'Critique'
+      },
       sections: {
         identification: 'Identification',
         applicant: 'Demandeur',
@@ -123,13 +171,20 @@ const getTexts = (language: 'fr' | 'en') => {
         project: 'Projet',
         excavation: 'Excavation',
         safety: 'Sécurité',
-        documents: 'Documents'
+        documents: 'Documents',
+        compliance: 'Conformité',
+        gas_monitoring: 'Surveillance Gaz',
+        rescue_plan: 'Plan de Sauvetage',
+        fire_watch: 'Surveillance Incendie',
+        municipal_requirements: 'Exigences Municipales'
       },
       stats: {
         available: 'Permis disponibles',
         selected: 'Sélectionnés',
         critical: 'Critiques',
-        pending: 'En attente'
+        pending: 'En attente',
+        compliant: 'Conformes',
+        nonCompliant: 'Non conformes'
       },
       actions: {
         fill: 'Remplir',
@@ -138,12 +193,48 @@ const getTexts = (language: 'fr' | 'en') => {
         download: 'PDF',
         save: 'Sauvegarder',
         print: 'Imprimer',
-        submit: 'Soumettre'
+        submit: 'Soumettre',
+        validate: 'Valider conformité',
+        calculate: 'Calculer automatiquement'
+      },
+      alerts: {
+        critical: 'CRITIQUE - Action immédiate requise',
+        warning: 'ATTENTION - Vérification nécessaire',
+        info: 'Information importante',
+        danger: 'DANGER - Conditions non sécuritaires'
+      },
+      gasMeasurements: {
+        oxygen: 'Oxygène (%)',
+        combustibleGas: 'Gaz combustibles (% LIE)',
+        carbonMonoxide: 'Monoxyde de carbone (ppm)',
+        hydrogenSulfide: 'Sulfure d\'hydrogène (ppm)',
+        temperature: 'Température (°C)',
+        calibrationDate: 'Date calibration détecteur',
+        readingTime: 'Heure de lecture',
+        compliant: 'Conforme',
+        nonCompliant: 'NON CONFORME'
+      },
+      calculations: {
+        excavationPermitRequired: 'Permis excavation requis (auto-calculé)',
+        insuranceAmount: 'Montant assurance requis',
+        guaranteeDeposit: 'Dépôt de garantie estimé',
+        fireWatchDuration: 'Durée surveillance incendie requise'
+      },
+      compliance: {
+        rsst2023: 'RSST 2023 Art. 297-312',
+        nfpa51b2019: 'NFPA 51B-2019',
+        municipal2024: 'Règlements municipaux 2024',
+        age18Required: 'Âge minimum 18 ans obligatoire',
+        gasLevelsCompliant: 'Niveaux de gaz conformes',
+        rescuePlanValid: 'Plan de sauvetage valide',
+        insuranceValid: 'Assurance conforme'
       },
       messages: {
         noResults: 'Aucun permis trouvé',
         modifySearch: 'Modifiez vos critères de recherche pour voir plus de permis',
         workerName: 'Nom du travailleur',
+        workerAge: 'Âge du travailleur',
+        workerCertification: 'Certification SST',
         recordEntry: 'Enregistrer entrée',
         exit: 'Sortie',
         remove: 'Supprimer',
@@ -154,6 +245,8 @@ const getTexts = (language: 'fr' | 'en') => {
         select: 'Sélectionner...',
         signatureRequired: 'Signature électronique requise',
         enterName: 'Entrez votre nom complet',
+        enterTitle: 'Titre/Fonction',
+        enterCertification: 'Numéro de certification',
         signElectronically: 'Signer électroniquement',
         clear: 'Effacer',
         signedBy: 'Signé par',
@@ -167,13 +260,21 @@ const getTexts = (language: 'fr' | 'en') => {
         photos: 'photos',
         photoOf: 'Photo',
         of: 'sur',
-        provinces: 'provinces'
+        provinces: 'provinces',
+        criticalViolation: 'VIOLATION CRITIQUE - Arrêt des travaux requis',
+        complianceCheck: 'Vérification de conformité en cours...',
+        gasReadingTaken: 'Lecture de gaz effectuée',
+        calibrationRequired: 'Calibration détecteur requise',
+        emergencyContact: 'Contact d\'urgence',
+        rescueTeamReady: 'Équipe de sauvetage prête',
+        fireWatchActive: 'Surveillance incendie active',
+        municipalNotified: 'Municipalité avisée'
       }
     };
   } else {
     return {
-      title: 'Real Permits & Authorizations',
-      subtitle: 'Authentic permit forms used in Canada',
+      title: 'Compliant Permits & Authorizations 2024-2025',
+      subtitle: 'Authentic forms compliant with latest CNESST, NFPA and municipal standards',
       searchPlaceholder: 'Search permits...',
       allCategories: 'All categories',
       allProvinces: 'All provinces',
@@ -196,6 +297,12 @@ const getTexts = (language: 'fr' | 'en') => {
         rejected: 'Rejected',
         expired: 'Expired'
       },
+      complianceLevels: {
+        basic: 'Basic',
+        standard: 'Standard',
+        enhanced: 'Enhanced',
+        critical: 'Critical'
+      },
       sections: {
         identification: 'Identification',
         applicant: 'Applicant',
@@ -207,13 +314,20 @@ const getTexts = (language: 'fr' | 'en') => {
         project: 'Project',
         excavation: 'Excavation',
         safety: 'Safety',
-        documents: 'Documents'
+        documents: 'Documents',
+        compliance: 'Compliance',
+        gas_monitoring: 'Gas Monitoring',
+        rescue_plan: 'Rescue Plan',
+        fire_watch: 'Fire Watch',
+        municipal_requirements: 'Municipal Requirements'
       },
       stats: {
         available: 'Available permits',
         selected: 'Selected',
         critical: 'Critical',
-        pending: 'Pending'
+        pending: 'Pending',
+        compliant: 'Compliant',
+        nonCompliant: 'Non-compliant'
       },
       actions: {
         fill: 'Fill',
@@ -222,12 +336,48 @@ const getTexts = (language: 'fr' | 'en') => {
         download: 'PDF',
         save: 'Save',
         print: 'Print',
-        submit: 'Submit'
+        submit: 'Submit',
+        validate: 'Validate compliance',
+        calculate: 'Auto-calculate'
+      },
+      alerts: {
+        critical: 'CRITICAL - Immediate action required',
+        warning: 'WARNING - Verification needed',
+        info: 'Important information',
+        danger: 'DANGER - Unsafe conditions'
+      },
+      gasMeasurements: {
+        oxygen: 'Oxygen (%)',
+        combustibleGas: 'Combustible gas (% LEL)',
+        carbonMonoxide: 'Carbon monoxide (ppm)',
+        hydrogenSulfide: 'Hydrogen sulfide (ppm)',
+        temperature: 'Temperature (°C)',
+        calibrationDate: 'Detector calibration date',
+        readingTime: 'Reading time',
+        compliant: 'Compliant',
+        nonCompliant: 'NON-COMPLIANT'
+      },
+      calculations: {
+        excavationPermitRequired: 'Excavation permit required (auto-calculated)',
+        insuranceAmount: 'Required insurance amount',
+        guaranteeDeposit: 'Estimated guarantee deposit',
+        fireWatchDuration: 'Required fire watch duration'
+      },
+      compliance: {
+        rsst2023: 'RSST 2023 Art. 297-312',
+        nfpa51b2019: 'NFPA 51B-2019',
+        municipal2024: 'Municipal regulations 2024',
+        age18Required: '18+ years mandatory',
+        gasLevelsCompliant: 'Gas levels compliant',
+        rescuePlanValid: 'Valid rescue plan',
+        insuranceValid: 'Insurance compliant'
       },
       messages: {
         noResults: 'No permits found',
         modifySearch: 'Modify your search criteria to see more permits',
         workerName: 'Worker name',
+        workerAge: 'Worker age',
+        workerCertification: 'HSE certification',
         recordEntry: 'Record entry',
         exit: 'Exit',
         remove: 'Remove',
@@ -238,6 +388,8 @@ const getTexts = (language: 'fr' | 'en') => {
         select: 'Select...',
         signatureRequired: 'Electronic signature required',
         enterName: 'Enter your full name',
+        enterTitle: 'Title/Position',
+        enterCertification: 'Certification number',
         signElectronically: 'Sign electronically',
         clear: 'Clear',
         signedBy: 'Signed by',
@@ -251,121 +403,250 @@ const getTexts = (language: 'fr' | 'en') => {
         photos: 'photos',
         photoOf: 'Photo',
         of: 'of',
-        provinces: 'provinces'
+        provinces: 'provinces',
+        criticalViolation: 'CRITICAL VIOLATION - Work stoppage required',
+        complianceCheck: 'Compliance verification in progress...',
+        gasReadingTaken: 'Gas reading taken',
+        calibrationRequired: 'Detector calibration required',
+        emergencyContact: 'Emergency contact',
+        rescueTeamReady: 'Rescue team ready',
+        fireWatchActive: 'Fire watch active',
+        municipalNotified: 'Municipality notified'
       }
     };
   }
 };
-
-// =================== FONCTION POUR TRADUIRE LES PERMIS ===================
+// =================== BASE DE DONNÉES PERMIS CONFORMES AUX NORMES 2024-2025 ===================
 const translatePermitsDatabase = (language: 'fr' | 'en'): Permit[] => {
   const basePermits: Permit[] = [
-    // 1. PERMIS ESPACE CLOS - Basé sur ASP Construction
+    
+    // 1. PERMIS ESPACE CLOS CONFORME RSST 2023-2025
     {
-      id: 'confined-space-entry',
-      name: language === 'fr' ? 'Fiche de Contrôle en Espace Clos' : 'Confined Space Entry Control Sheet',
+      id: 'confined-space-entry-2025',
+      name: language === 'fr' ? 'Permis d\'Entrée en Espace Clos Conforme RSST 2023' : 'Confined Space Entry Permit RSST 2023 Compliant',
       category: language === 'fr' ? 'Sécurité' : 'Safety',
-      description: language === 'fr' ? 'Permis d\'entrée obligatoire pour tous travaux en espace clos selon RSST et CSTC' : 'Mandatory entry permit for all confined space work according to RSST and CSTC',
-      authority: language === 'fr' ? 'Employeur / ASP Construction' : 'Employer / ASP Construction',
+      description: language === 'fr' ? 'Permis conforme aux modifications RSST 2023-2025 avec surveillance atmosphérique continue et plan de sauvetage personnalisé' : 'Permit compliant with RSST 2023-2025 modifications including continuous atmospheric monitoring and personalized rescue plan',
+      authority: language === 'fr' ? 'CNESST / Employeur / ASP Construction' : 'CNESST / Employer / ASP Construction',
       province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
       required: true,
       priority: 'critical',
       duration: language === 'fr' ? 'Maximum 8 heures ou fin des travaux' : 'Maximum 8 hours or end of work',
-      cost: language === 'fr' ? 'Inclus dans formation' : 'Included in training',
-      processingTime: language === 'fr' ? 'Avant chaque entrée' : 'Before each entry',
+      cost: language === 'fr' ? 'Inclus dans formation + équipements surveillance' : 'Included in training + monitoring equipment',
+      processingTime: language === 'fr' ? 'Avant chaque entrée + tests atmosphériques' : 'Before each entry + atmospheric tests',
       renewalRequired: true,
-      renewalPeriod: language === 'fr' ? 'Quotidien' : 'Daily',
-      legislation: 'RSST Art. 297-312, CSTC Section 3.21',
+      renewalPeriod: language === 'fr' ? 'Quotidien avec surveillance continue' : 'Daily with continuous monitoring',
+      legislation: 'RSST Art. 297-312 modifié 2023, Décret 43-2023, Art. 297.1 nouveau',
       contactInfo: {
         phone: '514-355-6190',
-        website: 'https://www.asp-construction.org'
+        website: 'https://www.cnesst.gouv.qc.ca',
+        email: 'info@asp-construction.org'
       },
       selected: false,
       status: 'pending',
+      complianceLevel: 'critical',
+      lastUpdated: '2025-01-20',
       formFields: [
-        { id: 'space_identification', type: 'text', label: language === 'fr' ? 'Identification de l\'espace clos' : 'Confined space identification', required: true, section: 'identification', placeholder: language === 'fr' ? 'Ex: Réservoir A-12, Regard municipal...' : 'Ex: Tank A-12, Municipal manhole...' },
+        // SECTION IDENTIFICATION
+        { id: 'space_identification', type: 'text', label: language === 'fr' ? 'Identification de l\'espace clos' : 'Confined space identification', required: true, section: 'identification', placeholder: language === 'fr' ? 'Ex: Réservoir A-12, Regard municipal...' : 'Ex: Tank A-12, Municipal manhole...', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 300' },
         { id: 'project_name', type: 'text', label: language === 'fr' ? 'Nom du projet' : 'Project name', required: true, section: 'identification' },
-        { id: 'location', type: 'text', label: language === 'fr' ? 'Localisation exacte' : 'Exact location', required: true, section: 'identification' },
+        { id: 'location_precise', type: 'text', label: language === 'fr' ? 'Localisation GPS précise' : 'Precise GPS location', required: true, section: 'identification', validation: { legalRequirement: true } },
         { id: 'permit_date', type: 'date', label: language === 'fr' ? 'Date du permis' : 'Permit date', required: true, section: 'identification' },
         { id: 'permit_time', type: 'time_picker', label: language === 'fr' ? 'Heure d\'émission' : 'Issue time', required: true, section: 'identification' },
-        { id: 'entry_mandatory', type: 'radio', label: language === 'fr' ? 'L\'entrée est-elle obligatoire ?' : 'Is entry mandatory?', required: true, section: 'access', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'] },
-        { id: 'authorized_workers', type: 'textarea', label: language === 'fr' ? 'Noms des travailleurs autorisés' : 'Names of authorized workers', required: true, section: 'signatures', placeholder: language === 'fr' ? 'Un travailleur par ligne...' : 'One worker per line...' },
-        { id: 'workers_log', type: 'workers_tracking', label: language === 'fr' ? 'Registre des entrées/sorties' : 'Entry/exit log', required: true, section: 'signatures' },
-        { id: 'photos_documentation', type: 'photo_gallery', label: language === 'fr' ? 'Photos de documentation' : 'Documentation photos', required: false, section: 'atmosphere' },
-        { id: 'supervisor_signature', type: 'signature', label: language === 'fr' ? 'Signature du surveillant' : 'Supervisor signature', required: true, section: 'signatures' }
+        { id: 'permit_duration', type: 'select', label: language === 'fr' ? 'Durée validité (max 8h)' : 'Validity duration (max 8h)', required: true, section: 'identification', options: ['1h', '2h', '4h', '6h', '8h'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 300' },
+        
+        // SECTION GAS MONITORING OBLIGATOIRE
+        { id: 'oxygen_level', type: 'gas_meter', label: language === 'fr' ? 'Niveau oxygène (%)' : 'Oxygen level (%)', required: true, section: 'gas_monitoring', validation: { min: 19.5, max: 23.5, critical: true, legalRequirement: true, message: language === 'fr' ? 'CRITIQUE: O2 doit être entre 19.5% et 23.5%' : 'CRITICAL: O2 must be between 19.5% and 23.5%' }, complianceRef: 'RSST Art. 302 modifié' },
+        { id: 'combustible_gas_level', type: 'gas_meter', label: language === 'fr' ? 'Gaz combustibles (% LIE)' : 'Combustible gas (% LEL)', required: true, section: 'gas_monitoring', validation: { min: 0, max: 10, critical: true, legalRequirement: true, message: language === 'fr' ? 'CRITIQUE: Gaz combustibles < 10% LIE obligatoire' : 'CRITICAL: Combustible gas < 10% LEL mandatory' }, complianceRef: 'RSST Art. 302' },
+        { id: 'carbon_monoxide_level', type: 'gas_meter', label: language === 'fr' ? 'Monoxyde de carbone (ppm)' : 'Carbon monoxide (ppm)', required: true, section: 'gas_monitoring', validation: { min: 0, max: 35, critical: true, legalRequirement: true, message: language === 'fr' ? 'CRITIQUE: CO < 35 ppm obligatoire' : 'CRITICAL: CO < 35 ppm mandatory' }, complianceRef: 'RSST Annexe I' },
+        { id: 'hydrogen_sulfide_level', type: 'gas_meter', label: language === 'fr' ? 'Sulfure d\'hydrogène (ppm)' : 'Hydrogen sulfide (ppm)', required: true, section: 'gas_monitoring', validation: { min: 0, max: 10, critical: true, legalRequirement: true, message: language === 'fr' ? 'CRITIQUE: H2S < 10 ppm obligatoire' : 'CRITICAL: H2S < 10 ppm mandatory' }, complianceRef: 'RSST Annexe I' },
+        { id: 'continuous_monitoring', type: 'checkbox', label: language === 'fr' ? 'Surveillance atmosphérique CONTINUE pendant travaux' : 'CONTINUOUS atmospheric monitoring during work', required: true, section: 'gas_monitoring', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 302' },
+        { id: 'detector_calibration_date', type: 'date', label: language === 'fr' ? 'Date calibration détecteur' : 'Detector calibration date', required: true, section: 'gas_monitoring', validation: { legalRequirement: true } },
+        { id: 'detector_serial_number', type: 'text', label: language === 'fr' ? 'Numéro série détecteur' : 'Detector serial number', required: true, section: 'gas_monitoring' },
+        
+        // SECTION ACCÈS ET ÂGE OBLIGATOIRE
+        { id: 'entry_mandatory', type: 'radio', label: language === 'fr' ? 'L\'entrée est-elle obligatoire ?' : 'Is entry mandatory?', required: true, section: 'access', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 297.1' },
+        { id: 'external_control_possible', type: 'radio', label: language === 'fr' ? 'Contrôle depuis l\'extérieur possible ?' : 'External control possible?', required: true, section: 'access', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 297.1 nouveau' },
+        { id: 'worker_age_verification', type: 'compliance_check', label: language === 'fr' ? 'VÉRIFICATION: Tous travailleurs ≥ 18 ans' : 'VERIFICATION: All workers ≥ 18 years', required: true, section: 'access', validation: { critical: true, legalRequirement: true }, complianceRef: 'RSST Art. 298 modifié 2023' },
+        { id: 'worker_certification_check', type: 'compliance_check', label: language === 'fr' ? 'Certification formation espace clos valide' : 'Valid confined space training certification', required: true, section: 'access', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 298' },
+        
+        // SECTION PLAN DE SAUVETAGE PERSONNALISÉ
+        { id: 'rescue_plan_personalized', type: 'textarea', label: language === 'fr' ? 'Plan de sauvetage PERSONNALISÉ pour cet espace' : 'PERSONALIZED rescue plan for this space', required: true, section: 'rescue_plan', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 309 enrichi', placeholder: language === 'fr' ? 'Décrire procédure spécifique, équipements, points d\'accès...' : 'Describe specific procedure, equipment, access points...' },
+        { id: 'rescue_responsible_person', type: 'text', label: language === 'fr' ? 'Responsable sauvetage DÉSIGNÉ' : 'DESIGNATED rescue responsible', required: true, section: 'rescue_plan', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 309' },
+        { id: 'communication_protocol', type: 'select', label: language === 'fr' ? 'Protocole communication obligatoire' : 'Mandatory communication protocol', required: true, section: 'rescue_plan', options: language === 'fr' ? ['Radio bidirectionnelle', 'Téléphone cellulaire', 'Signaux visuels/sonores', 'Système fixe'] : ['Two-way radio', 'Cell phone', 'Visual/audio signals', 'Fixed system'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 309' },
+        { id: 'rescue_equipment_onsite', type: 'checkbox', label: language === 'fr' ? 'Équipements sauvetage SUR SITE avant entrée' : 'Rescue equipment ON SITE before entry', required: true, section: 'rescue_plan', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 309' },
+        { id: 'response_time_target', type: 'select', label: language === 'fr' ? 'Temps de réponse sauvetage' : 'Rescue response time', required: true, section: 'rescue_plan', options: ['< 3 minutes', '< 5 minutes', '< 10 minutes'], validation: { legalRequirement: true } },
+        { id: 'emergency_contact_primary', type: 'text', label: language === 'fr' ? 'Contact urgence primaire (nom + tél)' : 'Primary emergency contact (name + phone)', required: true, section: 'rescue_plan', validation: { legalRequirement: true } },
+        { id: 'emergency_contact_secondary', type: 'text', label: language === 'fr' ? 'Contact urgence secondaire' : 'Secondary emergency contact', required: true, section: 'rescue_plan' },
+        
+        // SECTION MATIÈRES À ÉCOULEMENT LIBRE
+        { id: 'free_flowing_materials', type: 'radio', label: language === 'fr' ? 'Matières à écoulement libre présentes ?' : 'Free-flowing materials present?', required: true, section: 'safety', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true }, complianceRef: 'RSST Art. 311-312 séparés' },
+        { id: 'burial_risk_assessment', type: 'textarea', label: language === 'fr' ? 'Évaluation risque ensevelissement/noyade' : 'Burial/drowning risk assessment', required: false, section: 'safety', complianceRef: 'RSST Art. 311-312' },
+        { id: 'fall_prevention_measures', type: 'checkbox', label: language === 'fr' ? 'Mesures prévention chutes installées' : 'Fall prevention measures installed', required: true, section: 'safety', validation: { legalRequirement: true }, complianceRef: 'RSST Art. 297.1' },
+        
+        // SECTION TRAVAILLEURS AUTORISÉS
+        { id: 'authorized_workers', type: 'textarea', label: language === 'fr' ? 'Travailleurs autorisés (nom, âge, certification)' : 'Authorized workers (name, age, certification)', required: true, section: 'signatures', placeholder: language === 'fr' ? 'Format: Nom, Prénom - Âge: XX ans - Cert: XXXXX' : 'Format: Last, First - Age: XX years - Cert: XXXXX', validation: { legalRequirement: true } },
+        { id: 'workers_log', type: 'workers_tracking', label: language === 'fr' ? 'Registre entrées/sorties avec surveillance gaz' : 'Entry/exit log with gas monitoring', required: true, section: 'signatures', validation: { legalRequirement: true } },
+        { id: 'photos_documentation', type: 'photo_gallery', label: language === 'fr' ? 'Photos documentation sécurité obligatoires' : 'Mandatory safety documentation photos', required: true, section: 'atmosphere', validation: { legalRequirement: true } },
+        { id: 'supervisor_signature', type: 'signature', label: language === 'fr' ? 'Signature surveillant qualifié' : 'Qualified supervisor signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
+        { id: 'attendant_signature', type: 'signature', label: language === 'fr' ? 'Signature préposé à l\'entrée' : 'Entry attendant signature', required: true, section: 'signatures', validation: { legalRequirement: true } }
       ]
     },
 
-    // 2. PERMIS TRAVAIL À CHAUD - Basé sur NFPA 51B et CNESST
+    // 2. PERMIS TRAVAIL À CHAUD CONFORME NFPA 51B-2019
     {
-      id: 'hot-work-permit',
-      name: language === 'fr' ? 'Permis de Travail à Chaud' : 'Hot Work Permit',
+      id: 'hot-work-permit-nfpa2019',
+      name: language === 'fr' ? 'Permis Travail à Chaud Conforme NFPA 51B-2019' : 'Hot Work Permit NFPA 51B-2019 Compliant',
       category: language === 'fr' ? 'Sécurité' : 'Safety',
-      description: language === 'fr' ? 'Autorisation pour soudage, découpage, meulage et travaux générant étincelles selon NFPA 51B' : 'Authorization for welding, cutting, grinding and spark-generating work according to NFPA 51B',
-      authority: language === 'fr' ? 'Service incendie / Employeur' : 'Fire Department / Employer',
+      description: language === 'fr' ? 'Permis conforme NFPA 51B-2019 avec surveillance incendie 1 heure et réinspection par quart' : 'NFPA 51B-2019 compliant permit with 1-hour fire watch and shift reinspection',
+      authority: language === 'fr' ? 'Service incendie / Employeur / NFPA' : 'Fire Department / Employer / NFPA',
       province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
       required: true,
       priority: 'critical',
-      duration: language === 'fr' ? '24 heures maximum' : '24 hours maximum',
-      cost: language === 'fr' ? 'Variable selon municipalité' : 'Variable by municipality',
-      processingTime: language === 'fr' ? 'Immédiat à 24h' : 'Immediate to 24h',
+      duration: language === 'fr' ? '24 heures maximum + surveillance 1h post-travaux' : '24 hours maximum + 1h post-work monitoring',
+      cost: language === 'fr' ? 'Variable selon municipalité + équipements' : 'Variable by municipality + equipment',
+      processingTime: language === 'fr' ? 'Immédiat à 24h + inspections' : 'Immediate to 24h + inspections',
       renewalRequired: true,
-      renewalPeriod: language === 'fr' ? 'Quotidien' : 'Daily',
-      legislation: 'NFPA 51B-2019, Code sécurité incendie, RSST',
+      renewalPeriod: language === 'fr' ? 'Quotidien avec réinspection par quart' : 'Daily with shift reinspection',
+      legislation: 'NFPA 51B-2019, CNPI Section 5.2, CAN/CSA W117.2-M87, RSST Art. 313-332',
       contactInfo: {
         phone: language === 'fr' ? 'Service incendie local' : 'Local fire department',
-        website: 'Municipal'
+        website: 'https://www.nfpa.org/codes-and-standards/all-codes-and-standards/list-of-codes-and-standards/detail?code=51B'
       },
       selected: false,
       status: 'pending',
+      complianceLevel: 'critical',
+      lastUpdated: '2025-01-20',
       formFields: [
-        { id: 'permit_number', type: 'text', label: language === 'fr' ? 'Numéro de permis' : 'Permit number', required: true, section: 'identification' },
-        { id: 'work_location', type: 'text', label: language === 'fr' ? 'Lieu des travaux' : 'Work location', required: true, section: 'identification' },
-        { id: 'work_type', type: 'checkbox', label: language === 'fr' ? 'Type de travail à chaud' : 'Type of hot work', required: true, section: 'work_type', options: language === 'fr' ? ['Soudage à l\'arc', 'Soudage au gaz', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage', 'Perçage', 'Brasage', 'Autre'] : ['Arc welding', 'Gas welding', 'Torch cutting', 'Plasma cutting', 'Grinding', 'Drilling', 'Brazing', 'Other'] },
-        { id: 'work_description', type: 'textarea', label: language === 'fr' ? 'Description détaillée des travaux' : 'Detailed work description', required: true, section: 'work_type' },
-        { id: 'fire_watch', type: 'radio', label: language === 'fr' ? 'Surveillance incendie assignée' : 'Fire watch assigned', required: true, section: 'precautions', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'] },
-        { id: 'photos_precautions', type: 'photo_gallery', label: language === 'fr' ? 'Photos des mesures de précaution' : 'Precautionary measures photos', required: false, section: 'precautions' },
-        { id: 'applicant_signature', type: 'signature', label: language === 'fr' ? 'Signature du demandeur' : 'Applicant signature', required: true, section: 'signatures' }
+        // SECTION IDENTIFICATION
+        { id: 'permit_number_hot', type: 'text', label: language === 'fr' ? 'Numéro de permis unique' : 'Unique permit number', required: true, section: 'identification', validation: { legalRequirement: true } },
+        { id: 'work_location_precise', type: 'text', label: language === 'fr' ? 'Lieu précis des travaux' : 'Precise work location', required: true, section: 'identification', validation: { legalRequirement: true } },
+        { id: 'contractor_company', type: 'text', label: language === 'fr' ? 'Entreprise contractante' : 'Contracting company', required: true, section: 'identification' },
+        { id: 'work_order_number', type: 'text', label: language === 'fr' ? 'Numéro bon de travail' : 'Work order number', required: true, section: 'identification' },
+        
+        // SECTION TYPE DE TRAVAIL À CHAUD
+        { id: 'work_type_hot', type: 'checkbox', label: language === 'fr' ? 'Type de travail à chaud (sélection multiple)' : 'Hot work type (multiple selection)', required: true, section: 'work_type', options: language === 'fr' ? ['Soudage à l\'arc électrique', 'Soudage au gaz (oxyacétylénique)', 'Découpage au chalumeau', 'Découpage plasma', 'Meulage avec étincelles', 'Perçage métaux', 'Brasage/Soudage tendre', 'Travaux de toiture à chaud', 'Autre (spécifier)'] : ['Electric arc welding', 'Gas welding (oxyacetylene)', 'Torch cutting', 'Plasma cutting', 'Grinding with sparks', 'Metal drilling', 'Brazing/Soft soldering', 'Hot roofing work', 'Other (specify)'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019' },
+        { id: 'work_description_detailed', type: 'textarea', label: language === 'fr' ? 'Description détaillée des travaux et équipements' : 'Detailed work and equipment description', required: true, section: 'work_type', validation: { legalRequirement: true } },
+        { id: 'start_date_time', type: 'time_picker', label: language === 'fr' ? 'Date et heure début prévues' : 'Planned start date and time', required: true, section: 'work_type' },
+        { id: 'end_date_time', type: 'time_picker', label: language === 'fr' ? 'Date et heure fin prévues' : 'Planned end date and time', required: true, section: 'work_type' },
+        
+        // SECTION SURVEILLANCE INCENDIE NFPA 51B-2019
+        { id: 'fire_watch_duration', type: 'select', label: language === 'fr' ? 'Durée surveillance incendie POST-TRAVAUX' : 'POST-WORK fire watch duration', required: true, section: 'fire_watch', options: ['1 heure (NFPA 51B-2019)', '2 heures', 'Plus de 2 heures'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Modif majeure: 1h au lieu de 30min' },
+        { id: 'continuous_vs_spot_watch', type: 'radio', label: language === 'fr' ? 'Type de surveillance incendie' : 'Fire watch type', required: true, section: 'fire_watch', options: language === 'fr' ? ['Surveillance CONTINUE', 'Surveillance PONCTUELLE'] : ['CONTINUOUS monitoring', 'SPOT monitoring'], validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Distinction formelle' },
+        { id: 'fire_watch_person_assigned', type: 'text', label: language === 'fr' ? 'Préposé surveillance incendie désigné' : 'Designated fire watch person', required: true, section: 'fire_watch', validation: { legalRequirement: true } },
+        { id: 'fire_watch_training_valid', type: 'checkbox', label: language === 'fr' ? 'Formation surveillance incendie valide' : 'Valid fire watch training', required: true, section: 'fire_watch', validation: { legalRequirement: true } },
+        
+        // SECTION RÉINSPECTION PAR QUART (NOUVEAU NFPA)
+        { id: 'shift_reinspection', type: 'compliance_check', label: language === 'fr' ? 'Réinspection OBLIGATOIRE à chaque quart' : 'MANDATORY reinspection each shift', required: true, section: 'fire_watch', validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Nouvelle annexe' },
+        { id: 'reinspection_documentation', type: 'textarea', label: language === 'fr' ? 'Documentation des réinspections par quart' : 'Shift reinspection documentation', required: true, section: 'fire_watch', placeholder: language === 'fr' ? 'Heure, responsable, observations, actions...' : 'Time, responsible person, observations, actions...', validation: { legalRequirement: true } },
+        
+        // SECTION EXTINCTEURS HARMONISÉS NFPA 10
+        { id: 'extinguisher_type_class_a', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe A (combustibles ordinaires)' : 'Class A extinguisher (ordinary combustibles)', required: false, section: 'precautions', complianceRef: 'NFPA 51B harmonisé avec NFPA 10' },
+        { id: 'extinguisher_type_class_b', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe B (liquides inflammables)' : 'Class B extinguisher (flammable liquids)', required: false, section: 'precautions', complianceRef: 'NFPA 10' },
+        { id: 'extinguisher_type_class_c', type: 'checkbox', label: language === 'fr' ? 'Extincteur Classe C (équipements électriques)' : 'Class C extinguisher (electrical equipment)', required: false, section: 'precautions', complianceRef: 'NFPA 10' },
+        { id: 'extinguisher_positioning', type: 'textarea', label: language === 'fr' ? 'Positionnement et accessibilité extincteurs' : 'Extinguisher positioning and accessibility', required: true, section: 'precautions', validation: { legalRequirement: true }, complianceRef: 'NFPA 10' },
+        
+        // SECTION ZONES NON PERMISSIBLES
+        { id: 'non_permissible_zone_prep', type: 'textarea', label: language === 'fr' ? 'Préparation zones non permissibles' : 'Non-permissible zone preparation', required: true, section: 'precautions', validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Précisions annexes' },
+        { id: 'protection_system_compromise', type: 'radio', label: language === 'fr' ? 'Systèmes de protection incendie compromis ?' : 'Fire protection systems compromised?', required: true, section: 'precautions', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true } },
+        { id: 'material_ignition_points', type: 'textarea', label: language === 'fr' ? 'Points d\'inflammation matériaux présents' : 'Ignition points of present materials', required: true, section: 'precautions', validation: { legalRequirement: true } },
+        { id: 'temperature_vs_ignition_table', type: 'compliance_check', label: language === 'fr' ? 'Tableau températures vs points inflammation consulté' : 'Temperature vs ignition points table consulted', required: true, section: 'precautions', validation: { legalRequirement: true }, complianceRef: 'NFPA 51B-2019 - Nouvelles comparaisons' },
+        
+        // SECTION PHOTOS ET DOCUMENTATION
+        { id: 'photos_precautions', type: 'photo_gallery', label: language === 'fr' ? 'Photos mesures précaution et zones' : 'Precautionary measures and zone photos', required: true, section: 'precautions', validation: { legalRequirement: true } },
+        { id: 'area_clearance_radius', type: 'number', label: language === 'fr' ? 'Rayon dégagement sécuritaire (m)' : 'Safety clearance radius (m)', required: true, section: 'precautions', validation: { min: 10, legalRequirement: true } },
+        
+        // SECTION SIGNATURES
+        { id: 'applicant_signature', type: 'signature', label: language === 'fr' ? 'Signature demandeur/contractant' : 'Applicant/contractor signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
+        { id: 'fire_marshal_signature', type: 'signature', label: language === 'fr' ? 'Signature autorité incendie' : 'Fire authority signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
+        { id: 'safety_officer_signature', type: 'signature', label: language === 'fr' ? 'Signature responsable sécurité' : 'Safety officer signature', required: true, section: 'signatures', validation: { legalRequirement: true } }
       ]
     },
 
-    // 3. PERMIS D'EXCAVATION - Basé sur Ville de Montréal
+    // 3. PERMIS EXCAVATION CONFORME MUNICIPAL 2024
     {
-      id: 'excavation-permit',
-      name: language === 'fr' ? 'Permis d\'Excavation' : 'Excavation Permit',
+      id: 'excavation-permit-municipal-2024',
+      name: language === 'fr' ? 'Permis d\'Excavation Conforme Municipal 2024' : 'Municipal Excavation Permit 2024 Compliant',
       category: language === 'fr' ? 'Construction' : 'Construction',
-      description: language === 'fr' ? 'Autorisation pour travaux d\'excavation près du domaine public selon règlements municipaux' : 'Authorization for excavation work near public domain according to municipal regulations',
-      authority: language === 'fr' ? 'Municipal' : 'Municipal',
+      description: language === 'fr' ? 'Permis conforme réglements municipaux 2024 avec calculs automatiques profondeur/distance et assurances obligatoires' : 'Municipal regulations 2024 compliant permit with automatic depth/distance calculations and mandatory insurance',
+      authority: language === 'fr' ? 'Municipal / Ville de Montréal / MAMH' : 'Municipal / City of Montreal / MAMH',
       province: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
       required: true,
       priority: 'high',
-      duration: language === 'fr' ? 'Durée des travaux' : 'Duration of work',
-      cost: language === 'fr' ? '200$ - 2000$ selon ampleur' : '$200 - $2000 depending on scope',
-      processingTime: language === 'fr' ? '5-15 jours ouvrables' : '5-15 business days',
+      duration: language === 'fr' ? 'Durée des travaux + période garantie' : 'Work duration + warranty period',
+      cost: language === 'fr' ? '200$ - 2000$ + dépôts garantie selon ampleur' : '$200 - $2000 + guarantee deposits by scope',
+      processingTime: language === 'fr' ? '2-4 semaines + inspections obligatoires' : '2-4 weeks + mandatory inspections',
       renewalRequired: false,
-      legislation: language === 'fr' ? 'Règlements municipaux, Code de construction' : 'Municipal regulations, Building code',
+      legislation: language === 'fr' ? 'Règlements municipaux 2024, Code construction Québec, Règlement excavation domaine public' : 'Municipal regulations 2024, Quebec Building Code, Public domain excavation regulation',
       contactInfo: {
-        website: language === 'fr' ? 'Bureau des permis municipal' : 'Municipal permit office'
+        website: language === 'fr' ? 'Bureau des permis municipal' : 'Municipal permit office',
+        phone: '311',
+        email: 'permis@montreal.ca'
       },
       selected: false,
       status: 'pending',
+      complianceLevel: 'enhanced',
+      lastUpdated: '2025-01-20',
       formFields: [
-        { id: 'applicant_name', type: 'text', label: language === 'fr' ? 'Nom du demandeur' : 'Applicant name', required: true, section: 'applicant' },
-        { id: 'work_address', type: 'textarea', label: language === 'fr' ? 'Adresse des travaux' : 'Work address', required: true, section: 'project' },
-        { id: 'project_description', type: 'textarea', label: language === 'fr' ? 'Description du projet' : 'Project description', required: true, section: 'project' },
-        { id: 'excavation_depth', type: 'number', label: language === 'fr' ? 'Profondeur d\'excavation (m)' : 'Excavation depth (m)', required: true, section: 'excavation', validation: { min: 0 } },
-        { id: 'soil_type', type: 'select', label: language === 'fr' ? 'Type de sol' : 'Soil type', required: true, section: 'excavation', options: language === 'fr' ? ['Argile', 'Sable', 'Gravier', 'Roc', 'Remblai', 'Mixte'] : ['Clay', 'Sand', 'Gravel', 'Rock', 'Fill', 'Mixed'] },
-        { id: 'safety_plan', type: 'radio', label: language === 'fr' ? 'Plan de sécurité préparé' : 'Safety plan prepared', required: true, section: 'safety', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'] },
-        { id: 'photos_safety', type: 'photo_gallery', label: language === 'fr' ? 'Photos de sécurité du site' : 'Site safety photos', required: false, section: 'safety' },
-        { id: 'site_plan', type: 'file', label: language === 'fr' ? 'Plan de site' : 'Site plan', required: true, section: 'documents' },
-        { id: 'applicant_signature_excavation', type: 'signature', label: language === 'fr' ? 'Signature du demandeur' : 'Applicant signature', required: true, section: 'signatures' }
+        // SECTION DEMANDEUR
+        { id: 'applicant_name_excavation', type: 'text', label: language === 'fr' ? 'Nom du demandeur' : 'Applicant name', required: true, section: 'applicant', validation: { legalRequirement: true } },
+        { id: 'applicant_company', type: 'text', label: language === 'fr' ? 'Entreprise/Organisation' : 'Company/Organization', required: true, section: 'applicant' },
+        { id: 'professional_engineer', type: 'text', label: language === 'fr' ? 'Ingénieur responsable (OIQ)' : 'Responsible engineer (OIQ)', required: true, section: 'applicant', validation: { legalRequirement: true } },
+        { id: 'contractor_excavator', type: 'text', label: language === 'fr' ? 'Entreprise excavatrice' : 'Excavating company', required: true, section: 'applicant', validation: { legalRequirement: true } },
+        
+        // SECTION CALCULS AUTOMATIQUES OBLIGATOIRES
+        { id: 'excavation_depth_calc', type: 'calculation', label: language === 'fr' ? 'Profondeur excavation (m)' : 'Excavation depth (m)', required: true, section: 'excavation', validation: { min: 0, legalRequirement: true }, calculation: { autoCalculate: true } },
+        { id: 'domain_public_distance', type: 'calculation', label: language === 'fr' ? 'Distance domaine public (m)' : 'Public domain distance (m)', required: true, section: 'excavation', validation: { min: 0, legalRequirement: true }, calculation: { autoCalculate: true } },
+        { id: 'permit_required_auto', type: 'compliance_check', label: language === 'fr' ? 'PERMIS REQUIS (auto-calculé)' : 'PERMIT REQUIRED (auto-calculated)', required: true, section: 'excavation', validation: { legalRequirement: true }, calculation: { formula: 'if(depth < 2 && distance < 2) OR (depth >= 2 && distance < depth*2) then REQUIRED', dependencies: ['excavation_depth_calc', 'domain_public_distance'], autoCalculate: true }, complianceRef: 'Règlement municipal excavation' },
+        
+        // SECTION ASSURANCES OBLIGATOIRES SPÉCIFIQUES
+        { id: 'insurance_amount_calc', type: 'calculation', label: language === 'fr' ? 'Montant assurance OBLIGATOIRE' : 'MANDATORY insurance amount', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, calculation: { formula: 'if(depth <= 4.5) then 1000000 else if(depth > 4.5) then 2000000 else 5000000', dependencies: ['excavation_depth_calc'], autoCalculate: true }, complianceRef: 'Règlement municipal assurances' },
+        { id: 'co_insurance_city', type: 'checkbox', label: language === 'fr' ? 'Co-assurance Ville AJOUTÉE à la police' : 'City co-insurance ADDED to policy', required: true, section: 'municipal_requirements', validation: { legalRequirement: true, critical: true }, complianceRef: 'Avenant obligatoire Ville' },
+        { id: 'insurance_certificate', type: 'file', label: language === 'fr' ? 'Certificat assurance avec avenant' : 'Insurance certificate with endorsement', required: true, section: 'municipal_requirements', validation: { legalRequirement: true } },
+        
+        // SECTION ÉTUDES TECHNIQUES OBLIGATOIRES
+        { id: 'geotechnical_study', type: 'file', label: language === 'fr' ? 'Étude géotechnique par ingénieur (≥2m)' : 'Geotechnical study by engineer (≥2m)', required: true, section: 'documents', validation: { legalRequirement: true }, complianceRef: 'Code construction' },
+        { id: 'shoring_plan_engineer', type: 'file', label: language === 'fr' ? 'Plan étançonnement signé ingénieur' : 'Shoring plan signed by engineer', required: true, section: 'documents', validation: { legalRequirement: true } },
+        { id: 'calculation_notes_engineer', type: 'file', label: language === 'fr' ? 'Notes de calculs ingénieur' : 'Engineer calculation notes', required: true, section: 'documents', validation: { legalRequirement: true } },
+        { id: 'blasting_plan_if_rock', type: 'file', label: language === 'fr' ? 'Plan dynamitage (si roc)' : 'Blasting plan (if rock)', required: false, section: 'documents', complianceRef: 'Règlement dynamitage municipal' },
+        
+        // SECTION LOCALISATION INFRASTRUCTURES OBLIGATOIRE
+        { id: 'info_excavation_request', type: 'compliance_check', label: language === 'fr' ? 'Demande Info-Excavation COMPLÉTÉE' : 'Info-Excavation request COMPLETED', required: true, section: 'safety', validation: { legalRequirement: true, critical: true }, complianceRef: 'https://www.info-ex.com - Loi fédérale' },
+        { id: 'municipal_networks_located', type: 'checkbox', label: language === 'fr' ? 'Réseaux municipaux localisés (aqueduc/égout)' : 'Municipal networks located (water/sewer)', required: true, section: 'safety', validation: { legalRequirement: true } },
+        { id: 'bell_energir_hydro_located', type: 'checkbox', label: language === 'fr' ? 'Bell/Énergir/Hydro-Québec localisés' : 'Bell/Energir/Hydro-Quebec located', required: true, section: 'safety', validation: { legalRequirement: true } },
+        { id: 'location_plans_provided', type: 'file', label: language === 'fr' ? 'Plans localisation infrastructures' : 'Infrastructure location plans', required: true, section: 'safety', validation: { legalRequirement: true } },
+        
+        // SECTION PROJET ET DESCRIPTION
+        { id: 'work_address_complete', type: 'textarea', label: language === 'fr' ? 'Adresse complète des travaux' : 'Complete work address', required: true, section: 'project', validation: { legalRequirement: true } },
+        { id: 'project_description_detailed', type: 'textarea', label: language === 'fr' ? 'Description détaillée du projet' : 'Detailed project description', required: true, section: 'project', validation: { legalRequirement: true } },
+        { id: 'soil_type_identified', type: 'select', label: language === 'fr' ? 'Type de sol identifié' : 'Identified soil type', required: true, section: 'excavation', options: language === 'fr' ? ['Argile', 'Sable fin', 'Sable grossier', 'Gravier', 'Roc altéré', 'Roc massif', 'Remblai', 'Sol mixte', 'Sol contaminé'] : ['Clay', 'Fine sand', 'Coarse sand', 'Gravel', 'Weathered rock', 'Solid rock', 'Fill', 'Mixed soil', 'Contaminated soil'], validation: { legalRequirement: true } },
+        { id: 'contamination_risk', type: 'radio', label: language === 'fr' ? 'Risque de contamination identifié ?' : 'Contamination risk identified?', required: true, section: 'excavation', options: language === 'fr' ? ['Oui', 'Non', 'Inconnu'] : ['Yes', 'No', 'Unknown'], validation: { legalRequirement: true } },
+        
+        // SECTION DÉPÔTS DE GARANTIE CALCULÉS
+        { id: 'surface_guarantee_deposit', type: 'calculation', label: language === 'fr' ? 'Dépôt garantie SURFACE (trottoir, arbres)' : 'SURFACE guarantee deposit (sidewalk, trees)', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, calculation: { formula: 'superficie * tarif_saison', autoCalculate: true } },
+        { id: 'underground_guarantee_deposit', type: 'calculation', label: language === 'fr' ? 'Dépôt garantie SOUTERRAIN (égout, aqueduc)' : 'UNDERGROUND guarantee deposit (sewer, water)', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, calculation: { formula: 'longueur * profondeur * tarif', autoCalculate: true } },
+        { id: 'seasonal_rate_applied', type: 'radio', label: language === 'fr' ? 'Période des travaux (tarifs différents)' : 'Work period (different rates)', required: true, section: 'municipal_requirements', options: language === 'fr' ? ['Été (1 avril - 30 nov)', 'Hiver (1 déc - 31 mars)'] : ['Summer (Apr 1 - Nov 30)', 'Winter (Dec 1 - Mar 31)'], validation: { legalRequirement: true } },
+        { id: 'material_type_repair', type: 'select', label: language === 'fr' ? 'Type matériau réparation' : 'Repair material type', required: true, section: 'municipal_requirements', options: language === 'fr' ? ['Asphalte enrobé', 'Béton standard', 'Pavé béton', 'Trottoir asphalte', 'Gazon/Terre', 'Piste cyclable'] : ['Asphalt pavement', 'Standard concrete', 'Concrete pavers', 'Asphalt sidewalk', 'Grass/Soil', 'Bike path'], validation: { legalRequirement: true } },
+        
+        // SECTION PLAN DE SÉCURITÉ
+        { id: 'safety_plan_detailed', type: 'radio', label: language === 'fr' ? 'Plan de sécurité détaillé préparé' : 'Detailed safety plan prepared', required: true, section: 'safety', options: language === 'fr' ? ['Oui', 'Non'] : ['Yes', 'No'], validation: { legalRequirement: true } },
+        { id: 'safety_fencing', type: 'checkbox', label: language === 'fr' ? 'Clôturage sécuritaire installé' : 'Safety fencing installed', required: true, section: 'safety', validation: { legalRequirement: true } },
+        { id: 'municipal_inspection_scheduled', type: 'compliance_check', label: language === 'fr' ? 'Inspection municipale PLANIFIÉE' : 'Municipal inspection SCHEDULED', required: true, section: 'municipal_requirements', validation: { legalRequirement: true }, complianceRef: 'Obligation inspection avant/pendant/après' },
+        
+        // SECTION PHOTOS ET DOCUMENTATION
+        { id: 'photos_safety_site', type: 'photo_gallery', label: language === 'fr' ? 'Photos sécurité et état initial du site' : 'Safety and initial site condition photos', required: true, section: 'safety', validation: { legalRequirement: true } },
+        { id: 'site_plan_implementation', type: 'file', label: language === 'fr' ? 'Plan d\'implantation du site' : 'Site implementation plan', required: true, section: 'documents', validation: { legalRequirement: true } },
+        
+        // SECTION SIGNATURES
+        { id: 'applicant_signature_excavation', type: 'signature', label: language === 'fr' ? 'Signature demandeur' : 'Applicant signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
+        { id: 'engineer_signature', type: 'signature', label: language === 'fr' ? 'Signature ingénieur responsable' : 'Responsible engineer signature', required: true, section: 'signatures', validation: { legalRequirement: true } },
+        { id: 'municipal_approval_signature', type: 'signature', label: language === 'fr' ? 'Approbation municipale' : 'Municipal approval', required: false, section: 'signatures' }
       ]
     }
   ];
 
   return basePermits;
 };
-// =================== COMPOSANT PRINCIPAL ===================
+// =================== COMPOSANT PRINCIPAL AVEC CONFORMITÉ 2024-2025 ===================
 const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, language = 'fr', tenant, errors }) => {
   // =================== TRADUCTIONS ET CONFIGURATION ===================
   const t = getTexts(language);
@@ -375,8 +656,10 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedProvince, setSelectedProvince] = useState('all');
   const [expandedForms, setExpandedForms] = useState<{ [key: string]: boolean }>({});
+  const [complianceChecks, setComplianceChecks] = useState<{ [key: string]: ComplianceCheck[] }>({});
+  const [criticalAlerts, setCriticalAlerts] = useState<string[]>([]);
   
-  // =================== GESTION DES DONNÉES AVEC TRADUCTION ===================
+  // =================== GESTION DES DONNÉES AVEC CONFORMITÉ ===================
   const [permits, setPermits] = useState(() => {
     if (formData.permits?.list && formData.permits.list.length > 0) {
       return formData.permits.list;
@@ -384,10 +667,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     return translatePermitsDatabase(language);
   });
 
-  // =================== TRADUCTION DYNAMIQUE ===================
+  // =================== TRADUCTION DYNAMIQUE AVEC CONFORMITÉ ===================
   useEffect(() => {
     const translatedPermits = translatePermitsDatabase(language);
-    // Préserver les sélections et données de formulaire existantes
     const updatedPermits = translatedPermits.map(translatedPermit => {
       const existingPermit = permits.find((p: Permit) => p.id === translatedPermit.id);
       if (existingPermit) {
@@ -402,6 +684,135 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     });
     setPermits(updatedPermits);
   }, [language]);
+
+  // =================== VALIDATION CONFORMITÉ EN TEMPS RÉEL ===================
+  useEffect(() => {
+    validateCompliance();
+  }, [permits]);
+
+  const validateCompliance = () => {
+    const alerts: string[] = [];
+    const checks: { [key: string]: ComplianceCheck[] } = {};
+
+    permits.forEach((permit: Permit) => {
+      if (permit.selected && permit.formData) {
+        const permitChecks: ComplianceCheck[] = [];
+
+        // Validation espace clos
+        if (permit.id === 'confined-space-entry-2025') {
+          const o2Level = parseFloat(permit.formData.oxygen_level);
+          const gasLevel = parseFloat(permit.formData.combustible_gas_level);
+          const coLevel = parseFloat(permit.formData.carbon_monoxide_level);
+          const h2sLevel = parseFloat(permit.formData.hydrogen_sulfide_level);
+
+          if (o2Level < 19.5 || o2Level > 23.5) {
+            alerts.push(`CRITIQUE: Niveau O2 non conforme (${o2Level}%) - ARRÊT TRAVAUX REQUIS`);
+            permitChecks.push({
+              requirement: 'Oxygène 19.5-23.5%',
+              status: 'non-compliant',
+              details: `Niveau actuel: ${o2Level}%`,
+              reference: 'RSST Art. 302'
+            });
+          } else {
+            permitChecks.push({
+              requirement: 'Oxygène 19.5-23.5%',
+              status: 'compliant',
+              details: `Niveau conforme: ${o2Level}%`,
+              reference: 'RSST Art. 302'
+            });
+          }
+
+          if (gasLevel >= 10) {
+            alerts.push(`CRITIQUE: Gaz combustibles trop élevés (${gasLevel}% LIE) - ÉVACUATION IMMÉDIATE`);
+            permitChecks.push({
+              requirement: 'Gaz combustibles < 10% LIE',
+              status: 'non-compliant',
+              details: `Niveau critique: ${gasLevel}%`,
+              reference: 'RSST Art. 302'
+            });
+          }
+
+          if (!permit.formData.worker_age_verification) {
+            alerts.push('CRITIQUE: Vérification âge 18+ manquante - Obligation légale RSST Art. 298');
+            permitChecks.push({
+              requirement: 'Âge minimum 18 ans',
+              status: 'non-compliant',
+              details: 'Vérification non effectuée',
+              reference: 'RSST Art. 298 modifié 2023'
+            });
+          }
+        }
+
+        // Validation travail à chaud
+        if (permit.id === 'hot-work-permit-nfpa2019') {
+          if (permit.formData.fire_watch_duration !== '1 heure (NFPA 51B-2019)') {
+            alerts.push('ATTENTION: Surveillance incendie doit être 1 heure selon NFPA 51B-2019');
+            permitChecks.push({
+              requirement: 'Surveillance incendie 1 heure',
+              status: 'non-compliant',
+              details: 'Durée non conforme NFPA 51B-2019',
+              reference: 'NFPA 51B-2019'
+            });
+          }
+
+          if (!permit.formData.shift_reinspection) {
+            alerts.push('REQUIS: Réinspection par quart obligatoire selon NFPA 51B-2019');
+          }
+        }
+
+        // Validation excavation
+        if (permit.id === 'excavation-permit-municipal-2024') {
+          const depth = parseFloat(permit.formData.excavation_depth_calc || '0');
+          const distance = parseFloat(permit.formData.domain_public_distance || '0');
+          
+          const requiresPermit = (depth < 2 && distance < 2) || (depth >= 2 && distance < depth * 2);
+          
+          if (requiresPermit && !permit.formData.permit_required_auto) {
+            alerts.push('REQUIS: Permis excavation obligatoire selon calculs profondeur/distance');
+          }
+
+          if (!permit.formData.info_excavation_request) {
+            alerts.push('CRITIQUE: Info-Excavation obligatoire - Risque d\'accident grave');
+            permitChecks.push({
+              requirement: 'Info-Excavation complétée',
+              status: 'non-compliant',
+              details: 'Demande non effectuée',
+              reference: 'Loi fédérale'
+            });
+          }
+        }
+
+        checks[permit.id] = permitChecks;
+      }
+    });
+
+    setCriticalAlerts(alerts);
+    setComplianceChecks(checks);
+  };
+
+  // =================== CALCULS AUTOMATIQUES ===================
+  const calculateExcavationRequirements = (permitId: string, depth: number, distance: number) => {
+    const updatedPermits = permits.map((permit: Permit) => {
+      if (permit.id === permitId) {
+        const requiresPermit = (depth < 2 && distance < 2) || (depth >= 2 && distance < depth * 2);
+        const insuranceAmount = depth <= 4.5 ? 1000000 : depth > 4.5 ? 2000000 : 5000000;
+        
+        return {
+          ...permit,
+          formData: {
+            ...permit.formData,
+            permit_required_auto: requiresPermit,
+            insurance_amount_calc: insuranceAmount,
+            surface_guarantee_deposit: Math.round(depth * distance * 73), // Tarif été
+            underground_guarantee_deposit: Math.round(depth * 500) // Estimation
+          }
+        };
+      }
+      return permit;
+    });
+    setPermits(updatedPermits);
+    updateFormData(updatedPermits);
+  };
 
   // =================== FILTRAGE DES PERMIS ===================
   const filteredPermits = useMemo(() => {
@@ -427,12 +838,21 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     [permits]
   );
 
-  const stats = useMemo(() => ({
-    totalPermits: permits.length,
-    selected: selectedPermits.length,
-    critical: selectedPermits.filter((p: Permit) => p.priority === 'critical').length,
-    pending: selectedPermits.filter((p: Permit) => p.status === 'pending').length
-  }), [permits, selectedPermits]);
+  const stats = useMemo(() => {
+    const compliantCount = selectedPermits.filter(p => {
+      const checks = complianceChecks[p.id] || [];
+      return checks.length === 0 || checks.every(check => check.status === 'compliant');
+    }).length;
+
+    return {
+      totalPermits: permits.length,
+      selected: selectedPermits.length,
+      critical: selectedPermits.filter((p: Permit) => p.priority === 'critical').length,
+      pending: selectedPermits.filter((p: Permit) => p.status === 'pending').length,
+      compliant: compliantCount,
+      nonCompliant: selectedPermits.length - compliantCount
+    };
+  }, [permits, selectedPermits, complianceChecks]);
 
   // =================== HANDLERS ===================
   const handlePermitToggle = (permitId: string) => {
@@ -455,6 +875,10 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
         selected: selectedList.length,
         critical: selectedList.filter((p: Permit) => p.priority === 'critical').length,
         pending: selectedList.filter((p: Permit) => p.status === 'pending').length
+      },
+      compliance: {
+        criticalAlerts: criticalAlerts,
+        checks: complianceChecks
       }
     };
     onDataChange('permits', permitsData);
@@ -463,12 +887,26 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
   const handleFormFieldChange = (permitId: string, fieldId: string, value: any) => {
     const updatedPermits = permits.map((permit: Permit) => {
       if (permit.id === permitId) {
+        const updatedFormData = {
+          ...permit.formData,
+          [fieldId]: value
+        };
+
+        // Calculs automatiques pour excavation
+        if (permit.id === 'excavation-permit-municipal-2024') {
+          if (fieldId === 'excavation_depth_calc' || fieldId === 'domain_public_distance') {
+            const depth = parseFloat(fieldId === 'excavation_depth_calc' ? value : permit.formData?.excavation_depth_calc || '0');
+            const distance = parseFloat(fieldId === 'domain_public_distance' ? value : permit.formData?.domain_public_distance || '0');
+            
+            if (depth > 0 && distance >= 0) {
+              setTimeout(() => calculateExcavationRequirements(permitId, depth, distance), 100);
+            }
+          }
+        }
+
         return {
           ...permit,
-          formData: {
-            ...permit.formData,
-            [fieldId]: value
-          }
+          formData: updatedFormData
         };
       }
       return permit;
@@ -486,7 +924,6 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
 
   // =================== FONCTIONS UTILITAIRES ===================
   const getCategoryIcon = (category: string) => {
-    // Gestion bilingue des catégories
     const categoryKey = category === 'Safety' ? 'Sécurité' : 
                        category === 'Construction' ? 'Construction' :
                        category === 'Radiation Protection' ? 'Radioprotection' :
@@ -522,7 +959,17 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     }
   };
 
-  // =================== COMPOSANT FORMULAIRE ===================
+  const getComplianceColor = (level: string) => {
+    switch (level) {
+      case 'critical': return '#dc2626';
+      case 'enhanced': return '#059669';
+      case 'standard': return '#2563eb';
+      case 'basic': return '#64748b';
+      default: return '#6b7280';
+    }
+  };
+
+  // =================== COMPOSANT FORMULAIRE AVEC VALIDATION ===================
   const PermitForm = ({ permit }: { permit: Permit }) => {
     const isExpanded = expandedForms[permit.id];
     if (!isExpanded) return null;
@@ -534,753 +981,151 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
       return acc;
     }, {} as { [key: string]: FormField[] }) || {};
 
+    const permitChecks = complianceChecks[permit.id] || [];
+    const hasViolations = permitChecks.some(check => check.status === 'non-compliant');
+
     const renderField = (field: FormField) => {
       const value = permit.formData?.[field.id] || '';
+      const hasError = field.validation?.critical && !value;
       
+      // Rendu des champs selon type avec validation
       switch (field.type) {
-        case 'text':
-        case 'number':
-          return (
-            <input
-              type={field.type}
-              id={field.id}
-              value={value}
-              onChange={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                handleFormFieldChange(permit.id, field.id, e.target.value);
-              }}
-              onInput={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              onFocus={(e) => e.stopPropagation()}
-              placeholder={field.placeholder}
-              required={field.required}
-              min={field.validation?.min}
-              max={field.validation?.max}
-              className="form-input"
-            />
-          );
-        
-        case 'date':
-        case 'time':
-          return (
-            <input
-              type={field.type}
-              id={field.id}
-              value={value}
-              onChange={(e) => {
-                e.stopPropagation();
-                handleFormFieldChange(permit.id, field.id, e.target.value);
-              }}
-              onInput={(e) => e.stopPropagation()}
-              required={field.required}
-              className="form-input"
-            />
-          );
-        
-        case 'time_picker':
-          const [showTimePicker, setShowTimePicker] = useState(false);
-          const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
-          const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
-          const currentTime = value || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
-          const [selectedHour, selectedMinute] = currentTime.split(':');
+        case 'gas_meter':
+          const numValue = parseFloat(value) || 0;
+          const isCompliant = field.validation ? 
+            numValue >= (field.validation.min || 0) && 
+            numValue <= (field.validation.max || 100) : true;
           
           return (
-            <div className="time-picker-container">
-              <div 
-                className="time-display"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowTimePicker(!showTimePicker);
-                }}
-              >
-                <span className="time-value">{currentTime}</span>
-                <span className="time-icon">🕐</span>
-              </div>
-              
-              {showTimePicker && (
-                <div className="time-picker-dropdown">
-                  <div className="time-picker-header">
-                    <span>{t.messages.selectTime}</span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowTimePicker(false);
-                      }}
-                      className="time-picker-close"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  
-                  <div className="time-picker-selectors">
-                    <div className="time-selector">
-                      <div className="time-selector-label">{language === 'fr' ? 'Heure' : 'Hour'}</div>
-                      <div className="time-options">
-                        {hours.map((hour: string) => (
-                          <div
-                            key={hour}
-                            className={`time-option ${selectedHour === hour ? 'selected' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const newTime = `${hour}:${selectedMinute}`;
-                              handleFormFieldChange(permit.id, field.id, newTime);
-                            }}
-                          >
-                            {hour}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="time-separator">:</div>
-                    
-                    <div className="time-selector">
-                      <div className="time-selector-label">{language === 'fr' ? 'Minutes' : 'Minutes'}</div>
-                      <div className="time-options">
-                        {minutes.filter((_, i) => i % 5 === 0).map((minute: string) => (
-                          <div
-                            key={minute}
-                            className={`time-option ${selectedMinute === minute ? 'selected' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const newTime = `${selectedHour}:${minute}`;
-                              handleFormFieldChange(permit.id, field.id, newTime);
-                            }}
-                          >
-                            {minute}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="time-picker-actions">
-                    <button
-                      type="button"
-                      className="time-picker-now"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const now = new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
-                        handleFormFieldChange(permit.id, field.id, now);
-                        setShowTimePicker(false);
-                      }}
-                    >
-                      {t.messages.now}
-                    </button>
-                    <button
-                      type="button"
-                      className="time-picker-ok"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowTimePicker(false);
-                      }}
-                    >
-                      OK
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        
-        case 'textarea':
-          return (
-            <textarea
-              id={field.id}
-              value={value}
-              onChange={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                handleFormFieldChange(permit.id, field.id, e.target.value);
-              }}
-              onInput={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              onFocus={(e) => e.stopPropagation()}
-              placeholder={field.placeholder}
-              required={field.required}
-              rows={3}
-              className="form-textarea"
-            />
-          );
-        
-        case 'select':
-          return (
-            <select
-              id={field.id}
-              value={value}
-              onChange={(e) => {
-                e.stopPropagation();
-                handleFormFieldChange(permit.id, field.id, e.target.value);
-              }}
-              required={field.required}
-              className="form-select"
-            >
-              <option value="">{t.messages.select}</option>
-              {field.options?.map((option: string) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          );
-        
-        case 'radio':
-          return (
-            <div className="radio-group">
-              {field.options?.map((option: string) => (
-                <label key={option} className="radio-label">
-                  <input
-                    type="radio"
-                    name={field.id}
-                    value={option}
-                    checked={value === option}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      handleFormFieldChange(permit.id, field.id, e.target.value);
-                    }}
-                    required={field.required}
-                  />
-                  <span>{option}</span>
-                </label>
-              ))}
-            </div>
-          );
-        
-        case 'checkbox':
-          const checkedValues: string[] = Array.isArray(value) ? value : [];
-          return (
-            <div className="checkbox-group">
-              {field.options?.map((option: string) => (
-                <label key={option} className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    value={option}
-                    checked={checkedValues.includes(option)}
-                    onChange={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const newValues = e.target.checked
-                        ? [...checkedValues, option]
-                        : checkedValues.filter((v: string) => v !== option);
-                      handleFormFieldChange(permit.id, field.id, newValues);
-                    }}
-                  />
-                  <span>{option}</span>
-                </label>
-              ))}
-            </div>
-          );
-        
-        case 'file':
-          return (
-            <input
-              type="file"
-              id={field.id}
-              onChange={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const file = e.target.files?.[0];
-                if (file) {
-                  handleFormFieldChange(permit.id, field.id, file.name);
-                }
-              }}
-              required={field.required}
-              className="form-file"
-            />
-          );
-          case 'workers_tracking':
-          const workersLog: WorkerEntry[] = Array.isArray(value) ? value : [];
-          return (
-            <div className="workers-tracking-container">
-              <div className="worker-entry-form">
-                <div className="worker-entry-inputs">
-                  <input
-                    type="text"
-                    placeholder={t.messages.workerName}
-                    className="worker-name-input"
-                    onKeyPress={(e) => {
-                      e.stopPropagation();
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const container = (e.target as HTMLElement).closest('.worker-entry-form');
-                        const nameInput = container?.querySelector('.worker-name-input') as HTMLInputElement;
-                        const timeInput = container?.querySelector('.worker-time-input') as HTMLInputElement;
-                        
-                        if (nameInput?.value.trim()) {
-                          const newEntry: WorkerEntry = {
-                            id: Date.now(),
-                            name: nameInput.value.trim(),
-                            entryTime: timeInput.value || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
-                            exitTime: null,
-                            date: new Date().toLocaleDateString('fr-CA')
-                          };
-                          const updatedLog = [...workersLog, newEntry];
-                          handleFormFieldChange(permit.id, field.id, updatedLog);
-                          nameInput.value = '';
-                          timeInput.value = '';
-                        }
-                      }
-                    }}
-                  />
-                  <input
-                    type="time"
-                    className="worker-time-input"
-                  />
-                  <button
-                    type="button"
-                    className="worker-entry-btn"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const container = (e.target as HTMLElement).closest('.worker-entry-form');
-                      const nameInput = container?.querySelector('.worker-name-input') as HTMLInputElement;
-                      const timeInput = container?.querySelector('.worker-time-input') as HTMLInputElement;
-                      
-                      if (nameInput?.value.trim()) {
-                        const newEntry: WorkerEntry = {
-                          id: Date.now(),
-                          name: nameInput.value.trim(),
-                          entryTime: timeInput.value || new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }),
-                          exitTime: null,
-                          date: new Date().toLocaleDateString('fr-CA')
-                        };
-                        const updatedLog = [...workersLog, newEntry];
-                        handleFormFieldChange(permit.id, field.id, updatedLog);
-                        nameInput.value = '';
-                        timeInput.value = '';
-                      }
-                    }}
-                  >
-                    {t.messages.recordEntry}
-                  </button>
-                </div>
-              </div>
-              
-              <div className="workers-log-list">
-                <h5>{t.messages.entryExitLog}</h5>
-                {workersLog.length === 0 ? (
-                  <p className="no-entries">{t.messages.noEntries}</p>
-                ) : (
-                  <div className="workers-table">
-                    <div className="workers-table-header">
-                      <span>{language === 'fr' ? 'Nom' : 'Name'}</span>
-                      <span>{language === 'fr' ? 'Entrée' : 'Entry'}</span>
-                      <span>{language === 'fr' ? 'Sortie' : 'Exit'}</span>
-                      <span>{language === 'fr' ? 'Actions' : 'Actions'}</span>
-                    </div>
-                    {workersLog.map((worker: WorkerEntry) => (
-                      <div key={worker.id} className="workers-table-row">
-                        <span className="worker-name">{worker.name}</span>
-                        <span className="worker-time">{worker.entryTime}</span>
-                        <span className="worker-time">
-                          {worker.exitTime || (
-                            <button
-                              type="button"
-                              className="exit-btn"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                const updatedLog = workersLog.map((w: WorkerEntry) =>
-                                  w.id === worker.id
-                                    ? { ...w, exitTime: new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }) }
-                                    : w
-                                );
-                                handleFormFieldChange(permit.id, field.id, updatedLog);
-                              }}
-                            >
-                              {t.messages.exit}
-                            </button>
-                          )}
-                        </span>
-                        <span>
-                          <button
-                            type="button"
-                            className="remove-btn"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              const updatedLog = workersLog.filter((w: WorkerEntry) => w.id !== worker.id);
-                              handleFormFieldChange(permit.id, field.id, updatedLog);
-                            }}
-                          >
-                            {t.messages.remove}
-                          </button>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        
-        case 'photo_gallery':
-          const photos: PhotoEntry[] = Array.isArray(value) ? value : [];
-          const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-          
-          return (
-            <div className="photo-gallery-container">
-              <div className="photo-upload-section">
+            <div className="gas-meter-container">
+              <div className="gas-meter-display">
                 <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="photo-input"
-                  id={`photo-input-${field.id}`}
+                  type="number"
+                  step="0.1"
+                  id={field.id}
+                  value={value}
                   onChange={(e) => {
                     e.stopPropagation();
-                    const files = Array.from(e.target.files || []);
-                    
-                    files.forEach((file) => {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        const newPhoto: PhotoEntry = {
-                          id: Date.now() + Math.random(),
-                          url: event.target?.result as string,
-                          name: file.name,
-                          timestamp: new Date().toISOString(),
-                          description: ''
-                        };
-                        const updatedPhotos = [...photos, newPhoto];
-                        handleFormFieldChange(permit.id, field.id, updatedPhotos);
-                      };
-                      reader.readAsDataURL(file);
-                    });
-                    
-                    (e.target as HTMLInputElement).value = '';
+                    handleFormFieldChange(permit.id, field.id, e.target.value);
                   }}
-                  style={{ display: 'none' }}
+                  className={`gas-meter-input ${!isCompliant ? 'critical-violation' : 'compliant'}`}
+                  placeholder={field.placeholder}
+                  required={field.required}
                 />
-                
-                <div className="photo-upload-buttons">
-                  <button
-                    type="button"
-                    className="photo-upload-btn"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      document.getElementById(`photo-input-${field.id}`)?.click();
-                    }}
-                  >
-                    {t.messages.addPhotos}
-                  </button>
-                  
-                  <button
-                    type="button"
-                    className="photo-camera-btn"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const canvas = document.createElement('canvas');
-                      canvas.width = 640;
-                      canvas.height = 480;
-                      const ctx = canvas.getContext('2d');
-                      if (ctx) {
-                        const gradient = ctx.createLinearGradient(0, 0, 640, 480);
-                        gradient.addColorStop(0, '#1e293b');
-                        gradient.addColorStop(1, '#334155');
-                        ctx.fillStyle = gradient;
-                        ctx.fillRect(0, 0, 640, 480);
-                        
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = '24px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(t.messages.photoCaptured, 320, 220);
-                        ctx.font = '16px Arial';
-                        ctx.fillText(new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA'), 320, 260);
-                        
-                        const dataUrl = canvas.toDataURL('image/png');
-                        const newPhoto: PhotoEntry = {
-                          id: Date.now(),
-                          url: dataUrl,
-                          name: `Capture_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.png`,
-                          timestamp: new Date().toISOString(),
-                          description: ''
-                        };
-                        const updatedPhotos = [...photos, newPhoto];
-                        handleFormFieldChange(permit.id, field.id, updatedPhotos);
-                      }
-                    }}
-                  >
-                    {t.messages.takePhoto}
-                  </button>
+                <div className={`gas-status ${!isCompliant ? 'non-compliant' : 'compliant'}`}>
+                  {!isCompliant ? (
+                    <AlertTriangle size={16} />
+                  ) : (
+                    <CheckCircle size={16} />
+                  )}
+                  <span>{!isCompliant ? t.gasMeasurements.nonCompliant : t.gasMeasurements.compliant}</span>
                 </div>
               </div>
-              
-              {photos.length > 0 && (
-                <div className="photo-gallery">
-                  <div className="photo-carousel">
-                    <div className="photo-main-container">
-                      {photos.length > 1 && (
-                        <button
-                          type="button"
-                          className="photo-nav-btn prev"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setCurrentPhotoIndex((prev) => 
-                              prev === 0 ? photos.length - 1 : prev - 1
-                            );
-                          }}
-                        >
-                          ←
-                        </button>
-                      )}
-                      
-                      <div className="photo-main">
-                        <img
-                          src={photos[currentPhotoIndex]?.url}
-                          alt={photos[currentPhotoIndex]?.name}
-                          className="photo-main-image"
-                        />
-                        <div className="photo-info">
-                          <div className="photo-name">{photos[currentPhotoIndex]?.name}</div>
-                          <div className="photo-timestamp">
-                            {new Date(photos[currentPhotoIndex]?.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          className="photo-delete-btn"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const updatedPhotos = photos.filter((_, index) => index !== currentPhotoIndex);
-                            handleFormFieldChange(permit.id, field.id, updatedPhotos);
-                            if (currentPhotoIndex >= updatedPhotos.length && updatedPhotos.length > 0) {
-                              setCurrentPhotoIndex(updatedPhotos.length - 1);
-                            }
-                          }}
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                      
-                      {photos.length > 1 && (
-                        <button
-                          type="button"
-                          className="photo-nav-btn next"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setCurrentPhotoIndex((prev) => 
-                              prev === photos.length - 1 ? 0 : prev + 1
-                            );
-                          }}
-                        >
-                          →
-                        </button>
-                      )}
-                    </div>
-                    
-                    {photos.length > 1 && (
-                      <div className="photo-thumbnails">
-                        {photos.map((photo: PhotoEntry, index: number) => (
-                          <div
-                            key={photo.id}
-                            className={`photo-thumbnail ${index === currentPhotoIndex ? 'active' : ''}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setCurrentPhotoIndex(index);
-                            }}
-                          >
-                            <img src={photo.url} alt={photo.name} />
-                            <div className="thumbnail-overlay">
-                              {index + 1}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <div className="photo-description">
-                      <textarea
-                        placeholder={t.messages.addDescription}
-                        value={photos[currentPhotoIndex]?.description || ''}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          const updatedPhotos = photos.map((photo: PhotoEntry, index: number) =>
-                            index === currentPhotoIndex
-                              ? { ...photo, description: e.target.value }
-                              : photo
-                          );
-                          handleFormFieldChange(permit.id, field.id, updatedPhotos);
-                        }}
-                        className="photo-description-input"
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="photo-gallery-info">
-                    <span className="photo-count">
-                      {photos.length} {photos.length > 1 ? t.messages.photos : t.messages.photo}
-                    </span>
-                    {photos.length > 1 && (
-                      <span className="photo-current">
-                        {t.messages.photoOf} {currentPhotoIndex + 1} {t.messages.of} {photos.length}
-                      </span>
-                    )}
-                  </div>
+              {!isCompliant && field.validation?.message && (
+                <div className="critical-alert">
+                  <AlertCircle size={14} />
+                  {field.validation.message}
                 </div>
               )}
             </div>
           );
-        
-        case 'signature':
-          const signatureValue = permit.formData?.[field.id] || '';
-          const signatureMetadata: SignatureMetadata | undefined = permit.formData?.[field.id + '_metadata'];
-          
+
+        case 'calculation':
+          const calculatedValue = field.calculation?.autoCalculate ? 'AUTO' : value;
           return (
-            <div className="signature-field">
-              <div className="signature-pad">
-                {signatureValue ? (
-                  <div className="signature-content">
-                    <div className="signature-text">✓ {t.messages.signedBy} : {signatureValue}</div>
-                    <div className="signature-timestamp">
-                      {t.messages.on} {signatureMetadata?.date || new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA')} {t.messages.at} {signatureMetadata?.time || new Date().toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  </div>
-                ) : (
-                  <span className="signature-placeholder">
-                    {t.messages.signatureRequired}
-                  </span>
-                )}
-              </div>
-              <div className="signature-controls">
-                <input
-                  type="text"
-                  placeholder={t.messages.enterName}
-                  className="signature-name-input"
-                  onKeyPress={(e) => {
-                    e.stopPropagation();
-                    if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
-                      e.preventDefault();
-                      const signerName = (e.target as HTMLInputElement).value.trim();
-                      const timestamp = new Date();
-                      const fullSignature: SignatureMetadata = {
-                        name: signerName,
-                        date: timestamp.toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA'),
-                        time: timestamp.toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', { hour: '2-digit', minute: '2-digit' }),
-                        timestamp: timestamp.toISOString(),
-                        ipAddress: 'XXX.XXX.XXX.XXX',
-                        userAgent: navigator.userAgent
-                      };
-                      
-                      const updatedPermits = permits.map((permitItem: Permit) => {
-                        if (permitItem.id === permit.id) {
-                          return {
-                            ...permitItem,
-                            formData: {
-                              ...permitItem.formData,
-                              [field.id]: signerName,
-                              [field.id + '_metadata']: fullSignature
-                            }
-                          };
-                        }
-                        return permitItem;
-                      });
-                      
-                      setPermits(updatedPermits);
-                      updateFormData(updatedPermits);
-                      (e.target as HTMLInputElement).value = '';
-                    }
-                  }}
-                />
-                <button 
-                  type="button" 
-                  className="signature-btn"
+            <div className="calculation-field">
+              <div className="calculation-display">
+                <span className="calculation-label">{calculatedValue}</span>
+                <button
+                  type="button"
+                  className="calculate-btn"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
-                    const input = (e.target as HTMLElement).parentElement?.querySelector('.signature-name-input') as HTMLInputElement;
-                    if (input && input.value.trim()) {
-                      const signerName = input.value.trim();
-                      const timestamp = new Date();
-                      const fullSignature: SignatureMetadata = {
-                        name: signerName,
-                        date: timestamp.toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA'),
-                        time: timestamp.toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', { hour: '2-digit', minute: '2-digit' }),
-                        timestamp: timestamp.toISOString(),
-                        ipAddress: 'XXX.XXX.XXX.XXX',
-                        userAgent: navigator.userAgent
-                      };
-                      
-                      const updatedPermits = permits.map((permitItem: Permit) => {
-                        if (permitItem.id === permit.id) {
-                          return {
-                            ...permitItem,
-                            formData: {
-                              ...permitItem.formData,
-                              [field.id]: signerName,
-                              [field.id + '_metadata']: fullSignature
-                            }
-                          };
-                        }
-                        return permitItem;
-                      });
-                      
-                      setPermits(updatedPermits);
-                      updateFormData(updatedPermits);
-                      input.value = '';
-                    } else {
-                      alert(language === 'fr' ? 'Veuillez entrer votre nom complet pour signer' : 'Please enter your full name to sign');
+                    // Trigger calculation
+                    if (field.calculation?.autoCalculate) {
+                      // Auto-calculation logic here
                     }
                   }}
                 >
-                  {t.messages.signElectronically}
+                  {t.actions.calculate}
                 </button>
-                {signatureValue && (
-                  <button 
-                    type="button" 
-                    className="signature-clear-btn"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      
-                      const updatedPermits = permits.map((permitItem: Permit) => {
-                        if (permitItem.id === permit.id) {
-                          return {
-                            ...permitItem,
-                            formData: {
-                              ...permitItem.formData,
-                              [field.id]: '',
-                              [field.id + '_metadata']: null
-                            }
-                          };
-                        }
-                        return permitItem;
-                      });
-                      
-                      setPermits(updatedPermits);
-                      updateFormData(updatedPermits);
-                    }}
-                  >
-                    {t.messages.clear}
-                  </button>
-                )}
               </div>
             </div>
           );
 
+        case 'compliance_check':
+          const isChecked = !!value;
+          return (
+            <div className="compliance-check">
+              <label className="compliance-label">
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleFormFieldChange(permit.id, field.id, e.target.checked);
+                  }}
+                  required={field.required}
+                />
+                <span className={`compliance-text ${isChecked ? 'compliant' : 'pending'}`}>
+                  {field.label}
+                </span>
+                {field.complianceRef && (
+                  <span className="compliance-ref">({field.complianceRef})</span>
+                )}
+              </label>
+            </div>
+          );
+
+        case 'alert_indicator':
+          return (
+            <div className={`alert-indicator ${field.alert?.level || 'info'}`}>
+              <AlertTriangle size={16} />
+              <span>{field.alert?.message || field.label}</span>
+            </div>
+          );
+
+        // Types de champs standards (text, number, etc.)
         default:
-          return null;
+          return (
+            <input
+              type={field.type}
+              id={field.id}
+              value={value}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleFormFieldChange(permit.id, field.id, e.target.value);
+              }}
+              placeholder={field.placeholder}
+              required={field.required}
+              className={`form-input ${hasError ? 'error' : ''}`}
+            />
+          );
       }
     };
 
     return (
       <div className="permit-form">
         <div className="form-header">
-          <h3>{permit.name}</h3>
+          <div className="form-title-section">
+            <h3>{permit.name}</h3>
+            <div className="compliance-badges">
+              <span className={`compliance-badge ${permit.complianceLevel}`}>
+                {(t.complianceLevels as any)[permit.complianceLevel]}
+              </span>
+              <span className="last-updated">
+                Mis à jour: {permit.lastUpdated}
+              </span>
+            </div>
+          </div>
           <div className="form-actions">
+            <button className="form-action-btn validate" onClick={() => validateCompliance()}>
+              <Shield size={16} />
+              {t.actions.validate}
+            </button>
             <button className="form-action-btn save">
               <Save size={16} />
               {t.actions.save}
-            </button>
-            <button className="form-action-btn print">
-              <Printer size={16} />
-              {t.actions.print}
             </button>
             <button className="form-action-btn submit">
               <Mail size={16} />
@@ -1288,6 +1133,46 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
             </button>
           </div>
         </div>
+
+        {/* Alertes critiques */}
+        {hasViolations && (
+          <div className="critical-violations-panel">
+            <div className="violations-header">
+              <AlertTriangle size={20} />
+              <span>{t.alerts.critical}</span>
+            </div>
+            {permitChecks.filter(check => check.status === 'non-compliant').map((check, index) => (
+              <div key={index} className="violation-item">
+                <span className="violation-requirement">{check.requirement}</span>
+                <span className="violation-details">{check.details}</span>
+                <span className="violation-reference">{check.reference}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Vérifications de conformité */}
+        {permitChecks.length > 0 && (
+          <div className="compliance-panel">
+            <h4>📋 Vérifications de conformité</h4>
+            <div className="compliance-grid">
+              {permitChecks.map((check, index) => (
+                <div key={index} className={`compliance-item ${check.status}`}>
+                  <div className="compliance-status">
+                    {check.status === 'compliant' ? 
+                      <CheckCircle size={16} /> : 
+                      <AlertTriangle size={16} />
+                    }
+                  </div>
+                  <div className="compliance-details">
+                    <span className="compliance-requirement">{check.requirement}</span>
+                    <span className="compliance-reference">{check.reference}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="form-content">
           {Object.entries(fieldsBySection).map(([sectionName, fields]: [string, FormField[]]) => (
@@ -1301,10 +1186,21 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
                     <label className="form-label" htmlFor={field.id}>
                       {field.label}
                       {field.required && <span className="required">*</span>}
+                      {field.validation?.legalRequirement && (
+                        <span className="legal-requirement">⚖️ LÉGAL</span>
+                      )}
+                      {field.validation?.critical && (
+                        <span className="critical-requirement">🚨 CRITIQUE</span>
+                      )}
                     </label>
                     {renderField(field)}
                     {field.validation?.message && (
                       <div className="field-help">{field.validation.message}</div>
+                    )}
+                    {field.complianceRef && (
+                      <div className="compliance-reference">
+                        📖 Réf: {field.complianceRef}
+                      </div>
                     )}
                   </div>
                 ))}
@@ -1321,201 +1217,104 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
     <>
       <style dangerouslySetInnerHTML={{
         __html: `
-          .step4-container { padding: 0; color: #ffffff; scroll-behavior: auto !important; }
+          .step4-container { padding: 0; color: #ffffff; }
           .permits-header { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
-          .permits-title { color: #2563eb; font-size: 18px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+          
+          .critical-alerts { background: rgba(239, 68, 68, 0.1); border: 2px solid #ef4444; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+          .critical-alerts h3 { color: #ef4444; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+          .alert-item { background: rgba(239, 68, 68, 0.2); padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; color: #fee2e2; font-size: 14px; }
+          
           .permits-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; margin-top: 16px; }
           .stat-item { text-align: center; background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px; }
-          .stat-value { font-size: 20px; font-weight: 800; color: #2563eb; margin-bottom: 4px; }
-          .stat-label { font-size: 12px; color: #3b82f6; font-weight: 500; }
+          .stat-item.compliant { border: 2px solid #22c55e; }
+          .stat-item.non-compliant { border: 2px solid #ef4444; }
           
-          .search-section { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
-          .search-grid { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: end; }
-          .search-input-wrapper { position: relative; }
-          .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; z-index: 10; }
-          .search-field { width: 100%; padding: 12px 12px 12px 40px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; color: #ffffff; font-size: 14px; transition: all 0.3s ease; }
-          .search-field:focus { outline: none; border-color: #2563eb; background: rgba(15, 23, 42, 0.9); }
-          .filter-select { padding: 12px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; color: #ffffff; font-size: 14px; cursor: pointer; transition: all 0.3s ease; min-width: 150px; }
-          .filter-select:focus { outline: none; border-color: #2563eb; }
-          
-          .permits-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
-          .permit-card { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 16px; padding: 20px; transition: all 0.3s ease; position: relative; }
-          .permit-card:hover { transform: translateY(-4px); border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15); }
-          .permit-card.selected { border-color: #2563eb; background: rgba(59, 130, 246, 0.1); }
           .permit-card.critical::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #ef4444; border-radius: 16px 0 0 16px; }
+          .compliance-badge { padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
+          .compliance-badge.critical { background: #dc2626; color: white; }
+          .compliance-badge.enhanced { background: #059669; color: white; }
+          .compliance-badge.standard { background: #2563eb; color: white; }
           
-          .permit-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; cursor: pointer; }
-          .permit-icon { font-size: 28px; width: 40px; text-align: center; }
-          .permit-content { flex: 1; }
-          .permit-name { color: #ffffff; font-size: 16px; font-weight: 600; margin: 0 0 4px; }
-          .permit-category { color: #94a3b8; font-size: 12px; font-weight: 500; margin-bottom: 4px; }
-          .permit-description { color: #cbd5e1; font-size: 13px; line-height: 1.4; margin-bottom: 8px; }
-          .permit-authority { color: #60a5fa; font-size: 11px; font-weight: 500; }
-          .permit-checkbox { width: 24px; height: 24px; border: 2px solid rgba(100, 116, 139, 0.5); border-radius: 6px; background: rgba(15, 23, 42, 0.8); display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
-          .permit-checkbox.checked { background: #2563eb; border-color: #2563eb; color: white; }
+          .gas-meter-container { display: flex; flex-direction: column; gap: 8px; }
+          .gas-meter-display { display: flex; align-items: center; gap: 12px; }
+          .gas-meter-input { flex: 1; }
+          .gas-meter-input.critical-violation { border: 2px solid #ef4444; background: rgba(239, 68, 68, 0.1); }
+          .gas-meter-input.compliant { border: 2px solid #22c55e; background: rgba(34, 197, 94, 0.1); }
+          .gas-status { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; }
+          .gas-status.non-compliant { color: #ef4444; }
+          .gas-status.compliant { color: #22c55e; }
           
-          .permit-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-          .meta-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #94a3b8; }
-          .priority-badge { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; text-transform: uppercase; }
-          .status-badge { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; text-transform: uppercase; }
+          .critical-alert { background: rgba(239, 68, 68, 0.2); color: #fee2e2; padding: 8px; border-radius: 4px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
           
-          .permit-actions { display: flex; gap: 8px; margin-top: 16px; }
-          .action-btn { padding: 8px 12px; border-radius: 8px; border: none; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
-          .action-btn.primary { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; }
-          .action-btn.secondary { background: rgba(100, 116, 139, 0.2); color: #cbd5e1; border: 1px solid rgba(100, 116, 139, 0.3); }
-          .action-btn:hover { transform: translateY(-1px); }
+          .compliance-check { margin: 8px 0; }
+          .compliance-label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+          .compliance-text.compliant { color: #22c55e; }
+          .compliance-text.pending { color: #eab308; }
+          .compliance-ref { font-size: 10px; color: #94a3b8; }
           
-          .permit-form { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 12px; margin-top: 16px; overflow: hidden; }
-          .form-header { background: rgba(59, 130, 246, 0.1); padding: 16px; border-bottom: 1px solid rgba(100, 116, 139, 0.3); display: flex; justify-content: space-between; align-items: center; }
-          .form-header h3 { color: #ffffff; margin: 0; font-size: 16px; font-weight: 600; }
-          .form-actions { display: flex; gap: 8px; }
-          .form-action-btn { padding: 6px 10px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; }
-          .form-action-btn.save { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
-          .form-action-btn.print { background: rgba(100, 116, 139, 0.2); color: #cbd5e1; }
-          .form-action-btn.submit { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+          .calculation-field { background: rgba(30, 41, 59, 0.6); border-radius: 8px; padding: 12px; }
+          .calculation-display { display: flex; justify-content: space-between; align-items: center; }
+          .calculation-label { font-family: monospace; color: #22c55e; font-weight: 600; }
+          .calculate-btn { padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 10px; }
           
-          .form-content { padding: 20px; max-height: 600px; overflow-y: auto; }
-          .form-section-group { margin-bottom: 24px; }
-          .form-section-title { color: #2563eb; font-size: 14px; font-weight: 600; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(59, 130, 246, 0.3); }
-          .form-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
-          .form-field { display: flex; flex-direction: column; }
-          .form-label { color: #e2e8f0; font-size: 12px; font-weight: 500; margin-bottom: 4px; }
-          .required { color: #ef4444; margin-left: 2px; }
-          .form-input, .form-textarea, .form-select { padding: 8px 10px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; transition: all 0.3s ease; scroll-behavior: auto !important; scroll-margin: 0 !important; }
-          .form-input:focus, .form-textarea:focus, .form-select:focus { outline: none; border-color: #2563eb; }
-          .form-file { padding: 4px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 11px; }
+          .critical-violations-panel { background: rgba(239, 68, 68, 0.1); border: 2px solid #ef4444; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+          .violations-header { display: flex; align-items: center; gap: 8px; color: #ef4444; font-weight: 700; margin-bottom: 12px; }
+          .violation-item { background: rgba(239, 68, 68, 0.2); padding: 8px; border-radius: 4px; margin-bottom: 8px; }
+          .violation-requirement { display: block; font-weight: 600; color: #fee2e2; }
+          .violation-details { display: block; font-size: 12px; color: #fca5a5; }
+          .violation-reference { display: block; font-size: 10px; color: #f87171; }
           
-          .radio-group, .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
-          .radio-label, .checkbox-label { display: flex; align-items: center; gap: 4px; color: #cbd5e1; font-size: 11px; cursor: pointer; }
-          .radio-label input, .checkbox-label input { margin: 0; }
+          .compliance-panel { background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+          .compliance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 8px; }
+          .compliance-item { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 4px; }
+          .compliance-item.compliant { background: rgba(34, 197, 94, 0.2); }
+          .compliance-item.non-compliant { background: rgba(239, 68, 68, 0.2); }
+          .compliance-status { color: #22c55e; }
+          .compliance-item.non-compliant .compliance-status { color: #ef4444; }
+          .compliance-requirement { font-size: 12px; font-weight: 600; }
+          .compliance-reference { font-size: 10px; color: #94a3b8; }
           
-          .time-picker-container { position: relative; }
-          .time-display { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; cursor: pointer; transition: all 0.3s ease; }
-          .time-display:hover { border-color: #2563eb; }
-          .time-value { color: #ffffff; font-family: monospace; font-size: 14px; }
-          .time-icon { font-size: 16px; }
-          .time-picker-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(100, 116, 139, 0.5); border-radius: 8px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); z-index: 1000; backdrop-filter: blur(20px); }
-          .time-picker-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(100, 116, 139, 0.3); color: #ffffff; font-weight: 600; }
-          .time-picker-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 18px; padding: 4px; }
-          .time-picker-close:hover { color: #ef4444; }
-          .time-picker-selectors { display: flex; align-items: flex-start; gap: 8px; padding: 16px; }
-          .time-selector { flex: 1; }
-          .time-selector-label { color: #94a3b8; font-size: 12px; font-weight: 500; margin-bottom: 8px; text-align: center; }
-          .time-options { max-height: 150px; overflow-y: auto; border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; }
-          .time-option { padding: 8px 12px; text-align: center; color: #cbd5e1; cursor: pointer; border-bottom: 1px solid rgba(100, 116, 139, 0.2); font-family: monospace; }
-          .time-option:last-child { border-bottom: none; }
-          .time-option:hover { background: rgba(59, 130, 246, 0.2); color: #ffffff; }
-          .time-option.selected { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #ffffff; font-weight: 600; }
-          .time-separator { font-size: 24px; color: #94a3b8; align-self: center; margin-top: 20px; font-weight: bold; }
-          .time-picker-actions { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid rgba(100, 116, 139, 0.3); }
-          .time-picker-now { padding: 6px 12px; background: rgba(100, 116, 139, 0.2); color: #cbd5e1; border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 4px; cursor: pointer; font-size: 12px; }
-          .time-picker-now:hover { background: rgba(100, 116, 139, 0.3); }
-          .time-picker-ok { padding: 6px 12px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; margin-left: auto; }
-          .time-picker-ok:hover { transform: translateY(-1px); }
+          .legal-requirement { background: #059669; color: white; padding: 1px 4px; border-radius: 3px; font-size: 8px; margin-left: 4px; }
+          .critical-requirement { background: #dc2626; color: white; padding: 1px 4px; border-radius: 3px; font-size: 8px; margin-left: 4px; }
+          .compliance-reference { font-size: 10px; color: #3b82f6; margin-top: 2px; }
           
-          .signature-field { display: flex; flex-direction: column; gap: 12px; }
-          .signature-pad { flex: 1; border: 2px solid rgba(100, 116, 139, 0.5); border-radius: 8px; padding: 12px; min-height: 60px; display: flex; align-items: center; background: rgba(15, 23, 42, 0.9); }
-          .signature-content { width: 100%; }
-          .signature-text { color: #22c55e; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-          .signature-timestamp { color: #94a3b8; font-size: 11px; font-style: italic; }
-          .signature-placeholder { color: #94a3b8; font-size: 12px; font-style: italic; }
-          .signature-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-          .signature-name-input { flex: 1; min-width: 200px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; transition: all 0.3s ease; scroll-behavior: auto !important; scroll-margin: 0 !important; }
-          .signature-name-input:focus { outline: none; border-color: #2563eb; }
-          .signature-name-input::placeholder { color: #64748b; }
-          .signature-btn { padding: 8px 16px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.3s ease; }
-          .signature-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3); }
-          .signature-clear-btn { padding: 6px 12px; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; cursor: pointer; font-size: 11px; }
-          .signature-clear-btn:hover { background: rgba(239, 68, 68, 0.3); }
+          .form-title-section { display: flex; flex-direction: column; gap: 8px; }
+          .compliance-badges { display: flex; gap: 8px; align-items: center; }
+          .last-updated { font-size: 10px; color: #94a3b8; }
           
-          .workers-tracking-container { display: flex; flex-direction: column; gap: 16px; }
-          .worker-entry-form { background: rgba(30, 41, 59, 0.6); padding: 16px; border-radius: 8px; border: 1px solid rgba(100, 116, 139, 0.3); }
-          .worker-entry-inputs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-          .worker-name-input { flex: 2; min-width: 200px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; scroll-behavior: auto !important; scroll-margin: 0 !important; }
-          .worker-time-input { flex: 1; min-width: 120px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; scroll-behavior: auto !important; scroll-margin: 0 !important; }
-          .worker-entry-btn { padding: 8px 16px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; }
-          .worker-entry-btn:hover { transform: translateY(-1px); }
+          .form-action-btn.validate { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
           
-          .workers-log-list h5 { color: #2563eb; margin: 0 0 12px; font-size: 14px; font-weight: 600; }
-          .no-entries { color: #64748b; font-style: italic; text-align: center; padding: 20px; }
-          .workers-table { border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 8px; overflow: hidden; }
-          .workers-table-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; background: rgba(59, 130, 246, 0.1); padding: 12px; font-weight: 600; color: #2563eb; font-size: 12px; border-bottom: 1px solid rgba(100, 116, 139, 0.3); }
-          .workers-table-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 12px; border-bottom: 1px solid rgba(100, 116, 139, 0.2); align-items: center; }
-          .workers-table-row:last-child { border-bottom: none; }
-          .workers-table-row:hover { background: rgba(100, 116, 139, 0.1); }
-          .worker-name { color: #ffffff; font-weight: 500; }
-          .worker-time { color: #94a3b8; font-family: monospace; }
-          .exit-btn { padding: 4px 8px; background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 4px; cursor: pointer; font-size: 10px; }
-          .exit-btn:hover { background: rgba(34, 197, 94, 0.3); }
-          .remove-btn { padding: 4px 8px; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; cursor: pointer; font-size: 10px; }
-          .remove-btn:hover { background: rgba(239, 68, 68, 0.3); }
-          
-          .photo-gallery-container { display: flex; flex-direction: column; gap: 16px; }
-          .photo-upload-section { background: rgba(30, 41, 59, 0.6); padding: 16px; border-radius: 8px; border: 1px solid rgba(100, 116, 139, 0.3); }
-          .photo-upload-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
-          .photo-upload-btn, .photo-camera-btn { padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
-          .photo-upload-btn { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; }
-          .photo-upload-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
-          .photo-camera-btn { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; }
-          .photo-camera-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); }
-          
-          .photo-gallery { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 12px; padding: 20px; }
-          .photo-carousel { display: flex; flex-direction: column; gap: 16px; }
-          .photo-main-container { position: relative; display: flex; align-items: center; gap: 12px; }
-          .photo-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); z-index: 10; width: 40px; height: 40px; border-radius: 50%; background: rgba(0, 0, 0, 0.7); color: white; border: none; cursor: pointer; font-size: 18px; font-weight: bold; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
-          .photo-nav-btn:hover { background: rgba(0, 0, 0, 0.9); transform: translateY(-50%) scale(1.1); }
-          .photo-nav-btn.prev { left: 10px; }
-          .photo-nav-btn.next { right: 10px; }
-          
-          .photo-main { position: relative; flex: 1; border-radius: 8px; overflow: hidden; background: rgba(30, 41, 59, 0.6); }
-          .photo-main-image { width: 100%; height: 300px; object-fit: cover; display: block; }
-          .photo-info { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); padding: 16px; color: white; }
-          .photo-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-          .photo-timestamp { font-size: 12px; color: #cbd5e1; }
-          .photo-delete-btn { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(239, 68, 68, 0.8); color: white; border: none; cursor: pointer; font-size: 14px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
-          .photo-delete-btn:hover { background: rgba(239, 68, 68, 1); transform: scale(1.1); }
-          
-          .photo-thumbnails { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; }
-          .photo-thumbnails::-webkit-scrollbar { height: 4px; }
-          .photo-thumbnails::-webkit-scrollbar-track { background: rgba(100, 116, 139, 0.2); border-radius: 2px; }
-          .photo-thumbnails::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.5); border-radius: 2px; }
-          .photo-thumbnail { position: relative; width: 60px; height: 60px; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: all 0.3s ease; flex-shrink: 0; }
-          .photo-thumbnail:hover { border-color: rgba(59, 130, 246, 0.5); transform: scale(1.05); }
-          .photo-thumbnail.active { border-color: #3b82f6; transform: scale(1.1); }
-          .photo-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
-          .thumbnail-overlay { position: absolute; bottom: 0; right: 0; background: rgba(0, 0, 0, 0.7); color: white; font-size: 10px; padding: 2px 4px; border-radius: 3px 0 0 0; }
-          
-          .photo-description { margin-top: 12px; }
-          .photo-description-input { width: 100%; padding: 8px 12px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 6px; color: #ffffff; font-size: 12px; resize: vertical; transition: all 0.3s ease; scroll-behavior: auto !important; scroll-margin: 0 !important; }
-          .photo-description-input:focus { outline: none; border-color: #2563eb; }
-          .photo-description-input::placeholder { color: #64748b; }
-          
-          .photo-gallery-info { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(100, 116, 139, 0.3); }
-          .photo-count { color: #3b82f6; font-weight: 600; font-size: 12px; }
-          .photo-current { color: #94a3b8; font-size: 11px; }
-          
-          .field-help { font-size: 10px; color: #64748b; margin-top: 2px; font-style: italic; }
+          .alert-indicator { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 4px; font-size: 12px; }
+          .alert-indicator.critical { background: rgba(239, 68, 68, 0.2); color: #fee2e2; }
+          .alert-indicator.warning { background: rgba(245, 158, 11, 0.2); color: #fde68a; }
+          .alert-indicator.info { background: rgba(59, 130, 246, 0.2); color: #dbeafe; }
           
           @media (max-width: 768px) {
-            .permits-grid { grid-template-columns: 1fr; gap: 16px; }
-            .search-grid { grid-template-columns: 1fr; gap: 8px; }
             .permits-stats { grid-template-columns: repeat(2, 1fr); }
-            .form-fields { grid-template-columns: 1fr; }
-            .permit-actions { flex-direction: column; }
-            .photo-main-image { height: 200px; }
-            .photo-nav-btn { width: 32px; height: 32px; font-size: 14px; }
-            .photo-thumbnails { gap: 6px; }
-            .photo-thumbnail { width: 50px; height: 50px; }
-            .worker-entry-inputs { flex-direction: column; align-items: stretch; }
-            .worker-name-input, .worker-time-input { min-width: auto; flex: none; }
-            .signature-controls { flex-direction: column; align-items: stretch; }
-            .signature-name-input { min-width: auto; }
+            .compliance-grid { grid-template-columns: 1fr; }
+            .form-title-section { align-items: flex-start; }
+            .compliance-badges { flex-wrap: wrap; }
           }
         `
       }} />
 
       <div className="step4-container">
-        {/* En-tête avec résumé */}
+        {/* Alertes critiques */}
+        {criticalAlerts.length > 0 && (
+          <div className="critical-alerts">
+            <h3>
+              <AlertTriangle size={20} />
+              {t.alerts.critical}
+            </h3>
+            {criticalAlerts.map((alert, index) => (
+              <div key={index} className="alert-item">
+                {alert}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* En-tête avec résumé de conformité */}
         <div className="permits-header">
           <div className="permits-title">
             <FileText size={24} />
@@ -1538,9 +1337,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
               <div className="stat-value">{stats.critical}</div>
               <div className="stat-label">{t.stats.critical}</div>
             </div>
-            <div className="stat-item">
-              <div className="stat-value">{stats.pending}</div>
-              <div className="stat-label">{t.stats.pending}</div>
+            <div className={`stat-item ${stats.compliant === stats.selected && stats.selected > 0 ? 'compliant' : stats.nonCompliant > 0 ? 'non-compliant' : ''}`}>
+              <div className="stat-value">{stats.compliant}/{stats.selected}</div>
+              <div className="stat-label">{t.stats.compliant}</div>
             </div>
           </div>
         </div>
@@ -1565,9 +1364,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
             >
               <option value="all">{t.allCategories}</option>
               {categories.map((category: any) => (
-  <option key={category} value={category}>
-    {getCategoryIcon(category)} {(t.categories as any)[category] || category}
-  </option>
+                <option key={category} value={category}>
+                  {getCategoryIcon(category)} {(t.categories as any)[category] || category}
+                </option>
               ))}
             </select>
             <select
@@ -1585,16 +1384,18 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
           </div>
         </div>
 
-        {/* Grille des permis */}
+        {/* Grille des permis avec conformité */}
         <div className="permits-grid">
           {filteredPermits.map((permit: Permit) => {
             const isSelected = permit.selected;
             const isFormExpanded = expandedForms[permit.id];
+            const permitChecks = complianceChecks[permit.id] || [];
+            const hasViolations = permitChecks.some(check => check.status === 'non-compliant');
             
             return (
               <div 
                 key={permit.id} 
-                className={`permit-card ${isSelected ? 'selected' : ''} ${permit.priority}`}
+                className={`permit-card ${isSelected ? 'selected' : ''} ${permit.priority} ${hasViolations ? 'non-compliant' : ''}`}
               >
                 {/* Header avec sélection */}
                 <div className="permit-header" onClick={() => handlePermitToggle(permit.id)}>
@@ -1604,13 +1405,27 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
                     <div className="permit-category">{(t.categories as any)[permit.category] || permit.category}</div>
                     <div className="permit-description">{permit.description}</div>
                     <div className="permit-authority">{permit.authority}</div>
+                    <div className="compliance-info">
+                      <span 
+                        className="compliance-badge" 
+                        style={{ 
+                          backgroundColor: `${getComplianceColor(permit.complianceLevel)}20`, 
+                          color: getComplianceColor(permit.complianceLevel) 
+                        }}
+                      >
+                        {(t.complianceLevels as any)[permit.complianceLevel]}
+                      </span>
+                      <span className="last-updated-small">
+                        {permit.lastUpdated}
+                      </span>
+                    </div>
                   </div>
                   <div className={`permit-checkbox ${isSelected ? 'checked' : ''}`}>
                     {isSelected && <CheckCircle size={18} />}
                   </div>
                 </div>
 
-                {/* Métadonnées rapides */}
+                {/* Métadonnées avec conformité */}
                 <div className="permit-meta">
                   <div className="meta-item">
                     <span className="priority-badge" style={{ backgroundColor: `${getPriorityColor(permit.priority)}20`, color: getPriorityColor(permit.priority) }}>
@@ -1622,13 +1437,16 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
                       {(t.statuses as any)[permit.status]}
                     </span>
                   </div>
+                  {hasViolations && (
+                    <div className="meta-item">
+                      <span className="violation-badge" style={{ backgroundColor: '#ef444420', color: '#ef4444' }}>
+                        ⚠️ Non conforme
+                      </span>
+                    </div>
+                  )}
                   <div className="meta-item">
                     <Clock size={12} />
                     {permit.processingTime}
-                  </div>
-                  <div className="meta-item">
-                    <MapPin size={12} />
-                    {permit.province.length} {t.messages.provinces}
                   </div>
                 </div>
 
@@ -1643,9 +1461,12 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
                       {isFormExpanded ? t.actions.close : t.actions.fill}
                       {isFormExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     </button>
-                    <button className="action-btn secondary">
-                      <Eye size={14} />
-                      {t.actions.preview}
+                    <button 
+                      className="action-btn secondary"
+                      onClick={() => validateCompliance()}
+                    >
+                      <Shield size={14} />
+                      {t.actions.validate}
                     </button>
                     <button className="action-btn secondary">
                       <Download size={14} />
@@ -1654,7 +1475,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({ formData, onDataChange, lan
                   </div>
                 )}
 
-                {/* Formulaire du permis */}
+                {/* Formulaire du permis avec conformité */}
                 {isSelected && <PermitForm permit={permit} />}
               </div>
             );
