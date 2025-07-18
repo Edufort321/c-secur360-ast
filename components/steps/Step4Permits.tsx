@@ -3605,7 +3605,7 @@ const Step4PermitsComplete: React.FC<Step4PermitsProps> = ({ formData, onDataCha
             }}
           >
             <option value="all">{t.allCategories}</option>
-            {categories.map(category => (
+            {categories.map((category: string) => (
               <option key={category} value={category}>
                 {getCategoryIcon(category)} {(t.categories as any)[category] || category}
               </option>
