@@ -1,4 +1,4 @@
-// =================== COMPONENTS/STEPS/STEP4PERMITS/CONSTANTS/TRANSLATIONS.TS ===================
+// =================== COMPONENTS/STEPS/STEP4PERMITS/CONSTANTS/TRANSLATIONS.TS - SECTION 1 ===================
 // Traductions complètes français-anglais pour le système de permis de travail
 "use client";
 
@@ -12,6 +12,8 @@ export interface Translation {
 export interface TranslationGroup {
   [key: string]: Translation | TranslationGroup;
 }
+
+export type Language = 'fr' | 'en';
 
 // =================== TRADUCTIONS GÉNÉRALES ===================
 
@@ -109,7 +111,7 @@ export const GENERAL_TRANSLATIONS: TranslationGroup = {
     unknown: { fr: 'Inconnu', en: 'Unknown' }
   },
 
-  // Interface utilisateur
+  // Interface utilisateur de base
   ui: {
     yes: { fr: 'Oui', en: 'Yes' },
     no: { fr: 'Non', en: 'No' },
@@ -163,113 +165,7 @@ export const GENERAL_TRANSLATIONS: TranslationGroup = {
     secure: { fr: 'Sécurisé', en: 'Secure' },
     version: { fr: 'Version', en: 'Version' },
     language: { fr: 'Langue', en: 'Language' },
-    theme: { fr: 'Thème', en: 'Theme' },
-    layout: { fr: 'Mise en page', en: 'Layout' },
-    view: { fr: 'Vue', en: 'View' },
-    display: { fr: 'Affichage', en: 'Display' },
-    format: { fr: 'Format', en: 'Format' },
-    size: { fr: 'Taille', en: 'Size' },
-    color: { fr: 'Couleur', en: 'Color' },
-    font: { fr: 'Police', en: 'Font' },
-    image: { fr: 'Image', en: 'Image' },
-    video: { fr: 'Vidéo', en: 'Video' },
-    audio: { fr: 'Audio', en: 'Audio' },
-    file: { fr: 'Fichier', en: 'File' },
-    folder: { fr: 'Dossier', en: 'Folder' },
-    document: { fr: 'Document', en: 'Document' },
-    report: { fr: 'Rapport', en: 'Report' },
-    form: { fr: 'Formulaire', en: 'Form' },
-    field: { fr: 'Champ', en: 'Field' },
-    label: { fr: 'Étiquette', en: 'Label' },
-    placeholder: { fr: 'Texte indicatif', en: 'Placeholder' },
-    tooltip: { fr: 'Info-bulle', en: 'Tooltip' },
-    menu: { fr: 'Menu', en: 'Menu' },
-    toolbar: { fr: 'Barre d\'outils', en: 'Toolbar' },
-    sidebar: { fr: 'Barre latérale', en: 'Sidebar' },
-    footer: { fr: 'Pied de page', en: 'Footer' },
-    header: { fr: 'En-tête', en: 'Header' },
-    title: { fr: 'Titre', en: 'Title' },
-    subtitle: { fr: 'Sous-titre', en: 'Subtitle' },
-    content: { fr: 'Contenu', en: 'Content' },
-    text: { fr: 'Texte', en: 'Text' },
-    link: { fr: 'Lien', en: 'Link' },
-    button: { fr: 'Bouton', en: 'Button' },
-    checkbox: { fr: 'Case à cocher', en: 'Checkbox' },
-    radio: { fr: 'Bouton radio', en: 'Radio Button' },
-    dropdown: { fr: 'Liste déroulante', en: 'Dropdown' },
-    list: { fr: 'Liste', en: 'List' },
-    table: { fr: 'Tableau', en: 'Table' },
-    grid: { fr: 'Grille', en: 'Grid' },
-    chart: { fr: 'Graphique', en: 'Chart' },
-    map: { fr: 'Carte', en: 'Map' },
-    calendar: { fr: 'Calendrier', en: 'Calendar' },
-    clock: { fr: 'Horloge', en: 'Clock' },
-    timer: { fr: 'Minuteur', en: 'Timer' },
-    counter: { fr: 'Compteur', en: 'Counter' },
-    progress: { fr: 'Progression', en: 'Progress' },
-    loading: { fr: 'Chargement', en: 'Loading' },
-    spinner: { fr: 'Indicateur de chargement', en: 'Spinner' },
-    modal: { fr: 'Fenêtre modale', en: 'Modal' },
-    popup: { fr: 'Fenêtre contextuelle', en: 'Popup' },
-    alert: { fr: 'Alerte', en: 'Alert' },
-    notification: { fr: 'Notification', en: 'Notification' },
-    message: { fr: 'Message', en: 'Message' },
-    banner: { fr: 'Bannière', en: 'Banner' },
-    badge: { fr: 'Badge', en: 'Badge' },
-    tag: { fr: 'Étiquette', en: 'Tag' },
-    chip: { fr: 'Puce', en: 'Chip' },
-    card: { fr: 'Carte', en: 'Card' },
-    panel: { fr: 'Panneau', en: 'Panel' },
-    section: { fr: 'Section', en: 'Section' },
-    tab: { fr: 'Onglet', en: 'Tab' },
-    page: { fr: 'Page', en: 'Page' },
-    step: { fr: 'Étape', en: 'Step' },
-    wizard: { fr: 'Assistant', en: 'Wizard' },
-    guide: { fr: 'Guide', en: 'Guide' },
-    tutorial: { fr: 'Tutoriel', en: 'Tutorial' },
-    demo: { fr: 'Démonstration', en: 'Demo' },
-    preview: { fr: 'Aperçu', en: 'Preview' },
-    template: { fr: 'Modèle', en: 'Template' },
-    sample: { fr: 'Échantillon', en: 'Sample' },
-    example: { fr: 'Exemple', en: 'Example' }
-  },
-
-  // Messages
-  messages: {
-    welcome: { fr: 'Bienvenue', en: 'Welcome' },
-    goodbye: { fr: 'Au revoir', en: 'Goodbye' },
-    thankyou: { fr: 'Merci', en: 'Thank you' },
-    please: { fr: 'S\'il vous plaît', en: 'Please' },
-    sorry: { fr: 'Désolé', en: 'Sorry' },
-    excuse: { fr: 'Excusez-moi', en: 'Excuse me' },
-    congratulations: { fr: 'Félicitations', en: 'Congratulations' },
-    goodLuck: { fr: 'Bonne chance', en: 'Good luck' },
-    haveANiceDay: { fr: 'Bonne journée', en: 'Have a nice day' },
-    seeYouLater: { fr: 'À bientôt', en: 'See you later' },
-    seeYouSoon: { fr: 'À très bientôt', en: 'See you soon' },
-    pleaseTryAgain: { fr: 'Veuillez réessayer', en: 'Please try again' },
-    contactSupport: { fr: 'Contactez le support', en: 'Contact support' },
-    underMaintenance: { fr: 'En maintenance', en: 'Under maintenance' },
-    temporarilyUnavailable: { fr: 'Temporairement indisponible', en: 'Temporarily unavailable' },
-    comingSoon: { fr: 'Bientôt disponible', en: 'Coming soon' },
-    inDevelopment: { fr: 'En développement', en: 'In development' },
-    betaVersion: { fr: 'Version bêta', en: 'Beta version' },
-    experimentalFeature: { fr: 'Fonctionnalité expérimentale', en: 'Experimental feature' },
-    newFeature: { fr: 'Nouvelle fonctionnalité', en: 'New feature' },
-    improvement: { fr: 'Amélioration', en: 'Improvement' },
-    bugFix: { fr: 'Correction de bogue', en: 'Bug fix' },
-    securityUpdate: { fr: 'Mise à jour de sécurité', en: 'Security update' },
-    maintenanceWindow: { fr: 'Fenêtre de maintenance', en: 'Maintenance window' },
-    plannedOutage: { fr: 'Interruption planifiée', en: 'Planned outage' },
-    emergencyMaintenance: { fr: 'Maintenance d\'urgence', en: 'Emergency maintenance' },
-    serviceRestored: { fr: 'Service rétabli', en: 'Service restored' },
-    allSystemsOperational: { fr: 'Tous les systèmes opérationnels', en: 'All systems operational' },
-    partialOutage: { fr: 'Interruption partielle', en: 'Partial outage' },
-    majorOutage: { fr: 'Interruption majeure', en: 'Major outage' },
-    investigating: { fr: 'Investigation en cours', en: 'Investigating' },
-    identified: { fr: 'Identifié', en: 'Identified' },
-    monitoring: { fr: 'Surveillance', en: 'Monitoring' },
-    resolved: { fr: 'Résolu', en: 'Resolved' }
+    theme: { fr: 'Thème', en: 'Theme' }
   },
 
   // Temps et dates
@@ -447,10 +343,17 @@ export const PERMIT_TRANSLATIONS: TranslationGroup = {
     client: { fr: 'Client', en: 'Client' },
     representative: { fr: 'Représentant', en: 'Representative' },
     witness: { fr: 'Témoin', en: 'Witness' }
-  },
+  }
+};
+// =================== COMPONENTS/STEPS/STEP4PERMITS/CONSTANTS/TRANSLATIONS.TS - SECTION 2 ===================
+// Suite des traductions - Équipements, Interface utilisateur et fonctions utilitaires
+"use client";
 
-  // Équipements
-  equipment: {
+// =================== TRADUCTIONS ÉQUIPEMENTS ===================
+
+export const EQUIPMENT_TRANSLATIONS: TranslationGroup = {
+  // Types d'équipements
+  types: {
     detector: { fr: 'Détecteur', en: 'Detector' },
     monitor: { fr: 'Moniteur', en: 'Monitor' },
     sensor: { fr: 'Capteur', en: 'Sensor' },
@@ -489,11 +392,35 @@ export const PERMIT_TRANSLATIONS: TranslationGroup = {
     system: { fr: 'Système', en: 'System' }
   },
 
-  // Tests et mesures atmosphériques
-  atmospheric: {
+  // États équipements
+  status: {
+    available: { fr: 'Disponible', en: 'Available' },
+    inUse: { fr: 'En utilisation', en: 'In Use' },
+    maintenance: { fr: 'En maintenance', en: 'Under Maintenance' },
+    calibration: { fr: 'En calibration', en: 'Under Calibration' },
+    repair: { fr: 'En réparation', en: 'Under Repair' },
+    outOfService: { fr: 'Hors service', en: 'Out of Service' },
+    damaged: { fr: 'Endommagé', en: 'Damaged' },
+    expired: { fr: 'Expiré', en: 'Expired' },
+    recalled: { fr: 'Rappelé', en: 'Recalled' },
+    quarantined: { fr: 'En quarantaine', en: 'Quarantined' },
+    certified: { fr: 'Certifié', en: 'Certified' },
+    inspected: { fr: 'Inspecté', en: 'Inspected' },
+    tested: { fr: 'Testé', en: 'Tested' },
+    validated: { fr: 'Validé', en: 'Validated' },
+    approved: { fr: 'Approuvé', en: 'Approved' }
+  }
+};
+
+// =================== TRADUCTIONS TESTS ATMOSPHÉRIQUES ===================
+
+export const ATMOSPHERIC_TRANSLATIONS: TranslationGroup = {
+  // Paramètres atmosphériques
+  parameters: {
     oxygen: { fr: 'Oxygène', en: 'Oxygen' },
     lel: { fr: 'LIE', en: 'LEL' },
     lowerExplosiveLimit: { fr: 'Limite inférieure d\'explosivité', en: 'Lower Explosive Limit' },
+    upperExplosiveLimit: { fr: 'Limite supérieure d\'explosivité', en: 'Upper Explosive Limit' },
     hydrogenSulfide: { fr: 'Sulfure d\'hydrogène', en: 'Hydrogen Sulfide' },
     carbonMonoxide: { fr: 'Monoxyde de carbone', en: 'Carbon Monoxide' },
     carbonDioxide: { fr: 'Dioxyde de carbone', en: 'Carbon Dioxide' },
@@ -502,6 +429,9 @@ export const PERMIT_TRANSLATIONS: TranslationGroup = {
     ammonia: { fr: 'Ammoniac', en: 'Ammonia' },
     methane: { fr: 'Méthane', en: 'Methane' },
     propane: { fr: 'Propane', en: 'Propane' },
+    benzene: { fr: 'Benzène', en: 'Benzene' },
+    toluene: { fr: 'Toluène', en: 'Toluene' },
+    xylene: { fr: 'Xylène', en: 'Xylene' },
     temperature: { fr: 'Température', en: 'Temperature' },
     humidity: { fr: 'Humidité', en: 'Humidity' },
     pressure: { fr: 'Pression', en: 'Pressure' },
@@ -519,118 +449,48 @@ export const PERMIT_TRANSLATIONS: TranslationGroup = {
     aerosol: { fr: 'Aérosol', en: 'Aerosol' }
   },
 
-  // Procédures et étapes
-  procedures: {
-    isolation: { fr: 'Isolation', en: 'Isolation' },
-    ventilation: { fr: 'Ventilation', en: 'Ventilation' },
-    purging: { fr: 'Purge', en: 'Purging' },
-    testing: { fr: 'Tests', en: 'Testing' },
-    monitoring: { fr: 'Surveillance', en: 'Monitoring' },
-    communication: { fr: 'Communication', en: 'Communication' },
-    emergency: { fr: 'Urgence', en: 'Emergency' },
-    rescue: { fr: 'Sauvetage', en: 'Rescue' },
-    evacuation: { fr: 'Évacuation', en: 'Evacuation' },
-    containment: { fr: 'Confinement', en: 'Containment' },
-    decontamination: { fr: 'Décontamination', en: 'Decontamination' },
-    cleanup: { fr: 'Nettoyage', en: 'Cleanup' },
-    restoration: { fr: 'Remise en état', en: 'Restoration' },
-    documentation: { fr: 'Documentation', en: 'Documentation' },
-    training: { fr: 'Formation', en: 'Training' },
-    briefing: { fr: 'Briefing', en: 'Briefing' },
-    debriefing: { fr: 'Débriefing', en: 'Debriefing' },
-    preparation: { fr: 'Préparation', en: 'Preparation' },
-    setup: { fr: 'Installation', en: 'Setup' },
-    calibration: { fr: 'Calibration', en: 'Calibration' },
-    verification: { fr: 'Vérification', en: 'Verification' },
-    validation: { fr: 'Validation', en: 'Validation' },
-    inspection: { fr: 'Inspection', en: 'Inspection' },
-    maintenance: { fr: 'Maintenance', en: 'Maintenance' },
-    repair: { fr: 'Réparation', en: 'Repair' },
-    replacement: { fr: 'Remplacement', en: 'Replacement' },
-    upgrade: { fr: 'Mise à niveau', en: 'Upgrade' },
-    installation: { fr: 'Installation', en: 'Installation' },
-    commissioning: { fr: 'Mise en service', en: 'Commissioning' },
-    startup: { fr: 'Démarrage', en: 'Startup' },
-    shutdown: { fr: 'Arrêt', en: 'Shutdown' },
-    lockout: { fr: 'Cadenassage', en: 'Lockout' },
-    tagout: { fr: 'Étiquetage', en: 'Tagout' },
-    energization: { fr: 'Mise sous tension', en: 'Energization' },
-    reenergization: { fr: 'Remise sous tension', en: 'Re-energization' }
+  // Unités de mesure
+  units: {
+    percentage: { fr: '%', en: '%' },
+    ppm: { fr: 'ppm', en: 'ppm' },
+    ppb: { fr: 'ppb', en: 'ppb' },
+    mgm3: { fr: 'mg/m³', en: 'mg/m³' },
+    celsius: { fr: '°C', en: '°C' },
+    fahrenheit: { fr: '°F', en: '°F' },
+    pascal: { fr: 'Pa', en: 'Pa' },
+    kpa: { fr: 'kPa', en: 'kPa' },
+    bar: { fr: 'bar', en: 'bar' },
+    psi: { fr: 'psi', en: 'psi' },
+    kmh: { fr: 'km/h', en: 'km/h' },
+    ms: { fr: 'm/s', en: 'm/s' },
+    mph: { fr: 'mph', en: 'mph' },
+    decibel: { fr: 'dB', en: 'dB' },
+    hertz: { fr: 'Hz', en: 'Hz' },
+    microsievert: { fr: 'μSv', en: 'μSv' },
+    millisievert: { fr: 'mSv', en: 'mSv' },
+    rem: { fr: 'rem', en: 'rem' },
+    roentgen: { fr: 'R', en: 'R' }
   },
 
-  // Conformité et réglementations
-  compliance: {
-    regulation: { fr: 'Réglementation', en: 'Regulation' },
-    standard: { fr: 'Norme', en: 'Standard' },
-    code: { fr: 'Code', en: 'Code' },
-    guideline: { fr: 'Directive', en: 'Guideline' },
-    policy: { fr: 'Politique', en: 'Policy' },
-    procedure: { fr: 'Procédure', en: 'Procedure' },
-    protocol: { fr: 'Protocole', en: 'Protocol' },
-    practice: { fr: 'Pratique', en: 'Practice' },
-    requirement: { fr: 'Exigence', en: 'Requirement' },
-    obligation: { fr: 'Obligation', en: 'Obligation' },
-    responsibility: { fr: 'Responsabilité', en: 'Responsibility' },
-    accountability: { fr: 'Reddition de comptes', en: 'Accountability' },
-    liability: { fr: 'Responsabilité civile', en: 'Liability' },
-    penalty: { fr: 'Pénalité', en: 'Penalty' },
-    fine: { fr: 'Amende', en: 'Fine' },
-    violation: { fr: 'Violation', en: 'Violation' },
-    breach: { fr: 'Infraction', en: 'Breach' },
-    noncompliance: { fr: 'Non-conformité', en: 'Non-compliance' },
-    deviation: { fr: 'Déviation', en: 'Deviation' },
-    exception: { fr: 'Exception', en: 'Exception' },
-    waiver: { fr: 'Dérogation', en: 'Waiver' },
-    exemption: { fr: 'Exemption', en: 'Exemption' },
-    variance: { fr: 'Variance', en: 'Variance' },
-    permit: { fr: 'Permis', en: 'Permit' },
-    license: { fr: 'Licence', en: 'License' },
-    certificate: { fr: 'Certificat', en: 'Certificate' },
-    certification: { fr: 'Certification', en: 'Certification' },
-    accreditation: { fr: 'Accréditation', en: 'Accreditation' },
-    qualification: { fr: 'Qualification', en: 'Qualification' },
-    competency: { fr: 'Compétence', en: 'Competency' },
-    authorization: { fr: 'Autorisation', en: 'Authorization' },
-    approval: { fr: 'Approbation', en: 'Approval' },
-    endorsement: { fr: 'Endossement', en: 'Endorsement' },
-    validation: { fr: 'Validation', en: 'Validation' },
-    verification: { fr: 'Vérification', en: 'Verification' },
-    audit: { fr: 'Audit', en: 'Audit' },
-    inspection: { fr: 'Inspection', en: 'Inspection' },
-    assessment: { fr: 'Évaluation', en: 'Assessment' },
-    review: { fr: 'Révision', en: 'Review' },
-    monitoring: { fr: 'Surveillance', en: 'Monitoring' },
-    tracking: { fr: 'Suivi', en: 'Tracking' },
-    reporting: { fr: 'Rapport', en: 'Reporting' },
-    documentation: { fr: 'Documentation', en: 'Documentation' },
-    record: { fr: 'Dossier', en: 'Record' },
-    evidence: { fr: 'Preuve', en: 'Evidence' },
-    proof: { fr: 'Preuve', en: 'Proof' },
-    testimony: { fr: 'Témoignage', en: 'Testimony' },
-    statement: { fr: 'Déclaration', en: 'Statement' },
-    affidavit: { fr: 'Affidavit', en: 'Affidavit' },
-    declaration: { fr: 'Déclaration', en: 'Declaration' },
-    acknowledgment: { fr: 'Reconnaissance', en: 'Acknowledgment' },
-    consent: { fr: 'Consentement', en: 'Consent' },
-    agreement: { fr: 'Accord', en: 'Agreement' },
-    contract: { fr: 'Contrat', en: 'Contract' },
-    covenant: { fr: 'Engagement', en: 'Covenant' },
-    guarantee: { fr: 'Garantie', en: 'Guarantee' },
-    warranty: { fr: 'Garantie', en: 'Warranty' },
-    assurance: { fr: 'Assurance', en: 'Assurance' },
-    insurance: { fr: 'Assurance', en: 'Insurance' },
-    indemnity: { fr: 'Indemnité', en: 'Indemnity' },
-    compensation: { fr: 'Compensation', en: 'Compensation' },
-    remedy: { fr: 'Recours', en: 'Remedy' },
-    correction: { fr: 'Correction', en: 'Correction' },
-    corrective: { fr: 'Correctif', en: 'Corrective' },
-    preventive: { fr: 'Préventif', en: 'Preventive' },
-    proactive: { fr: 'Proactif', en: 'Proactive' },
-    reactive: { fr: 'Réactif', en: 'Reactive' }
+  // États de lecture
+  reading: {
+    normal: { fr: 'Normal', en: 'Normal' },
+    warning: { fr: 'Avertissement', en: 'Warning' },
+    critical: { fr: 'Critique', en: 'Critical' },
+    alarm: { fr: 'Alarme', en: 'Alarm' },
+    safe: { fr: 'Sécuritaire', en: 'Safe' },
+    unsafe: { fr: 'Non sécuritaire', en: 'Unsafe' },
+    acceptable: { fr: 'Acceptable', en: 'Acceptable' },
+    unacceptable: { fr: 'Inacceptable', en: 'Unacceptable' },
+    stable: { fr: 'Stable', en: 'Stable' },
+    unstable: { fr: 'Instable', en: 'Unstable' },
+    increasing: { fr: 'En augmentation', en: 'Increasing' },
+    decreasing: { fr: 'En diminution', en: 'Decreasing' },
+    fluctuating: { fr: 'Fluctuant', en: 'Fluctuating' }
   }
 };
 
-// =================== TRADUCTIONS D'INTERFACE ===================
+// =================== TRADUCTIONS INTERFACE UTILISATEUR ===================
 
 export const UI_TRANSLATIONS: TranslationGroup = {
   // Navigation
@@ -638,9 +498,9 @@ export const UI_TRANSLATIONS: TranslationGroup = {
     home: { fr: 'Accueil', en: 'Home' },
     dashboard: { fr: 'Tableau de bord', en: 'Dashboard' },
     permits: { fr: 'Permis', en: 'Permits' },
-    permits_create: { fr: 'Créer un permis', en: 'Create Permit' },
-    permits_manage: { fr: 'Gérer les permis', en: 'Manage Permits' },
-    permits_history: { fr: 'Historique des permis', en: 'Permit History' },
+    createPermit: { fr: 'Créer un permis', en: 'Create Permit' },
+    managePermits: { fr: 'Gérer les permis', en: 'Manage Permits' },
+    permitHistory: { fr: 'Historique des permis', en: 'Permit History' },
     templates: { fr: 'Modèles', en: 'Templates' },
     personnel: { fr: 'Personnel', en: 'Personnel' },
     equipment: { fr: 'Équipements', en: 'Equipment' },
@@ -654,13 +514,10 @@ export const UI_TRANSLATIONS: TranslationGroup = {
     help: { fr: 'Aide', en: 'Help' },
     support: { fr: 'Support', en: 'Support' },
     about: { fr: 'À propos', en: 'About' },
-    contact: { fr: 'Contact', en: 'Contact' },
-    legal: { fr: 'Mentions légales', en: 'Legal' },
-    privacy: { fr: 'Confidentialité', en: 'Privacy' },
-    terms: { fr: 'Conditions d\'utilisation', en: 'Terms of Use' }
+    contact: { fr: 'Contact', en: 'Contact' }
   },
 
-  // Formulaires
+  // Sections de formulaires
   forms: {
     identification: { fr: 'Identification', en: 'Identification' },
     personnel: { fr: 'Personnel', en: 'Personnel' },
@@ -685,15 +542,11 @@ export const UI_TRANSLATIONS: TranslationGroup = {
     formIncomplete: { fr: 'Formulaire incomplet', en: 'Form incomplete' },
     missingFields: { fr: 'Champs manquants', en: 'Missing fields' },
     invalidFields: { fr: 'Champs invalides', en: 'Invalid fields' },
-    duplicateEntry: { fr: 'Entrée dupliquée', en: 'Duplicate entry' },
     unsavedChanges: { fr: 'Modifications non sauvegardées', en: 'Unsaved changes' },
-    confirmDiscard: { fr: 'Confirmer l\'abandon', en: 'Confirm discard' },
-    saveBeforeLeaving: { fr: 'Sauvegarder avant de quitter', en: 'Save before leaving' },
     autoSaving: { fr: 'Sauvegarde automatique...', en: 'Auto-saving...' },
     autoSaved: { fr: 'Sauvegardé automatiquement', en: 'Auto-saved' },
-    manualSave: { fr: 'Sauvegarde manuelle', en: 'Manual save' },
-    saveFailed: { fr: 'Échec de la sauvegarde', en: 'Save failed' },
-    saveSuccessful: { fr: 'Sauvegarde réussie', en: 'Save successful' }
+    saveSuccessful: { fr: 'Sauvegarde réussie', en: 'Save successful' },
+    saveFailed: { fr: 'Échec de la sauvegarde', en: 'Save failed' }
   },
 
   // Tableaux et listes
@@ -708,12 +561,6 @@ export const UI_TRANSLATIONS: TranslationGroup = {
     search: { fr: 'Rechercher', en: 'Search' },
     reset: { fr: 'Réinitialiser', en: 'Reset' },
     export: { fr: 'Exporter', en: 'Export' },
-    import: { fr: 'Importer', en: 'Import' },
-    add: { fr: 'Ajouter', en: 'Add' },
-    edit: { fr: 'Modifier', en: 'Edit' },
-    delete: { fr: 'Supprimer', en: 'Delete' },
-    view: { fr: 'Voir', en: 'View' },
-    select: { fr: 'Sélectionner', en: 'Select' },
     selectAll: { fr: 'Tout sélectionner', en: 'Select all' },
     deselectAll: { fr: 'Tout désélectionner', en: 'Deselect all' },
     selectedItems: { fr: 'Éléments sélectionnés', en: 'Selected items' },
@@ -727,28 +574,18 @@ export const UI_TRANSLATIONS: TranslationGroup = {
     last: { fr: 'Dernier', en: 'Last' },
     next: { fr: 'Suivant', en: 'Next' },
     previous: { fr: 'Précédent', en: 'Previous' },
-    goToPage: { fr: 'Aller à la page', en: 'Go to page' },
-    rowsPerPage: { fr: 'Lignes par page', en: 'Rows per page' },
-    column: { fr: 'Colonne', en: 'Column' },
-    row: { fr: 'Ligne', en: 'Row' },
-    cell: { fr: 'Cellule', en: 'Cell' },
     ascending: { fr: 'Croissant', en: 'Ascending' },
     descending: { fr: 'Décroissant', en: 'Descending' },
     unsorted: { fr: 'Non trié', en: 'Unsorted' },
     sortBy: { fr: 'Trier par', en: 'Sort by' },
     filterBy: { fr: 'Filtrer par', en: 'Filter by' },
-    searchIn: { fr: 'Rechercher dans', en: 'Search in' },
     contains: { fr: 'Contient', en: 'Contains' },
     equals: { fr: 'Égal à', en: 'Equals' },
     startsWith: { fr: 'Commence par', en: 'Starts with' },
     endsWith: { fr: 'Se termine par', en: 'Ends with' },
     greaterThan: { fr: 'Supérieur à', en: 'Greater than' },
     lessThan: { fr: 'Inférieur à', en: 'Less than' },
-    between: { fr: 'Entre', en: 'Between' },
-    isNull: { fr: 'Est vide', en: 'Is null' },
-    isNotNull: { fr: 'N\'est pas vide', en: 'Is not null' },
-    isEmpty: { fr: 'Est vide', en: 'Is empty' },
-    isNotEmpty: { fr: 'N\'est pas vide', en: 'Is not empty' }
+    between: { fr: 'Entre', en: 'Between' }
   },
 
   // Alertes et notifications
@@ -763,9 +600,6 @@ export const UI_TRANSLATIONS: TranslationGroup = {
     notice: { fr: 'Avis', en: 'Notice' },
     reminder: { fr: 'Rappel', en: 'Reminder' },
     update: { fr: 'Mise à jour', en: 'Update' },
-    news: { fr: 'Nouvelles', en: 'News' },
-    announcement: { fr: 'Annonce', en: 'Announcement' },
-    alert: { fr: 'Alerte', en: 'Alert' },
     critical: { fr: 'Critique', en: 'Critical' },
     urgent: { fr: 'Urgent', en: 'Urgent' },
     important: { fr: 'Important', en: 'Important' },
@@ -778,17 +612,12 @@ export const UI_TRANSLATIONS: TranslationGroup = {
     showLess: { fr: 'Afficher moins', en: 'Show less' },
     details: { fr: 'Détails', en: 'Details' },
     moreInfo: { fr: 'Plus d\'informations', en: 'More information' },
-    learnMore: { fr: 'En apprendre plus', en: 'Learn more' },
-    getHelp: { fr: 'Obtenir de l\'aide', en: 'Get help' },
     contactSupport: { fr: 'Contacter le support', en: 'Contact support' },
-    reportIssue: { fr: 'Signaler un problème', en: 'Report issue' },
-    provideFeedback: { fr: 'Donner des commentaires', en: 'Provide feedback' },
-    shareExperience: { fr: 'Partager l\'expérience', en: 'Share experience' },
-    rateExperience: { fr: 'Évaluer l\'expérience', en: 'Rate experience' }
+    reportIssue: { fr: 'Signaler un problème', en: 'Report issue' }
   }
 };
 
-// =================== TRADUCTIONS DE MESSAGES SYSTÈME ===================
+// =================== MESSAGES SYSTÈME ===================
 
 export const SYSTEM_TRANSLATIONS: TranslationGroup = {
   // Messages d'erreur
@@ -813,4 +642,265 @@ export const SYSTEM_TRANSLATIONS: TranslationGroup = {
     permission: { fr: 'Permission refusée', en: 'Permission denied' },
     expired: { fr: 'Session expirée', en: 'Session expired' },
     invalid: { fr: 'Données invalides', en: 'Invalid data' },
-    corrupted: { fr: 'Données corrompues', en
+    corrupted: { fr: 'Données corrompues', en: 'Corrupted data' }
+  },
+
+  // Messages de succès
+  success: {
+    saved: { fr: 'Sauvegardé avec succès', en: 'Successfully saved' },
+    created: { fr: 'Créé avec succès', en: 'Successfully created' },
+    updated: { fr: 'Mis à jour avec succès', en: 'Successfully updated' },
+    deleted: { fr: 'Supprimé avec succès', en: 'Successfully deleted' },
+    submitted: { fr: 'Soumis avec succès', en: 'Successfully submitted' },
+    approved: { fr: 'Approuvé avec succès', en: 'Successfully approved' },
+    completed: { fr: 'Complété avec succès', en: 'Successfully completed' },
+    validated: { fr: 'Validé avec succès', en: 'Successfully validated' },
+    synchronized: { fr: 'Synchronisé avec succès', en: 'Successfully synchronized' },
+    exported: { fr: 'Exporté avec succès', en: 'Successfully exported' },
+    imported: { fr: 'Importé avec succès', en: 'Successfully imported' },
+    uploaded: { fr: 'Téléversé avec succès', en: 'Successfully uploaded' },
+    downloaded: { fr: 'Téléchargé avec succès', en: 'Successfully downloaded' }
+  },
+
+  // Messages informatifs
+  info: {
+    loading: { fr: 'Chargement en cours...', en: 'Loading...' },
+    processing: { fr: 'Traitement en cours...', en: 'Processing...' },
+    saving: { fr: 'Sauvegarde en cours...', en: 'Saving...' },
+    uploading: { fr: 'Téléversement en cours...', en: 'Uploading...' },
+    downloading: { fr: 'Téléchargement en cours...', en: 'Downloading...' },
+    connecting: { fr: 'Connexion en cours...', en: 'Connecting...' },
+    synchronizing: { fr: 'Synchronisation en cours...', en: 'Synchronizing...' },
+    validating: { fr: 'Validation en cours...', en: 'Validating...' },
+    submitting: { fr: 'Soumission en cours...', en: 'Submitting...' },
+    reviewing: { fr: 'Révision en cours...', en: 'Reviewing...' },
+    approving: { fr: 'Approbation en cours...', en: 'Approving...' },
+    completing: { fr: 'Finalisation en cours...', en: 'Completing...' }
+  },
+
+  // Confirmations
+  confirmations: {
+    delete: { fr: 'Êtes-vous sûr de vouloir supprimer ?', en: 'Are you sure you want to delete?' },
+    cancel: { fr: 'Êtes-vous sûr de vouloir annuler ?', en: 'Are you sure you want to cancel?' },
+    submit: { fr: 'Êtes-vous sûr de vouloir soumettre ?', en: 'Are you sure you want to submit?' },
+    approve: { fr: 'Êtes-vous sûr de vouloir approuver ?', en: 'Are you sure you want to approve?' },
+    reject: { fr: 'Êtes-vous sûr de vouloir rejeter ?', en: 'Are you sure you want to reject?' },
+    reset: { fr: 'Êtes-vous sûr de vouloir réinitialiser ?', en: 'Are you sure you want to reset?' },
+    clear: { fr: 'Êtes-vous sûr de vouloir effacer ?', en: 'Are you sure you want to clear?' },
+    overwrite: { fr: 'Êtes-vous sûr de vouloir remplacer ?', en: 'Are you sure you want to overwrite?' },
+    discard: { fr: 'Êtes-vous sûr de vouloir abandonner ?', en: 'Are you sure you want to discard?' },
+    logout: { fr: 'Êtes-vous sûr de vouloir vous déconnecter ?', en: 'Are you sure you want to logout?' },
+    leave: { fr: 'Êtes-vous sûr de vouloir quitter ?', en: 'Are you sure you want to leave?' },
+    proceed: { fr: 'Voulez-vous continuer ?', en: 'Do you want to proceed?' }
+  }
+};
+
+// =================== FONCTIONS UTILITAIRES ===================
+
+export function getTranslation(
+  group: TranslationGroup,
+  key: string,
+  language: Language = 'fr'
+): string {
+  const keys = key.split('.');
+  let current: any = group;
+  
+  for (const k of keys) {
+    if (current && typeof current === 'object' && k in current) {
+      current = current[k];
+    } else {
+      return key; // Retourne la clé si la traduction n'est pas trouvée
+    }
+  }
+  
+  if (current && typeof current === 'object' && language in current) {
+    return current[language];
+  }
+  
+  return key; // Retourne la clé si la traduction n'est pas trouvée
+}
+
+export function translate(key: string, language: Language = 'fr'): string {
+  // Essaie dans différents groupes de traductions
+  const groups = [
+    GENERAL_TRANSLATIONS,
+    PERMIT_TRANSLATIONS,
+    EQUIPMENT_TRANSLATIONS,
+    ATMOSPHERIC_TRANSLATIONS,
+    UI_TRANSLATIONS,
+    SYSTEM_TRANSLATIONS
+  ];
+  
+  for (const group of groups) {
+    const translation = getTranslation(group, key, language);
+    if (translation !== key) {
+      return translation;
+    }
+  }
+  
+  return key; // Retourne la clé si aucune traduction n'est trouvée
+}
+
+export function t(key: string, language: Language = 'fr'): string {
+  return translate(key, language);
+}
+
+export function getAvailableLanguages(): Language[] {
+  return ['fr', 'en'];
+}
+
+export function isValidLanguage(language: string): language is Language {
+  return ['fr', 'en'].includes(language as Language);
+}
+
+export function getLanguageName(language: Language): string {
+  const names: Record<Language, string> = {
+    fr: 'Français',
+    en: 'English'
+  };
+  return names[language] || language;
+}
+
+export function getLanguageFlag(language: Language): string {
+  const flags: Record<Language, string> = {
+    fr: '🇫🇷',
+    en: '🇬🇧'
+  };
+  return flags[language] || '🌐';
+}
+
+export function formatTranslationKey(key: string): string {
+  return key
+    .split('.')
+    .map(part => part.replace(/([A-Z])/g, ' $1'))
+    .join(' › ')
+    .replace(/^\w/, c => c.toUpperCase());
+}
+
+export function searchTranslations(
+  query: string,
+  language: Language = 'fr',
+  groups: TranslationGroup[] = []
+): Array<{ key: string; value: string; group: string }> {
+  const searchGroups = groups.length > 0 ? groups : [
+    GENERAL_TRANSLATIONS,
+    PERMIT_TRANSLATIONS,
+    EQUIPMENT_TRANSLATIONS,
+    ATMOSPHERIC_TRANSLATIONS,
+    UI_TRANSLATIONS,
+    SYSTEM_TRANSLATIONS
+  ];
+  
+  const results: Array<{ key: string; value: string; group: string }> = [];
+  const searchTerm = query.toLowerCase();
+  
+  const searchInGroup = (group: TranslationGroup, groupName: string, prefix = '') => {
+    for (const [key, value] of Object.entries(group)) {
+      const fullKey = prefix ? `${prefix}.${key}` : key;
+      
+      if (typeof value === 'object' && ('fr' in value || 'en' in value)) {
+        const translation = value as Translation;
+        const translatedValue = translation[language] || translation.fr;
+        
+        if (
+          key.toLowerCase().includes(searchTerm) ||
+          translatedValue.toLowerCase().includes(searchTerm)
+        ) {
+          results.push({
+            key: fullKey,
+            value: translatedValue,
+            group: groupName
+          });
+        }
+      } else if (typeof value === 'object') {
+        searchInGroup(value as TranslationGroup, groupName, fullKey);
+      }
+    }
+  };
+  
+  const groupNames = [
+    'General',
+    'Permits',
+    'Equipment',
+    'Atmospheric',
+    'UI',
+    'System'
+  ];
+  
+  searchGroups.forEach((group, index) => {
+    searchInGroup(group, groupNames[index] || 'Unknown');
+  });
+  
+  return results.sort((a, b) => a.key.localeCompare(b.key));
+}
+
+export function validateTranslationCompleteness(): {
+  isComplete: boolean;
+  missingTranslations: string[];
+  stats: {
+    total: number;
+    complete: number;
+    missing: number;
+    completionRate: number;
+  };
+} {
+  const missing: string[] = [];
+  let total = 0;
+  let complete = 0;
+  
+  const checkGroup = (group: TranslationGroup, prefix = '') => {
+    for (const [key, value] of Object.entries(group)) {
+      const fullKey = prefix ? `${prefix}.${key}` : key;
+      
+      if (typeof value === 'object' && ('fr' in value || 'en' in value)) {
+        const translation = value as Translation;
+        total++;
+        
+        if (translation.fr && translation.en) {
+          complete++;
+        } else {
+          missing.push(`${fullKey}: ${!translation.fr ? 'fr' : ''} ${!translation.en ? 'en' : ''}`);
+        }
+      } else if (typeof value === 'object') {
+        checkGroup(value as TranslationGroup, fullKey);
+      }
+    }
+  };
+  
+  const allGroups = [
+    GENERAL_TRANSLATIONS,
+    PERMIT_TRANSLATIONS,
+    EQUIPMENT_TRANSLATIONS,
+    ATMOSPHERIC_TRANSLATIONS,
+    UI_TRANSLATIONS,
+    SYSTEM_TRANSLATIONS
+  ];
+  
+  allGroups.forEach(group => checkGroup(group));
+  
+  return {
+    isComplete: missing.length === 0,
+    missingTranslations: missing,
+    stats: {
+      total,
+      complete,
+      missing: missing.length,
+      completionRate: total > 0 ? (complete / total) * 100 : 100
+    }
+  };
+}
+
+// =================== EXPORTS COMBINÉS ===================
+
+export const ALL_TRANSLATIONS = {
+  general: GENERAL_TRANSLATIONS,
+  permits: PERMIT_TRANSLATIONS,
+  equipment: EQUIPMENT_TRANSLATIONS,
+  atmospheric: ATMOSPHERIC_TRANSLATIONS,
+  ui: UI_TRANSLATIONS,
+  system: SYSTEM_TRANSLATIONS
+} as const;
+
+export type TranslationKeys = keyof typeof ALL_TRANSLATIONS;
+
+export default ALL_TRANSLATIONS;
