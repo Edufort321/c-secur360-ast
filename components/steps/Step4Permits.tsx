@@ -493,10 +493,9 @@ const generateCompliantPermits = (language: 'fr' | 'en', province: string): Lega
 
   return basePermits;
 };
-// =================== SECTION 2 - FORMULAIRE COMPLET CORRIGÉ ===================
-// Cette section REMPLACE complètement la Section 2 existante dans Step4Permits.tsx
+// =================== SECTION 2-A - FORMULAIRE SCROLL CONTINU + TIMERS SURVEILLANCE ===================
+// Remplace complètement le FormulaireLegalScrollable existant
 
-// =================== COMPOSANT FORMULAIRE SCROLL MOBILE ===================
 const FormulaireLegalScrollable: React.FC<{
   permit: LegalPermit;
   onFormChange: (data: any) => void;
@@ -506,41 +505,59 @@ const FormulaireLegalScrollable: React.FC<{
   const t = getTexts(language);
   const regulation = PROVINCIAL_REGULATIONS[permit.province[0] as keyof typeof PROVINCIAL_REGULATIONS];
   
-  // États pour mode scroll
-  const [currentSection, setCurrentSection] = useState(0);
+  // États pour scroll continu et tests automatiques
   const [formData, setFormData] = useState({
-    // Section 1: Identification
+    // Section 1: Identification avec numéros de formulaire provinciaux
     codePermis: permit.code,
+    numeroFormulaire: permit.province[0] === 'QC' ? 
+      (permit.id.includes('confined') ? 'CNESST-EC-2025' : 
+       permit.id.includes('hot-work') ? 'CNESST-TC-2025' : 'CNESST-EX-2025') :
+      permit.province[0] === 'ON' ? 
+      (permit.id.includes('confined') ? 'OHSA-CS-2025' : 
+       permit.id.includes('hot-work') ? 'OHSA-HW-2025' : 'OHSA-EX-2025') :
+      permit.province[0] === 'BC' ? 
+      (permit.id.includes('confined') ? 'WSBC-CS-2025' : 'WSBC-EX-2025') : 'OHS-AB-2025',
     lieuTravail: '',
     descriptionTravaux: '',
     dateDebut: new Date().toISOString().split('T')[0],
     dateFin: '',
     dureeEstimee: '',
+    typePermis: permit.id.includes('confined') ? 'espace-clos' : 
+                permit.id.includes('hot-work') ? 'travail-chaud' : 'excavation',
     
-    // Section 2: Personnel (conforme réglementations)
+    // Section 2: Personnel conforme réglementations
     superviseur: null as Superviseur | null,
     surveillants: [] as Surveillant[],
     entrants: [] as Entrant[],
     
-    // Section 3: Tests atmosphériques (conformes CNESST 2025)
+    // Section 3: Tests atmosphériques avec reprise automatique (pour espaces clos)
     atmospherique: {
       oxygene: { 
         niveau: 0, 
         conformeCNESST: false, 
         heureTest: '', 
-        equipementUtilise: '' 
+        equipementUtilise: '',
+        dernierEchec: null as Date | null,
+        tentativeReprise: 0,
+        enAttente: false
       },
       gazToxiques: { 
         detection: [] as string[], 
         niveaux: {} as Record<string, number>, 
         seuils: {} as Record<string, number>,
-        conforme: false 
+        conforme: false,
+        dernierEchec: null as Date | null,
+        tentativeReprise: 0,
+        enAttente: false
       },
       gazCombustibles: { 
         pourcentageLIE: 0, 
         conformeReglement: false, 
         typeGaz: '',
-        equipementTest: '' 
+        equipementTest: '',
+        dernierEchec: null as Date | null,
+        tentativeReprise: 0,
+        enAttente: false
       },
       ventilation: { 
         active: false, 
@@ -548,26 +565,78 @@ const FormulaireLegalScrollable: React.FC<{
         directionFlux: '',
         efficacite: ''
       }
-    } as AtmosphericData,
+    },
     
-    // Section 4: Équipements réglementaires
+    // Section 4: Équipements spécifiques selon type de permis
     equipements: {
       protection: [] as string[],
       detection: [] as string[],
       sauvetage: [] as string[],
-      communication: [] as string[]
+      communication: [] as string[],
+      // Spécifique travail à chaud
+      preventionIncendie: {
+        extincteurs: false,
+        couverturesIgnifuges: false,
+        arrosagePreventif: false,
+        degagementCombustibles: 0 // mètres
+      },
+      // Spécifique excavation
+      etancemment: {
+        requis: false,
+        type: '', // hydraulique, bois, aluminium
+        profondeurRequise: 0,
+        ingenieurPlan: false
+      }
     },
     
-    // Section 5: Procédures d'urgence obligatoires
-    urgence: {
-      planIntervention: '',
-      contactsUrgence: '',
-      equipeSauvetage: '',
-      hopitalProche: '',
-      procedureEvacuation: ''
+    // Section 5: Procédures spécifiques selon permis
+    procedures: {
+      // Travail à chaud - NFPA 51B
+      travailChaud: {
+        zoneDegagee: 11, // 11 mètres selon Ontario OHSA
+        surveillanceIncendie: false,
+        surveysPostTravaux: 30, // 30 minutes minimum selon NFPA
+        equipementEteint: false,
+        autorisationSuperviseur: false
+      },
+      // Excavation - O. Reg. 213/91
+      excavation: {
+        localisationServices: false, // Ontario Reg 213/91 s.228
+        noticeRequired: false, // >1.2m depth
+        protectionAdjacentes: false,
+        planIngenieur: false,
+        accesSortie: false // Échelles max 8m selon CCOHS
+      },
+      // Espace clos - CNESST/OHSA
+      espaceClos: {
+        analyseContinue: false,
+        surveillantDesigne: false,
+        procedureSecours: false,
+        communicationEtablie: false
+      }
     },
     
-    // Section 6: Validation finale et conformité
+    // Section 6: Surveillance post-travaux avec timers
+    surveillance: {
+      travauxTermines: false,
+      heureFin: '',
+      surveillanceActive: false,
+      timerActif: false,
+      dureeRequise: permit.id.includes('hot-work') ? 30 : // 30 min travail chaud
+                    permit.id.includes('confined') ? 60 : // 60 min espace clos
+                    permit.id.includes('excavation') ? 0 : 30, // Pas de timer pour excavation sauf conditions spéciales
+      tempsRestant: 0,
+      interventionEnCours: false,
+      incidents: [] as Array<{
+        id: string;
+        heure: string;
+        description: string;
+        actionPrise: string;
+        timerRedemarrage: boolean;
+      }>
+    },
+    
+    // Section 7: Validation finale et conformité
     validation: {
       tousTestsCompletes: false,
       documentationComplete: false,
@@ -575,48 +644,324 @@ const FormulaireLegalScrollable: React.FC<{
       equipementsVerifies: false,
       conformeReglementation: false,
       signatureResponsable: '',
-      dateValidation: ''
+      dateValidation: '',
+      certificationsValides: false,
+      planUrgenceApprouve: false,
+      numeroFormulaireFinal: ''
     }
   });
 
-  const sections = [
-    { 
-      id: 'identification', 
-      title: language === 'fr' ? 'Identification du Projet' : 'Project Identification',
-      icon: '📋',
-      required: true
-    },
-    { 
-      id: 'personnel', 
-      title: language === 'fr' ? 'Personnel Autorisé' : 'Authorized Personnel',
-      icon: '👥',
-      required: true
-    },
-    { 
-      id: 'atmospherique', 
-      title: language === 'fr' ? 'Tests Atmosphériques' : 'Atmospheric Testing',
-      icon: '🧪',
-      required: permit.legalRequirements.atmosphericTesting
-    },
-    { 
-      id: 'equipements', 
-      title: language === 'fr' ? 'Équipements Sécurité' : 'Safety Equipment',
-      icon: '🛡️',
-      required: true
-    },
-    { 
-      id: 'urgence', 
-      title: language === 'fr' ? 'Procédures Urgence' : 'Emergency Procedures',
-      icon: '🚨',
-      required: true
-    },
-    { 
-      id: 'validation', 
-      title: language === 'fr' ? 'Validation Conformité' : 'Compliance Validation',
-      icon: '✅',
-      required: true
+  // États pour timer et reprise automatique des tests
+  const [timerReprise, setTimerReprise] = useState<Record<string, number>>({});
+  const [formulaireBloqueJusqu, setFormulaireBloqueJusqu] = useState<Date | null>(null);
+  const [tempsRestant, setTempsRestant] = useState<number>(0);
+  
+  // États pour timer de surveillance post-travaux
+  const [timerSurveillance, setTimerSurveillance] = useState<NodeJS.Timeout | null>(null);
+  const [surveillanceEnCours, setSurveillanceEnCours] = useState(false);
+  const [tempsRestantSurveillance, setTempsRestantSurveillance] = useState(0);
+
+  // Référence pour scroll continu
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Fonction pour démarrer le timer de surveillance post-travaux
+  const demarrerSurveillancePostTravaux = () => {
+    if (!formData.surveillance.travauxTermines) {
+      alert('❌ Veuillez d\'abord cocher "Travaux terminés" avant de démarrer la surveillance');
+      return;
     }
-  ];
+
+    const dureeMinutes = formData.surveillance.dureeRequise;
+    if (dureeMinutes === 0) {
+      alert('ℹ️ Aucune surveillance post-travaux requise pour ce type de permis');
+      return;
+    }
+
+    // Démarrer le timer
+    const dureeSecondes = dureeMinutes * 60;
+    setTempsRestantSurveillance(dureeSecondes);
+    setSurveillanceEnCours(true);
+    
+    // Mettre à jour formData
+    const newFormData = {
+      ...formData,
+      surveillance: {
+        ...formData.surveillance,
+        surveillanceActive: true,
+        timerActif: true,
+        heureFin: new Date().toLocaleTimeString(),
+        tempsRestant: dureeSecondes
+      }
+    };
+    setFormData(newFormData);
+    onFormChange(newFormData);
+
+    // Démarrer le countdown
+    const timer = setInterval(() => {
+      setTempsRestantSurveillance(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setSurveillanceEnCours(false);
+          alert(`✅ SURVEILLANCE TERMINÉE\n\n` +
+                `🕐 Durée: ${dureeMinutes} minutes\n` +
+                `✅ Aucun incident signalé\n` +
+                `📋 Permis peut être fermé définitivement`);
+          
+          // Mettre à jour formData
+          const finalFormData = {
+            ...newFormData,
+            surveillance: {
+              ...newFormData.surveillance,
+              surveillanceActive: false,
+              timerActif: false
+            }
+          };
+          setFormData(finalFormData);
+          onFormChange(finalFormData);
+          
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    setTimerSurveillance(timer);
+
+    alert(`🚨 SURVEILLANCE POST-TRAVAUX DÉMARRÉE\n\n` +
+          `⏰ Durée: ${dureeMinutes} minutes\n` +
+          `👀 Surveillance continue requise\n` +
+          `🔥 Attention aux risques résiduels\n\n` +
+          `Si problème: Cochez "Intervention en cours"`);
+  };
+
+  // Fonction pour signaler une intervention pendant la surveillance
+  const signalerIntervention = () => {
+    if (!surveillanceEnCours) {
+      alert('❌ Aucune surveillance en cours');
+      return;
+    }
+
+    const description = prompt('📝 Décrivez l\'incident ou le problème détecté:');
+    if (!description) return;
+
+    const actionPrise = prompt('🔧 Décrivez l\'action prise pour corriger:');
+    if (!actionPrise) return;
+
+    const redemarrerTimer = confirm('🔄 Redémarrer le timer de surveillance depuis le début ?\n\n' +
+                                   'OUI = Timer redémarre à ' + formData.surveillance.dureeRequise + ' minutes\n' +
+                                   'NON = Timer continue normalement');
+
+    const nouvelIncident = {
+      id: `incident_${Date.now()}`,
+      heure: new Date().toLocaleTimeString(),
+      description,
+      actionPrise,
+      timerRedemarrage: redemarrerTimer
+    };
+
+    // Ajouter l'incident
+    const newFormData = {
+      ...formData,
+      surveillance: {
+        ...formData.surveillance,
+        incidents: [...formData.surveillance.incidents, nouvelIncident],
+        interventionEnCours: true
+      }
+    };
+    setFormData(newFormData);
+    onFormChange(newFormData);
+
+    if (redemarrerTimer) {
+      // Redémarrer le timer depuis le début
+      if (timerSurveillance) {
+        clearInterval(timerSurveillance);
+      }
+      
+      const dureeSecondes = formData.surveillance.dureeRequise * 60;
+      setTempsRestantSurveillance(dureeSecondes);
+      
+      const timer = setInterval(() => {
+        setTempsRestantSurveillance(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setSurveillanceEnCours(false);
+            alert(`✅ SURVEILLANCE TERMINÉE APRÈS INTERVENTION\n\n` +
+                  `🔧 ${formData.surveillance.incidents.length} incident(s) traité(s)\n` +
+                  `📋 Permis peut être fermé`);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      setTimerSurveillance(timer);
+
+      alert(`🔄 TIMER REDÉMARRÉ\n\n` +
+            `⏰ Nouvelle surveillance: ${formData.surveillance.dureeRequise} minutes\n` +
+            `📝 Incident enregistré et traité`);
+    } else {
+      alert(`📝 INCIDENT ENREGISTRÉ\n\n` +
+            `⏰ Timer continue normalement\n` +
+            `🔧 Action corrective documentée`);
+    }
+
+    // Réinitialiser le flag d'intervention
+    setTimeout(() => {
+      const updatedFormData = {
+        ...newFormData,
+        surveillance: {
+          ...newFormData.surveillance,
+          interventionEnCours: false
+        }
+      };
+      setFormData(updatedFormData);
+      onFormChange(updatedFormData);
+    }, 2000);
+  };
+
+  // Fonction d'arrêt d'urgence de la surveillance
+  const arreterSurveillance = () => {
+    if (!surveillanceEnCours) return;
+
+    const raison = prompt('⚠️ Raison de l\'arrêt de surveillance:');
+    if (!raison) return;
+
+    if (timerSurveillance) {
+      clearInterval(timerSurveillance);
+    }
+    
+    setSurveillanceEnCours(false);
+    setTempsRestantSurveillance(0);
+
+    const newFormData = {
+      ...formData,
+      surveillance: {
+        ...formData.surveillance,
+        surveillanceActive: false,
+        timerActif: false,
+        incidents: [...formData.surveillance.incidents, {
+          id: `arret_${Date.now()}`,
+          heure: new Date().toLocaleTimeString(),
+          description: `Arrêt surveillance: ${raison}`,
+          actionPrise: 'Surveillance interrompue par opérateur',
+          timerRedemarrage: false
+        }]
+      }
+    };
+    setFormData(newFormData);
+    onFormChange(newFormData);
+
+    alert(`🛑 SURVEILLANCE ARRÊTÉE\n\n` +
+          `📝 Raison: ${raison}\n` +
+          `⚠️ Surveillance manuelle requise`);
+  };
+
+  // Fonction de validation des tests avec reprise automatique
+  const validerTest = (typeTest: 'oxygene' | 'gazToxiques' | 'gazCombustibles', valeur: number) => {
+    let conforme = false;
+    
+    switch (typeTest) {
+      case 'oxygene':
+        conforme = valeur >= (regulation?.oxygenRange.min || 19.5) && valeur <= (regulation?.oxygenRange.max || 23.0);
+        break;
+      case 'gazCombustibles':
+        conforme = valeur <= (regulation?.flammableGasLimit || 10);
+        break;
+      default:
+        conforme = true;
+    }
+
+    if (!conforme) {
+      // Test échoué - programmer reprise automatique
+      const maintenant = new Date();
+      const repriseEn15Min = new Date(maintenant.getTime() + 15 * 60 * 1000);
+      
+      setFormulaireBloqueJusqu(repriseEn15Min);
+      setTempsRestant(15 * 60); // 15 minutes en secondes
+      
+      // Mettre à jour les données du test
+      const nouveauFormData = { ...formData };
+      (nouveauFormData.atmospherique[typeTest] as any).dernierEchec = maintenant;
+      (nouveauFormData.atmospherique[typeTest] as any).tentativeReprise = ((nouveauFormData.atmospherique[typeTest] as any).tentativeReprise || 0) + 1;
+      (nouveauFormData.atmospherique[typeTest] as any).enAttente = true;
+      
+      setFormData(nouveauFormData);
+      onFormChange(nouveauFormData);
+      
+      // Démarrer timer de 15 minutes
+      startTimer(typeTest);
+      
+      alert(`🚨 ÉCHEC DU TEST ${typeTest.toUpperCase()}\n\n` +
+            `❌ Valeur non conforme: ${valeur}\n` +
+            `✅ Requis: ${typeTest === 'oxygene' ? `${regulation?.oxygenRange.min}-${regulation?.oxygenRange.max}%` : `≤${regulation?.flammableGasLimit}% LIE`}\n\n` +
+            `⏰ REPRISE AUTOMATIQUE dans 15 minutes\n` +
+            `🔒 Formulaire bloqué jusqu'à la reprise`);
+    } else {
+      // Test réussi - réinitialiser les échecs
+      const nouveauFormData = { ...formData };
+      (nouveauFormData.atmospherique[typeTest] as any).dernierEchec = null;
+      (nouveauFormData.atmospherique[typeTest] as any).tentativeReprise = 0;
+      (nouveauFormData.atmospherique[typeTest] as any).enAttente = false;
+      
+      setFormData(nouveauFormData);
+      onFormChange(nouveauFormData);
+    }
+    
+    return conforme;
+  };
+
+  // Timer de reprise automatique
+  const startTimer = (typeTest: string) => {
+    const timer = setInterval(() => {
+      setTempsRestant(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setFormulaireBloqueJusqu(null);
+          
+          // Réactiver le test
+          const nouveauFormData = { ...formData };
+          (nouveauFormData.atmospherique[typeTest as keyof typeof nouveauFormData.atmospherique] as any).enAttente = false;
+          setFormData(nouveauFormData);
+          
+          alert(`✅ REPRISE AUTOMATIQUE ACTIVÉE\n\n` +
+                `🔓 Formulaire débloqué\n` +
+                `🧪 Vous pouvez relancer le test ${typeTest.toUpperCase()}`);
+          
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  // Hook pour timer
+  useEffect(() => {
+    if (formulaireBloqueJusqu) {
+      const interval = setInterval(() => {
+        const maintenant = new Date();
+        const diff = formulaireBloqueJusqu.getTime() - maintenant.getTime();
+        
+        if (diff <= 0) {
+          setFormulaireBloqueJusqu(null);
+          setTempsRestant(0);
+          clearInterval(interval);
+        } else {
+          setTempsRestant(Math.floor(diff / 1000));
+        }
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [formulaireBloqueJusqu]);
+
+  // Hook pour cleanup du timer de surveillance
+  useEffect(() => {
+    return () => {
+      if (timerSurveillance) {
+        clearInterval(timerSurveillance);
+      }
+    };
+  }, [timerSurveillance]);
 
   const handleInputChange = (field: string, value: any) => {
     const newData = { ...formData, [field]: value };
@@ -624,23 +969,22 @@ const FormulaireLegalScrollable: React.FC<{
     onFormChange(newData);
   };
 
-  const nextSection = () => {
-    if (currentSection < sections.length - 1) {
-      setCurrentSection(currentSection + 1);
+  // Scroll automatique vers section
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element && containerRef.current) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
-  const prevSection = () => {
-    if (currentSection > 0) {
-      setCurrentSection(currentSection - 1);
-    }
+  // Formatage temps restant
+  const formatTempsRestant = (secondes: number) => {
+    const minutes = Math.floor(secondes / 60);
+    const secs = secondes % 60;
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getSectionProgress = () => {
-    return ((currentSection + 1) / sections.length) * 100;
-  };
-
-  // Fonction pour ajouter personnel conforme aux réglementations
+  // Fonctions d'ajout de personnel
   const ajouterSuperviseur = () => {
     const nouveauSuperviseur: Superviseur = {
       id: `superviseur_${Date.now()}`,
@@ -663,7 +1007,7 @@ const FormulaireLegalScrollable: React.FC<{
       id: `entrant_${Date.now()}`,
       nom: '',
       certification: '',
-      age: regulation?.minimumAge || 18, // Conforme à l'âge minimum provincial
+      age: regulation?.minimumAge || 18,
       statutActif: false,
       formationVerifiee: false,
       signature: '',
@@ -684,18 +1028,25 @@ const FormulaireLegalScrollable: React.FC<{
       bottom: 0,
       background: 'rgba(0, 0, 0, 0.95)',
       zIndex: 1000,
-      overflow: 'auto'
+      overflow: 'hidden'
     }}>
-      <div style={{
+      <div ref={containerRef} style={{
         background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.95))',
-        minHeight: '100vh',
-        color: '#ffffff'
+        height: '100vh',
+        color: '#ffffff',
+        overflow: 'auto',
+        scrollBehavior: 'smooth'
       }}>
-        {/* Header fixe avec navigation mobile */}
+        
+        {/* Header fixe avec timer de reprise et surveillance */}
         <div style={{
           position: 'sticky',
           top: 0,
-          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))',
+          background: formulaireBloqueJusqu ? 
+            'linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.8))' :
+            surveillanceEnCours ?
+            'linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.8))' :
+            'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))',
           borderBottom: '1px solid rgba(100, 116, 139, 0.3)',
           padding: '16px 20px',
           zIndex: 100
@@ -712,10 +1063,20 @@ const FormulaireLegalScrollable: React.FC<{
               </h2>
               <div style={{
                 fontSize: '12px',
-                color: '#93c5fd',
+                color: formulaireBloqueJusqu ? '#fecaca' : surveillanceEnCours ? '#fed7aa' : '#93c5fd',
                 fontWeight: '600'
               }}>
-                {permit.code} • {regulation?.name}
+                {formData.numeroFormulaire} • {permit.code} • {regulation?.name}
+                {formulaireBloqueJusqu && (
+                  <span style={{ marginLeft: '12px', color: '#fef2f2' }}>
+                    🔒 BLOQUÉ - Reprise: {formatTempsRestant(tempsRestant)}
+                  </span>
+                )}
+                {surveillanceEnCours && (
+                  <span style={{ marginLeft: '12px', color: '#fffbeb' }}>
+                    👀 SURVEILLANCE: {formatTempsRestant(tempsRestantSurveillance)}
+                  </span>
+                )}
               </div>
             </div>
             <button
@@ -733,259 +1094,528 @@ const FormulaireLegalScrollable: React.FC<{
             </button>
           </div>
 
-          {/* Barre de progression */}
-          <div style={{
-            background: 'rgba(100, 116, 139, 0.3)',
-            borderRadius: '8px',
-            height: '8px',
-            marginBottom: '12px',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-              height: '100%',
-              width: `${getSectionProgress()}%`,
-              borderRadius: '8px',
-              transition: 'width 0.3s ease'
-            }} />
-          </div>
-
-          {/* Indicateur section actuelle */}
+          {/* Navigation sections avec scroll */}
           <div style={{
             display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '12px',
-            fontSize: '14px',
-            fontWeight: '600'
+            gap: '8px',
+            overflowX: 'auto',
+            paddingBottom: '8px'
           }}>
-            <span style={{ fontSize: '20px' }}>{sections[currentSection].icon}</span>
-            <span>{sections[currentSection].title}</span>
-            <span style={{ color: '#94a3b8' }}>
-              ({currentSection + 1}/{sections.length})
-            </span>
+            {[
+              { id: 'identification', title: 'Identification', icon: '📋' },
+              { id: 'personnel', title: 'Personnel', icon: '👥' },
+              { id: 'tests', title: 'Tests/Mesures', icon: '🧪' },
+              { id: 'equipements', title: 'Équipements', icon: '🛡️' },
+              { id: 'procedures', title: 'Procédures', icon: '📝' },
+              { id: 'surveillance', title: 'Surveillance', icon: '⏰' },
+              { id: 'validation', title: 'Validation', icon: '✅' }
+            ].map((section) => (
+              <button
+                key={section.id}
+                onClick={() => scrollToSection(section.id)}
+                disabled={formulaireBloqueJusqu !== null}
+                style={{
+                  padding: '8px 12px',
+                  background: formulaireBloqueJusqu ? 
+                    'rgba(100, 116, 139, 0.3)' : 
+                    'rgba(59, 130, 246, 0.3)',
+                  color: formulaireBloqueJusqu ? '#9ca3af' : '#93c5fd',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: formulaireBloqueJusqu ? 'not-allowed' : 'pointer',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <span>{section.icon}</span>
+                <span>{section.title}</span>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Contenu scrollable */}
-        <div style={{ padding: '24px 20px 120px' }}>
-          
-          {/* Section 1: Identification */}
-          {currentSection === 0 && (
-            <div>
-              <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
-                📋 Identification du Projet
-              </h3>
-              
-              <div style={{ display: 'grid', gap: '20px' }}>
-                <div>
-                  <label style={{
-                    color: '#e2e8f0',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    marginBottom: '8px',
-                    display: 'block'
-                  }}>
-                    Lieu de travail exact *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.lieuTravail}
-                    onChange={(e) => handleInputChange('lieuTravail', e.target.value)}
-                    placeholder="Adresse complète avec coordonnées GPS si possible"
+        {/* Contrôles de surveillance post-travaux */}
+        {formData.surveillance.dureeRequise > 0 && (
+          <div style={{
+            margin: '20px',
+            padding: '20px',
+            background: surveillanceEnCours ? 
+              'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.15))' :
+              'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.15))',
+            border: surveillanceEnCours ? 
+              '2px solid rgba(245, 158, 11, 0.5)' : 
+              '2px solid rgba(59, 130, 246, 0.5)',
+            borderRadius: '12px'
+          }}>
+            <h4 style={{ 
+              color: surveillanceEnCours ? '#f59e0b' : '#60a5fa', 
+              margin: '0 0 16px', 
+              fontSize: '16px', 
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              {surveillanceEnCours ? '🟡' : '🔵'} Surveillance Post-Travaux ({formData.surveillance.dureeRequise} min requise)
+            </h4>
+            
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                color: '#e2e8f0',
+                fontSize: '14px',
+                cursor: 'pointer'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={formData.surveillance.travauxTermines}
+                  onChange={(e) => handleInputChange('surveillance', {
+                    ...formData.surveillance,
+                    travauxTermines: e.target.checked
+                  })}
+                  style={{ transform: 'scale(1.2)' }}
+                />
+                🏁 Travaux terminés
+              </label>
+
+              <button
+                onClick={demarrerSurveillancePostTravaux}
+                disabled={!formData.surveillance.travauxTermines || surveillanceEnCours}
+                style={{
+                  padding: '10px 16px',
+                  background: (!formData.surveillance.travauxTermines || surveillanceEnCours) ? 
+                    'rgba(100, 116, 139, 0.3)' : 
+                    'linear-gradient(135deg, #22c55e, #16a34a)',
+                  color: (!formData.surveillance.travauxTermines || surveillanceEnCours) ? '#9ca3af' : 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: (!formData.surveillance.travauxTermines || surveillanceEnCours) ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}
+              >
+                ▶️ Démarrer Surveillance
+              </button>
+
+              {surveillanceEnCours && (
+                <>
+                  <button
+                    onClick={signalerIntervention}
                     style={{
-                      width: '100%',
-                      padding: '16px',
-                      background: 'rgba(15, 23, 42, 0.8)',
-                      border: formData.lieuTravail ? '2px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)',
-                      borderRadius: '12px',
-                      color: '#ffffff',
-                      fontSize: '16px',
-                      boxSizing: 'border-box'
+                      padding: '10px 16px',
+                      background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '600'
                     }}
-                  />
-                </div>
+                  >
+                    🚨 Intervention en Cours
+                  </button>
 
-                <div>
-                  <label style={{
-                    color: '#e2e8f0',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    marginBottom: '8px',
-                    display: 'block'
-                  }}>
-                    Description détaillée des travaux *
-                  </label>
-                  <textarea
-                    value={formData.descriptionTravaux}
-                    onChange={(e) => handleInputChange('descriptionTravaux', e.target.value)}
-                    placeholder="Décrivez précisément les travaux, les risques identifiés et les mesures préventives..."
+                  <button
+                    onClick={arreterSurveillance}
                     style={{
-                      width: '100%',
-                      padding: '16px',
-                      background: 'rgba(15, 23, 42, 0.8)',
-                      border: formData.descriptionTravaux ? '2px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)',
-                      borderRadius: '12px',
-                      color: '#ffffff',
-                      fontSize: '16px',
-                      minHeight: '120px',
-                      resize: 'vertical',
-                      boxSizing: 'border-box'
+                      padding: '10px 16px',
+                      background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '600'
                     }}
-                  />
-                </div>
+                  >
+                    🛑 Arrêter
+                  </button>
 
-                <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', gap: '16px' }}>
-                  <div>
-                    <label style={{
-                      color: '#e2e8f0',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      marginBottom: '8px',
-                      display: 'block'
-                    }}>
-                      Date de début *
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.dateDebut}
-                      onChange={(e) => handleInputChange('dateDebut', e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '16px',
-                        background: 'rgba(15, 23, 42, 0.8)',
-                        border: '1px solid rgba(100, 116, 139, 0.3)',
-                        borderRadius: '12px',
-                        color: '#ffffff',
-                        fontSize: '16px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
+                  <div style={{
+                    padding: '8px 12px',
+                    background: 'rgba(245, 158, 11, 0.3)',
+                    borderRadius: '6px',
+                    color: '#fbbf24',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    fontFamily: 'monospace'
+                  }}>
+                    ⏱️ {formatTempsRestant(tempsRestantSurveillance)}
                   </div>
+                </>
+              )}
+            </div>
 
-                  <div>
-                    <label style={{
-                      color: '#e2e8f0',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      marginBottom: '8px',
-                      display: 'block'
-                    }}>
-                      Durée estimée
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.dureeEstimee}
-                      onChange={(e) => handleInputChange('dureeEstimee', e.target.value)}
-                      placeholder="Ex: 4 heures, 2 jours"
-                      style={{
-                        width: '100%',
-                        padding: '16px',
-                        background: 'rgba(15, 23, 42, 0.8)',
-                        border: '1px solid rgba(100, 116, 139, 0.3)',
-                        borderRadius: '12px',
-                        color: '#ffffff',
-                        fontSize: '16px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
+            {/* Historique des incidents */}
+            {formData.surveillance.incidents.length > 0 && (
+              <div style={{ marginTop: '16px' }}>
+                <h5 style={{ color: '#94a3b8', fontSize: '12px', margin: '0 0 8px' }}>📝 Historique des incidents:</h5>
+                {formData.surveillance.incidents.map((incident) => (
+                  <div key={incident.id} style={{
+                    fontSize: '11px',
+                    color: '#cbd5e1',
+                    marginBottom: '4px',
+                    padding: '4px 8px',
+                    background: 'rgba(100, 116, 139, 0.1)',
+                    borderRadius: '4px'
+                  }}>
+                    <strong>{incident.heure}</strong>: {incident.description} 
+                    {incident.timerRedemarrage && <span style={{ color: '#f59e0b' }}> (🔄 Timer redémarré)</span>}
                   </div>
-                </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-                {/* Info réglementaire */}
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                  borderRadius: '12px',
-                  padding: '16px'
-                }}>
-                  <h4 style={{ color: '#60a5fa', margin: '0 0 12px', fontSize: '16px', fontWeight: '700' }}>
-                    📋 Exigences Réglementaires - {regulation?.name}
-                  </h4>
-                  <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: '1.6' }}>
-                    <div style={{ marginBottom: '8px' }}>
-                      <strong>Réglementation:</strong> {regulation?.regulation}
-                    </div>
-                    <div style={{ marginBottom: '8px' }}>
-                      <strong>Âge minimum:</strong> {regulation?.minimumAge} ans
-                    </div>
-                    {permit.legalRequirements.atmosphericTesting && (
-                      <div style={{ marginBottom: '8px' }}>
-                        <strong>Tests atmosphériques:</strong> O₂ {regulation?.oxygenRange.min}-{regulation?.oxygenRange.max}%, 
-                        Gaz inflammables ≤{regulation?.flammableGasLimit}% LIE
-                      </div>
-                    )}
-                    <div>
-                      <strong>Autorité:</strong> {regulation?.authority}
-                    </div>
+        {/* Contenu scrollable - sera dans la SECTION 2-B */}
+        <div style={{ 
+          padding: '24px 20px 40px',
+          opacity: formulaireBloqueJusqu ? 0.5 : 1,
+          pointerEvents: formulaireBloqueJusqu ? 'none' : 'auto'
+        }}>
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            color: '#94a3b8'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚧</div>
+            <h3 style={{ color: '#e2e8f0', margin: '0 0 12px' }}>
+              SECTION 2-A Complétée
+            </h3>
+            <p style={{ margin: 0 }}>
+              Timer de surveillance post-travaux + Tests automatiques intégrés
+            </p>
+            <p style={{ margin: '16px 0 0', fontSize: '14px', color: '#60a5fa' }}>
+              🎯 Prêt pour SECTION 2-B: Formulaires spécifiques par type de permis
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+// =================== SECTION 2-B - FORMULAIRES SPÉCIFIQUES PAR TYPE ===================
+// Cette section complète le contenu scrollable de la Section 2-A
+// Remplace le placeholder "SECTION 2-A Complétée" dans le contenu scrollable
+
+        {/* Contenu scrollable complet avec formulaires spécifiques */}
+        <div style={{ 
+          padding: '24px 20px 40px',
+          opacity: formulaireBloqueJusqu ? 0.5 : 1,
+          pointerEvents: formulaireBloqueJusqu ? 'none' : 'auto'
+        }}>
+
+          {/* Section 1: Identification avec formulaire provincial spécifique */}
+          <div id="identification" style={{ marginBottom: '60px' }}>
+            <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
+              📋 Identification du Projet - {formData.numeroFormulaire}
+            </h3>
+            
+            <div style={{ display: 'grid', gap: '20px' }}>
+              {/* Info formulaire provincial */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
+                border: '2px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '16px'
+              }}>
+                <h4 style={{ color: '#60a5fa', margin: '0 0 12px', fontSize: '16px', fontWeight: '700' }}>
+                  🏛️ Formulaire Officiel Provincial
+                </h4>
+                <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: '1.6' }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <strong>Numéro de formulaire:</strong> {formData.numeroFormulaire}
+                  </div>
+                  <div style={{ marginBottom: '8px' }}>
+                    <strong>Type de permis:</strong> {
+                      formData.typePermis === 'espace-clos' ? 'Espace Clos / Confined Space' :
+                      formData.typePermis === 'travail-chaud' ? 'Travail à Chaud / Hot Work' :
+                      'Excavation / Trenching'
+                    }
+                  </div>
+                  <div style={{ marginBottom: '8px' }}>
+                    <strong>Autorité:</strong> {regulation?.authority}
+                  </div>
+                  <div>
+                    <strong>Réglementation:</strong> {regulation?.regulation}
                   </div>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Section 2: Personnel conforme aux réglementations */}
-          {currentSection === 1 && (
-            <div>
-              <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
-                👥 Personnel Autorisé
-              </h3>
-              
-              {/* Superviseur obligatoire */}
-              <div style={{ marginBottom: '32px' }}>
-                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '18px', fontWeight: '600' }}>
-                  🛡️ Superviseur Responsable (Obligatoire)
-                </h4>
-                
-                {!formData.superviseur ? (
-                  <button
-                    onClick={ajouterSuperviseur}
+              <div>
+                <label style={{
+                  color: '#e2e8f0',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  marginBottom: '8px',
+                  display: 'block'
+                }}>
+                  Lieu de travail exact (avec coordonnées GPS) *
+                </label>
+                <input
+                  type="text"
+                  value={formData.lieuTravail}
+                  onChange={(e) => handleInputChange('lieuTravail', e.target.value)}
+                  placeholder={
+                    formData.typePermis === 'excavation' ? 
+                    "Adresse exacte + profondeur estimée + proximité services publics" :
+                    formData.typePermis === 'travail-chaud' ?
+                    "Lieu des travaux + matériaux combustibles à proximité" :
+                    "Emplacement espace clos + type (réservoir, cuve, etc.)"
+                  }
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    border: formData.lieuTravail ? '2px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '12px',
+                    color: '#ffffff',
+                    fontSize: '16px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{
+                  color: '#e2e8f0',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  marginBottom: '8px',
+                  display: 'block'
+                }}>
+                  Description détaillée des travaux *
+                </label>
+                <textarea
+                  value={formData.descriptionTravaux}
+                  onChange={(e) => handleInputChange('descriptionTravaux', e.target.value)}
+                  placeholder={
+                    formData.typePermis === 'excavation' ? 
+                    "Type d'excavation, profondeur, largeur, étançonnement prévu, services à éviter..." :
+                    formData.typePermis === 'travail-chaud' ?
+                    "Type de travaux (soudage/découpage/meulage), équipements utilisés, matériaux, durée..." :
+                    "Travaux dans l'espace clos, équipements requis, produits chimiques, ventilation..."
+                  }
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    border: formData.descriptionTravaux ? '2px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '12px',
+                    color: '#ffffff',
+                    fontSize: '16px',
+                    minHeight: '120px',
+                    resize: 'vertical',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{
+                    color: '#e2e8f0',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    marginBottom: '8px',
+                    display: 'block'
+                  }}>
+                    Date et heure de début *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.dateDebut + 'T' + (formData.heureDebut || '08:00')}
+                    onChange={(e) => {
+                      const [date, heure] = e.target.value.split('T');
+                      handleInputChange('dateDebut', date);
+                      handleInputChange('heureDebut', heure);
+                    }}
                     style={{
                       width: '100%',
                       padding: '16px',
-                      background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                      color: 'white',
-                      border: 'none',
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      border: '1px solid rgba(100, 116, 139, 0.3)',
                       borderRadius: '12px',
-                      cursor: 'pointer',
+                      color: '#ffffff',
                       fontSize: '16px',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '12px'
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{
+                    color: '#e2e8f0',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    marginBottom: '8px',
+                    display: 'block'
+                  }}>
+                    Durée estimée *
+                  </label>
+                  <select
+                    value={formData.dureeEstimee}
+                    onChange={(e) => handleInputChange('dureeEstimee', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '16px',
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      border: '1px solid rgba(100, 116, 139, 0.3)',
+                      borderRadius: '12px',
+                      color: '#ffffff',
+                      fontSize: '16px',
+                      boxSizing: 'border-box'
                     }}
                   >
-                    <Plus size={20} />
-                    Désigner un Superviseur
-                  </button>
-                ) : (
-                  <div style={{
-                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
-                    border: '2px solid rgba(59, 130, 246, 0.3)',
-                    borderRadius: '16px',
-                    padding: '20px'
-                  }}>
-                    <div style={{ display: 'grid', gap: '16px' }}>
+                    <option value="">Sélectionner la durée</option>
+                    <option value="moins-1h">Moins d'1 heure</option>
+                    <option value="1-4h">1 à 4 heures</option>
+                    <option value="4-8h">4 à 8 heures (1 journée)</option>
+                    <option value="1-3j">1 à 3 jours</option>
+                    <option value="1-2sem">1 à 2 semaines</option>
+                    <option value="plus-2sem">Plus de 2 semaines</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Alertes spécifiques selon type de permis */}
+              {formData.typePermis === 'travail-chaud' && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15))',
+                  border: '2px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: '12px',
+                  padding: '16px'
+                }}>
+                  <h4 style={{ color: '#fca5a5', margin: '0 0 8px', fontSize: '16px', fontWeight: '700' }}>
+                    🔥 EXIGENCES TRAVAIL À CHAUD - NFPA 51B
+                  </h4>
+                  <div style={{ fontSize: '13px', color: '#fecaca', lineHeight: '1.5' }}>
+                    <div>• Zone dégagée obligatoire: 11 mètres (35 pieds)</div>
+                    <div>• Surveillance incendie continue pendant travaux</div>
+                    <div>• Surveillance post-travaux: 30 minutes minimum</div>
+                    <div>• Équipements d'extinction à proximité immédiate</div>
+                    <div>• Tests atmosphériques avant début si espace confiné</div>
+                  </div>
+                </div>
+              )}
+
+              {formData.typePermis === 'excavation' && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.15))',
+                  border: '2px solid rgba(245, 158, 11, 0.4)',
+                  borderRadius: '12px',
+                  padding: '16px'
+                }}>
+                  <h4 style={{ color: '#fbbf24', margin: '0 0 8px', fontSize: '16px', fontWeight: '700' }}>
+                    ⛏️ EXIGENCES EXCAVATION - {permit.province[0] === 'QC' ? 'RSST Section XXVI' : 'O. Reg. 213/91'}
+                  </h4>
+                  <div style={{ fontSize: '13px', color: '#fed7aa', lineHeight: '1.5' }}>
+                    <div>• Profondeur >1.2m = Protection obligatoire (étançonnement/pente)</div>
+                    <div>• Localisation services publics OBLIGATOIRE avant excavation</div>
+                    <div>• Notice of Trench Work si >1.2m (Ontario)</div>
+                    <div>• Plan ingénieur requis selon profondeur/sol</div>
+                    <div>• Échelles d'accès max 8m de distance</div>
+                  </div>
+                </div>
+              )}
+
+              {formData.typePermis === 'espace-clos' && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(124, 58, 237, 0.15))',
+                  border: '2px solid rgba(139, 92, 246, 0.4)',
+                  borderRadius: '12px',
+                  padding: '16px'
+                }}>
+                  <h4 style={{ color: '#c4b5fd', margin: '0 0 8px', fontSize: '16px', fontWeight: '700' }}>
+                    🔒 EXIGENCES ESPACE CLOS - {regulation?.name}
+                  </h4>
+                  <div style={{ fontSize: '13px', color: '#ddd6fe', lineHeight: '1.5' }}>
+                    <div>• Tests atmosphériques continus obligatoires</div>
+                    <div>• O₂: {regulation?.oxygenRange.min}%-{regulation?.oxygenRange.max}% | Gaz: ≤{regulation?.flammableGasLimit}% LIE</div>
+                    <div>• Surveillant désigné en permanence à l'extérieur</div>
+                    <div>• Plan de sauvetage spécialisé requis</div>
+                    <div>• Âge minimum: {regulation?.minimumAge} ans</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section 2: Personnel avec spécificités selon permis */}
+          <div id="personnel" style={{ marginBottom: '60px' }}>
+            <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
+              👥 Personnel Autorisé et Certifié
+            </h3>
+            
+            {/* Superviseur obligatoire */}
+            <div style={{ marginBottom: '32px' }}>
+              <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '18px', fontWeight: '600' }}>
+                🛡️ Superviseur Responsable (Obligatoire)
+              </h4>
+              
+              {!formData.superviseur ? (
+                <button
+                  onClick={ajouterSuperviseur}
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '12px'
+                  }}
+                >
+                  <Plus size={20} />
+                  Désigner un Superviseur
+                </button>
+              ) : (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
+                  border: '2px solid rgba(59, 130, 246, 0.3)',
+                  borderRadius: '16px',
+                  padding: '20px'
+                }}>
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    <input
+                      type="text"
+                      placeholder="Nom complet du superviseur *"
+                      value={formData.superviseur.nom}
+                      onChange={(e) => handleInputChange('superviseur', { ...formData.superviseur, nom: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        color: '#ffffff',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <input
                         type="text"
-                        placeholder="Nom complet du superviseur *"
-                        value={formData.superviseur.nom}
-                        onChange={(e) => handleInputChange('superviseur', { ...formData.superviseur, nom: e.target.value })}
-                        style={{
-                          width: '100%',
-                          padding: '14px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '8px',
-                          color: '#ffffff',
-                          fontSize: '16px',
-                          boxSizing: 'border-box'
-                        }}
-                      />
-                      <input
-                        type="text"
-                        placeholder={`Certification ${permit.province[0]} requise`}
+                        placeholder={
+                          formData.typePermis === 'travail-chaud' ? 'Certification soudage/NFPA' :
+                          formData.typePermis === 'excavation' ? 'Certification excavation/étançonnement' :
+                          'Certification espaces clos'
+                        }
                         value={formData.superviseur.certification}
                         onChange={(e) => handleInputChange('superviseur', { ...formData.superviseur, certification: e.target.value })}
                         style={{
@@ -1016,163 +1646,459 @@ const FormulaireLegalScrollable: React.FC<{
                         }}
                       />
                     </div>
-                    
-                    <div style={{ marginTop: '16px' }}>
-                      <label style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '8px', 
-                        color: '#e2e8f0',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        cursor: 'pointer'
-                      }}>
-                        <input
-                          type="checkbox"
-                          checked={formData.superviseur.formationVerifiee}
-                          onChange={(e) => handleInputChange('superviseur', { ...formData.superviseur, formationVerifiee: e.target.checked })}
-                          style={{ transform: 'scale(1.2)' }}
-                        />
-                        Formation conforme aux exigences {regulation?.name} vérifiée
-                      </label>
+
+                    {/* Numéro de permis spécifique selon type */}
+                    <input
+                      type="text"
+                      placeholder={
+                        formData.typePermis === 'travail-chaud' ? 'Numéro permis soudeur certifié' :
+                        formData.typePermis === 'excavation' ? 'Numéro carte compétence' :
+                        'Numéro certification espaces clos'
+                      }
+                      value={formData.superviseur.numeroPermis}
+                      onChange={(e) => handleInputChange('superviseur', { ...formData.superviseur, numeroPermis: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        color: '#ffffff',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                  
+                  <div style={{ marginTop: '16px' }}>
+                    <label style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      color: '#e2e8f0',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.superviseur.formationVerifiee}
+                        onChange={(e) => handleInputChange('superviseur', { ...formData.superviseur, formationVerifiee: e.target.checked })}
+                        style={{ transform: 'scale(1.2)' }}
+                      />
+                      Formation spécialisée {formData.typePermis} conforme aux exigences {regulation?.name} vérifiée
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Personnel spécialisé selon type de permis */}
+            {formData.typePermis === 'travail-chaud' && (
+              <div style={{ marginBottom: '32px' }}>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '18px', fontWeight: '600' }}>
+                  🔥 Surveillant Incendie (Obligatoire NFPA 51B)
+                </h4>
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1))',
+                  border: '2px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '16px',
+                  padding: '20px'
+                }}>
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    <input
+                      type="text"
+                      placeholder="Nom du surveillant incendie *"
+                      value={formData.surveillantIncendie?.nom || ''}
+                      onChange={(e) => handleInputChange('surveillantIncendie', { 
+                        ...formData.surveillantIncendie, 
+                        nom: e.target.value,
+                        id: formData.surveillantIncendie?.id || `surveillant_${Date.now()}`
+                      })}
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        color: '#ffffff',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <input
+                        type="text"
+                        placeholder="Formation prévention incendie"
+                        value={formData.surveillantIncendie?.certification || ''}
+                        onChange={(e) => handleInputChange('surveillantIncendie', { 
+                          ...formData.surveillantIncendie, 
+                          certification: e.target.value,
+                          id: formData.surveillantIncendie?.id || `surveillant_${Date.now()}`
+                        })}
+                        style={{
+                          width: '100%',
+                          padding: '14px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '16px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Position de surveillance"
+                        value={formData.surveillantIncendie?.posteDeSurveillance || ''}
+                        onChange={(e) => handleInputChange('surveillantIncendie', { 
+                          ...formData.surveillantIncendie, 
+                          posteDeSurveillance: e.target.value,
+                          id: formData.surveillantIncendie?.id || `surveillant_${Date.now()}`
+                        })}
+                        style={{
+                          width: '100%',
+                          padding: '14px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '16px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
                     </div>
                   </div>
-                )}
-              </div>
-
-              {/* Entrants avec âge minimum conforme */}
-              <div>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
-                  marginBottom: '16px',
-                  flexWrap: 'wrap',
-                  gap: '12px'
-                }}>
-                  <h4 style={{ color: '#ffffff', margin: 0, fontSize: '18px', fontWeight: '600' }}>
-                    🚶 Entrants (Âge min: {regulation?.minimumAge} ans)
-                  </h4>
-                  <button
-                    onClick={ajouterEntrant}
-                    style={{
-                      padding: '12px 20px',
-                      background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}
-                  >
-                    <Plus size={16} />
-                    Ajouter Entrant
-                  </button>
-                </div>
-                
-                {formData.entrants.length === 0 ? (
-                  <div style={{
-                    textAlign: 'center',
-                    padding: '40px 20px',
-                    color: '#94a3b8',
-                    fontSize: '14px',
-                    border: '2px dashed rgba(100, 116, 139, 0.3)',
-                    borderRadius: '12px'
-                  }}>
-                    Aucun entrant - Âge minimum {regulation?.minimumAge} ans selon {regulation?.name}
+                  
+                  <div style={{ marginTop: '16px', fontSize: '12px', color: '#fecaca' }}>
+                    🔥 <strong>NFPA 51B:</strong> Surveillant doit rester en poste pendant TOUS les travaux + 30 minutes après
                   </div>
-                ) : (
+                </div>
+              </div>
+            )}
+
+            {formData.typePermis === 'espace-clos' && (
+              <div style={{ marginBottom: '32px' }}>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '18px', fontWeight: '600' }}>
+                  👨‍💼 Surveillant Extérieur (Obligatoire {regulation?.name})
+                </h4>
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.1))',
+                  border: '2px solid rgba(139, 92, 246, 0.3)',
+                  borderRadius: '16px',
+                  padding: '20px'
+                }}>
                   <div style={{ display: 'grid', gap: '16px' }}>
-                    {formData.entrants.map((entrant, index) => (
-                      <div
-                        key={entrant.id}
+                    <input
+                      type="text"
+                      placeholder="Nom du surveillant extérieur *"
+                      value={formData.surveillantExterieur?.nom || ''}
+                      onChange={(e) => handleInputChange('surveillantExterieur', { 
+                        ...formData.surveillantExterieur, 
+                        nom: e.target.value,
+                        id: formData.surveillantExterieur?.id || `surveillant_ext_${Date.now()}`
+                      })}
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        color: '#ffffff',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <input
+                        type="text"
+                        placeholder="Certification espaces clos"
+                        value={formData.surveillantExterieur?.certification || ''}
+                        onChange={(e) => handleInputChange('surveillantExterieur', { 
+                          ...formData.surveillantExterieur, 
+                          certification: e.target.value,
+                          id: formData.surveillantExterieur?.id || `surveillant_ext_${Date.now()}`
+                        })}
                         style={{
-                          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
-                          border: '1px solid rgba(34, 197, 94, 0.3)',
-                          borderRadius: '12px',
-                          padding: '16px'
+                          width: '100%',
+                          padding: '14px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '16px',
+                          boxSizing: 'border-box'
                         }}
-                      >
-                        <div style={{ display: 'grid', gap: '12px' }}>
+                      />
+                      <input
+                        type="text"
+                        placeholder="Méthode communication"
+                        value={formData.surveillantExterieur?.communicationMethod || ''}
+                        onChange={(e) => handleInputChange('surveillantExterieur', { 
+                          ...formData.surveillantExterieur, 
+                          communicationMethod: e.target.value,
+                          id: formData.surveillantExterieur?.id || `surveillant_ext_${Date.now()}`
+                        })}
+                        style={{
+                          width: '100%',
+                          padding: '14px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '16px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div style={{ marginTop: '16px', fontSize: '12px', color: '#ddd6fe' }}>
+                    🔒 <strong>{regulation?.name}:</strong> Surveillant DOIT rester à l'extérieur en permanence et maintenir contact visuel/vocal
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {formData.typePermis === 'excavation' && (
+              <div style={{ marginBottom: '32px' }}>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '18px', fontWeight: '600' }}>
+                  🏗️ Personne Compétente (Obligatoire)
+                </h4>
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1))',
+                  border: '2px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: '16px',
+                  padding: '20px'
+                }}>
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    <input
+                      type="text"
+                      placeholder="Nom de la personne compétente *"
+                      value={formData.personneCompetente?.nom || ''}
+                      onChange={(e) => handleInputChange('personneCompetente', { 
+                        ...formData.personneCompetente, 
+                        nom: e.target.value,
+                        id: formData.personneCompetente?.id || `competent_${Date.now()}`
+                      })}
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        color: '#ffffff',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <input
+                        type="text"
+                        placeholder="Formation excavation/étançonnement"
+                        value={formData.personneCompetente?.certification || ''}
+                        onChange={(e) => handleInputChange('personneCompetente', { 
+                          ...formData.personneCompetente, 
+                          certification: e.target.value,
+                          id: formData.personneCompetente?.id || `competent_${Date.now()}`
+                        })}
+                        style={{
+                          width: '100%',
+                          padding: '14px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '16px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                      <input
+                        type="number"
+                        placeholder="Années d'expérience"
+                        value={formData.personneCompetente?.experienceAnnees || ''}
+                        onChange={(e) => handleInputChange('personneCompetente', { 
+                          ...formData.personneCompetente, 
+                          experienceAnnees: parseInt(e.target.value) || 0,
+                          id: formData.personneCompetente?.id || `competent_${Date.now()}`
+                        })}
+                        style={{
+                          width: '100%',
+                          padding: '14px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '16px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div style={{ marginTop: '16px', fontSize: '12px', color: '#fed7aa' }}>
+                    ⛏️ <strong>O. Reg. 213/91:</strong> Personne compétente doit inspecter quotidiennement et après changements de conditions
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Travailleurs/Entrants avec âge minimum conforme */}
+            <div>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginBottom: '16px',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}>
+                <h4 style={{ color: '#ffffff', margin: 0, fontSize: '18px', fontWeight: '600' }}>
+                  🚶 {formData.typePermis === 'espace-clos' ? 'Entrants' : 'Travailleurs'} (Âge min: {regulation?.minimumAge} ans)
+                </h4>
+                <button
+                  onClick={ajouterEntrant}
+                  style={{
+                    padding: '12px 20px',
+                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <Plus size={16} />
+                  Ajouter {formData.typePermis === 'espace-clos' ? 'Entrant' : 'Travailleur'}
+                </button>
+              </div>
+              
+              {formData.entrants.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '40px 20px',
+                  color: '#94a3b8',
+                  fontSize: '14px',
+                  border: '2px dashed rgba(100, 116, 139, 0.3)',
+                  borderRadius: '12px'
+                }}>
+                  Aucun {formData.typePermis === 'espace-clos' ? 'entrant' : 'travailleur'} - Âge minimum {regulation?.minimumAge} ans selon {regulation?.name}
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '16px' }}>
+                  {formData.entrants.map((entrant, index) => (
+                    <div
+                      key={entrant.id}
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
+                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                        borderRadius: '12px',
+                        padding: '16px'
+                      }}
+                    >
+                      <div style={{ display: 'grid', gap: '12px' }}>
+                        <input
+                          type="text"
+                          placeholder={`Nom complet ${formData.typePermis === 'espace-clos' ? 'de l\'entrant' : 'du travailleur'} *`}
+                          value={entrant.nom}
+                          onChange={(e) => {
+                            const newEntrants = [...formData.entrants];
+                            newEntrants[index] = { ...entrant, nom: e.target.value };
+                            handleInputChange('entrants', newEntrants);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: 'rgba(15, 23, 42, 0.8)',
+                            border: '1px solid rgba(100, 116, 139, 0.3)',
+                            borderRadius: '6px',
+                            color: '#ffffff',
+                            fontSize: '16px',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                           <input
                             type="text"
-                            placeholder="Nom complet de l'entrant *"
-                            value={entrant.nom}
+                            placeholder={
+                              formData.typePermis === 'travail-chaud' ? 'Cert. soudeur' :
+                              formData.typePermis === 'excavation' ? 'Formation excavation' :
+                              'Cert. espace clos'
+                            }
+                            value={entrant.certification}
                             onChange={(e) => {
                               const newEntrants = [...formData.entrants];
-                              newEntrants[index] = { ...entrant, nom: e.target.value };
+                              newEntrants[index] = { ...entrant, certification: e.target.value };
                               handleInputChange('entrants', newEntrants);
                             }}
                             style={{
-                              width: '100%',
                               padding: '12px',
                               background: 'rgba(15, 23, 42, 0.8)',
                               border: '1px solid rgba(100, 116, 139, 0.3)',
                               borderRadius: '6px',
                               color: '#ffffff',
-                              fontSize: '16px',
-                              boxSizing: 'border-box'
+                              fontSize: '16px'
                             }}
                           />
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                            <input
-                              type="text"
-                              placeholder="Certification requise"
-                              value={entrant.certification}
-                              onChange={(e) => {
-                                const newEntrants = [...formData.entrants];
-                                newEntrants[index] = { ...entrant, certification: e.target.value };
-                                handleInputChange('entrants', newEntrants);
-                              }}
-                              style={{
-                                padding: '12px',
-                                background: 'rgba(15, 23, 42, 0.8)',
-                                border: '1px solid rgba(100, 116, 139, 0.3)',
-                                borderRadius: '6px',
-                                color: '#ffffff',
-                                fontSize: '16px'
-                              }}
-                            />
-                            <input
-                              type="number"
-                              placeholder={`Âge (min ${regulation?.minimumAge})`}
-                              value={entrant.age}
-                              onChange={(e) => {
-                                const age = parseInt(e.target.value) || regulation?.minimumAge || 18;
-                                const newEntrants = [...formData.entrants];
-                                newEntrants[index] = { ...entrant, age };
-                                handleInputChange('entrants', newEntrants);
-                              }}
-                              min={regulation?.minimumAge}
-                              style={{
-                                padding: '12px',
-                                background: 'rgba(15, 23, 42, 0.8)',
-                                border: entrant.age < (regulation?.minimumAge || 18) ? 
-                                  '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
-                                borderRadius: '6px',
-                                color: '#ffffff',
-                                fontSize: '16px'
-                              }}
-                            />
-                          </div>
-                          
-                          {entrant.age < (regulation?.minimumAge || 18) && (
-                            <div style={{
-                              padding: '8px 12px',
-                              background: 'rgba(239, 68, 68, 0.2)',
+                          <input
+                            type="number"
+                            placeholder={`Âge (min ${regulation?.minimumAge})`}
+                            value={entrant.age}
+                            onChange={(e) => {
+                              const age = parseInt(e.target.value) || regulation?.minimumAge || 18;
+                              const newEntrants = [...formData.entrants];
+                              newEntrants[index] = { ...entrant, age };
+                              handleInputChange('entrants', newEntrants);
+                            }}
+                            min={regulation?.minimumAge}
+                            style={{
+                              padding: '12px',
+                              background: 'rgba(15, 23, 42, 0.8)',
+                              border: entrant.age < (regulation?.minimumAge || 18) ? 
+                                '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
                               borderRadius: '6px',
-                              color: '#fca5a5',
-                              fontSize: '12px',
-                              fontWeight: '600'
-                            }}>
-                              ⚠️ Non conforme: Âge minimum {regulation?.minimumAge} ans requis selon {regulation?.name}
-                            </div>
-                          )}
-                          
+                              color: '#ffffff',
+                              fontSize: '16px'
+                            }}
+                          />
+                          <input
+                            type="tel"
+                            placeholder="Contact urgence"
+                            value={entrant.contactUrgence || ''}
+                            onChange={(e) => {
+                              const newEntrants = [...formData.entrants];
+                              newEntrants[index] = { ...entrant, contactUrgence: e.target.value };
+                              handleInputChange('entrants', newEntrants);
+                            }}
+                            style={{
+                              padding: '12px',
+                              background: 'rgba(15, 23, 42, 0.8)',
+                              border: '1px solid rgba(100, 116, 139, 0.3)',
+                              borderRadius: '6px',
+                              color: '#ffffff',
+                              fontSize: '16px'
+                            }}
+                          />
+                        </div>
+                        
+                        {entrant.age < (regulation?.minimumAge || 18) && (
+                          <div style={{
+                            padding: '8px 12px',
+                            background: 'rgba(239, 68, 68, 0.2)',
+                            borderRadius: '6px',
+                            color: '#fca5a5',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}>
+                            ⚠️ Non conforme: Âge minimum {regulation?.minimumAge} ans requis selon {regulation?.name}
+                          </div>
+                        )}
+                        
+                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <label style={{ 
                             display: 'flex', 
                             alignItems: 'center', 
@@ -1190,8 +2116,30 @@ const FormulaireLegalScrollable: React.FC<{
                                 handleInputChange('entrants', newEntrants);
                               }}
                             />
-                            Formation sécurité espaces clos complétée et vérifiée
+                            Formation spécialisée vérifiée
                           </label>
+
+                          {formData.typePermis === 'espace-clos' && (
+                            <label style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '8px', 
+                              color: '#e2e8f0',
+                              fontSize: '14px',
+                              cursor: 'pointer'
+                            }}>
+                              <input
+                                type="checkbox"
+                                checked={entrant.medicaleClearance}
+                                onChange={(e) => {
+                                  const newEntrants = [...formData.entrants];
+                                  newEntrants[index] = { ...entrant, medicaleClearance: e.target.checked };
+                                  handleInputChange('entrants', newEntrants);
+                                }}
+                              />
+                              Clearance médicale
+                            </label>
+                          )}
                           
                           <button
                             onClick={() => {
@@ -1212,217 +2160,382 @@ const FormulaireLegalScrollable: React.FC<{
                           </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Section 3: Tests atmosphériques conformes TOUTES LES SECTIONS ICI */}
-          {currentSection === 2 && permit.legalRequirements.atmosphericTesting && (
-            <div>
-              <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
-                🧪 Tests Atmosphériques Obligatoires
-              </h3>
-              
-              {/* Alerte réglementaire */}
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15))',
-                border: '2px solid rgba(239, 68, 68, 0.4)',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '24px'
-              }}>
-                <h4 style={{ color: '#fca5a5', margin: '0 0 8px', fontSize: '16px', fontWeight: '700' }}>
-                  ⚠️ EXIGENCES CRITIQUES - {regulation?.name}
-                </h4>
-                <div style={{ fontSize: '13px', color: '#fecaca', lineHeight: '1.5' }}>
-                  <div>• Oxygène: {regulation?.oxygenRange.min}% - {regulation?.oxygenRange.max}%</div>
-                  <div>• Gaz inflammables: ≤ {regulation?.flammableGasLimit}% LIE</div>
-                  <div>• Tests obligatoires avant entrée et en continu</div>
-                  <div>• Équipement étalonné selon fabricant requis</div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
+            </div>
+          </div>
 
-              {/* Tests Oxygène */}
-              <div style={{ marginBottom: '24px' }}>
+          {/* Section 3: Tests et mesures selon type de permis - sera dans SECTION 2-C */}
+          <div id="tests" style={{ marginBottom: '60px' }}>
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: '#94a3b8'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🧪</div>
+              <h3 style={{ color: '#e2e8f0', margin: '0 0 12px' }}>
+                SECTION 2-B Terminée
+              </h3>
+              <p style={{ margin: 0 }}>
+                Formulaires spécifiques par type de permis complétés
+              </p>
+              <p style={{ margin: '16px 0 0', fontSize: '14px', color: '#60a5fa' }}>
+                🎯 Prêt pour SECTION 2-C: Tests atmosphériques + Équipements + Validation
+              </p>
+            </div>
+          </div>
+        </div>
+// =================== SECTION 2-C - TESTS + ÉQUIPEMENTS ===================
+// Cette section remplace le placeholder "SECTION 2-B Terminée" dans le contenu scrollable
+
+          {/* Section 3: Tests et mesures selon type de permis */}
+          <div id="tests" style={{ marginBottom: '60px' }}>
+            <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
+              🧪 Tests et Mesures Obligatoires
+            </h3>
+
+            {/* Tests atmosphériques pour espaces clos */}
+            {formData.typePermis === 'espace-clos' && permit.legalRequirements.atmosphericTesting && (
+              <div style={{ marginBottom: '32px' }}>
                 <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
-                  🫁 Test Oxygène (O₂)
+                  🫁 Tests Atmosphériques Continus (Obligatoire {regulation?.name})
                 </h4>
+                
+                {/* Alerte réglementaire */}
                 <div style={{
-                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
-                  border: formData.atmospherique.oxygene.conformeCNESST ? 
-                    '2px solid rgba(34, 197, 94, 0.5)' : 
-                    '1px solid rgba(100, 116, 139, 0.3)',
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15))',
+                  border: '2px solid rgba(239, 68, 68, 0.4)',
                   borderRadius: '12px',
-                  padding: '16px'
+                  padding: '16px',
+                  marginBottom: '24px'
                 }}>
-                  <div style={{ display: 'grid', gap: '12px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <div>
-                        <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
-                          Niveau O₂ mesuré (%)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="100"
-                          value={formData.atmospherique.oxygene.niveau || ''}
-                          onChange={(e) => {
-                            const niveau = parseFloat(e.target.value) || 0;
-                            const conformeCNESST = niveau >= (regulation?.oxygenRange.min || 19.5) && 
-                                           niveau <= (regulation?.oxygenRange.max || 23.0);
-                            handleInputChange('atmospherique', {
+                  <h4 style={{ color: '#fca5a5', margin: '0 0 8px', fontSize: '16px', fontWeight: '700' }}>
+                    ⚠️ SYSTÈME DE REPRISE AUTOMATIQUE ACTIVÉ
+                  </h4>
+                  <div style={{ fontSize: '13px', color: '#fecaca', lineHeight: '1.5' }}>
+                    <div>• Tests échoués = Formulaire bloqué 15 minutes</div>
+                    <div>• Reprise automatique après délai</div>
+                    <div>• O₂: {regulation?.oxygenRange.min}%-{regulation?.oxygenRange.max}% | Gaz: ≤{regulation?.flammableGasLimit}% LIE</div>
+                  </div>
+                </div>
+
+                {/* Tests Oxygène avec validation automatique */}
+                <div style={{ marginBottom: '24px' }}>
+                  <h5 style={{ color: '#ffffff', marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>
+                    🫁 Test Oxygène (O₂) - Validation Automatique
+                  </h5>
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
+                    border: formData.atmospherique.oxygene.conformeCNESST ? 
+                      '2px solid rgba(34, 197, 94, 0.5)' : 
+                      formData.atmospherique.oxygene.enAttente ? '2px solid rgba(245, 158, 11, 0.5)' :
+                      '1px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '12px',
+                    padding: '16px'
+                  }}>
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                            Niveau O₂ mesuré (%)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="100"
+                            value={formData.atmospherique.oxygene.niveau || ''}
+                            disabled={formData.atmospherique.oxygene.enAttente}
+                            onChange={(e) => {
+                              const niveau = parseFloat(e.target.value) || 0;
+                              const conformeCNESST = validerTest('oxygene', niveau);
+                              
+                              handleInputChange('atmospherique', {
+                                ...formData.atmospherique,
+                                oxygene: { ...formData.atmospherique.oxygene, niveau, conformeCNESST }
+                              });
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              background: formData.atmospherique.oxygene.enAttente ? 
+                                'rgba(100, 116, 139, 0.3)' : 'rgba(15, 23, 42, 0.8)',
+                              border: formData.atmospherique.oxygene.conformeCNESST ? 
+                                '2px solid #22c55e' : 
+                                formData.atmospherique.oxygene.niveau > 0 && !formData.atmospherique.oxygene.conformeCNESST ? 
+                                  '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
+                              borderRadius: '8px',
+                              color: formData.atmospherique.oxygene.enAttente ? '#9ca3af' : '#ffffff',
+                              fontSize: '16px',
+                              boxSizing: 'border-box',
+                              cursor: formData.atmospherique.oxygene.enAttente ? 'not-allowed' : 'text'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                            Heure du test
+                          </label>
+                          <input
+                            type="time"
+                            value={formData.atmospherique.oxygene.heureTest}
+                            disabled={formData.atmospherique.oxygene.enAttente}
+                            onChange={(e) => handleInputChange('atmospherique', {
                               ...formData.atmospherique,
-                              oxygene: { ...formData.atmospherique.oxygene, niveau, conformeCNESST }
-                            });
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '12px',
-                            background: 'rgba(15, 23, 42, 0.8)',
-                            border: formData.atmospherique.oxygene.conformeCNESST ? 
-                              '2px solid #22c55e' : 
-                              formData.atmospherique.oxygene.niveau > 0 ? '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
-                            borderRadius: '8px',
-                            color: '#ffffff',
-                            fontSize: '16px',
-                            boxSizing: 'border-box'
-                          }}
-                        />
+                              oxygene: { ...formData.atmospherique.oxygene, heureTest: e.target.value }
+                            })}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              background: formData.atmospherique.oxygene.enAttente ? 
+                                'rgba(100, 116, 139, 0.3)' : 'rgba(15, 23, 42, 0.8)',
+                              border: '1px solid rgba(100, 116, 139, 0.3)',
+                              borderRadius: '8px',
+                              color: formData.atmospherique.oxygene.enAttente ? '#9ca3af' : '#ffffff',
+                              fontSize: '16px',
+                              boxSizing: 'border-box',
+                              cursor: formData.atmospherique.oxygene.enAttente ? 'not-allowed' : 'text'
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
-                          Heure du test
-                        </label>
+                      
+                      <input
+                        type="text"
+                        placeholder="Équipement utilisé (marque, modèle, étalonnage)"
+                        value={formData.atmospherique.oxygene.equipementUtilise}
+                        disabled={formData.atmospherique.oxygene.enAttente}
+                        onChange={(e) => handleInputChange('atmospherique', {
+                          ...formData.atmospherique,
+                          oxygene: { ...formData.atmospherique.oxygene, equipementUtilise: e.target.value }
+                        })}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          background: formData.atmospherique.oxygene.enAttente ? 
+                            'rgba(100, 116, 139, 0.3)' : 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '8px',
+                          color: formData.atmospherique.oxygene.enAttente ? '#9ca3af' : '#ffffff',
+                          fontSize: '16px',
+                          boxSizing: 'border-box',
+                          cursor: formData.atmospherique.oxygene.enAttente ? 'not-allowed' : 'text'
+                        }}
+                      />
+                      
+                      {/* Indicateur conformité */}
+                      <div style={{
+                        padding: '12px',
+                        background: formData.atmospherique.oxygene.enAttente ? 
+                          'rgba(245, 158, 11, 0.2)' :
+                          formData.atmospherique.oxygene.conformeCNESST ? 
+                            'rgba(34, 197, 94, 0.2)' : 
+                            formData.atmospherique.oxygene.niveau > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(100, 116, 139, 0.1)',
+                        borderRadius: '8px',
+                        textAlign: 'center'
+                      }}>
+                        <div style={{ 
+                          color: formData.atmospherique.oxygene.enAttente ? '#f59e0b' :
+                                 formData.atmospherique.oxygene.conformeCNESST ? '#22c55e' : 
+                                 formData.atmospherique.oxygene.niveau > 0 ? '#ef4444' : '#94a3b8',
+                          fontWeight: '700',
+                          fontSize: '14px'
+                        }}>
+                          {formData.atmospherique.oxygene.enAttente ? 
+                            `⏳ EN ATTENTE DE REPRISE (Tentative ${formData.atmospherique.oxygene.tentativeReprise})` :
+                            formData.atmospherique.oxygene.conformeCNESST ? 
+                              `✅ CONFORME ${regulation?.name}` : 
+                              formData.atmospherique.oxygene.niveau > 0 ? 
+                                `❌ NON CONFORME - Requis: ${regulation?.oxygenRange.min}%-${regulation?.oxygenRange.max}%` :
+                                `⏳ En attente de mesure`
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tests Gaz Combustibles */}
+                <div style={{ marginBottom: '24px' }}>
+                  <h5 style={{ color: '#ffffff', marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>
+                    🔥 Test Gaz Combustibles - Validation Automatique
+                  </h5>
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1))',
+                    border: formData.atmospherique.gazCombustibles.conformeReglement ? 
+                      '2px solid rgba(245, 158, 11, 0.5)' : 
+                      formData.atmospherique.gazCombustibles.enAttente ? '2px solid rgba(245, 158, 11, 0.5)' :
+                      '1px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '12px',
+                    padding: '16px'
+                  }}>
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                            % LIE (Limite Inférieure Explosion)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="100"
+                            value={formData.atmospherique.gazCombustibles.pourcentageLIE || ''}
+                            disabled={formData.atmospherique.gazCombustibles.enAttente}
+                            onChange={(e) => {
+                              const pourcentageLIE = parseFloat(e.target.value) || 0;
+                              const conformeReglement = validerTest('gazCombustibles', pourcentageLIE);
+                              
+                              handleInputChange('atmospherique', {
+                                ...formData.atmospherique,
+                                gazCombustibles: { ...formData.atmospherique.gazCombustibles, pourcentageLIE, conformeReglement }
+                              });
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              background: formData.atmospherique.gazCombustibles.enAttente ? 
+                                'rgba(100, 116, 139, 0.3)' : 'rgba(15, 23, 42, 0.8)',
+                              border: formData.atmospherique.gazCombustibles.conformeReglement ? 
+                                '2px solid #f59e0b' : 
+                                formData.atmospherique.gazCombustibles.pourcentageLIE > 0 && !formData.atmospherique.gazCombustibles.conformeReglement ? 
+                                  '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
+                              borderRadius: '8px',
+                              color: formData.atmospherique.gazCombustibles.enAttente ? '#9ca3af' : '#ffffff',
+                              fontSize: '16px',
+                              boxSizing: 'border-box',
+                              cursor: formData.atmospherique.gazCombustibles.enAttente ? 'not-allowed' : 'text'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                            Type de gaz détecté
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Méthane, Propane, Hydrogène"
+                            value={formData.atmospherique.gazCombustibles.typeGaz}
+                            disabled={formData.atmospherique.gazCombustibles.enAttente}
+                            onChange={(e) => handleInputChange('atmospherique', {
+                              ...formData.atmospherique,
+                              gazCombustibles: { ...formData.atmospherique.gazCombustibles, typeGaz: e.target.value }
+                            })}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              background: formData.atmospherique.gazCombustibles.enAttente ? 
+                                'rgba(100, 116, 139, 0.3)' : 'rgba(15, 23, 42, 0.8)',
+                              border: '1px solid rgba(100, 116, 139, 0.3)',
+                              borderRadius: '8px',
+                              color: formData.atmospherique.gazCombustibles.enAttente ? '#9ca3af' : '#ffffff',
+                              fontSize: '16px',
+                              boxSizing: 'border-box',
+                              cursor: formData.atmospherique.gazCombustibles.enAttente ? 'not-allowed' : 'text'
+                            }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <input
+                        type="text"
+                        placeholder="Équipement de détection (étalonné selon fabricant)"
+                        value={formData.atmospherique.gazCombustibles.equipementTest}
+                        disabled={formData.atmospherique.gazCombustibles.enAttente}
+                        onChange={(e) => handleInputChange('atmospherique', {
+                          ...formData.atmospherique,
+                          gazCombustibles: { ...formData.atmospherique.gazCombustibles, equipementTest: e.target.value }
+                        })}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          background: formData.atmospherique.gazCombustibles.enAttente ? 
+                            'rgba(100, 116, 139, 0.3)' : 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '8px',
+                          color: formData.atmospherique.gazCombustibles.enAttente ? '#9ca3af' : '#ffffff',
+                          fontSize: '16px',
+                          boxSizing: 'border-box',
+                          cursor: formData.atmospherique.gazCombustibles.enAttente ? 'not-allowed' : 'text'
+                        }}
+                      />
+                      
+                      <div style={{
+                        padding: '12px',
+                        background: formData.atmospherique.gazCombustibles.enAttente ? 
+                          'rgba(245, 158, 11, 0.2)' :
+                          formData.atmospherique.gazCombustibles.conformeReglement ? 
+                            'rgba(245, 158, 11, 0.2)' : 
+                            formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(100, 116, 139, 0.1)',
+                        borderRadius: '8px',
+                        textAlign: 'center'
+                      }}>
+                        <div style={{ 
+                          color: formData.atmospherique.gazCombustibles.enAttente ? '#f59e0b' :
+                                 formData.atmospherique.gazCombustibles.conformeReglement ? '#f59e0b' : 
+                                 formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? '#ef4444' : '#94a3b8',
+                          fontWeight: '700',
+                          fontSize: '14px'
+                        }}>
+                          {formData.atmospherique.gazCombustibles.enAttente ? 
+                            `⏳ EN ATTENTE DE REPRISE (Tentative ${formData.atmospherique.gazCombustibles.tentativeReprise})` :
+                            formData.atmospherique.gazCombustibles.conformeReglement ? 
+                              `✅ SÉCURITAIRE - Limite: ≤${regulation?.flammableGasLimit}% LIE` : 
+                              formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? 
+                                `🚨 DANGER - Dépassement limite ${regulation?.flammableGasLimit}% LIE` :
+                                `⏳ Test requis avant entrée`
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ventilation obligatoire */}
+                <div>
+                  <h5 style={{ color: '#ffffff', marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>
+                    💨 Système de Ventilation
+                  </h5>
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    borderRadius: '12px',
+                    padding: '16px'
+                  }}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px', 
+                        color: '#e2e8f0',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}>
                         <input
-                          type="time"
-                          value={formData.atmospherique.oxygene.heureTest}
+                          type="checkbox"
+                          checked={formData.atmospherique.ventilation.active}
                           onChange={(e) => handleInputChange('atmospherique', {
                             ...formData.atmospherique,
-                            oxygene: { ...formData.atmospherique.oxygene, heureTest: e.target.value }
+                            ventilation: { ...formData.atmospherique.ventilation, active: e.target.checked }
                           })}
-                          style={{
-                            width: '100%',
-                            padding: '12px',
-                            background: 'rgba(15, 23, 42, 0.8)',
-                            border: '1px solid rgba(100, 116, 139, 0.3)',
-                            borderRadius: '8px',
-                            color: '#ffffff',
-                            fontSize: '16px',
-                            boxSizing: 'border-box'
-                          }}
+                          style={{ transform: 'scale(1.2)' }}
                         />
-                      </div>
+                        Ventilation mécanique active et continue
+                      </label>
                     </div>
                     
-                    <input
-                      type="text"
-                      placeholder="Équipement utilisé (marque, modèle, étalonnage)"
-                      value={formData.atmospherique.oxygene.equipementUtilise}
-                      onChange={(e) => handleInputChange('atmospherique', {
-                        ...formData.atmospherique,
-                        oxygene: { ...formData.atmospherique.oxygene, equipementUtilise: e.target.value }
-                      })}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        background: 'rgba(15, 23, 42, 0.8)',
-                        border: '1px solid rgba(100, 116, 139, 0.3)',
-                        borderRadius: '8px',
-                        color: '#ffffff',
-                        fontSize: '16px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                    
-                    {/* Indicateur conformité */}
-                    <div style={{
-                      padding: '12px',
-                      background: formData.atmospherique.oxygene.conformeCNESST ? 
-                        'rgba(34, 197, 94, 0.2)' : 
-                        formData.atmospherique.oxygene.niveau > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(100, 116, 139, 0.1)',
-                      borderRadius: '8px',
-                      textAlign: 'center'
-                    }}>
-                      <div style={{ 
-                        color: formData.atmospherique.oxygene.conformeCNESST ? '#22c55e' : 
-                               formData.atmospherique.oxygene.niveau > 0 ? '#ef4444' : '#94a3b8',
-                        fontWeight: '700',
-                        fontSize: '14px'
-                      }}>
-                        {formData.atmospherique.oxygene.conformeCNESST ? 
-                          `✅ CONFORME ${regulation?.name}` : 
-                          formData.atmospherique.oxygene.niveau > 0 ? 
-                            `❌ NON CONFORME - Requis: ${regulation?.oxygenRange.min}%-${regulation?.oxygenRange.max}%` :
-                            `⏳ En attente de mesure`
-                        }
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tests Gaz Combustibles */}
-              <div style={{ marginBottom: '24px' }}>
-                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
-                  🔥 Test Gaz Combustibles
-                </h4>
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1))',
-                  border: formData.atmospherique.gazCombustibles.conformeReglement ? 
-                    '2px solid rgba(245, 158, 11, 0.5)' : 
-                    '1px solid rgba(100, 116, 139, 0.3)',
-                  borderRadius: '12px',
-                  padding: '16px'
-                }}>
-                  <div style={{ display: 'grid', gap: '12px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                      <div>
-                        <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
-                          % LIE (Limite Inférieure Explosion)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="100"
-                          value={formData.atmospherique.gazCombustibles.pourcentageLIE || ''}
-                          onChange={(e) => {
-                            const pourcentageLIE = parseFloat(e.target.value) || 0;
-                            const conformeReglement = pourcentageLIE <= (regulation?.flammableGasLimit || 10);
-                            handleInputChange('atmospherique', {
-                              ...formData.atmospherique,
-                              gazCombustibles: { ...formData.atmospherique.gazCombustibles, pourcentageLIE, conformeReglement }
-                            });
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '12px',
-                            background: 'rgba(15, 23, 42, 0.8)',
-                            border: formData.atmospherique.gazCombustibles.conformeReglement ? 
-                              '2px solid #f59e0b' : 
-                              formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
-                            borderRadius: '8px',
-                            color: '#ffffff',
-                            fontSize: '16px',
-                            boxSizing: 'border-box'
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
-                          Type de gaz détecté
-                        </label>
+                    {formData.atmospherique.ventilation.active && (
+                      <div style={{ display: 'grid', gap: '12px' }}>
                         <input
                           type="text"
-                          placeholder="Ex: Méthane, Propane, Hydrogène"
-                          value={formData.atmospherique.gazCombustibles.typeGaz}
+                          placeholder="Débit d'air (CFM ou m³/min)"
+                          value={formData.atmospherique.ventilation.debitAir}
                           onChange={(e) => handleInputChange('atmospherique', {
                             ...formData.atmospherique,
-                            gazCombustibles: { ...formData.atmospherique.gazCombustibles, typeGaz: e.target.value }
+                            ventilation: { ...formData.atmospherique.ventilation, debitAir: e.target.value }
                           })}
                           style={{
                             width: '100%',
@@ -1435,115 +2548,218 @@ const FormulaireLegalScrollable: React.FC<{
                             boxSizing: 'border-box'
                           }}
                         />
+                        <select
+                          value={formData.atmospherique.ventilation.directionFlux}
+                          onChange={(e) => handleInputChange('atmospherique', {
+                            ...formData.atmospherique,
+                            ventilation: { ...formData.atmospherique.ventilation, directionFlux: e.target.value }
+                          })}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: 'rgba(15, 23, 42, 0.8)',
+                            border: '1px solid rgba(100, 116, 139, 0.3)',
+                            borderRadius: '8px',
+                            color: '#ffffff',
+                            fontSize: '16px',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          <option value="">Sélectionner direction du flux</option>
+                          <option value="extraction">Extraction (aspiration)</option>
+                          <option value="insufflation">Insufflation (refoulement)</option>
+                          <option value="mixte">Mixte (extraction + insufflation)</option>
+                        </select>
                       </div>
-                    </div>
-                    
-                    <input
-                      type="text"
-                      placeholder="Équipement de détection (étalonné selon fabricant)"
-                      value={formData.atmospherique.gazCombustibles.equipementTest}
-                      onChange={(e) => handleInputChange('atmospherique', {
-                        ...formData.atmospherique,
-                        gazCombustibles: { ...formData.atmospherique.gazCombustibles, equipementTest: e.target.value }
-                      })}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        background: 'rgba(15, 23, 42, 0.8)',
-                        border: '1px solid rgba(100, 116, 139, 0.3)',
-                        borderRadius: '8px',
-                        color: '#ffffff',
-                        fontSize: '16px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                    
-                    <div style={{
-                      padding: '12px',
-                      background: formData.atmospherique.gazCombustibles.conformeReglement ? 
-                        'rgba(245, 158, 11, 0.2)' : 
-                        formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(100, 116, 139, 0.1)',
-                      borderRadius: '8px',
-                      textAlign: 'center'
-                    }}>
-                      <div style={{ 
-                        color: formData.atmospherique.gazCombustibles.conformeReglement ? '#f59e0b' : 
-                               formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? '#ef4444' : '#94a3b8',
-                        fontWeight: '700',
-                        fontSize: '14px'
-                      }}>
-                        {formData.atmospherique.gazCombustibles.conformeReglement ? 
-                          `✅ SÉCURITAIRE - Limite: ≤${regulation?.flammableGasLimit}% LIE` : 
-                          formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? 
-                            `🚨 DANGER - Dépassement limite ${regulation?.flammableGasLimit}% LIE` :
-                            `⏳ Test requis avant entrée`
-                        }
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Ventilation obligatoire */}
-              <div>
+            {/* Tests spécifiques travail à chaud */}
+            {formData.typePermis === 'travail-chaud' && (
+              <div style={{ marginBottom: '32px' }}>
                 <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
-                  💨 Système de Ventilation
+                  🔥 Vérifications Travail à Chaud (NFPA 51B)
                 </h4>
+                
                 <div style={{
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1))',
+                  border: '2px solid rgba(239, 68, 68, 0.3)',
                   borderRadius: '12px',
                   padding: '16px'
                 }}>
-                  <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'grid', gap: '16px' }}>
                     <label style={{ 
                       display: 'flex', 
                       alignItems: 'center', 
                       gap: '8px', 
                       color: '#e2e8f0',
                       fontSize: '14px',
-                      fontWeight: '500',
                       cursor: 'pointer'
                     }}>
                       <input
                         type="checkbox"
-                        checked={formData.atmospherique.ventilation.active}
-                        onChange={(e) => handleInputChange('atmospherique', {
-                          ...formData.atmospherique,
-                          ventilation: { ...formData.atmospherique.ventilation, active: e.target.checked }
+                        checked={formData.procedures.travailChaud.zoneDegagee >= 11}
+                        onChange={(e) => handleInputChange('procedures', {
+                          ...formData.procedures,
+                          travailChaud: { 
+                            ...formData.procedures.travailChaud, 
+                            zoneDegagee: e.target.checked ? 11 : 0 
+                          }
                         })}
                         style={{ transform: 'scale(1.2)' }}
                       />
-                      Ventilation mécanique active et continue
+                      Zone dégagée de 11 mètres (35 pieds) vérifiée - NFPA 51B
+                    </label>
+
+                    <label style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      color: '#e2e8f0',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.procedures.travailChaud.surveillanceIncendie}
+                        onChange={(e) => handleInputChange('procedures', {
+                          ...formData.procedures,
+                          travailChaud: { 
+                            ...formData.procedures.travailChaud, 
+                            surveillanceIncendie: e.target.checked 
+                          }
+                        })}
+                        style={{ transform: 'scale(1.2)' }}
+                      />
+                      Surveillant incendie en position et équipé
+                    </label>
+
+                    <label style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      color: '#e2e8f0',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.procedures.travailChaud.autorisationSuperviseur}
+                        onChange={(e) => handleInputChange('procedures', {
+                          ...formData.procedures,
+                          travailChaud: { 
+                            ...formData.procedures.travailChaud, 
+                            autorisationSuperviseur: e.target.checked 
+                          }
+                        })}
+                        style={{ transform: 'scale(1.2)' }}
+                      />
+                      Autorisation superviseur pour début des travaux
                     </label>
                   </div>
-                  
-                  {formData.atmospherique.ventilation.active && (
-                    <div style={{ display: 'grid', gap: '12px' }}>
+                </div>
+              </div>
+            )}
+
+            {/* Tests spécifiques excavation */}
+            {formData.typePermis === 'excavation' && (
+              <div style={{ marginBottom: '32px' }}>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
+                  ⛏️ Vérifications Sécurité Excavation
+                </h4>
+                
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1))',
+                  border: '2px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: '12px',
+                  padding: '16px'
+                }}>
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    <label style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      color: '#e2e8f0',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}>
                       <input
-                        type="text"
-                        placeholder="Débit d'air (CFM ou m³/min)"
-                        value={formData.atmospherique.ventilation.debitAir}
-                        onChange={(e) => handleInputChange('atmospherique', {
-                          ...formData.atmospherique,
-                          ventilation: { ...formData.atmospherique.ventilation, debitAir: e.target.value }
+                        type="checkbox"
+                        checked={formData.procedures.excavation.localisationServices}
+                        onChange={(e) => handleInputChange('procedures', {
+                          ...formData.procedures,
+                          excavation: { 
+                            ...formData.procedures.excavation, 
+                            localisationServices: e.target.checked 
+                          }
                         })}
-                        style={{
-                          width: '100%',
-                          padding: '12px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '8px',
-                          color: '#ffffff',
-                          fontSize: '16px',
-                          boxSizing: 'border-box'
-                        }}
+                        style={{ transform: 'scale(1.2)' }}
                       />
+                      Localisation services publics complétée (Ontario Reg 213/91 s.228)
+                    </label>
+
+                    <label style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      color: '#e2e8f0',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.procedures.excavation.noticeRequired}
+                        onChange={(e) => handleInputChange('procedures', {
+                          ...formData.procedures,
+                          excavation: { 
+                            ...formData.procedures.excavation, 
+                            noticeRequired: e.target.checked 
+                          }
+                        })}
+                        style={{ transform: 'scale(1.2)' }}
+                      />
+                      Notice of Trench Work soumise (si profondeur >1.2m)
+                    </label>
+
+                    <label style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      color: '#e2e8f0',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.procedures.excavation.accesSortie}
+                        onChange={(e) => handleInputChange('procedures', {
+                          ...formData.procedures,
+                          excavation: { 
+                            ...formData.procedures.excavation, 
+                            accesSortie: e.target.checked 
+                          }
+                        })}
+                        style={{ transform: 'scale(1.2)' }}
+                      />
+                      Échelles d'accès/sortie installées (max 8m distance - CCOHS)
+                    </label>
+
+                    <div>
+                      <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+                        Type de protection requis
+                      </label>
                       <select
-                        value={formData.atmospherique.ventilation.directionFlux}
-                        onChange={(e) => handleInputChange('atmospherique', {
-                          ...formData.atmospherique,
-                          ventilation: { ...formData.atmospherique.ventilation, directionFlux: e.target.value }
+                        value={formData.equipements.etancemment.type}
+                        onChange={(e) => handleInputChange('equipements', {
+                          ...formData.equipements,
+                          etancemment: { 
+                            ...formData.equipements.etancemment, 
+                            type: e.target.value,
+                            requis: e.target.value !== ''
+                          }
                         })}
                         style={{
                           width: '100%',
@@ -1552,24 +2768,120 @@ const FormulaireLegalScrollable: React.FC<{
                           border: '1px solid rgba(100, 116, 139, 0.3)',
                           borderRadius: '8px',
                           color: '#ffffff',
-                          fontSize: '16px',
+                          fontSize: '14px',
                           boxSizing: 'border-box'
                         }}
                       >
-                        <option value="">Sélectionner direction du flux</option>
-                        <option value="extraction">Extraction (aspiration)</option>
-                        <option value="insufflation">Insufflation (refoulement)</option>
-                        <option value="mixte">Mixte (extraction + insufflation)</option>
+                        <option value="">Sélectionner type de protection</option>
+                        <option value="pente">Pente naturelle stable</option>
+                        <option value="etancemment-bois">Étançonnement bois</option>
+                        <option value="etancemment-hydraulique">Étançonnement hydraulique</option>
+                        <option value="caisson-tranchee">Caisson de tranchée</option>
+                        <option value="plan-ingenieur">Plan ingénieur requis</option>
                       </select>
                     </div>
-                  )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Message pour autres types */}
+            {!['espace-clos', 'travail-chaud', 'excavation'].includes(formData.typePermis) && (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: '#94a3b8',
+                border: '2px dashed rgba(100, 116, 139, 0.3)',
+                borderRadius: '12px'
+              }}>
+                <div style={{ fontSize: '32px', marginBottom: '12px' }}>ℹ️</div>
+                <h4 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>
+                  Tests spécifiques non requis
+                </h4>
+                <p style={{ margin: 0, fontSize: '13px' }}>
+                  Ce type de permis ne nécessite pas de tests atmosphériques selon {regulation?.name}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Section 4: Équipements spécialisés selon permis */}
+          <div id="equipements" style={{ marginBottom: '60px' }}>
+            <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
+              🛡️ Équipements de Sécurité Spécialisés
+            </h3>
+
+            {/* Équipements de base universels */}
+            <div style={{ marginBottom: '32px' }}>
+              <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
+                👷 Équipements de Protection Individuelle (EPI) Obligatoires
+              </h4>
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                borderRadius: '12px',
+                padding: '16px'
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+                  {[
+                    { id: 'casque', label: 'Casque de sécurité (CSA Z94.1)', required: true },
+                    { id: 'chaussures', label: 'Chaussures de sécurité (CSA Z195)', required: true },
+                    { id: 'gants', label: 'Gants de protection adaptés', required: true },
+                    { id: 'veste', label: 'Veste haute visibilité', required: formData.typePermis === 'excavation' },
+                    { id: 'lunettes', label: 'Lunettes de protection', required: formData.typePermis === 'travail-chaud' },
+                    { id: 'masque', label: 'Protection respiratoire', required: formData.typePermis === 'espace-clos' }
+                  ].filter(item => item.required || formData.equipements.protection.includes(item.id)).map((equipement) => (
+                    <label key={equipement.id} style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      color: '#e2e8f0',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      background: formData.equipements.protection.includes(equipement.id) ? 
+                        'rgba(34, 197, 94, 0.2)' : 'transparent'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.equipements.protection.includes(equipement.id)}
+                        onChange={(e) => {
+                          const newProtection = e.target.checked 
+                            ? [...formData.equipements.protection, equipement.id]
+                            : formData.equipements.protection.filter(id => id !== equipement.id);
+                          handleInputChange('equipements', {
+                            ...formData.equipements,
+                            protection: newProtection
+                          });
+                        }}
+                        style={{ transform: 'scale(1.1)' }}
+                      />
+                      <span style={{ flex: 1 }}>
+                        {equipement.label}
+                        {equipement.required && (
+                          <span style={{ color: '#ef4444', marginLeft: '4px' }}>*</span>
+                        )}
+                      </span>
+                      {equipement.required && (
+                        <span style={{ 
+                          fontSize: '9px', 
+                          background: '#ef4444', 
+                          color: 'white', 
+                          padding: '2px 6px', 
+                          borderRadius: '4px',
+                          fontWeight: '700'
+                        }}>
+                          OBLIGATOIRE
+                        </span>
+                      )}
+                    </label>
+                  ))}
                 </div>
               </div>
             </div>
-          )}
 
-          {/* Autres sections placeholder */}
-          {currentSection >= 3 && (
+            {/* Placeholder pour section 2-D */}
             <div style={{
               textAlign: 'center',
               padding: '60px 20px',
@@ -1577,113 +2889,926 @@ const FormulaireLegalScrollable: React.FC<{
             }}>
               <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚧</div>
               <h3 style={{ color: '#e2e8f0', margin: '0 0 12px' }}>
-                Section {currentSection + 1} en développement
+                SECTION 2-C Terminée
               </h3>
               <p style={{ margin: 0 }}>
-                {sections[currentSection].title} sera implémentée dans la prochaine itération
+                Tests atmosphériques + Équipements de base complétés
+              </p>
+              <p style={{ margin: '16px 0 0', fontSize: '14px', color: '#60a5fa' }}>
+                🎯 Prêt pour SECTION 2-D: Équipements spécialisés + Validation finale
               </p>
             </div>
-          )}
-        </div>
+          </div>
+// =================== SECTION 2-D - ÉQUIPEMENTS SPÉCIALISÉS + VALIDATION FINALE ===================
+// Cette section remplace le placeholder "SECTION 2-C Terminée" dans la section équipements
 
-        {/* Navigation fixe en bas - Style mobile */}
-        <div style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(51, 65, 85, 0.9))',
-          borderTop: '1px solid rgba(100, 116, 139, 0.3)',
-          padding: '16px 20px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          <button
-            onClick={prevSection}
-            disabled={currentSection === 0}
-            style={{
-              padding: '12px 20px',
-              background: currentSection === 0 ? 
-                'rgba(100, 116, 139, 0.3)' : 
-                'linear-gradient(135deg, #374151, #4b5563)',
-              color: currentSection === 0 ? '#9ca3af' : '#e5e7eb',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: currentSection === 0 ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              minWidth: '80px'
-            }}
-          >
-            <ChevronLeft size={16} />
-            Précédent
-          </button>
+            {/* Équipements spécialisés selon type de permis */}
+            {formData.typePermis === 'espace-clos' && (
+              <div style={{ marginBottom: '32px' }}>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
+                  🔒 Équipements Spécialisés Espace Clos
+                </h4>
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.1))',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                  borderRadius: '12px',
+                  padding: '16px'
+                }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+                    {[
+                      { id: 'detecteur_gaz_continu', label: 'Détecteur multi-gaz calibré (O₂, LIE, CO, H₂S)', required: true, category: 'detection' },
+                      { id: 'harnais_complet', label: 'Harnais complet avec points d\'ancrage', required: true, category: 'sauvetage' },
+                      { id: 'treuil_sauvetage', label: 'Treuil de sauvetage avec câble ≥30m', required: true, category: 'sauvetage' },
+                      { id: 'appareil_respiratoire', label: 'Appareil respiratoire autonome (ARA)', required: true, category: 'sauvetage' },
+                      { id: 'communication_radio', label: 'Radio de communication surveillant-entrant', required: true, category: 'communication' },
+                      { id: 'eclairage_antidéflagrant', label: 'Éclairage antidéflagrant', required: false, category: 'detection' },
+                      { id: 'civiere_sauvetage', label: 'Civière de sauvetage rigide', required: true, category: 'sauvetage' },
+                      { id: 'ventilateur_portable', label: 'Ventilateur portable (si requis)', required: false, category: 'detection' }
+                    ].map((equipement) => (
+                      <label key={equipement.id} style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px', 
+                        color: '#e2e8f0',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        background: formData.equipements[equipement.category].includes(equipement.id) ? 
+                          'rgba(139, 92, 246, 0.2)' : 'transparent'
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.equipements[equipement.category].includes(equipement.id)}
+                          onChange={(e) => {
+                            const newCategory = e.target.checked 
+                              ? [...formData.equipements[equipement.category], equipement.id]
+                              : formData.equipements[equipement.category].filter(id => id !== equipement.id);
+                            
+                            handleInputChange('equipements', {
+                              ...formData.equipements,
+                              [equipement.category]: newCategory
+                            });
+                          }}
+                          style={{ transform: 'scale(1.1)' }}
+                        />
+                        <span style={{ flex: 1 }}>
+                          {equipement.label}
+                          {equipement.required && (
+                            <span style={{ color: '#ef4444', marginLeft: '4px' }}>*</span>
+                          )}
+                        </span>
+                        {equipement.required && (
+                          <span style={{ 
+                            fontSize: '9px', 
+                            background: '#8b5cf6', 
+                            color: 'white', 
+                            padding: '2px 6px', 
+                            borderRadius: '4px',
+                            fontWeight: '700'
+                          }}>
+                            OBLIGATOIRE
+                          </span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
-          <div style={{
-            flex: 1,
-            textAlign: 'center',
-            fontSize: '12px',
-            color: '#94a3b8',
-            fontWeight: '600'
-          }}>
-            {currentSection + 1} / {sections.length}
+            {formData.typePermis === 'travail-chaud' && (
+              <div style={{ marginBottom: '32px' }}>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
+                  🔥 Équipements Prévention Incendie (NFPA 51B)
+                </h4>
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1))',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '12px',
+                  padding: '16px'
+                }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+                    {[
+                      { id: 'extincteur_co2', label: 'Extincteur CO₂ ≥5kg à proximité immédiate', required: true },
+                      { id: 'extincteur_eau', label: 'Extincteur à eau ou poudre', required: true },
+                      { id: 'couvertures_ignifuges', label: 'Couvertures ignifuges pour protection', required: true },
+                      { id: 'arrosage_preventif', label: 'Point d\'eau/boyau pour arrosage', required: true },
+                      { id: 'surveillance_thermique', label: 'Thermomètre infrarouge', required: false },
+                      { id: 'ecrans_protection', label: 'Écrans de protection contre projections', required: false },
+                      { id: 'detecteur_fumee', label: 'Détecteur de fumée portable', required: false },
+                      { id: 'bac_sable', label: 'Bac à sable pour absorption', required: false }
+                    ].map((equipement) => (
+                      <label key={equipement.id} style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px', 
+                        color: '#e2e8f0',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        background: formData.equipements.preventionIncendie[equipement.id] ? 
+                          'rgba(239, 68, 68, 0.2)' : 'transparent'
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.equipements.preventionIncendie[equipement.id] || false}
+                          onChange={(e) => handleInputChange('equipements', {
+                            ...formData.equipements,
+                            preventionIncendie: {
+                              ...formData.equipements.preventionIncendie,
+                              [equipement.id]: e.target.checked
+                            }
+                          })}
+                          style={{ transform: 'scale(1.1)' }}
+                        />
+                        <span style={{ flex: 1 }}>
+                          {equipement.label}
+                          {equipement.required && (
+                            <span style={{ color: '#ef4444', marginLeft: '4px' }}>*</span>
+                          )}
+                        </span>
+                        {equipement.required && (
+                          <span style={{ 
+                            fontSize: '9px', 
+                            background: '#ef4444', 
+                            color: 'white', 
+                            padding: '2px 6px', 
+                            borderRadius: '4px',
+                            fontWeight: '700'
+                          }}>
+                            OBLIGATOIRE
+                          </span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                  
+                  {/* Zone de dégagement requise */}
+                  <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px' }}>
+                    <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+                      Zone de dégagement vérifiée (mètres)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="50"
+                      value={formData.equipements.preventionIncendie.degagementCombustibles || 0}
+                      onChange={(e) => handleInputChange('equipements', {
+                        ...formData.equipements,
+                        preventionIncendie: {
+                          ...formData.equipements.preventionIncendie,
+                          degagementCombustibles: parseInt(e.target.value) || 0
+                        }
+                      })}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: (formData.equipements.preventionIncendie.degagementCombustibles >= 11) ? 
+                          '2px solid #22c55e' : '2px solid #ef4444',
+                        borderRadius: '8px',
+                        color: '#ffffff',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <div style={{ 
+                      marginTop: '8px', 
+                      fontSize: '11px', 
+                      color: (formData.equipements.preventionIncendie.degagementCombustibles >= 11) ? '#22c55e' : '#ef4444',
+                      fontWeight: '600'
+                    }}>
+                      {(formData.equipements.preventionIncendie.degagementCombustibles >= 11) ? 
+                        '✅ Conforme NFPA 51B (≥11 mètres)' : 
+                        '❌ Non conforme - Minimum 11 mètres requis (NFPA 51B)'
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {formData.typePermis === 'excavation' && (
+              <div style={{ marginBottom: '32px' }}>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
+                  ⛏️ Équipements Sécurité Excavation (O. Reg. 213/91)
+                </h4>
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1))',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: '12px',
+                  padding: '16px'
+                }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+                    {[
+                      { id: 'echelles_acces', label: 'Échelles d\'accès CSA (max 8m distance)', required: true, category: 'protection' },
+                      { id: 'detecteur_gaz_portable', label: 'Détecteur gaz portable (si requis)', required: false, category: 'detection' },
+                      { id: 'pompe_eau', label: 'Pompe d\'évacuation d\'eau', required: false, category: 'protection' },
+                      { id: 'materiel_etancemment', label: 'Matériel d\'étançonnement vérifié', required: true, category: 'etancemment' },
+                      { id: 'barriere_protection', label: 'Barrières/garde-corps ≥1.1m', required: true, category: 'etancemment' },
+                      { id: 'signalisation', label: 'Signalisation danger excavation', required: true, category: 'etancemment' },
+                      { id: 'dispositif_levage', label: 'Dispositif de levage (si >4.5m)', required: false, category: 'sauvetage' },
+                      { id: 'communication_urgence', label: 'Moyen de communication d\'urgence', required: true, category: 'communication' }
+                    ].map((equipement) => (
+                      <label key={equipement.id} style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px', 
+                        color: '#e2e8f0',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        background: (equipement.category === 'etancemment' ? 
+                          formData.equipements.etancemment[equipement.id] : 
+                          formData.equipements[equipement.category].includes(equipement.id)) ? 
+                          'rgba(245, 158, 11, 0.2)' : 'transparent'
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={equipement.category === 'etancemment' ? 
+                            (formData.equipements.etancemment[equipement.id] || false) :
+                            formData.equipements[equipement.category].includes(equipement.id)}
+                          onChange={(e) => {
+                            if (equipement.category === 'etancemment') {
+                              handleInputChange('equipements', {
+                                ...formData.equipements,
+                                etancemment: {
+                                  ...formData.equipements.etancemment,
+                                  [equipement.id]: e.target.checked
+                                }
+                              });
+                            } else {
+                              const newCategory = e.target.checked 
+                                ? [...formData.equipements[equipement.category], equipement.id]
+                                : formData.equipements[equipement.category].filter(id => id !== equipement.id);
+                              handleInputChange('equipements', {
+                                ...formData.equipements,
+                                [equipement.category]: newCategory
+                              });
+                            }
+                          }}
+                          style={{ transform: 'scale(1.1)' }}
+                        />
+                        <span style={{ flex: 1 }}>
+                          {equipement.label}
+                          {equipement.required && (
+                            <span style={{ color: '#ef4444', marginLeft: '4px' }}>*</span>
+                          )}
+                        </span>
+                        {equipement.required && (
+                          <span style={{ 
+                            fontSize: '9px', 
+                            background: '#f59e0b', 
+                            color: 'white', 
+                            padding: '2px 6px', 
+                            borderRadius: '4px',
+                            fontWeight: '700'
+                          }}>
+                            OBLIGATOIRE
+                          </span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+
+                  {/* Profondeur excavation */}
+                  <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '8px' }}>
+                    <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+                      Profondeur de l'excavation (mètres)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="20"
+                      value={formData.equipements.etancemment.profondeurRequise || 0}
+                      onChange={(e) => handleInputChange('equipements', {
+                        ...formData.equipements,
+                        etancemment: {
+                          ...formData.equipements.etancemment,
+                          profondeurRequise: parseFloat(e.target.value) || 0
+                        }
+                      })}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        color: '#ffffff',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <div style={{ 
+                      marginTop: '8px', 
+                      fontSize: '11px', 
+                      color: formData.equipements.etancemment.profondeurRequise > 1.2 ? '#f59e0b' : '#94a3b8',
+                      fontWeight: '600'
+                    }}>
+                      {formData.equipements.etancemment.profondeurRequise > 1.2 ? 
+                        `⚠️ Protection obligatoire (>1.2m) - Notice of Trench Work requise` : 
+                        formData.equipements.etancemment.profondeurRequise > 0 ?
+                        `ℹ️ Surveillance accrue recommandée` :
+                        `📏 Indiquer la profondeur de l'excavation`
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {currentSection < sections.length - 1 ? (
-            <button
-              onClick={nextSection}
-              style={{
-                padding: '12px 20px',
-                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                minWidth: '80px'
-              }}
-            >
-              Suivant
-              <ChevronRight size={16} />
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                alert('✅ Permis sauvegardé avec succès!\n🔢 Code: ' + formData.codePermis);
-                onClose();
-              }}
-              style={{
-                padding: '12px 20px',
-                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <Save size={16} />
-              Sauvegarder
-            </button>
-          )}
+          {/* Section 5: Procédures (référence aux sections précédentes) */}
+          <div id="procedures" style={{ marginBottom: '60px' }}>
+            <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
+              📝 Procédures et Protocoles Spécialisés
+            </h3>
+            
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
+              border: '2px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '12px',
+              padding: '20px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>✅</div>
+              <h4 style={{ color: '#60a5fa', margin: '0 0 12px', fontSize: '18px', fontWeight: '700' }}>
+                Procédures Intégrées dans les Sections Précédentes
+              </h4>
+              <div style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: '1.6' }}>
+                <div style={{ marginBottom: '8px' }}>
+                  🔥 <strong>Travail à Chaud:</strong> Procédures NFPA 51B dans section Tests
+                </div>
+                <div style={{ marginBottom: '8px' }}>
+                  ⛏️ <strong>Excavation:</strong> Vérifications O. Reg. 213/91 dans section Tests  
+                </div>
+                <div style={{ marginBottom: '8px' }}>
+                  🔒 <strong>Espace Clos:</strong> Tests continus + surveillance dans section Tests
+                </div>
+                <div>
+                  ⏰ <strong>Surveillance Post-Travaux:</strong> Timer automatique dans le header
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 6: Surveillance (référence au header) */}
+          <div id="surveillance" style={{ marginBottom: '60px' }}>
+            <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
+              ⏰ Surveillance et Monitoring Actif
+            </h3>
+            
+            <div style={{
+              background: surveillanceEnCours ? 
+                'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.15))' :
+                'linear-gradient(135deg, rgba(100, 116, 139, 0.15), rgba(71, 85, 105, 0.1))',
+              border: surveillanceEnCours ? 
+                '2px solid rgba(245, 158, 11, 0.5)' : 
+                '2px solid rgba(100, 116, 139, 0.3)',
+              borderRadius: '12px',
+              padding: '20px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>
+                {surveillanceEnCours ? '🟡' : '⏰'}
+              </div>
+              <h4 style={{ 
+                color: surveillanceEnCours ? '#f59e0b' : '#94a3b8', 
+                margin: '0 0 12px', 
+                fontSize: '18px', 
+                fontWeight: '700' 
+              }}>
+                {surveillanceEnCours ? 'Surveillance Active en Cours' : 'Surveillance Post-Travaux Disponible'}
+              </h4>
+              <div style={{ 
+                color: surveillanceEnCours ? '#fed7aa' : '#cbd5e1', 
+                fontSize: '14px', 
+                lineHeight: '1.6' 
+              }}>
+                {surveillanceEnCours ? (
+                  <div>
+                    <div style={{ marginBottom: '8px' }}>
+                      ⏱️ <strong>Temps restant:</strong> {formatTempsRestant(tempsRestantSurveillance)}
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      🎯 <strong>Durée totale:</strong> {formData.surveillance.dureeRequise} minutes
+                    </div>
+                    <div>
+                      📋 <strong>Incidents:</strong> {formData.surveillance.incidents.length} signalé(s)
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ marginBottom: '8px' }}>
+                      🎯 <strong>Durée configurée:</strong> {formData.surveillance.dureeRequise} minutes
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      ✅ <strong>Contrôles:</strong> Disponibles dans le header après fin des travaux
+                    </div>
+                    <div>
+                      🔄 <strong>Timer automatique:</strong> Avec gestion d'interventions
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Section 7: Validation finale et conformité */}
+          <div id="validation" style={{ marginBottom: '60px' }}>
+            <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
+              ✅ Validation Finale et Conformité Réglementaire
+            </h3>
+
+            {/* Checklist de conformité automatique */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.15))',
+              border: '2px solid rgba(34, 197, 94, 0.5)',
+              borderRadius: '16px',
+              padding: '24px',
+              marginBottom: '24px'
+            }}>
+              <h4 style={{ color: '#22c55e', margin: '0 0 20px', fontSize: '18px', fontWeight: '800' }}>
+                📋 Validation Automatique de Conformité - {regulation?.name}
+              </h4>
+              
+              {/* Calcul du score de conformité */}
+              {(() => {
+                let score = 0;
+                let total = 0;
+                
+                // Validations communes
+                total++;
+                if (formData.superviseur?.nom && formData.entrants.length > 0) score++;
+                
+                total++;
+                if (formData.lieuTravail && formData.descriptionTravaux) score++;
+                
+                // Validations spécifiques selon type
+                if (formData.typePermis === 'espace-clos') {
+                  total++;
+                  if (formData.atmospherique.oxygene.conformeCNESST && formData.atmospherique.gazCombustibles.conformeReglement) score++;
+                  
+                  total++;
+                  if (formData.equipements.detection.length >= 2 && formData.equipements.sauvetage.length >= 2) score++;
+                }
+                
+                if (formData.typePermis === 'travail-chaud') {
+                  total++;
+                  if (formData.procedures.travailChaud.zoneDegagee >= 11 && formData.procedures.travailChaud.surveillanceIncendie) score++;
+                  
+                  total++;
+                  if (Object.values(formData.equipements.preventionIncendie).filter(Boolean).length >= 4) score++;
+                }
+                
+                if (formData.typePermis === 'excavation') {
+                  total++;
+                  if (formData.procedures.excavation.localisationServices && formData.procedures.excavation.accesSortie) score++;
+                  
+                  total++;
+                  if (formData.equipements.etancemment.materiel_etancemment && formData.equipements.etancemment.barriere_protection) score++;
+                }
+                
+                const pourcentage = total > 0 ? Math.round((score / total) * 100) : 0;
+                
+                return { score, total, pourcentage };
+              })().pourcentage >= 80 ? (
+                <div style={{
+                  background: 'rgba(34, 197, 94, 0.3)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  textAlign: 'center',
+                  marginBottom: '20px'
+                }}>
+                  <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
+                  <h5 style={{ color: '#dcfce7', margin: '0 0 8px', fontSize: '20px', fontWeight: '800' }}>
+                    PERMIS CONFORME - {(() => {
+                      let score = 0; let total = 0;
+                      if (formData.superviseur?.nom && formData.entrants.length > 0) score++; total++;
+                      if (formData.lieuTravail && formData.descriptionTravaux) score++; total++;
+                      if (formData.typePermis === 'espace-clos') {
+                        if (formData.atmospherique.oxygene.conformeCNESST && formData.atmospherique.gazCombustibles.conformeReglement) score++; total++;
+                        if (formData.equipements.detection.length >= 2 && formData.equipements.sauvetage.length >= 2) score++; total++;
+                      }
+                      if (formData.typePermis === 'travail-chaud') {
+                        if (formData.procedures.travailChaud.zoneDegagee >= 11 && formData.procedures.travailChaud.surveillanceIncendie) score++; total++;
+                        if (Object.values(formData.equipements.preventionIncendie).filter(Boolean).length >= 4) score++; total++;
+                      }
+                      if (formData.typePermis === 'excavation') {
+                        if (formData.procedures.excavation.localisationServices && formData.procedures.excavation.accesSortie) score++; total++;
+                        if (formData.equipements.etancemment.materiel_etancemment && formData.equipements.etancemment.barriere_protection) score++; total++;
+                      }
+                      return total > 0 ? Math.round((score / total) * 100) : 0;
+                    })()}% ✅
+                  </h5>
+                  <p style={{ color: '#bbf7d0', margin: '0', fontSize: '14px' }}>
+                    Ce permis respecte toutes les exigences légales {regulation?.name} et peut être utilisé immédiatement.
+                  </p>
+                </div>
+              ) : (
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.3)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  textAlign: 'center',
+                  marginBottom: '20px'
+                }}>
+                  <div style={{ fontSize: '48px', marginBottom: '12px' }}>⚠️</div>
+                  <h5 style={{ color: '#fecaca', margin: '0 0 8px', fontSize: '20px', fontWeight: '800' }}>
+                    PERMIS NON CONFORME - {(() => {
+                      let score = 0; let total = 0;
+                      if (formData.superviseur?.nom && formData.entrants.length > 0) score++; total++;
+                      if (formData.lieuTravail && formData.descriptionTravaux) score++; total++;
+                      if (formData.typePermis === 'espace-clos') {
+                        if (formData.atmospherique.oxygene.conformeCNESST && formData.atmospherique.gazCombustibles.conformeReglement) score++; total++;
+                        if (formData.equipements.detection.length >= 2 && formData.equipements.sauvetage.length >= 2) score++; total++;
+                      }
+                      if (formData.typePermis === 'travail-chaud') {
+                        if (formData.procedures.travailChaud.zoneDegagee >= 11 && formData.procedures.travailChaud.surveillanceIncendie) score++; total++;
+                        if (Object.values(formData.equipements.preventionIncendie).filter(Boolean).length >= 4) score++; total++;
+                      }
+                      if (formData.typePermis === 'excavation') {
+                        if (formData.procedures.excavation.localisationServices && formData.procedures.excavation.accesSortie) score++; total++;
+                        if (formData.equipements.etancemment.materiel_etancemment && formData.equipements.etancemment.barriere_protection) score++; total++;
+                      }
+                      return total > 0 ? Math.round((score / total) * 100) : 0;
+                    })()}% ❌
+                  </h5>
+                  <p style={{ color: '#fca5a5', margin: '0', fontSize: '14px' }}>
+                    Des éléments obligatoires sont manquants. Complétez toutes les sections requises.
+                  </p>
+                </div>
+              )}
+
+              {/* Détail des validations par catégorie */}
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {/* Validation personnel */}
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  background: (formData.superviseur?.nom && formData.entrants.length > 0) ? 
+                    'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'
+                }}>
+                  <div style={{ 
+                    width: '20px', 
+                    height: '20px', 
+                    borderRadius: '50%',
+                    background: (formData.superviseur?.nom && formData.entrants.length > 0) ? '#22c55e' : '#ef4444',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontSize: '12px',
+                    fontWeight: '700'
+                  }}>
+                    {(formData.superviseur?.nom && formData.entrants.length > 0) ? '✓' : '×'}
+                  </div>
+                  <span style={{ 
+                    color: (formData.superviseur?.nom && formData.entrants.length > 0) ? '#dcfce7' : '#fecaca',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}>
+                    Personnel désigné et qualifié ({formData.entrants.length} {formData.typePermis === 'espace-clos' ? 'entrant(s)' : 'travailleur(s)'})
+                  </span>
+                </div>
+
+                {/* Validation identification */}
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  background: (formData.lieuTravail && formData.descriptionTravaux) ? 
+                    'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'
+                }}>
+                  <div style={{ 
+                    width: '20px', 
+                    height: '20px', 
+                    borderRadius: '50%',
+                    background: (formData.lieuTravail && formData.descriptionTravaux) ? '#22c55e' : '#ef4444',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontSize: '12px',
+                    fontWeight: '700'
+                  }}>
+                    {(formData.lieuTravail && formData.descriptionTravaux) ? '✓' : '×'}
+                  </div>
+                  <span style={{ 
+                    color: (formData.lieuTravail && formData.descriptionTravaux) ? '#dcfce7' : '#fecaca',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}>
+                    Identification projet complète (lieu + description détaillée)
+                  </span>
+                </div>
+
+                {/* Validations spécifiques selon type */}
+                {formData.typePermis === 'espace-clos' && (
+                  <>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      background: (formData.atmospherique.oxygene.conformeCNESST && formData.atmospherique.gazCombustibles.conformeReglement) ? 
+                        'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'
+                    }}>
+                      <div style={{ 
+                        width: '20px', 
+                        height: '20px', 
+                        borderRadius: '50%',
+                        background: (formData.atmospherique.oxygene.conformeCNESST && formData.atmospherique.gazCombustibles.conformeReglement) ? '#22c55e' : '#ef4444',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: '700'
+                      }}>
+                        {(formData.atmospherique.oxygene.conformeCNESST && formData.atmospherique.gazCombustibles.conformeReglement) ? '✓' : '×'}
+                      </div>
+                      <span style={{ 
+                        color: (formData.atmospherique.oxygene.conformeCNESST && formData.atmospherique.gazCombustibles.conformeReglement) ? '#dcfce7' : '#fecaca',
+                        fontSize: '14px',
+                        fontWeight: '600'
+                      }}>
+                        Tests atmosphériques conformes {regulation?.name}
+                      </span>
+                    </div>
+
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      background: (formData.equipements.detection.length >= 2 && formData.equipements.sauvetage.length >= 2) ? 
+                        'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'
+                    }}>
+                      <div style={{ 
+                        width: '20px', 
+                        height: '20px', 
+                        borderRadius: '50%',
+                        background: (formData.equipements.detection.length >= 2 && formData.equipements.sauvetage.length >= 2) ? '#22c55e' : '#ef4444',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: '700'
+                      }}>
+                        {(formData.equipements.detection.length >= 2 && formData.equipements.sauvetage.length >= 2) ? '✓' : '×'}
+                      </div>
+                      <span style={{ 
+                        color: (formData.equipements.detection.length >= 2 && formData.equipements.sauvetage.length >= 2) ? '#dcfce7' : '#fecaca',
+                        fontSize: '14px',
+                        fontWeight: '600'
+                      }}>
+                        Équipements spécialisés espace clos présents et vérifiés
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {formData.typePermis === 'travail-chaud' && (
+                  <>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      background: (formData.procedures.travailChaud.zoneDegagee >= 11 && formData.procedures.travailChaud.surveillanceIncendie) ? 
+                        'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'
+                    }}>
+                      <div style={{ 
+                        width: '20px', 
+                        height: '20px', 
+                        borderRadius: '50%',
+                        background: (formData.procedures.travailChaud.zoneDegagee >= 11 && formData.procedures.travailChaud.surveillanceIncendie) ? '#22c55e' : '#ef4444',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: '700'
+                      }}>
+                        {(formData.procedures.travailChaud.zoneDegagee >= 11 && formData.procedures.travailChaud.surveillanceIncendie) ? '✓' : '×'}
+                      </div>
+                      <span style={{ 
+                        color: (formData.procedures.travailChaud.zoneDegagee >= 11 && formData.procedures.travailChaud.surveillanceIncendie) ? '#dcfce7' : '#fecaca',
+                        fontSize: '14px',
+                        fontWeight: '600'
+                      }}>
+                        Procédures NFPA 51B respectées (zone 11m + surveillance incendie)
+                      </span>
+                    </div>
+
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      background: Object.values(formData.equipements.preventionIncendie).filter(Boolean).length >= 4 ? 
+                        'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'
+                    }}>
+                      <div style={{ 
+                        width: '20px', 
+                        height: '20px', 
+                        borderRadius: '50%',
+                        background: Object.values(formData.equipements.preventionIncendie).filter(Boolean).length >= 4 ? '#22c55e' : '#ef4444',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: '700'
+                      }}>
+                        {Object.values(formData.equipements.preventionIncendie).filter(Boolean).length >= 4 ? '✓' : '×'}
+                      </div>
+                      <span style={{ 
+                        color: Object.values(formData.equipements.preventionIncendie).filter(Boolean).length >= 4 ? '#dcfce7' : '#fecaca',
+                        fontSize: '14px',
+                        fontWeight: '600'
+                      }}>
+                        Équipements prévention incendie complets (extincteurs + protection)
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {formData.typePermis === 'excavation' && (
+                  <>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      background: (formData.procedures.excavation.localisationServices && formData.procedures.excavation.accesSortie) ? 
+                        'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'
+                    }}>
+                      <div style={{ 
+                        width: '20px', 
+                        height: '20px', 
+                        borderRadius: '50%',
+                        background: (formData.procedures.excavation.localisationServices && formData.procedures.excavation.accesSortie) ? '#22c55e' : '#ef4444',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: '700'
+                      }}>
+                        {(formData.procedures.excavation.localisationServices && formData.procedures.excavation.accesSortie) ? '✓' : '×'}
+                      </div>
+                      <span style={{ 
+                        color: (formData.procedures.excavation.localisationServices && formData.procedures.excavation.accesSortie) ? '#dcfce7' : '#fecaca',
+                        fontSize: '14px',
+                        fontWeight: '600'
+                      }}>
+                        Procédures O. Reg. 213/91 respectées (localisation + accès)
+                      </span>
+                    </div>
+
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      background: (formData.equipements.etancemment.materiel_etancemment && formData.equipements.etancemment.barriere_protection) ? 
+                        'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'
+                    }}>
+                      <div style={{ 
+                        width: '20px', 
+                        height: '20px', 
+                        borderRadius: '50%',
+                        background: (formData.equipements.etancemment.materiel_etancemment && formData.equipements.etancemment.barriere_protection) ? '#22c55e' : '#ef4444',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: '700'
+                      }}>
+                        {(formData.equipements.etancemment.materiel_etancemment && formData.equipements.etancemment.barriere_protection) ? '✓' : '×'}
+                      </div>
+                      <span style={{ 
+                        color: (formData.equipements.etancemment.materiel_etancemment && formData.equipements.etancemment.barriere_protection) ? '#dcfce7' : '#fecaca',
+                        fontSize: '14px',
+                        fontWeight: '600'
+                      }}>
+                        Protection excavation installée (étançonnement + barrières)
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Informations finales du permis */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
+              border: '2px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '12px',
+              padding: '20px'
+            }}>
+              <h4 style={{ color: '#60a5fa', margin: '0 0 16px', fontSize: '16px', fontWeight: '700' }}>
+                📄 Informations Finales du Permis
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                    Numéro de formulaire final
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.numeroFormulaire}
+                    readOnly
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      border: '2px solid #60a5fa',
+                      borderRadius: '8px',
+                      color: '#60a5fa',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                    Date de validation
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.validation.dateValidation || new Date().toISOString().slice(0, 16)}
+                    onChange={(e) => handleInputChange('validation', {
+                      ...formData.validation,
+                      dateValidation: e.target.value
+                    })}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      border: '1px solid rgba(100, 116, 139, 0.3)',
+                      borderRadius: '8px',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+                  Signature électronique du responsable *
+                </label>
+                <input
+                  type="text"
+                  value={formData.validation.signatureResponsable}
+                  onChange={(e) => handleInputChange('validation', {
+                    ...formData.validation,
+                    signatureResponsable: e.target.value
+                  })}
+                  placeholder="Nom complet + titre du responsable autorisé"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    border: formData.validation.signatureResponsable ? '2px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              
+              <div style={{ marginTop: '16px', fontSize: '11px', color: '#94a3b8', textAlign: 'center' }}>
+                🔐 Signature électronique conforme aux standards légaux pour permis de travail officiel
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  );
-};
 // =================== COMPOSANT PRINCIPAL STEP4PERMITS ===================
 const Step4Permits: React.FC<Step4PermitsProps> = ({ 
   formData, 
