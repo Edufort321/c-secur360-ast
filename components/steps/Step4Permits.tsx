@@ -1713,7 +1713,6 @@ const FormulaireLegalComplet: React.FC<{
             </div>
           )}
         </div>
-
         {/* Footer Actions */}
         <div style={{
           background: 'rgba(30, 41, 59, 0.5)',
