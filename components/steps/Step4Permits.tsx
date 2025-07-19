@@ -518,10 +518,30 @@ const FormulaireLegalScrollable: React.FC<{
     
     // Section 3: Tests atmosphériques (conformes CNESST 2025/OHSA)
     atmospherique: {
-      oxygene: { niveau: 0, conforme: false, heureTest: '', equipement: '' },
-      gazToxiques: { detection: [], niveaux: {}, conforme: false },
-      gazCombustibles: { pourcentageLIE: 0, conforme: false, equipement: '' },
-      ventilation: { active: false, debit: '', direction: '' }
+      oxygene: { 
+        niveau: 0, 
+        conformeCNESST: false, 
+        heureTest: '', 
+        equipementUtilise: '' 
+      },
+      gazToxiques: { 
+        detection: [] as string[], 
+        niveaux: {} as Record<string, number>, 
+        seuils: {} as Record<string, number>,
+        conforme: false 
+      },
+      gazCombustibles: { 
+        pourcentageLIE: 0, 
+        conformeReglement: false, 
+        typeGaz: '',
+        equipementTest: '' 
+      },
+      ventilation: { 
+        active: false, 
+        debitAir: '', 
+        directionFlux: '',
+        efficacite: ''
+      }
     } as AtmosphericData,
     
     // Section 4: Équipements réglementaires
@@ -1364,18 +1384,18 @@ const FormulaireLegalScrollable: React.FC<{
                           value={formData.atmospherique.oxygene.niveau || ''}
                           onChange={(e) => {
                             const niveau = parseFloat(e.target.value) || 0;
-                            const conforme = niveau >= (regulation?.oxygenRange.min || 19.5) && 
+                            const conformeCNESST = niveau >= (regulation?.oxygenRange.min || 19.5) && 
                                            niveau <= (regulation?.oxygenRange.max || 23.0);
                             handleInputChange('atmospherique', {
                               ...formData.atmospherique,
-                              oxygene: { ...formData.atmospherique.oxygene, niveau, conforme }
+                              oxygene: { ...formData.atmospherique.oxygene, niveau, conformeCNESST }
                             });
                           }}
                           style={{
                             width: '100%',
                             padding: '12px',
                             background: 'rgba(15, 23, 42, 0.8)',
-                            border: formData.atmospherique.oxygene.conforme ? 
+                            border: formData.atmospherique.oxygene.conformeCNESST ? 
                               '2px solid #22c55e' : 
                               formData.atmospherique.oxygene.niveau > 0 ? '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
                             borderRadius: '8px',
@@ -1440,12 +1460,12 @@ const FormulaireLegalScrollable: React.FC<{
                       textAlign: 'center'
                     }}>
                       <div style={{ 
-                        color: formData.atmospherique.oxygene.conforme ? '#22c55e' : 
+                        color: formData.atmospherique.oxygene.conformeCNESST ? '#22c55e' : 
                                formData.atmospherique.oxygene.niveau > 0 ? '#ef4444' : '#94a3b8',
                         fontWeight: '700',
                         fontSize: '14px'
                       }}>
-                        {formData.atmospherique.oxygene.conforme ? 
+                        {formData.atmospherique.oxygene.conformeCNESST ? 
                           `✅ CONFORME ${regulation?.name}` : 
                           formData.atmospherique.oxygene.niveau > 0 ? 
                             `❌ NON CONFORME - Requis: ${regulation?.oxygenRange.min}%-${regulation?.oxygenRange.max}%` :
@@ -1464,7 +1484,7 @@ const FormulaireLegalScrollable: React.FC<{
                 </h4>
                 <div style={{
                   background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1))',
-                  border: formData.atmospherique.gazCombustibles.conforme ? 
+                  border: formData.atmospherique.gazCombustibles.conformeReglement ? 
                     '2px solid rgba(245, 158, 11, 0.5)' : 
                     '1px solid rgba(100, 116, 139, 0.3)',
                   borderRadius: '12px',
@@ -1484,17 +1504,17 @@ const FormulaireLegalScrollable: React.FC<{
                           value={formData.atmospherique.gazCombustibles.pourcentageLIE || ''}
                           onChange={(e) => {
                             const pourcentageLIE = parseFloat(e.target.value) || 0;
-                            const conforme = pourcentageLIE <= (regulation?.flammableGasLimit || 10);
+                            const conformeReglement = pourcentageLIE <= (regulation?.flammableGasLimit || 10);
                             handleInputChange('atmospherique', {
                               ...formData.atmospherique,
-                              gazCombustibles: { ...formData.atmospherique.gazCombustibles, pourcentageLIE, conforme }
+                              gazCombustibles: { ...formData.atmospherique.gazCombustibles, pourcentageLIE, conformeReglement }
                             });
                           }}
                           style={{
                             width: '100%',
                             padding: '12px',
                             background: 'rgba(15, 23, 42, 0.8)',
-                            border: formData.atmospherique.gazCombustibles.conforme ? 
+                            border: formData.atmospherique.gazCombustibles.conformeReglement ? 
                               '2px solid #f59e0b' : 
                               formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
                             borderRadius: '8px',
@@ -1533,10 +1553,10 @@ const FormulaireLegalScrollable: React.FC<{
                     <input
                       type="text"
                       placeholder="Équipement de détection (étalonné selon fabricant)"
-                      value={formData.atmospherique.gazCombustibles.equipement}
+                      value={formData.atmospherique.gazCombustibles.equipementTest}
                       onChange={(e) => handleInputChange('atmospherique', {
                         ...formData.atmospherique,
-                        gazCombustibles: { ...formData.atmospherique.gazCombustibles, equipement: e.target.value }
+                        gazCombustibles: { ...formData.atmospherique.gazCombustibles, equipementTest: e.target.value }
                       })}
                       style={{
                         width: '100%',
@@ -1552,19 +1572,19 @@ const FormulaireLegalScrollable: React.FC<{
                     
                     <div style={{
                       padding: '12px',
-                      background: formData.atmospherique.gazCombustibles.conforme ? 
+                      background: formData.atmospherique.gazCombustibles.conformeReglement ? 
                         'rgba(245, 158, 11, 0.2)' : 
                         formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(100, 116, 139, 0.1)',
                       borderRadius: '8px',
                       textAlign: 'center'
                     }}>
                       <div style={{ 
-                        color: formData.atmospherique.gazCombustibles.conforme ? '#f59e0b' : 
+                        color: formData.atmospherique.gazCombustibles.conformeReglement ? '#f59e0b' : 
                                formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? '#ef4444' : '#94a3b8',
                         fontWeight: '700',
                         fontSize: '14px'
                       }}>
-                        {formData.atmospherique.gazCombustibles.conforme ? 
+                        {formData.atmospherique.gazCombustibles.conformeReglement ? 
                           `✅ SÉCURITAIRE - Limite: ≤${regulation?.flammableGasLimit}% LIE` : 
                           formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? 
                             `🚨 DANGER - Dépassement limite ${regulation?.flammableGasLimit}% LIE` :
@@ -1615,10 +1635,10 @@ const FormulaireLegalScrollable: React.FC<{
                       <input
                         type="text"
                         placeholder="Débit d'air (CFM ou m³/min)"
-                        value={formData.atmospherique.ventilation.debit}
+                        value={formData.atmospherique.ventilation.debitAir}
                         onChange={(e) => handleInputChange('atmospherique', {
                           ...formData.atmospherique,
-                          ventilation: { ...formData.atmospherique.ventilation, debit: e.target.value }
+                          ventilation: { ...formData.atmospherique.ventilation, debitAir: e.target.value }
                         })}
                         style={{
                           width: '100%',
@@ -1632,10 +1652,10 @@ const FormulaireLegalScrollable: React.FC<{
                         }}
                       />
                       <select
-                        value={formData.atmospherique.ventilation.direction}
+                        value={formData.atmospherique.ventilation.directionFlux}
                         onChange={(e) => handleInputChange('atmospherique', {
                           ...formData.atmospherique,
-                          ventilation: { ...formData.atmospherique.ventilation, direction: e.target.value }
+                          ventilation: { ...formData.atmospherique.ventilation, directionFlux: e.target.value }
                         })}
                         style={{
                           width: '100%',
