@@ -1,45 +1,18 @@
-// components/steps/Step4Permits/utils/validators/index.ts - EXPORTS COMPLETS
+// components/steps/Step4Permits/utils/validators/index.ts - SYNTAX CORRECTED
 
 // =================== EXPORTS DES VALIDATEURS EXISTANTS ===================
 
 // Validateurs atmosphériques
 export * from './atmospheric';
-export {
-  validateAtmosphericReading,
-  validateAtmosphericReadings,
-  formatValidationResult as formatAtmosphericResult,
-  generateQualityReport as generateAtmosphericReport
-} from './atmospheric';
 
 // Validateurs équipement
 export * from './equipment';
-export {
-  validateEquipment,
-  validateEquipmentSet,
-  EQUIPMENT_SPECIFICATIONS,
-  SAFETY_CRITICAL_EQUIPMENT
-} from './equipment';
 
 // Validateurs personnel
 export * from './personnel';
-export {
-  validatePersonnel,
-  validatePersonnelTeam,
-  ROLE_REQUIREMENTS,
-  TRAINING_REFRESH_INTERVALS,
-  CERTIFICATION_VALIDITY,
-  MEDICAL_EXAM_INTERVALS
-} from './personnel';
 
 // Validateurs procédures
 export * from './procedures';
-export {
-  validateProcedure,
-  validateProcedureSet,
-  REQUIRED_PROCEDURES,
-  REGULATORY_REQUIREMENTS,
-  EMERGENCY_DRILL_INTERVALS
-} from './procedures';
 
 // =================== TYPES POUR VALIDATION MOBILE ===================
 export interface MobileValidationOptions {
@@ -85,7 +58,7 @@ export interface ValidationSummary {
   }>;
 }
 
-// =================== CLASSE MOBILEFORMVALIDATOR COMPLÈTE ===================
+// =================== CLASSE MOBILEFORMVALIDATOR SIMPLIFIÉE ===================
 export class MobileFormValidator {
   private permitType: string;
   private province: string;
@@ -146,7 +119,7 @@ export class MobileFormValidator {
     };
   }
 
-  // =================== VALIDATION SECTION SPÉCIFIQUE ===================
+  // =================== VALIDATION SECTION SPÉCIFIQUE - SYNTAX CORRIGÉE ===================
   validateSection(section: string, sectionData: any, fullFormData: any) {
     const errors: ValidationError[] = [];
     const warnings: ValidationError[] = [];
@@ -154,33 +127,54 @@ export class MobileFormValidator {
 
     try {
       switch (section) {
-        case 'identification':
-          ({ errors: errors.push(...this.validateIdentification(sectionData)), progress } = this.validateIdentification(sectionData));
+        case 'identification': {
+          const result = this.validateIdentification(sectionData);
+          errors.push(...result.errors);
+          progress = result.progress;
           break;
+        }
         
-        case 'personnel':
-          ({ errors: errors.push(...this.validatePersonnelSection(sectionData)), progress } = this.validatePersonnelSection(sectionData));
+        case 'personnel': {
+          const result = this.validatePersonnelSection(sectionData);
+          errors.push(...result.errors);
+          progress = result.progress;
           break;
+        }
         
-        case 'testsEtMesures':
-          ({ errors: errors.push(...this.validateTestsSection(sectionData)), progress } = this.validateTestsSection(sectionData));
+        case 'testsEtMesures': {
+          const result = this.validateTestsSection(sectionData);
+          errors.push(...result.errors);
+          progress = result.progress;
           break;
+        }
         
-        case 'equipements':
-          ({ errors: errors.push(...this.validateEquipmentSection(sectionData)), progress } = this.validateEquipmentSection(sectionData));
+        case 'equipements': {
+          const result = this.validateEquipmentSection(sectionData);
+          errors.push(...result.errors);
+          progress = result.progress;
           break;
+        }
         
-        case 'procedures':
-          ({ errors: errors.push(...this.validateProceduresSection(sectionData)), progress } = this.validateProceduresSection(sectionData));
+        case 'procedures': {
+          const result = this.validateProceduresSection(sectionData);
+          errors.push(...result.errors);
+          progress = result.progress;
           break;
+        }
         
-        case 'surveillance':
-          ({ errors: errors.push(...this.validateSurveillanceSection(sectionData)), progress } = this.validateSurveillanceSection(sectionData));
+        case 'surveillance': {
+          const result = this.validateSurveillanceSection(sectionData);
+          errors.push(...result.errors);
+          progress = result.progress;
           break;
+        }
         
-        case 'validation':
-          ({ errors: errors.push(...this.validateValidationSection(sectionData)), progress } = this.validateValidationSection(sectionData));
+        case 'validation': {
+          const result = this.validateValidationSection(sectionData);
+          errors.push(...result.errors);
+          progress = result.progress;
           break;
+        }
         
         default:
           progress = 100; // Section inconnue considérée comme complète
@@ -446,19 +440,6 @@ export class MobileFormValidator {
           message: this.language === 'fr' ? 'Email invalide' : 'Invalid email',
           severity: 'error',
           code: 'INVALID_EMAIL'
-        };
-      }
-    }
-
-    // Validation téléphone
-    if (fieldPath.includes('phone') && value) {
-      const phoneRegex = /^[\+]?[\d\s\-\(\)]{10,}$/;
-      if (!phoneRegex.test(value.replace(/\s/g, ''))) {
-        return {
-          field: fieldPath,
-          message: this.language === 'fr' ? 'Téléphone invalide' : 'Invalid phone',
-          severity: 'error',
-          code: 'INVALID_PHONE'
         };
       }
     }
