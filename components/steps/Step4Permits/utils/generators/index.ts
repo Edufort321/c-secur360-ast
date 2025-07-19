@@ -1,23 +1,15 @@
-// components/steps/Step4Permits/utils/generators/index.ts
+// components/steps/Step4Permits/utils/generators/index.ts - SANS EXPORTS EN DOUBLE
 
-// =================== EXPORTS DES GÉNÉRATEURS EXISTANTS ===================
+// =================== EXPORTS COMMENTÉS POUR ÉVITER LES CONFLITS ===================
 
-// Export des générateurs de templates email
-export * from './emailTemplates';
+// Ne pas exporter directement les fichiers existants qui ont des exports en double
+// export * from './emailTemplates';
+// export * from './excelExporter';
+// export * from './pdfGenerator';
+// export * from './qrGenerator';
+// export * from './reportGenerator';
 
-// Export des exportateurs Excel
-export * from './excelExporter';
-
-// Export des générateurs PDF
-export * from './pdfGenerator';
-
-// Export des générateurs QR
-export * from './qrGenerator';
-
-// Export des générateurs de rapports
-export * from './reportGenerator';
-
-// =================== FONCTIONS POUR USEPERMITS ===================
+// =================== INTERFACES POUR USEPERMITS ===================
 
 // Interface pour les options de génération PDF
 export interface PDFGenerationOptions {
@@ -59,7 +51,9 @@ export interface ExportResult {
   error?: string;
 }
 
-// =================== FONCTION GENERATEPERMITPDF ===================
+// =================== FONCTIONS POUR USEPERMITS ===================
+
+// Fonction generatePermitPDF pour usePermits
 export const generatePermitPDF = async (
   permit: any, 
   formData: any, 
@@ -91,7 +85,7 @@ export const generatePermitPDF = async (
   }
 };
 
-// =================== FONCTION EXPORTPERMITDATA ===================
+// Fonction exportPermitData pour usePermits
 export const exportPermitData = async (
   permit: any, 
   formData: any, 
@@ -132,7 +126,7 @@ export const exportPermitData = async (
   }
 };
 
-// =================== FONCTION GENERATEQRCODE ===================
+// Fonction generateQRCode simple
 export const generateQRCode = async (
   data: string, 
   options: { size?: number; format?: 'png' | 'svg' } = {}
@@ -140,8 +134,7 @@ export const generateQRCode = async (
   try {
     const { size = 200, format = 'png' } = options;
     
-    // TODO: Implémenter avec vraie génération QR
-    // Pour l'instant, utilisation d'un service externe
+    // Service externe pour QR codes
     const encodedData = encodeURIComponent(data);
     return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodedData}&format=${format}`;
     
@@ -151,7 +144,7 @@ export const generateQRCode = async (
   }
 };
 
-// =================== FONCTION GENERATEPERMITREPORT ===================
+// Fonction generatePermitReport simple
 export const generatePermitReport = async (
   permits: any[], 
   options: {
@@ -163,9 +156,7 @@ export const generatePermitReport = async (
 ): Promise<ExportResult> => {
   try {
     // Simulation de génération de rapport
-    // TODO: Implémenter avec vraie génération
-    
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simule traitement
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
     const fileName = `Rapport_Permis_${new Date().toISOString().split('T')[0]}.${options.format}`;
     const exportUrl = `/api/reports/permits?format=${options.format}`;
@@ -185,42 +176,6 @@ export const generatePermitReport = async (
   }
 };
 
-// =================== FONCTION GENERATEEMAIL ===================
-export const generatePermitEmail = async (
-  permit: any,
-  template: 'notification' | 'approval' | 'expiration',
-  recipients: string[],
-  options: {
-    language?: 'fr' | 'en';
-    includeAttachments?: boolean;
-  } = {}
-): Promise<{
-  success: boolean;
-  emailId?: string;
-  error?: string;
-}> => {
-  try {
-    // Simulation d'envoi email
-    // TODO: Implémenter avec vrai service email
-    
-    await new Promise(resolve => setTimeout(resolve, 800)); // Simule envoi
-    
-    const emailId = `email_${Date.now()}`;
-    
-    return {
-      success: true,
-      emailId
-    };
-    
-  } catch (error) {
-    console.error('Email generation failed:', error);
-    return {
-      success: false,
-      error: 'Échec de l\'envoi email'
-    };
-  }
-};
-
 // =================== UTILITAIRES ===================
 export const formatPermitData = (permit: any, formData: any) => {
   return {
@@ -229,11 +184,6 @@ export const formatPermitData = (permit: any, formData: any) => {
     exportTimestamp: new Date().toISOString(),
     version: '1.0'
   };
-};
-
-export const compressImages = async (images: File[]): Promise<File[]> => {
-  // TODO: Implémenter compression d'images
-  return images;
 };
 
 export const generateShareableLink = (permitId: string, expiresIn: number = 24): string => {
@@ -248,8 +198,6 @@ export default {
   exportPermitData,
   generateQRCode,
   generatePermitReport,
-  generatePermitEmail,
   formatPermitData,
-  compressImages,
   generateShareableLink
 };
