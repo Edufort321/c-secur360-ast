@@ -10,6 +10,20 @@ import {
   AlertTriangle, Activity, FileText, Users, Shield, Zap,
   Lock, Eye, Settings, Mic, Camera, MapPin, Power
 } from 'lucide-react';
+import type {
+  InspectionRecord,
+  ApprovalLevel,
+  SignatureData,
+  ProcedureStep,
+  Certification,
+  PersonnelMember,
+  TestResult,
+  CalibrationRecord,
+  EquipmentItem,
+  PPEItem,
+  CommunicationPlan,
+  ContactInfo
+} from '../../types/shared';
 
 // =================== TYPES ESSENTIELS ===================
 interface ElectricalFormData {
