@@ -1713,9 +1713,7 @@ const FormulaireLegalComplet: React.FC<{
                   </label>
                 ))}
               </div>
-
-              {/* Validation finale du permis */}
-              <div style={{
+           <div style={{
                 background: Object.values(formData).slice(-4).every(val => val === true) ?
                   'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.15))' :
                   'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15))',
@@ -1817,6 +1815,9 @@ const FormulaireLegalComplet: React.FC<{
     </div>
   );
 };
+
+              {/* Validation finale du permis */}
+
 // =================== STEP4PERMITS.TSX - SECTION 5/5 - FINALE ===================
 // Ajoutez cette section À LA SUITE de la SECTION 4 (ne remplacez pas, ajoutez !)
 
