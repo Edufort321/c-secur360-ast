@@ -1813,7 +1813,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
         return (
         <Step4Permits
           language={currentLanguage}
-          province={astData.step2?.province || 'QC'}
+          province={'QC'}
           userRole={'worker'}
           touchOptimized={true}
           compactMode={false}
