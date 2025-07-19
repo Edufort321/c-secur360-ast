@@ -1812,16 +1812,16 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       case 4:
         return (
         <Step4Permits
-  language={currentLanguage}
-  province={astData.province || 'QC'}
-  userRole={astData.userRole || 'worker'}
-  touchOptimized={true}
-  compactMode={false}
-  onPermitChange={(permits) => {
-    handleStep4DataChange('permits', permits);
-  }}
-  initialPermits={astData.step4?.permits || []}
-/>
+          language={currentLanguage}
+          province={astData.step2?.province || 'QC'}
+          userRole={'worker'}
+          touchOptimized={true}
+          compactMode={false}
+          onPermitChange={(permits) => {
+          handleStep4DataChange('permits', permits);
+        }}
+      initialPermits={astData.step4?.permits || []}
+    />
         );
       case 5:
         return (
