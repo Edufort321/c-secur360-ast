@@ -28,12 +28,7 @@ import {
   Wrench,
   Activity
 } from 'lucide-react';
-import type { 
-  PermitType,
-  PermitStatus,
-  Priority,
-  ValidationResult
-} from '../types';
+type PermitType = 'confined_space' | 'hot_work' | 'excavation' | 'lifting' | 'height_work' | 'electrical';
 
 // Types temporaires pour éviter les erreurs
 interface LegalPermit {
