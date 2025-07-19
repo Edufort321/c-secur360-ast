@@ -1,5 +1,12 @@
 // =================== COMPONENTS/FORMS/ELECTRICALFORM.TSX - FORMULAIRE TRAVAUX ÉLECTRIQUES ULTRA-COMPLET ===================
 // Formulaire travaux électriques révolutionnaire avec consignation, vérification absence tension et EPI spécialisés
+/*
+import type {
+  InspectionRecord,
+  ApprovalLevel,
+  // ... tous les imports
+} from '../../types/shared';
+*/
 
 "use client";
 
