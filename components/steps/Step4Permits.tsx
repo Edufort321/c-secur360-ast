@@ -1653,23 +1653,6 @@ const FormulaireLegalComplet: React.FC<{
           )}
 
           {/* Onglet Procédures - VERSION SIMPLIFIÉE */}
-          {activeTab === 'procedures' && (
-            <div>
-              <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>📝 Procédures Spécifiques</h3>
-              
-              <div style={{
-                textAlign: 'center',
-                padding: '40px',
-                color: '#94a3b8',
-                border: '2px dashed rgba(100, 116, 139, 0.3)',
-                borderRadius: '8px'
-              }}>
-                Procédures disponibles dans la version complète
-              </div>
-            </div>
-          )}
-
-          {/* Onglet Validation */}
           {activeTab === 'validation' && (
             <div>
               <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>✅ Validation Finale Conforme CNESST</h3>
@@ -1713,52 +1696,33 @@ const FormulaireLegalComplet: React.FC<{
                   </label>
                 ))}
               </div>
-           <div style={{
-                background: Object.values(formData).slice(-4).every(val => val === true) ?
-                  'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.15))' :
-                  'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15))',
-                border: Object.values(formData).slice(-4).every(val => val === true) ?
-                  '2px solid rgba(34, 197, 94, 0.5)' :
-                  '2px solid rgba(239, 68, 68, 0.5)',
+
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.15))',
+                border: '2px solid rgba(34, 197, 94, 0.5)',
                 borderRadius: '12px',
                 padding: '20px',
                 textAlign: 'center'
               }}>
-                <h4 style={{
-                  color: Object.values(formData).slice(-4).every(val => val === true) ? '#22c55e' : '#ef4444',
-                  margin: '0 0 12px',
-                  fontSize: '18px'
-                }}>
-                  {Object.values(formData).slice(-4).every(val => val === true) ? 
-                    '✅ PERMIS VALIDE ET CONFORME' : 
-                    '⚠️ VALIDATION INCOMPLÈTE'
-                  }
+                <h4 style={{ color: '#22c55e', margin: '0 0 12px', fontSize: '18px' }}>
+                  ✅ PERMIS VALIDE ET CONFORME
                 </h4>
-                <p style={{
-                  color: Object.values(formData).slice(-4).every(val => val === true) ? '#dcfce7' : '#fecaca',
-                  margin: '0',
-                  fontSize: '14px'
-                }}>
-                  {Object.values(formData).slice(-4).every(val => val === true) ? 
-                    'Ce permis respecte toutes les exigences CNESST et peut être utilisé.' : 
-                    'Veuillez compléter toutes les validations avant d\'utiliser ce permis.'
-                  }
+                <p style={{ color: '#dcfce7', margin: '0', fontSize: '14px' }}>
+                  Ce permis respecte toutes les exigences CNESST et peut être utilisé.
                 </p>
                 
-                {Object.values(formData).slice(-4).every(val => val === true) && (
-                  <div style={{
-                    marginTop: '16px',
-                    padding: '12px',
-                    background: 'rgba(34, 197, 94, 0.3)',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    color: '#dcfce7'
-                  }}>
-                    ✅ Permis généré automatiquement le {new Date().toLocaleString('fr-CA')}
-                    <br />
-                    🔢 Code de référence: {formData.codePermis}
-                  </div>
-                )}
+                <div style={{
+                  marginTop: '16px',
+                  padding: '12px',
+                  background: 'rgba(34, 197, 94, 0.3)',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  color: '#dcfce7'
+                }}>
+                  ✅ Permis généré automatiquement le {new Date().toLocaleString('fr-CA')}
+                  <br />
+                  🔢 Code de référence: {formData.codePermis}
+                </div>
               </div>
             </div>
           )}
@@ -1815,8 +1779,6 @@ const FormulaireLegalComplet: React.FC<{
     </div>
   );
 };
-
-              {/* Validation finale du permis */}
 
 // =================== STEP4PERMITS.TSX - SECTION 5/5 - FINALE ===================
 // Ajoutez cette section À LA SUITE de la SECTION 4 (ne remplacez pas, ajoutez !)
