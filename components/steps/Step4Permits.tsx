@@ -1806,8 +1806,7 @@ const FormulaireLegalComplet: React.FC<{
                     🔢 Code de référence légal: {formData.codePermis}
                     <br />
                     📋 Conforme aux normes CNESST en vigueur
-                  </div>
-                )}
+                </div>
               </div>
             </div>
           )}
