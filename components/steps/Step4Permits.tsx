@@ -1,3 +1,6 @@
+// =================== SECTION 1 - INTERFACES ET FONCTIONS COMPLÈTES ===================
+// À coller au début de votre fichier Step4Permits.tsx
+
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -361,6 +364,134 @@ const getTexts = (language: 'fr' | 'en') => {
       }
     };
   }
+};
+
+// =================== GÉNÉRATEUR PERMIS CONFORMES - FONCTION MANQUANTE ! ===================
+const generateCompliantPermits = (language: 'fr' | 'en', province: string): LegalPermit[] => {
+  const regulation = PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS];
+  const basePermits: LegalPermit[] = [];
+
+  // Permis Espace Clos - Obligatoire dans toutes les provinces
+  basePermits.push({
+    id: `confined-space-${province.toLowerCase()}`,
+    name: language === 'fr' ? 
+      `🔒 Permis Entrée Espace Clos - ${regulation?.name}` : 
+      `🔒 Confined Space Entry Permit - ${regulation?.name}`,
+    category: language === 'fr' ? 'Espaces Clos' : 'Confined Spaces',
+    description: language === 'fr' ? 
+      `Permis obligatoire selon ${regulation?.regulation}. Tests atmosphériques: O2 ${regulation?.oxygenRange.min}-${regulation?.oxygenRange.max}%, Gaz inflammables ≤${regulation?.flammableGasLimit}% LIE. Âge minimum: ${regulation?.minimumAge} ans.` :
+      `Mandatory permit per ${regulation?.regulation}. Atmospheric testing: O2 ${regulation?.oxygenRange.min}-${regulation?.oxygenRange.max}%, Flammable gases ≤${regulation?.flammableGasLimit}% LEL. Minimum age: ${regulation?.minimumAge} years.`,
+    authority: regulation?.authority || '',
+    province: [province],
+    priority: 'critical',
+    selected: false,
+    formData: {},
+    code: generateLegalPermitCode('confined-space', province),
+    status: 'draft',
+    dateCreated: new Date().toISOString(),
+    dateModified: new Date().toISOString(),
+    legalRequirements: {
+      permitRequired: true,
+      atmosphericTesting: true,
+      entryProcedure: true,
+      emergencyPlan: true,
+      equipmentCheck: true,
+      attendantRequired: true,
+      documentation: true
+    },
+    validity: {
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      isValid: false
+    },
+    compliance: {
+      [province.toLowerCase() === 'qc' ? 'cnesst' : 
+       province.toLowerCase() === 'on' ? 'ohsa' : 
+       province.toLowerCase() === 'bc' ? 'worksafebc' : 'ohs']: true
+    }
+  });
+
+  // Permis Travail à Chaud - Selon réglementation provinciale
+  if (province === 'QC' || province === 'ON') {
+    basePermits.push({
+      id: `hot-work-${province.toLowerCase()}`,
+      name: language === 'fr' ? 
+        `🔥 Permis Travail à Chaud - ${regulation?.name}` : 
+        `🔥 Hot Work Permit - ${regulation?.name}`,
+      category: language === 'fr' ? 'Travail à Chaud' : 'Hot Work',
+      description: language === 'fr' ? 
+        `Soudage, découpage, meulage selon ${regulation?.regulation}. Surveillance incendie continue obligatoire. Tests atmosphériques avant travaux.` :
+        `Welding, cutting, grinding per ${regulation?.regulation}. Continuous fire watch mandatory. Atmospheric testing before work.`,
+      authority: regulation?.authority || '',
+      province: [province],
+      priority: 'critical',
+      selected: false,
+      formData: {},
+      code: generateLegalPermitCode('hot-work', province),
+      status: 'draft',
+      dateCreated: new Date().toISOString(),
+      dateModified: new Date().toISOString(),
+      legalRequirements: {
+        permitRequired: true,
+        atmosphericTesting: true,
+        entryProcedure: false,
+        emergencyPlan: true,
+        equipmentCheck: true,
+        attendantRequired: true,
+        documentation: true
+      },
+      validity: {
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 jours max
+        isValid: false
+      },
+      compliance: {
+        [province.toLowerCase() === 'qc' ? 'cnesst' : 'ohsa']: true
+      }
+    });
+  }
+
+  // Permis Excavation - Selon municipalités et provinces
+  basePermits.push({
+    id: `excavation-${province.toLowerCase()}`,
+    name: language === 'fr' ? 
+      `⛏️ Permis Excavation - ${regulation?.name}` : 
+      `⛏️ Excavation Permit - ${regulation?.name}`,
+    category: language === 'fr' ? 'Excavation' : 'Excavation',
+    description: language === 'fr' ? 
+      `Excavation >1.2m. Étançonnement obligatoire selon codes municipaux et ${regulation?.regulation}. Plans ingénieur requis.` :
+      `Excavation >1.2m. Shoring mandatory per municipal codes and ${regulation?.regulation}. Engineer plans required.`,
+    authority: regulation?.authority || '',
+    province: [province],
+    priority: 'high',
+    selected: false,
+    formData: {},
+    code: generateLegalPermitCode('excavation', province),
+    status: 'draft',
+    dateCreated: new Date().toISOString(),
+    dateModified: new Date().toISOString(),
+    legalRequirements: {
+      permitRequired: true,
+      atmosphericTesting: false,
+      entryProcedure: true,
+      emergencyPlan: true,
+      equipmentCheck: true,
+      attendantRequired: false,
+      documentation: true
+    },
+    validity: {
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(), // 6 mois
+      isValid: false
+    },
+    compliance: {
+      [province.toLowerCase() === 'qc' ? 'cnesst' : 
+       province.toLowerCase() === 'on' ? 'ohsa' : 
+       province.toLowerCase() === 'bc' ? 'worksafebc' : 'ohs']: true
+    }
+  });
+
+  return basePermits;
 };
 // =================== SECTION 2 - FORMULAIRE COMPLET CORRIGÉ ===================
 // Cette section REMPLACE complètement la Section 2 existante dans Step4Permits.tsx
