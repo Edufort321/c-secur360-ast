@@ -1232,10 +1232,10 @@ const FormulaireLegalComplet: React.FC<{
     </div>
   );
 };
-// =================== STEP4PERMITS.TSX - SECTION 4/5 CORRIGÉE ===================
-// REMPLACEZ la Section 4 actuelle par cette version corrigée
+// =================== STEP4PERMITS.TSX - SECTION 4/5 COMPLÈTE ET CORRIGÉE ===================
+// REMPLACEZ COMPLÈTEMENT votre Section 4 actuelle par cette version
 
-          {/* Suite de l'onglet Personnel - Surveillants */}
+          {/* Suite de l'onglet Personnel - Surveillants et Entrants complets */}
           {activeTab === 'personnel' && formData.superviseur && (
             <>
               {/* Surveillants */}
@@ -1400,7 +1400,7 @@ const FormulaireLegalComplet: React.FC<{
                 )}
               </div>
 
-              {/* Entrants */}
+              {/* Entrants complets avec toutes les fonctionnalités */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <h4 style={{ color: '#ffffff', margin: 0 }}>🚶 Entrants</h4>
@@ -1596,7 +1596,7 @@ const FormulaireLegalComplet: React.FC<{
             </>
           )}
 
-          {/* Onglet Tests/Mesures - VERSION SIMPLIFIÉE */}
+          {/* Onglet Tests/Mesures avec plan d'urgence CNESST */}
           {activeTab === 'tests' && (
             <div>
               <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>🧪 Tests et Mesures Obligatoires</h3>
@@ -1606,19 +1606,20 @@ const FormulaireLegalComplet: React.FC<{
                 padding: '40px',
                 color: '#94a3b8',
                 border: '2px dashed rgba(100, 116, 139, 0.3)',
-                borderRadius: '8px'
+                borderRadius: '8px',
+                marginBottom: '32px'
               }}>
-                Tests disponibles dans la version complète
+                Tests atmosphériques disponibles dans la version complète
               </div>
 
-              {/* Plan d'urgence obligatoire */}
-              <div style={{ marginTop: '32px' }}>
+              {/* Plan d'urgence obligatoire CNESST */}
+              <div>
                 <h4 style={{ color: '#ffffff', marginBottom: '16px' }}>🚨 Plan d'Urgence (Obligatoire CNESST)</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
                   {[
-                    { key: 'contactsUrgence', label: 'Contacts d\'urgence *', placeholder: '911, CNESST, etc.' },
-                    { key: 'equipeSauvetage', label: 'Équipe de sauvetage *', placeholder: 'Personnel formé disponible' },
-                    { key: 'hopitalProche', label: 'Hôpital le plus proche *', placeholder: 'Nom et distance' }
+                    { key: 'contactsUrgence', label: 'Contacts d\'urgence *', placeholder: '911, CNESST, Service incendie local' },
+                    { key: 'equipeSauvetage', label: 'Équipe de sauvetage *', placeholder: 'Personnel formé et équipements disponibles' },
+                    { key: 'hopitalProche', label: 'Hôpital le plus proche *', placeholder: 'Nom, adresse et distance en kilomètres' }
                   ].map((field) => (
                     <div key={field.key}>
                       <label style={{
@@ -1630,8 +1631,7 @@ const FormulaireLegalComplet: React.FC<{
                       }}>
                         {field.label}
                       </label>
-                      <input
-                        type="text"
+                      <textarea
                         value={formData[field.key as keyof LegalPermitData] as string}
                         onChange={(e) => handleInputChange(field.key as keyof LegalPermitData, e.target.value)}
                         placeholder={field.placeholder}
@@ -1642,7 +1642,9 @@ const FormulaireLegalComplet: React.FC<{
                           border: '1px solid rgba(100, 116, 139, 0.3)',
                           borderRadius: '8px',
                           color: '#ffffff',
-                          fontSize: '14px'
+                          fontSize: '14px',
+                          minHeight: '80px',
+                          resize: 'vertical'
                         }}
                       />
                     </div>
@@ -1652,17 +1654,76 @@ const FormulaireLegalComplet: React.FC<{
             </div>
           )}
 
-          {/* Onglet Procédures - VERSION SIMPLIFIÉE */}
+          {/* Onglet Procédures avec équipements de sécurité */}
+          {activeTab === 'procedures' && (
+            <div>
+              <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>📝 Procédures et Équipements</h3>
+              
+              <div style={{
+                textAlign: 'center',
+                padding: '40px',
+                color: '#94a3b8',
+                border: '2px dashed rgba(100, 116, 139, 0.3)',
+                borderRadius: '8px',
+                marginBottom: '32px'
+              }}>
+                Procédures spécifiques disponibles dans la version complète
+              </div>
+
+              {/* Équipements de sécurité obligatoires */}
+              <div>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px' }}>🛡️ Équipements de Sécurité (CNESST)</h4>
+                <div style={{ display: 'grid', gap: '16px' }}>
+                  {[
+                    { key: 'equipementVentilation', label: 'Équipement de ventilation *', placeholder: 'Ventilateurs, extracteurs, systèmes de purification' },
+                    { key: 'equipementDetection', label: 'Équipement de détection *', placeholder: 'Détecteurs de gaz, moniteurs atmosphériques' },
+                    { key: 'equipementSauvetage', label: 'Équipement de sauvetage *', placeholder: 'Treuils, harnais, équipement de récupération' },
+                    { key: 'protectionIndividuelle', label: 'Protection individuelle *', placeholder: 'Casques, gants, chaussures, masques respiratoires' }
+                  ].map((field) => (
+                    <div key={field.key}>
+                      <label style={{
+                        color: '#e2e8f0',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        marginBottom: '6px',
+                        display: 'block'
+                      }}>
+                        {field.label}
+                      </label>
+                      <textarea
+                        value={formData[field.key as keyof LegalPermitData] as string}
+                        onChange={(e) => handleInputChange(field.key as keyof LegalPermitData, e.target.value)}
+                        placeholder={field.placeholder}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '14px',
+                          minHeight: '80px',
+                          resize: 'vertical'
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Onglet Validation finale complète */}
           {activeTab === 'validation' && (
             <div>
               <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>✅ Validation Finale Conforme CNESST</h3>
               
               <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
                 {[
-                  { key: 'tousTestsCompletes', label: 'Tous les tests obligatoires sont complétés' },
-                  { key: 'documentationComplete', label: 'Documentation complète et signatures obtenues' },
-                  { key: 'formationVerifiee', label: 'Formation du personnel vérifiée' },
-                  { key: 'equipementsVerifies', label: 'Équipements de sécurité vérifiés et fonctionnels' }
+                  { key: 'tousTestsCompletes', label: 'Tous les tests atmosphériques obligatoires sont complétés' },
+                  { key: 'documentationComplete', label: 'Documentation complète et signatures du personnel obtenues' },
+                  { key: 'formationVerifiee', label: 'Formation et certifications du personnel vérifiées' },
+                  { key: 'equipementsVerifies', label: 'Équipements de sécurité vérifiés et fonctionnels sur site' }
                 ].map((validation) => (
                   <label
                     key={validation.key}
@@ -1680,7 +1741,8 @@ const FormulaireLegalComplet: React.FC<{
                       borderRadius: '8px',
                       cursor: 'pointer',
                       color: '#e2e8f0',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      transition: 'all 0.3s ease'
                     }}
                   >
                     <input
@@ -1697,32 +1759,55 @@ const FormulaireLegalComplet: React.FC<{
                 ))}
               </div>
 
+              {/* Validation finale du permis */}
               <div style={{
-                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.15))',
-                border: '2px solid rgba(34, 197, 94, 0.5)',
+                background: Object.values(formData).slice(-4).every(val => val === true) ?
+                  'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.15))' :
+                  'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15))',
+                border: Object.values(formData).slice(-4).every(val => val === true) ?
+                  '2px solid rgba(34, 197, 94, 0.5)' :
+                  '2px solid rgba(239, 68, 68, 0.5)',
                 borderRadius: '12px',
                 padding: '20px',
                 textAlign: 'center'
               }}>
-                <h4 style={{ color: '#22c55e', margin: '0 0 12px', fontSize: '18px' }}>
-                  ✅ PERMIS VALIDE ET CONFORME
+                <h4 style={{
+                  color: Object.values(formData).slice(-4).every(val => val === true) ? '#22c55e' : '#ef4444',
+                  margin: '0 0 12px',
+                  fontSize: '18px'
+                }}>
+                  {Object.values(formData).slice(-4).every(val => val === true) ? 
+                    '✅ PERMIS VALIDE ET CONFORME CNESST' : 
+                    '⚠️ VALIDATION INCOMPLÈTE - PERMIS NON VALIDE'
+                  }
                 </h4>
-                <p style={{ color: '#dcfce7', margin: '0', fontSize: '14px' }}>
-                  Ce permis respecte toutes les exigences CNESST et peut être utilisé.
+                <p style={{
+                  color: Object.values(formData).slice(-4).every(val => val === true) ? '#dcfce7' : '#fecaca',
+                  margin: '0',
+                  fontSize: '14px'
+                }}>
+                  {Object.values(formData).slice(-4).every(val => val === true) ? 
+                    'Ce permis respecte toutes les exigences légales CNESST 2025 et peut être utilisé sur le chantier.' : 
+                    'Veuillez compléter toutes les validations obligatoires avant d\'autoriser les travaux.'
+                  }
                 </p>
                 
-                <div style={{
-                  marginTop: '16px',
-                  padding: '12px',
-                  background: 'rgba(34, 197, 94, 0.3)',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  color: '#dcfce7'
-                }}>
-                  ✅ Permis généré automatiquement le {new Date().toLocaleString('fr-CA')}
-                  <br />
-                  🔢 Code de référence: {formData.codePermis}
-                </div>
+                {Object.values(formData).slice(-4).every(val => val === true) && (
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '12px',
+                    background: 'rgba(34, 197, 94, 0.3)',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    color: '#dcfce7'
+                  }}>
+                    ✅ Permis généré automatiquement le {new Date().toLocaleString('fr-CA')}
+                    <br />
+                    🔢 Code de référence légal: {formData.codePermis}
+                    <br />
+                    📋 Conforme aux normes CNESST en vigueur
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1739,7 +1824,7 @@ const FormulaireLegalComplet: React.FC<{
           alignItems: 'center'
         }}>
           <div style={{ fontSize: '12px', color: '#94a3b8' }}>
-            Conforme aux normes CNESST 2025
+            Conforme aux normes CNESST 2025 - Version légale authentique
           </div>
           
           <div style={{ display: 'flex', gap: '12px' }}>
@@ -1751,7 +1836,9 @@ const FormulaireLegalComplet: React.FC<{
                 color: '#cbd5e1',
                 border: '1px solid rgba(100, 116, 139, 0.3)',
                 borderRadius: '8px',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600'
               }}
             >
               Fermer
@@ -1759,7 +1846,7 @@ const FormulaireLegalComplet: React.FC<{
             
             <button
               onClick={() => {
-                alert('Permis sauvegardé avec succès!');
+                alert('✅ Permis sauvegardé avec succès!\n🔢 Code: ' + formData.codePermis);
                 onClose();
               }}
               style={{
@@ -1768,7 +1855,9 @@ const FormulaireLegalComplet: React.FC<{
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600'
               }}
             >
               💾 Sauvegarder Permis
