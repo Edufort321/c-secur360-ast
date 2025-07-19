@@ -1330,6 +1330,7 @@ const FormulaireLegalScrollable: React.FC<{
 };
 // =================== CONTINUATION DU FORMULAIRE SCROLLABLE ===================
 // REMPLACER la partie {/* Sections 3-6 seront dans les prochaines sections */} par ce code
+// ATTENTION: Ces sections s'ajoutent DANS le composant FormulaireLegalScrollable, pas à l'extérieur
 
           {/* Section 3: Tests atmosphériques conformes réglementations */}
           {currentSection === 2 && permit.legalRequirements.atmosphericTesting && (
