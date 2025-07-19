@@ -1392,7 +1392,6 @@ const FormulaireLegalComplet: React.FC<{
               </div>
             </div>
           )}
-        </div>
 
         {/* Footer Actions - SIMPLE */}
         <div style={{
