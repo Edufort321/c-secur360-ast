@@ -18,6 +18,158 @@ import {
 } from 'lucide-react';
 
 // =================== TYPES & INTERFACES ===================
+
+// Interface Bluetooth personnalisée
+interface BluetoothDevice {
+  id: string;
+  name: string;
+  connected: boolean;
+  type: 'gas-detector' | 'monitor' | 'sensor';
+  batteryLevel?: number;
+  lastReading?: {
+    timestamp: Date;
+    values: Record<string, number>;
+  };
+  gatt?: {
+    connected: boolean;
+    connect(): Promise<any>;
+    disconnect(): void;
+  };
+}
+
+interface AtmosphericLimits {
+  oxygen: { min: number; max: number; critical: number };
+  lel: { max: number; critical: number };
+  h2s: { max: number; critical: number };
+  co: { max: number; critical: number };
+}
+
+interface VentilationSetup {
+  type: 'natural' | 'mechanical' | 'forced';
+  airflow: number; // CFM
+  direction: 'supply' | 'exhaust' | 'both';
+  equipment: string[];
+  verified: boolean;
+}
+
+interface Certification {
+  id: string;
+  name: string;
+  issuer: string;
+  expiryDate: Date;
+  valid: boolean;
+}
+
+interface PersonnelMember {
+  id: string;
+  prenom: string;
+  nom: string;
+  poste: string;
+  entreprise: string;
+  age: number;
+  experience: number;
+  certifications: Certification[];
+  photo?: string;
+  statut: 'actif' | 'inactif' | 'formation';
+  contactUrgence: {
+    nom: string;
+    relation: string;
+    telephone: string;
+  };
+}
+
+interface AtmosphericReading {
+  id: string;
+  timestamp: Date;
+  location: string;
+  operator: string;
+  readings: {
+    oxygen: number;
+    lel: number;
+    h2s: number;
+    co: number;
+    temperature: number;
+    pressure?: number;
+  };
+  deviceId: string;
+  isValid: boolean;
+  notes?: string;
+  photo?: string;
+}
+
+interface ProcedureStep {
+  id: string;
+  title: { fr: string; en: string };
+  description: { fr: string; en: string };
+  acceptanceCriteria: { fr: string[]; en: string[] };
+  requiredPersonnel: string[];
+  estimatedTime: number;
+  isCompleted: boolean;
+  completedBy?: string;
+  completedAt?: Date;
+  notes?: string;
+  voiceNotes?: string[];
+  photos?: string[];
+  references?: { fr: string; en: string };
+}
+
+interface CommunicationPlan {
+  primary: string;
+  backup: string;
+  emergencyProtocol: string;
+}
+
+interface RescueEquipment {
+  id: string;
+  name: string;
+  type: string;
+  available: boolean;
+  lastInspection: Date;
+}
+
+interface EquipmentItem {
+  id: string;
+  name: string;
+  type: string;
+  serialNumber?: string;
+  calibrationDate?: Date;
+  nextCalibration?: Date;
+  status: 'operational' | 'maintenance' | 'out-of-service';
+  location?: string;
+}
+
+interface PPEItem {
+  id: string;
+  type: string;
+  size?: string;
+  condition: 'new' | 'good' | 'fair' | 'replace';
+  assignedTo?: string;
+}
+
+interface ApprovalLevel {
+  id: string;
+  role: string;
+  required: boolean;
+  approved: boolean;
+  approvedBy?: string;
+  approvedAt?: Date;
+}
+
+interface SignatureData {
+  id: string;
+  name: string;
+  role: string;
+  signature: string; // Base64 image
+  timestamp: Date;
+}
+
+interface ValidationStep {
+  id: string;
+  description: string;
+  completed: boolean;
+  notes?: string;
+}
+
 interface ConfinedSpaceFormData {
   // Section 1 - Identification
   identification: {
@@ -94,59 +246,6 @@ interface ConfinedSpaceFormData {
     issuedAt?: Date;
     validUntil?: Date;
   };
-}
-
-interface PersonnelMember {
-  id: string;
-  prenom: string;
-  nom: string;
-  poste: string;
-  entreprise: string;
-  age: number;
-  experience: number;
-  certifications: Certification[];
-  photo?: string;
-  statut: 'actif' | 'inactif' | 'formation';
-  contactUrgence: {
-    nom: string;
-    relation: string;
-    telephone: string;
-  };
-}
-
-interface AtmosphericReading {
-  id: string;
-  timestamp: Date;
-  location: string;
-  operator: string;
-  readings: {
-    oxygen: number;
-    lel: number;
-    h2s: number;
-    co: number;
-    temperature: number;
-    pressure?: number;
-  };
-  deviceId: string;
-  isValid: boolean;
-  notes?: string;
-  photo?: string;
-}
-
-interface ProcedureStep {
-  id: string;
-  title: { fr: string; en: string };
-  description: { fr: string; en: string };
-  acceptanceCriteria: { fr: string[]; en: string[] };
-  requiredPersonnel: string[];
-  estimatedTime: number;
-  isCompleted: boolean;
-  completedBy?: string;
-  completedAt?: Date;
-  notes?: string;
-  voiceNotes?: string[];
-  photos?: string[];
-  references?: { fr: string; en: string };
 }
 
 // =================== PROPS ===================
@@ -244,8 +343,194 @@ const PROVINCIAL_REGULATIONS = {
       standard: 'CSA Z1006-16',
       authority: 'Ministry of Labour'
     }
+  },
+  AB: {
+    atmosphericLimits: {
+      oxygen: { min: 19.5, max: 23.0, critical: 19.0 },
+      lel: { max: 10, critical: 25 },
+      h2s: { max: 10, critical: 20 },
+      co: { max: 25, critical: 200 }
+    },
+    requiredPersonnel: {
+      superviseur: { minAge: 21, minExperience: 5, certifications: ['espace-clos-superviseur-ab'] },
+      surveillant: { minAge: 18, minExperience: 2, certifications: ['espace-clos-surveillant-ab'] }
+    },
+    references: {
+      regulation: 'OHS Code Part 46',
+      standard: 'CSA Z1006-16',
+      authority: 'Alberta Labour'
+    }
+  },
+  BC: {
+    atmosphericLimits: {
+      oxygen: { min: 19.5, max: 23.0, critical: 19.0 },
+      lel: { max: 10, critical: 25 },
+      h2s: { max: 10, critical: 20 },
+      co: { max: 25, critical: 200 }
+    },
+    requiredPersonnel: {
+      superviseur: { minAge: 21, minExperience: 5, certifications: ['espace-clos-superviseur-bc'] },
+      surveillant: { minAge: 18, minExperience: 2, certifications: ['espace-clos-surveillant-bc'] }
+    },
+    references: {
+      regulation: 'OHS Regulation Part 9',
+      standard: 'CSA Z1006-16',
+      authority: 'WorkSafeBC'
+    }
+  },
+  SK: {
+    atmosphericLimits: {
+      oxygen: { min: 19.5, max: 23.0, critical: 19.0 },
+      lel: { max: 10, critical: 25 },
+      h2s: { max: 10, critical: 20 },
+      co: { max: 25, critical: 200 }
+    },
+    requiredPersonnel: {
+      superviseur: { minAge: 21, minExperience: 5, certifications: ['espace-clos-superviseur-sk'] },
+      surveillant: { minAge: 18, minExperience: 2, certifications: ['espace-clos-surveillant-sk'] }
+    },
+    references: {
+      regulation: 'OHS Regulations Part XVIII',
+      standard: 'CSA Z1006-16',
+      authority: 'Saskatchewan Labour Relations'
+    }
+  },
+  MB: {
+    atmosphericLimits: {
+      oxygen: { min: 19.5, max: 23.0, critical: 19.0 },
+      lel: { max: 10, critical: 25 },
+      h2s: { max: 10, critical: 20 },
+      co: { max: 25, critical: 200 }
+    },
+    requiredPersonnel: {
+      superviseur: { minAge: 21, minExperience: 5, certifications: ['espace-clos-superviseur-mb'] },
+      surveillant: { minAge: 18, minExperience: 2, certifications: ['espace-clos-surveillant-mb'] }
+    },
+    references: {
+      regulation: 'WSH Regulation 217/2006',
+      standard: 'CSA Z1006-16',
+      authority: 'Manitoba Workplace Safety'
+    }
+  },
+  NB: {
+    atmosphericLimits: {
+      oxygen: { min: 19.5, max: 23.0, critical: 19.0 },
+      lel: { max: 10, critical: 25 },
+      h2s: { max: 10, critical: 20 },
+      co: { max: 25, critical: 200 }
+    },
+    requiredPersonnel: {
+      superviseur: { minAge: 21, minExperience: 5, certifications: ['espace-clos-superviseur-nb'] },
+      surveillant: { minAge: 18, minExperience: 2, certifications: ['espace-clos-surveillant-nb'] }
+    },
+    references: {
+      regulation: 'OHS General Regulation 91-191',
+      standard: 'CSA Z1006-16',
+      authority: 'WorkSafeNB'
+    }
+  },
+  NS: {
+    atmosphericLimits: {
+      oxygen: { min: 19.5, max: 23.0, critical: 19.0 },
+      lel: { max: 10, critical: 25 },
+      h2s: { max: 10, critical: 20 },
+      co: { max: 25, critical: 200 }
+    },
+    requiredPersonnel: {
+      superviseur: { minAge: 21, minExperience: 5, certifications: ['espace-clos-superviseur-ns'] },
+      surveillant: { minAge: 18, minExperience: 2, certifications: ['espace-clos-surveillant-ns'] }
+    },
+    references: {
+      regulation: 'OHS Regulations',
+      standard: 'CSA Z1006-16',
+      authority: 'Labour Standards'
+    }
+  },
+  PE: {
+    atmosphericLimits: {
+      oxygen: { min: 19.5, max: 23.0, critical: 19.0 },
+      lel: { max: 10, critical: 25 },
+      h2s: { max: 10, critical: 20 },
+      co: { max: 25, critical: 200 }
+    },
+    requiredPersonnel: {
+      superviseur: { minAge: 21, minExperience: 5, certifications: ['espace-clos-superviseur-pe'] },
+      surveillant: { minAge: 18, minExperience: 2, certifications: ['espace-clos-surveillant-pe'] }
+    },
+    references: {
+      regulation: 'OHS General Regulations',
+      standard: 'CSA Z1006-16',
+      authority: 'PEI Workers Compensation'
+    }
+  },
+  NL: {
+    atmosphericLimits: {
+      oxygen: { min: 19.5, max: 23.0, critical: 19.0 },
+      lel: { max: 10, critical: 25 },
+      h2s: { max: 10, critical: 20 },
+      co: { max: 25, critical: 200 }
+    },
+    requiredPersonnel: {
+      superviseur: { minAge: 21, minExperience: 5, certifications: ['espace-clos-superviseur-nl'] },
+      surveillant: { minAge: 18, minExperience: 2, certifications: ['espace-clos-surveillant-nl'] }
+    },
+    references: {
+      regulation: 'OHS Regulations',
+      standard: 'CSA Z1006-16',
+      authority: 'WorkplaceNL'
+    }
+  },
+  NT: {
+    atmosphericLimits: {
+      oxygen: { min: 19.5, max: 23.0, critical: 19.0 },
+      lel: { max: 10, critical: 25 },
+      h2s: { max: 10, critical: 20 },
+      co: { max: 25, critical: 200 }
+    },
+    requiredPersonnel: {
+      superviseur: { minAge: 21, minExperience: 5, certifications: ['espace-clos-superviseur-nt'] },
+      surveillant: { minAge: 18, minExperience: 2, certifications: ['espace-clos-surveillant-nt'] }
+    },
+    references: {
+      regulation: 'Safety Regulations',
+      standard: 'CSA Z1006-16',
+      authority: 'WSCC'
+    }
+  },
+  NU: {
+    atmosphericLimits: {
+      oxygen: { min: 19.5, max: 23.0, critical: 19.0 },
+      lel: { max: 10, critical: 25 },
+      h2s: { max: 10, critical: 20 },
+      co: { max: 25, critical: 200 }
+    },
+    requiredPersonnel: {
+      superviseur: { minAge: 21, minExperience: 5, certifications: ['espace-clos-superviseur-nu'] },
+      surveillant: { minAge: 18, minExperience: 2, certifications: ['espace-clos-surveillant-nu'] }
+    },
+    references: {
+      regulation: 'Safety Regulations',
+      standard: 'CSA Z1006-16',
+      authority: 'WSCC'
+    }
+  },
+  YT: {
+    atmosphericLimits: {
+      oxygen: { min: 19.5, max: 23.0, critical: 19.0 },
+      lel: { max: 10, critical: 25 },
+      h2s: { max: 10, critical: 20 },
+      co: { max: 25, critical: 200 }
+    },
+    requiredPersonnel: {
+      superviseur: { minAge: 21, minExperience: 5, certifications: ['espace-clos-superviseur-yt'] },
+      surveillant: { minAge: 18, minExperience: 2, certifications: ['espace-clos-surveillant-yt'] }
+    },
+    references: {
+      regulation: 'OHS Regulations',
+      standard: 'CSA Z1006-16',
+      authority: 'Yukon Workers Compensation'
+    }
   }
-  // Ajouter AB, BC, etc.
 };
 
 // =================== COMPOSANT PRINCIPAL ===================
@@ -341,7 +626,7 @@ export default function ConfinedSpaceForm({
 
   // =================== HOOKS PERSONNALISÉS ===================
   const [isVoiceActive, setIsVoiceActive] = useState(false);
-  const [voiceSupported] = useState(() => 'webkitSpeechRecognition' in window);
+  const [voiceSupported] = useState(() => 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
   const [geolocationSupported] = useState(() => 'geolocation' in navigator);
   const [bluetoothSupported] = useState(() => 'bluetooth' in navigator);
 
@@ -423,6 +708,9 @@ export default function ConfinedSpaceForm({
         if (!formData.identification.spaceDescription.trim()) {
           errors.push(language === 'fr' ? 'Description espace requise' : 'Space description required');
         }
+        if (!formData.identification.workDescription.trim()) {
+          errors.push(language === 'fr' ? 'Description travaux requise' : 'Work description required');
+        }
         break;
         
       case 'personnel':
@@ -432,6 +720,9 @@ export default function ConfinedSpaceForm({
         if (formData.personnel.surveillants.length === 0) {
           errors.push(language === 'fr' ? 'Surveillant requis' : 'Attendant required');
         }
+        if (formData.personnel.entrants.length === 0) {
+          errors.push(language === 'fr' ? 'Au moins un entrant requis' : 'At least one entrant required');
+        }
         break;
         
       case 'atmospheric':
@@ -440,7 +731,29 @@ export default function ConfinedSpaceForm({
         }
         break;
         
-      // Ajouter validation autres sections
+      case 'procedures':
+        if (formData.procedures.preEntryChecklist.length === 0) {
+          errors.push(language === 'fr' ? 'Liste pré-entrée requise' : 'Pre-entry checklist required');
+        }
+        if (!formData.procedures.communicationPlan.primary) {
+          errors.push(language === 'fr' ? 'Plan communication requis' : 'Communication plan required');
+        }
+        break;
+        
+      case 'equipment':
+        if (formData.equipment.detectionEquipment.length === 0) {
+          errors.push(language === 'fr' ? 'Équipement détection requis' : 'Detection equipment required');
+        }
+        if (formData.equipment.ppe.length === 0) {
+          errors.push(language === 'fr' ? 'EPI requis' : 'PPE required');
+        }
+        break;
+        
+      case 'validation':
+        if (formData.validation.signatures.length === 0) {
+          errors.push(language === 'fr' ? 'Signatures requises' : 'Signatures required');
+        }
+        break;
     }
     
     setValidationErrors(prev => ({
@@ -594,6 +907,23 @@ export default function ConfinedSpaceForm({
           </div>
         </div>
 
+        {/* Description du travail */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            {language === 'fr' ? 'Description du travail' : 'Work description'}
+          </label>
+          <textarea
+            value={formData.identification.workDescription}
+            onChange={(e) => updateFormData('identification', 'workDescription', e.target.value)}
+            rows={2}
+            className="w-full px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            placeholder={language === 'fr' 
+              ? 'Ex: Nettoyage et inspection interne, soudure de réparation...'
+              : 'Ex: Internal cleaning and inspection, repair welding...'
+            }
+          />
+        </div>
+
         {/* Dates et durée */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -634,6 +964,45 @@ export default function ConfinedSpaceForm({
             />
           </div>
         </div>
+
+        {/* Contact d'urgence */}
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            {language === 'fr' ? 'Contact d\'urgence' : 'Emergency contact'}
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input
+              type="text"
+              value={formData.identification.emergencyContact.name}
+              onChange={(e) => updateFormData('identification', 'emergencyContact', {
+                ...formData.identification.emergencyContact,
+                name: e.target.value
+              })}
+              className="px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder={language === 'fr' ? 'Nom' : 'Name'}
+            />
+            <input
+              type="tel"
+              value={formData.identification.emergencyContact.phone}
+              onChange={(e) => updateFormData('identification', 'emergencyContact', {
+                ...formData.identification.emergencyContact,
+                phone: e.target.value
+              })}
+              className="px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder={language === 'fr' ? 'Téléphone' : 'Phone'}
+            />
+            <input
+              type="text"
+              value={formData.identification.emergencyContact.role}
+              onChange={(e) => updateFormData('identification', 'emergencyContact', {
+                ...formData.identification.emergencyContact,
+                role: e.target.value
+              })}
+              className="px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder={language === 'fr' ? 'Rôle' : 'Role'}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -654,6 +1023,12 @@ export default function ConfinedSpaceForm({
             ? 'Section personnel - À implémenter avec QR scan, certifications, etc.'
             : 'Personnel section - To implement with QR scan, certifications, etc.'
           }
+          <div className="mt-4 text-sm text-gray-400">
+            {language === 'fr' 
+              ? `Réglementation ${province}: ${PROVINCIAL_REGULATIONS[province].references.regulation}`
+              : `${province} Regulation: ${PROVINCIAL_REGULATIONS[province].references.regulation}`
+            }
+          </div>
         </div>
       </div>
     </div>
@@ -669,12 +1044,53 @@ export default function ConfinedSpaceForm({
           </h3>
         </div>
         
+        {/* Limites atmosphériques provinciales */}
+        <div className="mb-6 p-4 bg-white rounded-lg border">
+          <h4 className="font-medium text-gray-900 mb-3">
+            {language === 'fr' ? `Limites réglementaires - ${province}` : `Regulatory limits - ${province}`}
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <span className="block text-gray-600">O₂:</span>
+              <span className="font-medium">
+                {formData.atmospheric.limits.oxygen.min}% - {formData.atmospheric.limits.oxygen.max}%
+              </span>
+            </div>
+            <div>
+              <span className="block text-gray-600">LEL:</span>
+              <span className="font-medium">
+                &lt; {formData.atmospheric.limits.lel.max}%
+              </span>
+            </div>
+            <div>
+              <span className="block text-gray-600">H₂S:</span>
+              <span className="font-medium">
+                &lt; {formData.atmospheric.limits.h2s.max} ppm
+              </span>
+            </div>
+            <div>
+              <span className="block text-gray-600">CO:</span>
+              <span className="font-medium">
+                &lt; {formData.atmospheric.limits.co.max} ppm
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Placeholder pour section tests */}
         <div className="text-center py-8 text-gray-500">
           {language === 'fr' 
             ? 'Section tests atmosphériques - À implémenter avec Bluetooth, monitoring temps réel, etc.'
             : 'Atmospheric testing section - To implement with Bluetooth, real-time monitoring, etc.'
           }
+          {bluetoothSupported && (
+            <div className="mt-4 flex justify-center">
+              <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg">
+                <Bluetooth className="h-4 w-4" />
+                <span>{language === 'fr' ? 'Connecter détecteur' : 'Connect detector'}</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -690,6 +1106,26 @@ export default function ConfinedSpaceForm({
           </h3>
         </div>
         
+        {/* Plan de communication */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            {language === 'fr' ? 'Plan de communication primaire' : 'Primary communication plan'}
+          </label>
+          <textarea
+            value={formData.procedures.communicationPlan.primary}
+            onChange={(e) => updateFormData('procedures', 'communicationPlan', {
+              ...formData.procedures.communicationPlan,
+              primary: e.target.value
+            })}
+            rows={2}
+            className="w-full px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+            placeholder={language === 'fr' 
+              ? 'Ex: Radio VHF canal 8, vérification aux 15 minutes...'
+              : 'Ex: VHF radio channel 8, check every 15 minutes...'
+            }
+          />
+        </div>
+
         {/* Placeholder pour section procédures */}
         <div className="text-center py-8 text-gray-500">
           {language === 'fr' 
