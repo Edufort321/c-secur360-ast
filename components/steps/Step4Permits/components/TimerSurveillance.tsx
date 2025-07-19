@@ -315,13 +315,15 @@ export const TimerSurveillance: React.FC<TimerSurveillanceProps> = ({
 
     // Notification push
     if (settings.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
-      new Notification(alertConfig.title[language], {
-        body: alert.message[language],
-        icon: '/timer-icon.png',
-        vibrate: alertConfig.vibration,
-        tag: alert.id
-      });
-    }
+      new Notification(alert.title[language], {
+  body: alert.message[language],
+  icon: '/timer-icon.png',
+  tag: alert.id
+});
+
+if (navigator.vibrate && alertConfig.vibration) {
+  navigator.vibrate(alertConfig.vibration);
+}
 
     return alert;
   }, [language, settings, onAlertGenerated]);
