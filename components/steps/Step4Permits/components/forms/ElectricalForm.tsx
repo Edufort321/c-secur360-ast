@@ -1,12 +1,5 @@
 // =================== COMPONENTS/FORMS/ELECTRICALFORM.TSX - FORMULAIRE TRAVAUX ÉLECTRIQUES ULTRA-COMPLET ===================
 // Formulaire travaux électriques révolutionnaire avec consignation, vérification absence tension et EPI spécialisés
-/*
-import type {
-  InspectionRecord,
-  ApprovalLevel,
-  // ... tous les imports
-} from '../../types/shared';
-*/
 
 "use client";
 
@@ -32,7 +25,7 @@ import type {
   ContactInfo
 } from '../../types/shared';
 
-// =================== TYPES ESSENTIELS ===================
+// =================== TYPES SPÉCIFIQUES ÉLECTRIQUES ===================
 interface ElectricalFormData {
   identification: {
     permitType: 'electrique';
@@ -124,6 +117,7 @@ interface ElectricalFormData {
   };
 }
 
+// =================== INTERFACES SPÉCIFIQUES ÉLECTRIQUES ===================
 interface IsolationPoint {
   id: string;
   description: string;
@@ -218,27 +212,19 @@ interface TestEquipment {
 }
 
 interface ElectricalPersonnel {
-  id: string; prenom: string; nom: string; poste: string; entreprise: string;
-  age: number; experience: number; certifications: Certification[];
+  id: string; 
+  prenom: string; 
+  nom: string; 
+  poste: string; 
+  entreprise: string;
+  age: number; 
+  experience: number; 
+  certifications: Certification[];
   electricalLicense: string;
   qualifiedPerson: boolean;
   arcFlashTraining: boolean;
   cprCertified: boolean;
   lastSafetyTraining: Date;
-}
-
-interface TestResult {
-  id: string;
-  testType: string;
-  circuit: string;
-  expectedValue: number;
-  actualValue: number;
-  unit: string;
-  acceptable: boolean;
-  standard: string;
-  performedBy: string;
-  timestamp: Date;
-  equipment: string;
 }
 
 interface VoltageTest {
@@ -253,16 +239,6 @@ interface VoltageTest {
   safe: boolean; // zero energy confirmed
 }
 
-interface CalibrationRecord {
-  equipmentId: string;
-  calibrationDate: Date;
-  nextCalibration: Date;
-  calibratedBy: string;
-  certificate: string;
-  accuracy: string;
-  traceable: boolean; // NIST traceable
-}
-
 interface ElectricalApproval {
   inspectorName: string;
   inspectorLicense: string;
@@ -270,11 +246,6 @@ interface ElectricalApproval {
   approved: boolean;
   conditions: string[];
   certificateNumber?: string;
-}
-
-interface ProcedureStep {
-  id: string; title: { fr: string; en: string }; description: { fr: string; en: string };
-  isCompleted: boolean; completedBy?: string; completedAt?: Date;
 }
 
 // =================== CONFIGURATION ===================
