@@ -1596,54 +1596,20 @@ const FormulaireLegalComplet: React.FC<{
             </>
           )}
 
-          {/* Onglet Tests/Mesures */}
+          {/* Onglet Tests/Mesures - VERSION SIMPLIFIÉE */}
           {activeTab === 'tests' && (
             <div>
               <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>🧪 Tests et Mesures Obligatoires</h3>
               
-              {fieldsConfig.tests.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-                  {fieldsConfig.tests.map((field) => (
-                    <div key={field.key}>
-                      <label style={{
-                        color: '#e2e8f0',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        marginBottom: '6px',
-                        display: 'block'
-                      }}>
-                        {field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
-                      </label>
-                      <input
-                        type="text"
-                        value={formData[field.key as keyof LegalPermitData] as string}
-                        onChange={(e) => handleInputChange(field.key as keyof LegalPermitData, e.target.value)}
-                        placeholder={field.placeholder}
-                        style={{
-                          width: '100%',
-                          padding: '12px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: field.required && !formData[field.key as keyof LegalPermitData] ? 
-                            '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '8px',
-                          color: '#ffffff',
-                          fontSize: '14px'
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '40px',
-                  color: '#94a3b8',
-                  border: '2px dashed rgba(100, 116, 139, 0.3)',
-                  borderRadius: '8px'
-                }}>
-                  Aucun test spécifique requis pour ce type de permis selon les normes CNESST
-                </div>
-              )}
+              <div style={{
+                textAlign: 'center',
+                padding: '40px',
+                color: '#94a3b8',
+                border: '2px dashed rgba(100, 116, 139, 0.3)',
+                borderRadius: '8px'
+              }}>
+                Tests disponibles dans la version complète
+              </div>
 
               {/* Plan d'urgence obligatoire */}
               <div style={{ marginTop: '32px' }}>
@@ -1686,92 +1652,19 @@ const FormulaireLegalComplet: React.FC<{
             </div>
           )}
 
-          {/* Onglet Procédures */}
+          {/* Onglet Procédures - VERSION SIMPLIFIÉE */}
           {activeTab === 'procedures' && (
             <div>
               <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>📝 Procédures Spécifiques</h3>
               
-              <div style={{ display: 'grid', gap: '20px' }}>
-                {fieldsConfig.procedures.map((field) => (
-                  <div key={field.key}>
-                    <label style={{
-                      color: '#e2e8f0',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      marginBottom: '6px',
-                      display: 'block'
-                    }}>
-                      {field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
-                    </label>
-                    {field.type === 'textarea' ? (
-                      <textarea
-                        value={formData[field.key as keyof LegalPermitData] as string}
-                        onChange={(e) => handleInputChange(field.key as keyof LegalPermitData, e.target.value)}
-                        placeholder={field.placeholder}
-                        style={{
-                          width: '100%',
-                          padding: '12px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '8px',
-                          color: '#ffffff',
-                          fontSize: '14px',
-                          minHeight: '120px'
-                        }}
-                      />
-                    ) : (
-                      <input
-                        type="text"
-                        value={formData[field.key as keyof LegalPermitData] as string}
-                        onChange={(e) => handleInputChange(field.key as keyof LegalPermitData, e.target.value)}
-                        placeholder={field.placeholder}
-                        style={{
-                          width: '100%',
-                          padding: '12px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '8px',
-                          color: '#ffffff',
-                          fontSize: '14px'
-                        }}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Équipements de sécurité */}
-              <div style={{ marginTop: '32px' }}>
-                <h4 style={{ color: '#ffffff', marginBottom: '16px' }}>🛡️ Équipements de Sécurité</h4>
-                <div style={{ display: 'grid', gap: '16px' }}>
-                  {fieldsConfig.equipements.map((field) => (
-                    <div key={field.key}>
-                      <label style={{
-                        color: '#e2e8f0',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        marginBottom: '6px',
-                        display: 'block'
-                      }}>
-                        {field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
-                      </label>
-                      <textarea
-                        value={formData[field.key as keyof LegalPermitData] as string}
-                        onChange={(e) => handleInputChange(field.key as keyof LegalPermitData, e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '12px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '8px',
-                          color: '#ffffff',
-                          fontSize: '14px',
-                          minHeight: '80px'
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
+              <div style={{
+                textAlign: 'center',
+                padding: '40px',
+                color: '#94a3b8',
+                border: '2px dashed rgba(100, 116, 139, 0.3)',
+                borderRadius: '8px'
+              }}>
+                Procédures disponibles dans la version complète
               </div>
             </div>
           )}
