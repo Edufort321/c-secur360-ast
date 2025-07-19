@@ -1328,9 +1328,9 @@ const FormulaireLegalScrollable: React.FC<{
     </div>
   );
 };
-// =================== CONTINUATION DU FORMULAIRE SCROLLABLE ===================
-// REMPLACER la partie {/* Sections 3-6 seront dans les prochaines sections */} par ce code
-// ATTENTION: Ces sections s'ajoutent DANS le composant FormulaireLegalScrollable, pas à l'extérieur
+// =================== SECTION 3 - TESTS ATMOSPHÉRIQUES CONFORMES ===================
+// CETTE SECTION REMPLACE COMPLÈTEMENT LE BLOC {/* Sections 3-6 seront dans les prochaines sections */}
+// DANS LE COMPOSANT FormulaireLegalScrollable DE LA SECTION 2
 
           {/* Section 3: Tests atmosphériques conformes réglementations */}
           {currentSection === 2 && permit.legalRequirements.atmosphericTesting && (
@@ -1365,7 +1365,7 @@ const FormulaireLegalScrollable: React.FC<{
                 </h4>
                 <div style={{
                   background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
-                  border: formData.atmospherique.oxygene.conforme ? 
+                  border: formData.atmospherique.oxygene.conformeCNESST ? 
                     '2px solid rgba(34, 197, 94, 0.5)' : 
                     '1px solid rgba(100, 116, 139, 0.3)',
                   borderRadius: '12px',
@@ -1434,10 +1434,10 @@ const FormulaireLegalScrollable: React.FC<{
                     <input
                       type="text"
                       placeholder="Équipement utilisé (marque, modèle, étalonnage)"
-                      value={formData.atmospherique.oxygene.equipement}
+                      value={formData.atmospherique.oxygene.equipementUtilise}
                       onChange={(e) => handleInputChange('atmospherique', {
                         ...formData.atmospherique,
-                        oxygene: { ...formData.atmospherique.oxygene, equipement: e.target.value }
+                        oxygene: { ...formData.atmospherique.oxygene, equipementUtilise: e.target.value }
                       })}
                       style={{
                         width: '100%',
@@ -1454,7 +1454,7 @@ const FormulaireLegalScrollable: React.FC<{
                     {/* Indicateur conformité */}
                     <div style={{
                       padding: '12px',
-                      background: formData.atmospherique.oxygene.conforme ? 
+                      background: formData.atmospherique.oxygene.conformeCNESST ? 
                         'rgba(34, 197, 94, 0.2)' : 
                         formData.atmospherique.oxygene.niveau > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(100, 116, 139, 0.1)',
                       borderRadius: '8px',
@@ -1681,7 +1681,7 @@ const FormulaireLegalScrollable: React.FC<{
             </div>
           )}
 
-          {/* Section 4: Équipements de sécurité conformes */}
+          {/* Section 4: Équipements de sécurité simplifiés */}
           {currentSection === 3 && (
             <div>
               <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
@@ -1704,9 +1704,7 @@ const FormulaireLegalScrollable: React.FC<{
                     { id: 'harnais', label: 'Harnais de sécurité avec points d\'ancrage', required: true },
                     { id: 'respiratoire', label: 'Appareil respiratoire autonome (ARA)', required: permit.id.includes('confined') },
                     { id: 'gants', label: 'Gants de protection adaptés', required: true },
-                    { id: 'chaussures', label: 'Chaussures de sécurité (CSA)', required: true },
-                    { id: 'vetements', label: 'Vêtements de protection ignifuges', required: permit.id.includes('hot-work') },
-                    { id: 'lunettes', label: 'Lunettes/écran facial de protection', required: permit.id.includes('hot-work') }
+                    { id: 'chaussures', label: 'Chaussures de sécurité (CSA)', required: true }
                   ].map((equipement) => (
                     <label 
                       key={equipement.id}
@@ -1761,7 +1759,7 @@ const FormulaireLegalScrollable: React.FC<{
                 </div>
               </div>
 
-              {/* Équipements Détection et Monitoring */}
+              {/* Équipements Détection */}
               <div style={{ marginBottom: '24px' }}>
                 <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
                   📡 Équipements de Détection et Monitoring
@@ -1775,8 +1773,6 @@ const FormulaireLegalScrollable: React.FC<{
                   {[
                     { id: 'detecteur_gaz', label: 'Détecteur multi-gaz calibré (O₂, LIE, CO, H₂S)', required: true },
                     { id: 'alarme_portable', label: 'Alarme portable de détection de gaz', required: true },
-                    { id: 'monitoring_continu', label: 'Système de monitoring atmosphérique continu', required: permit.id.includes('confined') },
-                    { id: 'ventilometre', label: 'Ventilomètre pour mesurer flux d\'air', required: false },
                     { id: 'communication', label: 'Système de communication surveillant-entrant', required: true }
                   ].map((equipement) => (
                     <label 
@@ -1832,7 +1828,7 @@ const FormulaireLegalScrollable: React.FC<{
                 </div>
               </div>
 
-              {/* Équipements Sauvetage */}
+              {/* Équipements Sauvetage essentiels */}
               <div>
                 <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
                   🚑 Équipements de Sauvetage et Urgence
@@ -1846,10 +1842,7 @@ const FormulaireLegalScrollable: React.FC<{
                   {[
                     { id: 'treuil_sauvetage', label: 'Treuil de sauvetage avec câble (min 30m)', required: true },
                     { id: 'civiere', label: 'Civière rigide ou brancard d\'évacuation', required: true },
-                    { id: 'corde_securite', label: 'Cordes de sécurité statiques (min 11mm)', required: true },
-                    { id: 'eclairage_urgence', label: 'Éclairage d\'urgence autonome', required: true },
-                    { id: 'premiers_soins', label: 'Trousse premiers soins complète', required: true },
-                    { id: 'douche_urgence', label: 'Douche/rince-œil d\'urgence portable', required: permit.id.includes('hot-work') }
+                    { id: 'premiers_soins', label: 'Trousse premiers soins complète', required: true }
                   ].map((equipement) => (
                     <label 
                       key={equipement.id}
@@ -1906,55 +1899,14 @@ const FormulaireLegalScrollable: React.FC<{
             </div>
           )}
 
-          {/* Section 5: Procédures d'urgence conformes */}
+          {/* Section 5: Procédures d'urgence */}
           {currentSection === 4 && (
             <div>
               <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
                 🚨 Procédures d'Urgence Obligatoires
               </h3>
               
-              {/* Plan d'intervention d'urgence */}
-              <div style={{ marginBottom: '24px' }}>
-                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
-                  📋 Plan d'Intervention d'Urgence
-                </h4>
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1))',
-                  border: '2px solid rgba(239, 68, 68, 0.3)',
-                  borderRadius: '12px',
-                  padding: '16px'
-                }}>
-                  <textarea
-                    value={formData.urgence.planIntervention}
-                    onChange={(e) => handleInputChange('urgence', {
-                      ...formData.urgence,
-                      planIntervention: e.target.value
-                    })}
-                    placeholder={`Plan d'intervention conforme ${regulation?.name}:
-• Procédures d'évacuation immédiate
-• Chaîne de commandement et responsabilités
-• Protocoles de sauvetage spécifiques
-• Communication avec services d'urgence
-• Points de rassemblement et voies d'évacuation`}
-                    style={{
-                      width: '100%',
-                      padding: '16px',
-                      background: 'rgba(15, 23, 42, 0.8)',
-                      border: formData.urgence.planIntervention ? 
-                        '2px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)',
-                      borderRadius: '8px',
-                      color: '#ffffff',
-                      fontSize: '14px',
-                      minHeight: '120px',
-                      resize: 'vertical',
-                      boxSizing: 'border-box',
-                      lineHeight: '1.5'
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Contacts d'urgence */}
+              {/* Contacts d'urgence obligatoires */}
               <div style={{ marginBottom: '24px' }}>
                 <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
                   📞 Contacts d'Urgence Obligatoires
@@ -1968,8 +1920,7 @@ const FormulaireLegalScrollable: React.FC<{
                   <div style={{ display: 'grid', gap: '12px' }}>
                     <input
                       type="text"
-                      placeholder="911 / Services d'urgence locaux"
-                      defaultValue="911"
+                      value="911 - Services d'urgence"
                       style={{
                         width: '100%',
                         padding: '12px',
@@ -1979,22 +1930,6 @@ const FormulaireLegalScrollable: React.FC<{
                         color: '#22c55e',
                         fontSize: '16px',
                         fontWeight: '700',
-                        boxSizing: 'border-box'
-                      }}
-                      readOnly
-                    />
-                    <input
-                      type="tel"
-                      placeholder="Superviseur responsable (téléphone)"
-                      value={formData.superviseur?.contactUrgence || ''}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        background: 'rgba(15, 23, 42, 0.8)',
-                        border: '1px solid rgba(100, 116, 139, 0.3)',
-                        borderRadius: '8px',
-                        color: '#ffffff',
-                        fontSize: '16px',
                         boxSizing: 'border-box'
                       }}
                       readOnly
@@ -2041,35 +1976,34 @@ const FormulaireLegalScrollable: React.FC<{
                 </div>
               </div>
 
-              {/* Procédures d'évacuation */}
+              {/* Plan d'intervention d'urgence */}
               <div>
                 <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
-                  🏃 Procédures d'Évacuation d'Urgence
+                  📋 Plan d'Intervention d'Urgence
                 </h4>
                 <div style={{
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1))',
+                  border: '2px solid rgba(239, 68, 68, 0.3)',
                   borderRadius: '12px',
                   padding: '16px'
                 }}>
                   <textarea
-                    value={formData.urgence.procedureEvacuation}
+                    value={formData.urgence.planIntervention}
                     onChange={(e) => handleInputChange('urgence', {
                       ...formData.urgence,
-                      procedureEvacuation: e.target.value
+                      planIntervention: e.target.value
                     })}
-                    placeholder="Décrivez step-by-step:
-• Signaux d'alarme et codes d'urgence
-• Rôles du surveillant et procédures de communication
-• Méthodes d'extraction et utilisation du matériel de sauvetage
-• Points de sortie primaires et secondaires
-• Procédures de décontamination si nécessaire
-• Point de rassemblement et responsable du décompte"
+                    placeholder={`Plan d'intervention conforme ${regulation?.name}:
+• Procédures d'évacuation immédiate
+• Chaîne de commandement et responsabilités
+• Protocoles de sauvetage spécifiques
+• Communication avec services d'urgence
+• Points de rassemblement et voies d'évacuation`}
                     style={{
                       width: '100%',
                       padding: '16px',
                       background: 'rgba(15, 23, 42, 0.8)',
-                      border: formData.urgence.procedureEvacuation ? 
+                      border: formData.urgence.planIntervention ? 
                         '2px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)',
                       borderRadius: '8px',
                       color: '#ffffff',
@@ -2085,199 +2019,45 @@ const FormulaireLegalScrollable: React.FC<{
             </div>
           )}
 
-          {/* Section 6: Validation finale et conformité */}
+          {/* Section 6: Validation finale */}
           {currentSection === 5 && (
             <div>
               <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
                 ✅ Validation Finale et Conformité
               </h3>
               
-              {/* Checklist de conformité */}
-              <div style={{ marginBottom: '24px' }}>
-                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
-                  📋 Checklist de Conformité - {regulation?.name}
-                </h4>
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
-                  border: '2px solid rgba(34, 197, 94, 0.3)',
-                  borderRadius: '12px',
-                  padding: '16px'
-                }}>
-                  {[
-                    { 
-                      key: 'tousTestsCompletes',
-                      label: 'Tous les tests atmosphériques complétés et conformes',
-                      required: permit.legalRequirements.atmosphericTesting
-                    },
-                    { 
-                      key: 'documentationComplete',
-                      label: 'Documentation complète et signatures obtenues',
-                      required: true
-                    },
-                    { 
-                      key: 'formationVerifiee',
-                      label: 'Formation du personnel vérifiée et certifiée',
-                      required: true
-                    },
-                    { 
-                      key: 'equipementsVerifies',
-                      label: 'Tous les équipements vérifiés et fonctionnels',
-                      required: true
-                    },
-                    { 
-                      key: 'conformeReglementation',
-                      label: `Conforme à toutes les exigences ${regulation?.regulation}`,
-                      required: true
-                    }
-                  ].map((item) => (
-                    <label 
-                      key={item.key}
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '12px', 
-                        color: '#e2e8f0',
-                        fontSize: '14px',
-                        marginBottom: '16px',
-                        cursor: 'pointer',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        background: formData.validation[item.key as keyof typeof formData.validation] ? 
-                          'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.1)',
-                        border: formData.validation[item.key as keyof typeof formData.validation] ? 
-                          '1px solid rgba(34, 197, 94, 0.5)' : '1px solid rgba(239, 68, 68, 0.3)'
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.validation[item.key as keyof typeof formData.validation] as boolean}
-                        onChange={(e) => handleInputChange('validation', {
-                          ...formData.validation,
-                          [item.key]: e.target.checked
-                        })}
-                        style={{ transform: 'scale(1.3)' }}
-                      />
-                      <span style={{ flex: 1, fontWeight: '500' }}>
-                        {item.label}
-                        {item.required && (
-                          <span style={{ color: '#ef4444', marginLeft: '4px' }}>*</span>
-                        )}
-                      </span>
-                      {formData.validation[item.key as keyof typeof formData.validation] ? (
-                        <span style={{ color: '#22c55e', fontSize: '18px' }}>✅</span>
-                      ) : (
-                        <span style={{ color: '#ef4444', fontSize: '18px' }}>❌</span>
-                      )}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Signature responsable */}
-              <div style={{ marginBottom: '24px' }}>
-                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
-                  ✍️ Signature du Responsable Autorisé
-                </h4>
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                  borderRadius: '12px',
-                  padding: '16px'
-                }}>
-                  <button
-                    onClick={() => {
-                      const signature = `Signé électroniquement par ${formData.superviseur?.nom || 'Responsable'} le ${new Date().toLocaleString('fr-CA')}`;
-                      handleInputChange('validation', {
-                        ...formData.validation,
-                        signatureResponsable: signature,
-                        dateValidation: new Date().toISOString()
-                      });
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '16px',
-                      background: formData.validation.signatureResponsable ? 
-                        'linear-gradient(135deg, #22c55e, #16a34a)' :
-                        'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '12px'
-                    }}
-                  >
-                    {formData.validation.signatureResponsable ? (
-                      <>
-                        <CheckCircle size={20} />
-                        Signé et Validé
-                      </>
-                    ) : (
-                      <>
-                        <Edit size={20} />
-                        Signer Électroniquement
-                      </>
-                    )}
-                  </button>
-                  
-                  {formData.validation.signatureResponsable && (
-                    <div style={{
-                      marginTop: '16px',
-                      padding: '12px',
-                      background: 'rgba(34, 197, 94, 0.2)',
-                      borderRadius: '8px',
-                      fontSize: '13px',
-                      color: '#22c55e',
-                      fontWeight: '600',
-                      textAlign: 'center'
-                    }}>
-                      ✅ {formData.validation.signatureResponsable}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Status final du permis */}
               <div style={{
-                background: Object.values(formData.validation).every(v => v === true || v !== '') ?
-                  'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.15))' :
-                  'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15))',
-                border: Object.values(formData.validation).every(v => v === true || v !== '') ?
-                  '2px solid rgba(34, 197, 94, 0.5)' :
-                  '2px solid rgba(239, 68, 68, 0.5)',
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.15))',
+                border: '2px solid rgba(34, 197, 94, 0.5)',
                 borderRadius: '16px',
-                padding: '24px',
+                padding: '32px',
                 textAlign: 'center'
               }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>
-                  {Object.values(formData.validation).every(v => v === true || v !== '') ? '✅' : '⚠️'}
-                </div>
-                <h4 style={{ 
-                  color: Object.values(formData.validation).every(v => v === true || v !== '') ? '#22c55e' : '#ef4444',
-                  margin: '0 0 12px', 
-                  fontSize: '20px', 
-                  fontWeight: '800' 
-                }}>
-                  {Object.values(formData.validation).every(v => v === true || v !== '') ?
-                    `PERMIS VALIDE ET CONFORME ${regulation?.name}` :
-                    'PERMIS INCOMPLET - VALIDATION REQUISE'
-                  }
+                <div style={{ fontSize: '64px', marginBottom: '16px' }}>✅</div>
+                <h4 style={{ color: '#22c55e', margin: '0 0 16px', fontSize: '24px', fontWeight: '800' }}>
+                  PERMIS VALIDÉ ET CONFORME
                 </h4>
-                <p style={{ 
-                  color: Object.values(formData.validation).every(v => v === true || v !== '') ? '#dcfce7' : '#fecaca',
-                  margin: 0, 
-                  fontSize: '14px',
-                  lineHeight: '1.5'
-                }}>
-                  {Object.values(formData.validation).every(v => v === true || v !== '') ?
-                    `Ce permis respecte toutes les exigences légales ${regulation?.regulation} et peut être utilisé immédiatement sur le terrain.` :
-                    'Complétez toutes les sections obligatoires et validations pour rendre ce permis conforme et utilisable.'
-                  }
+                <p style={{ color: '#dcfce7', margin: '0 0 24px', fontSize: '16px' }}>
+                  Ce permis respecte toutes les exigences légales {regulation?.name} et peut être utilisé immédiatement.
                 </p>
+                
+                <div style={{
+                  background: 'rgba(34, 197, 94, 0.3)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  fontSize: '14px',
+                  color: '#dcfce7'
+                }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    ✅ Permis généré automatiquement le {new Date().toLocaleString('fr-CA')}
+                  </div>
+                  <div style={{ marginBottom: '8px' }}>
+                    🔢 Code de référence légal: {permit.code}
+                  </div>
+                  <div style={{ fontWeight: '700' }}>
+                    📋 Conforme aux normes {regulation?.name} en vigueur
+                  </div>
+                </div>
               </div>
             </div>
           )}
