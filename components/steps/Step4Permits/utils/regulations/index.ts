@@ -532,6 +532,172 @@ export const searchRegulations = (
   return results;
 };
 
+// =================== FONCTIONS POUR USEPERMITS ===================
+
+// Fonction generateCompliantPermits pour usePermits
+export const generateCompliantPermits = (
+  language: 'fr' | 'en',
+  province: Jurisdiction,
+  options: { mobileOptimized?: boolean } = {}
+): any[] => {
+  const config = getRegulationConfig(province);
+  
+  return [
+    {
+      id: `permit_${Date.now()}`,
+      name: language === 'fr' ? `Permis conforme ${province}` : `Compliant permit ${province}`,
+      type: 'confined_space',
+      status: 'draft',
+      dateCreation: new Date(),
+      dateExpiration: new Date(Date.now() + 8 * 60 * 60 * 1000),
+      location: '',
+      site: '',
+      secteur: '',
+      description: '',
+      priority: 'medium',
+      progress: 0,
+      tags: [],
+      attachments: [],
+      lastModified: new Date(),
+      modifiedBy: 'system',
+      atmosphericData: [],
+      equipmentData: [],
+      personnelData: [],
+      procedureData: [],
+      regulatoryCompliance: {
+        jurisdiction: province,
+        applicableRegulations: config.applicableRegulations,
+        complianceStatus: 'pending',
+        lastAssessment: new Date(),
+        nextReview: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        violations: []
+      }
+    }
+  ];
+};
+
+// Fonction searchPermitsOptimized pour usePermits
+export const searchPermitsOptimized = (
+  criteria: any,
+  permits: any[],
+  language: 'fr' | 'en',
+  mobileOptimized: boolean = false
+): any[] => {
+  let filtered = [...permits];
+  
+  if (criteria.motsCles?.[language]) {
+    const searchTerm = criteria.motsCles[language].toLowerCase();
+    filtered = filtered.filter(permit => 
+      permit.name.toLowerCase().includes(searchTerm) ||
+      permit.location?.toLowerCase().includes(searchTerm) ||
+      permit.description?.toLowerCase().includes(searchTerm)
+    );
+  }
+  
+  if (criteria.province) {
+    filtered = filtered.filter(permit => permit.jurisdiction === criteria.province);
+  }
+  
+  if (criteria.status) {
+    filtered = filtered.filter(permit => permit.status === criteria.status);
+  }
+  
+  if (criteria.type) {
+    filtered = filtered.filter(permit => permit.type === criteria.type);
+  }
+  
+  return filtered;
+};
+
+// Fonction validateAtmosphericData pour usePermits
+export const validateAtmosphericData = (
+  data: any,
+  jurisdiction: Jurisdiction = 'QC'
+): ValidationResult => {
+  const config = getRegulationConfig(jurisdiction);
+  const errors: any[] = [];
+  const warnings: any[] = [];
+  
+  if (data.oxygen) {
+    const { min, max } = config.atmosphericLimits.oxygen;
+    if (data.oxygen < min || data.oxygen > max) {
+      errors.push({
+        type: 'oxygen_out_of_range',
+        message: {
+          fr: `Niveau d'oxygène hors limites: ${data.oxygen}% (requis: ${min}-${max}%)`,
+          en: `Oxygen level out of range: ${data.oxygen}% (required: ${min}-${max}%)`
+        },
+        field: 'oxygen',
+        value: data.oxygen,
+        critical: true
+      });
+    }
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+    criticalIssues: errors.filter(e => e.critical),
+    suggestions: [],
+    confidence: errors.length === 0 ? 100 : 50
+  };
+};
+
+// Fonction validatePersonnelRequirements pour usePermits
+export const validatePersonnelRequirements = (
+  personnelData: any[],
+  jurisdiction: Jurisdiction = 'QC'
+): ValidationResult => {
+  const config = getRegulationConfig(jurisdiction);
+  const errors: any[] = [];
+  const warnings: any[] = [];
+  
+  // Vérifier présence superviseur
+  const hasSupervisor = personnelData.some(person => person.role === 'entry_supervisor');
+  if (!hasSupervisor) {
+    errors.push({
+      type: 'missing_supervisor',
+      message: {
+        fr: 'Un superviseur d\'entrée est requis',
+        en: 'An entry supervisor is required'
+      },
+      field: 'supervisor',
+      critical: true
+    });
+  }
+  
+  // Vérifier certifications
+  config.personnelRequirements.forEach(requirement => {
+    const hasQualified = personnelData.some(person => 
+      person.certifications?.some((cert: any) => 
+        cert.type === requirement && cert.status === 'valid'
+      )
+    );
+    
+    if (!hasQualified) {
+      warnings.push({
+        type: 'missing_certification',
+        message: {
+          fr: `Certification manquante: ${requirement}`,
+          en: `Missing certification: ${requirement}`
+        },
+        field: 'certifications',
+        severity: 'medium' as const
+      });
+    }
+  });
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+    criticalIssues: errors.filter(e => e.critical),
+    suggestions: [],
+    confidence: errors.length === 0 ? (warnings.length === 0 ? 100 : 80) : 0
+  };
+};
+
 // =================== EXPORTS PRINCIPAUX ===================
 export {
   type RegulationConfig
@@ -547,5 +713,9 @@ export default {
   getPersonnelRequirements,
   getProcedureRequirements,
   searchRegulations,
+  generateCompliantPermits,
+  searchPermitsOptimized,
+  validateAtmosphericData,
+  validatePersonnelRequirements,
   REGULATION_MAPPING
 };
