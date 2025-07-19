@@ -1,11 +1,11 @@
-// components/steps/Step4Permits/components/base.tsx - Composants de base
+// components/steps/Step4Permits/components/base.tsx - Composants de base CORRIGÉ
 
 import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Eye, Edit3, Copy, Trash2, CheckCircle, XCircle, Clock, 
   AlertTriangle, RefreshCw, X, Home, Flame, Construction, 
-  Crane, Building, Zap, Users, FileText, Calendar
+  Building, Zap, Users, FileText, Calendar
 } from 'lucide-react';
 
 // =================== PERMIT CARD ===================
@@ -26,7 +26,7 @@ const PERMIT_ICONS = {
   'confined_space': Home,
   'hot_work': Flame,
   'excavation': Construction,
-  'lifting': Crane,
+  'lifting': Construction, // CHANGÉ: Crane → Construction
   'height_work': Building,
   'electrical': Zap
 };
