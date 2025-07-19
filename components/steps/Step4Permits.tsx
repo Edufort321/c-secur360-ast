@@ -362,133 +362,8 @@ const getTexts = (language: 'fr' | 'en') => {
     };
   }
 };
-// =================== GÉNÉRATEUR PERMIS CONFORMES ===================
-const generateCompliantPermits = (language: 'fr' | 'en', province: string): LegalPermit[] => {
-  const regulation = PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS];
-  const basePermits: LegalPermit[] = [];
-
-  // Permis Espace Clos - Obligatoire dans toutes les provinces
-  basePermits.push({
-    id: `confined-space-${province.toLowerCase()}`,
-    name: language === 'fr' ? 
-      `🔒 Permis Entrée Espace Clos - ${regulation?.name}` : 
-      `🔒 Confined Space Entry Permit - ${regulation?.name}`,
-    category: language === 'fr' ? 'Espaces Clos' : 'Confined Spaces',
-    description: language === 'fr' ? 
-      `Permis obligatoire selon ${regulation?.regulation}. Tests atmosphériques: O2 ${regulation?.oxygenRange.min}-${regulation?.oxygenRange.max}%, Gaz inflammables ≤${regulation?.flammableGasLimit}% LIE. Âge minimum: ${regulation?.minimumAge} ans.` :
-      `Mandatory permit per ${regulation?.regulation}. Atmospheric testing: O2 ${regulation?.oxygenRange.min}-${regulation?.oxygenRange.max}%, Flammable gases ≤${regulation?.flammableGasLimit}% LEL. Minimum age: ${regulation?.minimumAge} years.`,
-    authority: regulation?.authority || '',
-    province: [province],
-    priority: 'critical',
-    selected: false,
-    formData: {},
-    code: generateLegalPermitCode('confined-space', province),
-    status: 'draft',
-    dateCreated: new Date().toISOString(),
-    dateModified: new Date().toISOString(),
-    legalRequirements: {
-      permitRequired: true,
-      atmosphericTesting: true,
-      entryProcedure: true,
-      emergencyPlan: true,
-      equipmentCheck: true,
-      attendantRequired: true,
-      documentation: true
-    },
-    validity: {
-      startDate: new Date().toISOString(),
-      endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-      isValid: false
-    },
-    compliance: {
-      [province.toLowerCase() === 'qc' ? 'cnesst' : 
-       province.toLowerCase() === 'on' ? 'ohsa' : 
-       province.toLowerCase() === 'bc' ? 'worksafebc' : 'ohs']: true
-    }
-  });
-
-  // Permis Travail à Chaud - Selon réglementation provinciale
-  if (province === 'QC' || province === 'ON') {
-    basePermits.push({
-      id: `hot-work-${province.toLowerCase()}`,
-      name: language === 'fr' ? 
-        `🔥 Permis Travail à Chaud - ${regulation?.name}` : 
-        `🔥 Hot Work Permit - ${regulation?.name}`,
-      category: language === 'fr' ? 'Travail à Chaud' : 'Hot Work',
-      description: language === 'fr' ? 
-        `Soudage, découpage, meulage selon ${regulation?.regulation}. Surveillance incendie continue obligatoire. Tests atmosphériques avant travaux.` :
-        `Welding, cutting, grinding per ${regulation?.regulation}. Continuous fire watch mandatory. Atmospheric testing before work.`,
-      authority: regulation?.authority || '',
-      province: [province],
-      priority: 'critical',
-      selected: false,
-      formData: {},
-      code: generateLegalPermitCode('hot-work', province),
-      status: 'draft',
-      dateCreated: new Date().toISOString(),
-      dateModified: new Date().toISOString(),
-      legalRequirements: {
-        permitRequired: true,
-        atmosphericTesting: true,
-        entryProcedure: false,
-        emergencyPlan: true,
-        equipmentCheck: true,
-        attendantRequired: true,
-        documentation: true
-      },
-      validity: {
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 jours max
-        isValid: false
-      },
-      compliance: {
-        [province.toLowerCase() === 'qc' ? 'cnesst' : 'ohsa']: true
-      }
-    });
-  }
-
-  // Permis Excavation - Selon municipalités et provinces
-  basePermits.push({
-    id: `excavation-${province.toLowerCase()}`,
-    name: language === 'fr' ? 
-      `⛏️ Permis Excavation - ${regulation?.name}` : 
-      `⛏️ Excavation Permit - ${regulation?.name}`,
-    category: language === 'fr' ? 'Excavation' : 'Excavation',
-    description: language === 'fr' ? 
-      `Excavation >1.2m. Étançonnement obligatoire selon codes municipaux et ${regulation?.regulation}. Plans ingénieur requis.` :
-      `Excavation >1.2m. Shoring mandatory per municipal codes and ${regulation?.regulation}. Engineer plans required.`,
-    authority: regulation?.authority || '',
-    province: [province],
-    priority: 'high',
-    selected: false,
-    formData: {},
-    code: generateLegalPermitCode('excavation', province),
-    status: 'draft',
-    dateCreated: new Date().toISOString(),
-    dateModified: new Date().toISOString(),
-    legalRequirements: {
-      permitRequired: true,
-      atmosphericTesting: false,
-      entryProcedure: true,
-      emergencyPlan: true,
-      equipmentCheck: true,
-      attendantRequired: false,
-      documentation: true
-    },
-    validity: {
-      startDate: new Date().toISOString(),
-      endDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(), // 6 mois
-      isValid: false
-    },
-    compliance: {
-      [province.toLowerCase() === 'qc' ? 'cnesst' : 
-       province.toLowerCase() === 'on' ? 'ohsa' : 
-       province.toLowerCase() === 'bc' ? 'worksafebc' : 'ohs']: true
-    }
-  });
-
-  return basePermits;
-};
+// =================== SECTION 2 - FORMULAIRE COMPLET CORRIGÉ ===================
+// Cette section REMPLACE complètement la Section 2 existante dans Step4Permits.tsx
 
 // =================== COMPOSANT FORMULAIRE SCROLL MOBILE ===================
 const FormulaireLegalScrollable: React.FC<{
@@ -516,7 +391,7 @@ const FormulaireLegalScrollable: React.FC<{
     surveillants: [] as Surveillant[],
     entrants: [] as Entrant[],
     
-    // Section 3: Tests atmosphériques (conformes CNESST 2025/OHSA)
+    // Section 3: Tests atmosphériques (conformes CNESST 2025)
     atmospherique: {
       oxygene: { 
         niveau: 0, 
@@ -763,6 +638,7 @@ const FormulaireLegalScrollable: React.FC<{
 
         {/* Contenu scrollable */}
         <div style={{ padding: '24px 20px 120px' }}>
+          
           {/* Section 1: Identification */}
           {currentSection === 0 && (
             <div>
@@ -793,7 +669,7 @@ const FormulaireLegalScrollable: React.FC<{
                       border: formData.lieuTravail ? '2px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)',
                       borderRadius: '12px',
                       color: '#ffffff',
-                      fontSize: '16px', // Taille mobile-friendly
+                      fontSize: '16px',
                       boxSizing: 'border-box'
                     }}
                   />
@@ -1212,8 +1088,357 @@ const FormulaireLegalScrollable: React.FC<{
             </div>
           )}
 
-          {/* Sections 3-6 seront dans les prochaines sections */}
-          {currentSection >= 2 && (
+          {/* Section 3: Tests atmosphériques conformes TOUTES LES SECTIONS ICI */}
+          {currentSection === 2 && permit.legalRequirements.atmosphericTesting && (
+            <div>
+              <h3 style={{ color: '#ffffff', marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
+                🧪 Tests Atmosphériques Obligatoires
+              </h3>
+              
+              {/* Alerte réglementaire */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15))',
+                border: '2px solid rgba(239, 68, 68, 0.4)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '24px'
+              }}>
+                <h4 style={{ color: '#fca5a5', margin: '0 0 8px', fontSize: '16px', fontWeight: '700' }}>
+                  ⚠️ EXIGENCES CRITIQUES - {regulation?.name}
+                </h4>
+                <div style={{ fontSize: '13px', color: '#fecaca', lineHeight: '1.5' }}>
+                  <div>• Oxygène: {regulation?.oxygenRange.min}% - {regulation?.oxygenRange.max}%</div>
+                  <div>• Gaz inflammables: ≤ {regulation?.flammableGasLimit}% LIE</div>
+                  <div>• Tests obligatoires avant entrée et en continu</div>
+                  <div>• Équipement étalonné selon fabricant requis</div>
+                </div>
+              </div>
+
+              {/* Tests Oxygène */}
+              <div style={{ marginBottom: '24px' }}>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
+                  🫁 Test Oxygène (O₂)
+                </h4>
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
+                  border: formData.atmospherique.oxygene.conformeCNESST ? 
+                    '2px solid rgba(34, 197, 94, 0.5)' : 
+                    '1px solid rgba(100, 116, 139, 0.3)',
+                  borderRadius: '12px',
+                  padding: '16px'
+                }}>
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                          Niveau O₂ mesuré (%)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          value={formData.atmospherique.oxygene.niveau || ''}
+                          onChange={(e) => {
+                            const niveau = parseFloat(e.target.value) || 0;
+                            const conformeCNESST = niveau >= (regulation?.oxygenRange.min || 19.5) && 
+                                           niveau <= (regulation?.oxygenRange.max || 23.0);
+                            handleInputChange('atmospherique', {
+                              ...formData.atmospherique,
+                              oxygene: { ...formData.atmospherique.oxygene, niveau, conformeCNESST }
+                            });
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: 'rgba(15, 23, 42, 0.8)',
+                            border: formData.atmospherique.oxygene.conformeCNESST ? 
+                              '2px solid #22c55e' : 
+                              formData.atmospherique.oxygene.niveau > 0 ? '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
+                            borderRadius: '8px',
+                            color: '#ffffff',
+                            fontSize: '16px',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                          Heure du test
+                        </label>
+                        <input
+                          type="time"
+                          value={formData.atmospherique.oxygene.heureTest}
+                          onChange={(e) => handleInputChange('atmospherique', {
+                            ...formData.atmospherique,
+                            oxygene: { ...formData.atmospherique.oxygene, heureTest: e.target.value }
+                          })}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: 'rgba(15, 23, 42, 0.8)',
+                            border: '1px solid rgba(100, 116, 139, 0.3)',
+                            borderRadius: '8px',
+                            color: '#ffffff',
+                            fontSize: '16px',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <input
+                      type="text"
+                      placeholder="Équipement utilisé (marque, modèle, étalonnage)"
+                      value={formData.atmospherique.oxygene.equipementUtilise}
+                      onChange={(e) => handleInputChange('atmospherique', {
+                        ...formData.atmospherique,
+                        oxygene: { ...formData.atmospherique.oxygene, equipementUtilise: e.target.value }
+                      })}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        color: '#ffffff',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    
+                    {/* Indicateur conformité */}
+                    <div style={{
+                      padding: '12px',
+                      background: formData.atmospherique.oxygene.conformeCNESST ? 
+                        'rgba(34, 197, 94, 0.2)' : 
+                        formData.atmospherique.oxygene.niveau > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(100, 116, 139, 0.1)',
+                      borderRadius: '8px',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ 
+                        color: formData.atmospherique.oxygene.conformeCNESST ? '#22c55e' : 
+                               formData.atmospherique.oxygene.niveau > 0 ? '#ef4444' : '#94a3b8',
+                        fontWeight: '700',
+                        fontSize: '14px'
+                      }}>
+                        {formData.atmospherique.oxygene.conformeCNESST ? 
+                          `✅ CONFORME ${regulation?.name}` : 
+                          formData.atmospherique.oxygene.niveau > 0 ? 
+                            `❌ NON CONFORME - Requis: ${regulation?.oxygenRange.min}%-${regulation?.oxygenRange.max}%` :
+                            `⏳ En attente de mesure`
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tests Gaz Combustibles */}
+              <div style={{ marginBottom: '24px' }}>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
+                  🔥 Test Gaz Combustibles
+                </h4>
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1))',
+                  border: formData.atmospherique.gazCombustibles.conformeReglement ? 
+                    '2px solid rgba(245, 158, 11, 0.5)' : 
+                    '1px solid rgba(100, 116, 139, 0.3)',
+                  borderRadius: '12px',
+                  padding: '16px'
+                }}>
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                          % LIE (Limite Inférieure Explosion)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          value={formData.atmospherique.gazCombustibles.pourcentageLIE || ''}
+                          onChange={(e) => {
+                            const pourcentageLIE = parseFloat(e.target.value) || 0;
+                            const conformeReglement = pourcentageLIE <= (regulation?.flammableGasLimit || 10);
+                            handleInputChange('atmospherique', {
+                              ...formData.atmospherique,
+                              gazCombustibles: { ...formData.atmospherique.gazCombustibles, pourcentageLIE, conformeReglement }
+                            });
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: 'rgba(15, 23, 42, 0.8)',
+                            border: formData.atmospherique.gazCombustibles.conformeReglement ? 
+                              '2px solid #f59e0b' : 
+                              formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
+                            borderRadius: '8px',
+                            color: '#ffffff',
+                            fontSize: '16px',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                          Type de gaz détecté
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Méthane, Propane, Hydrogène"
+                          value={formData.atmospherique.gazCombustibles.typeGaz}
+                          onChange={(e) => handleInputChange('atmospherique', {
+                            ...formData.atmospherique,
+                            gazCombustibles: { ...formData.atmospherique.gazCombustibles, typeGaz: e.target.value }
+                          })}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: 'rgba(15, 23, 42, 0.8)',
+                            border: '1px solid rgba(100, 116, 139, 0.3)',
+                            borderRadius: '8px',
+                            color: '#ffffff',
+                            fontSize: '16px',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <input
+                      type="text"
+                      placeholder="Équipement de détection (étalonné selon fabricant)"
+                      value={formData.atmospherique.gazCombustibles.equipementTest}
+                      onChange={(e) => handleInputChange('atmospherique', {
+                        ...formData.atmospherique,
+                        gazCombustibles: { ...formData.atmospherique.gazCombustibles, equipementTest: e.target.value }
+                      })}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        color: '#ffffff',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    
+                    <div style={{
+                      padding: '12px',
+                      background: formData.atmospherique.gazCombustibles.conformeReglement ? 
+                        'rgba(245, 158, 11, 0.2)' : 
+                        formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(100, 116, 139, 0.1)',
+                      borderRadius: '8px',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ 
+                        color: formData.atmospherique.gazCombustibles.conformeReglement ? '#f59e0b' : 
+                               formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? '#ef4444' : '#94a3b8',
+                        fontWeight: '700',
+                        fontSize: '14px'
+                      }}>
+                        {formData.atmospherique.gazCombustibles.conformeReglement ? 
+                          `✅ SÉCURITAIRE - Limite: ≤${regulation?.flammableGasLimit}% LIE` : 
+                          formData.atmospherique.gazCombustibles.pourcentageLIE > 0 ? 
+                            `🚨 DANGER - Dépassement limite ${regulation?.flammableGasLimit}% LIE` :
+                            `⏳ Test requis avant entrée`
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ventilation obligatoire */}
+              <div>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
+                  💨 Système de Ventilation
+                </h4>
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  borderRadius: '12px',
+                  padding: '16px'
+                }}>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      color: '#e2e8f0',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.atmospherique.ventilation.active}
+                        onChange={(e) => handleInputChange('atmospherique', {
+                          ...formData.atmospherique,
+                          ventilation: { ...formData.atmospherique.ventilation, active: e.target.checked }
+                        })}
+                        style={{ transform: 'scale(1.2)' }}
+                      />
+                      Ventilation mécanique active et continue
+                    </label>
+                  </div>
+                  
+                  {formData.atmospherique.ventilation.active && (
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                      <input
+                        type="text"
+                        placeholder="Débit d'air (CFM ou m³/min)"
+                        value={formData.atmospherique.ventilation.debitAir}
+                        onChange={(e) => handleInputChange('atmospherique', {
+                          ...formData.atmospherique,
+                          ventilation: { ...formData.atmospherique.ventilation, debitAir: e.target.value }
+                        })}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '16px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                      <select
+                        value={formData.atmospherique.ventilation.directionFlux}
+                        onChange={(e) => handleInputChange('atmospherique', {
+                          ...formData.atmospherique,
+                          ventilation: { ...formData.atmospherique.ventilation, directionFlux: e.target.value }
+                        })}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '16px',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        <option value="">Sélectionner direction du flux</option>
+                        <option value="extraction">Extraction (aspiration)</option>
+                        <option value="insufflation">Insufflation (refoulement)</option>
+                        <option value="mixte">Mixte (extraction + insufflation)</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Autres sections placeholder */}
+          {currentSection >= 3 && (
             <div style={{
               textAlign: 'center',
               padding: '60px 20px',
