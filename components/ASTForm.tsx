@@ -1820,7 +1820,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
           onPermitChange={(permits) => {
           handleStep4DataChange('permits', permits);
         }}
-      initialPermits={astData.step4?.permits || []}
+      initialPermits={[]}
     />
         );
       case 5:
