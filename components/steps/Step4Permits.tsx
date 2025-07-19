@@ -1714,10 +1714,16 @@ const FormulaireLegalComplet: React.FC<{
           )}
         </div>
 
-          {/* Onglet Validation finale complète */}
-          {activeTab === 'validation' && (
-            <div>
-              <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>✅ Validation Finale Conforme CNESST</h3>
+        {/* Footer Actions */}
+        <div style={{
+          background: 'rgba(30, 41, 59, 0.5)',
+          borderTop: '1px solid rgba(100, 116, 139, 0.3)',
+          borderRadius: '0 0 16px 16px',
+          padding: '20px 24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
               
               <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
                 {[
