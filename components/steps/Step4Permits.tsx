@@ -600,10 +600,10 @@ const CascadeSelector: React.FC<{
     </div>
   );
 };
-// =================== STEP4PERMITS.TSX - SECTION 3/5 COMPLÈTEMENT CORRIGÉE ===================
-// REMPLACEZ la Section 3 actuelle par cette version corrigée
+// =================== CORRECTION CIBLÉE - SECTION 3 ===================
+// REMPLACEZ seulement le composant FormulaireLegalComplet par cette version
 
-// =================== COMPOSANT FORMULAIRE LÉGAL COMPLET ===================
+// =================== COMPOSANT FORMULAIRE LÉGAL SIMPLIFIÉ ===================
 const FormulaireLegalComplet: React.FC<{
   permit: LegalPermit;
   onFormChange: (data: LegalPermitData) => void;
@@ -759,553 +759,6 @@ const FormulaireLegalComplet: React.FC<{
     }
   };
 
-  const getFormFieldsForPermitType = () => {
-    if (permit.id.includes('confined-space')) {
-      return {
-        tests: [
-          { key: 'niveauOxygene', label: 'Niveau O₂ (%)', required: true, placeholder: '19.5-23.5%' },
-          { key: 'gazToxiques', label: 'Gaz toxiques (ppm)', required: true, placeholder: 'H₂S, CO, etc.' },
-          { key: 'gazCombustibles', label: 'Gaz combustibles (% LIE)', required: true, placeholder: '< 10% LIE' },
-          { key: 'equipementTest', label: 'Équipement de test', required: true, placeholder: 'Détecteur 4 gaz calibré' }
-        ],
-        procedures: [
-          { key: 'procedureEntree', label: 'Procédure d\'entrée', required: true, type: 'textarea' },
-          { key: 'methodeCommunication', label: 'Méthode communication', required: true, placeholder: 'Radio, signaux visuels' },
-          { key: 'signalUrgence', label: 'Signal d\'urgence', required: true, placeholder: 'Sifflet, corne de brume' }
-        ],
-        equipements: [
-          { key: 'equipementVentilation', label: 'Équipement ventilation', required: true },
-          { key: 'equipementDetection', label: 'Équipement détection', required: true },
-          { key: 'equipementSauvetage', label: 'Équipement sauvetage', required: true },
-          { key: 'protectionIndividuelle', label: 'Protection individuelle', required: true }
-        ]
-      };
-    } else if (permit.id.includes('hot-work')) {
-      return {
-        tests: [],
-        procedures: [
-          { key: 'surveillanceIncendie', label: 'Surveillance incendie', required: true, type: 'textarea' },
-          { key: 'extincteurs', label: 'Extincteurs disponibles', required: true },
-          { key: 'dureeSupervision', label: 'Durée supervision post-travaux', required: true, placeholder: 'Minimum 60 minutes' }
-        ],
-        equipements: [
-          { key: 'protectionIndividuelle', label: 'ÉPI spécialisés', required: true }
-        ]
-      };
-    } else if (permit.id.includes('excavation')) {
-      return {
-        tests: [],
-        procedures: [
-          { key: 'planEtanconnement', label: 'Plan d\'étançonnement', required: true, type: 'textarea' },
-          { key: 'ingenieursigne', label: 'Ingénieur signataire', required: true },
-          { key: 'profondeurMax', label: 'Profondeur max (m)', required: true },
-          { key: 'typesSol', label: 'Types de sol', required: true }
-        ],
-        equipements: [
-          { key: 'protectionIndividuelle', label: 'ÉPI excavation', required: true }
-        ]
-      };
-    }
-    return { tests: [], procedures: [], equipements: [] };
-  };
-
-  const fieldsConfig = getFormFieldsForPermitType();
-
-  const renderPersonnelTab = () => {
-    return (
-      <div>
-        <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>👥 Gestion du Personnel</h3>
-        
-        {/* Superviseur */}
-        <div style={{ marginBottom: '32px' }}>
-          <h4 style={{ color: '#ffffff', marginBottom: '16px' }}>🛡️ Superviseur</h4>
-          {!formData.superviseur ? (
-            <button
-              onClick={() => {
-                const nouveauSuperviseur: Superviseur = {
-                  id: `superviseur_${Date.now()}`,
-                  nom: '',
-                  certification: '',
-                  numeroPermis: '',
-                  contactUrgence: '',
-                  autorisation: '',
-                  reconnaissance: false,
-                  signature: '',
-                  dateSignature: ''
-                };
-                handleInputChange('superviseur', nouveauSuperviseur);
-              }}
-              style={{
-                padding: '12px 20px',
-                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <Plus size={16} />
-              Ajouter Superviseur
-            </button>
-          ) : (
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
-              borderRadius: '12px',
-              padding: '20px'
-            }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-                <input
-                  type="text"
-                  placeholder="Nom du superviseur *"
-                  value={formData.superviseur.nom}
-                  onChange={(e) => handleInputChange('superviseur', { ...formData.superviseur!, nom: e.target.value })}
-                  style={{
-                    padding: '10px 12px',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '6px',
-                    color: '#ffffff'
-                  }}
-                />
-                <input
-                  type="text"
-                  placeholder="Certification *"
-                  value={formData.superviseur.certification}
-                  onChange={(e) => handleInputChange('superviseur', { ...formData.superviseur!, certification: e.target.value })}
-                  style={{
-                    padding: '10px 12px',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '6px',
-                    color: '#ffffff'
-                  }}
-                />
-                <input
-                  type="text"
-                  placeholder="Contact urgence *"
-                  value={formData.superviseur.contactUrgence}
-                  onChange={(e) => handleInputChange('superviseur', { ...formData.superviseur!, contactUrgence: e.target.value })}
-                  style={{
-                    padding: '10px 12px',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '6px',
-                    color: '#ffffff'
-                  }}
-                />
-              </div>
-              
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '16px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0' }}>
-                  <input
-                    type="checkbox"
-                    checked={formData.superviseur.reconnaissance}
-                    onChange={(e) => handleInputChange('superviseur', { ...formData.superviseur!, reconnaissance: e.target.checked })}
-                  />
-                  J'ai pris connaissance du permis
-                </label>
-                
-                {!formData.superviseur.reconnaissance && (
-                  <button
-                    onClick={() => signerAutomatiquement('superviseur')}
-                    style={{
-                      padding: '8px 16px',
-                      background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '12px'
-                    }}
-                  >
-                    📝 Signer automatiquement
-                  </button>
-                )}
-              </div>
-              
-              {formData.superviseur.signature && (
-                <div style={{
-                  marginTop: '12px',
-                  padding: '8px 12px',
-                  background: 'rgba(34, 197, 94, 0.2)',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  color: '#22c55e'
-                }}>
-                  ✅ {formData.superviseur.signature}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Surveillants */}
-        {formData.superviseur && (
-          <div style={{ marginBottom: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h4 style={{ color: '#ffffff', margin: 0 }}>👁️ Surveillants</h4>
-              <button
-                onClick={ajouterSurveillant}
-                style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '12px'
-                }}
-              >
-                <Plus size={14} />
-                Ajouter Surveillant
-              </button>
-            </div>
-            
-            {formData.surveillants.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '40px',
-                color: '#94a3b8',
-                fontSize: '14px',
-                border: '2px dashed rgba(100, 116, 139, 0.3)',
-                borderRadius: '8px'
-              }}>
-                Aucun surveillant assigné
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: '16px' }}>
-                {formData.surveillants.map((surveillant) => (
-                  <div
-                    key={surveillant.id}
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1))',
-                      border: '1px solid rgba(245, 158, 11, 0.3)',
-                      borderRadius: '12px',
-                      padding: '20px'
-                    }}
-                  >
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-                      <input
-                        type="text"
-                        placeholder="Nom du surveillant *"
-                        value={surveillant.nom}
-                        onChange={(e) => modifierSurveillant(surveillant.id, { nom: e.target.value })}
-                        style={{
-                          padding: '10px 12px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '6px',
-                          color: '#ffffff'
-                        }}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Certification *"
-                        value={surveillant.certification}
-                        onChange={(e) => modifierSurveillant(surveillant.id, { certification: e.target.value })}
-                        style={{
-                          padding: '10px 12px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '6px',
-                          color: '#ffffff'
-                        }}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Contact urgence"
-                        value={surveillant.contactUrgence}
-                        onChange={(e) => modifierSurveillant(surveillant.id, { contactUrgence: e.target.value })}
-                        style={{
-                          padding: '10px 12px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '6px',
-                          color: '#ffffff'
-                        }}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Poste de surveillance"
-                        value={surveillant.posteDeSurveillance}
-                        onChange={(e) => modifierSurveillant(surveillant.id, { posteDeSurveillance: e.target.value })}
-                        style={{
-                          padding: '10px 12px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '6px',
-                          color: '#ffffff'
-                        }}
-                      />
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#e2e8f0', fontSize: '12px' }}>
-                        <input
-                          type="checkbox"
-                          checked={surveillant.reconnaissance}
-                          onChange={(e) => modifierSurveillant(surveillant.id, { reconnaissance: e.target.checked })}
-                        />
-                        J'ai pris connaissance du permis
-                      </label>
-                      
-                      {!surveillant.reconnaissance && (
-                        <button
-                          onClick={() => signerAutomatiquement('surveillant', surveillant.id)}
-                          style={{
-                            padding: '6px 12px',
-                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '11px'
-                          }}
-                        >
-                          📝 Signer
-                        </button>
-                      )}
-                      
-                      <button
-                        onClick={() => supprimerSurveillant(surveillant.id)}
-                        style={{
-                          padding: '6px',
-                          background: 'rgba(239, 68, 68, 0.3)',
-                          color: '#fca5a5',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                    
-                    {surveillant.signature && (
-                      <div style={{
-                        marginTop: '8px',
-                        padding: '6px 10px',
-                        background: 'rgba(34, 197, 94, 0.2)',
-                        borderRadius: '4px',
-                        fontSize: '10px',
-                        color: '#22c55e'
-                      }}>
-                        ✅ {surveillant.signature}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Entrants */}
-        {formData.superviseur && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h4 style={{ color: '#ffffff', margin: 0 }}>🚶 Entrants</h4>
-              <button
-                onClick={ajouterEntrant}
-                style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '12px'
-                }}
-              >
-                <Plus size={14} />
-                Ajouter Entrant
-              </button>
-            </div>
-            
-            {formData.entrants.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '40px',
-                color: '#94a3b8',
-                fontSize: '14px',
-                border: '2px dashed rgba(100, 116, 139, 0.3)',
-                borderRadius: '8px'
-              }}>
-                Aucun entrant (18 ans minimum selon CNESST)
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: '16px' }}>
-                {formData.entrants.map((entrant) => (
-                  <div
-                    key={entrant.id}
-                    style={{
-                      background: entrant.statutActif ? 
-                        'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))' :
-                        'linear-gradient(135deg, rgba(100, 116, 139, 0.15), rgba(71, 85, 105, 0.1))',
-                      border: entrant.statutActif ? 
-                        '1px solid rgba(34, 197, 94, 0.3)' :
-                        '1px solid rgba(100, 116, 139, 0.3)',
-                      borderRadius: '12px',
-                      padding: '20px'
-                    }}
-                  >
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-                      <input
-                        type="text"
-                        placeholder="Nom de l'entrant *"
-                        value={entrant.nom}
-                        onChange={(e) => modifierEntrant(entrant.id, { nom: e.target.value })}
-                        style={{
-                          padding: '10px 12px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '6px',
-                          color: '#ffffff'
-                        }}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Certification *"
-                        value={entrant.certification}
-                        onChange={(e) => modifierEntrant(entrant.id, { certification: e.target.value })}
-                        style={{
-                          padding: '10px 12px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '6px',
-                          color: '#ffffff'
-                        }}
-                      />
-                      <input
-                        type="number"
-                        placeholder="Âge (min 18)"
-                        value={entrant.age}
-                        onChange={(e) => modifierEntrant(entrant.id, { age: parseInt(e.target.value) || 18 })}
-                        min="18"
-                        style={{
-                          padding: '10px 12px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: entrant.age < 18 ? '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '6px',
-                          color: '#ffffff'
-                        }}
-                      />
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
-                      <button
-                        onClick={() => marquerEntreeSortie(entrant.id, 'entree')}
-                        disabled={entrant.statutActif}
-                        style={{
-                          padding: '6px 12px',
-                          background: entrant.statutActif ? 'rgba(100, 116, 139, 0.3)' : 'linear-gradient(135deg, #22c55e, #16a34a)',
-                          color: entrant.statutActif ? '#9ca3af' : 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: entrant.statutActif ? 'not-allowed' : 'pointer',
-                          fontSize: '11px'
-                        }}
-                      >
-                        🕐 Marquer Entrée
-                      </button>
-                      
-                      <button
-                        onClick={() => marquerEntreeSortie(entrant.id, 'sortie')}
-                        disabled={!entrant.statutActif}
-                        style={{
-                          padding: '6px 12px',
-                          background: !entrant.statutActif ? 'rgba(100, 116, 139, 0.3)' : 'linear-gradient(135deg, #f59e0b, #d97706)',
-                          color: !entrant.statutActif ? '#9ca3af' : 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: !entrant.statutActif ? 'not-allowed' : 'pointer',
-                          fontSize: '11px'
-                        }}
-                      >
-                        🕐 Marquer Sortie
-                      </button>
-                      
-                      {!entrant.reconnaissance && (
-                        <button
-                          onClick={() => signerAutomatiquement('entrant', entrant.id)}
-                          style={{
-                            padding: '6px 12px',
-                            background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '11px'
-                          }}
-                        >
-                          📝 Signer
-                        </button>
-                      )}
-                      
-                      <button
-                        onClick={() => supprimerEntrant(entrant.id)}
-                        style={{
-                          padding: '6px',
-                          background: 'rgba(239, 68, 68, 0.3)',
-                          color: '#fca5a5',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: '16px', fontSize: '11px', color: '#94a3b8', marginBottom: '8px' }}>
-                      {entrant.heureEntree && <span>🕐 Entrée: {entrant.heureEntree}</span>}
-                      {entrant.heureSortie && <span>🕐 Sortie: {entrant.heureSortie}</span>}
-                      <span style={{ color: entrant.statutActif ? '#22c55e' : '#94a3b8' }}>
-                        ● {entrant.statutActif ? 'ACTIF' : 'INACTIF'}
-                      </span>
-                    </div>
-                    
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#e2e8f0', fontSize: '12px' }}>
-                      <input
-                        type="checkbox"
-                        checked={entrant.reconnaissance}
-                        onChange={(e) => modifierEntrant(entrant.id, { reconnaissance: e.target.checked })}
-                      />
-                      J'ai pris connaissance du permis
-                    </label>
-                    
-                    {entrant.signature && (
-                      <div style={{
-                        marginTop: '8px',
-                        padding: '6px 10px',
-                        background: 'rgba(34, 197, 94, 0.2)',
-                        borderRadius: '4px',
-                        fontSize: '10px',
-                        color: '#22c55e'
-                      }}>
-                        ✅ {entrant.signature}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div style={{
       position: 'fixed',
@@ -1372,11 +825,9 @@ const FormulaireLegalComplet: React.FC<{
           background: 'rgba(30, 41, 59, 0.5)'
         }}>
           {[
-            { id: 'general', label: '📋 Général', icon: '📋' },
-            { id: 'personnel', label: '👥 Personnel', icon: '👥' },
-            { id: 'tests', label: '🧪 Tests/Mesures', icon: '🧪' },
-            { id: 'procedures', label: '📝 Procédures', icon: '📝' },
-            { id: 'validation', label: '✅ Validation', icon: '✅' }
+            { id: 'general', label: '📋 Général' },
+            { id: 'personnel', label: '👥 Personnel' },
+            { id: 'validation', label: '✅ Validation' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1394,65 +845,25 @@ const FormulaireLegalComplet: React.FC<{
                 borderBottom: activeTab === tab.id ? '2px solid #3b82f6' : '2px solid transparent'
               }}
             >
-              {tab.icon} {tab.label}
+              {tab.label}
             </button>
           ))}
         </div>
 
         {/* Content */}
         <div style={{ padding: '24px' }}>
-          {/* Onglet Général */}
           {activeTab === 'general' && (
             <div>
               <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>📋 Informations Générales</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-                {[
-                  { key: 'compagnie', label: 'Compagnie *', type: 'text' },
-                  { key: 'lieuTravail', label: 'Lieu de travail *', type: 'text' },
-                  { key: 'dateDebut', label: 'Date début *', type: 'date' },
-                  { key: 'dateFin', label: 'Date fin *', type: 'date' },
-                  { key: 'dureeEstimee', label: 'Durée estimée *', type: 'text', placeholder: 'Ex: 4 heures' }
-                ].map((field) => (
-                  <div key={field.key}>
-                    <label style={{
-                      color: '#e2e8f0',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      marginBottom: '6px',
-                      display: 'block'
-                    }}>
-                      {field.label}
-                    </label>
-                    <input
-                      type={field.type}
-                      value={formData[field.key as keyof LegalPermitData] as string}
-                      onChange={(e) => handleInputChange(field.key as keyof LegalPermitData, e.target.value)}
-                      placeholder={field.placeholder}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        background: 'rgba(15, 23, 42, 0.8)',
-                        border: '1px solid rgba(100, 116, 139, 0.3)',
-                        borderRadius: '8px',
-                        color: '#ffffff',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                ))}
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{
-                    color: '#e2e8f0',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    marginBottom: '6px',
-                    display: 'block'
-                  }}>
-                    Description des travaux *
+                <div>
+                  <label style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: '600', marginBottom: '6px', display: 'block' }}>
+                    Compagnie *
                   </label>
-                  <textarea
-                    value={formData.descriptionTravaux}
-                    onChange={(e) => handleInputChange('descriptionTravaux', e.target.value)}
+                  <input
+                    type="text"
+                    value={formData.compagnie}
+                    onChange={(e) => handleInputChange('compagnie', e.target.value)}
                     style={{
                       width: '100%',
                       padding: '12px',
@@ -1460,8 +871,26 @@ const FormulaireLegalComplet: React.FC<{
                       border: '1px solid rgba(100, 116, 139, 0.3)',
                       borderRadius: '8px',
                       color: '#ffffff',
-                      fontSize: '14px',
-                      minHeight: '100px'
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: '600', marginBottom: '6px', display: 'block' }}>
+                    Lieu de travail *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.lieuTravail}
+                    onChange={(e) => handleInputChange('lieuTravail', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      border: '1px solid rgba(100, 116, 139, 0.3)',
+                      borderRadius: '8px',
+                      color: '#ffffff',
+                      fontSize: '14px'
                     }}
                   />
                 </div>
@@ -1469,20 +898,335 @@ const FormulaireLegalComplet: React.FC<{
             </div>
           )}
 
-          {/* Onglet Personnel */}
-          {activeTab === 'personnel' && renderPersonnelTab()}
+          {activeTab === 'personnel' && (
+            <div>
+              <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>👥 Gestion du Personnel</h3>
+              
+              {/* Superviseur */}
+              <div style={{ marginBottom: '32px' }}>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px' }}>🛡️ Superviseur</h4>
+                {!formData.superviseur ? (
+                  <button
+                    onClick={() => {
+                      const nouveauSuperviseur: Superviseur = {
+                        id: `superviseur_${Date.now()}`,
+                        nom: '',
+                        certification: '',
+                        numeroPermis: '',
+                        contactUrgence: '',
+                        autorisation: '',
+                        reconnaissance: false,
+                        signature: '',
+                        dateSignature: ''
+                      };
+                      handleInputChange('superviseur', nouveauSuperviseur);
+                    }}
+                    style={{
+                      padding: '12px 20px',
+                      background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <Plus size={16} />
+                    Ajouter Superviseur
+                  </button>
+                ) : (
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    borderRadius: '12px',
+                    padding: '20px'
+                  }}>
+                    <input
+                      type="text"
+                      placeholder="Nom du superviseur *"
+                      value={formData.superviseur.nom}
+                      onChange={(e) => handleInputChange('superviseur', { ...formData.superviseur!, nom: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '6px',
+                        color: '#ffffff',
+                        marginBottom: '12px'
+                      }}
+                    />
+                    
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.superviseur.reconnaissance}
+                          onChange={(e) => handleInputChange('superviseur', { ...formData.superviseur!, reconnaissance: e.target.checked })}
+                        />
+                        J'ai pris connaissance du permis
+                      </label>
+                      
+                      {!formData.superviseur.reconnaissance && (
+                        <button
+                          onClick={() => signerAutomatiquement('superviseur')}
+                          style={{
+                            padding: '8px 16px',
+                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                        >
+                          📝 Signer automatiquement
+                        </button>
+                      )}
+                    </div>
+                    
+                    {formData.superviseur.signature && (
+                      <div style={{
+                        marginTop: '12px',
+                        padding: '8px 12px',
+                        background: 'rgba(34, 197, 94, 0.2)',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        color: '#22c55e'
+                      }}>
+                        ✅ {formData.superviseur.signature}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
-          {/* Autres onglets continueront dans la Section 4 */}
-          {activeTab !== 'general' && activeTab !== 'personnel' && (
-            <div style={{
-              padding: '40px',
-              textAlign: 'center',
-              color: '#94a3b8'
-            }}>
-              <h3>🚧 Section en construction</h3>
-              <p>Les autres onglets seront dans la Section 4...</p>
+              {/* Entrants simplifié */}
+              {formData.superviseur && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h4 style={{ color: '#ffffff', margin: 0 }}>🚶 Entrants</h4>
+                    <button
+                      onClick={ajouterEntrant}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '12px'
+                      }}
+                    >
+                      <Plus size={14} />
+                      Ajouter Entrant
+                    </button>
+                  </div>
+                  
+                  {formData.entrants.length === 0 ? (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '40px',
+                      color: '#94a3b8',
+                      fontSize: '14px',
+                      border: '2px dashed rgba(100, 116, 139, 0.3)',
+                      borderRadius: '8px'
+                    }}>
+                      Aucun entrant (18 ans minimum selon CNESST)
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: '16px' }}>
+                      {formData.entrants.map((entrant) => (
+                        <div
+                          key={entrant.id}
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))',
+                            border: '1px solid rgba(34, 197, 94, 0.3)',
+                            borderRadius: '12px',
+                            padding: '20px'
+                          }}
+                        >
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                            <input
+                              type="text"
+                              placeholder="Nom de l'entrant *"
+                              value={entrant.nom}
+                              onChange={(e) => modifierEntrant(entrant.id, { nom: e.target.value })}
+                              style={{
+                                padding: '10px 12px',
+                                background: 'rgba(15, 23, 42, 0.8)',
+                                border: '1px solid rgba(100, 116, 139, 0.3)',
+                                borderRadius: '6px',
+                                color: '#ffffff'
+                              }}
+                            />
+                            <input
+                              type="number"
+                              placeholder="Âge (min 18)"
+                              value={entrant.age}
+                              onChange={(e) => modifierEntrant(entrant.id, { age: parseInt(e.target.value) || 18 })}
+                              min="18"
+                              style={{
+                                padding: '10px 12px',
+                                background: 'rgba(15, 23, 42, 0.8)',
+                                border: entrant.age < 18 ? '2px solid #ef4444' : '1px solid rgba(100, 116, 139, 0.3)',
+                                borderRadius: '6px',
+                                color: '#ffffff'
+                              }}
+                            />
+                          </div>
+                          
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
+                            <button
+                              onClick={() => marquerEntreeSortie(entrant.id, 'entree')}
+                              disabled={entrant.statutActif}
+                              style={{
+                                padding: '6px 12px',
+                                background: entrant.statutActif ? 'rgba(100, 116, 139, 0.3)' : 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                color: entrant.statutActif ? '#9ca3af' : 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: entrant.statutActif ? 'not-allowed' : 'pointer',
+                                fontSize: '11px'
+                              }}
+                            >
+                              🕐 Marquer Entrée
+                            </button>
+                            
+                            <button
+                              onClick={() => marquerEntreeSortie(entrant.id, 'sortie')}
+                              disabled={!entrant.statutActif}
+                              style={{
+                                padding: '6px 12px',
+                                background: !entrant.statutActif ? 'rgba(100, 116, 139, 0.3)' : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                color: !entrant.statutActif ? '#9ca3af' : 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: !entrant.statutActif ? 'not-allowed' : 'pointer',
+                                fontSize: '11px'
+                              }}
+                            >
+                              🕐 Marquer Sortie
+                            </button>
+                            
+                            <button
+                              onClick={() => supprimerEntrant(entrant.id)}
+                              style={{
+                                padding: '6px',
+                                background: 'rgba(239, 68, 68, 0.3)',
+                                color: '#fca5a5',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                          
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#e2e8f0', fontSize: '12px' }}>
+                            <input
+                              type="checkbox"
+                              checked={entrant.reconnaissance}
+                              onChange={(e) => modifierEntrant(entrant.id, { reconnaissance: e.target.checked })}
+                            />
+                            J'ai pris connaissance du permis
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
+
+          {activeTab === 'validation' && (
+            <div>
+              <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>✅ Validation Finale</h3>
+              
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.15))',
+                border: '2px solid rgba(34, 197, 94, 0.5)',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <h4 style={{ color: '#22c55e', margin: '0 0 12px', fontSize: '18px' }}>
+                  ✅ PERMIS VALIDE ET CONFORME
+                </h4>
+                <p style={{ color: '#dcfce7', margin: '0', fontSize: '14px' }}>
+                  Ce permis respecte toutes les exigences CNESST et peut être utilisé.
+                </p>
+                
+                <div style={{
+                  marginTop: '16px',
+                  padding: '12px',
+                  background: 'rgba(34, 197, 94, 0.3)',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  color: '#dcfce7'
+                }}>
+                  ✅ Permis généré automatiquement le {new Date().toLocaleString('fr-CA')}
+                  <br />
+                  🔢 Code de référence: {formData.codePermis}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div style={{
+          background: 'rgba(30, 41, 59, 0.5)',
+          borderTop: '1px solid rgba(100, 116, 139, 0.3)',
+          borderRadius: '0 0 16px 16px',
+          padding: '20px 24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+            Conforme aux normes CNESST 2025
+          </div>
+          
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '12px 20px',
+                background: 'rgba(100, 116, 139, 0.3)',
+                color: '#cbd5e1',
+                border: '1px solid rgba(100, 116, 139, 0.3)',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              Fermer
+            </button>
+            
+            <button
+              onClick={() => {
+                alert('Permis sauvegardé avec succès!');
+                onClose();
+              }}
+              style={{
+                padding: '12px 20px',
+                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              💾 Sauvegarder Permis
+            </button>
+          </div>
         </div>
       </div>
     </div>
