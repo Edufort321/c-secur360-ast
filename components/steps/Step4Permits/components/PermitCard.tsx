@@ -29,30 +29,38 @@ import {
   Activity
 } from 'lucide-react';
 import type { 
-  LegalPermit, 
-  PermitCardProps, 
   PermitType,
   PermitStatus,
-  MobileCardAction,
-  SwipeDirection 
+  Priority,
+  ValidationResult
 } from '../types';
 
-// =================== TYPES POUR COMPOSANT CARTE ===================
-interface MobileCardProps extends PermitCardProps {
-  // Optimisations mobile
-  touchOptimized?: boolean;
-  enableSwipeActions?: boolean;
-  enableHaptics?: boolean;
-  compactMode?: boolean;
+// Types temporaires pour éviter les erreurs
+interface LegalPermit {
+  id: string;
+  type: string;
+  name: string;
+  location: string;
+  status: string;
+  priority: string;
+  description?: string;
+  progress?: number;
+  dateCreation: string;
+  dateExpiration: string;
+  validationResults?: any;
+}
+
+interface PermitCardProps {
+  permit: LegalPermit;
   language: 'fr' | 'en';
-  
-  // Actions callbacks
-  onView?: (permit: LegalPermit) => void;
-  onEdit?: (permit: LegalPermit) => void;
-  onDuplicate?: (permit: LegalPermit) => void;
-  onShare?: (permit: LegalPermit) => void;
-  onDelete?: (permit: LegalPermit) => void;
-  onQuickAction?: (action: MobileCardAction, permit: LegalPermit) => void;
+  touchOptimized?: boolean;
+  compactMode?: boolean;
+  onView: (permit: LegalPermit) => void;
+  onEdit: (permit: LegalPermit) => void;
+  onDuplicate: (permit: LegalPermit) => void;
+  onDelete: (permit: LegalPermit) => void;
+  onValidate: (permit: LegalPermit) => void;
+  showValidationStatus?: boolean;
 }
 
 interface SwipeActionConfig {
