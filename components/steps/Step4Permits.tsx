@@ -1712,6 +1712,7 @@ const FormulaireLegalComplet: React.FC<{
               </div>
             </div>
           )}
+        </div>
 
           {/* Onglet Validation finale complète */}
           {activeTab === 'validation' && (
