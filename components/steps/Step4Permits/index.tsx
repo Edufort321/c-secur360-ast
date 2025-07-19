@@ -1,5 +1,4 @@
-// =================== COMPONENTS/STEPS/STEP4PERMITS/INDEX.TSX - COMPOSANT PRINCIPAL ULTRA-COMPLET ===================
-// Orchestrateur principal avec tous les formulaires, cartes et surveillance temps réel
+// components/steps/Step4Permits/index.tsx - SYSTÈME COMPLET AVEC VALIDATEURS INTÉGRÉS
 
 "use client";
 
@@ -11,10 +10,7 @@ import {
   Filter, 
   Grid3X3, 
   List, 
-  SortAsc, 
-  SortDesc,
   Download,
-  Upload,
   Settings,
   Bell,
   Eye,
@@ -28,13 +24,49 @@ import {
   Zap,
   RefreshCw,
   ChevronDown,
-  X
+  X,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Shield,
+  Wrench,
+  Activity
 } from 'lucide-react';
+
+// =================== IMPORTS TYPES ===================
+import {
+  PermitData,
+  PermitValidationResult,
+  AtmosphericData,
+  EquipmentData,
+  PersonnelData,
+  ProcedureData,
+  ValidationSummary,
+  PermitStatus,
+  BilingualText
+} from './types';
+
+// =================== IMPORTS VALIDATEURS ===================
+import { validateAtmosphericReading, validateAtmosphericReadings } from './utils/validators/atmospheric';
+import { validateEquipment, validateEquipmentSet } from './utils/validators/equipment';
+import { validatePersonnel, validatePersonnelTeam } from './utils/validators/personnel';
+import { validateProcedure, validateProcedureSet } from './utils/validators/procedures';
+
+// =================== IMPORTS RÉGLEMENTATIONS ===================
+import { getRegulationConfig } from './utils/regulations';
 
 // =================== IMPORTS COMPOSANTS ===================
 import PermitCard from './components/PermitCard';
 import StatusBadge from './components/StatusBadge';
 import TimerSurveillance from './components/TimerSurveillance';
+
+// Panneaux de validation
+import { AtmosphericMonitoringPanel } from './components/AtmosphericMonitoringPanel';
+import { EquipmentValidationPanel } from './components/EquipmentValidationPanel';
+import { PersonnelValidationPanel } from './components/PersonnelValidationPanel';
+import { ProcedureValidationPanel } from './components/ProcedureValidationPanel';
+import { ValidationSummaryPanel } from './components/ValidationSummaryPanel';
+import { PermitGenerationPanel } from './components/PermitGenerationPanel';
 
 // Formulaires spécialisés
 import ConfinedSpaceForm from './components/forms/ConfinedSpaceForm';
@@ -53,21 +85,12 @@ export type PermitType =
   | 'hauteur' 
   | 'electrique';
 
-export type PermitStatus = 
-  | 'draft' 
-  | 'pending' 
-  | 'approved' 
-  | 'active' 
-  | 'completed' 
-  | 'expired' 
-  | 'suspended' 
-  | 'cancelled';
-
 export type ViewMode = 'grid' | 'list' | 'timeline';
 export type SortField = 'dateCreation' | 'dateExpiration' | 'name' | 'type' | 'status' | 'priority';
 export type SortDirection = 'asc' | 'desc';
+export type ValidationTab = 'atmospheric' | 'equipment' | 'personnel' | 'procedures' | 'summary';
 
-export interface LegalPermit {
+export interface LegalPermit extends PermitData {
   id: string;
   name: string;
   type: PermitType;
@@ -78,24 +101,30 @@ export interface LegalPermit {
   site: string;
   secteur: string;
   description: string;
-  entrants?: PersonnelMember[];
+  entrants?: PersonnelData[];
   superviseur?: string;
-  formData?: any; // Données spécifiques au formulaire
+  formData?: any;
   priority: 'low' | 'medium' | 'high' | 'critical';
   progress: number; // 0-100
   tags: string[];
   attachments: string[];
   lastModified: Date;
   modifiedBy: string;
-}
-
-export interface PersonnelMember {
-  id: string;
-  prenom: string;
-  nom: string;
-  poste: string;
-  entreprise: string;
-  certifications: string[];
+  
+  // Données validation
+  atmosphericData?: AtmosphericData[];
+  equipmentData?: EquipmentData[];
+  personnelData?: PersonnelData[];
+  procedureData?: ProcedureData[];
+  
+  // Résultats validation
+  validationResults?: {
+    atmospheric?: any;
+    equipment?: any;
+    personnel?: any;
+    procedures?: any;
+    overall?: PermitValidationResult;
+  };
 }
 
 export interface FilterConfig {
@@ -105,6 +134,7 @@ export interface FilterConfig {
   sites: string[];
   personnel: string[];
   searchQuery: string;
+  validationStatus: ('valid' | 'invalid' | 'pending')[];
 }
 
 export interface Step4PermitsProps {
@@ -125,16 +155,18 @@ const PERMIT_TYPES_CONFIG = {
     color: '#DC2626',
     description: { fr: 'Espaces confinés avec risques atmosphériques', en: 'Confined spaces with atmospheric hazards' },
     component: ConfinedSpaceForm,
-    estimatedTime: 45, // minutes
+    estimatedTime: 45,
+    requiredValidations: ['atmospheric', 'equipment', 'personnel', 'procedures'],
     requiredCertifications: ['espace-clos-superviseur', 'premiers-secours']
   },
   'travail-chaud': {
     icon: '🔥',
     title: { fr: 'Travail à chaud', en: 'Hot work' },
     color: '#EA580C',
-    description: { fr: 'Soudage, coupage, travaux génératiceurs étincelles', en: 'Welding, cutting, spark-generating work' },
+    description: { fr: 'Soudage, coupage, travaux générateurs étincelles', en: 'Welding, cutting, spark-generating work' },
     component: HotWorkForm,
     estimatedTime: 30,
+    requiredValidations: ['atmospheric', 'equipment', 'personnel', 'procedures'],
     requiredCertifications: ['travail-chaud', 'surveillance-incendie']
   },
   'excavation': {
@@ -144,6 +176,7 @@ const PERMIT_TYPES_CONFIG = {
     description: { fr: 'Travaux excavation et tranchées', en: 'Excavation and trenching work' },
     component: ExcavationForm,
     estimatedTime: 35,
+    requiredValidations: ['atmospheric', 'equipment', 'personnel', 'procedures'],
     requiredCertifications: ['excavation-superviseur', 'services-publics']
   },
   'levage': {
@@ -153,6 +186,7 @@ const PERMIT_TYPES_CONFIG = {
     description: { fr: 'Opérations de levage et grutage', en: 'Lifting and crane operations' },
     component: LiftingForm,
     estimatedTime: 40,
+    requiredValidations: ['equipment', 'personnel', 'procedures'],
     requiredCertifications: ['grutier-certifie', 'signaleur']
   },
   'hauteur': {
@@ -162,6 +196,7 @@ const PERMIT_TYPES_CONFIG = {
     description: { fr: 'Travaux en hauteur >3m', en: 'Work at height >3m' },
     component: HeightWorkForm,
     estimatedTime: 50,
+    requiredValidations: ['equipment', 'personnel', 'procedures'],
     requiredCertifications: ['travail-hauteur', 'protection-chute']
   },
   'electrique': {
@@ -171,6 +206,7 @@ const PERMIT_TYPES_CONFIG = {
     description: { fr: 'Travaux sur installations électriques', en: 'Electrical installation work' },
     component: ElectricalForm,
     estimatedTime: 55,
+    requiredValidations: ['equipment', 'personnel', 'procedures'],
     requiredCertifications: ['electricien-certifie', 'loto-electrique']
   }
 } as const;
@@ -188,7 +224,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
   // =================== STATE MANAGEMENT ===================
   const [permits, setPermits] = useState<LegalPermit[]>(initialPermits);
   const [selectedPermit, setSelectedPermit] = useState<LegalPermit | null>(null);
-  const [currentView, setCurrentView] = useState<'list' | 'create' | 'edit' | 'surveillance'>('list');
+  const [currentView, setCurrentView] = useState<'list' | 'create' | 'edit' | 'validate' | 'surveillance'>('list');
   const [selectedPermitType, setSelectedPermitType] = useState<PermitType>('espace-clos');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sortField, setSortField] = useState<SortField>('dateCreation');
@@ -201,10 +237,106 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     dateRange: { start: null, end: null },
     sites: [],
     personnel: [],
-    searchQuery: ''
+    searchQuery: '',
+    validationStatus: []
   });
   const [showFilters, setShowFilters] = useState(false);
   const [surveillancePermits, setSurveillancePermits] = useState<LegalPermit[]>([]);
+  const [activeValidationTab, setActiveValidationTab] = useState<ValidationTab>('atmospheric');
+  const [validationInProgress, setValidationInProgress] = useState(false);
+
+  // =================== FONCTIONS VALIDATION ===================
+  const validatePermitData = useCallback(async (permit: LegalPermit): Promise<PermitValidationResult> => {
+    setValidationInProgress(true);
+    
+    try {
+      const regulationConfig = getRegulationConfig(province);
+      const results: any = {};
+
+      // Validation atmosphérique
+      if (permit.atmosphericData && permit.atmosphericData.length > 0) {
+        if (permit.atmosphericData.length === 1) {
+          results.atmospheric = validateAtmosphericReading(permit.atmosphericData[0]);
+        } else {
+          results.atmospheric = validateAtmosphericReadings(permit.atmosphericData);
+        }
+      }
+
+      // Validation équipement
+      if (permit.equipmentData && permit.equipmentData.length > 0) {
+        if (permit.equipmentData.length === 1) {
+          results.equipment = validateEquipment(permit.equipmentData[0]);
+        } else {
+          results.equipment = validateEquipmentSet(permit.equipmentData);
+        }
+      }
+
+      // Validation personnel
+      if (permit.personnelData && permit.personnelData.length > 0) {
+        if (permit.personnelData.length === 1) {
+          results.personnel = validatePersonnel(permit.personnelData[0]);
+        } else {
+          results.personnel = validatePersonnelTeam(permit.personnelData);
+        }
+      }
+
+      // Validation procédures
+      if (permit.procedureData && permit.procedureData.length > 0) {
+        if (permit.procedureData.length === 1) {
+          results.procedures = validateProcedure(permit.procedureData[0]);
+        } else {
+          results.procedures = validateProcedureSet(permit.procedureData);
+        }
+      }
+
+      // Validation globale
+      const overallValid = Object.values(results).every((result: any) => result?.isValid === true);
+      const criticalIssues = Object.values(results).flatMap((result: any) => result?.criticalIssues || []);
+      const allErrors = Object.values(results).flatMap((result: any) => result?.errors || []);
+      const allWarnings = Object.values(results).flatMap((result: any) => result?.warnings || []);
+
+      const overallResult: PermitValidationResult = {
+        isValid: overallValid,
+        errors: allErrors,
+        warnings: allWarnings,
+        criticalIssues,
+        suggestions: Object.values(results).flatMap((result: any) => result?.suggestions || []),
+        confidence: Object.values(results).reduce((sum: number, result: any) => 
+          sum + (result?.confidence || 0), 0) / Object.keys(results).length || 0
+      };
+
+      // Mise à jour du permis avec résultats
+      const updatedPermit = {
+        ...permit,
+        validationResults: {
+          ...results,
+          overall: overallResult
+        }
+      };
+
+      setPermits(prev => prev.map(p => p.id === permit.id ? updatedPermit : p));
+
+      return overallResult;
+    } catch (error) {
+      console.error('Erreur validation permis:', error);
+      throw error;
+    } finally {
+      setValidationInProgress(false);
+    }
+  }, [province]);
+
+  const validateAllPermits = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      for (const permit of permits) {
+        await validatePermitData(permit);
+      }
+    } catch (error) {
+      console.error('Erreur validation tous permis:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [permits, validatePermitData]);
 
   // =================== COMPUTED VALUES ===================
   const filteredPermits = useMemo(() => {
@@ -229,6 +361,14 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
 
     if (filters.statuses.length > 0) {
       filtered = filtered.filter(permit => filters.statuses.includes(permit.status));
+    }
+
+    if (filters.validationStatus.length > 0) {
+      filtered = filtered.filter(permit => {
+        const validationStatus = permit.validationResults?.overall?.isValid === true ? 'valid' :
+                               permit.validationResults?.overall?.isValid === false ? 'invalid' : 'pending';
+        return filters.validationStatus.includes(validationStatus);
+      });
     }
 
     if (filters.dateRange.start) {
@@ -280,6 +420,17 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     return summary;
   }, [permits]);
 
+  const validationSummary = useMemo(() => {
+    const summary = permits.reduce((acc, permit) => {
+      const validationStatus = permit.validationResults?.overall?.isValid === true ? 'valid' :
+                             permit.validationResults?.overall?.isValid === false ? 'invalid' : 'pending';
+      acc[validationStatus] = (acc[validationStatus] || 0) + 1;
+      return acc;
+    }, {} as Record<'valid' | 'invalid' | 'pending', number>);
+    
+    return summary;
+  }, [permits]);
+
   // =================== ACTIONS CRUD ===================
   const createPermit = useCallback((type: PermitType) => {
     const newPermit: LegalPermit = {
@@ -298,7 +449,13 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
       tags: [],
       attachments: [],
       lastModified: new Date(),
-      modifiedBy: userRole
+      modifiedBy: userRole,
+      
+      // Données validation par défaut
+      atmosphericData: [],
+      equipmentData: [],
+      personnelData: [],
+      procedureData: []
     };
 
     setSelectedPermit(newPermit);
@@ -312,6 +469,12 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     setCurrentView('edit');
   }, []);
 
+  const validatePermit = useCallback(async (permit: LegalPermit) => {
+    setSelectedPermit(permit);
+    setCurrentView('validate');
+    await validatePermitData(permit);
+  }, [validatePermitData]);
+
   const duplicatePermit = useCallback((permit: LegalPermit) => {
     const duplicated: LegalPermit = {
       ...permit,
@@ -321,7 +484,8 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
       status: 'draft',
       progress: 0,
       lastModified: new Date(),
-      modifiedBy: userRole
+      modifiedBy: userRole,
+      validationResults: undefined // Reset validation
     };
 
     setPermits(prev => [duplicated, ...prev]);
@@ -365,7 +529,6 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
   }, [selectedPermit, currentView, userRole, permits, onPermitChange]);
 
   const calculateProgress = (formData: any): number => {
-    // Calcul basique du pourcentage de complétion
     const requiredFields = ['identification', 'personnel', 'procedures', 'validation'];
     const completedFields = requiredFields.filter(field => 
       formData[field] && Object.keys(formData[field]).length > 0
@@ -395,7 +558,8 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
       dateRange: { start: null, end: null },
       sites: [],
       personnel: [],
-      searchQuery: ''
+      searchQuery: '',
+      validationStatus: []
     });
     setSearchQuery('');
   }, []);
@@ -410,6 +574,223 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
       }
     });
   }, []);
+
+  // =================== RENDU VALIDATION ===================
+  const renderValidationPanel = () => {
+    if (!selectedPermit) return null;
+
+    const validationResults = selectedPermit.validationResults;
+    const requiredValidations = PERMIT_TYPES_CONFIG[selectedPermit.type].requiredValidations;
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Header validation */}
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
+          <div className="px-4 py-4">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {language === 'fr' ? 'Validation permis' : 'Permit validation'}
+                </h2>
+                <p className="text-sm text-gray-600">{selectedPermit.name}</p>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => validatePermitData(selectedPermit)}
+                  disabled={validationInProgress}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 min-h-[44px]"
+                >
+                  {validationInProgress ? <RefreshCw className="animate-spin" size={20} /> : <CheckCircle size={20} />}
+                  <span>{language === 'fr' ? 'Valider' : 'Validate'}</span>
+                </button>
+                
+                <button
+                  onClick={() => setCurrentView('list')}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 min-h-[44px]"
+                >
+                  <X size={20} />
+                  <span>{language === 'fr' ? 'Fermer' : 'Close'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Onglets validation */}
+            <div className="flex border-b border-gray-200">
+              {requiredValidations.includes('atmospheric') && (
+                <button
+                  onClick={() => setActiveValidationTab('atmospheric')}
+                  className={`px-4 py-2 font-medium border-b-2 ${
+                    activeValidationTab === 'atmospheric'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Activity size={20} />
+                    <span>{language === 'fr' ? 'Atmosphérique' : 'Atmospheric'}</span>
+                    {validationResults?.atmospheric && (
+                      validationResults.atmospheric.isValid ? 
+                        <CheckCircle size={16} className="text-green-500" /> :
+                        <XCircle size={16} className="text-red-500" />
+                    )}
+                  </div>
+                </button>
+              )}
+              
+              {requiredValidations.includes('equipment') && (
+                <button
+                  onClick={() => setActiveValidationTab('equipment')}
+                  className={`px-4 py-2 font-medium border-b-2 ${
+                    activeValidationTab === 'equipment'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Wrench size={20} />
+                    <span>{language === 'fr' ? 'Équipement' : 'Equipment'}</span>
+                    {validationResults?.equipment && (
+                      validationResults.equipment.isValid ? 
+                        <CheckCircle size={16} className="text-green-500" /> :
+                        <XCircle size={16} className="text-red-500" />
+                    )}
+                  </div>
+                </button>
+              )}
+              
+              {requiredValidations.includes('personnel') && (
+                <button
+                  onClick={() => setActiveValidationTab('personnel')}
+                  className={`px-4 py-2 font-medium border-b-2 ${
+                    activeValidationTab === 'personnel'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Users size={20} />
+                    <span>{language === 'fr' ? 'Personnel' : 'Personnel'}</span>
+                    {validationResults?.personnel && (
+                      validationResults.personnel.isValid ? 
+                        <CheckCircle size={16} className="text-green-500" /> :
+                        <XCircle size={16} className="text-red-500" />
+                    )}
+                  </div>
+                </button>
+              )}
+              
+              {requiredValidations.includes('procedures') && (
+                <button
+                  onClick={() => setActiveValidationTab('procedures')}
+                  className={`px-4 py-2 font-medium border-b-2 ${
+                    activeValidationTab === 'procedures'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText size={20} />
+                    <span>{language === 'fr' ? 'Procédures' : 'Procedures'}</span>
+                    {validationResults?.procedures && (
+                      validationResults.procedures.isValid ? 
+                        <CheckCircle size={16} className="text-green-500" /> :
+                        <XCircle size={16} className="text-red-500" />
+                    )}
+                  </div>
+                </button>
+              )}
+              
+              <button
+                onClick={() => setActiveValidationTab('summary')}
+                className={`px-4 py-2 font-medium border-b-2 ${
+                  activeValidationTab === 'summary'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Shield size={20} />
+                  <span>{language === 'fr' ? 'Résumé' : 'Summary'}</span>
+                  {validationResults?.overall && (
+                    validationResults.overall.isValid ? 
+                      <CheckCircle size={16} className="text-green-500" /> :
+                      <XCircle size={16} className="text-red-500" />
+                  )}
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Contenu validation */}
+        <div className="p-4">
+          {activeValidationTab === 'atmospheric' && (
+            <AtmosphericMonitoringPanel
+              permit={selectedPermit}
+              language={language}
+              validationResult={validationResults?.atmospheric}
+              onDataUpdate={(data) => {
+                const updated = { ...selectedPermit, atmosphericData: data };
+                setSelectedPermit(updated);
+                setPermits(prev => prev.map(p => p.id === updated.id ? updated : p));
+              }}
+            />
+          )}
+          
+          {activeValidationTab === 'equipment' && (
+            <EquipmentValidationPanel
+              permit={selectedPermit}
+              language={language}
+              validationResult={validationResults?.equipment}
+              onDataUpdate={(data) => {
+                const updated = { ...selectedPermit, equipmentData: data };
+                setSelectedPermit(updated);
+                setPermits(prev => prev.map(p => p.id === updated.id ? updated : p));
+              }}
+            />
+          )}
+          
+          {activeValidationTab === 'personnel' && (
+            <PersonnelValidationPanel
+              permit={selectedPermit}
+              language={language}
+              validationResult={validationResults?.personnel}
+              onDataUpdate={(data) => {
+                const updated = { ...selectedPermit, personnelData: data };
+                setSelectedPermit(updated);
+                setPermits(prev => prev.map(p => p.id === updated.id ? updated : p));
+              }}
+            />
+          )}
+          
+          {activeValidationTab === 'procedures' && (
+            <ProcedureValidationPanel
+              permit={selectedPermit}
+              language={language}
+              validationResult={validationResults?.procedures}
+              onDataUpdate={(data) => {
+                const updated = { ...selectedPermit, procedureData: data };
+                setSelectedPermit(updated);
+                setPermits(prev => prev.map(p => p.id === updated.id ? updated : p));
+              }}
+            />
+          )}
+          
+          {activeValidationTab === 'summary' && (
+            <ValidationSummaryPanel
+              permit={selectedPermit}
+              language={language}
+              validationResult={validationResults?.overall}
+              onGeneratePermit={() => {
+                // Générer le permis final
+              }}
+            />
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // =================== RENDU FORMULAIRES ===================
   const renderForm = () => {
@@ -446,7 +827,10 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
               {language === 'fr' ? 'Permis de travail' : 'Work permits'}
             </h2>
             <p className="text-sm text-gray-600">
-              {permits.length} {language === 'fr' ? 'permis total' : 'total permits'}
+              {permits.length} {language === 'fr' ? 'permis total' : 'total permits'} • 
+              <span className="ml-2 text-green-600">{validationSummary.valid || 0} valides</span> • 
+              <span className="ml-2 text-red-600">{validationSummary.invalid || 0} invalides</span> • 
+              <span className="ml-2 text-yellow-600">{validationSummary.pending || 0} en attente</span>
             </p>
           </div>
           
@@ -457,6 +841,15 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
             >
               <Filter size={20} />
               <span className="hidden sm:inline">{language === 'fr' ? 'Filtres' : 'Filters'}</span>
+            </button>
+            
+            <button
+              onClick={validateAllPermits}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 disabled:opacity-50 min-h-[44px]"
+            >
+              {isLoading ? <RefreshCw className="animate-spin" size={20} /> : <CheckCircle size={20} />}
+              <span className="hidden sm:inline">{language === 'fr' ? 'Valider tout' : 'Validate all'}</span>
             </button>
             
             <button
@@ -504,18 +897,37 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
         </div>
 
         {/* Status summary */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          {Object.entries(statusSummary).map(([status, count]) => (
-            <div key={status} className="flex items-center gap-1">
-              <StatusBadge
-                status={status as PermitStatus}
-                language={language}
-                size="sm"
-                showLabel={false}
-              />
-              <span className="text-sm text-gray-600">{count}</span>
+        <div className="flex items-center gap-4 overflow-x-auto pb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">{language === 'fr' ? 'Status:' : 'Status:'}</span>
+            {Object.entries(statusSummary).map(([status, count]) => (
+              <div key={status} className="flex items-center gap-1">
+                <StatusBadge
+                  status={status as PermitStatus}
+                  language={language}
+                  size="sm"
+                  showLabel={false}
+                />
+                <span className="text-sm text-gray-600">{count}</span>
+              </div>
+            ))}
+          </div>
+          
+          <div className="flex items-center gap-2 border-l border-gray-300 pl-4">
+            <span className="text-sm font-medium text-gray-700">{language === 'fr' ? 'Validation:' : 'Validation:'}</span>
+            <div className="flex items-center gap-1">
+              <CheckCircle size={16} className="text-green-500" />
+              <span className="text-sm text-gray-600">{validationSummary.valid || 0}</span>
             </div>
-          ))}
+            <div className="flex items-center gap-1">
+              <XCircle size={16} className="text-red-500" />
+              <span className="text-sm text-gray-600">{validationSummary.invalid || 0}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Clock size={16} className="text-yellow-500" />
+              <span className="text-sm text-gray-600">{validationSummary.pending || 0}</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -529,7 +941,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* Filtres types */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -579,6 +991,36 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                         language={language}
                         size="sm"
                       />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Filtres validation */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {language === 'fr' ? 'Status validation' : 'Validation status'}
+                </label>
+                <div className="space-y-1">
+                  {[
+                    { key: 'valid', label: { fr: 'Valide', en: 'Valid' }, icon: CheckCircle, color: 'text-green-500' },
+                    { key: 'invalid', label: { fr: 'Invalide', en: 'Invalid' }, icon: XCircle, color: 'text-red-500' },
+                    { key: 'pending', label: { fr: 'En attente', en: 'Pending' }, icon: Clock, color: 'text-yellow-500' }
+                  ].map(({ key, label, icon: Icon, color }) => (
+                    <label key={key} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={filters.validationStatus.includes(key as any)}
+                        onChange={(e) => {
+                          const newStatuses = e.target.checked
+                            ? [...filters.validationStatus, key as any]
+                            : filters.validationStatus.filter(s => s !== key);
+                          handleFilterChange({ validationStatus: newStatuses });
+                        }}
+                        className="mr-2"
+                      />
+                      <Icon size={16} className={color} />
+                      <span className="text-sm ml-1">{label[language]}</span>
                     </label>
                   ))}
                 </div>
@@ -640,6 +1082,9 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                   <div className="flex-1">
                     <div className="font-medium text-gray-900">{config.title[language]}</div>
                     <div className="text-xs text-gray-500">~{config.estimatedTime}min</div>
+                    <div className="text-xs text-blue-600">
+                      {config.requiredValidations.length} validations requises
+                    </div>
                   </div>
                 </button>
               ))}
@@ -681,12 +1126,14 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                       language={language}
                       touchOptimized={touchOptimized}
                       compactMode={compactMode}
-                      onView={(permit) => toggleSurveillance(permit)}
+                      onView={(permit) => validatePermit(permit)}
                       onEdit={editPermit}
                       onDuplicate={duplicatePermit}
                       onDelete={deletePermit}
+                      onValidate={validatePermit}
                       enableSwipeActions={touchOptimized}
                       enableHaptics={touchOptimized}
+                      showValidationStatus={true}
                     />
                   ))}
                 </div>
@@ -716,6 +1163,18 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
             transition={{ duration: 0.3 }}
           >
             {renderForm()}
+          </motion.div>
+        )}
+
+        {currentView === 'validate' && (
+          <motion.div
+            key="validate"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            {renderValidationPanel()}
           </motion.div>
         )}
 
