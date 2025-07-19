@@ -1,4 +1,4 @@
-// components/steps/Step4Permits/index.tsx - SYSTÈME COMPLET INTÉGRÉ - SECTION 1
+// components/steps/Step4Permits/index.tsx - SYSTÈME COMPLET CORRIGÉ - SECTION 1
 
 "use client";
 
@@ -38,74 +38,37 @@ import {
   ProcedureGap, DocumentationGap, EmergencyProcedureStatus, RiskItem, ControlMeasure
 } from './types';
 
-// =================== IMPORTS VALIDATEURS ===================
-import { 
-  validateAtmosphericReading, 
-  validateAtmosphericReadings,
-  formatValidationResult as formatAtmosphericResult,
-  generateQualityReport as generateAtmosphericReport
-} from './utils/validators/atmospheric';
-
-import { 
-  validateEquipment, 
-  validateEquipmentSet,
-  EQUIPMENT_SPECIFICATIONS,
-  SAFETY_CRITICAL_EQUIPMENT
-} from './utils/validators/equipment';
-
-import { 
-  validatePersonnel, 
-  validatePersonnelTeam,
-  ROLE_REQUIREMENTS,
-  TRAINING_REFRESH_INTERVALS,
-  CERTIFICATION_VALIDITY,
-  MEDICAL_EXAM_INTERVALS
-} from './utils/validators/personnel';
-
-import { 
-  validateProcedure, 
-  validateProcedureSet,
-  REQUIRED_PROCEDURES,
-  REGULATORY_REQUIREMENTS,
-  EMERGENCY_DRILL_INTERVALS
-} from './utils/validators/procedures';
-
 // =================== IMPORTS RÉGLEMENTATIONS ===================
 import { 
   getRegulationConfig,
   validateRegulatory,
-  generateComplianceReport
+  generateComplianceReport,
+  REGULATION_MAPPING
 } from './utils/regulations';
 
-// Import réglementations provinciales
-import { albertaRegulations } from './utils/regulations/alberta';
-import { britishColumbiaRegulations } from './utils/regulations/britishColumbia';
-import { manitobaRegulations } from './utils/regulations/manitoba';
-import { newBrunswickRegulations } from './utils/regulations/newBrunswick';
-import { newfoundlandLabradorRegulations } from './utils/regulations/newfoundlandLabrador';
-import { northwestRegulations } from './utils/regulations/northwest';
-import { novaScotiaRegulations } from './utils/regulations/novaScotia';
-import { nunavutRegulations } from './utils/regulations/nunavut';
-import { ontarioRegulations } from './utils/regulations/ontario';
-import { princeEdwardIslandRegulations } from './utils/regulations/princeEdwardIsland';
-import { quebecRegulations } from './utils/regulations/quebec';
-import { saskatchewanRegulations } from './utils/regulations/saskatchewan';
-import { yukonRegulations } from './utils/regulations/yukon';
+// =================== IMPORTS COMPOSANTS CORRIGÉS ===================
 
-// =================== IMPORTS COMPOSANTS ===================
+// Composants de validation
+import { 
+  AtmosphericMonitoringPanel,
+  EquipmentValidationPanel,
+  PersonnelValidationPanel,
+  ProcedureValidationPanel,
+  ValidationSummaryPanel,
+  PermitGenerationPanel
+} from './components/ValidationPanels';
 
 // Composants de base
-import PermitCard from './components/PermitCard';
-import StatusBadge from './components/StatusBadge';
-import TimerSurveillance from './components/TimerSurveillance';
-
-// Panneaux de validation
-import { AtmosphericMonitoringPanel } from './components/AtmosphericMonitoringPanel';
-import { EquipmentValidationPanel } from './components/EquipmentValidationPanel';
-import { PersonnelValidationPanel } from './components/PersonnelValidationPanel';
-import { ProcedureValidationPanel } from './components/ProcedureValidationPanel';
-import { ValidationSummaryPanel } from './components/ValidationSummaryPanel';
-import { PermitGenerationPanel } from './components/PermitGenerationPanel';
+import { 
+  PermitCard,
+  StatusBadge,
+  TimerSurveillance,
+  LoadingSpinner,
+  ErrorBoundary,
+  ToastNotification,
+  ConfirmDialog,
+  HelpTooltip
+} from './components/base';
 
 // Formulaires spécialisés
 import ConfinedSpaceForm from './components/forms/ConfinedSpaceForm';
@@ -115,18 +78,13 @@ import LiftingForm from './components/forms/LiftingForm';
 import HeightWorkForm from './components/forms/HeightWorkForm';
 import ElectricalForm from './components/forms/ElectricalForm';
 
-// Composants helpers
-import { LoadingSpinner } from './components/LoadingSpinner';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { ToastNotification } from './components/ToastNotification';
-import { ConfirmDialog } from './components/ConfirmDialog';
-import { HelpTooltip } from './components/HelpTooltip';
-
 // Hooks personnalisés
-import { usePermitValidation } from './hooks/usePermitValidation';
-import { usePermitData } from './hooks/usePermitData';
-import { useSurveillance } from './hooks/useSurveillance';
-import { useNotifications } from './hooks/useNotifications';
+import { 
+  usePermitData,
+  usePermitValidation,
+  useSurveillance,
+  useNotifications
+} from './hooks/usePermits';
 
 // =================== TYPES PRINCIPAUX ===================
 export type PermitTypeEnum = 
@@ -386,432 +344,7 @@ const PERMIT_TYPES_CONFIG = {
     regulatoryBasis: ['CSA Z462', 'Electrical Code']
   }
 } as const;
-
-// =================== MAPPAGE RÉGLEMENTATIONS ===================
-const REGULATION_MAPPING = {
-  'QC': quebecRegulations,
-  'ON': ontarioRegulations,
-  'AB': albertaRegulations,
-  'BC': britishColumbiaRegulations,
-  'SK': saskatchewanRegulations,
-  'MB': manitobaRegulations,
-  'NB': newBrunswickRegulations,
-  'NS': novaScotiaRegulations,
-  'PE': princeEdwardIslandRegulations,
-  'NL': newfoundlandLabradorRegulations,
-  'NT': northwestRegulations,
-  'NU': nunavutRegulations,
-  'YT': yukonRegulations
-};
-
-// FIN SECTION 1 - Prêt pour la section 2 ?
-// components/steps/Step4Permits/index.tsx - SYSTÈME COMPLET INTÉGRÉ - SECTION 1
-
-"use client";
-
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Plus, Search, Filter, Grid3X3, List, Download, Settings, Bell, Eye, Edit3, Copy, Trash2,
-  FileText, Users, Clock, MapPin, Zap, RefreshCw, ChevronDown, X, AlertTriangle, CheckCircle,
-  XCircle, Shield, Wrench, Activity, Home, Flame, Construction, Crane, Building, Zap as ZapIcon
-} from 'lucide-react';
-
-// =================== IMPORTS TYPES COMPLETS ===================
-import {
-  // Types de base
-  PermitData, PermitValidationResult, AtmosphericData, EquipmentData, PersonnelData, ProcedureData,
-  ValidationSummary, PermitStatus, BilingualText, ValidationResult,
-  
-  // Types atmosphériques
-  AtmosphericReading, GasType, AlarmLevel, ValidationWarning, ValidationError, ValidationSuggestion,
-  DataQualityMetrics, ValidationWarningType, ValidationErrorType, SuggestionType,
-  
-  // Types équipement
-  EquipmentType, CalibrationStatus, MaintenanceRecord, SafetyRating, EquipmentValidationResult,
-  EquipmentStatus, CertificationStatus, MaintenanceStatus, CalibrationValidationStatus,
-  SafetyComplianceStatus, EquipmentIssue, EquipmentIssueType,
-  
-  // Types personnel
-  PersonnelRole, CertificationRecord, TrainingRecord, MedicalClearance, EmergencyContact,
-  PersonnelValidationResult, PersonnelStatus, QualificationStatus, TrainingStatus, MedicalStatus,
-  TeamCompositionStatus, EmergencyReadinessStatus, PersonnelRestriction, MedicalRestriction,
-  ExperienceLevel, CompetencyLevel, FitnessLevel, ExperienceBalance,
-  
-  // Types procédures
-  ProcedureType, ProcedureStep, SafetyProtocol, EmergencyProcedure, RiskAssessment, WorkPermit,
-  ProcedureValidationResult, ProcedureStatus, SafetyComplianceStatus as ProcSafetyComplianceStatus,
-  CompletenessStatus, EmergencyPreparednessStatus, RegulatoryComplianceStatus, RiskManagementStatus,
-  ProcedureGap, DocumentationGap, EmergencyProcedureStatus, RiskItem, ControlMeasure
-} from './types';
-
-// =================== IMPORTS VALIDATEURS ===================
-import { 
-  validateAtmosphericReading, 
-  validateAtmosphericReadings,
-  formatValidationResult as formatAtmosphericResult,
-  generateQualityReport as generateAtmosphericReport
-} from './utils/validators/atmospheric';
-
-import { 
-  validateEquipment, 
-  validateEquipmentSet,
-  EQUIPMENT_SPECIFICATIONS,
-  SAFETY_CRITICAL_EQUIPMENT
-} from './utils/validators/equipment';
-
-import { 
-  validatePersonnel, 
-  validatePersonnelTeam,
-  ROLE_REQUIREMENTS,
-  TRAINING_REFRESH_INTERVALS,
-  CERTIFICATION_VALIDITY,
-  MEDICAL_EXAM_INTERVALS
-} from './utils/validators/personnel';
-
-import { 
-  validateProcedure, 
-  validateProcedureSet,
-  REQUIRED_PROCEDURES,
-  REGULATORY_REQUIREMENTS,
-  EMERGENCY_DRILL_INTERVALS
-} from './utils/validators/procedures';
-
-// =================== IMPORTS RÉGLEMENTATIONS ===================
-import { 
-  getRegulationConfig,
-  validateRegulatory,
-  generateComplianceReport
-} from './utils/regulations';
-
-// Import réglementations provinciales
-import { albertaRegulations } from './utils/regulations/alberta';
-import { britishColumbiaRegulations } from './utils/regulations/britishColumbia';
-import { manitobaRegulations } from './utils/regulations/manitoba';
-import { newBrunswickRegulations } from './utils/regulations/newBrunswick';
-import { newfoundlandLabradorRegulations } from './utils/regulations/newfoundlandLabrador';
-import { northwestRegulations } from './utils/regulations/northwest';
-import { novaScotiaRegulations } from './utils/regulations/novaScotia';
-import { nunavutRegulations } from './utils/regulations/nunavut';
-import { ontarioRegulations } from './utils/regulations/ontario';
-import { princeEdwardIslandRegulations } from './utils/regulations/princeEdwardIsland';
-import { quebecRegulations } from './utils/regulations/quebec';
-import { saskatchewanRegulations } from './utils/regulations/saskatchewan';
-import { yukonRegulations } from './utils/regulations/yukon';
-
-// =================== IMPORTS COMPOSANTS ===================
-
-// Composants de base
-import PermitCard from './components/PermitCard';
-import StatusBadge from './components/StatusBadge';
-import TimerSurveillance from './components/TimerSurveillance';
-
-// Panneaux de validation
-import { AtmosphericMonitoringPanel } from './components/AtmosphericMonitoringPanel';
-import { EquipmentValidationPanel } from './components/EquipmentValidationPanel';
-import { PersonnelValidationPanel } from './components/PersonnelValidationPanel';
-import { ProcedureValidationPanel } from './components/ProcedureValidationPanel';
-import { ValidationSummaryPanel } from './components/ValidationSummaryPanel';
-import { PermitGenerationPanel } from './components/PermitGenerationPanel';
-
-// Formulaires spécialisés
-import ConfinedSpaceForm from './components/forms/ConfinedSpaceForm';
-import HotWorkForm from './components/forms/HotWorkForm';
-import ExcavationForm from './components/forms/ExcavationForm';
-import LiftingForm from './components/forms/LiftingForm';
-import HeightWorkForm from './components/forms/HeightWorkForm';
-import ElectricalForm from './components/forms/ElectricalForm';
-
-// Composants helpers
-import { LoadingSpinner } from './components/LoadingSpinner';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { ToastNotification } from './components/ToastNotification';
-import { ConfirmDialog } from './components/ConfirmDialog';
-import { HelpTooltip } from './components/HelpTooltip';
-
-// Hooks personnalisés
-import { usePermitValidation } from './hooks/usePermitValidation';
-import { usePermitData } from './hooks/usePermitData';
-import { useSurveillance } from './hooks/useSurveillance';
-import { useNotifications } from './hooks/useNotifications';
-
-// =================== TYPES PRINCIPAUX ===================
-export type PermitTypeEnum = 
-  | 'confined_space'
-  | 'hot_work' 
-  | 'excavation' 
-  | 'lifting' 
-  | 'height_work' 
-  | 'electrical';
-
-export type ViewMode = 'grid' | 'list' | 'timeline' | 'kanban';
-export type SortField = 'dateCreation' | 'dateExpiration' | 'name' | 'type' | 'status' | 'priority' | 'validation';
-export type SortDirection = 'asc' | 'desc';
-export type ValidationTab = 'atmospheric' | 'equipment' | 'personnel' | 'procedures' | 'summary' | 'regulatory';
-
-export interface LegalPermit extends PermitData {
-  id: string;
-  name: string;
-  type: PermitTypeEnum;
-  status: PermitStatus;
-  dateCreation: Date;
-  dateExpiration: Date;
-  location: string;
-  site: string;
-  secteur: string;
-  description: string;
-  entrants?: PersonnelData[];
-  superviseur?: string;
-  formData?: any;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  progress: number; // 0-100
-  tags: string[];
-  attachments: AttachmentData[];
-  lastModified: Date;
-  modifiedBy: string;
-  
-  // Données validation complètes
-  atmosphericData?: AtmosphericData[];
-  equipmentData?: EquipmentData[];
-  personnelData?: PersonnelData[];
-  procedureData?: ProcedureData[];
-  
-  // Résultats validation
-  validationResults?: {
-    atmospheric?: any;
-    equipment?: EquipmentValidationResult;
-    personnel?: PersonnelValidationResult;
-    procedures?: ProcedureValidationResult;
-    regulatory?: ValidationResult;
-    overall?: PermitValidationResult;
-  };
-  
-  // Métadonnées
-  regulatoryCompliance?: ComplianceData;
-  riskAssessment?: RiskAssessmentData;
-  approvalWorkflow?: ApprovalWorkflowData;
-  auditTrail?: AuditTrailEntry[];
-}
-
-export interface AttachmentData {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  url: string;
-  uploadedBy: string;
-  uploadedAt: Date;
-  category: 'document' | 'image' | 'certificate' | 'procedure' | 'other';
-}
-
-export interface ComplianceData {
-  jurisdiction: string;
-  applicableRegulations: string[];
-  complianceStatus: 'compliant' | 'non_compliant' | 'partial' | 'pending';
-  lastAssessment: Date;
-  nextReview: Date;
-  violations: ComplianceViolation[];
-}
-
-export interface ComplianceViolation {
-  regulation: string;
-  section: string;
-  description: BilingualText;
-  severity: 'minor' | 'major' | 'critical';
-  remediation: BilingualText;
-  deadline: Date;
-}
-
-export interface RiskAssessmentData {
-  id: string;
-  assessor: string;
-  assessmentDate: Date;
-  risks: RiskItem[];
-  controlMeasures: ControlMeasure[];
-  residualRisk: 'low' | 'medium' | 'high' | 'very_high';
-  approved: boolean;
-  approvedBy?: string;
-  approvalDate?: Date;
-}
-
-export interface ApprovalWorkflowData {
-  steps: ApprovalStep[];
-  currentStep: number;
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  finalApprover?: string;
-  finalApprovalDate?: Date;
-}
-
-export interface ApprovalStep {
-  stepNumber: number;
-  approver: string;
-  role: string;
-  status: 'pending' | 'approved' | 'rejected';
-  comments?: string;
-  actionDate?: Date;
-  required: boolean;
-}
-
-export interface AuditTrailEntry {
-  id: string;
-  timestamp: Date;
-  user: string;
-  action: string;
-  details: any;
-  ipAddress?: string;
-}
-
-export interface FilterConfig {
-  types: PermitTypeEnum[];
-  statuses: PermitStatus[];
-  dateRange: { start: Date | null; end: Date | null };
-  sites: string[];
-  personnel: string[];
-  searchQuery: string;
-  validationStatus: ('valid' | 'invalid' | 'pending')[];
-  priorities: ('low' | 'medium' | 'high' | 'critical')[];
-  compliance: ('compliant' | 'non_compliant' | 'partial' | 'pending')[];
-}
-
-export interface Step4PermitsProps {
-  language: 'fr' | 'en';
-  province: 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
-  userRole: string;
-  touchOptimized?: boolean;
-  compactMode?: boolean;
-  onPermitChange?: (permits: LegalPermit[]) => void;
-  initialPermits?: LegalPermit[];
-  permissions?: UserPermissions;
-}
-
-export interface UserPermissions {
-  canCreate: boolean;
-  canEdit: boolean;
-  canDelete: boolean;
-  canApprove: boolean;
-  canValidate: boolean;
-  canSupervise: boolean;
-  canAudit: boolean;
-}
-
-// =================== CONFIGURATION TYPES PERMIS ===================
-const PERMIT_TYPES_CONFIG = {
-  'confined_space': {
-    icon: Home,
-    iconEmoji: '🏠',
-    title: { fr: 'Espace clos', en: 'Confined space' },
-    color: '#DC2626',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
-    textColor: 'text-red-700',
-    description: { fr: 'Espaces confinés avec risques atmosphériques', en: 'Confined spaces with atmospheric hazards' },
-    component: ConfinedSpaceForm,
-    estimatedTime: 45,
-    requiredValidations: ['atmospheric', 'equipment', 'personnel', 'procedures', 'regulatory'],
-    requiredCertifications: ['espace-clos-superviseur', 'premiers-secours'],
-    criticalFactors: ['atmospheric_monitoring', 'ventilation', 'emergency_rescue'],
-    regulatoryBasis: ['CSA Z1006', 'Provincial OHS']
-  },
-  'hot_work': {
-    icon: Flame,
-    iconEmoji: '🔥',
-    title: { fr: 'Travail à chaud', en: 'Hot work' },
-    color: '#EA580C',
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-200',
-    textColor: 'text-orange-700',
-    description: { fr: 'Soudage, coupage, travaux générateurs étincelles', en: 'Welding, cutting, spark-generating work' },
-    component: HotWorkForm,
-    estimatedTime: 30,
-    requiredValidations: ['atmospheric', 'equipment', 'personnel', 'procedures'],
-    requiredCertifications: ['travail-chaud', 'surveillance-incendie'],
-    criticalFactors: ['fire_prevention', 'fire_watch', 'emergency_response'],
-    regulatoryBasis: ['Fire Code', 'Provincial OHS']
-  },
-  'excavation': {
-    icon: Construction,
-    iconEmoji: '🏗️',
-    title: { fr: 'Excavation', en: 'Excavation' },
-    color: '#D97706',
-    bgColor: 'bg-yellow-50',
-    borderColor: 'border-yellow-200',
-    textColor: 'text-yellow-700',
-    description: { fr: 'Travaux excavation et tranchées', en: 'Excavation and trenching work' },
-    component: ExcavationForm,
-    estimatedTime: 35,
-    requiredValidations: ['atmospheric', 'equipment', 'personnel', 'procedures'],
-    requiredCertifications: ['excavation-superviseur', 'services-publics'],
-    criticalFactors: ['utility_clearance', 'soil_stability', 'access_egress'],
-    regulatoryBasis: ['Provincial OHS', 'Municipal Bylaws']
-  },
-  'lifting': {
-    icon: Crane,
-    iconEmoji: '🏗️',
-    title: { fr: 'Levage', en: 'Lifting' },
-    color: '#059669',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-200',
-    textColor: 'text-green-700',
-    description: { fr: 'Opérations de levage et grutage', en: 'Lifting and crane operations' },
-    component: LiftingForm,
-    estimatedTime: 40,
-    requiredValidations: ['equipment', 'personnel', 'procedures'],
-    requiredCertifications: ['grutier-certifie', 'signaleur'],
-    criticalFactors: ['load_calculation', 'ground_conditions', 'weather_limits'],
-    regulatoryBasis: ['CSA Standards', 'Provincial OHS']
-  },
-  'height_work': {
-    icon: Building,
-    iconEmoji: '🏢',
-    title: { fr: 'Travail en hauteur', en: 'Height work' },
-    color: '#7C3AED',
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-200',
-    textColor: 'text-purple-700',
-    description: { fr: 'Travaux en hauteur >3m', en: 'Work at height >3m' },
-    component: HeightWorkForm,
-    estimatedTime: 50,
-    requiredValidations: ['equipment', 'personnel', 'procedures'],
-    requiredCertifications: ['travail-hauteur', 'protection-chute'],
-    criticalFactors: ['fall_protection', 'rescue_plan', 'weather_conditions'],
-    regulatoryBasis: ['CSA Z259 Series', 'Provincial OHS']
-  },
-  'electrical': {
-    icon: ZapIcon,
-    iconEmoji: '⚡',
-    title: { fr: 'Travaux électriques', en: 'Electrical work' },
-    color: '#DC2626',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
-    textColor: 'text-red-700',
-    description: { fr: 'Travaux sur installations électriques', en: 'Electrical installation work' },
-    component: ElectricalForm,
-    estimatedTime: 55,
-    requiredValidations: ['equipment', 'personnel', 'procedures'],
-    requiredCertifications: ['electricien-certifie', 'loto-electrique'],
-    criticalFactors: ['lockout_tagout', 'arc_flash_protection', 'qualified_personnel'],
-    regulatoryBasis: ['CSA Z462', 'Electrical Code']
-  }
-} as const;
-
-// =================== MAPPAGE RÉGLEMENTATIONS ===================
-const REGULATION_MAPPING = {
-  'QC': quebecRegulations,
-  'ON': ontarioRegulations,
-  'AB': albertaRegulations,
-  'BC': britishColumbiaRegulations,
-  'SK': saskatchewanRegulations,
-  'MB': manitobaRegulations,
-  'NB': newBrunswickRegulations,
-  'NS': novaScotiaRegulations,
-  'PE': princeEdwardIslandRegulations,
-  'NL': newfoundlandLabradorRegulations,
-  'NT': northwestRegulations,
-  'NU': nunavutRegulations,
-  'YT': yukonRegulations
-};
-
-// =================== COMPOSANT PRINCIPAL ===================
+// =================== COMPOSANT PRINCIPAL - SECTION 2 ===================
 export const Step4Permits: React.FC<Step4PermitsProps> = ({
   language,
   province,
@@ -893,7 +426,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
 
   // =================== COMPUTED VALUES ===================
   const regulationConfig = useMemo(() => {
-    return REGULATION_MAPPING[province] || quebecRegulations;
+    return REGULATION_MAPPING[province] || REGULATION_MAPPING['QC'];
   }, [province]);
 
   const filteredPermits = useMemo(() => {
@@ -946,6 +479,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
       filtered = filtered.filter(permit => permit.dateCreation <= filters.dateRange.end!);
     }
 
+    // Tri
     filtered.sort((a, b) => {
       let comparison = 0;
       
@@ -1015,7 +549,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     };
   }, [permits]);
 
-  // =================== HANDLERS ===================
+  // =================== HANDLERS PRINCIPAUX ===================
   const handleCreatePermit = useCallback((type: PermitTypeEnum) => {
     if (!permissions.canCreate) {
       showToast('error', language === 'fr' ? 'Permission refusée' : 'Permission denied');
@@ -1113,8 +647,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
       }
     });
   }, [permissions.canDelete, showToast, language, deletePermit]);
-
-  // =================== RENDU VALIDATION ===================
+  // =================== RENDU VALIDATION PANEL ===================
   const renderValidationPanel = () => {
     if (!selectedPermit) return null;
 
@@ -1153,6 +686,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
               </div>
             </div>
 
+            {/* Onglets de validation */}
             <div className="flex border-b border-gray-200 overflow-x-auto">
               {requiredValidations.map((validationType) => {
                 const tabConfig = {
@@ -1189,6 +723,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                 );
               })}
               
+              {/* Onglet résumé */}
               <button
                 onClick={() => setActiveValidationTab('summary')}
                 className={`px-4 py-2 font-medium border-b-2 whitespace-nowrap ${
@@ -1211,6 +746,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
           </div>
         </div>
 
+        {/* Contenu des panneaux de validation */}
         <div className="p-4">
           <ErrorBoundary>
             {activeValidationTab === 'atmospheric' && (
@@ -1311,6 +847,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
   return (
     <div className="min-h-screen bg-gray-50">
       <AnimatePresence mode="wait">
+        {/* VUE LISTE */}
         {currentView === 'list' && (
           <motion.div
             key="list"
@@ -1319,7 +856,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            {/* Header avec filtres et stats */}
+            {/* Header avec stats et boutons */}
             <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
               <div className="px-4 py-4">
                 <div className="flex items-center justify-between mb-4">
@@ -1363,6 +900,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                   </div>
                 </div>
 
+                {/* Barre de recherche et contrôles de vue */}
                 <div className="flex items-center gap-3 mb-4">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -1474,12 +1012,14 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
           </motion.div>
         )}
 
+        {/* VUE VALIDATION */}
         {currentView === 'validate' && (
           <motion.div key="validate" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {renderValidationPanel()}
           </motion.div>
         )}
 
+        {/* VUE SURVEILLANCE */}
         {currentView === 'surveillance' && (
           <motion.div key="surveillance" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4">
             <div className="mb-4 flex items-center justify-between">
