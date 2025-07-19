@@ -25,9 +25,18 @@ import {
   Minimize2,
   Battery,
   Wifi,
+  WifiOff,
   Signal
 } from 'lucide-react';
-import { StatusBadge, useSmartStatus } from './StatusBadge';
+
+// Import temporaire pour StatusBadge
+const StatusBadge = ({ status, language, timeRemaining, showProgress, progressValue, size }: any) => (
+  <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+    {status}
+  </div>
+);
+
+const useSmartStatus = () => ({});
 
 // =================== TYPES ===================
 export interface TimerConfig {
@@ -284,8 +293,8 @@ export const TimerSurveillance: React.FC<TimerSurveillanceProps> = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
-  // =================== GESTION ALERTES ===================
-  const createAlert = useCallback((alertType: keyof typeof ALERT_TYPES, customMessage?: string) => {
+  // =================== GESTION ALERTES - CORRIGÉE ===================
+  const createAlert = useCallback((alertType: keyof typeof ALERT_TYPES, customMessage: string = '') => {
     const alertConfig = ALERT_TYPES[alertType];
     const alert: TimerAlert = {
       id: `alert_${Date.now()}`,
@@ -316,21 +325,27 @@ export const TimerSurveillance: React.FC<TimerSurveillanceProps> = ({
     // Notification push
     if (settings.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
       new Notification(alert.title[language], {
-  body: alert.message[language],
-  icon: '/timer-icon.png',
-  tag: alert.id
-});
+        body: alert.message[language],
+        icon: '/timer-icon.png',
+        tag: alert.id
+      });
 
-if (navigator.vibrate && alertConfig.vibration) {
-  navigator.vibrate(alertConfig.vibration);
-}
+      if (navigator.vibrate && alertConfig.vibration) {
+        navigator.vibrate(alertConfig.vibration);
+      }
+    }
 
     return alert;
   }, [language, settings, onAlertGenerated]);
 
   const playAlertSound = useCallback((soundType: string) => {
     if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      try {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      } catch (error) {
+        console.warn('AudioContext not supported');
+        return;
+      }
     }
 
     const audioContext = audioContextRef.current;
