@@ -945,7 +945,10 @@ export default function ElectricalForm({
             />
             <p className="text-xs text-yellow-700 mt-1">
               {language === 'fr' 
-                ? `Requis: ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredLicenses?.maitre || PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredLicenses?.master || 'Licence valide'} (${province})`
+                ? `Requis: ${(() => {
+    const reg = PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredLicenses;
+    return reg?.master || reg?.maitre || 'Licence valide';
+  })()} (${province})`
                 : `Required: ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredLicenses?.master || PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredLicenses?.maitre || 'Valid license'} (${province})`
               }
             </p>
