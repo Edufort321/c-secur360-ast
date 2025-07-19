@@ -1232,86 +1232,59 @@ const FormulaireLegalComplet: React.FC<{
     </div>
   );
 };
-// =================== SECTION 4 - ULTRA SIMPLE - GARANTIE SANS ERREUR ===================
-// SUPPRIMEZ COMPLÈTEMENT votre Section 4 actuelle et remplacez par EXACTEMENT ce code :
+// =================== SECTION 4 - VERSION FINALE SIMPLIFIÉE ===================
+// REMPLACEZ COMPLÈTEMENT votre Section 4 par ce code minimal qui compile :
 
-          {/* Surveillants simplifié */}
+          {/* Personnel - Surveillants et Entrants */}
           {activeTab === 'personnel' && formData.superviseur && (
-            <div style={{ marginBottom: '32px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h4 style={{ color: '#ffffff', margin: 0 }}>👁️ Surveillants</h4>
-                <button
-                  onClick={ajouterSurveillant}
-                  style={{
-                    padding: '8px 16px',
-                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Ajouter Surveillant
-                </button>
+            <div>
+              {/* Surveillants */}
+              <div style={{ marginBottom: '32px' }}>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px' }}>👁️ Surveillants</h4>
+                
+                {formData.surveillants.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '40px',
+                    color: '#94a3b8',
+                    border: '2px dashed rgba(100, 116, 139, 0.3)',
+                    borderRadius: '8px'
+                  }}>
+                    Aucun surveillant
+                  </div>
+                ) : (
+                  <div>
+                    {formData.surveillants.map((surveillant) => (
+                      <div key={surveillant.id} style={{
+                        background: 'rgba(245, 158, 11, 0.1)',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                        borderRadius: '8px',
+                        padding: '16px',
+                        marginBottom: '12px'
+                      }}>
+                        <input
+                          type="text"
+                          placeholder="Nom du surveillant"
+                          value={surveillant.nom}
+                          onChange={(e) => modifierSurveillant(surveillant.id, { nom: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            background: 'rgba(15, 23, 42, 0.8)',
+                            border: '1px solid rgba(100, 116, 139, 0.3)',
+                            borderRadius: '4px',
+                            color: '#ffffff'
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              
-              {formData.surveillants.length === 0 ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '40px',
-                  color: '#94a3b8',
-                  border: '2px dashed rgba(100, 116, 139, 0.3)',
-                  borderRadius: '8px'
-                }}>
-                  Aucun surveillant
-                </div>
-              ) : (
-                <div>
-                  {formData.surveillants.map((surveillant) => (
-                    <div key={surveillant.id} style={{
-                      background: 'rgba(245, 158, 11, 0.1)',
-                      border: '1px solid rgba(245, 158, 11, 0.3)',
-                      borderRadius: '8px',
-                      padding: '16px',
-                      marginBottom: '12px'
-                    }}>
-                      <input
-                        type="text"
-                        placeholder="Nom du surveillant"
-                        value={surveillant.nom}
-                        onChange={(e) => modifierSurveillant(surveillant.id, { nom: e.target.value })}
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          background: 'rgba(15, 23, 42, 0.8)',
-                          border: '1px solid rgba(100, 116, 139, 0.3)',
-                          borderRadius: '4px',
-                          color: '#ffffff'
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
 
-              {/* Entrants simplifié */}
-              <div style={{ marginTop: '32px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h4 style={{ color: '#ffffff', margin: 0 }}>🚶 Entrants</h4>
-                  <button
-                    onClick={ajouterEntrant}
-                    style={{
-                      padding: '8px 16px',
-                      background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Ajouter Entrant
-                  </button>
-                </div>
+              {/* Entrants */}
+              <div>
+                <h4 style={{ color: '#ffffff', marginBottom: '16px' }}>🚶 Entrants</h4>
                 
                 {formData.entrants.length === 0 ? (
                   <div style={{
@@ -1355,46 +1328,40 @@ const FormulaireLegalComplet: React.FC<{
             </div>
           )}
 
-          {/* Tests simplifié */}
+          {/* Tests */}
           {activeTab === 'tests' && (
             <div>
-              <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>🧪 Tests et Mesures</h3>
+              <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>🧪 Tests</h3>
               <div style={{
                 background: 'rgba(100, 116, 139, 0.1)',
                 border: '1px solid rgba(100, 116, 139, 0.3)',
                 borderRadius: '8px',
                 padding: '20px'
               }}>
-                <p style={{ color: '#94a3b8', margin: 0 }}>
-                  Section Tests en développement
-                </p>
+                <p style={{ color: '#94a3b8', margin: 0 }}>Tests en développement</p>
               </div>
             </div>
           )}
 
-          {/* Validation simplifié */}
+          {/* Validation */}
           {activeTab === 'validation' && (
             <div>
               <h3 style={{ color: '#ffffff', marginBottom: '20px' }}>✅ Validation</h3>
               <div style={{
-                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.1))',
+                background: 'rgba(34, 197, 94, 0.1)',
                 border: '1px solid rgba(34, 197, 94, 0.3)',
                 borderRadius: '8px',
                 padding: '20px',
                 textAlign: 'center'
               }}>
-                <h4 style={{ color: '#22c55e', margin: '0 0 12px' }}>
-                  ✅ PERMIS VALIDE
-                </h4>
-                <p style={{ color: '#dcfce7', margin: 0 }}>
-                  Permis prêt à être utilisé
-                </p>
+                <h4 style={{ color: '#22c55e', margin: '0 0 12px' }}>✅ PERMIS VALIDE</h4>
+                <p style={{ color: '#dcfce7', margin: 0 }}>Permis prêt</p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer Actions - SIMPLE */}
+        {/* Footer */}
         <div style={{
           background: 'rgba(30, 41, 59, 0.5)',
           borderTop: '1px solid rgba(100, 116, 139, 0.3)',
