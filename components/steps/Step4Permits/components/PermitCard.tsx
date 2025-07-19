@@ -3,7 +3,7 @@
 
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, 
@@ -28,6 +28,11 @@ import {
   Wrench,
   Activity
 } from 'lucide-react';
+
+// =================== TYPES ===================
+type SwipeDirection = 'left' | 'right' | 'up' | 'down' | 'left-extended' | 'right-extended';
+type MobileCardAction = 'view' | 'edit' | 'share' | 'duplicate' | 'delete';
+type PermitStatus = 'active' | 'pending' | 'expired' | 'suspended' | 'draft' | 'approved' | 'completed' | 'cancelled';
 type PermitType = 'confined_space' | 'hot_work' | 'excavation' | 'lifting' | 'height_work' | 'electrical';
 
 // Types temporaires pour éviter les erreurs
@@ -43,6 +48,9 @@ interface LegalPermit {
   dateCreation: string;
   dateExpiration: string;
   validationResults?: any;
+  site?: string;
+  entrants?: any[];
+  secteur?: string;
 }
 
 interface PermitCardProps {
@@ -58,6 +66,13 @@ interface PermitCardProps {
   showValidationStatus?: boolean;
 }
 
+interface MobileCardProps extends PermitCardProps {
+  enableSwipeActions?: boolean;
+  enableHaptics?: boolean;
+  onQuickAction?: (action: MobileCardAction, permit: LegalPermit) => void;
+  onShare?: (permit: LegalPermit) => void;
+}
+
 interface SwipeActionConfig {
   direction: SwipeDirection;
   threshold: number;
@@ -67,6 +82,19 @@ interface SwipeActionConfig {
   action: MobileCardAction;
   hapticPattern?: number[];
 }
+
+// Fonction useSwipeable temporaire
+const useSwipeable = (options: {
+  onSwipeStart?: () => void;
+  onSwiping?: (eventData: { deltaX: number; deltaY: number }) => void;
+  onSwiped?: () => void;
+  trackMouse?: boolean;
+  preventScrollOnSwipe?: boolean;
+  delta?: number;
+}) => {
+  // Hook temporaire qui retourne un objet vide
+  return {};
+};
 
 // =================== CONFIGURATION SWIPE ACTIONS MOBILE ===================
 const SWIPE_ACTIONS: SwipeActionConfig[] = [
@@ -100,10 +128,15 @@ const SWIPE_ACTIONS: SwipeActionConfig[] = [
 ];
 
 // =================== CONFIGURATION ICONS PAR TYPE ===================
-const PERMIT_ICONS: Record<PermitType, React.ReactNode> = {
+const PERMIT_ICONS: Record<string, React.ReactNode> = {
+  'confined_space': <Shield className="w-5 h-5" />,
+  'hot_work': <Zap className="w-5 h-5" />,
+  'excavation': <HardHat className="w-5 h-5" />,
+  'lifting': <Wrench className="w-5 h-5" />,
+  'height_work': <Activity className="w-5 h-5" />,
+  'electrical': <Zap className="w-5 h-5" />,
   'espace-clos': <Shield className="w-5 h-5" />,
   'travail-chaud': <Zap className="w-5 h-5" />,
-  'excavation': <HardHat className="w-5 h-5" />,
   'levage': <Wrench className="w-5 h-5" />,
   'hauteur': <Activity className="w-5 h-5" />,
   'isolation-energetique': <Zap className="w-5 h-5" />,
@@ -114,7 +147,7 @@ const PERMIT_ICONS: Record<PermitType, React.ReactNode> = {
 };
 
 // =================== CONFIGURATION STATUS COULEURS ===================
-const STATUS_CONFIG: Record<PermitStatus, {
+const STATUS_CONFIG: Record<string, {
   color: string;
   bgColor: string;
   icon: React.ReactNode;
@@ -143,6 +176,30 @@ const STATUS_CONFIG: Record<PermitStatus, {
     bgColor: '#F3F4F6',
     icon: <AlertTriangle className="w-4 h-4" />,
     label: { fr: 'Suspendu', en: 'Suspended' }
+  },
+  'draft': {
+    color: '#6B7280',
+    bgColor: '#F3F4F6',
+    icon: <FileText className="w-4 h-4" />,
+    label: { fr: 'Brouillon', en: 'Draft' }
+  },
+  'approved': {
+    color: '#10B981',
+    bgColor: '#D1FAE5',
+    icon: <CheckCircle className="w-4 h-4" />,
+    label: { fr: 'Approuvé', en: 'Approved' }
+  },
+  'completed': {
+    color: '#059669',
+    bgColor: '#D1FAE5',
+    icon: <CheckCircle className="w-4 h-4" />,
+    label: { fr: 'Terminé', en: 'Completed' }
+  },
+  'cancelled': {
+    color: '#EF4444',
+    bgColor: '#FEE2E2',
+    icon: <AlertTriangle className="w-4 h-4" />,
+    label: { fr: 'Annulé', en: 'Cancelled' }
   }
 };
 
@@ -306,8 +363,8 @@ export const PermitCard: React.FC<MobileCardProps> = ({
   };
 
   // =================== RENDU COMPOSANT ===================
-  const statusConfig = STATUS_CONFIG[permit.status];
-  const permitIcon = PERMIT_ICONS[permit.type];
+  const statusConfig = STATUS_CONFIG[permit.status] || STATUS_CONFIG['draft'];
+  const permitIcon = PERMIT_ICONS[permit.type] || <FileText className="w-5 h-5" />;
 
   return (
     <motion.div
