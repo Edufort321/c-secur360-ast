@@ -70,7 +70,7 @@ export const PermitCard: React.FC<PermitCardProps> = ({
   onValidate,
   showValidationStatus = false
 }) => {
-  const PermitIcon = PERMIT_ICONS[permit.type] || FileText;
+  const PermitIcon = PERMIT_ICONS[permit.type as keyof typeof PERMIT_ICONS] || FileText;
   const isValid = permit.validationResults?.overall?.isValid;
 
   return (
