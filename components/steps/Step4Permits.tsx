@@ -1127,12 +1127,12 @@ const FormulaireLegalComplet: React.FC<{
     </div>
   );
 };
-// =================== STEP4PERMITS.TSX - SECTION 4/5 ===================
-// Ajoutez cette section À LA SUITE de la SECTION 3 (ne remplacez pas, ajoutez !)
+// =================== STEP4PERMITS.TSX - SECTION 4/5 CORRIGÉE ===================
+// REMPLACEZ la Section 4 actuelle par cette version corrigée
 
           {/* Suite de l'onglet Personnel - Surveillants */}
-          {activeTab === 'personnel' && (
-            <div>
+          {activeTab === 'personnel' && formData.superviseur && (
+            <>
               {/* Surveillants */}
               <div style={{ marginBottom: '32px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -1170,7 +1170,7 @@ const FormulaireLegalComplet: React.FC<{
                   </div>
                 ) : (
                   <div style={{ display: 'grid', gap: '16px' }}>
-                    {formData.surveillants.map((surveillant, index) => (
+                    {formData.surveillants.map((surveillant) => (
                       <div
                         key={surveillant.id}
                         style={{
@@ -1332,7 +1332,7 @@ const FormulaireLegalComplet: React.FC<{
                   </div>
                 ) : (
                   <div style={{ display: 'grid', gap: '16px' }}>
-                    {formData.entrants.map((entrant, index) => (
+                    {formData.entrants.map((entrant) => (
                       <div
                         key={entrant.id}
                         style={{
@@ -1488,7 +1488,7 @@ const FormulaireLegalComplet: React.FC<{
                   </div>
                 )}
               </div>
-            </div>
+            </>
           )}
 
           {/* Onglet Tests/Mesures */}
@@ -1514,7 +1514,6 @@ const FormulaireLegalComplet: React.FC<{
                         value={formData[field.key as keyof LegalPermitData] as string}
                         onChange={(e) => handleInputChange(field.key as keyof LegalPermitData, e.target.value)}
                         placeholder={field.placeholder}
-                        pattern={field.pattern}
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -1621,7 +1620,6 @@ const FormulaireLegalComplet: React.FC<{
                         value={formData[field.key as keyof LegalPermitData] as string}
                         onChange={(e) => handleInputChange(field.key as keyof LegalPermitData, e.target.value)}
                         placeholder={field.placeholder}
-                        pattern={field.pattern}
                         style={{
                           width: '100%',
                           padding: '12px',
