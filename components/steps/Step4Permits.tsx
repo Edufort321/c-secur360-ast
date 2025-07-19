@@ -1907,17 +1907,13 @@ const FormulaireLegalComplet: React.FC<{
                 alert('Permis sauvegardé avec succès!');
                 onClose();
               }}
-              disabled={!Object.values(formData).slice(-4).every(val => val === true)}
               style={{
                 padding: '12px 20px',
-                background: Object.values(formData).slice(-4).every(val => val === true) ?
-                  'linear-gradient(135deg, #22c55e, #16a34a)' :
-                  'rgba(100, 116, 139, 0.3)',
+                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
-                cursor: Object.values(formData).slice(-4).every(val => val === true) ? 'pointer' : 'not-allowed',
-                opacity: Object.values(formData).slice(-4).every(val => val === true) ? 1 : 0.5
+                cursor: 'pointer'
               }}
             >
               💾 Sauvegarder Permis
