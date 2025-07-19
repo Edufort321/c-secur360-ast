@@ -76,7 +76,7 @@ export const PermitCard: React.FC<PermitCardProps> = ({
   return (
     <motion.div
       className={`bg-white rounded-lg border-2 shadow-sm hover:shadow-md transition-shadow ${
-        PERMIT_COLORS[permit.type] || 'bg-gray-50 border-gray-200'
+        PERMIT_COLORS[permit.type as keyof typeof PERMIT_COLORS] || 'bg-gray-50 border-gray-200'
       }`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -106,10 +106,10 @@ export const PermitCard: React.FC<PermitCardProps> = ({
 
         {/* Status and Priority */}
         <div className="flex items-center gap-2 mb-3">
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[permit.status]}`}>
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[permit.status as keyof typeof STATUS_COLORS] || 'bg-gray-100 text-gray-800'}`}>
             {permit.status}
           </span>
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${PRIORITY_COLORS[permit.priority]}`}>
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${PRIORITY_COLORS[permit.priority as keyof typeof PRIORITY_COLORS] || 'bg-gray-100 text-gray-800'}`}>
             {permit.priority}
           </span>
         </div>
@@ -233,7 +233,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
   return (
     <span className={`inline-flex items-center gap-1 rounded-full font-medium ${
-      STATUS_COLORS[status] || 'bg-gray-100 text-gray-800'
+      STATUS_COLORS[status as keyof typeof STATUS_COLORS] || 'bg-gray-100 text-gray-800'
     } ${sizeClasses[size]}`}>
       {showIcon && getStatusIcon()}
       <span>{status}</span>
