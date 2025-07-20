@@ -1,7 +1,7 @@
 // =================== CONSTANTS/ATMOSPHERICLIMITS.TS - LIMITES ATMOSPHÉRIQUES PAR PROVINCE ===================
 // Constantes des limites atmosphériques selon réglementations provinciales canadiennes
 
-import type { PermitType } from '../types';
+export type PermitType = 'espace-clos' | 'travail-chaud' | 'excavation' | 'levage' | 'hauteur' | 'isolation-energetique' | 'pression' | 'radiographie' | 'toiture' | 'demolition';
 
 // =================== INTERFACES ===================
 export interface AtmosphericParameter {
