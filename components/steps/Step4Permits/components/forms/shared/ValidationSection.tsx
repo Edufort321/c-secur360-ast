@@ -59,19 +59,142 @@ import {
   Wifi,
   Battery
 } from 'lucide-react';
-import { generateValidationId, validateSignatureData, generateQRCode } from '../../utils/validators';
-import { PROVINCIAL_REGULATIONS } from '../../constants/provinces';
-import type { 
-  PermitFormData,
-  PermitType,
-  ValidationStep,
-  SignatureData,
-  ApprovalWorkflow,
-  NotificationData,
-  FieldError,
-  GeolocationData,
-  AuditTrail
-} from '../../types';
+
+// =================== TYPES ET INTERFACES ===================
+export type PermitType = 'espace-clos' | 'travail-chaud' | 'excavation' | 'levage' | 'hauteur' | 'isolation-energetique' | 'pression' | 'radiographie' | 'toiture' | 'demolition';
+
+export interface PermitFormData {
+  id?: string;
+  name?: string;
+  status?: string;
+  signatures?: SignatureCapture[];
+  validationWorkflow?: ValidationWorkflow;
+  [key: string]: any;
+}
+
+export interface FieldError {
+  message: { fr: string; en: string };
+  code: string;
+}
+
+export interface ValidationStep {
+  id: string;
+  title: { fr: string; en: string };
+  description: { fr: string; en: string };
+  status: 'pending' | 'in-progress' | 'completed' | 'failed' | 'skipped';
+  assignedTo: string[];
+  startDate: Date;
+  endDate?: Date;
+  timeLimit?: number;
+  isRequired: boolean;
+  order: number;
+}
+
+export interface SignatureData {
+  id: string;
+  signerId: string;
+  signerName: string;
+  timestamp: Date;
+  signatureImage: string;
+}
+
+export interface ApprovalWorkflow {
+  id: string;
+  steps: ValidationStep[];
+  status: 'pending' | 'approved' | 'rejected';
+}
+
+export interface NotificationData {
+  id: string;
+  type: string;
+  title: { fr: string; en: string };
+  message: { fr: string; en: string };
+  recipients: string[];
+  priority: 'low' | 'medium' | 'high';
+  timestamp: Date;
+  relatedEntity: string;
+  entityId: string;
+  actionRequired: boolean;
+}
+
+export interface GeolocationData {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  timestamp: Date;
+}
+
+export interface AuditTrail {
+  id: string;
+  action: string;
+  timestamp: Date;
+  userId: string;
+  details: string;
+  ipAddress: string;
+}
+
+// =================== FONCTIONS UTILITAIRES ===================
+const generateValidationId = (): string => {
+  return `validation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+};
+
+const validateSignatureData = (signature: SignatureCapture): FieldError | null => {
+  if (!signature.signatureData || signature.signatureData.length < 100) {
+    return {
+      message: {
+        fr: 'La signature est requise et doit être valide',
+        en: 'Signature is required and must be valid'
+      },
+      code: 'SIGNATURE_INVALID'
+    };
+  }
+  
+  if (!signature.signerName || signature.signerName.trim().length < 2) {
+    return {
+      message: {
+        fr: 'Le nom du signataire est requis',
+        en: 'Signer name is required'
+      },
+      code: 'SIGNER_NAME_REQUIRED'
+    };
+  }
+  
+  return null;
+};
+
+const generateQRCode = async (data: string): Promise<string> => {
+  // Simulation génération QR code - Remplacer par vraie librairie QR
+  const qrData = `data:image/svg+xml;base64,${btoa(`<svg>QR_CODE_FOR_${data}</svg>`)}`;
+  return qrData;
+};
+
+// =================== CONSTANTES RÉGLEMENTATIONS ===================
+const PROVINCIAL_REGULATIONS = {
+  QC: {
+    authority: 'CNESST',
+    digitalSignatureRequired: true,
+    retentionPeriod: 7, // years
+    auditRequirements: ['timestamp', 'geolocation', 'identity_verification']
+  },
+  ON: {
+    authority: 'Ministry of Labour',
+    digitalSignatureRequired: true,
+    retentionPeriod: 5,
+    auditRequirements: ['timestamp', 'identity_verification']
+  },
+  AB: {
+    authority: 'Alberta Labour',
+    digitalSignatureRequired: false,
+    retentionPeriod: 7,
+    auditRequirements: ['timestamp']
+  },
+  BC: {
+    authority: 'WorkSafeBC',
+    digitalSignatureRequired: true,
+    retentionPeriod: 5,
+    auditRequirements: ['timestamp', 'geolocation', 'identity_verification']
+  }
+};
 
 // =================== INTERFACES SECTION ===================
 interface ValidationSectionProps {
@@ -477,7 +600,7 @@ export const ValidationSection: React.FC<ValidationSectionProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const signaturePadRef = useRef<any>(null);
   const cameraRef = useRef<HTMLVideoElement>(null);
-  const voiceRecognitionRef = useRef<SpeechRecognition | null>(null);
+  const voiceRecognitionRef = useRef<any>(null);
 
   // =================== WORKFLOW CONFIGURATION ===================
   const approvalSteps = useMemo(() => {
