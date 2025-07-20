@@ -430,7 +430,7 @@ export const OFFICIAL_PERMITS = {
       'Equipment verification',
       'Authorization signatures'
     ],
-    validityPeriod: '8 hours maximum',
+    validityPeriod: '8 heures maximum',
     renewalProcess: 'Risk reassessment',
     testingRequired: false,
     personnelRequired: ['Fire watch', 'Certified welder', 'Authorized supervisor']
@@ -483,7 +483,7 @@ export const OFFICIAL_PERMITS = {
       'Emergency procedures',
       'Competent person designation'
     ],
-    validityPeriod: '30 days maximum',
+    validityPeriod: '30 jours maximum',
     renewalProcess: 'Site condition reassessment',
     testingRequired: false,
     personnelRequired: ['Competent person', 'Qualified supervisor', 'Equipment operator']
@@ -508,7 +508,7 @@ export const OFFICIAL_PERMITS = {
       'Competent person designation',
       'Emergency response procedures'
     ],
-    validityPeriod: '30 days maximum',
+    validityPeriod: '30 jours maximum',
     renewalProcess: 'Site condition reassessment',
     testingRequired: false,
     personnelRequired: ['Competent person', 'Qualified supervisor', 'Heavy equipment operator']
@@ -561,7 +561,7 @@ export const OFFICIAL_PERMITS = {
       'Weather monitoring procedures',
       'Emergency response plan'
     ],
-    validityPeriod: '7 days or project duration',
+    validityPeriod: '7 jours ou durée projet',
     renewalProcess: 'Lift plan reassessment',
     testingRequired: true,
     personnelRequired: ['Certified crane operator', 'Qualified signaller', 'Lifting supervisor']
@@ -587,7 +587,7 @@ export const OFFICIAL_PERMITS = {
       'Weather restrictions',
       'Emergency procedures'
     ],
-    validityPeriod: '7 days or project duration',
+    validityPeriod: '7 jours ou durée projet',
     renewalProcess: 'Operations reassessment',
     testingRequired: true,
     personnelRequired: ['BC certified crane operator', 'Qualified rigger', 'Competent supervisor']
@@ -640,7 +640,7 @@ export const OFFICIAL_PERMITS = {
       'Weather monitoring',
       'Competent worker designation'
     ],
-    validityPeriod: '8 hours or work shift',
+    validityPeriod: '8 heures ou quart de travail',
     renewalProcess: 'Daily reassessment',
     testingRequired: false,
     personnelRequired: ['Working at Heights certified worker', 'Competent person', 'Rescue team (if required)']
@@ -666,7 +666,7 @@ export const OFFICIAL_PERMITS = {
       'Weather conditions assessment',
       'Qualified person oversight'
     ],
-    validityPeriod: '8 hours or work shift',
+    validityPeriod: '8 heures ou quart de travail',
     renewalProcess: 'Daily conditions assessment',
     testingRequired: false,
     personnelRequired: ['Qualified worker', 'Competent supervisor', 'Rescue capability']
@@ -692,7 +692,7 @@ export const OFFICIAL_PERMITS = {
       'Environmental conditions',
       'Supervisor authorization'
     ],
-    validityPeriod: '8 hours or work shift',
+    validityPeriod: '8 heures ou quart de travail',
     renewalProcess: 'Shift-by-shift assessment',
     testingRequired: false,
     personnelRequired: ['Competent worker', 'Qualified supervisor', 'Rescue trained personnel']
@@ -719,8 +719,8 @@ export const OFFICIAL_PERMITS = {
       'Clés individuelles et étiquettes',
       'Procédure de remise en service'
     ],
-    validityPeriod: 'Duration of maintenance work',
-    renewalProcess: 'New isolation required',
+    validityPeriod: 'Durée des travaux de maintenance',
+    renewalProcess: 'Nouvel isolement requis',
     testingRequired: true,
     personnelRequired: ['Électricien qualifié', 'Personne autorisée LOTO', 'Superviseur électrique']
   },
@@ -745,7 +745,7 @@ export const OFFICIAL_PERMITS = {
       'Individual locks and tags',
       'Re-energization procedure'
     ],
-    validityPeriod: 'Duration of electrical work',
+    validityPeriod: 'Durée des travaux électriques',
     renewalProcess: 'New lockout required',
     testingRequired: true,
     personnelRequired: ['Qualified electrician', 'Authorized LOTO person', 'Electrical supervisor']
@@ -771,7 +771,7 @@ export const OFFICIAL_PERMITS = {
       'Personal protective equipment',
       'System restoration procedures'
     ],
-    validityPeriod: 'Duration of electrical maintenance',
+    validityPeriod: 'Durée maintenance électrique',
     renewalProcess: 'Complete re-isolation',
     testingRequired: true,
     personnelRequired: ['Qualified electrical worker', 'LOTO authorized person', 'Electrical safety supervisor']
@@ -798,8 +798,8 @@ export const OFFICIAL_PERMITS = {
       'Soudeur et inspecteur certifiés',
       'Procédures de remise en service'
     ],
-    validityPeriod: 'Duration of pressure vessel work',
-    renewalProcess: 'New assessment and isolation',
+    validityPeriod: 'Durée travaux équipement pression',
+    renewalProcess: 'Nouvelle évaluation et isolement',
     testingRequired: true,
     personnelRequired: ['Soudeur certifié CWB', 'Inspecteur agréé', 'Superviseur qualifié']
   },
@@ -825,9 +825,9 @@ export const OFFICIAL_PERMITS = {
       'Surveillance de zone obligatoire',
       'Déclaration post-exposition'
     ],
-    validityPeriod: 'Duration of radiographic work',
+    validityPeriod: 'Durée des travaux radiographiques',
     radiationSafetyRequired: true,
-    renewalProcess: 'New radiation safety assessment',
+    renewalProcess: 'Nouvelle évaluation sécurité radiation',
     testingRequired: true,
     personnelRequired: ['Radiographe certifié CCSN', 'Agent de radioprotection', 'Surveillant zone']
   },
@@ -853,8 +853,8 @@ export const OFFICIAL_PERMITS = {
       'Formation spécialisée toiture',
       'Surveillance continue si requis'
     ],
-    validityPeriod: '8 hours or weather dependent',
-    renewalProcess: 'Weather and conditions reassessment',
+    validityPeriod: '8 heures ou selon météo',
+    renewalProcess: 'Réévaluation météo et conditions',
     testingRequired: false,
     personnelRequired: ['Couvreur expérimenté', 'Superviseur toiture', 'Surveillant sécurité']
   },
@@ -880,8 +880,8 @@ export const OFFICIAL_PERMITS = {
       'Plan de gestion des débris',
       'Procédures d\'urgence spécialisées'
     ],
-    validityPeriod: 'Duration of demolition project',
-    renewalProcess: 'Weekly progress assessment',
+    validityPeriod: 'Durée du projet de démolition',
+    renewalProcess: 'Évaluation hebdomadaire du progrès',
     testingRequired: true, // Pour amiante et matières dangereuses
     personnelRequired: ['Superviseur démolition', 'Opérateur équipement lourd', 'Inspecteur structure']
   }
@@ -1070,7 +1070,16 @@ export const getProvinceName = (code: string, language: 'fr' | 'en' = 'fr') => {
 };
 
 export const getCategoryInfo = (category: string, language: 'fr' | 'en' = 'fr') => {
-  return PERMIT_CATEGORIES[language][category as keyof typeof PERMIT_CATEGORIES.fr];
+  const categories = PERMIT_CATEGORIES[language];
+  
+  // Type guard to ensure safe indexing
+  if (language === 'fr') {
+    const frCategories = categories as typeof PERMIT_CATEGORIES.fr;
+    return frCategories[category as keyof typeof frCategories];
+  } else {
+    const enCategories = categories as typeof PERMIT_CATEGORIES.en;
+    return enCategories[category as keyof typeof enCategories];
+  }
 };
 
 // =================== FONCTION GÉNÉRATION PERMIS COMPLETS ===================
