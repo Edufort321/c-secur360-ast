@@ -8,50 +8,211 @@ import type { CustomGeolocationPosition, GeolocationAddress } from './useGeoloca
 
 // =================== CONFIGURATION SUPABASE ===================
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// =================== INTERFACES MÉTADONNÉES ===================
+
+export interface SpaceDimensions {
+  length?: number;
+  width?: number;
+  height?: number;
+  diameter?: number;
+  volume?: number;
+  unit: 'm' | 'ft';
+  entrance_size?: string;
+  working_space?: string;
+}
+
+export interface AccessPoint {
+  id: string;
+  name: string;
+  type: 'manhole' | 'hatch' | 'door' | 'opening' | 'valve' | 'port';
+  size: string;
+  location: string;
+  coordinates?: { x: number; y: number; z: number };
+  is_emergency_exit: boolean;
+  key_required: boolean;
+  lock_type?: string;
+  restrictions: string[];
+  last_inspected?: string;
+  condition: 'excellent' | 'good' | 'fair' | 'poor' | 'unsafe';
+}
+
+export interface VentilationSystem {
+  id: string;
+  name: string;
+  type: 'natural' | 'mechanical' | 'forced' | 'exhaust' | 'supply' | 'hybrid';
+  capacity_cfm: number;
+  location: string;
+  manufacturer?: string;
+  model?: string;
+  serial_number?: string;
+  installation_date?: string;
+  is_operational: boolean;
+  last_maintenance: string;
+  next_maintenance: string;
+  maintenance_schedule: 'weekly' | 'monthly' | 'quarterly' | 'annual';
+  efficiency_rating?: number;
+  noise_level_db?: number;
+  energy_consumption_kw?: number;
+}
+
+export interface MaintenanceRecord {
+  date: string;
+  type: 'inspection' | 'repair' | 'calibration' | 'replacement';
+  description: string;
+  technician: string;
+  parts_replaced?: string[];
+  cost?: number;
+  next_action?: string;
+}
+
+export interface EmergencyEquipment {
+  id: string;
+  name: string;
+  type: 'rescue_tripod' | 'winch' | 'ventilator' | 'communication' | 'lighting' | 'first_aid' | 'breathing_apparatus' | 'fall_protection';
+  location: string;
+  manufacturer?: string;
+  model?: string;
+  serial_number?: string;
+  purchase_date?: string;
+  last_inspection: string;
+  next_inspection: string;
+  inspection_frequency: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'annual';
+  is_operational: boolean;
+  certification_number?: string;
+  certification_expiry?: string;
+  maintenance_records: MaintenanceRecord[];
+}
+
+export interface TrainingRecord {
+  course_name: string;
+  completion_date: string;
+  expiry_date?: string;
+  instructor: string;
+  certificate_number?: string;
+  score?: number;
+}
+
+export interface EmergencyContact {
+  name: string;
+  relationship: string;
+  phone_primary: string;
+  phone_secondary?: string;
+  email?: string;
+}
+
+export interface PersonnelAssignment {
+  id: string;
+  name: string;
+  role: string;
+  certifications: string[];
+  experience_years: number;
+  training_records: TrainingRecord[];
+  medical_clearance: boolean;
+  medical_expiry?: string;
+  emergency_contact: EmergencyContact;
+}
+
+export interface AtmosphericReading {
+  timestamp: string;
+  device_id: string;
+  device_name: string;
+  operator: string;
+  location: string;
+  oxygen_percent: number;
+  lel_percent: number;
+  h2s_ppm: number;
+  co_ppm: number;
+  co2_ppm?: number;
+  temperature_celsius: number;
+  humidity_percent?: number;
+  pressure_kpa?: number;
+  is_valid: boolean;
+  calibration_date: string;
+  notes?: string;
+}
+
+export interface InspectionItem {
+  id: string;
+  category: string;
+  description: string;
+  requirement: string;
+  status: 'pass' | 'fail' | 'na' | 'attention_required';
+  notes?: string;
+  photos?: string[];
+  corrective_action?: string;
+  due_date?: string;
+}
+
+export interface InspectionFinding {
+  id: string;
+  category: 'safety' | 'environmental' | 'operational' | 'compliance';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  location: string;
+  recommendation: string;
+  timeline: 'immediate' | 'within_24h' | 'within_week' | 'within_month';
+  responsible_person?: string;
+  photos?: string[];
+  status: 'open' | 'in_progress' | 'completed' | 'deferred';
+}
+
+export interface WeatherConditions {
+  temperature_celsius: number;
+  humidity_percent: number;
+  pressure_kpa: number;
+  wind_speed_kmh: number;
+  wind_direction_degrees: number;
+  precipitation: 'none' | 'light' | 'moderate' | 'heavy';
+  visibility_km: number;
+  conditions: 'clear' | 'cloudy' | 'overcast' | 'fog' | 'rain' | 'snow';
+}
+
+export interface PersonnelInvolved {
+  id: string;
+  name: string;
+  role: string;
+  department: string;
+  experience_years: number;
+  injury_type?: 'none' | 'minor' | 'major' | 'fatality';
+  medical_treatment?: boolean;
+  hospital_transport?: boolean;
+  time_off_work?: number; // days
+}
+
+export interface CorrectiveAction {
+  id: string;
+  description: string;
+  responsible_person: string;
+  due_date: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: 'pending' | 'in_progress' | 'completed' | 'overdue';
+  completion_date?: string;
+  verification_method: string;
+  cost_estimate?: number;
+  actual_cost?: number;
+}
+
+export interface QRPrintData {
+  title: string;
+  subtitle: string;
+  instructions: string[];
+  emergency_contact: string;
+  company_logo?: string;
+  qr_size: number;
+  format: 'A4' | 'Letter' | 'Label' | '4x6' | '3x5';
+  language: 'fr' | 'en';
+  color_scheme: 'standard' | 'high_contrast' | 'safety_orange' | 'custom';
+  include_map: boolean;
+  include_photos: boolean;
+  watermark?: string;
+}
 
 // =================== INTERFACES SUPABASE ===================
 
-export interface Database {
-  public: {
-    Tables: {
-      confined_spaces: {
-        Row: ConfinedSpaceRow;
-        Insert: ConfinedSpaceInsert;
-        Update: ConfinedSpaceUpdate;
-      };
-      qr_codes: {
-        Row: QRCodeRow;
-        Insert: QRCodeInsert;
-        Update: QRCodeUpdate;
-      };
-      space_permits: {
-        Row: SpacePermitRow;
-        Insert: SpacePermitInsert;
-        Update: SpacePermitUpdate;
-      };
-      space_inspections: {
-        Row: SpaceInspectionRow;
-        Insert: SpaceInspectionInsert;
-        Update: SpaceInspectionUpdate;
-      };
-      space_incidents: {
-        Row: SpaceIncidentRow;
-        Insert: SpaceIncidentInsert;
-        Update: SpaceIncidentUpdate;
-      };
-      qr_access_logs: {
-        Row: QRAccessLogRow;
-        Insert: QRAccessLogInsert;
-        Update: QRAccessLogUpdate;
-      };
-    };
-  };
-}
-
-// Tables Supabase - Schema complet
 export interface ConfinedSpaceRow {
   id: string;
   name: string;
@@ -222,205 +383,6 @@ export type SpaceIncidentUpdate = Partial<Omit<SpaceIncidentRow, 'id' | 'created
 export type QRAccessLogInsert = Omit<QRAccessLogRow, 'id' | 'created_at'>;
 export type QRAccessLogUpdate = Partial<Omit<QRAccessLogRow, 'id' | 'created_at'>>;
 
-// =================== INTERFACES MÉTADONNÉES ===================
-
-export interface SpaceDimensions {
-  length?: number;
-  width?: number;
-  height?: number;
-  diameter?: number;
-  volume?: number;
-  unit: 'm' | 'ft';
-  entrance_size?: string;
-  working_space?: string;
-}
-
-export interface AccessPoint {
-  id: string;
-  name: string;
-  type: 'manhole' | 'hatch' | 'door' | 'opening' | 'valve' | 'port';
-  size: string;
-  location: string;
-  coordinates?: { x: number; y: number; z: number };
-  is_emergency_exit: boolean;
-  key_required: boolean;
-  lock_type?: string;
-  restrictions: string[];
-  last_inspected?: string;
-  condition: 'excellent' | 'good' | 'fair' | 'poor' | 'unsafe';
-}
-
-export interface VentilationSystem {
-  id: string;
-  name: string;
-  type: 'natural' | 'mechanical' | 'forced' | 'exhaust' | 'supply' | 'hybrid';
-  capacity_cfm: number;
-  location: string;
-  manufacturer?: string;
-  model?: string;
-  serial_number?: string;
-  installation_date?: string;
-  is_operational: boolean;
-  last_maintenance: string;
-  next_maintenance: string;
-  maintenance_schedule: 'weekly' | 'monthly' | 'quarterly' | 'annual';
-  efficiency_rating?: number;
-  noise_level_db?: number;
-  energy_consumption_kw?: number;
-}
-
-export interface EmergencyEquipment {
-  id: string;
-  name: string;
-  type: 'rescue_tripod' | 'winch' | 'ventilator' | 'communication' | 'lighting' | 'first_aid' | 'breathing_apparatus' | 'fall_protection';
-  location: string;
-  manufacturer?: string;
-  model?: string;
-  serial_number?: string;
-  purchase_date?: string;
-  last_inspection: string;
-  next_inspection: string;
-  inspection_frequency: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'annual';
-  is_operational: boolean;
-  certification_number?: string;
-  certification_expiry?: string;
-  maintenance_records: MaintenanceRecord[];
-}
-
-export interface MaintenanceRecord {
-  date: string;
-  type: 'inspection' | 'repair' | 'calibration' | 'replacement';
-  description: string;
-  technician: string;
-  parts_replaced?: string[];
-  cost?: number;
-  next_action?: string;
-}
-
-export interface PersonnelAssignment {
-  id: string;
-  name: string;
-  role: string;
-  certifications: string[];
-  experience_years: number;
-  training_records: TrainingRecord[];
-  medical_clearance: boolean;
-  medical_expiry?: string;
-  emergency_contact: EmergencyContact;
-}
-
-export interface TrainingRecord {
-  course_name: string;
-  completion_date: string;
-  expiry_date?: string;
-  instructor: string;
-  certificate_number?: string;
-  score?: number;
-}
-
-export interface EmergencyContact {
-  name: string;
-  relationship: string;
-  phone_primary: string;
-  phone_secondary?: string;
-  email?: string;
-}
-
-export interface AtmosphericReading {
-  timestamp: string;
-  device_id: string;
-  device_name: string;
-  operator: string;
-  location: string;
-  oxygen_percent: number;
-  lel_percent: number;
-  h2s_ppm: number;
-  co_ppm: number;
-  co2_ppm?: number;
-  temperature_celsius: number;
-  humidity_percent?: number;
-  pressure_kpa?: number;
-  is_valid: boolean;
-  calibration_date: string;
-  notes?: string;
-}
-
-export interface InspectionItem {
-  id: string;
-  category: string;
-  description: string;
-  requirement: string;
-  status: 'pass' | 'fail' | 'na' | 'attention_required';
-  notes?: string;
-  photos?: string[];
-  corrective_action?: string;
-  due_date?: string;
-}
-
-export interface InspectionFinding {
-  id: string;
-  category: 'safety' | 'environmental' | 'operational' | 'compliance';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  description: string;
-  location: string;
-  recommendation: string;
-  timeline: 'immediate' | 'within_24h' | 'within_week' | 'within_month';
-  responsible_person?: string;
-  photos?: string[];
-  status: 'open' | 'in_progress' | 'completed' | 'deferred';
-}
-
-export interface WeatherConditions {
-  temperature_celsius: number;
-  humidity_percent: number;
-  pressure_kpa: number;
-  wind_speed_kmh: number;
-  wind_direction_degrees: number;
-  precipitation: 'none' | 'light' | 'moderate' | 'heavy';
-  visibility_km: number;
-  conditions: 'clear' | 'cloudy' | 'overcast' | 'fog' | 'rain' | 'snow';
-}
-
-export interface PersonnelInvolved {
-  id: string;
-  name: string;
-  role: string;
-  department: string;
-  experience_years: number;
-  injury_type?: 'none' | 'minor' | 'major' | 'fatality';
-  medical_treatment?: boolean;
-  hospital_transport?: boolean;
-  time_off_work?: number; // days
-}
-
-export interface CorrectiveAction {
-  id: string;
-  description: string;
-  responsible_person: string;
-  due_date: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  status: 'pending' | 'in_progress' | 'completed' | 'overdue';
-  completion_date?: string;
-  verification_method: string;
-  cost_estimate?: number;
-  actual_cost?: number;
-}
-
-export interface QRPrintData {
-  title: string;
-  subtitle: string;
-  instructions: string[];
-  emergency_contact: string;
-  company_logo?: string;
-  qr_size: number;
-  format: 'A4' | 'Letter' | 'Label' | '4x6' | '3x5';
-  language: 'fr' | 'en';
-  color_scheme: 'standard' | 'high_contrast' | 'safety_orange' | 'custom';
-  include_map: boolean;
-  include_photos: boolean;
-  watermark?: string;
-}
-
 // =================== CONFIGURATION ===================
 
 const QR_CONFIG = {
@@ -477,11 +439,10 @@ export function useQRCode() {
       setIsLoading(true);
       clearError();
 
-      const spaceId = generateId('space');
       const userId = 'current_user'; // À remplacer par auth réel
 
       const confinedSpace: ConfinedSpaceInsert = {
-        name: spaceData.name || `Espace Clos ${spaceId.slice(-8)}`,
+        name: spaceData.name || `Espace Clos ${Date.now().toString().slice(-8)}`,
         type: spaceData.type || 'other',
         description: spaceData.description || '',
         location_latitude: position.latitude,
@@ -731,7 +692,6 @@ export function useQRCode() {
         color: QR_CONFIG.color
       });
 
-      const qrId = generateId('qr');
       const userId = 'current_user'; // À remplacer par auth réel
 
       const qrCodeData: QRCodeInsert = {
@@ -754,7 +714,7 @@ export function useQRCode() {
 
       if (error) throw error;
 
-      log('QR Code généré', { qrId, spaceId, spaceName: space.name });
+      log('QR Code généré', { qrId: data.id, spaceId, spaceName: space.name });
       return data;
 
     } catch (error: any) {
@@ -762,7 +722,7 @@ export function useQRCode() {
     } finally {
       setIsLoading(false);
     }
-  }, [getConfinedSpace, generateQRCodeImage, generateId, handleError, clearError, log]);
+  }, [getConfinedSpace, generateQRCodeImage, handleError, clearError, log]);
 
   // =================== GESTION HISTORIQUES ===================
 
@@ -931,7 +891,7 @@ export function useQRCode() {
 
       if (qrError) throw qrError;
 
-      const space = qrData.confined_spaces;
+      const space = qrData.confined_spaces as ConfinedSpaceRow;
       const printData = qrData.print_data;
 
       // Incrémenter le compteur d'impressions
@@ -958,7 +918,7 @@ export function useQRCode() {
               size: ${printData.format}; 
               margin: 1.5cm; 
               @bottom-center {
-                content: "Page " counter(page) " - Généré le " "${new Date().toLocaleDateString('fr-CA')}";
+                content: "Page " counter(page) " - Généré le ${new Date().toLocaleDateString('fr-CA')}";
                 font-size: 10px;
                 color: #666;
               }
@@ -1139,7 +1099,7 @@ export function useQRCode() {
             <div class="instructions">
               <h3>📱 Instructions d'utilisation:</h3>
               <ul>
-                ${printData.instructions.map(instruction => `<li>${instruction}</li>`).join('')}
+                ${printData.instructions.map((instruction: string) => `<li>${instruction}</li>`).join('')}
               </ul>
             </div>
 
@@ -1171,7 +1131,7 @@ export function useQRCode() {
             ${space.hazards.length > 0 ? `
               <div class="hazards">
                 <strong>⚠️ Dangers identifiés:</strong><br/>
-                ${space.hazards.map(hazard => `<span class="hazard-item">${hazard}</span>`).join('')}
+                ${space.hazards.map((hazard: string) => `<span class="hazard-item">${hazard}</span>`).join('')}
               </div>
             ` : ''}
             
