@@ -5,11 +5,20 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ChevronLeft, ChevronRight, Save, Send, CheckCircle, XCircle, 
-  AlertTriangle, Activity, FileText, Users, Shield, Building2,
-  Wind, Eye, Settings, Mic, Camera, MapPin, Zap
-} from 'lucide-react';
+import type {
+  ApprovalLevel,
+  SignatureData,
+  InspectionRecord,
+  ProcedureStep,
+  Certification,
+  PersonnelMember,
+  TestResult,
+  CalibrationRecord,
+  EquipmentItem,
+  PPEItem,
+  CommunicationPlan,
+  ContactInfo
+} from '../../types/shared';
 
 // =================== TYPES ESSENTIELS ===================
 interface HeightWorkFormData {
