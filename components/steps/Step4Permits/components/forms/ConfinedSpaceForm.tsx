@@ -5,17 +5,20 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  // Navigation & UI
-  ChevronLeft, ChevronRight, Save, Send, Download, Upload,
-  // Status & Progress
-  CheckCircle, XCircle, Clock, AlertTriangle, Zap, Activity,
-  // Features
-  Mic, Camera, MapPin, Bluetooth, QrCode, Signature,
-  // Content
-  FileText, Users, Shield, Eye, Wind, Thermometer, 
-  Settings, Bell, Star, Award, Lock, Key
-} from 'lucide-react';
+import type {
+  ApprovalLevel,
+  SignatureData,
+  InspectionRecord,
+  ProcedureStep,
+  Certification,
+  PersonnelMember,
+  TestResult,
+  CalibrationRecord,
+  EquipmentItem,
+  PPEItem,
+  CommunicationPlan,
+  ContactInfo
+} from '../../types/shared';
 
 // =================== TYPES & INTERFACES ===================
 
