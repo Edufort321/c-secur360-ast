@@ -85,7 +85,7 @@ export interface DeviceCapabilities {
 
 // =================== PATTERNS PRÉDÉFINIS ===================
 
-export const HAPTIC_PATTERNS: Record<string, HapticPattern> = {
+const HAPTIC_PATTERNS: Record<string, HapticPattern> = {
   // Feedback de base
   tap: {
     id: 'tap',
@@ -828,7 +828,7 @@ export function useHaptics(config: Partial<HapticConfig> = {}) {
   const tap = useCallback(() => playPattern('tap'), [playPattern]);
   const click = useCallback(() => playPattern('click'), [playPattern]);
   const success = useCallback(() => playPattern('success'), [playPattern]);
-  const error = useCallback() => playPattern('error'), [playPattern]);
+  const error = useCallback(() => playPattern('error'), [playPattern]);
   const warning = useCallback(() => playPattern('warning'), [playPattern]);
   const criticalAlert = useCallback(() => playPattern('critical_alert'), [playPattern]);
   const bluetoothConnect = useCallback(() => playPattern('bluetooth_connect'), [playPattern]);
@@ -914,8 +914,5 @@ export function useHaptics(config: Partial<HapticConfig> = {}) {
 // =================== TYPES EXPORTÉS ===================
 
 export type UseHapticsReturn = ReturnType<typeof useHaptics>;
-
-// Export des patterns pour utilisation externe
-export { HAPTIC_PATTERNS };
 
 export default useHaptics;
