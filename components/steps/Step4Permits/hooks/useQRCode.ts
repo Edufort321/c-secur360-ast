@@ -4,7 +4,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import type { GeolocationPosition, GeolocationAddress } from './useGeolocation';
+import type { CustomGeolocationPosition, GeolocationAddress } from './useGeolocation';
 
 // =================== CONFIGURATION SUPABASE ===================
 
@@ -470,7 +470,7 @@ export function useQRCode() {
 
   const createConfinedSpace = useCallback(async (
     spaceData: Partial<ConfinedSpaceInsert>,
-    position: GeolocationPosition,
+    position: CustomGeolocationPosition,
     address: GeolocationAddress
   ): Promise<string | null> => {
     try {
