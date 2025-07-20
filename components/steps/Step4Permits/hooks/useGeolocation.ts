@@ -668,13 +668,4 @@ export function useGeolocation(config: Partial<GeolocationConfig> = {}) {
 
 export type UseGeolocationReturn = ReturnType<typeof useGeolocation>;
 
-// Export des types pour utilisation dans d'autres hooks
-export type {
-  CustomGeolocationPosition,
-  GeolocationAddress,
-  GeolocationError,
-  GeolocationConfig,
-  LocationHistory
-};
-
 export default useGeolocation;
