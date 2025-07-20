@@ -199,8 +199,18 @@ const searchPermitsOptimized = (criteria: PermitSearchCriteria, permits: LegalPe
 
 const validateAtmosphericData = (data: any) => ({ valid: true });
 const validatePersonnelRequirements = (data: any) => ({ valid: true });
-const generatePermitPDF = async (permit: any, formData: any, options: any) => ({ success: true, downloadUrl: '' });
-const exportPermitData = async (permit: any, formData: any, options: any) => ({ success: true });
+const generatePermitPDF = async (permit: any, formData: any, options: any) => ({ 
+  success: true, 
+  downloadUrl: '', 
+  error: null 
+});
+const exportPermitData = async (permit: any, formData: any, options: any) => ({ 
+  success: true, 
+  error: null,
+  mobileShareData: null,
+  exportUrl: null,
+  fileName: null
+});
 
 // MobileFormValidator temporaire
 class MobileFormValidator {
@@ -852,7 +862,7 @@ export const usePermits = (config: UsePermitsConfig): [UsePermitsState, UsePermi
     });
     
     if (!result.success) {
-      throw new Error(result.error);
+      throw new Error(result.error || 'PDF generation failed');
     }
     
     return result.downloadUrl || '';
@@ -875,7 +885,7 @@ export const usePermits = (config: UsePermitsConfig): [UsePermitsState, UsePermi
     });
     
     if (!exportResult.success) {
-      throw new Error(exportResult.error);
+      throw new Error(exportResult.error || 'Export failed');
     }
     
     // Utiliser Web Share API si disponible
