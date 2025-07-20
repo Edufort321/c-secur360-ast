@@ -615,7 +615,7 @@ export const CERTIFICATIONS_CATALOG: Record<string, CertificationInfo> = {
     color: '#7C3AED'
   },
 
-  // =================== CERTIFICATIONS EXCAVATION ===================
+  // =================== AUTRES CERTIFICATIONS ===================
   'personne-competente-excavation': {
     id: 'personne-competente-excavation',
     name: { fr: 'Personne compétente excavation', en: 'Excavation Competent Person' },
@@ -662,7 +662,6 @@ export const CERTIFICATIONS_CATALOG: Record<string, CertificationInfo> = {
     color: '#A16207'
   },
 
-  // =================== CERTIFICATIONS TRAVAIL EN HAUTEUR ===================
   'travail-hauteur-superviseur': {
     id: 'travail-hauteur-superviseur',
     name: { fr: 'Superviseur travail hauteur', en: 'Work at Height Supervisor' },
@@ -709,7 +708,6 @@ export const CERTIFICATIONS_CATALOG: Record<string, CertificationInfo> = {
     color: '#7C2D12'
   },
 
-  // =================== CERTIFICATIONS ÉLECTRIQUES ===================
   'electricien-certifie': {
     id: 'electricien-certifie',
     name: { fr: 'Électricien certifié', en: 'Certified Electrician' },
@@ -725,7 +723,7 @@ export const CERTIFICATIONS_CATALOG: Record<string, CertificationInfo> = {
       en: ['30h continuing education', 'Regulations exam']
     },
     minimumAge: 18,
-    trainingHours: 8000, // Apprentissage 4 ans
+    trainingHours: 8000,
     examRequired: true,
     practicalTest: true,
     medicalExam: false,
@@ -739,19 +737,6 @@ export const CERTIFICATIONS_CATALOG: Record<string, CertificationInfo> = {
           phone: '514-738-2184',
           email: 'info@cmeq.org',
           address: '5925, boulevard Décarie, Montréal (Québec) H3W 3C9'
-        },
-        processingTime: '8-12 semaines',
-        recognition: 'provincial'
-      },
-      {
-        organization: 'Electrical Safety Authority (ESA)',
-        province: ['ON'],
-        website: 'https://www.esasafe.com',
-        accreditation: 'ESA-EC-001',
-        contactInfo: {
-          phone: '1-877-372-7233',
-          email: 'info@esasafe.com',
-          address: '155 Matheson Blvd W, Mississauga, ON L5R 3L5'
         },
         processingTime: '8-12 semaines',
         recognition: 'provincial'
@@ -812,9 +797,7 @@ export const CERTIFICATIONS_CATALOG: Record<string, CertificationInfo> = {
     continuingEducation: 4,
     icon: '🔐',
     color: '#DC2626'
-  },
-
-  // =================== CERTIFICATIONS SPÉCIALISÉES ===================
+  // =================== AUTRES CERTIFICATIONS COMPLÈTES ===================
   'inspecteur-pression-certifie': {
     id: 'inspecteur-pression-certifie',
     name: { fr: 'Inspecteur équipements pression', en: 'Pressure Equipment Inspector' },
@@ -995,6 +978,145 @@ export const CERTIFICATIONS_CATALOG: Record<string, CertificationInfo> = {
     continuingEducation: 8,
     icon: '🏗️',
     color: '#991B1B'
+  },
+
+  // =================== CERTIFICATIONS ADDITIONNELLES ===================
+  'gaz-detection': {
+    id: 'gaz-detection',
+    name: { fr: 'Détection de gaz', en: 'Gas Detection' },
+    description: { 
+      fr: 'Utilisation détecteurs multi-gaz portables',
+      en: 'Portable multi-gas detector usage'
+    },
+    category: 'technical',
+    level: 'intermediate',
+    validityPeriod: 24,
+    renewalRequirements: {
+      fr: ['Calibrage équipements', 'Test fonctionnement'],
+      en: ['Equipment calibration', 'Function testing']
+    },
+    prerequisite: ['securite-generale'],
+    minimumAge: 18,
+    trainingHours: 12,
+    examRequired: true,
+    practicalTest: true,
+    medicalExam: false,
+    issuingBodies: [
+      {
+        organization: 'CNESST',
+        province: ['QC'],
+        website: 'https://www.cnesst.gouv.qc.ca',
+        accreditation: 'CNESST-GD-001',
+        contactInfo: {
+          phone: '1-844-838-0808',
+          email: 'formation@cnesst.gouv.qc.ca',
+          address: '524, rue Bourdages, Québec (Québec) G1K 7E2'
+        },
+        processingTime: '1-2 semaines',
+        recognition: 'provincial'
+      }
+    ],
+    cost: {
+      initial: 200,
+      renewal: 100,
+      currency: 'CAD'
+    },
+    onlineAvailable: true,
+    continuingEducation: 2,
+    icon: '🔍',
+    color: '#6B7280'
+  },
+
+  'equipements-protection': {
+    id: 'equipements-protection',
+    name: { fr: 'Équipements de protection individuelle', en: 'Personal Protective Equipment' },
+    description: { 
+      fr: 'Sélection et utilisation EPI selon risques',
+      en: 'PPE selection and usage per risk assessment'
+    },
+    category: 'safety',
+    level: 'basic',
+    validityPeriod: 24,
+    renewalRequirements: {
+      fr: ['Mise à jour équipements', 'Formation nouvelle technologie'],
+      en: ['Equipment updates', 'New technology training']
+    },
+    prerequisite: ['securite-generale'],
+    minimumAge: 16,
+    trainingHours: 8,
+    examRequired: true,
+    practicalTest: true,
+    medicalExam: false,
+    issuingBodies: [
+      {
+        organization: 'CNESST',
+        province: ['QC'],
+        website: 'https://www.cnesst.gouv.qc.ca',
+        accreditation: 'CNESST-EPI-001',
+        contactInfo: {
+          phone: '1-844-838-0808',
+          email: 'formation@cnesst.gouv.qc.ca',
+          address: '524, rue Bourdages, Québec (Québec) G1K 7E2'
+        },
+        processingTime: '1 semaine',
+        recognition: 'provincial'
+      }
+    ],
+    cost: {
+      initial: 150,
+      renewal: 75,
+      currency: 'CAD'
+    },
+    onlineAvailable: true,
+    continuingEducation: 2,
+    icon: '🦺',
+    color: '#F59E0B'
+  },
+
+  'communication-urgence': {
+    id: 'communication-urgence',
+    name: { fr: 'Communications d\'urgence', en: 'Emergency Communications' },
+    description: { 
+      fr: 'Systèmes communication et procédures urgence',
+      en: 'Communication systems and emergency procedures'
+    },
+    category: 'safety',
+    level: 'basic',
+    validityPeriod: 24,
+    renewalRequirements: {
+      fr: ['Test équipements', 'Simulation urgence'],
+      en: ['Equipment testing', 'Emergency simulation']
+    },
+    prerequisite: ['securite-generale'],
+    minimumAge: 18,
+    trainingHours: 8,
+    examRequired: true,
+    practicalTest: true,
+    medicalExam: false,
+    issuingBodies: [
+      {
+        organization: 'CNESST',
+        province: ['QC'],
+        website: 'https://www.cnesst.gouv.qc.ca',
+        accreditation: 'CNESST-CU-001',
+        contactInfo: {
+          phone: '1-844-838-0808',
+          email: 'formation@cnesst.gouv.qc.ca',
+          address: '524, rue Bourdages, Québec (Québec) G1K 7E2'
+        },
+        processingTime: '1-2 semaines',
+        recognition: 'provincial'
+      }
+    ],
+    cost: {
+      initial: 200,
+      renewal: 100,
+      currency: 'CAD'
+    },
+    onlineAvailable: false,
+    continuingEducation: 2,
+    icon: '📻',
+    color: '#10B981'
   }
 };
 
@@ -1060,7 +1182,7 @@ export const PROVINCIAL_CERTIFICATION_REQUIREMENTS: Record<string, ProvincialCer
             'Updated training registry maintained'
           ]
         },
-        reciprocity: ['ON', 'NB'] // Reconnaissance mutuelle limitée
+        reciprocity: ['ON', 'NB']
       },
       'travail-chaud': {
         roles: [
@@ -1094,7 +1216,8 @@ export const PROVINCIAL_CERTIFICATION_REQUIREMENTS: Record<string, ProvincialCer
             },
             experienceRequired: 2
           }
-        ]
+        ],
+        reciprocity: ['ON']
       },
       'levage': {
         roles: [
@@ -1132,7 +1255,8 @@ export const PROVINCIAL_CERTIFICATION_REQUIREMENTS: Record<string, ProvincialCer
             },
             experienceRequired: 2
           }
-        ]
+        ],
+        reciprocity: ['ON']
       },
       'excavation': {
         roles: [
@@ -1150,7 +1274,8 @@ export const PROVINCIAL_CERTIFICATION_REQUIREMENTS: Record<string, ProvincialCer
               en: ['Geotechnical training recommended', 'Minimum 25 years old']
             }
           }
-        ]
+        ],
+        reciprocity: []
       },
       'hauteur': {
         roles: [
@@ -1164,7 +1289,8 @@ export const PROVINCIAL_CERTIFICATION_REQUIREMENTS: Record<string, ProvincialCer
             },
             experienceRequired: 3
           }
-        ]
+        ],
+        reciprocity: ['ON']
       },
       'isolation-energetique': {
         roles: [
@@ -1182,7 +1308,8 @@ export const PROVINCIAL_CERTIFICATION_REQUIREMENTS: Record<string, ProvincialCer
               en: ['Valid CMEQ license', 'Specialized LOTO training']
             }
           }
-        ]
+        ],
+        reciprocity: []
       },
       'pression': {
         roles: [
@@ -1194,13 +1321,10 @@ export const PROVINCIAL_CERTIFICATION_REQUIREMENTS: Record<string, ProvincialCer
               optional: [],
               alternatives: []
             },
-            experienceRequired: 5,
-            specialConditions: {
-              fr: ['Certification CSA B51 valide', 'Formation continue 40h/an'],
-              en: ['Valid CSA B51 certification', '40h/year continuing education']
-            }
+            experienceRequired: 5
           }
-        ]
+        ],
+        reciprocity: []
       },
       'radiographie': {
         roles: [
@@ -1212,13 +1336,10 @@ export const PROVINCIAL_CERTIFICATION_REQUIREMENTS: Record<string, ProvincialCer
               optional: [],
               alternatives: []
             },
-            experienceRequired: 2,
-            specialConditions: {
-              fr: ['Licence CCSN valide', 'Surveillance médicale renforcée'],
-              en: ['Valid CNSC license', 'Enhanced medical surveillance']
-            }
+            experienceRequired: 2
           }
-        ]
+        ],
+        reciprocity: []
       },
       'toiture': {
         roles: [
@@ -1232,7 +1353,8 @@ export const PROVINCIAL_CERTIFICATION_REQUIREMENTS: Record<string, ProvincialCer
             },
             experienceRequired: 2
           }
-        ]
+        ],
+        reciprocity: []
       },
       'demolition': {
         roles: [
@@ -1250,7 +1372,8 @@ export const PROVINCIAL_CERTIFICATION_REQUIREMENTS: Record<string, ProvincialCer
               en: ['Mandatory asbestos training', 'Medical surveillance']
             }
           }
-        ]
+        ],
+        reciprocity: []
       }
     },
     renewalPeriods: {
@@ -1272,12 +1395,15 @@ export const PROVINCIAL_CERTIFICATION_REQUIREMENTS: Record<string, ProvincialCer
       'inspecteur-pression-certifie': 60,
       'operateur-radio-certifie': 60,
       'couvreur-certifie': 36,
-      'demolisseur-certifie': 36
+      'demolisseur-certifie': 36,
+      'gaz-detection': 24,
+      'equipements-protection': 24,
+      'communication-urgence': 24
     },
     gracePeriods: {
       'securite-generale': 30,
       'premiers-secours': 30,
-      'espace-clos-entrant': 0, // Aucune grâce pour sécurité critique
+      'espace-clos-entrant': 0,
       'espace-clos-surveillant': 0,
       'espace-clos-superviseur': 0,
       'soudage-certifie': 15,
@@ -1293,7 +1419,10 @@ export const PROVINCIAL_CERTIFICATION_REQUIREMENTS: Record<string, ProvincialCer
       'inspecteur-pression-certifie': 0,
       'operateur-radio-certifie': 0,
       'couvreur-certifie': 15,
-      'demolisseur-certifie': 0
+      'demolisseur-certifie': 0,
+      'gaz-detection': 7,
+      'equipements-protection': 15,
+      'communication-urgence': 7
     },
     penalties: {
       expiredCertification: {
@@ -1310,7 +1439,6 @@ export const PROVINCIAL_CERTIFICATION_REQUIREMENTS: Record<string, ProvincialCer
       }
     }
   }
-  // Autres provinces suivront le même modèle...
 };
 
 // =================== FONCTIONS UTILITAIRES ===================
@@ -1377,7 +1505,7 @@ export function validateCertificationExpiry(
     isInGracePeriod = false;
     status = daysUntilExpiry <= 30 ? 'expiring-soon' : 'valid';
   } else if (gracePeriod > 0 && now <= graceEndDate) {
-    isValid = true; // Techniquement valide pendant la grâce
+    isValid = true;
     isInGracePeriod = true;
     status = 'grace-period';
   } else {
