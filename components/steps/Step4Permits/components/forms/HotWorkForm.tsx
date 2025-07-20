@@ -5,13 +5,16 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ChevronLeft, ChevronRight, Save, Send, CheckCircle, XCircle, 
+  AlertTriangle, Activity, Users, Shield, Zap, FileText,
+  Settings, Flame
+} from 'lucide-react';
 import type {
   ApprovalLevel,
   SignatureData,
   InspectionRecord,
-  ProcedureStep,
   Certification,
-  PersonnelMember,
   TestResult,
   CalibrationRecord,
   EquipmentItem,
@@ -20,7 +23,47 @@ import type {
   ContactInfo
 } from '../../types/shared';
 
-// =================== TYPES & INTERFACES ===================
+// =================== TYPES LOCAUX SPÉCIFIQUES TRAVAIL À CHAUD ===================
+
+// Interface ProcedureStep locale pour éviter conflit
+interface HotWorkProcedureStep {
+  id: string;
+  title: { fr: string; en: string };
+  description: { fr: string; en: string };
+  acceptanceCriteria: { fr: string[]; en: string[] };
+  isCompleted: boolean;
+  completedBy?: string;
+  completedAt?: Date;
+  required: boolean;
+  estimatedTime?: number;
+  fireRiskLevel?: 'low' | 'medium' | 'high' | 'critical';
+}
+
+// Interface PersonnelMember locale pour éviter conflit
+interface HotWorkPersonnelMember {
+  id: string;
+  prenom: string;
+  nom: string;
+  poste: string;
+  entreprise: string;
+  age: number;
+  experience: number;
+  certifications: Certification[];
+  photo?: string;
+  statut: 'actif' | 'inactif' | 'formation';
+  hotWorkCertifications: string[];
+  fireWatchTrained: boolean;
+  lastFireSafetyTraining: Date;
+  medicalValid: boolean;
+}
+
+interface ValidationStep {
+  id: string;
+  description: string;
+  completed: boolean;
+  notes?: string;
+}
+
 interface HotWorkFormData {
   // Section 1 - Identification
   identification: {
@@ -35,9 +78,12 @@ interface HotWorkFormData {
       room?: string;
       specificLocation: string;
       hotZoneRadius: number; // metres
+      ventilationAdequate: boolean;
+      floorType: string;
     };
     workDescription: string;
     equipmentUsed: string[];
+    materials: string[];
     startDate: Date;
     endDate: Date;
     estimatedDuration: number;
@@ -46,14 +92,22 @@ interface HotWorkFormData {
       phone: string;
       role: string;
     };
+    contractor: {
+      name: string;
+      license: string;
+      hotWorkLicense: string;
+      contact: string;
+      insurance: string;
+    };
   };
 
   // Section 2 - Personnel
   personnel: {
-    operateur: PersonnelMember[];
-    surveillantIncendie: PersonnelMember[];
-    superviseur: PersonnelMember[];
-    securite: PersonnelMember[];
+    operateur: HotWorkPersonnelMember[];
+    surveillantIncendie: HotWorkPersonnelMember[];
+    superviseur: HotWorkPersonnelMember[];
+    securite: HotWorkPersonnelMember[];
+    sauveteurs?: HotWorkPersonnelMember[];
   };
 
   // Section 3 - Évaluation Risques Incendie
@@ -63,23 +117,31 @@ interface HotWorkFormData {
       types: string[];
       distance: number; // metres
       protection: string[];
+      fireRating: string;
+      removalPossible: boolean;
     };
     flammableLiquids: {
       present: boolean;
       types: string[];
       containers: string[];
       ventilation: string;
+      spillContainment: boolean;
+      flashPoint: number; // °C
     };
     gasesFlammables: {
       present: boolean;
       types: string[];
       concentration: number; // %LEL
       monitoring: boolean;
+      ventilationRate: number; // m³/min
+      detectionSystem: boolean;
     };
     structuresAdjacentes: {
       description: string[];
       fireResistance: string;
       protectionRequired: boolean;
+      fireBarriers: string[];
+      sprinklerSystem: boolean;
     };
     weatherConditions: {
       temperature: number;
@@ -87,7 +149,9 @@ interface HotWorkFormData {
       windSpeed: number;
       windDirection: string;
       weatherImpact: 'low' | 'medium' | 'high';
+      precipitationRisk: boolean;
     };
+    overallRiskLevel: 'low' | 'medium' | 'high' | 'critical';
   };
 
   // Section 4 - Mesures Préventives
@@ -97,25 +161,38 @@ interface HotWorkFormData {
       duration: number; // minutes après travaux
       personnel: string[];
       equipment: string[];
+      communicationMethod: string;
+      checkInterval: number; // minutes
     };
     fireExtinguishers: {
       types: string[];
       locations: string[];
       inspectionDate: Date;
       quantity: number;
+      capacity: string;
+      accessibility: boolean;
     };
     protectionBarriers: {
       type: string[];
       coverage: string[];
       fireResistance: string;
+      heatShields: boolean;
+      sparkScreens: boolean;
     };
     ventilation: {
       required: boolean;
       type: 'naturelle' | 'forcée' | 'aspiration';
       capacity: number; // m³/min
       smokeEvacuation: boolean;
+      filterSystem: boolean;
     };
-    emergencyProcedures: ProcedureStep[];
+    emergencyProcedures: HotWorkProcedureStep[];
+    hotWorkProtocol: {
+      preWorkInspection: boolean;
+      continuousMonitoring: boolean;
+      postWorkInspection: boolean;
+      cooldownPeriod: number; // minutes
+    };
   };
 
   // Section 5 - Équipements
@@ -125,6 +202,7 @@ interface HotWorkFormData {
     monitoringEquipment: EquipmentItem[];
     ppe: PPEItem[];
     communicationEquipment: EquipmentItem[];
+    testingEquipment: EquipmentItem[];
   };
 
   // Section 6 - Validation
@@ -137,6 +215,8 @@ interface HotWorkFormData {
     issuedBy?: SignatureData;
     issuedAt?: Date;
     validUntil?: Date;
+    fireMarshallApproval?: SignatureData;
+    safetyOfficerApproval?: SignatureData;
   };
 }
 
@@ -150,57 +230,166 @@ interface FireWatchEntry {
   hazards: string[];
   actions: string[];
   photo?: string;
+  equipmentChecked: boolean;
+  allClear: boolean;
 }
 
-interface PersonnelMember {
-  id: string;
-  prenom: string;
-  nom: string;
-  poste: string;
-  entreprise: string;
-  age: number;
-  experience: number;
-  certifications: Certification[];
-  photo?: string;
-  statut: 'actif' | 'inactif' | 'formation';
-}
+// =================== CONFIGURATION ===================
 
-interface EquipmentItem {
-  id: string;
-  name: string;
-  type: string;
-  model: string;
-  serialNumber: string;
-  lastInspection: Date;
-  nextInspection: Date;
-  status: 'operational' | 'maintenance' | 'defective';
-  location: string;
-}
+// Types de travaux à chaud avec spécifications techniques
+const HOT_WORK_TYPES = {
+  'soudage': {
+    icon: '⚡',
+    title: { fr: 'Soudage électrique', en: 'Electric welding' },
+    risks: { fr: ['Étincelles', 'Arc électrique', 'Fumées'], en: ['Sparks', 'Electric arc', 'Fumes'] },
+    equipment: ['poste-soudure', 'electrodes', 'cables'],
+    temperature: { min: 3000, max: 6000 }, // °C
+    sparkRange: 10, // mètres
+    requiredCertifications: ['soudage-CSA-W47.1', 'arc-electrique']
+  },
+  'coupage': {
+    icon: '🔥',
+    title: { fr: 'Coupage thermique', en: 'Thermal cutting' },
+    risks: { fr: ['Étincelles', 'Scories', 'Gaz chauds'], en: ['Sparks', 'Slag', 'Hot gases'] },
+    equipment: ['chalumeau', 'oxygene', 'acetylene'],
+    temperature: { min: 2500, max: 3500 },
+    sparkRange: 15,
+    requiredCertifications: ['coupage-thermique', 'gaz-comprimes']
+  },
+  'meulage': {
+    icon: '💫',
+    title: { fr: 'Meulage/Polissage', en: 'Grinding/Polishing' },
+    risks: { fr: ['Étincelles métalliques', 'Poussières', 'Friction'], en: ['Metal sparks', 'Dust', 'Friction'] },
+    equipment: ['meuleuse', 'disques', 'aspiration'],
+    temperature: { min: 800, max: 1500 },
+    sparkRange: 8,
+    requiredCertifications: ['meulage-securite', 'outils-electriques']
+  },
+  'brasage': {
+    icon: '🔥',
+    title: { fr: 'Brasage/Soudure', en: 'Brazing/Soldering' },
+    risks: { fr: ['Flamme nue', 'Métal fondu', 'Vapeurs'], en: ['Open flame', 'Molten metal', 'Vapors'] },
+    equipment: ['chalumeau', 'metal-apport', 'flux'],
+    temperature: { min: 400, max: 900 },
+    sparkRange: 5,
+    requiredCertifications: ['brasage-specialise', 'flamme-nue']
+  },
+  'oxycoupage': {
+    icon: '💥',
+    title: { fr: 'Oxycoupage', en: 'Oxyfuel cutting' },
+    risks: { fr: ['Flamme haute température', 'Projection métal', 'Gaz sous pression'], en: ['High temp flame', 'Metal projection', 'Pressurized gas'] },
+    equipment: ['chalumeau-oxycoupage', 'oxygene', 'gaz-combustible'],
+    temperature: { min: 3000, max: 4000 },
+    sparkRange: 20,
+    requiredCertifications: ['oxycoupage-avance', 'haute-pression']
+  },
+  'autre': {
+    icon: '🛠️',
+    title: { fr: 'Autre travail à chaud', en: 'Other hot work' },
+    risks: { fr: ['Variable selon type'], en: ['Variable by type'] },
+    equipment: ['selon-travail'],
+    temperature: { min: 200, max: 5000 },
+    sparkRange: 12,
+    requiredCertifications: ['travail-chaud-general']
+  }
+};
 
-interface ProcedureStep {
-  id: string;
-  title: { fr: string; en: string };
-  description: { fr: string; en: string };
-  acceptanceCriteria: { fr: string[]; en: string[] };
-  isCompleted: boolean;
-  completedBy?: string;
-  completedAt?: Date;
-}
+// Réglementations provinciales canadiennes
+const PROVINCIAL_REGULATIONS = {
+  QC: {
+    fireWatchDuration: 60, // minutes après travaux
+    hotZoneRadius: 10, // mètres minimum
+    requiredCertifications: {
+      operateur: ['soudage-certifie-qc', 'travail-chaud-qc'],
+      surveillantIncendie: ['surveillant-incendie-qc', 'extincteurs-qc']
+    },
+    temperatureLimits: {
+      maxAmbient: 35, // °C
+      maxSurface: 60, // °C après travaux
+      windSpeedMax: 25 // km/h
+    },
+    inspectionRequirements: {
+      preWork: true,
+      postWork: true,
+      fireWatchLog: true
+    },
+    references: {
+      regulation: 'RSST, art. 312-325',
+      standard: 'NFPA 51B',
+      authority: 'CNESST'
+    }
+  },
+  ON: {
+    fireWatchDuration: 30,
+    hotZoneRadius: 15,
+    requiredCertifications: {
+      operateur: ['soudage-certifie-on', 'travail-chaud-on'],
+      surveillantIncendie: ['surveillant-incendie-on']
+    },
+    temperatureLimits: {
+      maxAmbient: 30,
+      maxSurface: 55,
+      windSpeedMax: 20
+    },
+    inspectionRequirements: {
+      preWork: true,
+      postWork: true,
+      fireWatchLog: true
+    },
+    references: {
+      regulation: 'O. Reg. 213/91',
+      standard: 'CSA W47.1',
+      authority: 'Ministry of Labour'
+    }
+  },
+  AB: {
+    fireWatchDuration: 45,
+    hotZoneRadius: 12,
+    requiredCertifications: {
+      operateur: ['soudage-certifie-ab', 'travail-chaud-ab'],
+      surveillantIncendie: ['surveillant-incendie-ab']
+    },
+    temperatureLimits: {
+      maxAmbient: 40,
+      maxSurface: 65,
+      windSpeedMax: 30
+    },
+    inspectionRequirements: {
+      preWork: true,
+      postWork: true,
+      fireWatchLog: true
+    },
+    references: {
+      regulation: 'OHS Code Part 18',
+      standard: 'CSA W47.1',
+      authority: 'Alberta Labour'
+    }
+  },
+  BC: {
+    fireWatchDuration: 30,
+    hotZoneRadius: 10,
+    requiredCertifications: {
+      operateur: ['soudage-certifie-bc', 'travail-chaud-bc'],
+      surveillantIncendie: ['surveillant-incendie-bc']
+    },
+    temperatureLimits: {
+      maxAmbient: 30,
+      maxSurface: 55,
+      windSpeedMax: 25
+    },
+    inspectionRequirements: {
+      preWork: true,
+      postWork: true,
+      fireWatchLog: true
+    },
+    references: {
+      regulation: 'OHS Regulation Part 16',
+      standard: 'CSA W47.1',
+      authority: 'WorkSafeBC'
+    }
+  }
+};
 
-// =================== PROPS ===================
-interface HotWorkFormProps {
-  permitId?: string;
-  initialData?: Partial<HotWorkFormData>;
-  language: 'fr' | 'en';
-  province: 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
-  userRole: string;
-  onSave: (data: HotWorkFormData) => Promise<void>;
-  onSubmit: (data: HotWorkFormData) => Promise<void>;
-  onCancel: () => void;
-  touchOptimized?: boolean;
-}
-
-// =================== CONFIGURATION SECTIONS ===================
 const FORM_SECTIONS = [
   {
     id: 'identification',
@@ -246,84 +435,18 @@ const FORM_SECTIONS = [
   }
 ];
 
-// =================== TYPES DE TRAVAUX À CHAUD ===================
-const HOT_WORK_TYPES = {
-  'soudage': {
-    icon: '⚡',
-    title: { fr: 'Soudage électrique', en: 'Electric welding' },
-    risks: { fr: ['Étincelles', 'Arc électrique', 'Fumées'], en: ['Sparks', 'Electric arc', 'Fumes'] },
-    equipment: ['poste-soudure', 'electrodes', 'cables'],
-    temperature: { min: 3000, max: 6000 } // °C
-  },
-  'coupage': {
-    icon: '🔥',
-    title: { fr: 'Coupage thermique', en: 'Thermal cutting' },
-    risks: { fr: ['Étincelles', 'Scories', 'Gaz chauds'], en: ['Sparks', 'Slag', 'Hot gases'] },
-    equipment: ['chalumeau', 'oxygene', 'acetylene'],
-    temperature: { min: 2500, max: 3500 }
-  },
-  'meulage': {
-    icon: '💫',
-    title: { fr: 'Meulage/Polissage', en: 'Grinding/Polishing' },
-    risks: { fr: ['Étincelles métalliques', 'Poussières', 'Friction'], en: ['Metal sparks', 'Dust', 'Friction'] },
-    equipment: ['meuleuse', 'disques', 'aspiration'],
-    temperature: { min: 800, max: 1500 }
-  },
-  'brasage': {
-    icon: '🔥',
-    title: { fr: 'Brasage/Soudure', en: 'Brazing/Soldering' },
-    risks: { fr: ['Flamme nue', 'Métal fondu', 'Vapeurs'], en: ['Open flame', 'Molten metal', 'Vapors'] },
-    equipment: ['chalumeau', 'metal-apport', 'flux'],
-    temperature: { min: 400, max: 900 }
-  },
-  'oxycoupage': {
-    icon: '💥',
-    title: { fr: 'Oxycoupage', en: 'Oxyfuel cutting' },
-    risks: { fr: ['Flamme haute température', 'Projection métal', 'Gaz sous pression'], en: ['High temp flame', 'Metal projection', 'Pressurized gas'] },
-    equipment: ['chalumeau-oxycoupage', 'oxygene', 'gaz-combustible'],
-    temperature: { min: 3000, max: 4000 }
-  }
-};
-
-// =================== RÉGLEMENTATIONS PAR PROVINCE ===================
-const PROVINCIAL_REGULATIONS = {
-  QC: {
-    fireWatchDuration: 60, // minutes après travaux
-    hotZoneRadius: 10, // mètres minimum
-    requiredCertifications: {
-      operateur: ['soudage-certifie-qc', 'travail-chaud-qc'],
-      surveillantIncendie: ['surveillant-incendie-qc', 'extincteurs-qc']
-    },
-    temperatureLimits: {
-      maxAmbient: 35, // °C
-      maxSurface: 60, // °C après travaux
-      windSpeedMax: 25 // km/h
-    },
-    references: {
-      regulation: 'RSST, art. 312-325',
-      standard: 'NFPA 51B',
-      authority: 'CNESST'
-    }
-  },
-  ON: {
-    fireWatchDuration: 30,
-    hotZoneRadius: 15,
-    requiredCertifications: {
-      operateur: ['soudage-certifie-on', 'travail-chaud-on'],
-      surveillantIncendie: ['surveillant-incendie-on']
-    },
-    temperatureLimits: {
-      maxAmbient: 30,
-      maxSurface: 55,
-      windSpeedMax: 20
-    },
-    references: {
-      regulation: 'O. Reg. 213/91',
-      standard: 'CSA W47.1',
-      authority: 'Ministry of Labour'
-    }
-  }
-};
+// =================== PROPS ===================
+interface HotWorkFormProps {
+  permitId?: string;
+  initialData?: Partial<HotWorkFormData>;
+  language: 'fr' | 'en';
+  province: 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+  userRole: string;
+  onSave: (data: HotWorkFormData) => Promise<void>;
+  onSubmit: (data: HotWorkFormData) => Promise<void>;
+  onCancel: () => void;
+  touchOptimized?: boolean;
+}
 
 // =================== COMPOSANT PRINCIPAL ===================
 export default function HotWorkForm({
@@ -348,10 +471,13 @@ export default function HotWorkForm({
       location: {
         address: '',
         specificLocation: '',
-        hotZoneRadius: PROVINCIAL_REGULATIONS[province].hotZoneRadius
+        hotZoneRadius: (PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.hotZoneRadius || 10),
+        ventilationAdequate: false,
+        floorType: ''
       },
       workDescription: '',
       equipmentUsed: [],
+      materials: [],
       startDate: new Date(),
       endDate: new Date(Date.now() + 8 * 60 * 60 * 1000),
       estimatedDuration: 8,
@@ -359,6 +485,13 @@ export default function HotWorkForm({
         name: '',
         phone: '',
         role: ''
+      },
+      contractor: {
+        name: '',
+        license: '',
+        hotWorkLicense: '',
+        contact: '',
+        insurance: ''
       }
     },
     personnel: {
@@ -372,65 +505,89 @@ export default function HotWorkForm({
         present: false,
         types: [],
         distance: 0,
-        protection: []
+        protection: [],
+        fireRating: '',
+        removalPossible: false
       },
       flammableLiquids: {
         present: false,
         types: [],
         containers: [],
-        ventilation: ''
+        ventilation: '',
+        spillContainment: false,
+        flashPoint: 0
       },
       gasesFlammables: {
         present: false,
         types: [],
         concentration: 0,
-        monitoring: false
+        monitoring: false,
+        ventilationRate: 0,
+        detectionSystem: false
       },
       structuresAdjacentes: {
         description: [],
         fireResistance: '',
-        protectionRequired: false
+        protectionRequired: false,
+        fireBarriers: [],
+        sprinklerSystem: false
       },
       weatherConditions: {
         temperature: 20,
         humidity: 50,
         windSpeed: 0,
         windDirection: 'N',
-        weatherImpact: 'low'
-      }
+        weatherImpact: 'low',
+        precipitationRisk: false
+      },
+      overallRiskLevel: 'medium'
     },
     preventiveMeasures: {
       fireWatch: {
         required: true,
-        duration: PROVINCIAL_REGULATIONS[province].fireWatchDuration,
+        duration: (PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.fireWatchDuration || 60),
         personnel: [],
-        equipment: []
+        equipment: [],
+        communicationMethod: '',
+        checkInterval: 15
       },
       fireExtinguishers: {
         types: [],
         locations: [],
         inspectionDate: new Date(),
-        quantity: 0
+        quantity: 0,
+        capacity: '',
+        accessibility: false
       },
       protectionBarriers: {
         type: [],
         coverage: [],
-        fireResistance: ''
+        fireResistance: '',
+        heatShields: false,
+        sparkScreens: false
       },
       ventilation: {
         required: false,
         type: 'naturelle',
         capacity: 0,
-        smokeEvacuation: false
+        smokeEvacuation: false,
+        filterSystem: false
       },
-      emergencyProcedures: []
+      emergencyProcedures: [],
+      hotWorkProtocol: {
+        preWorkInspection: true,
+        continuousMonitoring: true,
+        postWorkInspection: true,
+        cooldownPeriod: 30
+      }
     },
     equipment: {
       hotWorkEquipment: [],
       fireSuppressionEquipment: [],
       monitoringEquipment: [],
       ppe: [],
-      communicationEquipment: []
+      communicationEquipment: [],
+      testingEquipment: []
     },
     validation: {
       approvals: [],
@@ -518,6 +675,23 @@ export default function HotWorkForm({
     hapticFeedback('selection');
   }, [hapticFeedback]);
 
+  // Calcul automatique rayon zone chaude selon type de travail
+  useEffect(() => {
+    const workType = formData.identification.workType;
+    const workConfig = HOT_WORK_TYPES[workType];
+    if (workConfig && workConfig.sparkRange) {
+      const minRadius = PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.hotZoneRadius || 10;
+      const suggestedRadius = Math.max(minRadius, workConfig.sparkRange);
+      
+      if (formData.identification.location.hotZoneRadius !== suggestedRadius) {
+        updateFormData('identification', 'location', {
+          ...formData.identification.location,
+          hotZoneRadius: suggestedRadius
+        });
+      }
+    }
+  }, [formData.identification.workType, province, updateFormData]);
+
   // Validation section
   const validateSection = useCallback((sectionIndex: number) => {
     const section = FORM_SECTIONS[sectionIndex];
@@ -531,6 +705,9 @@ export default function HotWorkForm({
         if (!formData.identification.workDescription.trim()) {
           errors.push(language === 'fr' ? 'Description travaux requise' : 'Work description required');
         }
+        if (!formData.identification.contractor.hotWorkLicense.trim()) {
+          errors.push(language === 'fr' ? 'Licence travail à chaud requise' : 'Hot work license required');
+        }
         break;
         
       case 'personnel':
@@ -540,11 +717,41 @@ export default function HotWorkForm({
         if (formData.personnel.surveillantIncendie.length === 0) {
           errors.push(language === 'fr' ? 'Surveillant incendie requis' : 'Fire watch required');
         }
+        if (formData.personnel.superviseur.length === 0) {
+          errors.push(language === 'fr' ? 'Superviseur requis' : 'Supervisor required');
+        }
         break;
         
       case 'fireRisk':
-        if (!formData.fireRisk.weatherConditions.temperature) {
-          errors.push(language === 'fr' ? 'Conditions météo requises' : 'Weather conditions required');
+        if (formData.fireRisk.overallRiskLevel === 'critical' && !formData.preventiveMeasures.fireWatch.required) {
+          errors.push(language === 'fr' ? 'Surveillance incendie obligatoire pour risque critique' : 'Fire watch mandatory for critical risk');
+        }
+        if (formData.fireRisk.weatherConditions.windSpeed > (PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.temperatureLimits.windSpeedMax || 25)) {
+          errors.push(language === 'fr' ? 'Vitesse du vent trop élevée' : 'Wind speed too high');
+        }
+        break;
+        
+      case 'preventiveMeasures':
+        if (formData.preventiveMeasures.fireWatch.required && formData.preventiveMeasures.fireWatch.personnel.length === 0) {
+          errors.push(language === 'fr' ? 'Personnel surveillance incendie requis' : 'Fire watch personnel required');
+        }
+        if (formData.preventiveMeasures.fireExtinguishers.quantity === 0) {
+          errors.push(language === 'fr' ? 'Extincteurs requis' : 'Fire extinguishers required');
+        }
+        break;
+        
+      case 'equipment':
+        if (formData.equipment.hotWorkEquipment.length === 0) {
+          errors.push(language === 'fr' ? 'Équipement travail à chaud requis' : 'Hot work equipment required');
+        }
+        if (formData.equipment.ppe.length === 0) {
+          errors.push(language === 'fr' ? 'EPI requis' : 'PPE required');
+        }
+        break;
+        
+      case 'validation':
+        if (formData.validation.signatures.length === 0) {
+          errors.push(language === 'fr' ? 'Signatures requises' : 'Signatures required');
         }
         break;
     }
@@ -555,7 +762,7 @@ export default function HotWorkForm({
     }));
     
     return errors.length === 0;
-  }, [formData, language]);
+  }, [formData, language, province]);
 
   // Navigation sections
   const navigateToSection = useCallback((sectionIndex: number) => {
@@ -696,16 +903,16 @@ export default function HotWorkForm({
             </label>
             <input
               type="number"
-              min={PROVINCIAL_REGULATIONS[province].hotZoneRadius}
+              min={PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.hotZoneRadius || 10}
               value={formData.identification.location.hotZoneRadius}
               onChange={(e) => updateFormData('identification', 'location', {
                 ...formData.identification.location,
-                hotZoneRadius: parseInt(e.target.value)
+                hotZoneRadius: parseInt(e.target.value) || 10
               })}
               className="w-full px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
             />
             <p className="text-xs text-gray-500 mt-1">
-              {language === 'fr' ? 'Minimum' : 'Minimum'}: {PROVINCIAL_REGULATIONS[province].hotZoneRadius}m ({province})
+              {language === 'fr' ? 'Minimum' : 'Minimum'}: {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.hotZoneRadius || 10}m ({province})
             </p>
           </div>
         </div>
@@ -725,6 +932,41 @@ export default function HotWorkForm({
               : 'Ex: Repair welding on piping, 3 butt welds, stainless steel...'
             }
           />
+        </div>
+
+        {/* Entrepreneur et licence */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {language === 'fr' ? 'Entrepreneur' : 'Contractor'}
+            </label>
+            <input
+              type="text"
+              value={formData.identification.contractor.name}
+              onChange={(e) => updateFormData('identification', 'contractor', {
+                ...formData.identification.contractor,
+                name: e.target.value
+              })}
+              className="w-full px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              placeholder={language === 'fr' ? 'Nom de l\'entreprise' : 'Company name'}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {language === 'fr' ? 'Licence travail à chaud' : 'Hot work license'}
+            </label>
+            <input
+              type="text"
+              value={formData.identification.contractor.hotWorkLicense}
+              onChange={(e) => updateFormData('identification', 'contractor', {
+                ...formData.identification.contractor,
+                hotWorkLicense: e.target.value
+              })}
+              className="w-full px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              placeholder={language === 'fr' ? 'Ex: HW-12345-QC' : 'Ex: HW-12345-QC'}
+            />
+          </div>
         </div>
 
         {/* Dates et durée */}
@@ -762,9 +1004,36 @@ export default function HotWorkForm({
               min="0.5"
               step="0.5"
               value={formData.identification.estimatedDuration}
-              onChange={(e) => updateFormData('identification', 'estimatedDuration', parseFloat(e.target.value))}
+              onChange={(e) => updateFormData('identification', 'estimatedDuration', parseFloat(e.target.value) || 0)}
               className="w-full px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
             />
+          </div>
+        </div>
+
+        {/* Information réglementaire */}
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h4 className="font-medium text-red-800 mb-2">
+            {language === 'fr' ? `Réglementation ${province}` : `${province} Regulation`}
+          </h4>
+          <div className="text-sm text-red-700 space-y-1">
+            <p>
+              {language === 'fr' ? 'Surveillance incendie' : 'Fire watch'}: {' '}
+              <span className="font-medium">
+                {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.fireWatchDuration || 60} min
+              </span>
+            </p>
+            <p>
+              {language === 'fr' ? 'Zone chaude min' : 'Hot zone min'}: {' '}
+              <span className="font-medium">
+                {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.hotZoneRadius || 10}m
+              </span>
+            </p>
+            <p>
+              {language === 'fr' ? 'Référence' : 'Reference'}: {' '}
+              <span className="font-medium">
+                {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.references.regulation}
+              </span>
+            </p>
           </div>
         </div>
       </div>
@@ -874,7 +1143,7 @@ export default function HotWorkForm({
   // =================== RENDU PRINCIPAL ===================
   return (
     <div className="max-w-4xl mx-auto bg-white min-h-screen">
-      {/* Header sticky avec progression - identique à ConfinedSpaceForm */}
+      {/* Header sticky avec progression */}
       <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="px-4 py-3">
           {/* Barre de progression */}
@@ -993,7 +1262,7 @@ export default function HotWorkForm({
         )}
       </div>
 
-      {/* Navigation bottom sticky - identique à ConfinedSpaceForm */}
+      {/* Navigation bottom sticky */}
       <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-3">
         <div className="flex justify-between items-center">
           <button
