@@ -748,7 +748,9 @@ export const usePermits = (config: UsePermitsConfig): [UsePermitsState, UsePermi
         success: 50,
         warning: [100, 50, 100],
         error: [100, 50, 100, 50, 100],
-        light: 25
+        light: 25,
+        medium: 50,
+        heavy: [100, 50, 100]
       };
       navigator.vibrate(patterns[result.mobileFeedback.haptic] || 25);
     }
