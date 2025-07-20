@@ -827,10 +827,16 @@ export function useQRCode() {
   ): Promise<boolean> => {
     try {
       // Incrémenter le compteur de scans
+      const { data: currentQR } = await supabase
+        .from('qr_codes')
+        .select('scan_count')
+        .eq('id', qrCodeId)
+        .single();
+
       await supabase
         .from('qr_codes')
         .update({ 
-          scan_count: supabase.sql`scan_count + 1`,
+          scan_count: (currentQR?.scan_count || 0) + 1,
           last_scanned_at: new Date().toISOString()
         })
         .eq('id', qrCodeId);
@@ -929,9 +935,15 @@ export function useQRCode() {
       const printData = qrData.print_data;
 
       // Incrémenter le compteur d'impressions
+      const { data: currentQR } = await supabase
+        .from('qr_codes')
+        .select('print_count')
+        .eq('id', qrCodeId)
+        .single();
+
       await supabase
         .from('qr_codes')
-        .update({ print_count: supabase.sql`print_count + 1` })
+        .update({ print_count: (currentQR?.print_count || 0) + 1 })
         .eq('id', qrCodeId);
 
       // Générer le HTML pour le PDF
