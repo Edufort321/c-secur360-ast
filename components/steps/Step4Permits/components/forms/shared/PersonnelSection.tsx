@@ -894,7 +894,7 @@ export const PersonnelSection: React.FC<PersonnelSectionProps> = ({
             roleConfig={availableRoles[activeRole]}
             language={language}
             province={province}
-            onSave={(personnel) => addPersonnelToRole(activeRole, personnel)}
+            onSave={(personnel: PersonnelFormData) => addPersonnelToRole(activeRole, personnel)}
             onCancel={() => {
               setShowAddPersonnel(false);
               setActiveRole(null);
