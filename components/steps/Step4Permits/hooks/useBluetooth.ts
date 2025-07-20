@@ -4,9 +4,98 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+// =================== DÉCLARATIONS DE TYPES WEB BLUETOOTH ===================
+
+declare global {
+  interface Navigator {
+    bluetooth?: Bluetooth;
+  }
+  
+  interface Bluetooth {
+    getAvailability(): Promise<boolean>;
+    requestDevice(options?: RequestDeviceOptions): Promise<BluetoothDevice>;
+  }
+  
+  interface BluetoothDevice {
+    id: string;
+    name?: string;
+    gatt?: BluetoothRemoteGATTServer;
+  }
+  
+  interface BluetoothRemoteGATTServer {
+    device: BluetoothDevice;
+    connected: boolean;
+    connect(): Promise<BluetoothRemoteGATTServer>;
+    disconnect(): void;
+    getPrimaryService(service: BluetoothServiceUUID): Promise<BluetoothRemoteGATTService>;
+    getPrimaryServices(service?: BluetoothServiceUUID): Promise<BluetoothRemoteGATTService[]>;
+  }
+  
+  interface BluetoothRemoteGATTService {
+    device: BluetoothDevice;
+    uuid: string;
+    isPrimary: boolean;
+    getCharacteristic(characteristic: BluetoothCharacteristicUUID): Promise<BluetoothRemoteGATTCharacteristic>;
+    getCharacteristics(characteristic?: BluetoothCharacteristicUUID): Promise<BluetoothRemoteGATTCharacteristic[]>;
+  }
+  
+  interface BluetoothRemoteGATTCharacteristic extends EventTarget {
+    service: BluetoothRemoteGATTService;
+    uuid: string;
+    properties: BluetoothCharacteristicProperties;
+    value?: DataView;
+    readValue(): Promise<DataView>;
+    writeValue(value: BufferSource): Promise<void>;
+    startNotifications(): Promise<BluetoothRemoteGATTCharacteristic>;
+    stopNotifications(): Promise<BluetoothRemoteGATTCharacteristic>;
+  }
+  
+  interface BluetoothCharacteristicProperties {
+    broadcast: boolean;
+    read: boolean;
+    writeWithoutResponse: boolean;
+    write: boolean;
+    notify: boolean;
+    indicate: boolean;
+    authenticatedSignedWrites: boolean;
+    reliableWrite: boolean;
+    writableAuxiliaries: boolean;
+  }
+  
+  interface RequestDeviceOptions {
+    filters?: BluetoothLEScanFilter[];
+    optionalServices?: BluetoothServiceUUID[];
+    acceptAllDevices?: boolean;
+    deviceId?: string;
+  }
+  
+  interface BluetoothLEScanFilter {
+    services?: BluetoothServiceUUID[];
+    name?: string;
+    namePrefix?: string;
+    manufacturerData?: BluetoothManufacturerDataFilter[];
+    serviceData?: BluetoothServiceDataFilter[];
+  }
+  
+  interface BluetoothManufacturerDataFilter {
+    companyIdentifier: number;
+    dataPrefix?: BufferSource;
+    mask?: BufferSource;
+  }
+  
+  interface BluetoothServiceDataFilter {
+    service: BluetoothServiceUUID;
+    dataPrefix?: BufferSource;
+    mask?: BufferSource;
+  }
+  
+  type BluetoothServiceUUID = number | string;
+  type BluetoothCharacteristicUUID = number | string;
+}
+
 // =================== INTERFACES ===================
 
-export interface BluetoothDevice {
+export interface BluetoothDeviceInfo {
   id: string;
   name: string;
   type: 'detector' | 'monitor' | 'sensor' | 'unknown';
@@ -18,17 +107,17 @@ export interface BluetoothDevice {
   signalStrength: number; // RSSI en dBm
   isConnected: boolean;
   lastSeen: Date;
-  services: BluetoothService[];
+  services: BluetoothServiceInfo[];
   capabilities: DeviceCapabilities;
 }
 
-export interface BluetoothService {
+export interface BluetoothServiceInfo {
   uuid: string;
   name: string;
-  characteristics: BluetoothCharacteristic[];
+  characteristics: BluetoothCharacteristicInfo[];
 }
 
-export interface BluetoothCharacteristic {
+export interface BluetoothCharacteristicInfo {
   uuid: string;
   name: string;
   properties: string[];
@@ -100,8 +189,8 @@ export interface BluetoothState {
   isEnabled: boolean;
   isScanning: boolean;
   isConnecting: boolean;
-  devices: BluetoothDevice[];
-  connectedDevices: BluetoothDevice[];
+  devices: BluetoothDeviceInfo[];
+  connectedDevices: BluetoothDeviceInfo[];
   readings: AtmosphericReading[];
   error: string | null;
   lastError: Date | null;
@@ -252,7 +341,7 @@ export function useBluetooth(config: Partial<BluetoothConfig> = {}) {
   }, [setError, log]);
 
   // Identification du type d'appareil basé sur le nom
-  const identifyDevice = useCallback((name: string): BluetoothDevice['type'] => {
+  const identifyDevice = useCallback((name: string): BluetoothDeviceInfo['type'] => {
     const deviceName = name.toLowerCase();
     
     if (deviceName.includes('gasalert') || 
@@ -318,7 +407,7 @@ export function useBluetooth(config: Partial<BluetoothConfig> = {}) {
       }, finalConfig.scanTimeout);
 
       // Demande de sélection d'appareil
-      const device = await navigator.bluetooth.requestDevice(options);
+      const device = await navigator.bluetooth!.requestDevice(options);
       
       if (scanTimeoutRef.current) {
         clearTimeout(scanTimeoutRef.current);
@@ -328,7 +417,7 @@ export function useBluetooth(config: Partial<BluetoothConfig> = {}) {
         const deviceInfo = getDeviceInfo(device.name || 'Unknown');
         const deviceType = identifyDevice(device.name || 'Unknown');
         
-        const bluetoothDevice: BluetoothDevice = {
+        const bluetoothDeviceInfo: BluetoothDeviceInfo = {
           id: device.id,
           name: device.name || 'Appareil inconnu',
           type: deviceType,
@@ -356,10 +445,10 @@ export function useBluetooth(config: Partial<BluetoothConfig> = {}) {
         setState(prev => ({
           ...prev,
           isScanning: false,
-          devices: [...prev.devices.filter(d => d.id !== device.id), bluetoothDevice]
+          devices: [...prev.devices.filter(d => d.id !== device.id), bluetoothDeviceInfo]
         }));
 
-        log('Appareil découvert', bluetoothDevice);
+        log('Appareil découvert', bluetoothDeviceInfo);
       }
 
     } catch (error: any) {
@@ -397,7 +486,7 @@ export function useBluetooth(config: Partial<BluetoothConfig> = {}) {
 
     try {
       // Obtenir l'appareil Bluetooth natif
-      const bluetoothDevice = await navigator.bluetooth.requestDevice({
+      const bluetoothDevice = await navigator.bluetooth!.requestDevice({
         deviceId: deviceId,
         optionalServices: Object.values(DEVICE_SERVICES)
       });
@@ -423,11 +512,11 @@ export function useBluetooth(config: Partial<BluetoothConfig> = {}) {
 
       // Découvrir les services
       const services = await server.getPrimaryServices();
-      const bluetoothServices: BluetoothService[] = [];
+      const bluetoothServices: BluetoothServiceInfo[] = [];
 
       for (const service of services) {
         const characteristics = await service.getCharacteristics();
-        const bluetoothCharacteristics: BluetoothCharacteristic[] = [];
+        const bluetoothCharacteristics: BluetoothCharacteristicInfo[] = [];
 
         for (const char of characteristics) {
           bluetoothCharacteristics.push({
