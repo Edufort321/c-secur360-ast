@@ -1297,74 +1297,273 @@ export const PERMIT_EQUIPMENT_REQUIREMENTS: Record<PermitType, PermitEquipmentRe
   'isolation-energetique': {
     permitType: 'isolation-energetique',
     requiredEquipment: {
-      mandatory: [],
-      conditional: [],
-      optional: []
+      mandatory: [
+        'cadenas-loto-master',
+        'testeur-tension-digital'
+      ],
+      conditional: [
+        {
+          equipmentId: 'detecteur-4-gaz-bw',
+          conditions: [
+            { type: 'hazard-level', operator: '==', value: 'atmospheres-confinees' }
+          ]
+        }
+      ],
+      optional: [
+        'etiquettes-loto',
+        'dispositifs-loto-specialises'
+      ]
     },
-    minimumQuantities: {},
-    qualificationRequirements: {},
-    inspectionSchedule: {}
+    minimumQuantities: {
+      'cadenas-loto-master': 4, // Un par source d'énergie
+      'testeur-tension-digital': 1,
+      'detecteur-4-gaz-bw': 1
+    },
+    qualificationRequirements: {
+      'testeur-tension-digital': ['formation-electricien', 'formation-loto'],
+      'cadenas-loto-master': ['formation-loto']
+    },
+    inspectionSchedule: {
+      'testeur-tension-digital': 'before-use',
+      'cadenas-loto-master': 'monthly'
+    },
+    specialConditions: {
+      fr: [
+        'Vérification absence tension obligatoire avant travaux',
+        'Cadenas personnalisés par travailleur',
+        'Procédures LOTO documentées et affichées',
+        'Test fonctionnel équipements après réactivation'
+      ],
+      en: [
+        'Mandatory voltage absence verification before work',
+        'Personalized padlocks per worker',
+        'Documented and posted LOTO procedures',
+        'Functional testing of equipment after reactivation'
+      ]
+    }
   },
 
   'pression': {
     permitType: 'pression',
     requiredEquipment: {
-      mandatory: ['detecteur-4-gaz-bw'],
-      conditional: [],
-      optional: []
+      mandatory: [
+        'detecteur-4-gaz-bw',
+        'manometre-precision'
+      ],
+      conditional: [
+        {
+          equipmentId: 'camera-surveillance-chantier',
+          conditions: [
+            { type: 'hazard-level', operator: '==', value: 'haute-pression' }
+          ]
+        }
+      ],
+      optional: [
+        'camera-thermique',
+        'detecteur-fuites'
+      ]
     },
     minimumQuantities: {
-      'detecteur-4-gaz-bw': 1
+      'detecteur-4-gaz-bw': 1,
+      'manometre-precision': 1,
+      'camera-surveillance-chantier': 1
     },
-    qualificationRequirements: {},
+    qualificationRequirements: {
+      'manometre-precision': ['formation-pression', 'inspection-equipements-pression']
+    },
     inspectionSchedule: {
-      'detecteur-4-gaz-bw': 'before-use'
+      'detecteur-4-gaz-bw': 'before-use',
+      'manometre-precision': 'before-use'
+    },
+    specialConditions: {
+      fr: [
+        'Surveillance continue pression pendant travaux',
+        'Procédures dépressurisation documentées',
+        'Équipements protection individuelle renforcée'
+      ],
+      en: [
+        'Continuous pressure monitoring during work',
+        'Documented depressurization procedures',
+        'Enhanced personal protective equipment'
+      ]
     }
   },
 
   'radiographie': {
     permitType: 'radiographie',
     requiredEquipment: {
-      mandatory: [],
-      conditional: [],
-      optional: []
+      mandatory: [
+        'dosimetre-personnel-digital',
+        'detecteur-radiation',
+        'panneau-radiation'
+      ],
+      conditional: [
+        {
+          equipmentId: 'barriere-de-securite',
+          conditions: [
+            { type: 'personnel-count', operator: '>', value: 2 }
+          ]
+        }
+      ],
+      optional: [
+        'plomb-protection',
+        'surveymeter-radiation'
+      ]
     },
-    minimumQuantities: {},
-    qualificationRequirements: {},
-    inspectionSchedule: {}
+    minimumQuantities: {
+      'dosimetre-personnel-digital': 1, // Par personne exposée
+      'detecteur-radiation': 1,
+      'panneau-radiation': 4, // Périmètre sécurité
+      'barriere-de-securite': 8
+    },
+    qualificationRequirements: {
+      'dosimetre-personnel-digital': ['licence-operateur-radio', 'formation-radioprotection'],
+      'detecteur-radiation': ['licence-operateur-radio']
+    },
+    inspectionSchedule: {
+      'dosimetre-personnel-digital': 'daily',
+      'detecteur-radiation': 'before-use',
+      'panneau-radiation': 'weekly'
+    },
+    specialConditions: {
+      fr: [
+        'Surveillance dosimétrique obligatoire',
+        'Périmètre contrôlé délimité et signalisé',
+        'Procédures urgence radiation disponibles',
+        'Communication autorité compétente (CCSN)'
+      ],
+      en: [
+        'Mandatory dosimetric monitoring',
+        'Controlled perimeter delimited and signaled',
+        'Radiation emergency procedures available',
+        'Communication with competent authority (CNSC)'
+      ]
+    }
   },
 
   'toiture': {
     permitType: 'toiture',
     requiredEquipment: {
-      mandatory: ['harnais-securite-miller'],
-      conditional: [],
-      optional: []
+      mandatory: [
+        'harnais-securite-miller',
+        'echelle-extension-fibre',
+        'radio-motorola-cp200d'
+      ],
+      conditional: [
+        {
+          equipmentId: 'anemometre-digital',
+          conditions: [
+            { type: 'height', operator: '>', value: 6, unit: 'm' }
+          ]
+        },
+        {
+          equipmentId: 'barriere-de-securite',
+          conditions: [
+            { type: 'personnel-count', operator: '>', value: 3 }
+          ]
+        }
+      ],
+      optional: [
+        'garde-corps-temporaire',
+        'filet-securite',
+        'eclairage-portable-led'
+      ]
     },
     minimumQuantities: {
-      'harnais-securite-miller': 1
+      'harnais-securite-miller': 1, // Par travailleur
+      'echelle-extension-fibre': 1,
+      'radio-motorola-cp200d': 1,
+      'anemometre-digital': 1,
+      'barriere-de-securite': 6
     },
     qualificationRequirements: {
-      'harnais-securite-miller': ['formation-travail-hauteur']
+      'harnais-securite-miller': ['formation-travail-hauteur', 'formation-toiture'],
+      'echelle-extension-fibre': ['formation-echelles']
     },
     inspectionSchedule: {
-      'harnais-securite-miller': 'before-use'
+      'harnais-securite-miller': 'before-use',
+      'echelle-extension-fibre': 'before-use',
+      'anemometre-digital': 'before-use'
+    },
+    specialConditions: {
+      fr: [
+        'Arrêt travaux si vent >35 km/h',
+        'Surveillance météo continue',
+        'Périmètre sécurité au sol délimité',
+        'Plan évacuation d\'urgence établi'
+      ],
+      en: [
+        'Stop work if wind >35 km/h',
+        'Continuous weather monitoring',
+        'Ground safety perimeter delimited',
+        'Emergency evacuation plan established'
+      ]
     }
   },
 
   'demolition': {
     permitType: 'demolition',
     requiredEquipment: {
-      mandatory: ['detecteur-4-gaz-bw'],
-      conditional: [],
-      optional: []
+      mandatory: [
+        'detecteur-4-gaz-bw',
+        'radio-motorola-cp200d',
+        'barriere-de-securite'
+      ],
+      conditional: [
+        {
+          equipmentId: 'detecteur-amiante-portable',
+          conditions: [
+            { type: 'hazard-level', operator: '==', value: 'batiment-pre-1980' }
+          ]
+        },
+        {
+          equipmentId: 'camera-surveillance-chantier',
+          conditions: [
+            { type: 'work-duration', operator: '>', value: 480, unit: 'minutes' }
+          ]
+        },
+        {
+          equipmentId: 'perceuse-percussion-sans-fil',
+          conditions: [
+            { type: 'hazard-level', operator: '==', value: 'demolition-selective' }
+          ]
+        }
+      ],
+      optional: [
+        'aspirateur-hepa',
+        'bache-protection',
+        'eclairage-portable-led'
+      ]
     },
     minimumQuantities: {
-      'detecteur-4-gaz-bw': 1
+      'detecteur-4-gaz-bw': 1,
+      'radio-motorola-cp200d': 2,
+      'barriere-de-securite': 10,
+      'perceuse-percussion-sans-fil': 2,
+      'camera-surveillance-chantier': 2
     },
-    qualificationRequirements: {},
+    qualificationRequirements: {
+      'detecteur-4-gaz-bw': ['formation-detection-gaz'],
+      'detecteur-amiante-portable': ['formation-amiante', 'certification-amiante']
+    },
     inspectionSchedule: {
-      'detecteur-4-gaz-bw': 'before-use'
+      'detecteur-4-gaz-bw': 'before-use',
+      'barriere-de-securite': 'daily',
+      'camera-surveillance-chantier': 'weekly'
+    },
+    specialConditions: {
+      fr: [
+        'Évaluation amiante obligatoire bâtiments pré-1980',
+        'Surveillance continue atmosphère travail',
+        'Périmètre sécurité étendu selon hauteur',
+        'Plan gestion déchets dangereux'
+      ],
+      en: [
+        'Mandatory asbestos assessment for pre-1980 buildings',
+        'Continuous work atmosphere monitoring',
+        'Extended safety perimeter per height',
+        'Hazardous waste management plan'
+      ]
     }
   }
 };
