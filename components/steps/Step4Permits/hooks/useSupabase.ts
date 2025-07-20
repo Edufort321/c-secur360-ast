@@ -1016,7 +1016,7 @@ export function useSupabase(config: Partial<SupabaseConfig> = {}) {
           table,
           filter: filter ? Object.entries(filter).map(([key, value]) => `${key}=eq.${value}`).join(',') : undefined
         } as any,
-        (payload) => {
+        (payload: any) => {
           log('Realtime event', { table, event, payload });
           callback(payload);
         }
