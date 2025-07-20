@@ -264,13 +264,13 @@ const LEGAL_TEXTS = {
       'Je confirme mon identité et mon autorisation',
       'J\'accepte la collecte de données biométriques',
       'Je comprends les implications légales de cette signature'
-    ],
+    ] as string[],
     disclaimers: [
       'Cette signature électronique a force légale au Canada',
       'Les données sont protégées selon les normes PIPEDA',
       'Un audit trail complet est maintenu pour conformité',
       'En cas de litige, cette signature peut être utilisée comme preuve'
-    ]
+    ] as string[]
   },
   en: {
     consentTitle: 'Electronic Signature Consent',
@@ -312,15 +312,15 @@ const LEGAL_TEXTS = {
       'I confirm my identity and authorization',
       'I accept biometric data collection',
       'I understand the legal implications of this signature'
-    ],
+    ] as string[],
     disclaimers: [
       'This electronic signature has legal force in Canada',
       'Data is protected under PIPEDA standards',
       'A complete audit trail is maintained for compliance',
       'In case of dispute, this signature may be used as evidence'
-    ]
+    ] as string[]
   }
-} as const;
+};
 
 // =================== HOOK PRINCIPAL ===================
 
@@ -766,8 +766,8 @@ export function useSignature(config: Partial<SignatureConfig> = {}) {
         witnessId: witnessInfo?.id,
         witnessName: witnessInfo?.name,
         consentLanguage: 'fr',
-        acknowledgments: LEGAL_TEXTS.fr.acknowledgments,
-        disclaimers: LEGAL_TEXTS.fr.disclaimers
+        acknowledgments: [...LEGAL_TEXTS.fr.acknowledgments],
+        disclaimers: [...LEGAL_TEXTS.fr.disclaimers]
       };
 
       // Méthode de vérification
