@@ -4,7 +4,268 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { createClient, SupabaseClient, User, Session } from '@supabase/supabase-js';
-import type { Database } from './useQRCode'; // Import du type Database
+
+// =================== TYPES SUPABASE DATABASE ===================
+
+export interface Database {
+  public: {
+    Tables: {
+      user_profiles: {
+        Row: UserProfileRow;
+        Insert: UserProfileInsert;
+        Update: UserProfileUpdate;
+      };
+      companies: {
+        Row: CompanyRow;
+        Insert: CompanyInsert;
+        Update: CompanyUpdate;
+      };
+      confined_spaces: {
+        Row: ConfinedSpaceRow;
+        Insert: ConfinedSpaceInsert;
+        Update: ConfinedSpaceUpdate;
+      };
+      qr_codes: {
+        Row: QRCodeRow;
+        Insert: QRCodeInsert;
+        Update: QRCodeUpdate;
+      };
+      space_permits: {
+        Row: SpacePermitRow;
+        Insert: SpacePermitInsert;
+        Update: SpacePermitUpdate;
+      };
+      space_inspections: {
+        Row: SpaceInspectionRow;
+        Insert: SpaceInspectionInsert;
+        Update: SpaceInspectionUpdate;
+      };
+      space_incidents: {
+        Row: SpaceIncidentRow;
+        Insert: SpaceIncidentInsert;
+        Update: SpaceIncidentUpdate;
+      };
+      qr_access_logs: {
+        Row: QRAccessLogRow;
+        Insert: QRAccessLogInsert;
+        Update: QRAccessLogUpdate;
+      };
+    };
+  };
+}
+
+// Tables de base
+export interface UserProfileRow {
+  id: string;
+  email: string;
+  full_name: string;
+  company_id: string;
+  role: UserRole;
+  permissions: string[];
+  avatar_url?: string;
+  phone?: string;
+  department?: string;
+  position?: string;
+  certifications: Certification[];
+  is_active: boolean;
+  last_login: string;
+  created_at: string;
+  updated_at: string;
+  metadata: Record<string, any>;
+}
+
+export interface CompanyRow {
+  id: string;
+  name: string;
+  type: 'enterprise' | 'contractor' | 'government' | 'nonprofit';
+  registration_number?: string;
+  address: string;
+  city: string;
+  province: string;
+  postal_code: string;
+  phone: string;
+  email: string;
+  website?: string;
+  industry: string;
+  size: 'small' | 'medium' | 'large' | 'enterprise';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConfinedSpaceRow {
+  id: string;
+  name: string;
+  type: 'tank' | 'vessel' | 'tunnel' | 'pit' | 'silo' | 'vault' | 'trench' | 'other';
+  description: string;
+  location_latitude: number;
+  location_longitude: number;
+  location_accuracy: number;
+  address_formatted: string;
+  address_city: string;
+  address_province: string;
+  address_postal_code?: string;
+  dimensions: Record<string, any>;
+  hazards: string[];
+  access_points: Record<string, any>[];
+  ventilation_systems: Record<string, any>[];
+  emergency_equipment: Record<string, any>[];
+  status: 'active' | 'inactive' | 'maintenance' | 'decommissioned';
+  company_id: string;
+  site_id?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  last_inspection_date?: string;
+  next_inspection_due?: string;
+  compliance_score?: number;
+  risk_assessment: 'low' | 'medium' | 'high' | 'critical';
+  metadata: Record<string, any>;
+}
+
+export interface QRCodeRow {
+  id: string;
+  space_id: string;
+  qr_code_data: string;
+  qr_url: string;
+  print_data: Record<string, any>;
+  is_active: boolean;
+  expiry_date?: string;
+  print_count: number;
+  scan_count: number;
+  last_scanned_at?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SpacePermitRow {
+  id: string;
+  space_id: string;
+  permit_number: string;
+  permit_type: string;
+  start_date: string;
+  end_date: string;
+  status: 'draft' | 'pending' | 'approved' | 'active' | 'completed' | 'cancelled' | 'expired';
+  work_description: string;
+  personnel_assigned: Record<string, any>[];
+  supervisor_id: string;
+  safety_officer_id: string;
+  atmospheric_readings: Record<string, any>[];
+  equipment_used: string[];
+  procedures_completed: string[];
+  risk_controls: string[];
+  emergency_contacts: Record<string, any>[];
+  notes: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  approved_by?: string;
+  approved_at?: string;
+  completed_by?: string;
+  completed_at?: string;
+}
+
+export interface SpaceInspectionRow {
+  id: string;
+  space_id: string;
+  inspection_date: string;
+  inspector_id: string;
+  inspector_name: string;
+  inspection_type: 'routine' | 'safety' | 'pre_entry' | 'post_work' | 'regulatory';
+  checklist_items: Record<string, any>[];
+  findings: Record<string, any>[];
+  recommendations: string[];
+  photos: string[];
+  videos: string[];
+  documents: string[];
+  overall_score: number;
+  compliance_status: 'compliant' | 'minor_issues' | 'major_issues' | 'critical';
+  next_inspection_due: string;
+  certification_required: boolean;
+  certification_expiry?: string;
+  weather_conditions?: Record<string, any>;
+  temperature: number;
+  humidity: number;
+  atmospheric_pressure: number;
+  wind_speed: number;
+  notes: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SpaceIncidentRow {
+  id: string;
+  space_id: string;
+  incident_number: string;
+  incident_date: string;
+  incident_time: string;
+  incident_type: 'near_miss' | 'injury' | 'exposure' | 'equipment_failure' | 'evacuation' | 'environmental' | 'security';
+  severity: 'low' | 'medium' | 'high' | 'critical' | 'catastrophic';
+  description: string;
+  location_details: string;
+  personnel_involved: Record<string, any>[];
+  witnesses: Record<string, any>[];
+  immediate_actions: string[];
+  root_cause_analysis: string;
+  corrective_actions: Record<string, any>[];
+  preventive_measures: string[];
+  investigation_status: 'pending' | 'ongoing' | 'completed' | 'closed';
+  investigation_team: string[];
+  photos: string[];
+  documents: string[];
+  regulatory_notification: boolean;
+  regulatory_agencies: string[];
+  insurance_claim: boolean;
+  estimated_cost: number;
+  actual_cost?: number;
+  lessons_learned: string[];
+  reported_by: string;
+  investigated_by?: string;
+  approved_by?: string;
+  is_resolved: boolean;
+  resolution_date?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QRAccessLogRow {
+  id: string;
+  qr_code_id: string;
+  space_id: string;
+  accessed_at: string;
+  user_id?: string;
+  user_agent: string;
+  ip_address: string;
+  location_latitude?: number;
+  location_longitude?: number;
+  device_type: 'mobile' | 'tablet' | 'desktop';
+  browser: string;
+  referrer?: string;
+  session_duration?: number;
+  pages_viewed: string[];
+  actions_taken: string[];
+  created_at: string;
+}
+
+// Insert/Update types
+export type UserProfileInsert = Omit<UserProfileRow, 'id' | 'created_at' | 'updated_at'>;
+export type UserProfileUpdate = Partial<Omit<UserProfileRow, 'id' | 'created_at'>>;
+export type CompanyInsert = Omit<CompanyRow, 'id' | 'created_at' | 'updated_at'>;
+export type CompanyUpdate = Partial<Omit<CompanyRow, 'id' | 'created_at'>>;
+export type ConfinedSpaceInsert = Omit<ConfinedSpaceRow, 'id' | 'created_at' | 'updated_at'>;
+export type ConfinedSpaceUpdate = Partial<Omit<ConfinedSpaceRow, 'id' | 'created_at'>>;
+export type QRCodeInsert = Omit<QRCodeRow, 'id' | 'created_at' | 'updated_at'>;
+export type QRCodeUpdate = Partial<Omit<QRCodeRow, 'id' | 'created_at'>>;
+export type SpacePermitInsert = Omit<SpacePermitRow, 'id' | 'created_at' | 'updated_at'>;
+export type SpacePermitUpdate = Partial<Omit<SpacePermitRow, 'id' | 'created_at'>>;
+export type SpaceInspectionInsert = Omit<SpaceInspectionRow, 'id' | 'created_at' | 'updated_at'>;
+export type SpaceInspectionUpdate = Partial<Omit<SpaceInspectionRow, 'id' | 'created_at'>>;
+export type SpaceIncidentInsert = Omit<SpaceIncidentRow, 'id' | 'created_at' | 'updated_at'>;
+export type SpaceIncidentUpdate = Partial<Omit<SpaceIncidentRow, 'id' | 'created_at'>>;
+export type QRAccessLogInsert = Omit<QRAccessLogRow, 'id' | 'created_at'>;
+export type QRAccessLogUpdate = Partial<Omit<QRAccessLogRow, 'id' | 'created_at'>>;
 
 // =================== CONFIGURATION SUPABASE ===================
 
@@ -453,7 +714,10 @@ export function useSupabase(config: Partial<SupabaseConfig> = {}) {
 
       const profile: UserProfile = {
         ...data,
-        company_name: data.companies?.name || 'Compagnie inconnue'
+        company_name: data.companies?.name || 'Compagnie inconnue',
+        last_login: new Date(data.last_login),
+        created_at: new Date(data.created_at),
+        updated_at: new Date(data.updated_at)
       };
 
       const permissions = ROLE_PERMISSIONS[profile.role] || ROLE_PERMISSIONS.observer;
