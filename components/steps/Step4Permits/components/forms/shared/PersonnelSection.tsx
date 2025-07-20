@@ -35,21 +35,128 @@ import {
   X,
   ChevronDown,
   ChevronUp,
-  Info
+  Info,
+  Settings
 } from 'lucide-react';
-import { generatePersonnelId, validatePersonnelData } from '../../utils/validators';
-import { PROVINCIAL_REGULATIONS } from '../../constants/provinces';
-import type { 
-  PermitFormData,
-  PermitType,
-  Entrant,
-  Surveillant,
-  Superviseur,
-  PersonneCompetente,
-  PersonnelSpecialise,
-  FieldError,
-  CertificationData
-} from '../../types';
+
+// =================== TYPES ET INTERFACES ===================
+export type PermitType = 'espace-clos' | 'travail-chaud' | 'excavation' | 'levage' | 'hauteur' | 'isolation-energetique' | 'pression' | 'radiographie' | 'toiture' | 'demolition';
+
+export interface PermitFormData {
+  [key: string]: any;
+}
+
+export interface FieldError {
+  message: { fr: string; en: string };
+  code: string;
+}
+
+export interface CertificationData {
+  id: string;
+  name: { fr: string; en: string };
+  issuer: string;
+  number: string;
+  issueDate: Date;
+  expiryDate: Date;
+  isValid: boolean;
+}
+
+export interface Entrant {
+  id: string;
+  nom: string;
+  prenom: string;
+  age: number;
+  certifications: CertificationData[];
+}
+
+export interface Surveillant {
+  id: string;
+  nom: string;
+  prenom: string;
+  age: number;
+  certifications: CertificationData[];
+}
+
+export interface Superviseur {
+  id: string;
+  nom: string;
+  prenom: string;
+  age: number;
+  certifications: CertificationData[];
+}
+
+export interface PersonneCompetente {
+  id: string;
+  nom: string;
+  prenom: string;
+  age: number;
+  certifications: CertificationData[];
+}
+
+export interface PersonnelSpecialise {
+  id: string;
+  nom: string;
+  prenom: string;
+  age: number;
+  certifications: CertificationData[];
+}
+
+// =================== FONCTIONS UTILITAIRES ===================
+const generatePersonnelId = (): string => {
+  return `personnel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+};
+
+const validatePersonnelData = (personnel: PersonnelFormData, roleConfig: RoleConfig): FieldError | null => {
+  if (personnel.age < roleConfig.minAge) {
+    return {
+      message: {
+        fr: `Âge minimum requis: ${roleConfig.minAge} ans`,
+        en: `Minimum age required: ${roleConfig.minAge} years`
+      },
+      code: 'AGE_TOO_LOW'
+    };
+  }
+  
+  if (!personnel.nom || !personnel.prenom) {
+    return {
+      message: {
+        fr: 'Nom et prénom requis',
+        en: 'First and last name required'
+      },
+      code: 'NAME_REQUIRED'
+    };
+  }
+  
+  return null;
+};
+
+// =================== CONSTANTES RÉGLEMENTATIONS ===================
+const PROVINCIAL_REGULATIONS = {
+  QC: {
+    minAge: 18,
+    maxWorkHours: 12,
+    certificationRequired: true,
+    authority: 'CNESST'
+  },
+  ON: {
+    minAge: 18,
+    maxWorkHours: 12,
+    certificationRequired: true,
+    authority: 'Ministry of Labour'
+  },
+  AB: {
+    minAge: 18,
+    maxWorkHours: 12,
+    certificationRequired: true,
+    authority: 'Alberta Labour'
+  },
+  BC: {
+    minAge: 18,
+    maxWorkHours: 12,
+    certificationRequired: true,
+    authority: 'WorkSafeBC'
+  }
+};
 
 // =================== INTERFACES SECTION ===================
 interface PersonnelSectionProps {
@@ -275,7 +382,6 @@ const PERSONNEL_ROLES: Record<PermitType, Record<string, RoleConfig>> = {
       }
     }
   },
-  // ... Autres types de permis avec configurations similaires
   'excavation': {
     'personne-competente': {
       id: 'personne-competente',
@@ -729,7 +835,7 @@ export const PersonnelSection: React.FC<PersonnelSectionProps> = ({
                 {/* Erreurs rôle */}
                 {hasErrors && (
                   <div className="mt-3 flex items-center gap-2 text-sm text-red-600">
-                    <AlertCircle className="w-4 h-4" />
+                    <AlertTriangle className="w-4 h-4" />
                     <span>{hasErrors.message[language]}</span>
                   </div>
                 )}
