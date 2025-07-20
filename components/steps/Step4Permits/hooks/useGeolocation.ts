@@ -572,7 +572,7 @@ export function useGeolocation(config: Partial<GeolocationConfig> = {}) {
     log('Historique des positions effacé');
   }, [log]);
 
-  const getDistanceTraveled = useCallback(): number => {
+  const getDistanceTraveled = useCallback((): number => {
     if (locationHistory.length < 2) return 0;
     
     let totalDistance = 0;
@@ -585,7 +585,7 @@ export function useGeolocation(config: Partial<GeolocationConfig> = {}) {
     return totalDistance;
   }, [locationHistory, calculateDistance]);
 
-  const getAverageAccuracy = useCallback(): number => {
+  const getAverageAccuracy = useCallback((): number => {
     if (locationHistory.length === 0) return 0;
     
     const totalAccuracy = locationHistory.reduce((sum, entry) => sum + entry.position.accuracy, 0);
