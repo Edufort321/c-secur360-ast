@@ -818,9 +818,13 @@ export const ValidationSection: React.FC<ValidationSectionProps> = ({
       new Notification(notification.title[language], {
         body: notification.message[language],
         icon: '/icon-approval.png',
-        badge: '/badge.png',
-        vibrate: [200, 100, 200]
+        badge: '/badge.png'
       });
+      
+      // Vibration séparée car non supportée dans NotificationOptions
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
+      }
     }
   }, [approvalSteps, data.id, language]);
 
