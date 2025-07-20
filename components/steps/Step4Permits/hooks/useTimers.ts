@@ -1016,13 +1016,31 @@ export function useTimers(config: Partial<TimerConfig> = {}) {
   const createPermitValidityTimer = useCallback((permitId: string, duration?: number) => {
     return createTimer('permit_validity', {
       duration: duration || 8 * 60 * 60 * 1000, // 8h par défaut
-      metadata: { permitId, description: `Validité permis ${permitId}` }
+      metadata: { 
+        permitId, 
+        description: `Validité permis ${permitId}`,
+        requirements: ['Renouvellement avant expiration'],
+        consequences: ['Arrêt immédiat des travaux'],
+        relatedTimers: [],
+        legalDeadline: true,
+        autoRenew: false,
+        notificationChannels: ['push', 'haptic', 'audio']
+      }
     });
   }, [createTimer]);
 
   const createAtmosphericTestTimer = useCallback((spaceId: string) => {
     return createTimer('atmospheric_testing', {
-      metadata: { spaceId, description: `Tests atmosphériques ${spaceId}` }
+      metadata: { 
+        spaceId, 
+        description: `Tests atmosphériques ${spaceId}`,
+        requirements: ['Tests O₂, LEL, H₂S, CO obligatoires'],
+        consequences: ['Évacuation si tests non effectués'],
+        relatedTimers: [],
+        legalDeadline: true,
+        autoRenew: true,
+        notificationChannels: ['push', 'haptic']
+      }
     });
   }, [createTimer]);
 
@@ -1030,7 +1048,16 @@ export function useTimers(config: Partial<TimerConfig> = {}) {
     const duration = expiryDate.getTime() - Date.now();
     return createTimer('certification_expiry', {
       duration,
-      metadata: { userId, description: `Expiration ${certificationName}` }
+      metadata: { 
+        userId, 
+        description: `Expiration ${certificationName}`,
+        requirements: ['Formation et examen de renouvellement'],
+        consequences: ['Personnel non autorisé à travailler'],
+        relatedTimers: [],
+        legalDeadline: true,
+        autoRenew: false,
+        notificationChannels: ['push', 'email', 'sms']
+      }
     });
   }, [createTimer]);
 
