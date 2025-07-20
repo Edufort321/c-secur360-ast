@@ -5,13 +5,16 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ChevronLeft, ChevronRight, Save, Send, CheckCircle, XCircle, 
+  AlertTriangle, Activity, Users, Shield, FileText,
+  Calculator, Truck, MapPin, Mic
+} from 'lucide-react';
 import type {
   ApprovalLevel,
   SignatureData,
   InspectionRecord,
-  ProcedureStep,
   Certification,
-  PersonnelMember,
   TestResult,
   CalibrationRecord,
   EquipmentItem,
@@ -20,7 +23,39 @@ import type {
   ContactInfo
 } from '../../types/shared';
 
-// =================== TYPES ESSENTIELS ===================
+// =================== TYPES LOCAUX SPÉCIFIQUES LEVAGE ===================
+
+// Interface ProcedureStep locale pour éviter conflit
+interface LiftingProcedureStep {
+  id: string;
+  title: { fr: string; en: string };
+  description: { fr: string; en: string };
+  isCompleted: boolean;
+  completedBy?: string;
+  completedAt?: Date;
+  required: boolean;
+  estimatedTime?: number;
+  safetyLevel?: 'low' | 'medium' | 'high' | 'critical';
+}
+
+// Interface PersonnelMember locale pour éviter conflit
+interface LiftingPersonnelMember {
+  id: string;
+  prenom: string;
+  nom: string;
+  poste: string;
+  entreprise: string;
+  age: number;
+  experience: number;
+  certifications: Certification[];
+  medicalValid: boolean;
+  medicalExpiry?: Date;
+  liftingCertifications: string[];
+  maxLiftCapacity: number; // tonnes
+  lastLiftingTraining: Date;
+  signalCertified: boolean;
+}
+
 interface LiftingFormData {
   identification: {
     permitType: 'levage';
@@ -32,6 +67,8 @@ interface LiftingFormData {
       specificLocation: string;
       groundConditions: string;
       obstacles: string[];
+      accessRoutes: string[];
+      soilBearing: number; // kN/m²
     };
     workDescription: string;
     liftPlan: {
@@ -40,11 +77,19 @@ interface LiftingFormData {
       preparedBy?: string;
       approvedBy?: string;
       planDate?: Date;
+      engineerSigned?: boolean;
     };
     startDate: Date;
     endDate: Date;
     estimatedDuration: number;
-    contractor: { name: string; license: string; contact: string; insurance: string };
+    contractor: { 
+      name: string; 
+      license: string; 
+      contact: string; 
+      insurance: string;
+      liftingLicense: string;
+      craneOperatorCert: string;
+    };
   };
 
   loadCalculations: {
@@ -56,10 +101,14 @@ interface LiftingFormData {
     craneCapacity: number; // kg
     workingLoadLimit: number; // kg (with safety factors)
     safetyFactor: number;
+    dynamicFactor: number;
     windSpeed: number; // km/h
     maxAllowableWind: number; // km/h
     riggingWeight: number; // kg
     totalLoad: number; // kg (load + rigging)
+    momentCalculation: number; // kNm
+    stabilitySafety: number;
+    loadChart: string; // reference
   };
 
   equipment: {
@@ -68,25 +117,29 @@ interface LiftingFormData {
       model: string;
       serialNumber: string;
       capacity: number; // tonnes
-      boom: { length: number; angle: number; };
+      boom: { length: number; angle: number; telescopic: boolean; };
       counterweight: number; // kg
+      outriggers: { extended: boolean; pressure: number; };
       lastInspection: Date;
       nextInspection: Date;
       certificationNumber: string;
       operator: string;
       operatorLicense: string;
+      operatorExpiry: Date;
     };
     rigging: RiggingEquipment[];
     accessories: AccessoryEquipment[];
     signaling: SignalingEquipment[];
+    loadBlocks: LoadBlock[];
   };
 
   personnel: {
-    operateur: PersonnelMember[];
-    signaleur: PersonnelMember[];
-    grutier: PersonnelMember[];
-    superviseur: PersonnelMember[];
-    rigger: PersonnelMember[];
+    operateur: LiftingPersonnelMember[];
+    signaleur: LiftingPersonnelMember[];
+    grutier: LiftingPersonnelMember[];
+    superviseur: LiftingPersonnelMember[];
+    rigger: LiftingPersonnelMember[];
+    inspecteur?: LiftingPersonnelMember[];
   };
 
   safetyMeasures: {
@@ -95,20 +148,33 @@ interface LiftingFormData {
       barriers: string[];
       signage: string[];
       personnel: string[];
+      markings: string[];
     };
     communicationPlan: {
       primary: 'radio' | 'hand-signals' | 'phone';
       backup: string;
       frequencies: string[];
       testPerformed: boolean;
+      emergencyChannel: string;
     };
     weatherMonitoring: {
       required: boolean;
       parameters: string[];
-      limits: { windSpeed: number; visibility: number; precipitation: boolean; };
+      limits: { 
+        windSpeed: number; 
+        visibility: number; 
+        precipitation: boolean;
+        temperature: { min: number; max: number; };
+      };
       monitoringFrequency: number; // minutes
+      weatherStation: string;
     };
-    emergencyProcedures: ProcedureStep[];
+    emergencyProcedures: LiftingProcedureStep[];
+    riskMitigation: {
+      powerLines: { present: boolean; distance: number; protection: string; };
+      publicAccess: { restricted: boolean; barriers: string[]; signage: string[]; };
+      adjacentStructures: { present: boolean; protection: string[]; monitoring: boolean; };
+    };
   };
 
   validation: {
@@ -120,6 +186,8 @@ interface LiftingFormData {
     issuedBy?: SignatureData;
     issuedAt?: Date;
     validUntil?: Date;
+    engineerApproval?: SignatureData;
+    liftDirectorApproval?: SignatureData;
   };
 }
 
@@ -134,8 +202,11 @@ interface RiggingEquipment {
   angle: number; // degrees
   safetyFactor: number;
   lastInspection: Date;
+  nextInspection: Date;
   condition: 'excellent' | 'good' | 'acceptable' | 'defective';
   serialNumber: string;
+  manufacturer: string;
+  certificationStandard: string;
 }
 
 interface AccessoryEquipment {
@@ -145,7 +216,10 @@ interface AccessoryEquipment {
   weight: number;
   application: string;
   lastInspection: Date;
+  nextInspection: Date;
   certified: boolean;
+  serialNumber: string;
+  condition: 'excellent' | 'good' | 'acceptable' | 'defective';
 }
 
 interface SignalingEquipment {
@@ -155,11 +229,23 @@ interface SignalingEquipment {
   frequency?: string;
   tested: boolean;
   backup: boolean;
+  batteryLevel?: number;
+  range?: number; // metres
+}
+
+interface LoadBlock {
+  id: string;
+  capacity: number; // tonnes
+  numberOfSheaves: number;
+  reeving: string;
+  weight: number; // kg
+  lastInspection: Date;
+  condition: 'excellent' | 'good' | 'acceptable' | 'defective';
 }
 
 interface LoadTest {
   id: string;
-  testType: 'pre-lift' | 'trial-lift' | 'dynamic-test';
+  testType: 'pre-lift' | 'trial-lift' | 'dynamic-test' | 'proof-load';
   testWeight: number; // kg
   testHeight: number; // metres
   testRadius: number; // metres
@@ -167,17 +253,8 @@ interface LoadTest {
   performedBy: string;
   performedAt: Date;
   notes: string;
-}
-
-interface PersonnelMember {
-  id: string; prenom: string; nom: string; poste: string; entreprise: string;
-  age: number; experience: number; certifications: Certification[];
-  medicalValid: boolean; medicalExpiry?: Date;
-}
-
-interface ProcedureStep {
-  id: string; title: { fr: string; en: string }; description: { fr: string; en: string };
-  isCompleted: boolean; completedBy?: string; completedAt?: Date;
+  photos?: string[];
+  witnessedBy?: string;
 }
 
 // =================== CONFIGURATION ===================
@@ -187,42 +264,48 @@ const LIFTING_TYPES = {
     title: { fr: 'Grue mobile', en: 'Mobile crane' },
     description: { fr: 'Grue automotrice sur chenilles/pneus', en: 'Self-propelled crane on tracks/wheels' },
     maxCapacity: 1200, // tonnes
-    requiredCertifications: ['grutier-mobile', 'operateur-grue']
+    requiredCertifications: ['grutier-mobile', 'operateur-grue'],
+    specialRequirements: ['plan-levage', 'sol-porteur', 'stabilisateurs']
   },
   'grue-tour': {
     icon: '🏢',
     title: { fr: 'Grue à tour', en: 'Tower crane' },
     description: { fr: 'Grue fixe de construction', en: 'Fixed construction crane' },
     maxCapacity: 100,
-    requiredCertifications: ['grutier-tour', 'monteur-grue']
+    requiredCertifications: ['grutier-tour', 'monteur-grue'],
+    specialRequirements: ['ancrage', 'contrepoids', 'haubanage']
   },
   'palan': {
     icon: '⛓️',
     title: { fr: 'Palan/Treuil électrique', en: 'Electric hoist/winch' },
     description: { fr: 'Système de levage électrique', en: 'Electric lifting system' },
     maxCapacity: 50,
-    requiredCertifications: ['operateur-palan']
+    requiredCertifications: ['operateur-palan'],
+    specialRequirements: ['ancrage-poutre', 'alimentation-electrique']
   },
   'treuil': {
     icon: '🔧',
     title: { fr: 'Treuil manuel', en: 'Manual winch' },
     description: { fr: 'Système levage manuel/hydraulique', en: 'Manual/hydraulic lifting system' },
     maxCapacity: 20,
-    requiredCertifications: ['operateur-treuil']
+    requiredCertifications: ['operateur-treuil'],
+    specialRequirements: ['ancrage-solide', 'angle-approche']
   },
   'chariot-elevateur': {
     icon: '🚜',
     title: { fr: 'Chariot élévateur', en: 'Forklift' },
     description: { fr: 'Chariot élévateur télescopique', en: 'Telescopic forklift' },
     maxCapacity: 15,
-    requiredCertifications: ['operateur-chariot-elevateur']
+    requiredCertifications: ['operateur-chariot-elevateur'],
+    specialRequirements: ['stabilite', 'centre-gravite', 'charge-nominale']
   },
   'levage-manuel': {
     icon: '💪',
     title: { fr: 'Levage manuel', en: 'Manual lifting' },
     description: { fr: 'Levage à la force humaine', en: 'Human-powered lifting' },
     maxCapacity: 0.5,
-    requiredCertifications: ['formation-manutention']
+    requiredCertifications: ['formation-manutention'],
+    specialRequirements: ['technique-levage', 'travail-equipe', 'echauffement']
   }
 };
 
@@ -247,6 +330,7 @@ const PROVINCIAL_REGULATIONS = {
       critical: 50 // km/h
     },
     exclusionZoneMultiplier: 1.5, // x boom length
+    engineerRequired: 10000, // kg
     references: {
       regulation: 'RSST, art. 345-380',
       standard: 'CSA B167',
@@ -266,10 +350,51 @@ const PROVINCIAL_REGULATIONS = {
       critical: 45
     },
     exclusionZoneMultiplier: 2.0,
+    engineerRequired: 9000,
     references: {
       regulation: 'O. Reg. 213/91',
       standard: 'ANSI B30.5',
       authority: 'Ministry of Labour'
+    }
+  },
+  AB: {
+    maxLiftWithoutPlan: 4500,
+    requiredInspections: {
+      daily: true,
+      weekly: false,
+      monthly: true,
+      annual: true
+    },
+    windLimits: {
+      normal: 50, // Plus élevé en Alberta
+      critical: 60
+    },
+    exclusionZoneMultiplier: 1.5,
+    engineerRequired: 10000,
+    references: {
+      regulation: 'OHS Code Part 15',
+      standard: 'CSA B167',
+      authority: 'Alberta Labour'
+    }
+  },
+  BC: {
+    maxLiftWithoutPlan: 4500,
+    requiredInspections: {
+      daily: true,
+      weekly: true,
+      monthly: true,
+      annual: true
+    },
+    windLimits: {
+      normal: 40,
+      critical: 50
+    },
+    exclusionZoneMultiplier: 2.0,
+    engineerRequired: 9000,
+    references: {
+      regulation: 'OHS Regulation Part 14',
+      standard: 'CSA B167',
+      authority: 'WorkSafeBC'
     }
   }
 };
@@ -312,14 +437,23 @@ export default function LiftingForm({
         address: '', 
         specificLocation: '',
         groundConditions: '',
-        obstacles: []
+        obstacles: [],
+        accessRoutes: [],
+        soilBearing: 0
       },
       workDescription: '',
       liftPlan: { hasLiftPlan: false },
       startDate: new Date(),
       endDate: new Date(Date.now() + 8 * 60 * 60 * 1000),
       estimatedDuration: 8,
-      contractor: { name: '', license: '', contact: '', insurance: '' }
+      contractor: { 
+        name: '', 
+        license: '', 
+        contact: '', 
+        insurance: '',
+        liftingLicense: '',
+        craneOperatorCert: ''
+      }
     },
     loadCalculations: {
       loadWeight: 0,
@@ -330,41 +464,57 @@ export default function LiftingForm({
       craneCapacity: 0,
       workingLoadLimit: 0,
       safetyFactor: 5,
+      dynamicFactor: 1.15,
       windSpeed: 0,
       maxAllowableWind: PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.windLimits.normal || 40,
       riggingWeight: 0,
-      totalLoad: 0
+      totalLoad: 0,
+      momentCalculation: 0,
+      stabilitySafety: 1.5,
+      loadChart: ''
     },
     equipment: {
       crane: {
-        make: '', model: '', serialNumber: '', capacity: 0,
-        boom: { length: 0, angle: 45 },
+        make: '', 
+        model: '', 
+        serialNumber: '', 
+        capacity: 0,
+        boom: { length: 0, angle: 45, telescopic: false },
         counterweight: 0,
+        outriggers: { extended: false, pressure: 0 },
         lastInspection: new Date(),
         nextInspection: new Date(),
         certificationNumber: '',
         operator: '',
-        operatorLicense: ''
+        operatorLicense: '',
+        operatorExpiry: new Date()
       },
       rigging: [],
       accessories: [],
-      signaling: []
+      signaling: [],
+      loadBlocks: []
     },
     personnel: {
-      operateur: [], signaleur: [], grutier: [], superviseur: [], rigger: []
+      operateur: [], 
+      signaleur: [], 
+      grutier: [], 
+      superviseur: [], 
+      rigger: []
     },
     safetyMeasures: {
       exclusionZone: {
         radius: 0,
         barriers: [],
         signage: [],
-        personnel: []
+        personnel: [],
+        markings: []
       },
       communicationPlan: {
         primary: 'radio',
         backup: '',
         frequencies: [],
-        testPerformed: false
+        testPerformed: false,
+        emergencyChannel: ''
       },
       weatherMonitoring: {
         required: true,
@@ -372,11 +522,18 @@ export default function LiftingForm({
         limits: { 
           windSpeed: PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.windLimits.normal || 40,
           visibility: 100,
-          precipitation: false
+          precipitation: false,
+          temperature: { min: -25, max: 40 }
         },
-        monitoringFrequency: 30
+        monitoringFrequency: 30,
+        weatherStation: ''
       },
-      emergencyProcedures: []
+      emergencyProcedures: [],
+      riskMitigation: {
+        powerLines: { present: false, distance: 0, protection: '' },
+        publicAccess: { restricted: false, barriers: [], signage: [] },
+        adjacentStructures: { present: false, protection: [], monitoring: false }
+      }
     },
     validation: {
       preInspections: [],
@@ -440,18 +597,40 @@ export default function LiftingForm({
     hapticFeedback('selection');
   }, [hapticFeedback]);
 
-  // Calculs automatiques
+  // Calculs automatiques charge totale et limites de travail
   const calculateTotalLoad = useCallback(() => {
     const total = formData.loadCalculations.loadWeight + formData.loadCalculations.riggingWeight;
-    updateFormData('loadCalculations', 'totalLoad', total);
-    
+    const dynamicLoad = total * formData.loadCalculations.dynamicFactor;
     const wwl = formData.loadCalculations.craneCapacity / formData.loadCalculations.safetyFactor;
-    updateFormData('loadCalculations', 'workingLoadLimit', wwl);
-  }, [formData.loadCalculations.loadWeight, formData.loadCalculations.riggingWeight, formData.loadCalculations.craneCapacity, formData.loadCalculations.safetyFactor, updateFormData]);
+    
+    setFormData(prev => ({
+      ...prev,
+      loadCalculations: {
+        ...prev.loadCalculations,
+        totalLoad: total,
+        workingLoadLimit: wwl,
+        momentCalculation: total * formData.loadCalculations.liftRadius
+      }
+    }));
+  }, [formData.loadCalculations.loadWeight, formData.loadCalculations.riggingWeight, formData.loadCalculations.craneCapacity, formData.loadCalculations.safetyFactor, formData.loadCalculations.dynamicFactor, formData.loadCalculations.liftRadius]);
 
   useEffect(() => {
     calculateTotalLoad();
-  }, [formData.loadCalculations.loadWeight, formData.loadCalculations.riggingWeight, formData.loadCalculations.craneCapacity, formData.loadCalculations.safetyFactor]);
+  }, [formData.loadCalculations.loadWeight, formData.loadCalculations.riggingWeight, formData.loadCalculations.craneCapacity, formData.loadCalculations.safetyFactor, formData.loadCalculations.dynamicFactor, formData.loadCalculations.liftRadius]);
+
+  // Calcul automatique zone d'exclusion
+  useEffect(() => {
+    const boomLength = formData.equipment.crane.boom.length;
+    const multiplier = PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.exclusionZoneMultiplier || 1.5;
+    const radius = boomLength * multiplier;
+    
+    if (radius !== formData.safetyMeasures.exclusionZone.radius) {
+      updateFormData('safetyMeasures', 'exclusionZone', {
+        ...formData.safetyMeasures.exclusionZone,
+        radius: Math.max(radius, 10) // minimum 10m
+      });
+    }
+  }, [formData.equipment.crane.boom.length, province, updateFormData]);
 
   const validateSection = useCallback((sectionIndex: number) => {
     const section = FORM_SECTIONS[sectionIndex];
@@ -465,10 +644,14 @@ export default function LiftingForm({
         if (!formData.identification.workDescription.trim()) {
           errors.push(language === 'fr' ? 'Description travaux requise' : 'Work description required');
         }
-        if (formData.loadCalculations.loadWeight > PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxLiftWithoutPlan && !formData.identification.liftPlan.hasLiftPlan) {
+        if (formData.loadCalculations.loadWeight > (PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxLiftWithoutPlan || 5000) && !formData.identification.liftPlan.hasLiftPlan) {
           errors.push(language === 'fr' ? 'Plan de levage requis pour cette charge' : 'Lift plan required for this load');
         }
+        if (formData.loadCalculations.loadWeight > (PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.engineerRequired || 10000) && !formData.identification.liftPlan.engineerSigned) {
+          errors.push(language === 'fr' ? 'Approbation ingénieur requise' : 'Engineer approval required');
+        }
         break;
+        
       case 'loadCalculations':
         if (formData.loadCalculations.loadWeight <= 0) {
           errors.push(language === 'fr' ? 'Poids de charge requis' : 'Load weight required');
@@ -479,7 +662,11 @@ export default function LiftingForm({
         if (formData.loadCalculations.windSpeed > formData.loadCalculations.maxAllowableWind) {
           errors.push(language === 'fr' ? 'Vitesse du vent trop élevée' : 'Wind speed too high');
         }
+        if (formData.loadCalculations.safetyFactor < 3) {
+          errors.push(language === 'fr' ? 'Facteur de sécurité insuffisant (min 3)' : 'Insufficient safety factor (min 3)');
+        }
         break;
+        
       case 'equipment':
         if (!formData.equipment.crane.make.trim()) {
           errors.push(language === 'fr' ? 'Informations grue requises' : 'Crane information required');
@@ -487,13 +674,38 @@ export default function LiftingForm({
         if (formData.equipment.rigging.length === 0) {
           errors.push(language === 'fr' ? 'Équipement élingage requis' : 'Rigging equipment required');
         }
+        if (!formData.equipment.crane.operatorLicense.trim()) {
+          errors.push(language === 'fr' ? 'Licence opérateur requise' : 'Operator license required');
+        }
         break;
+        
       case 'personnel':
         if (formData.personnel.operateur.length === 0) {
           errors.push(language === 'fr' ? 'Opérateur requis' : 'Operator required');
         }
         if (formData.personnel.signaleur.length === 0) {
           errors.push(language === 'fr' ? 'Signaleur requis' : 'Signaler required');
+        }
+        if (formData.personnel.superviseur.length === 0) {
+          errors.push(language === 'fr' ? 'Superviseur requis' : 'Supervisor required');
+        }
+        break;
+        
+      case 'safetyMeasures':
+        if (formData.safetyMeasures.exclusionZone.radius < 10) {
+          errors.push(language === 'fr' ? 'Zone d\'exclusion minimale 10m' : 'Minimum exclusion zone 10m');
+        }
+        if (!formData.safetyMeasures.communicationPlan.testPerformed) {
+          errors.push(language === 'fr' ? 'Test communication requis' : 'Communication test required');
+        }
+        break;
+        
+      case 'validation':
+        if (formData.validation.signatures.length === 0) {
+          errors.push(language === 'fr' ? 'Signatures requises' : 'Signatures required');
+        }
+        if (formData.validation.preInspections.length === 0) {
+          errors.push(language === 'fr' ? 'Inspection pré-levage requise' : 'Pre-lift inspection required');
         }
         break;
     }
@@ -587,8 +799,8 @@ export default function LiftingForm({
                   <span className="text-2xl">{config.icon}</span>
                   <div className="flex-1">
                     <div className="font-medium">{config.title[language]}</div>
-                    <div className="text-xs text-gray-500">
-                      Max: {config.maxCapacity}T
+                    <div className="text-xs text-gray-500 mt-1">
+                      {config.description[language]}
                     </div>
                   </div>
                 </div>
@@ -648,35 +860,61 @@ export default function LiftingForm({
           </div>
 
           {formData.identification.liftPlan.hasLiftPlan && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input
-                type="text"
-                value={formData.identification.liftPlan.planNumber || ''}
-                onChange={(e) => updateFormData('identification', 'liftPlan', {
-                  ...formData.identification.liftPlan,
-                  planNumber: e.target.value
-                })}
-                className="px-3 py-2 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder={language === 'fr' ? 'Numéro du plan' : 'Plan number'}
-              />
-              <input
-                type="text"
-                value={formData.identification.liftPlan.preparedBy || ''}
-                onChange={(e) => updateFormData('identification', 'liftPlan', {
-                  ...formData.identification.liftPlan,
-                  preparedBy: e.target.value
-                })}
-                className="px-3 py-2 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder={language === 'fr' ? 'Préparé par' : 'Prepared by'}
-              />
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  value={formData.identification.liftPlan.planNumber || ''}
+                  onChange={(e) => updateFormData('identification', 'liftPlan', {
+                    ...formData.identification.liftPlan,
+                    planNumber: e.target.value
+                  })}
+                  className="px-3 py-2 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder={language === 'fr' ? 'Numéro du plan' : 'Plan number'}
+                />
+                <input
+                  type="text"
+                  value={formData.identification.liftPlan.preparedBy || ''}
+                  onChange={(e) => updateFormData('identification', 'liftPlan', {
+                    ...formData.identification.liftPlan,
+                    preparedBy: e.target.value
+                  })}
+                  className="px-3 py-2 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder={language === 'fr' ? 'Préparé par' : 'Prepared by'}
+                />
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="engineerSigned"
+                  checked={formData.identification.liftPlan.engineerSigned || false}
+                  onChange={(e) => updateFormData('identification', 'liftPlan', {
+                    ...formData.identification.liftPlan,
+                    engineerSigned: e.target.checked
+                  })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="engineerSigned" className="text-sm text-gray-700">
+                  {language === 'fr' ? 'Signé par un ingénieur' : 'Signed by engineer'}
+                </label>
+              </div>
             </div>
           )}
 
-          <div className="mt-2 text-xs text-yellow-700">
-            {language === 'fr' 
-              ? `Plan requis pour charges > ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxLiftWithoutPlan || 5000}kg (${province})`
-              : `Plan required for loads > ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxLiftWithoutPlan || 5000}kg (${province})`
-            }
+          <div className="mt-2 text-xs text-yellow-700 space-y-1">
+            <p>
+              {language === 'fr' 
+                ? `Plan requis pour charges > ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxLiftWithoutPlan || 5000}kg (${province})`
+                : `Plan required for loads > ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxLiftWithoutPlan || 5000}kg (${province})`
+              }
+            </p>
+            <p>
+              {language === 'fr' 
+                ? `Ingénieur requis pour charges > ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.engineerRequired || 10000}kg`
+                : `Engineer required for loads > ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.engineerRequired || 10000}kg`
+              }
+            </p>
           </div>
         </div>
 
@@ -705,7 +943,42 @@ export default function LiftingForm({
           </div>
         </div>
 
-        {/* Dates et entrepreneur */}
+        {/* Entrepreneur et licence */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {language === 'fr' ? 'Entrepreneur' : 'Contractor'}
+            </label>
+            <input
+              type="text"
+              value={formData.identification.contractor.name}
+              onChange={(e) => updateFormData('identification', 'contractor', {
+                ...formData.identification.contractor,
+                name: e.target.value
+              })}
+              className="w-full px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder={language === 'fr' ? 'Nom de l\'entreprise' : 'Company name'}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {language === 'fr' ? 'Licence levage' : 'Lifting license'}
+            </label>
+            <input
+              type="text"
+              value={formData.identification.contractor.liftingLicense}
+              onChange={(e) => updateFormData('identification', 'contractor', {
+                ...formData.identification.contractor,
+                liftingLicense: e.target.value
+              })}
+              className="w-full px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder={language === 'fr' ? 'Ex: LF-12345-QC' : 'Ex: LF-12345-QC'}
+            />
+          </div>
+        </div>
+
+        {/* Dates */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -721,18 +994,43 @@ export default function LiftingForm({
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {language === 'fr' ? 'Entrepreneur' : 'Contractor'}
+              {language === 'fr' ? 'Durée (heures)' : 'Duration (hours)'}
             </label>
             <input
-              type="text"
-              value={formData.identification.contractor.name}
-              onChange={(e) => updateFormData('identification', 'contractor', {
-                ...formData.identification.contractor,
-                name: e.target.value
-              })}
+              type="number"
+              min="0.5"
+              step="0.5"
+              value={formData.identification.estimatedDuration}
+              onChange={(e) => updateFormData('identification', 'estimatedDuration', parseFloat(e.target.value) || 0)}
               className="w-full px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder={language === 'fr' ? 'Nom de l\'entreprise' : 'Company name'}
             />
+          </div>
+        </div>
+
+        {/* Information réglementaire */}
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-medium text-blue-800 mb-2">
+            {language === 'fr' ? `Réglementation ${province}` : `${province} Regulation`}
+          </h4>
+          <div className="text-sm text-blue-700 space-y-1">
+            <p>
+              {language === 'fr' ? 'Plan requis' : 'Plan required'}: {' '}
+              <span className="font-medium">
+                > {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxLiftWithoutPlan || 5000}kg
+              </span>
+            </p>
+            <p>
+              {language === 'fr' ? 'Vent max' : 'Max wind'}: {' '}
+              <span className="font-medium">
+                {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.windLimits.normal || 40} km/h
+              </span>
+            </p>
+            <p>
+              {language === 'fr' ? 'Référence' : 'Reference'}: {' '}
+              <span className="font-medium">
+                {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.references.regulation}
+              </span>
+            </p>
           </div>
         </div>
       </div>
