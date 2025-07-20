@@ -26,16 +26,43 @@ import {
   Save,
   Loader2
 } from 'lucide-react';
-import { PERMIT_DROPDOWN_OPTIONS } from '../../types/forms';
-import { generatePermitCode } from '../../utils/generators';
-import { validatePermitName, validateLocation } from '../../utils/validators';
-import type { 
-  PermitFormData, 
-  PermitType, 
-  FieldError,
-  LocationData,
-  SiteData 
-} from '../../types';
+
+// =================== TYPES ET INTERFACES ===================
+export type PermitType = 'espace-clos' | 'travail-chaud' | 'excavation' | 'levage' | 'hauteur' | 'isolation-energetique' | 'pression' | 'radiographie' | 'toiture' | 'demolition';
+
+export interface PermitFormData {
+  type?: PermitType;
+  name?: string;
+  location?: string | LocationData;
+  site?: string;
+  secteur?: string;
+  description?: string;
+  [key: string]: any;
+}
+
+export interface FieldError {
+  message: { fr: string; en: string };
+  code: string;
+}
+
+export interface LocationData {
+  address: string;
+  coordinates?: { lat: number; lng: number };
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  country?: string;
+  name?: string;
+  type?: string;
+}
+
+export interface SiteData {
+  id: string;
+  name: string;
+  type: string;
+  address: string;
+  coordinates: { lat: number; lng: number };
+}
 
 // =================== INTERFACES SECTION ===================
 interface IdentificationSectionProps {
@@ -65,6 +92,105 @@ interface VoiceInputState {
   confidence: number;
   error?: string;
 }
+
+// =================== CONFIGURATION OPTIONS PERMIS ===================
+const PERMIT_DROPDOWN_OPTIONS = [
+  {
+    value: 'espace-clos' as PermitType,
+    label: { fr: 'Espace clos', en: 'Confined space' },
+    estimatedDuration: 45,
+    requiredPersonnel: ['supervisor', 'attendant', 'entrant']
+  },
+  {
+    value: 'travail-chaud' as PermitType,
+    label: { fr: 'Travail à chaud', en: 'Hot work' },
+    estimatedDuration: 30,
+    requiredPersonnel: ['supervisor', 'fire-watch']
+  },
+  {
+    value: 'excavation' as PermitType,
+    label: { fr: 'Excavation', en: 'Excavation' },
+    estimatedDuration: 35,
+    requiredPersonnel: ['supervisor', 'competent-person']
+  },
+  {
+    value: 'levage' as PermitType,
+    label: { fr: 'Levage/Grutage', en: 'Lifting/Crane' },
+    estimatedDuration: 50,
+    requiredPersonnel: ['lift-director', 'crane-operator', 'signal-person']
+  },
+  {
+    value: 'hauteur' as PermitType,
+    label: { fr: 'Travail en hauteur', en: 'Work at height' },
+    estimatedDuration: 25,
+    requiredPersonnel: ['supervisor', 'qualified-person']
+  },
+  {
+    value: 'isolation-energetique' as PermitType,
+    label: { fr: 'Isolation énergétique', en: 'Energy isolation' },
+    estimatedDuration: 40,
+    requiredPersonnel: ['authorized-person', 'electrician']
+  },
+  {
+    value: 'pression' as PermitType,
+    label: { fr: 'Équipement sous pression', en: 'Pressure equipment' },
+    estimatedDuration: 55,
+    requiredPersonnel: ['pressure-specialist', 'supervisor']
+  },
+  {
+    value: 'radiographie' as PermitType,
+    label: { fr: 'Radiographie industrielle', en: 'Industrial radiography' },
+    estimatedDuration: 60,
+    requiredPersonnel: ['radiation-safety-officer', 'radiographer']
+  },
+  {
+    value: 'toiture' as PermitType,
+    label: { fr: 'Travaux de toiture', en: 'Roofing work' },
+    estimatedDuration: 30,
+    requiredPersonnel: ['supervisor', 'roofer']
+  },
+  {
+    value: 'demolition' as PermitType,
+    label: { fr: 'Démolition', en: 'Demolition' },
+    estimatedDuration: 70,
+    requiredPersonnel: ['demolition-supervisor', 'structural-engineer']
+  }
+];
+
+// =================== FONCTIONS UTILITAIRES ===================
+const generatePermitCode = (type: PermitType, date: Date = new Date()): string => {
+  const typeCode = type.toUpperCase().slice(0, 3);
+  const dateCode = date.toISOString().slice(0, 10).replace(/-/g, '');
+  const randomCode = Math.random().toString(36).substr(2, 4).toUpperCase();
+  return `${typeCode}-${dateCode}-${randomCode}`;
+};
+
+const validatePermitName = (name: string, type: PermitType, language: 'fr' | 'en'): FieldError | null => {
+  if (!name || name.trim().length < 3) {
+    return {
+      message: {
+        fr: 'Le nom doit contenir au moins 3 caractères',
+        en: 'Name must contain at least 3 characters'
+      },
+      code: 'NAME_TOO_SHORT'
+    };
+  }
+  return null;
+};
+
+const validateLocation = (location: string | LocationData, language: 'fr' | 'en'): FieldError | null => {
+  const locationStr = typeof location === 'string' ? location : location?.address || '';
+  if (!locationStr || locationStr.trim().length < 5) {
+    return {
+      message: {
+        fr: 'La localisation doit être précisée',
+        en: 'Location must be specified'
+      },
+      code: 'LOCATION_REQUIRED'
+    };
+  }
+  return null;
+};
 
 // =================== CONSTANTES SECTION ===================
 const PERMIT_TYPES_CONFIG = {
@@ -279,32 +405,23 @@ export const IdentificationSection: React.FC<IdentificationSectionProps> = ({
 
       const { latitude, longitude } = position.coords;
       
-      // Reverse geocoding pour obtenir adresse
-      const response = await fetch(
-        `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_API_KEY&language=${language}&no_annotations=1`
-      );
+      // Mock reverse geocoding pour obtenir adresse
+      const mockAddress = `${latitude.toFixed(4)}, ${longitude.toFixed(4)} - Sherbrooke, QC`;
       
-      if (response.ok) {
-        const data = await response.json();
-        const result = data.results[0];
-        
-        if (result) {
-          const locationData: LocationData = {
-            address: result.formatted,
-            coordinates: { lat: latitude, lng: longitude },
-            city: result.components.city || result.components.town,
-            province: result.components.state || result.components.province,
-            postalCode: result.components.postcode,
-            country: result.components.country
-          };
-          
-          onChange('location', locationData);
-          
-          // Feedback haptic succès
-          if (navigator.vibrate) {
-            navigator.vibrate([50, 25, 50]);
-          }
-        }
+      const locationData: LocationData = {
+        address: mockAddress,
+        coordinates: { lat: latitude, lng: longitude },
+        city: 'Sherbrooke',
+        province: 'QC',
+        postalCode: 'J1K 2R1',
+        country: 'Canada'
+      };
+      
+      onChange('location', locationData);
+      
+      // Feedback haptic succès
+      if (navigator.vibrate) {
+        navigator.vibrate([50, 25, 50]);
       }
     } catch (error) {
       console.error('Erreur géolocalisation:', error);
@@ -316,7 +433,7 @@ export const IdentificationSection: React.FC<IdentificationSectionProps> = ({
     } finally {
       setIsLoadingLocation(false);
     }
-  }, [enableLocationServices, language, onChange]);
+  }, [enableLocationServices, onChange]);
 
   // =================== VOICE INPUT MOBILE ===================
   const startVoiceInput = useCallback((fieldName: string) => {
