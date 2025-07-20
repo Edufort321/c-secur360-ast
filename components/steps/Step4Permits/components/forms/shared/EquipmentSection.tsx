@@ -699,7 +699,7 @@ export const EquipmentSection: React.FC<EquipmentSectionProps> = ({
       {Object.entries(EQUIPMENT_CATEGORIES).map(([categoryKey, config]) => {
         const category = categoryKey as EquipmentCategory;
         const items = equipmentByCategory[category] || [];
-        const isRequired = permitRequirements.required.includes(category);
+        const isRequired = permitRequirements.required.includes(category as any);
         const hasItems = items.length > 0;
         const Icon = config.icon;
 
