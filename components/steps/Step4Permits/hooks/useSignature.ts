@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { GeolocationPosition } from './useGeolocation';
+import type { CustomGeolocationPosition } from './useGeolocation';
 
 // =================== INTERFACES SIGNATURES ===================
 
@@ -19,7 +19,7 @@ export interface ElectronicSignature {
   ipAddress: string;
   userAgent: string;
   deviceInfo: DeviceInfo;
-  location?: GeolocationPosition;
+  location?: CustomGeolocationPosition;
   biometricData?: BiometricData;
   legalConsent: LegalConsent;
   verificationMethod: VerificationMethod;
@@ -689,7 +689,7 @@ export function useSignature(config: Partial<SignatureConfig> = {}) {
       role: SignerRole;
     },
     signatureType: SignatureType,
-    location?: GeolocationPosition,
+    location?: CustomGeolocationPosition,
     witnessInfo?: {
       id: string;
       name: string;
