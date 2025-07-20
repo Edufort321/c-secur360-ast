@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronLeft, ChevronRight, Save, Send, CheckCircle, XCircle, 
   AlertTriangle, Activity, Users, Shield, Zap, FileText,
-  Mountain, MapPin, Mic, Electric
+  Mountain, MapPin, Mic
 } from 'lucide-react';
 import type {
   ApprovalLevel,
@@ -307,7 +307,7 @@ const PROVINCIAL_REGULATIONS = {
 const FORM_SECTIONS = [
   { id: 'identification', title: { fr: 'Identification', en: 'Identification' }, icon: FileText, estimatedTime: 5 },
   { id: 'dimensions', title: { fr: 'Dimensions & Sol', en: 'Dimensions & Soil' }, icon: Mountain, estimatedTime: 8 },
-  { id: 'utilities', title: { fr: 'Services publics', en: 'Utilities' }, icon: Electric, estimatedTime: 12 },
+  { id: 'utilities', title: { fr: 'Services publics', en: 'Utilities' }, icon: Zap, estimatedTime: 12 },
   { id: 'personnel', title: { fr: 'Personnel', en: 'Personnel' }, icon: Users, estimatedTime: 7 },
   { id: 'safety', title: { fr: 'Sécurité & Accès', en: 'Safety & Access' }, icon: Shield, estimatedTime: 10 },
   { id: 'validation', title: { fr: 'Validation', en: 'Validation' }, icon: CheckCircle, estimatedTime: 4 }
@@ -829,7 +829,7 @@ export default function ExcavationForm({
     <div className="space-y-6">
       <div className="bg-yellow-50 rounded-xl p-6">
         <div className="flex items-center space-x-3 mb-4">
-          <Electric className="h-6 w-6 text-yellow-600" />
+          <Zap className="h-6 w-6 text-yellow-600" />
           <h3 className="text-lg font-semibold text-gray-900">
             {language === 'fr' ? 'Services publics et marquage' : 'Utilities and marking'}
           </h3>
