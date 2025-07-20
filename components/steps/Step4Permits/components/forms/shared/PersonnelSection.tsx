@@ -911,7 +911,7 @@ export const PersonnelSection: React.FC<PersonnelSectionProps> = ({
           <PersonnelDetailsModal
             personnel={selectedPersonnel}
             language={language}
-            onSave={(updates) => {
+            onSave={(updates: Partial<PersonnelFormData>) => {
               // Update personnel logic
               setShowPersonnelDetails(false);
               setSelectedPersonnel(null);
