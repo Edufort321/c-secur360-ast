@@ -1,7 +1,7 @@
 // =================== CONSTANTS/EQUIPMENT.TS - SECTION 1 - INTERFACES ET ÉQUIPEMENTS DÉTECTION/PROTECTION ===================
 // Constantes des équipements requis selon types de permis et réglementations provinciales
 
-import type { PermitType } from '../types';
+export type PermitType = 'espace-clos' | 'travail-chaud' | 'excavation' | 'levage' | 'hauteur' | 'isolation-energetique' | 'pression' | 'radiographie' | 'toiture' | 'demolition';
 
 // =================== INTERFACES ===================
 export interface EquipmentItem {
