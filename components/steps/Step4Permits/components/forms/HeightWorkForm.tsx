@@ -5,13 +5,16 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ChevronLeft, ChevronRight, Save, Send, CheckCircle, XCircle, 
+  AlertTriangle, Activity, Users, Shield, Zap, FileText,
+  Building2, MapPin, Mic, Wind
+} from 'lucide-react';
 import type {
   ApprovalLevel,
   SignatureData,
   InspectionRecord,
-  ProcedureStep,
   Certification,
-  PersonnelMember,
   TestResult,
   CalibrationRecord,
   EquipmentItem,
@@ -20,7 +23,39 @@ import type {
   ContactInfo
 } from '../../types/shared';
 
-// =================== TYPES ESSENTIELS ===================
+// =================== TYPES LOCAUX SPÉCIFIQUES HAUTEUR ===================
+
+// Interface ProcedureStep locale pour éviter conflit
+interface HeightProcedureStep {
+  id: string;
+  title: { fr: string; en: string };
+  description: { fr: string; en: string };
+  isCompleted: boolean;
+  completedBy?: string;
+  completedAt?: Date;
+  required: boolean;
+  estimatedTime?: number;
+  riskLevel?: 'low' | 'medium' | 'high' | 'critical';
+}
+
+// Interface PersonnelMember locale pour éviter conflit
+interface HeightPersonnelMember {
+  id: string;
+  prenom: string;
+  nom: string;
+  poste: string;
+  entreprise: string;
+  age: number;
+  experience: number;
+  certifications: Certification[];
+  medicalValid: boolean;
+  medicalExpiry?: Date;
+  heightCertifications: string[];
+  heightExperience: number; // years
+  lastHeightTraining: Date;
+  maxWorkHeight: number; // metres
+}
+
 interface HeightWorkFormData {
   identification: {
     permitType: 'hauteur';
@@ -33,6 +68,8 @@ interface HeightWorkFormData {
       buildingHeight: number; // metres
       workHeight: number; // metres
       accessType: string;
+      buildingType: string;
+      constructionYear?: number;
     };
     workDescription: string;
     riskAssessment: {
@@ -40,11 +77,19 @@ interface HeightWorkFormData {
       weatherSensitive: boolean;
       publicExposure: boolean;
       structuralRisk: boolean;
+      proximityPowerLines: boolean;
+      roofAccess: boolean;
     };
     startDate: Date;
     endDate: Date;
     estimatedDuration: number;
-    contractor: { name: string; license: string; contact: string; insuranceHeight: string };
+    contractor: { 
+      name: string; 
+      license: string; 
+      contact: string; 
+      insuranceHeight: string;
+      specialtyLicense: string;
+    };
   };
 
   fallProtection: {
@@ -56,14 +101,18 @@ interface HeightWorkFormData {
       lastInspection: Date;
       nextInspection: Date;
       anchoragePoints: AnchoragePoint[];
+      capacity: number; // kN
+      standard: string;
     };
     backupSystem?: {
       type: string;
       certification: string;
       anchoragePoints: AnchoragePoint[];
+      capacity: number;
     };
     rescueEquipment: RescueEquipment[];
     ppe: HeightPPE[];
+    safetySystems: SafetySystem[];
   };
 
   accessEquipment: {
@@ -71,14 +120,16 @@ interface HeightWorkFormData {
     ladders?: LadderEquipment[];
     aerialPlatforms?: AerialPlatform[];
     ropeSystems?: RopeAccessSystem[];
+    liftingSystems?: LiftingSystem[];
   };
 
   personnel: {
-    superviseur: PersonnelMember[];
-    travailleurs: PersonnelMember[];
-    surveillants: PersonnelMember[];
-    sauveteurs: PersonnelMember[];
-    riggers?: PersonnelMember[];
+    superviseur: HeightPersonnelMember[];
+    travailleurs: HeightPersonnelMember[];
+    surveillants: HeightPersonnelMember[];
+    sauveteurs: HeightPersonnelMember[];
+    riggers?: HeightPersonnelMember[];
+    inspecteurs?: HeightPersonnelMember[];
   };
 
   environmentalConditions: {
@@ -87,6 +138,8 @@ interface HeightWorkFormData {
       minVisibility: number; // metres
       maxPrecipitation: boolean;
       temperatureRange: { min: number; max: number; };
+      lightningRestrictions: boolean;
+      iceConditions: boolean;
     };
     currentConditions: {
       windSpeed: number;
@@ -94,12 +147,15 @@ interface HeightWorkFormData {
       precipitation: boolean;
       temperature: number;
       forecast: string;
+      uvIndex?: number;
+      airQuality?: string;
     };
     monitoring: {
       required: boolean;
       frequency: number; // minutes
       parameters: string[];
       alertThresholds: Record<string, number>;
+      monitoringEquipment: string[];
     };
   };
 
@@ -110,19 +166,23 @@ interface HeightWorkFormData {
       responseTime: number; // minutes
       rescueTeam: string[];
       equipment: string[];
+      trainingDate?: Date;
+      drillFrequency: number; // months
     };
     communicationPlan: {
       primary: 'radio' | 'cellular' | 'whistle' | 'hand-signals';
       backup: string;
       emergencyNumbers: string[];
       checkInFrequency: number; // minutes
+      escalationProcedure: string;
     };
-    evacuationProcedures: ProcedureStep[];
+    evacuationProcedures: HeightProcedureStep[];
     medicalAccess: {
       accessRoute: string;
       evacuationMethod: string;
       nearestHospital: string;
       estimatedTime: number; // minutes
+      specializedEquipment: string[];
     };
   };
 
@@ -134,39 +194,58 @@ interface HeightWorkFormData {
     issuedBy?: SignatureData;
     issuedAt?: Date;
     validUntil?: Date;
+    engineerApproval?: SignatureData;
+    heightSpecialistApproval?: SignatureData;
   };
 }
 
 interface AnchoragePoint {
   id: string;
-  type: 'structural' | 'temporary' | 'mobile';
+  type: 'structural' | 'temporary' | 'mobile' | 'engineered';
   location: string;
   capacity: number; // kN
   certification: string;
   lastTested: Date;
+  nextTest: Date;
   condition: 'excellent' | 'good' | 'acceptable' | 'defective';
+  material: string;
+  installationDate: Date;
 }
 
 interface RescueEquipment {
   id: string;
-  type: 'treuil-sauvetage' | 'descenseur' | 'brancard-evacuation' | 'kit-premiers-secours';
+  type: 'treuil-sauvetage' | 'descenseur' | 'brancard-evacuation' | 'kit-premiers-secours' | 'corde-sauvetage';
   capacity?: number;
   lastInspection: Date;
+  nextInspection: Date;
   location: string;
   assignedTo: string;
+  condition: 'excellent' | 'good' | 'acceptable' | 'defective';
 }
 
 interface HeightPPE {
   id: string;
-  type: 'harnais' | 'longe' | 'casque' | 'chaussures-securite' | 'gants-adherents' | 'protection-oculaire';
+  type: 'harnais' | 'longe' | 'casque' | 'chaussures-securite' | 'gants-adherents' | 'protection-oculaire' | 'antichute-mobile';
   standard: string; // CSA Z259.10, ANSI Z359, etc.
   size: string;
   condition: 'new' | 'good' | 'acceptable' | 'retired';
   lastInspection: Date;
+  nextInspection: Date;
   assignedTo: string;
+  serialNumber: string;
+}
+
+interface SafetySystem {
+  id: string;
+  type: 'collective' | 'individual' | 'administrative';
+  description: string;
+  effectiveness: 'high' | 'medium' | 'low';
+  maintenance: string;
+  responsible: string;
 }
 
 interface ScaffoldingSystem {
+  id: string;
   type: 'cadre' | 'tube-boulon' | 'modulaire' | 'suspendu';
   manufacturer: string;
   height: number; // metres
@@ -176,26 +255,32 @@ interface ScaffoldingSystem {
   installer: string;
   installerLicense: string;
   lastInspection: Date;
+  nextInspection: Date;
   components: ScaffoldingComponent[];
+  engineerApproval: boolean;
 }
 
 interface ScaffoldingComponent {
   id: string;
-  type: 'cadre' | 'plateau' | 'console' | 'garde-corps' | 'ancrage';
+  type: 'cadre' | 'plateau' | 'console' | 'garde-corps' | 'ancrage' | 'contreventement';
   quantity: number;
   condition: 'excellent' | 'good' | 'acceptable' | 'defective';
   serialNumbers: string[];
+  material: string;
+  loadRating: number; // kg
 }
 
 interface LadderEquipment {
   id: string;
-  type: 'simple' | 'coulissante' | 'articulee' | 'plateforme';
-  material: 'aluminum' | 'fiberglass' | 'steel';
+  type: 'simple' | 'coulissante' | 'articulee' | 'plateforme' | 'escabeau';
+  material: 'aluminum' | 'fiberglass' | 'steel' | 'wood';
   height: number; // metres
   loadCapacity: number; // kg
   certification: string;
   lastInspection: Date;
+  nextInspection: Date;
   condition: 'excellent' | 'good' | 'acceptable' | 'defective';
+  angleRestrictions: { min: number; max: number; }; // degrees
 }
 
 interface AerialPlatform {
@@ -205,10 +290,12 @@ interface AerialPlatform {
   model: string;
   maxHeight: number; // metres
   loadCapacity: number; // kg
-  powerSource: 'electric' | 'diesel' | 'hybrid';
+  powerSource: 'electric' | 'diesel' | 'hybrid' | 'manual';
   lastInspection: Date;
+  nextInspection: Date;
   operator: string;
   operatorCertification: string;
+  operatorExpiry: Date;
 }
 
 interface RopeAccessSystem {
@@ -219,19 +306,20 @@ interface RopeAccessSystem {
   diameter: number; // mm
   breakingStrength: number; // kN
   lastInspection: Date;
+  nextInspection: Date;
   certifiedTechnician: string;
+  technicanLicense: string;
 }
 
-interface PersonnelMember {
-  id: string; prenom: string; nom: string; poste: string; entreprise: string;
-  age: number; experience: number; certifications: Certification[];
-  medicalValid: boolean; medicalExpiry?: Date;
-  heightCertifications: string[]; // Specific height work certifications
-}
-
-interface ProcedureStep {
-  id: string; title: { fr: string; en: string }; description: { fr: string; en: string };
-  isCompleted: boolean; completedBy?: string; completedAt?: Date;
+interface LiftingSystem {
+  id: string;
+  type: 'grue-mobile' | 'palan' | 'treuil' | 'monte-charge';
+  capacity: number; // kg
+  certification: string;
+  operator: string;
+  operatorCertification: string;
+  lastInspection: Date;
+  nextInspection: Date;
 }
 
 // =================== CONFIGURATION ===================
@@ -355,6 +443,38 @@ const PROVINCIAL_REGULATIONS = {
       standard: 'CAN/CSA Z259 series',
       authority: 'Ministry of Labour'
     }
+  },
+  AB: {
+    minHeightRequiringProtection: 3.0,
+    maxWindSpeed: 50, // Plus élevé en Alberta
+    requiredRescueTime: 12,
+    inspectionFrequency: {
+      daily: true,
+      weekly: false,
+      monthly: true
+    },
+    anchorageStrength: 22,
+    references: {
+      regulation: 'OHS Code Part 9',
+      standard: 'CSA Z259 series',
+      authority: 'Alberta Labour'
+    }
+  },
+  BC: {
+    minHeightRequiringProtection: 3.0,
+    maxWindSpeed: 40,
+    requiredRescueTime: 10,
+    inspectionFrequency: {
+      daily: true,
+      weekly: true,
+      monthly: true
+    },
+    anchorageStrength: 22,
+    references: {
+      regulation: 'OHS Regulation Part 11',
+      standard: 'CSA Z259 series',
+      authority: 'WorkSafeBC'
+    }
   }
 };
 
@@ -398,19 +518,28 @@ export default function HeightWorkForm({
         specificLocation: '',
         buildingHeight: 0,
         workHeight: 0,
-        accessType: ''
+        accessType: '',
+        buildingType: ''
       },
       workDescription: '',
       riskAssessment: {
         fallRisk: 'medium',
         weatherSensitive: true,
         publicExposure: false,
-        structuralRisk: false
+        structuralRisk: false,
+        proximityPowerLines: false,
+        roofAccess: false
       },
       startDate: new Date(),
       endDate: new Date(Date.now() + 8 * 60 * 60 * 1000),
       estimatedDuration: 8,
-      contractor: { name: '', license: '', contact: '', insuranceHeight: '' }
+      contractor: { 
+        name: '', 
+        license: '', 
+        contact: '', 
+        insuranceHeight: '',
+        specialtyLicense: ''
+      }
     },
     fallProtection: {
       primarySystem: {
@@ -420,21 +549,29 @@ export default function HeightWorkForm({
         certification: '',
         lastInspection: new Date(),
         nextInspection: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 days
-        anchoragePoints: []
+        anchoragePoints: [],
+        capacity: 22,
+        standard: 'CSA Z259.10'
       },
       rescueEquipment: [],
-      ppe: []
+      ppe: [],
+      safetySystems: []
     },
     accessEquipment: {},
     personnel: {
-      superviseur: [], travailleurs: [], surveillants: [], sauveteurs: []
+      superviseur: [], 
+      travailleurs: [], 
+      surveillants: [], 
+      sauveteurs: []
     },
     environmentalConditions: {
       weatherLimits: {
         maxWindSpeed: PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxWindSpeed || 40,
         minVisibility: 100,
         maxPrecipitation: false,
-        temperatureRange: { min: -20, max: 35 }
+        temperatureRange: { min: -20, max: 35 },
+        lightningRestrictions: true,
+        iceConditions: false
       },
       currentConditions: {
         windSpeed: 0,
@@ -450,7 +587,8 @@ export default function HeightWorkForm({
         alertThresholds: {
           windSpeed: PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxWindSpeed || 40,
           visibility: 100
-        }
+        },
+        monitoringEquipment: []
       }
     },
     emergencyProcedures: {
@@ -458,20 +596,23 @@ export default function HeightWorkForm({
         hasRescuePlan: false,
         responseTime: PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredRescueTime || 10,
         rescueTeam: [],
-        equipment: []
+        equipment: [],
+        drillFrequency: 6
       },
       communicationPlan: {
         primary: 'radio',
         backup: '',
         emergencyNumbers: [],
-        checkInFrequency: 15
+        checkInFrequency: 15,
+        escalationProcedure: ''
       },
       evacuationProcedures: [],
       medicalAccess: {
         accessRoute: '',
         evacuationMethod: '',
         nearestHospital: '',
-        estimatedTime: 0
+        estimatedTime: 0,
+        specializedEquipment: []
       }
     },
     validation: {
@@ -547,15 +688,15 @@ export default function HeightWorkForm({
         if (!formData.identification.workDescription.trim()) {
           errors.push(language === 'fr' ? 'Description travaux requise' : 'Work description required');
         }
-        if (formData.identification.location.workHeight < PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.minHeightRequiringProtection) {
-          errors.push(language === 'fr' ? `Hauteur minimale ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.minHeightRequiringProtection}m requise` : `Minimum height ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.minHeightRequiringProtection}m required`);
+        if (formData.identification.location.workHeight < (PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.minHeightRequiringProtection || 3)) {
+          errors.push(language === 'fr' ? `Hauteur minimale ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.minHeightRequiringProtection || 3}m requise` : `Minimum height ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.minHeightRequiringProtection || 3}m required`);
         }
         break;
       case 'fallProtection':
         if (!formData.fallProtection.primarySystem.manufacturer.trim()) {
           errors.push(language === 'fr' ? 'Système protection primaire requis' : 'Primary protection system required');
         }
-        if (formData.fallProtection.anchoragePoints?.length === 0) {
+        if (formData.fallProtection.primarySystem.anchoragePoints?.length === 0) {
           errors.push(language === 'fr' ? 'Points d\'ancrage requis' : 'Anchorage points required');
         }
         break;
@@ -579,8 +720,8 @@ export default function HeightWorkForm({
         if (!formData.emergencyProcedures.rescuePlan.hasRescuePlan) {
           errors.push(language === 'fr' ? 'Plan de sauvetage requis' : 'Rescue plan required');
         }
-        if (formData.emergencyProcedures.rescuePlan.responseTime > PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredRescueTime) {
-          errors.push(language === 'fr' ? `Temps de réponse max ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredRescueTime}min` : `Max response time ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredRescueTime}min`);
+        if (formData.emergencyProcedures.rescuePlan.responseTime > (PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredRescueTime || 15)) {
+          errors.push(language === 'fr' ? `Temps de réponse max ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredRescueTime || 15}min` : `Max response time ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredRescueTime || 15}min`);
         }
         break;
     }
@@ -675,8 +816,8 @@ export default function HeightWorkForm({
                   <span className="text-2xl">{config.icon}</span>
                   <div className="flex-1">
                     <div className="font-medium">{config.title[language]}</div>
-                    <div className="text-xs text-gray-500">
-                      {language === 'fr' ? 'Min' : 'Min'}: {config.minHeight}m
+                    <div className="text-xs text-gray-500 mt-1">
+                      {config.description[language]}
                     </div>
                   </div>
                 </div>
@@ -747,8 +888,8 @@ export default function HeightWorkForm({
           
           <div className="mt-2 text-xs text-sky-700">
             {language === 'fr' 
-              ? `Protection obligatoire à partir de ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.minHeightRequiringProtection}m (${province})`
-              : `Protection required from ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.minHeightRequiringProtection}m (${province})`
+              ? `Protection obligatoire à partir de ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.minHeightRequiringProtection || 3}m (${province})`
+              : `Protection required from ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.minHeightRequiringProtection || 3}m (${province})`
             }
           </div>
         </div>
@@ -783,7 +924,8 @@ export default function HeightWorkForm({
               {[
                 { key: 'weatherSensitive', label: { fr: 'Sensible aux conditions météo', en: 'Weather sensitive' } },
                 { key: 'publicExposure', label: { fr: 'Exposition du public', en: 'Public exposure' } },
-                { key: 'structuralRisk', label: { fr: 'Risque structurel', en: 'Structural risk' } }
+                { key: 'structuralRisk', label: { fr: 'Risque structurel', en: 'Structural risk' } },
+                { key: 'proximityPowerLines', label: { fr: 'Proximité lignes électriques', en: 'Proximity to power lines' } }
               ].map(item => (
                 <div key={item.key} className="flex items-center space-x-3">
                   <input
@@ -858,6 +1000,33 @@ export default function HeightWorkForm({
               className="w-full px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
               placeholder={language === 'fr' ? 'Nom de l\'entreprise' : 'Company name'}
             />
+          </div>
+        </div>
+
+        {/* Information réglementaire */}
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-medium text-blue-800 mb-2">
+            {language === 'fr' ? `Réglementation ${province}` : `${province} Regulation`}
+          </h4>
+          <div className="text-sm text-blue-700 space-y-1">
+            <p>
+              {language === 'fr' ? 'Hauteur min protection' : 'Min protection height'}: {' '}
+              <span className="font-medium">
+                {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.minHeightRequiringProtection || 3}m
+              </span>
+            </p>
+            <p>
+              {language === 'fr' ? 'Vitesse vent max' : 'Max wind speed'}: {' '}
+              <span className="font-medium">
+                {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxWindSpeed || 40} km/h
+              </span>
+            </p>
+            <p>
+              {language === 'fr' ? 'Temps sauvetage max' : 'Max rescue time'}: {' '}
+              <span className="font-medium">
+                {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredRescueTime || 15} min
+              </span>
+            </p>
           </div>
         </div>
       </div>
