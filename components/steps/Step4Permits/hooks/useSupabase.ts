@@ -1008,15 +1008,19 @@ export function useSupabase(config: Partial<SupabaseConfig> = {}) {
     
     let subscription = supabase
       .channel(`table_${table}_${subscriptionId}`)
-      .on('postgres_changes', {
-        event,
-        schema: 'public',
-        table,
-        filter: filter ? Object.entries(filter).map(([key, value]) => `${key}=eq.${value}`).join(',') : undefined
-      }, (payload) => {
-        log('Realtime event', { table, event, payload });
-        callback(payload);
-      })
+      .on(
+        'postgres_changes' as any,
+        {
+          event,
+          schema: 'public',
+          table,
+          filter: filter ? Object.entries(filter).map(([key, value]) => `${key}=eq.${value}`).join(',') : undefined
+        } as any,
+        (payload) => {
+          log('Realtime event', { table, event, payload });
+          callback(payload);
+        }
+      )
       .subscribe();
 
     const realtimeSubscription: RealtimeSubscription = {
