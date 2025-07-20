@@ -6,16 +6,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type {
-  SignatureData,
-  InspectionRecord,
-  ProcedureStep,
   Certification,
   PersonnelMember,
-  TestResult,
-  CalibrationRecord,
   EquipmentItem,
   PPEItem,
-  CommunicationPlan,
   ContactInfo
 } from '../../types/shared';
 
