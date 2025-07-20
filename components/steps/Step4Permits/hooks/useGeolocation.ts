@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 // =================== INTERFACES GÉOLOCALISATION ===================
 
-export interface GeolocationPosition {
+export interface CustomGeolocationPosition {
   latitude: number;
   longitude: number;
   accuracy: number; // en mètres
@@ -54,7 +54,7 @@ export interface GeolocationState {
   isEnabled: boolean;
   isLoading: boolean;
   isWatching: boolean;
-  position: GeolocationPosition | null;
+  position: CustomGeolocationPosition | null;
   address: GeolocationAddress | null;
   error: GeolocationError | null;
   lastUpdate: Date | null;
@@ -63,7 +63,7 @@ export interface GeolocationState {
 
 export interface LocationHistory {
   id: string;
-  position: GeolocationPosition;
+  position: CustomGeolocationPosition;
   address: GeolocationAddress | null;
   timestamp: Date;
   source: 'manual' | 'watch' | 'auto';
@@ -134,7 +134,7 @@ export function useGeolocation(config: Partial<GeolocationConfig> = {}) {
   
   // Références pour le nettoyage
   const watchIdRef = useRef<number | null>(null);
-  const lastPositionRef = useRef<GeolocationPosition | null>(null);
+  const lastPositionRef = useRef<CustomGeolocationPosition | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -177,7 +177,7 @@ export function useGeolocation(config: Partial<GeolocationConfig> = {}) {
   }, [setError, log]);
 
   // Calcul de distance entre deux positions (formule Haversine)
-  const calculateDistance = useCallback((pos1: GeolocationPosition, pos2: GeolocationPosition): number => {
+  const calculateDistance = useCallback((pos1: CustomGeolocationPosition, pos2: CustomGeolocationPosition): number => {
     const R = 6371e3; // Rayon de la Terre en mètres
     const φ1 = pos1.latitude * Math.PI / 180;
     const φ2 = pos2.latitude * Math.PI / 180;
@@ -193,7 +193,7 @@ export function useGeolocation(config: Partial<GeolocationConfig> = {}) {
   }, []);
 
   // Calcul de la vitesse entre deux positions
-  const calculateSpeed = useCallback((pos1: GeolocationPosition, pos2: GeolocationPosition): number => {
+  const calculateSpeed = useCallback((pos1: CustomGeolocationPosition, pos2: CustomGeolocationPosition): number => {
     const distance = calculateDistance(pos1, pos2);
     const timeDiff = (pos2.timestamp.getTime() - pos1.timestamp.getTime()) / 1000; // secondes
     return timeDiff > 0 ? distance / timeDiff : 0; // m/s
@@ -208,7 +208,7 @@ export function useGeolocation(config: Partial<GeolocationConfig> = {}) {
 
   // =================== GÉOLOCALISATION ===================
 
-  const getCurrentPosition = useCallback((retryCount = 0): Promise<GeolocationPosition> => {
+  const getCurrentPosition = useCallback((retryCount = 0): Promise<CustomGeolocationPosition> => {
     return new Promise((resolve, reject) => {
       if (!state.isSupported) {
         reject(new Error('Géolocalisation non supportée'));
@@ -228,7 +228,7 @@ export function useGeolocation(config: Partial<GeolocationConfig> = {}) {
 
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const geoPosition: GeolocationPosition = {
+          const geoPosition: CustomGeolocationPosition = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy,
@@ -340,7 +340,7 @@ export function useGeolocation(config: Partial<GeolocationConfig> = {}) {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
-        const geoPosition: GeolocationPosition = {
+        const geoPosition: CustomGeolocationPosition = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           accuracy: position.coords.accuracy,
@@ -448,7 +448,7 @@ export function useGeolocation(config: Partial<GeolocationConfig> = {}) {
   // =================== GÉOCODAGE INVERSE ===================
 
   const reverseGeocode = useCallback(async (
-    position: GeolocationPosition,
+    position: CustomGeolocationPosition,
     provider: GeolocationConfig['geocodingProvider'] = finalConfig.geocodingProvider
   ): Promise<GeolocationAddress | null> => {
     try {
@@ -670,7 +670,7 @@ export type UseGeolocationReturn = ReturnType<typeof useGeolocation>;
 
 // Export des types pour utilisation dans d'autres hooks
 export type {
-  GeolocationPosition,
+  CustomGeolocationPosition,
   GeolocationAddress,
   GeolocationError,
   GeolocationConfig,
