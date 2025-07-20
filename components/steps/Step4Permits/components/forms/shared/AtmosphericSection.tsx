@@ -411,7 +411,6 @@ export const AtmosphericSection: React.FC<AtmosphericSectionProps> = ({
         new Notification(`${alarm.severity.toUpperCase()} - ${parameterConfig?.label[language] || alarm.parameter}`, {
           body: `${language === 'fr' ? 'Valeur' : 'Value'}: ${alarm.value}${parameterConfig?.unit || ''} (${language === 'fr' ? 'Seuil' : 'Threshold'}: ${alarm.threshold}${parameterConfig?.unit || ''})`,
           icon: '/atmospheric-alarm.png',
-          vibrate: alarm.severity === 'emergency' ? [200, 100, 200] : [100],
           tag: alarm.id
         });
       }
