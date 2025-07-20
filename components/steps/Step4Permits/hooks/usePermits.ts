@@ -1292,5 +1292,4 @@ const showNotification = (title: string, body: string) => {
 };
 
 // =================== EXPORTS ===================
-export type { UsePermitsConfig, UsePermitsState, UsePermitsActions };
 export default usePermits;
