@@ -665,6 +665,7 @@ export default function ElectricalForm({
       case 'testing': return renderTestingSection();
       case 'validation': return renderValidationSection();
       default: return <div>Section non trouvée</div>;
+    }
   };
 
   const renderIdentificationSection = () => (
@@ -944,8 +945,14 @@ export default function ElectricalForm({
             />
             <p className="text-xs text-yellow-700 mt-1">
               {language === 'fr' 
-                ?.requiredLicenses?.master || PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredLicenses?.maitre
-                : `Required: ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredLicenses?.master || PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredLicenses?.maitre || 'Valid license'} (${province})`
+                ? `Requis: ${(() => {
+                    const reg = PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredLicenses;
+                    return reg?.maitre || reg?.master || 'Licence valide';
+                  })()} (${province})`
+                : `Required: ${(() => {
+                    const reg = PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredLicenses;
+                    return reg?.master || reg?.maitre || 'Valid license';
+                  })()} (${province})`
               }
             </p>
           </div>
