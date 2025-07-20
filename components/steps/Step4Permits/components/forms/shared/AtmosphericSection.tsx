@@ -325,7 +325,7 @@ export const AtmosphericSection: React.FC<AtmosphericSectionProps> = ({
     };
   }, [monitoringSession]);
 
-  // =================== VALIDATION LECTURES ===================
+  // =================== VALIDATION LECTURES - CORRIGÉE ===================
   const validateReading = useCallback((reading: AtmosphericReading): AlarmData[] => {
     const alarms: AlarmData[] = [];
     const limits = data.limits || provincialLimits;
@@ -338,30 +338,36 @@ export const AtmosphericSection: React.FC<AtmosphericSectionProps> = ({
       let severity: AlarmData['severity'] = 'info';
 
       if (parameter === 'oxygen') {
-        if (value < paramLimits.critical) {
+        // CORRECTION: Vérification avec garde de type pour 'critical'
+        if ('critical' in paramLimits && value < paramLimits.critical) {
           alarmType = 'critical';
           severity = 'emergency';
-        } else if (value < paramLimits.min || value > paramLimits.max) {
+        } else if ('min' in paramLimits && 'max' in paramLimits && (value < paramLimits.min || value > paramLimits.max)) {
           alarmType = 'high';
           severity = 'critical';
         }
       } else {
-        if (value > paramLimits.critical) {
+        // CORRECTION: Vérification avec garde de type pour 'critical'
+        if ('critical' in paramLimits && value > paramLimits.critical) {
           alarmType = 'critical';
           severity = 'emergency';
-        } else if (value > paramLimits.max) {
+        } else if ('max' in paramLimits && value > paramLimits.max) {
           alarmType = 'high';
           severity = 'warning';
         }
       }
 
       if (alarmType) {
+        const threshold = parameter === 'oxygen' 
+          ? ('min' in paramLimits ? paramLimits.min : 0)
+          : ('max' in paramLimits ? paramLimits.max : 0);
+
         alarms.push({
           id: `alarm_${Date.now()}_${parameter}`,
           type: alarmType,
           parameter,
           value,
-          threshold: parameter === 'oxygen' ? paramLimits.min : paramLimits.max,
+          threshold,
           timestamp: new Date(),
           acknowledged: false,
           deviceId: reading.deviceId,
@@ -528,11 +534,11 @@ export const AtmosphericSection: React.FC<AtmosphericSectionProps> = ({
             let status: 'normal' | 'warning' | 'critical' = 'normal';
             if (limits) {
               if (parameter === 'oxygen') {
-                if (value < limits.critical) status = 'critical';
-                else if (value < limits.min || value > limits.max) status = 'warning';
+                if ('critical' in limits && value < limits.critical) status = 'critical';
+                else if ('min' in limits && 'max' in limits && (value < limits.min || value > limits.max)) status = 'warning';
               } else {
-                if (value > limits.critical) status = 'critical';
-                else if (value > limits.max) status = 'warning';
+                if ('critical' in limits && value > limits.critical) status = 'critical';
+                else if ('max' in limits && value > limits.max) status = 'warning';
               }
             }
 
@@ -568,8 +574,8 @@ export const AtmosphericSection: React.FC<AtmosphericSectionProps> = ({
                 {limits && (
                   <div className="text-xs text-gray-500">
                     {parameter === 'oxygen' 
-                      ? `${limits.min}-${limits.max}${config.unit}`
-                      : `<${limits.max}${config.unit}`
+                      ? ('min' in limits && 'max' in limits ? `${limits.min}-${limits.max}${config.unit}` : '')
+                      : ('max' in limits ? `<${limits.max}${config.unit}` : '')
                     }
                   </div>
                 )}
@@ -842,8 +848,8 @@ export const AtmosphericSection: React.FC<AtmosphericSectionProps> = ({
                   <div className="font-medium">{config.label[language]}</div>
                   <div className="text-gray-600">
                     {param === 'oxygen' 
-                      ? `${limits.min}-${limits.max}${config.unit}`
-                      : `<${limits.max}${config.unit}`
+                      ? ('min' in limits && 'max' in limits ? `${limits.min}-${limits.max}${config.unit}` : '')
+                      : ('max' in limits ? `<${limits.max}${config.unit}` : '')
                     }
                   </div>
                 </div>
