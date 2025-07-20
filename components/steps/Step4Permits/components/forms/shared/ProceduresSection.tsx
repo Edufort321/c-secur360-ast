@@ -50,21 +50,122 @@ import {
   Phone,
   Bell,
   X,
-  Check
+  Check,
+  Gauge
 } from 'lucide-react';
-import { generateProcedureId, validateProcedureStep } from '../../utils/validators';
-import { PROVINCIAL_REGULATIONS } from '../../constants/provinces';
-import type { 
-  PermitFormData,
-  PermitType,
-  ProcedureStep,
-  SafetyProcedure,
-  EmergencyProcedure,
-  CommunicationPlan,
-  FieldError,
-  VoiceNote,
-  ChecklistItem
-} from '../../types';
+
+// =================== TYPES ET INTERFACES ===================
+export type PermitType = 'espace-clos' | 'travail-chaud' | 'excavation' | 'levage' | 'hauteur' | 'isolation-energetique' | 'pression' | 'radiographie' | 'toiture' | 'demolition';
+
+export interface PermitFormData {
+  procedures?: {
+    stepExecutions?: Record<string, StepExecution>;
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
+export interface FieldError {
+  message: { fr: string; en: string };
+  code: string;
+}
+
+export interface ProcedureStep {
+  id: string;
+  title: { fr: string; en: string };
+  description: { fr: string; en: string };
+  order: number;
+  isRequired: boolean;
+}
+
+export interface SafetyProcedure {
+  id: string;
+  name: { fr: string; en: string };
+  steps: ProcedureStep[];
+}
+
+export interface EmergencyProcedure {
+  id: string;
+  name: { fr: string; en: string };
+  steps: ProcedureStep[];
+}
+
+export interface CommunicationPlan {
+  id: string;
+  name: { fr: string; en: string };
+  steps: ProcedureStep[];
+}
+
+export interface VoiceNote {
+  id: string;
+  url: string;
+  duration: number;
+  timestamp: Date;
+}
+
+export interface ChecklistItem {
+  id: string;
+  text: { fr: string; en: string };
+  isChecked: boolean;
+  isRequired: boolean;
+}
+
+// =================== FONCTIONS UTILITAIRES ===================
+const generateProcedureId = (): string => {
+  return `procedure_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+};
+
+const validateProcedureStep = (step: ProcedureStepTemplate): FieldError | null => {
+  if (!step.title.fr || !step.title.en) {
+    return {
+      message: {
+        fr: 'Le titre de l\'étape est requis',
+        en: 'Step title is required'
+      },
+      code: 'STEP_TITLE_REQUIRED'
+    };
+  }
+  
+  if (!step.description.fr || !step.description.en) {
+    return {
+      message: {
+        fr: 'La description de l\'étape est requise',
+        en: 'Step description is required'
+      },
+      code: 'STEP_DESCRIPTION_REQUIRED'
+    };
+  }
+  
+  return null;
+};
+
+// =================== CONSTANTES RÉGLEMENTATIONS ===================
+const PROVINCIAL_REGULATIONS = {
+  QC: {
+    authority: 'CNESST',
+    standards: ['CSA Z1006-16', 'NFPA 350'],
+    maxWorkHours: 12,
+    minRestPeriod: 8
+  },
+  ON: {
+    authority: 'Ministry of Labour',
+    standards: ['CSA Z1006-16', 'NFPA 350'],
+    maxWorkHours: 12,
+    minRestPeriod: 8
+  },
+  AB: {
+    authority: 'Alberta Labour',
+    standards: ['CSA Z1006-16', 'NFPA 350'],
+    maxWorkHours: 12,
+    minRestPeriod: 8
+  },
+  BC: {
+    authority: 'WorkSafeBC',
+    standards: ['CSA Z1006-16', 'NFPA 350'],
+    maxWorkHours: 12,
+    minRestPeriod: 8
+  }
+};
 
 // =================== INTERFACES SECTION ===================
 interface ProceduresSectionProps {
@@ -417,7 +518,7 @@ export const ProceduresSection: React.FC<ProceduresSectionProps> = ({
   const [stepTimers, setStepTimers] = useState<Record<string, number>>({});
 
   // Refs pour fonctionnalités
-  const voiceRecognitionRef = useRef<SpeechRecognition | null>(null);
+  const voiceRecognitionRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const stepTimerRefs = useRef<Record<string, NodeJS.Timeout>>({});
 
@@ -526,7 +627,7 @@ export const ProceduresSection: React.FC<ProceduresSectionProps> = ({
         [field]: value,
         ...(field === 'status' && value === 'in-progress' && { startTime: new Date() }),
         ...(field === 'status' && ['completed', 'failed'].includes(value) && { endTime: new Date() })
-      }
+      } as StepExecution
     }));
     
     // Mettre à jour données formulaire
