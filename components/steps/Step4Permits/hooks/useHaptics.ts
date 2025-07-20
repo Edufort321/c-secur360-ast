@@ -25,7 +25,7 @@ export interface HapticPattern {
   description: string;
   pattern: number[]; // Vibration pattern in ms [vibrate, pause, vibrate, pause...]
   intensity?: 'light' | 'medium' | 'heavy';
-  category: 'feedback' | 'notification' | 'alert' | 'custom';
+  category: 'feedback' | 'notification' | 'alert' | 'custom' | 'navigation';
   context: 'success' | 'error' | 'warning' | 'info' | 'selection' | 'navigation' | 'bluetooth' | 'atmospheric';
 }
 
