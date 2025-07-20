@@ -1,7 +1,7 @@
 // =================== CONSTANTS/CERTIFICATIONS.TS - CERTIFICATIONS PAR PROVINCE ET TYPE PERMIS ===================
 // Constantes des certifications requises selon réglementations provinciales canadiennes
 
-import type { PermitType } from '../types';
+export type PermitType = 'espace-clos' | 'travail-chaud' | 'excavation' | 'levage' | 'hauteur' | 'isolation-energetique' | 'pression' | 'radiographie' | 'toiture' | 'demolition';
 
 // =================== INTERFACES ===================
 export interface CertificationInfo {
