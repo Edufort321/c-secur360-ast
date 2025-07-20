@@ -35,6 +35,17 @@ export interface TimerAlert {
   callback?: () => void;
 }
 
+// Interface pour les templates d'alertes (sans timerId et triggerTime)
+export interface TimerAlertTemplate {
+  id: string;
+  triggerOffset: number; // millisecondes avant expiration
+  alertType: 'notification' | 'warning' | 'critical' | 'expired';
+  message: string;
+  isTriggered: boolean;
+  isSilenced: boolean;
+  callback?: () => void;
+}
+
 export interface TimerMetadata {
   permitId?: string;
   spaceId?: string;
@@ -84,6 +95,17 @@ export interface TimerStats {
   upcomingExpirations: Timer[];
 }
 
+// Interface pour les templates de timers
+export interface TimerTemplate {
+  name: string;
+  type: TimerType;
+  context: TimerContext;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  duration: number;
+  alerts: TimerAlertTemplate[];
+  metadata: Partial<TimerMetadata>;
+}
+
 // =================== TYPES ===================
 
 export type TimerType = 
@@ -110,7 +132,7 @@ export type NotificationChannel =
 
 // =================== TEMPLATES TIMERS ===================
 
-export const TIMER_TEMPLATES: Record<TimerType, Partial<Timer>> = {
+export const TIMER_TEMPLATES: Record<TimerType, TimerTemplate> = {
   permit_validity: {
     name: 'Validité Permis',
     type: 'permit_validity',
@@ -139,6 +161,7 @@ export const TIMER_TEMPLATES: Record<TimerType, Partial<Timer>> = {
       description: 'Validité du permis de travail',
       requirements: ['Renouvellement avant expiration'],
       consequences: ['Arrêt immédiat des travaux'],
+      relatedTimers: [],
       legalDeadline: true,
       autoRenew: false,
       notificationChannels: ['push', 'haptic', 'audio']
@@ -165,6 +188,7 @@ export const TIMER_TEMPLATES: Record<TimerType, Partial<Timer>> = {
       description: 'Intervalle tests atmosphériques périodiques',
       requirements: ['Tests O₂, LEL, H₂S, CO obligatoires'],
       consequences: ['Évacuation si tests non effectués'],
+      relatedTimers: [],
       legalDeadline: true,
       autoRenew: true,
       notificationChannels: ['push', 'haptic']
@@ -199,6 +223,7 @@ export const TIMER_TEMPLATES: Record<TimerType, Partial<Timer>> = {
       description: 'Calibration périodique équipements de mesure',
       requirements: ['Calibration par technicien certifié'],
       consequences: ['Équipement hors service si non calibré'],
+      relatedTimers: [],
       legalDeadline: true,
       autoRenew: false,
       notificationChannels: ['push', 'email']
@@ -233,6 +258,7 @@ export const TIMER_TEMPLATES: Record<TimerType, Partial<Timer>> = {
       description: 'Expiration certifications personnel',
       requirements: ['Formation et examen de renouvellement'],
       consequences: ['Personnel non autorisé à travailler'],
+      relatedTimers: [],
       legalDeadline: true,
       autoRenew: false,
       notificationChannels: ['push', 'email', 'sms']
@@ -267,6 +293,7 @@ export const TIMER_TEMPLATES: Record<TimerType, Partial<Timer>> = {
       description: 'Durée maximale du quart de travail',
       requirements: ['Respect des heures légales de travail'],
       consequences: ['Heures supplémentaires, fatigue'],
+      relatedTimers: [],
       legalDeadline: false,
       autoRenew: false,
       notificationChannels: ['push']
@@ -293,8 +320,253 @@ export const TIMER_TEMPLATES: Record<TimerType, Partial<Timer>> = {
       description: 'Fréquence exercices d\'urgence obligatoires',
       requirements: ['Exercice trimestriel équipe sauvetage'],
       consequences: ['Non-conformité réglementaire'],
+      relatedTimers: [],
       legalDeadline: true,
       autoRenew: true,
+      notificationChannels: ['push', 'email']
+    }
+  },
+
+  // Ajout des types manquants avec des templates par défaut
+  inspection_due: {
+    name: 'Inspection Due',
+    type: 'inspection_due',
+    context: 'compliance',
+    priority: 'medium',
+    duration: 30 * 24 * 60 * 60 * 1000, // 30 jours
+    alerts: [
+      {
+        id: 'reminder_7d',
+        triggerOffset: 7 * 24 * 60 * 60 * 1000,
+        alertType: 'notification',
+        message: 'Inspection due dans 7 jours',
+        isTriggered: false,
+        isSilenced: false
+      }
+    ],
+    metadata: {
+      description: 'Inspection périodique requise',
+      requirements: ['Inspection par personne qualifiée'],
+      consequences: ['Non-conformité réglementaire'],
+      relatedTimers: [],
+      legalDeadline: true,
+      autoRenew: false,
+      notificationChannels: ['push', 'email']
+    }
+  },
+
+  training_deadline: {
+    name: 'Échéance Formation',
+    type: 'training_deadline',
+    context: 'training',
+    priority: 'medium',
+    duration: 30 * 24 * 60 * 60 * 1000, // 30 jours
+    alerts: [
+      {
+        id: 'reminder_14d',
+        triggerOffset: 14 * 24 * 60 * 60 * 1000,
+        alertType: 'notification',
+        message: 'Formation obligatoire dans 14 jours',
+        isTriggered: false,
+        isSilenced: false
+      }
+    ],
+    metadata: {
+      description: 'Échéance formation obligatoire',
+      requirements: ['Completion formation certifiante'],
+      consequences: ['Personnel non qualifié'],
+      relatedTimers: [],
+      legalDeadline: true,
+      autoRenew: false,
+      notificationChannels: ['push', 'email']
+    }
+  },
+
+  maintenance_due: {
+    name: 'Maintenance Due',
+    type: 'maintenance_due',
+    context: 'maintenance',
+    priority: 'medium',
+    duration: 90 * 24 * 60 * 60 * 1000, // 90 jours
+    alerts: [
+      {
+        id: 'reminder_7d',
+        triggerOffset: 7 * 24 * 60 * 60 * 1000,
+        alertType: 'notification',
+        message: 'Maintenance préventive due dans 7 jours',
+        isTriggered: false,
+        isSilenced: false
+      }
+    ],
+    metadata: {
+      description: 'Maintenance préventive équipement',
+      requirements: ['Maintenance par technicien qualifié'],
+      consequences: ['Risque panne équipement'],
+      relatedTimers: [],
+      legalDeadline: false,
+      autoRenew: true,
+      notificationChannels: ['push', 'email']
+    }
+  },
+
+  audit_reminder: {
+    name: 'Rappel Audit',
+    type: 'audit_reminder',
+    context: 'compliance',
+    priority: 'medium',
+    duration: 365 * 24 * 60 * 60 * 1000, // 1 an
+    alerts: [
+      {
+        id: 'reminder_30d',
+        triggerOffset: 30 * 24 * 60 * 60 * 1000,
+        alertType: 'notification',
+        message: 'Audit annuel dans 30 jours',
+        isTriggered: false,
+        isSilenced: false
+      }
+    ],
+    metadata: {
+      description: 'Audit annuel obligatoire',
+      requirements: ['Préparation documents audit'],
+      consequences: ['Non-conformité réglementaire'],
+      relatedTimers: [],
+      legalDeadline: true,
+      autoRenew: true,
+      notificationChannels: ['push', 'email']
+    }
+  },
+
+  break_reminder: {
+    name: 'Rappel Pause',
+    type: 'break_reminder',
+    context: 'administrative',
+    priority: 'low',
+    duration: 4 * 60 * 60 * 1000, // 4 heures
+    alerts: [
+      {
+        id: 'break_time',
+        triggerOffset: 0,
+        alertType: 'notification',
+        message: 'Pause recommandée',
+        isTriggered: false,
+        isSilenced: false
+      }
+    ],
+    metadata: {
+      description: 'Rappel pause régulière',
+      requirements: ['Pause toutes les 4 heures'],
+      consequences: ['Fatigue, productivité réduite'],
+      relatedTimers: [],
+      legalDeadline: false,
+      autoRenew: true,
+      notificationChannels: ['push']
+    }
+  },
+
+  meeting_reminder: {
+    name: 'Rappel Réunion',
+    type: 'meeting_reminder',
+    context: 'administrative',
+    priority: 'low',
+    duration: 60 * 60 * 1000, // 1 heure
+    alerts: [
+      {
+        id: 'meeting_15m',
+        triggerOffset: 15 * 60 * 1000,
+        alertType: 'notification',
+        message: 'Réunion dans 15 minutes',
+        isTriggered: false,
+        isSilenced: false
+      }
+    ],
+    metadata: {
+      description: 'Rappel réunion programmée',
+      requirements: ['Présence obligatoire'],
+      consequences: ['Retard réunion'],
+      relatedTimers: [],
+      legalDeadline: false,
+      autoRenew: false,
+      notificationChannels: ['push', 'audio']
+    }
+  },
+
+  custom_countdown: {
+    name: 'Compte à Rebours',
+    type: 'custom_countdown',
+    context: 'administrative',
+    priority: 'medium',
+    duration: 60 * 60 * 1000, // 1 heure par défaut
+    alerts: [
+      {
+        id: 'countdown_end',
+        triggerOffset: 0,
+        alertType: 'notification',
+        message: 'Compte à rebours terminé',
+        isTriggered: false,
+        isSilenced: false
+      }
+    ],
+    metadata: {
+      description: 'Compte à rebours personnalisé',
+      requirements: ['Action à effectuer'],
+      consequences: ['Délai dépassé'],
+      relatedTimers: [],
+      legalDeadline: false,
+      autoRenew: false,
+      notificationChannels: ['push', 'audio']
+    }
+  },
+
+  procedure_timeout: {
+    name: 'Timeout Procédure',
+    type: 'procedure_timeout',
+    context: 'safety',
+    priority: 'high',
+    duration: 30 * 60 * 1000, // 30 minutes
+    alerts: [
+      {
+        id: 'timeout_warning',
+        triggerOffset: 5 * 60 * 1000,
+        alertType: 'warning',
+        message: 'Procédure expire dans 5 minutes',
+        isTriggered: false,
+        isSilenced: false
+      }
+    ],
+    metadata: {
+      description: 'Timeout procédure sécurité',
+      requirements: ['Completion procédure obligatoire'],
+      consequences: ['Arrêt procédure, recommencer'],
+      relatedTimers: [],
+      legalDeadline: true,
+      autoRenew: false,
+      notificationChannels: ['push', 'haptic', 'audio']
+    }
+  },
+
+  response_deadline: {
+    name: 'Délai Réponse',
+    type: 'response_deadline',
+    context: 'administrative',
+    priority: 'medium',
+    duration: 24 * 60 * 60 * 1000, // 24 heures
+    alerts: [
+      {
+        id: 'response_6h',
+        triggerOffset: 6 * 60 * 60 * 1000,
+        alertType: 'warning',
+        message: 'Réponse requise dans 6 heures',
+        isTriggered: false,
+        isSilenced: false
+      }
+    ],
+    metadata: {
+      description: 'Délai de réponse obligatoire',
+      requirements: ['Réponse dans les délais'],
+      consequences: ['Escalade automatique'],
+      relatedTimers: [],
+      legalDeadline: false,
+      autoRenew: false,
       notificationChannels: ['push', 'email']
     }
   }
@@ -381,34 +653,39 @@ export function useTimers(config: Partial<TimerConfig> = {}) {
 
     const timerId = generateId();
     const now = new Date();
+    const duration = customConfig?.duration || template.duration;
 
-    // Générer les alertes avec IDs uniques
-    const alerts: TimerAlert[] = (template.alerts || []).map(alertTemplate => ({
+    // Générer les alertes avec IDs uniques et propriétés complètes
+    const alerts: TimerAlert[] = template.alerts.map(alertTemplate => ({
       ...alertTemplate,
       id: `${timerId}_${alertTemplate.id}`,
       timerId,
-      triggerTime: new Date(now.getTime() + (customConfig?.duration || template.duration || 0) - alertTemplate.triggerOffset),
-      isTriggered: false,
-      isSilenced: false
+      triggerTime: new Date(now.getTime() + duration - alertTemplate.triggerOffset)
     }));
 
     const timer: Timer = {
       id: timerId,
-      name: customConfig?.name || template.name || `Timer ${type}`,
+      name: customConfig?.name || template.name,
       type,
-      context: template.context || 'administrative',
+      context: template.context,
       startTime: now,
-      duration: customConfig?.duration || template.duration || 60 * 60 * 1000, // 1h par défaut
-      remainingTime: customConfig?.duration || template.duration || 60 * 60 * 1000,
+      duration,
+      remainingTime: duration,
       status: 'active',
-      priority: customConfig?.priority || template.priority || 'medium',
+      priority: customConfig?.priority || template.priority,
       alerts,
       onExpire: customConfig?.onExpire,
       onWarning: customConfig?.onWarning,
       metadata: {
-        ...template.metadata,
+        description: template.metadata.description || '',
+        requirements: template.metadata.requirements || [],
+        consequences: template.metadata.consequences || [],
+        relatedTimers: template.metadata.relatedTimers || [],
+        legalDeadline: template.metadata.legalDeadline || false,
+        autoRenew: template.metadata.autoRenew || false,
+        notificationChannels: template.metadata.notificationChannels || ['push'],
         ...customConfig?.metadata
-      } as TimerMetadata
+      }
     };
 
     setTimers(prev => new Map(prev.set(timerId, timer)));
