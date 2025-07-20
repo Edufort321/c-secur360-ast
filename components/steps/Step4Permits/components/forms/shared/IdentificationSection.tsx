@@ -382,7 +382,7 @@ export const IdentificationSection: React.FC<IdentificationSectionProps> = ({
   // Refs pour gestion mobile
   const permitTypeRef = useRef<HTMLDivElement>(null);
   const locationInputRef = useRef<HTMLInputElement>(null);
-  const voiceRecognitionRef = useRef<SpeechRecognition | null>(null);
+  const voiceRecognitionRef = useRef<any>(null);
 
   // =================== GÉOLOCALISATION MOBILE ===================
   const getCurrentLocation = useCallback(async () => {
