@@ -829,13 +829,11 @@ export function useSupabase(config: Partial<SupabaseConfig> = {}) {
     options: { returning?: boolean } = { returning: true }
   ): Promise<QueryResult<T>> => {
     const operation = async () => {
-      let query = supabase.from(table).insert(data);
-      
       if (options.returning) {
-        query = query.select('*');
+        return await supabase.from(table).insert(data).select('*');
+      } else {
+        return await supabase.from(table).insert(data);
       }
-      
-      return await query;
     };
 
     return executeQuery<T>(operation, undefined, false);
@@ -900,10 +898,10 @@ export function useSupabase(config: Partial<SupabaseConfig> = {}) {
       });
       
       if (options.returning) {
-        query = query.select('*');
+        return await query.select('*');
+      } else {
+        return await query;
       }
-      
-      return await query;
     };
 
     // Invalider le cache pour cette table
@@ -928,10 +926,10 @@ export function useSupabase(config: Partial<SupabaseConfig> = {}) {
       });
       
       if (options.returning) {
-        query = query.select('*');
+        return await query.select('*');
+      } else {
+        return await query;
       }
-      
-      return await query;
     };
 
     // Invalider le cache pour cette table
