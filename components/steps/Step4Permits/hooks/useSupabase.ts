@@ -828,10 +828,15 @@ export function useSupabase(config: Partial<SupabaseConfig> = {}) {
     data: any,
     options: { returning?: boolean } = { returning: true }
   ): Promise<QueryResult<T>> => {
-    const operation = () => supabase
-      .from(table)
-      .insert(data)
-      .select(options.returning ? '*' : undefined);
+    const operation = async () => {
+      let query = supabase.from(table).insert(data);
+      
+      if (options.returning) {
+        query = query.select('*');
+      }
+      
+      return await query;
+    };
 
     return executeQuery<T>(operation, undefined, false);
   }, [executeQuery]);
@@ -849,7 +854,7 @@ export function useSupabase(config: Partial<SupabaseConfig> = {}) {
   ): Promise<QueryResult<T[]>> => {
     const cacheKey = generateCacheKey(table, query);
     
-    const operation = () => {
+    const operation = async () => {
       let supabaseQuery = supabase.from(table).select(query?.select || '*');
       
       if (query?.where) {
@@ -875,7 +880,7 @@ export function useSupabase(config: Partial<SupabaseConfig> = {}) {
         );
       }
       
-      return supabaseQuery;
+      return await supabaseQuery;
     };
 
     return executeQuery<T[]>(operation, cacheKey, useCache);
@@ -887,7 +892,7 @@ export function useSupabase(config: Partial<SupabaseConfig> = {}) {
     where: Record<string, any>,
     options: { returning?: boolean } = { returning: true }
   ): Promise<QueryResult<T>> => {
-    const operation = () => {
+    const operation = async () => {
       let query = supabase.from(table).update(data);
       
       Object.entries(where).forEach(([key, value]) => {
@@ -898,7 +903,7 @@ export function useSupabase(config: Partial<SupabaseConfig> = {}) {
         query = query.select('*');
       }
       
-      return query;
+      return await query;
     };
 
     // Invalider le cache pour cette table
@@ -915,7 +920,7 @@ export function useSupabase(config: Partial<SupabaseConfig> = {}) {
     where: Record<string, any>,
     options: { returning?: boolean } = { returning: false }
   ): Promise<QueryResult<T>> => {
-    const operation = () => {
+    const operation = async () => {
       let query = supabase.from(table).delete();
       
       Object.entries(where).forEach(([key, value]) => {
@@ -926,7 +931,7 @@ export function useSupabase(config: Partial<SupabaseConfig> = {}) {
         query = query.select('*');
       }
       
-      return query;
+      return await query;
     };
 
     // Invalider le cache pour cette table
