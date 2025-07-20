@@ -904,16 +904,16 @@ export default function LiftingForm({
 
           <div className="mt-2 text-xs text-yellow-700 space-y-1">
             <p>
-              {language === 'fr' 
-                ? `Plan requis pour charges > ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxLiftWithoutPlan || 5000}kg (${province})`
-                : `Plan required for loads > ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxLiftWithoutPlan || 5000}kg (${province})`
-              }
+              {language === 'fr' ? 'Plan requis' : 'Plan required'}: {' '}
+              <span className="font-medium">
+                &gt; {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxLiftWithoutPlan || 5000}kg ({province})
+              </span>
             </p>
             <p>
-              {language === 'fr' 
-                ? `Ingénieur requis pour charges > ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.engineerRequired || 10000}kg`
-                : `Engineer required for loads > ${PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.engineerRequired || 10000}kg`
-              }
+              {language === 'fr' ? 'Ingénieur requis' : 'Engineer required'}: {' '}
+              <span className="font-medium">
+                &gt; {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.engineerRequired || 10000}kg
+              </span>
             </p>
           </div>
         </div>
@@ -1016,7 +1016,7 @@ export default function LiftingForm({
             <p>
               {language === 'fr' ? 'Plan requis' : 'Plan required'}: {' '}
               <span className="font-medium">
-                > {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxLiftWithoutPlan || 5000}kg
+                &gt; {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxLiftWithoutPlan || 5000}kg
               </span>
             </p>
             <p>
