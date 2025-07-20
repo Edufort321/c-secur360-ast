@@ -665,7 +665,6 @@ export default function ElectricalForm({
       case 'testing': return renderTestingSection();
       case 'validation': return renderValidationSection();
       default: return <div>Section non trouvée</div>;
-    }
   };
 
   const renderIdentificationSection = () => (
