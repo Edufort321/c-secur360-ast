@@ -112,6 +112,220 @@ export interface MaintenanceSchedule {
   };
 }
 
+export function evaluateConditionalEquipment(
+  equipment: ConditionalEquipment,
+  permitConditions: Record<string, any>
+): boolean {
+  return equipment.conditions.every(condition => {
+    const value = permitConditions[condition.type];
+    if (value === undefined) return false;
+
+    switch (condition.operator) {
+      case '>': return value > condition.value;
+      case '<': return value < condition.value;
+      case '>=': return value >= condition.value;
+      case '<=': return value <= condition.value;
+      case '==': return value === condition.value;
+      case '!=': return value !== condition.value;
+      default: return false;
+    }
+  });
+}
+
+export function calculateEquipmentCosts(
+  equipmentIds: string[],
+  rentalDuration: { daily?: number; weekly?: number; monthly?: number } = {},
+  includeMaintenanceAnnual: boolean = false
+): {
+  purchase: { total: number; breakdown: Record<string, number> };
+  rental: { total: number; breakdown: Record<string, number> };
+  maintenance: { total: number; breakdown: Record<string, number> };
+} {
+  const result = {
+    purchase: { total: 0, breakdown: {} as Record<string, number> },
+    rental: { total: 0, breakdown: {} as Record<string, number> },
+    maintenance: { total: 0, breakdown: {} as Record<string, number> }
+  };
+
+  equipmentIds.forEach(id => {
+    const equipment = getEquipmentInfo(id);
+    if (!equipment) return;
+
+    // Coût achat (moyenne min-max)
+    const purchaseCost = (equipment.cost.purchase.min + equipment.cost.purchase.max) / 2;
+    result.purchase.total += purchaseCost;
+    result.purchase.breakdown[id] = purchaseCost;
+
+    // Coût location
+    let rentalCost = 0;
+    if (rentalDuration.daily && equipment.cost.rental?.daily) {
+      rentalCost += rentalDuration.daily * equipment.cost.rental.daily;
+    }
+    if (rentalDuration.weekly && equipment.cost.rental?.weekly) {
+      rentalCost += rentalDuration.weekly * equipment.cost.rental.weekly;
+    }
+    if (rentalDuration.monthly && equipment.cost.rental?.monthly) {
+      rentalCost += rentalDuration.monthly * equipment.cost.rental.monthly;
+    }
+    result.rental.total += rentalCost;
+    result.rental.breakdown[id] = rentalCost;
+
+    // Coût maintenance annuel
+    if (includeMaintenanceAnnual) {
+      const maintenanceCost = equipment.cost.maintenance.annual;
+      result.maintenance.total += maintenanceCost;
+      result.maintenance.breakdown[id] = maintenanceCost;
+    }
+  });
+
+  return result;
+}
+
+export function searchEquipment(
+  query: string,
+  filters?: {
+    category?: EquipmentCategory;
+    manufacturer?: string;
+    maxCost?: number;
+    certification?: string;
+  }
+): EquipmentItem[] {
+  const searchTerm = query.toLowerCase();
+
+  return Object.values(EQUIPMENT_CATALOG).filter(equipment => {
+    // Recherche textuelle
+    const matchesQuery = !query || 
+      equipment.name.fr.toLowerCase().includes(searchTerm) ||
+      equipment.name.en.toLowerCase().includes(searchTerm) ||
+      equipment.description.fr.toLowerCase().includes(searchTerm) ||
+      equipment.description.en.toLowerCase().includes(searchTerm) ||
+      equipment.id.toLowerCase().includes(searchTerm);
+
+    // Filtres
+    const matchesCategory = !filters?.category || equipment.category === filters.category;
+    
+    const matchesManufacturer = !filters?.manufacturer || 
+      equipment.manufacturer?.some(m => m.toLowerCase().includes(filters.manufacturer!.toLowerCase()));
+    
+    const matchesCost = !filters?.maxCost || 
+      equipment.cost.purchase.min <= filters.maxCost;
+    
+    const matchesCertification = !filters?.certification ||
+      equipment.certifications.some(cert => 
+        cert.standard.toLowerCase().includes(filters.certification!.toLowerCase()) ||
+        cert.number.toLowerCase().includes(filters.certification!.toLowerCase())
+      );
+
+    return matchesQuery && matchesCategory && matchesManufacturer && matchesCost && matchesCertification;
+  });
+}
+
+export function getEquipmentAlternatives(equipmentId: string): EquipmentItem[] {
+  const equipment = getEquipmentInfo(equipmentId);
+  if (!equipment || !equipment.alternatives) return [];
+
+  return equipment.alternatives
+    .map(altId => getEquipmentInfo(altId))
+    .filter((alt): alt is EquipmentItem => alt !== null);
+}
+
+export function getCompatibleEquipment(equipmentId: string): EquipmentItem[] {
+  const equipment = getEquipmentInfo(equipmentId);
+  if (!equipment || !equipment.compatibility) return [];
+
+  return equipment.compatibility
+    .map(compId => getEquipmentInfo(compId))
+    .filter((comp): comp is EquipmentItem => comp !== null);
+}
+
+export function validateEquipmentForPermit(
+  permitType: PermitType,
+  availableEquipment: string[],
+  permitConditions?: Record<string, any>
+): {
+  isValid: boolean;
+  missingMandatory: string[];
+  missingConditional: string[];
+  recommendations: string[];
+} {
+  const requirements = getRequiredEquipmentForPermit(permitType);
+  if (!requirements) {
+    return {
+      isValid: false,
+      missingMandatory: [],
+      missingConditional: [],
+      recommendations: []
+    };
+  }
+
+  // Vérifier équipements obligatoires
+  const missingMandatory = requirements.requiredEquipment.mandatory.filter(
+    reqId => !availableEquipment.includes(reqId)
+  );
+
+  // Vérifier équipements conditionnels
+  const missingConditional: string[] = [];
+  if (permitConditions) {
+    requirements.requiredEquipment.conditional.forEach(conditional => {
+      const isRequired = evaluateConditionalEquipment(conditional, permitConditions);
+      if (isRequired && !availableEquipment.includes(conditional.equipmentId)) {
+        missingConditional.push(conditional.equipmentId);
+      }
+    });
+  }
+
+  // Recommandations (équipements optionnels)
+  const recommendations = requirements.requiredEquipment.optional.filter(
+    optId => !availableEquipment.includes(optId)
+  );
+
+  const isValid = missingMandatory.length === 0 && missingConditional.length === 0;
+
+  return {
+    isValid,
+    missingMandatory,
+    missingConditional,
+    recommendations
+  };
+}
+
+export function getEquipmentMaintenanceSchedule(equipmentId: string): {
+  nextMaintenance: Date;
+  overdueTasks: string[];
+  upcomingTasks: { task: string; dueDate: Date }[];
+} {
+  const equipment = getEquipmentInfo(equipmentId);
+  if (!equipment) {
+    return {
+      nextMaintenance: new Date(),
+      overdueTasks: [],
+      upcomingTasks: []
+    };
+  }
+
+  const now = new Date();
+  const upcomingTasks: { task: string; dueDate: Date }[] = [];
+  
+  equipment.maintenanceSchedule.preventive.forEach(task => {
+    const dueDate = new Date(now);
+    dueDate.setMonth(dueDate.getMonth() + task.frequency);
+    
+    upcomingTasks.push({
+      task: task.task.fr,
+      dueDate
+    });
+  });
+
+  // Tri par date
+  upcomingTasks.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+  
+  return {
+    nextMaintenance: upcomingTasks[0]?.dueDate || new Date(),
+    overdueTasks: [], // À implémenter selon historique maintenance
+    upcomingTasks
+  };
+}
+
 export interface MaintenanceItem {
   frequency: number; // mois
   task: { fr: string; en: string };
@@ -847,27 +1061,66 @@ export const PERMIT_EQUIPMENT_REQUIREMENTS: Record<PermitType, PermitEquipmentRe
       mandatory: [
         'detecteur-4-gaz-bw',
         'harnais-securite-miller',
-        'radio-motorola-cp200d'
+        'radio-motorola-cp200d',
+        'treuil-sauvetage-3m'
       ],
-      conditional: [],
-      optional: []
+      conditional: [
+        {
+          equipmentId: 'ventilateur-portable-allegro',
+          conditions: [
+            { type: 'atmospheric', operator: '<', value: 20.5, unit: '%' },
+            { type: 'work-duration', operator: '>', value: 30, unit: 'minutes' }
+          ],
+          alternatives: ['ventilateur-ram-fan']
+        },
+        {
+          equipmentId: 'eclairage-portable-led',
+          conditions: [
+            { type: 'work-duration', operator: '>', value: 60, unit: 'minutes' }
+          ]
+        }
+      ],
+      optional: [
+        'eclairage-portable-led',
+        'treuil-support-portable'
+      ]
     },
     minimumQuantities: {
-      'detecteur-4-gaz-bw': 2,
-      'harnais-securite-miller': 4,
-      'radio-motorola-cp200d': 3
+      'detecteur-4-gaz-bw': 2, // 1 pour superviseur, 1 pour surveillant
+      'harnais-securite-miller': 4, // Tous les entrants
+      'radio-motorola-cp200d': 3, // Superviseur, surveillant, 1 entrant
+      'treuil-sauvetage-3m': 1,
+      'ventilateur-portable-allegro': 1,
+      'eclairage-portable-led': 2
     },
     qualificationRequirements: {
-      'detecteur-4-gaz-bw': ['formation-detection-gaz']
+      'detecteur-4-gaz-bw': ['formation-detection-gaz'],
+      'treuil-sauvetage-3m': ['formation-sauvetage-espace-clos'],
+      'harnais-securite-miller': ['formation-antichute']
     },
     inspectionSchedule: {
       'detecteur-4-gaz-bw': 'before-use',
       'harnais-securite-miller': 'before-use',
-      'radio-motorola-cp200d': 'daily'
+      'treuil-sauvetage-3m': 'before-use',
+      'radio-motorola-cp200d': 'daily',
+      'ventilateur-portable-allegro': 'before-use',
+      'eclairage-portable-led': 'weekly'
     },
     specialConditions: {
-      fr: ['Tests atmosphériques obligatoires avant entrée'],
-      en: ['Mandatory atmospheric testing before entry']
+      fr: [
+        'Tests atmosphériques obligatoires avant entrée',
+        'Communication continue superviseur-surveillant-entrants',
+        'Équipements sauvetage positionnés près entrée',
+        'Ventilation si O₂ < 20.5% ou contaminants détectés',
+        'Éclairage adéquat si travaux >1h'
+      ],
+      en: [
+        'Mandatory atmospheric testing before entry',
+        'Continuous communication supervisor-attendant-entrants',
+        'Rescue equipment positioned near entry',
+        'Ventilation if O₂ < 20.5% or contaminants detected',
+        'Adequate lighting if work >1h'
+      ]
     }
   },
 
@@ -879,16 +1132,34 @@ export const PERMIT_EQUIPMENT_REQUIREMENTS: Record<PermitType, PermitEquipmentRe
         'extincteur-co2-5kg',
         'radio-motorola-cp200d'
       ],
-      conditional: [],
-      optional: []
+      conditional: [
+        {
+          equipmentId: 'arrosoir-emergency',
+          conditions: [
+            { type: 'work-duration', operator: '>', value: 60, unit: 'minutes' }
+          ]
+        },
+        {
+          equipmentId: 'ventilateur-portable-allegro',
+          conditions: [
+            { type: 'hazard-level', operator: '==', value: 'fumees-toxiques' }
+          ]
+        }
+      ],
+      optional: [
+        'ecran-protection-soudage',
+        'aspirateur-fumees',
+        'eclairage-portable-led'
+      ]
     },
     minimumQuantities: {
       'detecteur-4-gaz-bw': 1,
-      'extincteur-co2-5kg': 2,
+      'extincteur-co2-5kg': 2, // Zone travail + zone surveillance
       'radio-motorola-cp200d': 2
     },
     qualificationRequirements: {
-      'extincteur-co2-5kg': ['formation-extinction-incendie']
+      'extincteur-co2-5kg': ['formation-extinction-incendie'],
+      'detecteur-4-gaz-bw': ['formation-detection-gaz']
     },
     inspectionSchedule: {
       'detecteur-4-gaz-bw': 'before-use',
@@ -899,50 +1170,127 @@ export const PERMIT_EQUIPMENT_REQUIREMENTS: Record<PermitType, PermitEquipmentRe
   'levage': {
     permitType: 'levage',
     requiredEquipment: {
-      mandatory: ['radio-motorola-cp200d'],
-      conditional: [],
-      optional: []
+      mandatory: [
+        'radio-motorola-cp200d',
+        'elingues-textiles-certifiees'
+      ],
+      conditional: [
+        {
+          equipmentId: 'anemometre-digital',
+          conditions: [
+            { type: 'height', operator: '>', value: 10, unit: 'm' }
+          ]
+        }
+      ],
+      optional: [
+        'palonnier-automatique',
+        'camera-surveillance'
+      ]
     },
     minimumQuantities: {
-      'radio-motorola-cp200d': 3
+      'radio-motorola-cp200d': 3, // Opérateur, signaleur, superviseur
+      'elingues-textiles-certifiees': 4,
+      'anemometre-digital': 1
     },
-    qualificationRequirements: {},
-    inspectionSchedule: {}
+    qualificationRequirements: {
+      'elingues-textiles-certifiees': ['formation-elingage'],
+      'anemometre-digital': ['formation-mesures-meteorologiques']
+    },
+    inspectionSchedule: {
+      'elingues-textiles-certifiees': 'before-use',
+      'anemometre-digital': 'before-use'
+    },
+    specialConditions: {
+      fr: [
+        'Surveillance vitesse vent obligatoire si hauteur >10m',
+        'Arrêt travaux si vent >40 km/h',
+        'Communication radio continue entre équipe'
+      ],
+      en: [
+        'Wind speed monitoring mandatory if height >10m',
+        'Stop work if wind >40 km/h',
+        'Continuous radio communication between team'
+      ]
+    }
   },
 
   'excavation': {
     permitType: 'excavation',
     requiredEquipment: {
-      mandatory: ['detecteur-4-gaz-bw', 'radio-motorola-cp200d'],
-      conditional: [],
-      optional: []
+      mandatory: [
+        'detecteur-4-gaz-bw', 
+        'radio-motorola-cp200d'
+      ],
+      conditional: [
+        {
+          equipmentId: 'systeme-etayage',
+          conditions: [
+            { type: 'depth', operator: '>', value: 1.2, unit: 'm' }
+          ]
+        },
+        {
+          equipmentId: 'pompe-submersible',
+          conditions: [
+            { type: 'hazard-level', operator: '==', value: 'eau-souterraine' }
+          ]
+        },
+        {
+          equipmentId: 'eclairage-portable-led',
+          conditions: [
+            { type: 'depth', operator: '>', value: 2, unit: 'm' }
+          ]
+        }
+      ],
+      optional: [
+        'detecteur-services-publics',
+        'barriere-securite'
+      ]
     },
     minimumQuantities: {
       'detecteur-4-gaz-bw': 1,
-      'radio-motorola-cp200d': 2
+      'radio-motorola-cp200d': 2,
+      'eclairage-portable-led': 2
     },
-    qualificationRequirements: {},
+    qualificationRequirements: {
+      'systeme-etayage': ['formation-excavation-securite']
+    },
     inspectionSchedule: {
-      'detecteur-4-gaz-bw': 'before-use'
+      'detecteur-4-gaz-bw': 'before-use',
+      'systeme-etayage': 'daily'
     }
   },
 
   'hauteur': {
     permitType: 'hauteur',
     requiredEquipment: {
-      mandatory: ['harnais-securite-miller', 'radio-motorola-cp200d'],
-      conditional: [],
-      optional: []
+      mandatory: [
+        'harnais-securite-miller',
+        'radio-motorola-cp200d'
+      ],
+      conditional: [
+        {
+          equipmentId: 'anemometre-digital',
+          conditions: [
+            { type: 'height', operator: '>', value: 15, unit: 'm' }
+          ]
+        }
+      ],
+      optional: [
+        'filet-securite',
+        'garde-corps-temporaire'
+      ]
     },
     minimumQuantities: {
-      'harnais-securite-miller': 1,
-      'radio-motorola-cp200d': 1
+      'harnais-securite-miller': 1, // Par travailleur
+      'radio-motorola-cp200d': 1,
+      'anemometre-digital': 1
     },
     qualificationRequirements: {
       'harnais-securite-miller': ['formation-travail-hauteur']
     },
     inspectionSchedule: {
-      'harnais-securite-miller': 'before-use'
+      'harnais-securite-miller': 'before-use',
+      'anemometre-digital': 'before-use'
     }
   },
 
