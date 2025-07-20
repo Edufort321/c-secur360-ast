@@ -2,7 +2,7 @@
 // Constantes pour les types de permis avec configurations complètes, workflows et exigences
 "use client";
 
-import { LucideIcon } from 'lucide-react';
+export type PermitType = 'espace-clos' | 'travail-chaud' | 'excavation' | 'levage' | 'hauteur' | 'isolation-energetique' | 'pression' | 'radiographie' | 'toiture' | 'demolition';
 
 // =================== INTERFACES ===================
 
