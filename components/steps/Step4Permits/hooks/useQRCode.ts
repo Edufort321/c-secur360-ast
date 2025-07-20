@@ -481,7 +481,6 @@ export function useQRCode() {
       const userId = 'current_user'; // À remplacer par auth réel
 
       const confinedSpace: ConfinedSpaceInsert = {
-        id: spaceId,
         name: spaceData.name || `Espace Clos ${spaceId.slice(-8)}`,
         type: spaceData.type || 'other',
         description: spaceData.description || '',
@@ -513,8 +512,11 @@ export function useQRCode() {
 
       if (error) throw error;
 
-      log('Espace clos créé', { spaceId, name: confinedSpace.name });
-      return spaceId;
+      // Récupérer l'ID généré par Supabase
+      const actualSpaceId = data.id;
+
+      log('Espace clos créé', { spaceId: actualSpaceId, name: confinedSpace.name });
+      return actualSpaceId;
 
     } catch (error: any) {
       return handleError(error, 'createConfinedSpace');
@@ -733,7 +735,6 @@ export function useQRCode() {
       const userId = 'current_user'; // À remplacer par auth réel
 
       const qrCodeData: QRCodeInsert = {
-        id: qrId,
         space_id: spaceId,
         qr_code_data: qrCodeImage,
         qr_url: qrUrl,
