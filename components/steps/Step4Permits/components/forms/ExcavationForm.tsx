@@ -5,13 +5,16 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ChevronLeft, ChevronRight, Save, Send, CheckCircle, XCircle, 
+  AlertTriangle, Activity, Users, Shield, Zap, FileText,
+  Mountain, MapPin, Mic, Electric
+} from 'lucide-react';
 import type {
   ApprovalLevel,
   SignatureData,
   InspectionRecord,
-  ProcedureStep,
   Certification,
-  PersonnelMember,
   TestResult,
   CalibrationRecord,
   EquipmentItem,
@@ -20,74 +23,230 @@ import type {
   ContactInfo
 } from '../../types/shared';
 
-// =================== TYPES ESSENTIELS ===================
+// =================== TYPES LOCAUX SPÉCIFIQUES EXCAVATION ===================
+
+// Interface ProcedureStep locale pour éviter conflit
+interface ExcavationProcedureStep {
+  id: string;
+  title: { fr: string; en: string };
+  description: { fr: string; en: string };
+  isCompleted: boolean;
+  completedBy?: string;
+  completedAt?: Date;
+  required: boolean;
+  estimatedTime?: number;
+}
+
+// Interface PersonnelMember locale pour éviter conflit
+interface ExcavationPersonnelMember {
+  id: string;
+  prenom: string;
+  nom: string;
+  poste: string;
+  entreprise: string;
+  age: number;
+  experience: number;
+  certifications: Certification[];
+  excavationTraining: boolean;
+  shoringCertified: boolean;
+  lastSafetyTraining: Date;
+}
+
 interface ExcavationFormData {
   identification: {
     permitType: 'excavation';
     permitNumber: string;
     excavationType: 'tranchee' | 'fosse' | 'puits' | 'tunnel' | 'fondation';
-    location: { address: string; coordinates?: { lat: number; lng: number }; specificLocation: string };
+    location: { 
+      address: string; 
+      coordinates?: { lat: number; lng: number }; 
+      specificLocation: string;
+      municipality: string;
+      zone: string;
+    };
     workDescription: string;
     startDate: Date;
     endDate: Date;
     estimatedDuration: number;
-    contractor: { name: string; license: string; contact: string };
+    contractor: { 
+      name: string; 
+      license: string; 
+      contact: string;
+      excavationLicense: string;
+      insurance: string;
+    };
   };
+
   dimensions: {
-    length: number; width: number; depth: number; volume: number;
+    length: number;
+    width: number;
+    depth: number;
+    volume: number;
     soilType: 'type-a' | 'type-b' | 'type-c' | 'roc';
-    waterTable: { present: boolean; depth?: number; drainageRequired: boolean };
-    shoring: { required: boolean; type?: string; certification?: string };
+    waterTable: { 
+      present: boolean; 
+      depth?: number; 
+      drainageRequired: boolean;
+      pumping: boolean;
+    };
+    shoring: { 
+      required: boolean; 
+      type?: 'hydraulic' | 'timber' | 'aluminum' | 'steel';
+      certification?: string;
+      engineer?: string;
+    };
+    slopeAngle: number;
+    benching: boolean;
   };
+
   utilities: {
-    callBeforeDigging: { called: boolean; callNumber: string; ticketNumber: string; expiryDate: Date };
-    markedUtilities: Array<{ id: string; type: string; provider: string; depth: number; marked: boolean }>;
-    clearances: { electrical: number; gas: number; water: number; sewer: number };
-    handDigging: { required: boolean; depth: number; equipment: string[] };
+    callBeforeDigging: { 
+      called: boolean; 
+      callNumber: string; 
+      ticketNumber: string; 
+      expiryDate: Date;
+      operator: string;
+    };
+    markedUtilities: Array<{ 
+      id: string; 
+      type: 'electrical' | 'gas' | 'water' | 'sewer' | 'telecom' | 'cable';
+      provider: string; 
+      depth: number; 
+      marked: boolean;
+      locateDate: Date;
+      clearance: number;
+    }>;
+    clearances: { 
+      electrical: number; 
+      gas: number; 
+      water: number; 
+      sewer: number;
+      telecom: number;
+    };
+    handDigging: { 
+      required: boolean; 
+      depth: number; 
+      equipment: string[];
+      zones: string[];
+    };
+    vacuumExcavation: {
+      required: boolean;
+      provider: string;
+      zones: string[];
+    };
   };
+
   personnel: {
-    superviseur: PersonnelMember[];
-    operateurs: PersonnelMember[];
-    signaleurs: PersonnelMember[];
+    superviseur: ExcavationPersonnelMember[];
+    operateurs: ExcavationPersonnelMember[];
+    signaleurs: ExcavationPersonnelMember[];
+    inspecteurs: ExcavationPersonnelMember[];
   };
+
   safety: {
-    entryExit: { ladders: number; spacing: number; condition: string };
-    atmosphericTesting: { required: boolean; frequency: number; parameters: string[] };
-    trafficControl: { required: boolean; signage: string[]; flaggers: number };
-    emergencyProcedures: ProcedureStep[];
+    entryExit: { 
+      ladders: number; 
+      spacing: number; 
+      condition: 'excellent' | 'good' | 'acceptable' | 'needs-replacement';
+      ramps: boolean;
+      stairways: boolean;
+    };
+    atmosphericTesting: { 
+      required: boolean; 
+      frequency: number; 
+      parameters: string[];
+      equipment: string[];
+    };
+    trafficControl: { 
+      required: boolean; 
+      signage: string[]; 
+      flaggers: number;
+      barriers: string[];
+      lighting: boolean;
+    };
+    emergencyProcedures: ExcavationProcedureStep[];
+    evacuation: {
+      routes: string[];
+      assembly: string;
+      communication: string;
+    };
   };
+
   validation: {
     approvals: ApprovalLevel[];
     signatures: SignatureData[];
     inspections: InspectionRecord[];
     permitStatus: 'draft' | 'pending' | 'approved' | 'active' | 'completed' | 'cancelled';
+    dailyInspections: boolean;
+    engineerApproval?: SignatureData;
+    municipalApproval?: SignatureData;
   };
-}
-
-interface PersonnelMember {
-  id: string; prenom: string; nom: string; poste: string; entreprise: string;
-  age: number; experience: number; certifications: Certification[];
-}
-
-interface ProcedureStep {
-  id: string; title: { fr: string; en: string }; description: { fr: string; en: string };
-  isCompleted: boolean; completedBy?: string; completedAt?: Date;
 }
 
 // =================== CONFIGURATION ===================
 const EXCAVATION_TYPES = {
-  'tranchee': { icon: '🏗️', title: { fr: 'Tranchée', en: 'Trench' }, maxDepth: 6, minWidth: 0.6 },
-  'fosse': { icon: '🕳️', title: { fr: 'Fosse', en: 'Pit' }, maxDepth: 4, minWidth: 1.2 },
-  'puits': { icon: '⬇️', title: { fr: 'Puits', en: 'Shaft' }, maxDepth: 20, minWidth: 1.0 },
-  'tunnel': { icon: '🚇', title: { fr: 'Tunnel', en: 'Tunnel' }, maxDepth: 50, minWidth: 2.0 },
-  'fondation': { icon: '🏢', title: { fr: 'Fondation', en: 'Foundation' }, maxDepth: 8, minWidth: 1.5 }
+  'tranchee': { 
+    icon: '🏗️', 
+    title: { fr: 'Tranchée', en: 'Trench' }, 
+    maxDepth: 6, 
+    minWidth: 0.6,
+    description: { fr: 'Excavation linéaire étroite', en: 'Narrow linear excavation' }
+  },
+  'fosse': { 
+    icon: '🕳️', 
+    title: { fr: 'Fosse', en: 'Pit' }, 
+    maxDepth: 4, 
+    minWidth: 1.2,
+    description: { fr: 'Excavation large et peu profonde', en: 'Wide shallow excavation' }
+  },
+  'puits': { 
+    icon: '⬇️', 
+    title: { fr: 'Puits', en: 'Shaft' }, 
+    maxDepth: 20, 
+    minWidth: 1.0,
+    description: { fr: 'Excavation verticale profonde', en: 'Deep vertical excavation' }
+  },
+  'tunnel': { 
+    icon: '🚇', 
+    title: { fr: 'Tunnel', en: 'Tunnel' }, 
+    maxDepth: 50, 
+    minWidth: 2.0,
+    description: { fr: 'Excavation souterraine horizontale', en: 'Horizontal underground excavation' }
+  },
+  'fondation': { 
+    icon: '🏢', 
+    title: { fr: 'Fondation', en: 'Foundation' }, 
+    maxDepth: 8, 
+    minWidth: 1.5,
+    description: { fr: 'Excavation pour fondations bâtiment', en: 'Building foundation excavation' }
+  }
 };
 
 const SOIL_TYPES = {
-  'type-a': { title: { fr: 'Type A - Sol stable', en: 'Type A - Stable soil' }, angle: 53, color: 'green' },
-  'type-b': { title: { fr: 'Type B - Sol moyennement stable', en: 'Type B - Moderately stable' }, angle: 45, color: 'yellow' },
-  'type-c': { title: { fr: 'Type C - Sol instable', en: 'Type C - Unstable soil' }, angle: 34, color: 'red' },
-  'roc': { title: { fr: 'Roc solide', en: 'Solid rock' }, angle: 90, color: 'gray' }
+  'type-a': { 
+    title: { fr: 'Type A - Sol stable', en: 'Type A - Stable soil' }, 
+    angle: 53, 
+    color: 'green',
+    description: { fr: 'Argile, limon dur, roc fracturé', en: 'Clay, hard silt, fractured rock' }
+  },
+  'type-b': { 
+    title: { fr: 'Type B - Sol moyennement stable', en: 'Type B - Moderately stable' }, 
+    angle: 45, 
+    color: 'yellow',
+    description: { fr: 'Sable grossier, limon, argile moyenne', en: 'Coarse sand, silt, medium clay' }
+  },
+  'type-c': { 
+    title: { fr: 'Type C - Sol instable', en: 'Type C - Unstable soil' }, 
+    angle: 34, 
+    color: 'red',
+    description: { fr: 'Sable fin, limon, sol granulaire', en: 'Fine sand, silt, granular soil' }
+  },
+  'roc': { 
+    title: { fr: 'Roc solide', en: 'Solid rock' }, 
+    angle: 90, 
+    color: 'gray',
+    description: { fr: 'Roc dur non fracturé', en: 'Hard unfractured rock' }
+  }
 };
 
 const PROVINCIAL_REGULATIONS = {
@@ -95,13 +254,53 @@ const PROVINCIAL_REGULATIONS = {
     maxDepthWithoutShoring: 1.5,
     callBeforeDigging: 'Info-Excavation',
     callNumber: '1-800-663-9228',
-    requiredClearances: { electrical: 3.0, gas: 1.0, water: 0.5, sewer: 0.3 }
+    website: 'www.info-ex.com',
+    requiredClearances: { electrical: 3.0, gas: 1.0, water: 0.5, sewer: 0.3, telecom: 0.3 },
+    inspectionRequired: true,
+    references: {
+      regulation: 'RSST, art. 238-245',
+      standard: 'CSA Z184',
+      authority: 'CNESST'
+    }
   },
   ON: {
     maxDepthWithoutShoring: 1.2,
     callBeforeDigging: 'Ontario One Call',
     callNumber: '1-800-400-2255',
-    requiredClearances: { electrical: 3.0, gas: 1.5, water: 0.6, sewer: 0.3 }
+    website: 'www.ontarioonecall.ca',
+    requiredClearances: { electrical: 3.0, gas: 1.5, water: 0.6, sewer: 0.3, telecom: 0.3 },
+    inspectionRequired: true,
+    references: {
+      regulation: 'O. Reg. 213/91',
+      standard: 'CSA Z184',
+      authority: 'Ministry of Labour'
+    }
+  },
+  AB: {
+    maxDepthWithoutShoring: 1.2,
+    callBeforeDigging: 'Alberta One-Call',
+    callNumber: '1-800-242-3447',
+    website: 'www.alberta1call.com',
+    requiredClearances: { electrical: 3.0, gas: 1.5, water: 0.6, sewer: 0.3, telecom: 0.3 },
+    inspectionRequired: true,
+    references: {
+      regulation: 'OHS Code Part 32',
+      standard: 'CSA Z184',
+      authority: 'Alberta Labour'
+    }
+  },
+  BC: {
+    maxDepthWithoutShoring: 1.2,
+    callBeforeDigging: 'BC One Call',
+    callNumber: '1-800-474-6886',
+    website: 'www.bconecall.bc.ca',
+    requiredClearances: { electrical: 3.0, gas: 1.5, water: 0.6, sewer: 0.3, telecom: 0.3 },
+    inspectionRequired: true,
+    references: {
+      regulation: 'OHS Regulation Part 20',
+      standard: 'CSA Z184',
+      authority: 'WorkSafeBC'
+    }
   }
 };
 
@@ -139,38 +338,91 @@ export default function ExcavationForm({
       permitType: 'excavation',
       permitNumber: `EX-${Date.now()}`,
       excavationType: 'tranchee',
-      location: { address: '', specificLocation: '' },
+      location: { 
+        address: '', 
+        specificLocation: '',
+        municipality: '',
+        zone: ''
+      },
       workDescription: '',
       startDate: new Date(),
       endDate: new Date(Date.now() + 8 * 60 * 60 * 1000),
       estimatedDuration: 8,
-      contractor: { name: '', license: '', contact: '' }
+      contractor: { 
+        name: '', 
+        license: '', 
+        contact: '',
+        excavationLicense: '',
+        insurance: ''
+      }
     },
     dimensions: {
-      length: 0, width: 0, depth: 0, volume: 0,
+      length: 0, 
+      width: 0, 
+      depth: 0, 
+      volume: 0,
       soilType: 'type-b',
-      waterTable: { present: false, drainageRequired: false },
-      shoring: { required: false }
+      waterTable: { present: false, drainageRequired: false, pumping: false },
+      shoring: { required: false },
+      slopeAngle: 45,
+      benching: false
     },
     utilities: {
       callBeforeDigging: {
         called: false,
         callNumber: PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.callNumber || '',
         ticketNumber: '',
-        expiryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+        expiryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        operator: ''
       },
       markedUtilities: [],
-      clearances: PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredClearances || { electrical: 3, gas: 1, water: 0.5, sewer: 0.3 },
-      handDigging: { required: false, depth: 0.5, equipment: [] }
+      clearances: PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredClearances || { 
+        electrical: 3, gas: 1, water: 0.5, sewer: 0.3, telecom: 0.3 
+      },
+      handDigging: { required: false, depth: 0.5, equipment: [], zones: [] },
+      vacuumExcavation: { required: false, provider: '', zones: [] }
     },
-    personnel: { superviseur: [], operateurs: [], signaleurs: [] },
+    personnel: { 
+      superviseur: [], 
+      operateurs: [], 
+      signaleurs: [],
+      inspecteurs: []
+    },
     safety: {
-      entryExit: { ladders: 0, spacing: 7.5, condition: '' },
-      atmosphericTesting: { required: false, frequency: 15, parameters: [] },
-      trafficControl: { required: false, signage: [], flaggers: 0 },
-      emergencyProcedures: []
+      entryExit: { 
+        ladders: 0, 
+        spacing: 7.5, 
+        condition: 'good',
+        ramps: false,
+        stairways: false
+      },
+      atmosphericTesting: { 
+        required: false, 
+        frequency: 15, 
+        parameters: [],
+        equipment: []
+      },
+      trafficControl: { 
+        required: false, 
+        signage: [], 
+        flaggers: 0,
+        barriers: [],
+        lighting: false
+      },
+      emergencyProcedures: [],
+      evacuation: {
+        routes: [],
+        assembly: '',
+        communication: ''
+      }
     },
-    validation: { approvals: [], signatures: [], inspections: [], permitStatus: 'draft' },
+    validation: { 
+      approvals: [], 
+      signatures: [], 
+      inspections: [], 
+      permitStatus: 'draft',
+      dailyInspections: true
+    },
     ...initialData
   }));
 
@@ -226,6 +478,29 @@ export default function ExcavationForm({
     hapticFeedback('selection');
   }, [hapticFeedback]);
 
+  // Calcul automatique du volume
+  useEffect(() => {
+    const { length, width, depth } = formData.dimensions;
+    if (length > 0 && width > 0 && depth > 0) {
+      const volume = length * width * depth;
+      updateFormData('dimensions', 'volume', Math.round(volume * 100) / 100);
+    }
+  }, [formData.dimensions.length, formData.dimensions.width, formData.dimensions.depth, updateFormData]);
+
+  // Détermination automatique étaiement requis
+  useEffect(() => {
+    const { depth, soilType } = formData.dimensions;
+    const maxDepth = PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxDepthWithoutShoring || 1.2;
+    const shoringRequired = depth > maxDepth || (soilType === 'type-c' && depth > 1.0);
+    
+    if (formData.dimensions.shoring.required !== shoringRequired) {
+      updateFormData('dimensions', 'shoring', {
+        ...formData.dimensions.shoring,
+        required: shoringRequired
+      });
+    }
+  }, [formData.dimensions.depth, formData.dimensions.soilType, province, updateFormData]);
+
   const validateSection = useCallback((sectionIndex: number) => {
     const section = FORM_SECTIONS[sectionIndex];
     const errors: string[] = [];
@@ -238,15 +513,56 @@ export default function ExcavationForm({
         if (!formData.identification.workDescription.trim()) {
           errors.push(language === 'fr' ? 'Description travaux requise' : 'Work description required');
         }
+        if (!formData.identification.contractor.name.trim()) {
+          errors.push(language === 'fr' ? 'Nom entrepreneur requis' : 'Contractor name required');
+        }
         break;
+        
       case 'dimensions':
         if (formData.dimensions.depth <= 0) {
           errors.push(language === 'fr' ? 'Profondeur requise' : 'Depth required');
         }
+        if (formData.dimensions.length <= 0) {
+          errors.push(language === 'fr' ? 'Longueur requise' : 'Length required');
+        }
+        if (formData.dimensions.width <= 0) {
+          errors.push(language === 'fr' ? 'Largeur requise' : 'Width required');
+        }
+        if (formData.dimensions.shoring.required && !formData.dimensions.shoring.type) {
+          errors.push(language === 'fr' ? 'Type d\'étaiement requis' : 'Shoring type required');
+        }
         break;
+        
       case 'utilities':
         if (!formData.utilities.callBeforeDigging.called) {
           errors.push(language === 'fr' ? 'Appel avant excavation requis' : 'Call before digging required');
+        }
+        if (formData.utilities.callBeforeDigging.called && !formData.utilities.callBeforeDigging.ticketNumber.trim()) {
+          errors.push(language === 'fr' ? 'Numéro de billet requis' : 'Ticket number required');
+        }
+        break;
+        
+      case 'personnel':
+        if (formData.personnel.superviseur.length === 0) {
+          errors.push(language === 'fr' ? 'Superviseur requis' : 'Supervisor required');
+        }
+        if (formData.personnel.operateurs.length === 0) {
+          errors.push(language === 'fr' ? 'Opérateur requis' : 'Operator required');
+        }
+        break;
+        
+      case 'safety':
+        if (formData.dimensions.depth > 1.2 && formData.safety.entryExit.ladders === 0) {
+          errors.push(language === 'fr' ? 'Échelles d\'accès requises' : 'Access ladders required');
+        }
+        if (formData.safety.trafficControl.required && formData.safety.trafficControl.flaggers === 0) {
+          errors.push(language === 'fr' ? 'Signaleurs requis' : 'Flaggers required');
+        }
+        break;
+        
+      case 'validation':
+        if (formData.validation.signatures.length === 0) {
+          errors.push(language === 'fr' ? 'Signatures requises' : 'Signatures required');
         }
         break;
     }
@@ -340,8 +656,8 @@ export default function ExcavationForm({
                   <span className="text-2xl">{config.icon}</span>
                   <div className="flex-1">
                     <div className="font-medium">{config.title[language]}</div>
-                    <div className="text-xs text-gray-500">
-                      Max: {config.maxDepth}m | Min: {config.minWidth}m
+                    <div className="text-xs text-gray-500 mt-1">
+                      {config.description[language]}
                     </div>
                   </div>
                 </div>
@@ -355,7 +671,7 @@ export default function ExcavationForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             {language === 'fr' ? 'Localisation' : 'Location'}
           </label>
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 mb-3">
             <input
               type="text"
               value={formData.identification.location.address}
@@ -372,6 +688,40 @@ export default function ExcavationForm({
             >
               <MapPin className="h-5 w-5" />
             </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                {language === 'fr' ? 'Municipalité' : 'Municipality'}
+              </label>
+              <input
+                type="text"
+                value={formData.identification.location.municipality}
+                onChange={(e) => updateFormData('identification', 'location', {
+                  ...formData.identification.location,
+                  municipality: e.target.value
+                })}
+                className="w-full px-3 py-2 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                placeholder={language === 'fr' ? 'Ex: Ville de Sherbrooke' : 'Ex: City of Sherbrooke'}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                {language === 'fr' ? 'Zone/Secteur' : 'Zone/Sector'}
+              </label>
+              <input
+                type="text"
+                value={formData.identification.location.zone}
+                onChange={(e) => updateFormData('identification', 'location', {
+                  ...formData.identification.location,
+                  zone: e.target.value
+                })}
+                className="w-full px-3 py-2 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                placeholder={language === 'fr' ? 'Ex: Centre-ville' : 'Ex: Downtown'}
+              />
+            </div>
           </div>
         </div>
 
@@ -428,6 +778,27 @@ export default function ExcavationForm({
               className="w-full px-4 py-3 text-[16px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
               placeholder={language === 'fr' ? 'Nom de l\'entreprise' : 'Company name'}
             />
+          </div>
+        </div>
+
+        {/* Information réglementaire */}
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-medium text-blue-800 mb-2">
+            {language === 'fr' ? `Réglementation ${province}` : `${province} Regulation`}
+          </h4>
+          <div className="text-sm text-blue-700">
+            <p>
+              {language === 'fr' ? 'Profondeur max sans étaiement' : 'Max depth without shoring'}: {' '}
+              <span className="font-medium">
+                {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.maxDepthWithoutShoring || 1.2}m
+              </span>
+            </p>
+            <p>
+              {language === 'fr' ? 'Appel obligatoire' : 'Mandatory call'}: {' '}
+              <span className="font-medium">
+                {PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.callBeforeDigging || 'Call Before Dig'}
+              </span>
+            </p>
           </div>
         </div>
       </div>
