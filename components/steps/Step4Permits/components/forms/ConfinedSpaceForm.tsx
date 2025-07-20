@@ -5,6 +5,12 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ChevronLeft, ChevronRight, Save, Send, CheckCircle, XCircle, 
+  AlertTriangle, Activity, Users, Shield, Zap, FileText,
+  Lock, Eye, Settings, Mic, Camera, MapPin, Power, Wind,
+  Thermometer, Droplets, Gauge, Radio, Battery, Wifi, Bluetooth
+} from 'lucide-react';
 
 // =================== TYPES & INTERFACES ===================
 
