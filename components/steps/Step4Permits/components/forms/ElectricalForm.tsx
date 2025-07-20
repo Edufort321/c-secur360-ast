@@ -947,11 +947,11 @@ export default function ElectricalForm({
               {language === 'fr' 
                 ? `Requis: ${(() => {
                     const reg = PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredLicenses;
-                    return reg?.maitre || reg?.master || 'Licence valide';
+                    return reg && ('maitre' in reg ? reg.maitre : (reg as any).master) || 'Licence valide';
                   })()} (${province})`
                 : `Required: ${(() => {
                     const reg = PROVINCIAL_REGULATIONS[province as keyof typeof PROVINCIAL_REGULATIONS]?.requiredLicenses;
-                    return reg?.master || reg?.maitre || 'Valid license';
+                    return reg && ('master' in reg ? (reg as any).master : reg.maitre) || 'Valid license';
                   })()} (${province})`
               }
             </p>
