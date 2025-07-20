@@ -36,7 +36,6 @@ import {
   Wifi,
   Bluetooth,
   Activity,
-  Tool,
   Gauge
 } from 'lucide-react';
 import { StatusBadge } from '../../StatusBadge';
@@ -195,7 +194,7 @@ const EQUIPMENT_CATEGORIES = {
     required: false
   },
   'hand-tools': {
-    icon: Tool,
+    icon: Wrench,
     title: { fr: 'Outils manuels', en: 'Hand tools' },
     color: '#6B7280',
     required: false
