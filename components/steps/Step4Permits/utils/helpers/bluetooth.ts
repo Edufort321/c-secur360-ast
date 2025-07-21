@@ -702,7 +702,7 @@ export class BluetoothManager {
 
   private isBluetoothSupported(): boolean {
     return 'bluetooth' in navigator && 
-           navigator.bluetooth && 
+           !!navigator.bluetooth && 
            typeof navigator.bluetooth.requestDevice === 'function';
   }
 
