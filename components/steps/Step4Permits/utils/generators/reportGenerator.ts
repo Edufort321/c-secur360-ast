@@ -612,7 +612,7 @@ export class ReportGenerator {
     data: any,
     options: Partial<ReportOptions> = {}
   ): Promise<ReportGenerationResult> {
-    const reportOptions = { ...template.defaultOptions, ...options };
+    const reportOptions: ReportOptions = { ...template.defaultOptions, ...options } as ReportOptions;
     
     try {
       const startTime = performance.now();
