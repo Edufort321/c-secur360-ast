@@ -4,7 +4,29 @@
 
 import type { ProvinceCode } from '../constants/provinces';
 import type { PersonnelRole } from './personnel';
-import type { Timestamped, BilingualText, GeoCoordinates } from './index';
+
+// =================== TYPES LOCAUX DE BASE ===================
+
+export interface LocalTimestamped {
+  createdAt: number;
+  updatedAt?: number;
+  version?: number;
+}
+
+export interface LocalBilingualText {
+  fr: string;
+  en: string;
+}
+
+export interface LocalGeoCoordinates {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  altitude?: number;
+  altitudeAccuracy?: number;
+  heading?: number;
+  speed?: number;
+}
 
 // =================== TYPES DE BASE ===================
 
@@ -77,7 +99,7 @@ export type CryptographicStandard =
 
 // =================== INTERFACES PRINCIPALES ===================
 
-export interface ElectronicSignature extends Timestamped {
+export interface ElectronicSignature extends LocalTimestamped {
   id: string;                              // ID unique signature
   documentId: string;                      // ID document signé
   documentType: string;                    // Type document (permit, form, etc.)
@@ -141,7 +163,7 @@ export interface ElectronicSignature extends Timestamped {
     role: PersonnelRole;
     timestamp: number;
     signature?: string;                   // Signature témoin
-    statement: BilingualText;             // Déclaration témoin
+    statement: LocalBilingualText;        // Déclaration témoin
   }>;
   notarization?: {                        // Notarisation (si requis)
     notaryId: string;
@@ -149,11 +171,11 @@ export interface ElectronicSignature extends Timestamped {
     notaryCommission: string;
     notaryExpiry: string;
     notarySignature: string;
-    notaryStatement: BilingualText;
+    notaryStatement: LocalBilingualText;
     digitalSeal?: string;                 // Sceau numérique
   };
   revocation?: {                          // Révocation (si applicable)
-    reason: BilingualText;
+    reason: LocalBilingualText;
     revokedBy: string;
     revokedAt: number;
     newSignatureRequired: boolean;
@@ -259,8 +281,8 @@ export interface SignatureMetadata {
   environment: {                         // Environnement
     timestamp: number;                    // Horodatage précis
     timezone: string;                     // Fuseau horaire
-    location?: GeoCoordinates;            // Position GPS
-    address?: BilingualText;              // Adresse géocodée
+    location?: LocalGeoCoordinates;       // Position GPS
+    address?: LocalBilingualText;         // Adresse géocodée
     network: {                           // Réseau
       ipAddress: string;                  // Adresse IP
       ipType: 'ipv4' | 'ipv6';           // Type IP
@@ -282,15 +304,15 @@ export interface SignatureMetadata {
     };
   };
   context: {                             // Contexte
-    documentName: BilingualText;          // Nom document
+    documentName: LocalBilingualText;     // Nom document
     documentVersion: string;              // Version document
-    signatureReason: BilingualText;       // Raison signature
-    signatureLocation: BilingualText;     // Lieu signature
+    signatureReason: LocalBilingualText;  // Raison signature
+    signatureLocation: LocalBilingualText;// Lieu signature
     workflowStage: string;                // Étape workflow
     requiredBy?: string;                  // Requis par
     deadline?: number;                    // Échéance
     urgency: 'low' | 'normal' | 'high' | 'urgent' | 'emergency';
-    consequences: BilingualText[];        // Conséquences non-signature
+    consequences: LocalBilingualText[];   // Conséquences non-signature
   };
   behavior: {                            // Comportement
     hesitationCount: number;              // Hésitations
@@ -319,7 +341,7 @@ export interface SignatureMetadata {
     riskFactors: Array<{                 // Facteurs risque
       factor: string;
       level: 'low' | 'medium' | 'high' | 'critical';
-      description: BilingualText;
+      description: LocalBilingualText;
     }>;
     confidenceScore: number;              // Score confiance global (0-100)
     fraudRisk: number;                    // Risque fraude (0-100)
@@ -376,12 +398,12 @@ export interface SignatureValidation {
     verificationScore: number;            // Score vérification (0-100)
     exceptions: Array<{                  // Exceptions
       type: string;
-      description: BilingualText;
+      description: LocalBilingualText;
       severity: 'minor' | 'major' | 'critical';
-      resolution?: BilingualText;
+      resolution?: LocalBilingualText;
     }>;
     overrides: Array<{                   // Dérogations
-      reason: BilingualText;
+      reason: LocalBilingualText;
       authorizedBy: string;
       timestamp: number;
       documentation: string;
@@ -391,25 +413,25 @@ export interface SignatureValidation {
 
 export interface LegalConsent {
   consentVersion: string;                 // Version consentement
-  consentText: BilingualText;             // Texte consentement
+  consentText: LocalBilingualText;        // Texte consentement
   consentGiven: boolean;                  // Consentement donné
   consentTimestamp: number;               // Moment consentement
   consentMethod: 'explicit' | 'implied' | 'opt_in' | 'opt_out';
   consentScope: string[];                 // Portée consentement
   dataProcessing: {                      // Traitement données
-    purposes: BilingualText[];            // Finalités
+    purposes: LocalBilingualText[];       // Finalités
     dataTypes: string[];                  // Types données
     recipients: string[];                 // Destinataires
     retention: {                         // Conservation
       period: number;                     // Période (années)
-      criteria: BilingualText;            // Critères
-      disposal: BilingualText;            // Destruction
+      criteria: LocalBilingualText;       // Critères
+      disposal: LocalBilingualText;       // Destruction
     };
     transfers: Array<{                   // Transferts
       recipient: string;
       country: string;
-      safeguards: BilingualText[];
-      purpose: BilingualText;
+      safeguards: LocalBilingualText[];
+      purpose: LocalBilingualText;
     }>;
     rights: {                           // Droits
       access: boolean;                    // Accès
@@ -418,14 +440,14 @@ export interface LegalConsent {
       portability: boolean;               // Portabilité
       objection: boolean;                 // Opposition
       restriction: boolean;               // Limitation
-      complaint: BilingualText;           // Plainte
+      complaint: LocalBilingualText;      // Plainte
     };
   };
   biometricConsent?: {                   // Consentement biométrique
     specific: boolean;                    // Spécifique
     informed: boolean;                    // Éclairé
     freely_given: boolean;                // Libre
-    withdrawal: BilingualText;            // Retrait
+    withdrawal: LocalBilingualText;       // Retrait
     sensitive_data: boolean;              // Données sensibles
     special_categories: string[];         // Catégories spéciales
   };
@@ -433,7 +455,7 @@ export interface LegalConsent {
     ageVerification: boolean;             // Vérification âge
     parentalConsent: boolean;             // Consentement parental
     guardianSignature?: string;           // Signature tuteur
-    specialProtections: BilingualText[];  // Protections spéciales
+    specialProtections: LocalBilingualText[]; // Protections spéciales
   };
   compliance: {                         // Conformité
     pipeda: boolean;                      // PIPEDA (Canada)
@@ -448,8 +470,8 @@ export interface LegalConsent {
     consentHistory: Array<{              // Historique
       version: string;
       timestamp: number;
-      changes: BilingualText[];
-      reason: BilingualText;
+      changes: LocalBilingualText[];
+      reason: LocalBilingualText;
     }>;
     auditTrail: string[];                 // Piste audit
   };
@@ -467,7 +489,7 @@ export interface SignatureAudit {
       ip: string;
       device: string;
     };
-    action: BilingualText;               // Action
+    action: LocalBilingualText;          // Action
     details: Record<string, any>;        // Détails
     result: 'success' | 'failure' | 'partial';
     evidence: string[];                   // Preuves
@@ -495,7 +517,7 @@ export interface SignatureAudit {
     accessLog: Array<{                   // Journal accès
       timestamp: number;
       user: string;
-      purpose: BilingualText;
+      purpose: LocalBilingualText;
       granted: boolean;
       duration?: number;                  // Durée accès (ms)
       documentsAccessed: string[];
@@ -511,7 +533,7 @@ export interface SignatureAudit {
     }>;
     restrictions: Array<{                // Restrictions
       type: 'time' | 'location' | 'device' | 'purpose';
-      description: BilingualText;
+      description: LocalBilingualText;
       active: boolean;
       expires?: number;
     }>;
@@ -525,7 +547,7 @@ export interface SignatureAudit {
     lastAudit?: {                       // Dernier audit
       date: number;
       auditor: string;
-      findings: BilingualText[];
+      findings: LocalBilingualText[];
       score: number;                      // Score (0-100)
     };
   };
@@ -540,19 +562,19 @@ export interface SignatureCompliance {
       date: number;
       assessor: string;
       score: number;                      // Score (0-100)
-      findings: BilingualText[];
-      recommendations: BilingualText[];
+      findings: LocalBilingualText[];
+      recommendations: LocalBilingualText[];
     };
     requirements: Array<{               // Exigences
-      requirement: BilingualText;
+      requirement: LocalBilingualText;
       status: 'met' | 'not_met' | 'partial' | 'n_a';
       evidence: string[];
-      notes?: BilingualText;
+      notes?: LocalBilingualText;
     }>;
     exceptions?: Array<{                // Exceptions
       requirement: string;
-      reason: BilingualText;
-      mitigation: BilingualText;
+      reason: LocalBilingualText;
+      mitigation: LocalBilingualText;
       approved_by: string;
       expires?: number;
     }>;
@@ -567,7 +589,7 @@ export interface SignatureCompliance {
     local_counsel?: {                   // Conseil juridique local
       firm: string;
       lawyer: string;
-      opinion: BilingualText;
+      opinion: LocalBilingualText;
       date: number;
     };
   }>;
@@ -581,7 +603,7 @@ export interface SignatureCompliance {
       certificate: string;
       issued: number;
       expires: number;
-      scope: BilingualText;
+      scope: LocalBilingualText;
     };
   }>;
   technical: {                          // Conformité technique
@@ -619,8 +641,8 @@ export interface SignatureCompliance {
       conducted: boolean;
       date?: number;
       assessor?: string;
-      findings?: BilingualText[];
-      mitigation?: BilingualText[];
+      findings?: LocalBilingualText[];
+      mitigation?: LocalBilingualText[];
     };
   };
   continuous_monitoring: {              // Surveillance continue
@@ -631,7 +653,7 @@ export interface SignatureCompliance {
       condition: string;
       threshold: number;
       recipients: string[];
-      actions: BilingualText[];
+      actions: LocalBilingualText[];
     }>;
     reports: {                          // Rapports
       frequency: 'weekly' | 'monthly' | 'quarterly' | 'annual';
@@ -644,7 +666,7 @@ export interface SignatureCompliance {
 
 export interface RetentionPolicy {
   policy_id: string;                      // ID politique
-  policy_name: BilingualText;             // Nom politique
+  policy_name: LocalBilingualText;        // Nom politique
   version: string;                        // Version
   effective_date: number;                 // Date entrée vigueur
   categories: Array<{                     // Catégories
@@ -656,7 +678,7 @@ export interface RetentionPolicy {
     };
     legal_hold?: {                      // Conservation judiciaire
       active: boolean;
-      reason: BilingualText;
+      reason: LocalBilingualText;
       authority: string;
       case_number?: string;
       contact: string;
@@ -664,15 +686,15 @@ export interface RetentionPolicy {
     };
     disposition: {                       // Sort final
       method: 'secure_deletion' | 'anonymization' | 'archival' | 'transfer';
-      criteria: BilingualText[];
+      criteria: LocalBilingualText[];
       responsible: PersonnelRole;
       verification: boolean;
       certificate?: boolean;              // Certificat destruction
     };
     exceptions: Array<{                  // Exceptions
-      condition: BilingualText;
+      condition: LocalBilingualText;
       extension: number;                  // Prolongation (jours)
-      reason: BilingualText;
+      reason: LocalBilingualText;
       authority: string;
     }>;
   }>;
@@ -689,27 +711,27 @@ export interface RetentionPolicy {
   }>;
   compliance: {                          // Conformité
     regulatory_basis: string[];          // Base réglementaire
-    business_justification: BilingualText;// Justification métier
+    business_justification: LocalBilingualText;// Justification métier
     risk_assessment: {                   // Évaluation risque
       over_retention: number;             // Risque sur-conservation (1-5)
       under_retention: number;            // Risque sous-conservation (1-5)
       data_breach: number;                // Risque violation (1-5)
       compliance_violation: number;       // Risque non-conformité (1-5)
-      mitigation: BilingualText[];        // Mesures atténuation
+      mitigation: LocalBilingualText[];   // Mesures atténuation
     };
     audit_trail: {                      // Piste audit
       retention_events: Array<{          // Événements conservation
         type: 'creation' | 'extension' | 'disposal' | 'hold' | 'release';
         timestamp: number;
         actor: string;
-        reason: BilingualText;
+        reason: LocalBilingualText;
         evidence: string[];
       }>;
       reviews: Array<{                   // Révisions
         date: number;
         reviewer: string;
-        findings: BilingualText[];
-        changes: BilingualText[];
+        findings: LocalBilingualText[];
+        changes: LocalBilingualText[];
         next_review: number;
       }>;
     };
@@ -768,7 +790,7 @@ export interface TamperEvidence {
     timestamp: number;
     type: 'content_modification' | 'metadata_change' | 'hash_mismatch' | 'signature_invalid' | 'time_anomaly';
     severity: 'low' | 'medium' | 'high' | 'critical';
-    description: BilingualText;
+    description: LocalBilingualText;
     evidence: string[];                   // Preuves altération
     hash_before?: string;                 // Hash avant
     hash_after?: string;                  // Hash après
@@ -786,19 +808,19 @@ export interface TamperEvidence {
   protection: {                         // Protection
     mechanisms: string[];                // Mécanismes protection
     effectiveness: number;               // Efficacité (0-100)
-    vulnerabilities?: BilingualText[];   // Vulnérabilités
-    recommendations: BilingualText[];    // Recommandations
+    vulnerabilities?: LocalBilingualText[];// Vulnérabilités
+    recommendations: LocalBilingualText[];// Recommandations
   };
   response: {                           // Réponse
-    automatic: BilingualText[];          // Actions automatiques
-    manual: BilingualText[];             // Actions manuelles
+    automatic: LocalBilingualText[];     // Actions automatiques
+    manual: LocalBilingualText[];        // Actions manuelles
     notifications: string[];             // Notifications envoyées
     investigation: {                    // Enquête
       required: boolean;
       initiated: boolean;
       investigator?: string;
       status?: 'open' | 'in_progress' | 'closed';
-      findings?: BilingualText[];
+      findings?: LocalBilingualText[];
     };
   };
 }
@@ -827,30 +849,30 @@ export interface IntegrityHash {
 
 export interface SecurityContext {
   threat_model: {                        // Modèle menaces
-    assets: BilingualText[];             // Actifs protégés
+    assets: LocalBilingualText[];        // Actifs protégés
     threats: Array<{                    // Menaces
-      threat: BilingualText;
+      threat: LocalBilingualText;
       likelihood: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
       impact: 'negligible' | 'minor' | 'moderate' | 'major' | 'severe';
       risk_level: 'low' | 'medium' | 'high' | 'critical';
-      mitigation: BilingualText[];
+      mitigation: LocalBilingualText[];
     }>;
-    attack_vectors: BilingualText[];     // Vecteurs attaque
-    countermeasures: BilingualText[];    // Contre-mesures
+    attack_vectors: LocalBilingualText[];// Vecteurs attaque
+    countermeasures: LocalBilingualText[];// Contre-mesures
   };
   security_controls: Array<{             // Contrôles sécurité
     control: string;
     type: 'preventive' | 'detective' | 'corrective' | 'compensating';
     implementation: 'technical' | 'administrative' | 'physical';
     effectiveness: number;               // Efficacité (0-100)
-    coverage: BilingualText[];           // Couverture
-    gaps?: BilingualText[];              // Lacunes
+    coverage: LocalBilingualText[];      // Couverture
+    gaps?: LocalBilingualText[];         // Lacunes
   }>;
   risk_assessment: {                     // Évaluation risque
     overall_risk: 'low' | 'medium' | 'high' | 'critical';
     residual_risk: number;               // Risque résiduel (0-100)
     acceptable_risk: number;             // Risque acceptable (0-100)
-    risk_appetite: BilingualText;        // Appétit risque
+    risk_appetite: LocalBilingualText;   // Appétit risque
     last_assessment: number;             // Dernière évaluation
     next_review: number;                 // Prochaine révision
   };
@@ -863,12 +885,12 @@ export interface SecurityContext {
       email: string;
       escalation_level: number;
     }>;
-    procedures: BilingualText[];         // Procédures
+    procedures: LocalBilingualText[];    // Procédures
     tools: string[];                     // Outils
     testing: {                          // Tests
       last_test: number;
       frequency: number;                  // Mois
-      results?: BilingualText[];
+      results?: LocalBilingualText[];
     };
   };
 }
@@ -911,30 +933,10 @@ export interface AuthenticationFactor {
     compromise_indicators: string[];      // Indicateurs compromission
     risk_score: number;                  // Score risque (0-100)
     last_assessment: number;             // Dernière évaluation
-    mitigation: BilingualText[];         // Mesures atténuation
+    mitigation: LocalBilingualText[];    // Mesures atténuation
   };
 }
 
-// =================== EXPORT TYPES ===================
-
-export type {
-  SignatureType,
-  SignatureStatus,
-  SignatureMethod,
-  AuthenticationLevel,
-  LegalFramework,
-  CryptographicStandard,
-  ElectronicSignature,
-  BiometricData,
-  SignatureMetadata,
-  SignatureValidation,
-  LegalConsent,
-  SignatureAudit,
-  SignatureCompliance,
-  RetentionPolicy,
-  MultiFactorAuthentication,
-  TamperEvidence,
-  IntegrityHash,
-  SecurityContext,
-  AuthenticationFactor
-};
+// =================== EXPORTS (SANS CONFLIT) ===================
+// Note: Tous les types sont déjà exportés individuellement ci-dessus
+// Pas besoin de re-export groupé qui causerait des conflits d'export
