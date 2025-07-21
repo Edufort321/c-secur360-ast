@@ -735,10 +735,10 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
   }, [permissions.canDelete, showToast, language, deletePermit]);
 
   // =================== RENDU VALIDATION PANEL ===================
-  const renderValidationPanel = () => {
+  const renderValidationPanel = useCallback(() => {
     if (!selectedPermit) return null;
 
-    const validationResults = selectedPermit.validationResults;
+    const validationResultsData = selectedPermit.validationResults;
     const requiredValidations = PERMIT_TYPES_CONFIG[selectedPermit.type].requiredValidations;
 
     return (
@@ -800,8 +800,8 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                     <div className="flex items-center gap-2">
                       <TabIcon size={20} />
                       <span>{tabConfig.label[language]}</span>
-                      {validationResults?.[validationType] && (
-                        validationResults[validationType].isValid ? 
+                      {validationResultsData?.[validationType] && (
+                        validationResultsData[validationType].isValid ? 
                           <CheckCircle size={16} className="text-green-500" /> :
                           <XCircle size={16} className="text-red-500" />
                       )}
@@ -822,8 +822,8 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                 <div className="flex items-center gap-2">
                   <FileText size={20} />
                   <span>{language === 'fr' ? 'Résumé' : 'Summary'}</span>
-                  {validationResults?.overall && (
-                    validationResults.overall.isValid ? 
+                  {validationResultsData?.overall && (
+                    validationResultsData.overall.isValid ? 
                       <CheckCircle size={16} className="text-green-500" /> :
                       <XCircle size={16} className="text-red-500" />
                   )}
@@ -840,7 +840,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
               <AtmosphericMonitoringPanel
                 permit={selectedPermit}
                 language={language}
-                validationResult={validationResults?.atmospheric}
+                validationResult={validationResultsData?.atmospheric}
                 regulationConfig={regulationConfig}
                 onDataUpdate={(data) => {
                   const updated = { 
@@ -859,7 +859,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
               <EquipmentValidationPanel
                 permit={selectedPermit}
                 language={language}
-                validationResult={validationResults?.equipment}
+                validationResult={validationResultsData?.equipment}
                 regulationConfig={regulationConfig}
                 onDataUpdate={(data) => {
                   const updated = { 
@@ -878,7 +878,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
               <PersonnelValidationPanel
                 permit={selectedPermit}
                 language={language}
-                validationResult={validationResults?.personnel}
+                validationResult={validationResultsData?.personnel}
                 regulationConfig={regulationConfig}
                 onDataUpdate={(data) => {
                   const updated = { 
@@ -897,7 +897,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
               <ProcedureValidationPanel
                 permit={selectedPermit}
                 language={language}
-                validationResult={validationResults?.procedures}
+                validationResult={validationResultsData?.procedures}
                 regulationConfig={regulationConfig}
                 onDataUpdate={(data) => {
                   const updated = { 
@@ -916,8 +916,8 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
               <ValidationSummaryPanel
                 permit={selectedPermit}
                 language={language}
-                validationResult={validationResults?.overall}
-                allValidationResults={validationResults}
+                validationResult={validationResultsData?.overall}
+                allValidationResults={validationResultsData}
                 regulationConfig={regulationConfig}
                 onGeneratePermit={() => {
                   showToast('success', language === 'fr' ? 'Permis généré avec succès' : 'Permit generated successfully');
@@ -928,7 +928,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
         </div>
       </div>
     );
-  };
+  }, [selectedPermit, language, validationLoading, validatePermit, activeValidationTab, regulationConfig, userRole, setPermits, showToast]);
 
   // =================== RENDU PRINCIPAL ===================
   return (
