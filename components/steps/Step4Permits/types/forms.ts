@@ -841,39 +841,6 @@ export interface FormValidationResult {
   };
 }
 
-// =================== EXPORT TYPES ===================
-export type {
-  PermitFormData,
-  PermitType,
-  AtmosphericData,
-  SurveillantIncendie,
-  SurveillantExterieur,
-  PersonneCompetente,
-  OperateurGrue,
-  ElectricienQualifie,
-  InspecteurRadiation,
-  EquipementProtection,
-  EquipementDetection,
-  EquipementSauvetage,
-  EquipementCommunication,
-  ProceduresTravailChaud,
-  ProceduresExcavation,
-  ProceduresEspaceClos,
-  ProceduresLevage,
-  ProceduresHauteur,
-  ProceduresLOTO,
-  ProceduresRadiographie,
-  ProceduresDemolition,
-  TestsStructurels,
-  TestsElectriques,
-  TestsRadiation,
-  TestsQualiteSol,
-  IncidentSurveillance,
-  PermitSearchCriteria,
-  PermitCreationOptions,
-  PermitTypeOption,
-  PermitActionContext,
-  PermitSearchResult,
-  FormValidationError,
-  FormValidationResult
-};
+// =================== EXPORTS (SANS CONFLIT) ===================
+// Note: Tous les types sont déjà exportés individuellement ci-dessus
+// Pas besoin de re-export groupé qui causerait des conflits d'export
