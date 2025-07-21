@@ -414,64 +414,6 @@ export interface ProvincialRegulation {
   specialRequirements?: string[];
 }
 
-// =================== EXPORTS GROUPÉS ===================
-export type {
-  // Base types
-  Certification,
-  ContactInfo,
-  Location,
-  
-  // Personnel
-  PersonnelMember,
-  ElectricalPersonnel,
-  
-  // Procedures
-  ProcedureStep,
-  SafetyProcedure,
-  
-  // Equipment
-  EquipmentItem,
-  SafetyEquipment,
-  PPEItem,
-  
-  // Testing
-  TestResult,
-  MeasurementReading,
-  CalibrationRecord,
-  
-  // Validation
-  ApprovalLevel,
-  SignatureData,
-  ValidationStep,
-  InspectionRecord,
-  InspectionFinding,
-  
-  // Risk Assessment
-  RiskAssessment,
-  HazardIdentification,
-  ControlMeasure,
-  
-  // Communications
-  CommunicationPlan,
-  EmergencyContact,
-  
-  // Monitoring
-  MonitoringConfig,
-  MonitoringDevice,
-  
-  // Alerts
-  Alert,
-  NotificationSettings,
-  
-  // Documents
-  DocumentReference,
-  Attachment,
-  
-  // Workflow
-  PermitStatus,
-  WorkflowStep,
-  StatusHistory,
-  
-  // Regulations
-  ProvincialRegulation
-};
+// =================== EXPORTS (SANS CONFLIT) ===================
+// Note: Tous les types sont déjà exportés individuellement ci-dessus
+// Pas besoin de re-export groupé qui causerait des conflits d'export
