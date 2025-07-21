@@ -464,7 +464,7 @@ export class ExcelExporter {
         location: form?.location?.description || '',
         supervisor: form?.supervisor?.name || '',
         entrants: form?.entrants?.length || 0,
-        createdDate: new Date(permit.createdAt).toISOString().split('T')[0],
+        createdDate: permit.createdAt ? new Date(permit.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         validUntil: permit.validUntil ? new Date(permit.validUntil).toISOString().split('T')[0] : '',
         riskLevel: this.calculateRiskLevel(permit, form),
         complianceScore: this.calculateComplianceScore(permit, form)
