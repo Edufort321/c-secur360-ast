@@ -2,17 +2,134 @@
 // Formatters spécialisés pour affichage données atmosphériques et de sécurité
 "use client";
 
-import type { 
-  AtmosphericReading,
-  GasType,
-  AlarmLevel,
-  BilingualText,
-  NumericValue,
-  PersonnelData,
-  ElectronicSignature,
-  PriorityLevel,
-  ProvinceCode
-} from '../../types';
+// Import uniquement des types existants
+import type { ProvinceCode } from '../../constants/provinces';
+
+// Types définis localement pour éviter les dépendances manquantes
+export type LocalGasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export type LocalAlarmLevel = 'safe' | 'low' | 'medium' | 'high' | 'danger' | 'critical' | 'extreme';
+
+export interface LocalBilingualText {
+  fr: string;
+  en: string;
+}
+
+export interface LocalNumericValue {
+  value: number;
+  unit: string;
+  precision?: number;
+  range?: { min: number; max: number; };
+}
+
+export interface LocalPersonnelData {
+  id: string;
+  personal: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    employeeId: string;
+  };
+  role: 'supervisor' | 'safety_officer' | 'entrant' | 'attendant';
+  certifications: Array<{
+    type: string;
+    number: string;
+    issuer: string;
+    validFrom: number;
+    validUntil: number;
+  }>;
+  medicalClearance: {
+    status: 'valid' | 'expired' | 'pending';
+    expiryDate: number;
+    restrictions: string[];
+    doctorName: string;
+  };
+  emergencyContact: {
+    name: string;
+    relationship: string;
+    phone: string;
+    email?: string;
+  };
+}
+
+export interface LocalElectronicSignature {
+  id: string;
+  signerId: string;
+  signerName: string;
+  timestamp: number;
+  ipAddress: string;
+  userAgent: string;
+  biometricData?: {
+    fingerprint?: string;
+    voiceprint?: string;
+    typing_pattern?: Array<{ key: string; duration: number; }>;
+  };
+  certificate: {
+    issuer: string;
+    serialNumber: string;
+    validFrom: number;
+    validUntil: number;
+    algorithm: string;
+  };
+  metadata: {
+    documentHash: string;
+    signatureHash: string;
+    timestampHash: string;
+    verificationType: 'standard' | 'advanced' | 'qualified';
+    legalCompliance: string[];
+  };
+}
+
+export type LocalPriorityLevel = 'low' | 'medium' | 'high' | 'critical' | 'emergency';
+
+export interface LocalAtmosphericReading {
+  id: string;
+  timestamp: number;
+  gasType: LocalGasType;
+  value: number;
+  unit: string;
+  alarmLevel: LocalAlarmLevel;
+  confidence: number;
+  location: {
+    coordinates: { latitude: number; longitude: number; };
+    point: string;
+  };
+  environmentalConditions: {
+    temperature: number;
+    humidity: number;
+    pressure: number;
+  };
+  metadata: {
+    equipment: {
+      model: string;
+      serialNumber: string;
+      lastCalibration: number;
+      batteryLevel: number;
+    };
+    operator: string;
+    qualityAssurance: {
+      validated: boolean;
+      flagged: boolean;
+      notes: string[];
+    };
+  };
+}
 
 // =================== INTERFACES FORMATAGE ===================
 
@@ -54,7 +171,7 @@ export interface ColorScale {
     min: number;
     max: number;
     color: string;
-    label: BilingualText;
+    label: LocalBilingualText;
     severity: 'safe' | 'caution' | 'warning' | 'danger' | 'critical';
   }>;
 }
@@ -134,7 +251,7 @@ export const UNIT_ABBREVIATIONS = {
 
 // =================== ÉCHELLES COULEURS SPÉCIALISÉES ===================
 
-export const GAS_COLOR_SCALES: Record<GasType, ColorScale> = {
+export const GAS_COLOR_SCALES: Record<LocalGasType, ColorScale> = {
   oxygen: {
     name: 'Oxygen Levels',
     ranges: [
@@ -184,13 +301,114 @@ export const GAS_COLOR_SCALES: Record<GasType, ColorScale> = {
       { min: 50, max: 100, color: '#dc2626', label: { fr: 'Danger', en: 'Danger' }, severity: 'danger' },
       { min: 100, max: Infinity, color: '#7c2d12', label: { fr: 'Critique', en: 'Critical' }, severity: 'critical' }
     ]
+  },
+  carbon_dioxide: {
+    name: 'Carbon Dioxide',
+    ranges: [
+      { min: 0, max: 5000, color: '#059669', label: { fr: 'Sécuritaire', en: 'Safe' }, severity: 'safe' },
+      { min: 5000, max: 10000, color: '#eab308', label: { fr: 'Attention', en: 'Caution' }, severity: 'caution' },
+      { min: 10000, max: 30000, color: '#ea580c', label: { fr: 'Avertissement', en: 'Warning' }, severity: 'warning' },
+      { min: 30000, max: 50000, color: '#dc2626', label: { fr: 'Danger', en: 'Danger' }, severity: 'danger' },
+      { min: 50000, max: Infinity, color: '#7c2d12', label: { fr: 'Critique', en: 'Critical' }, severity: 'critical' }
+    ]
+  },
+  ammonia: {
+    name: 'Ammonia',
+    ranges: [
+      { min: 0, max: 25, color: '#059669', label: { fr: 'Sécuritaire', en: 'Safe' }, severity: 'safe' },
+      { min: 25, max: 35, color: '#eab308', label: { fr: 'Attention', en: 'Caution' }, severity: 'caution' },
+      { min: 35, max: 50, color: '#ea580c', label: { fr: 'Avertissement', en: 'Warning' }, severity: 'warning' },
+      { min: 50, max: 300, color: '#dc2626', label: { fr: 'Danger', en: 'Danger' }, severity: 'danger' },
+      { min: 300, max: Infinity, color: '#7c2d12', label: { fr: 'Critique', en: 'Critical' }, severity: 'critical' }
+    ]
+  },
+  chlorine: {
+    name: 'Chlorine',
+    ranges: [
+      { min: 0, max: 0.5, color: '#059669', label: { fr: 'Sécuritaire', en: 'Safe' }, severity: 'safe' },
+      { min: 0.5, max: 1, color: '#eab308', label: { fr: 'Attention', en: 'Caution' }, severity: 'caution' },
+      { min: 1, max: 3, color: '#ea580c', label: { fr: 'Avertissement', en: 'Warning' }, severity: 'warning' },
+      { min: 3, max: 10, color: '#dc2626', label: { fr: 'Danger', en: 'Danger' }, severity: 'danger' },
+      { min: 10, max: Infinity, color: '#7c2d12', label: { fr: 'Critique', en: 'Critical' }, severity: 'critical' }
+    ]
+  },
+  nitrogen_dioxide: {
+    name: 'Nitrogen Dioxide',
+    ranges: [
+      { min: 0, max: 3, color: '#059669', label: { fr: 'Sécuritaire', en: 'Safe' }, severity: 'safe' },
+      { min: 3, max: 5, color: '#eab308', label: { fr: 'Attention', en: 'Caution' }, severity: 'caution' },
+      { min: 5, max: 10, color: '#ea580c', label: { fr: 'Avertissement', en: 'Warning' }, severity: 'warning' },
+      { min: 10, max: 20, color: '#dc2626', label: { fr: 'Danger', en: 'Danger' }, severity: 'danger' },
+      { min: 20, max: Infinity, color: '#7c2d12', label: { fr: 'Critique', en: 'Critical' }, severity: 'critical' }
+    ]
+  },
+  sulfur_dioxide: {
+    name: 'Sulfur Dioxide',
+    ranges: [
+      { min: 0, max: 2, color: '#059669', label: { fr: 'Sécuritaire', en: 'Safe' }, severity: 'safe' },
+      { min: 2, max: 5, color: '#eab308', label: { fr: 'Attention', en: 'Caution' }, severity: 'caution' },
+      { min: 5, max: 10, color: '#ea580c', label: { fr: 'Avertissement', en: 'Warning' }, severity: 'warning' },
+      { min: 10, max: 100, color: '#dc2626', label: { fr: 'Danger', en: 'Danger' }, severity: 'danger' },
+      { min: 100, max: Infinity, color: '#7c2d12', label: { fr: 'Critique', en: 'Critical' }, severity: 'critical' }
+    ]
+  },
+  benzene: {
+    name: 'Benzene',
+    ranges: [
+      { min: 0, max: 0.5, color: '#059669', label: { fr: 'Sécuritaire', en: 'Safe' }, severity: 'safe' },
+      { min: 0.5, max: 2.5, color: '#eab308', label: { fr: 'Attention', en: 'Caution' }, severity: 'caution' },
+      { min: 2.5, max: 25, color: '#ea580c', label: { fr: 'Avertissement', en: 'Warning' }, severity: 'warning' },
+      { min: 25, max: 500, color: '#dc2626', label: { fr: 'Danger', en: 'Danger' }, severity: 'danger' },
+      { min: 500, max: Infinity, color: '#7c2d12', label: { fr: 'Critique', en: 'Critical' }, severity: 'critical' }
+    ]
+  },
+  toluene: {
+    name: 'Toluene',
+    ranges: [
+      { min: 0, max: 20, color: '#059669', label: { fr: 'Sécuritaire', en: 'Safe' }, severity: 'safe' },
+      { min: 20, max: 50, color: '#eab308', label: { fr: 'Attention', en: 'Caution' }, severity: 'caution' },
+      { min: 50, max: 200, color: '#ea580c', label: { fr: 'Avertissement', en: 'Warning' }, severity: 'warning' },
+      { min: 200, max: 500, color: '#dc2626', label: { fr: 'Danger', en: 'Danger' }, severity: 'danger' },
+      { min: 500, max: Infinity, color: '#7c2d12', label: { fr: 'Critique', en: 'Critical' }, severity: 'critical' }
+    ]
+  },
+  xylene: {
+    name: 'Xylene',
+    ranges: [
+      { min: 0, max: 100, color: '#059669', label: { fr: 'Sécuritaire', en: 'Safe' }, severity: 'safe' },
+      { min: 100, max: 150, color: '#eab308', label: { fr: 'Attention', en: 'Caution' }, severity: 'caution' },
+      { min: 150, max: 500, color: '#ea580c', label: { fr: 'Avertissement', en: 'Warning' }, severity: 'warning' },
+      { min: 500, max: 900, color: '#dc2626', label: { fr: 'Danger', en: 'Danger' }, severity: 'danger' },
+      { min: 900, max: Infinity, color: '#7c2d12', label: { fr: 'Critique', en: 'Critical' }, severity: 'critical' }
+    ]
+  },
+  acetone: {
+    name: 'Acetone',
+    ranges: [
+      { min: 0, max: 500, color: '#059669', label: { fr: 'Sécuritaire', en: 'Safe' }, severity: 'safe' },
+      { min: 500, max: 750, color: '#eab308', label: { fr: 'Attention', en: 'Caution' }, severity: 'caution' },
+      { min: 750, max: 1000, color: '#ea580c', label: { fr: 'Avertissement', en: 'Warning' }, severity: 'warning' },
+      { min: 1000, max: 2500, color: '#dc2626', label: { fr: 'Danger', en: 'Danger' }, severity: 'danger' },
+      { min: 2500, max: Infinity, color: '#7c2d12', label: { fr: 'Critique', en: 'Critical' }, severity: 'critical' }
+    ]
+  },
+  formaldehyde: {
+    name: 'Formaldehyde',
+    ranges: [
+      { min: 0, max: 0.1, color: '#059669', label: { fr: 'Sécuritaire', en: 'Safe' }, severity: 'safe' },
+      { min: 0.1, max: 0.3, color: '#eab308', label: { fr: 'Attention', en: 'Caution' }, severity: 'caution' },
+      { min: 0.3, max: 2, color: '#ea580c', label: { fr: 'Avertissement', en: 'Warning' }, severity: 'warning' },
+      { min: 2, max: 20, color: '#dc2626', label: { fr: 'Danger', en: 'Danger' }, severity: 'danger' },
+      { min: 20, max: Infinity, color: '#7c2d12', label: { fr: 'Critique', en: 'Critical' }, severity: 'critical' }
+    ]
   }
-} as any;
+};
 
 export const ALARM_LEVEL_COLORS = {
   safe: '#059669',
-  caution: '#eab308',
-  warning: '#ea580c',
+  low: '#84cc16',
+  medium: '#eab308',
+  high: '#ea580c',
   danger: '#dc2626',
   critical: '#7c2d12',
   extreme: '#450a0a'
@@ -206,7 +424,7 @@ export const PRIORITY_COLORS = {
 
 // =================== MAPPINGS ICÔNES ===================
 
-export const GAS_ICONS: Record<GasType, string> = {
+export const GAS_ICONS: Record<LocalGasType, string> = {
   oxygen: '🫁',
   carbon_monoxide: '☠️',
   hydrogen_sulfide: '🧪',
@@ -216,13 +434,19 @@ export const GAS_ICONS: Record<GasType, string> = {
   ammonia: '🔵',
   chlorine: '🟢',
   sulfur_dioxide: '🟡',
-  nitrogen_dioxide: '🟤'
-} as any;
+  nitrogen_dioxide: '🟤',
+  benzene: '🧴',
+  toluene: '🧴',
+  xylene: '🧴',
+  acetone: '🧴',
+  formaldehyde: '⚠️'
+};
 
 export const ALARM_ICONS = {
   safe: '✅',
-  caution: '⚠️',
-  warning: '🟠',
+  low: '🟢',
+  medium: '⚠️',
+  high: '🟠',
   danger: '🔴',
   critical: '🚨',
   extreme: '💀'
@@ -302,7 +526,7 @@ export class DataFormatter {
    * Formater lecture atmosphérique
    */
   static formatAtmosphericReading(
-    reading: AtmosphericReading,
+    reading: LocalAtmosphericReading,
     options?: Partial<FormattingOptions>
   ): FormattedValue {
     const opts = { ...this.defaultOptions, ...options };
@@ -350,15 +574,16 @@ export class DataFormatter {
    * Formater niveau d'alarme
    */
   static formatAlarmLevel(
-    alarmLevel: AlarmLevel,
+    alarmLevel: LocalAlarmLevel,
     options?: Partial<FormattingOptions>
   ): FormattedValue {
     const opts = { ...this.defaultOptions, ...options };
     
     const labels = {
       safe: { fr: 'Sécuritaire', en: 'Safe' },
-      caution: { fr: 'Attention', en: 'Caution' },
-      warning: { fr: 'Avertissement', en: 'Warning' },
+      low: { fr: 'Faible', en: 'Low' },
+      medium: { fr: 'Moyen', en: 'Medium' },
+      high: { fr: 'Élevé', en: 'High' },
       danger: { fr: 'Danger', en: 'Danger' },
       critical: { fr: 'Critique', en: 'Critical' },
       extreme: { fr: 'Extrême', en: 'Extreme' }
@@ -513,15 +738,15 @@ export class DataFormatter {
    * Formater données personnel
    */
   static formatPersonnelData(
-    personnel: PersonnelData,
-    field: keyof PersonnelData,
+    personnel: LocalPersonnelData,
+    field: keyof LocalPersonnelData,
     options?: Partial<FormattingOptions>
   ): FormattedValue {
     const opts = { ...this.defaultOptions, ...options };
     const value = personnel[field];
 
     switch (field) {
-      case 'name':
+      case 'personal':
         return {
           display: `${personnel.personal.firstName} ${personnel.personal.lastName}`,
           raw: value,
@@ -535,8 +760,7 @@ export class DataFormatter {
           entrant: { fr: 'Entrant', en: 'Entrant' },
           attendant: { fr: 'Surveillant', en: 'Attendant' }
         };
-        // @ts-ignore
-        const roleLabel = roleLabels[value as string]?.[opts.language] || value;
+        const roleLabel = roleLabels[personnel.role]?.[opts.language] || personnel.role;
         return {
           display: roleLabel,
           raw: value,
@@ -683,7 +907,7 @@ export class DataFormatter {
   }
 
   private static generateAtmosphericTooltip(
-    reading: AtmosphericReading,
+    reading: LocalAtmosphericReading,
     language: 'fr' | 'en'
   ): string {
     const gasName = {
@@ -691,7 +915,17 @@ export class DataFormatter {
       carbon_monoxide: { fr: 'Monoxyde de carbone', en: 'Carbon monoxide' },
       hydrogen_sulfide: { fr: 'Sulfure d\'hydrogène', en: 'Hydrogen sulfide' },
       methane: { fr: 'Méthane', en: 'Methane' },
-      propane: { fr: 'Propane', en: 'Propane' }
+      propane: { fr: 'Propane', en: 'Propane' },
+      carbon_dioxide: { fr: 'Dioxyde de carbone', en: 'Carbon dioxide' },
+      ammonia: { fr: 'Ammoniac', en: 'Ammonia' },
+      chlorine: { fr: 'Chlore', en: 'Chlorine' },
+      nitrogen_dioxide: { fr: 'Dioxyde d\'azote', en: 'Nitrogen dioxide' },
+      sulfur_dioxide: { fr: 'Dioxyde de soufre', en: 'Sulfur dioxide' },
+      benzene: { fr: 'Benzène', en: 'Benzene' },
+      toluene: { fr: 'Toluène', en: 'Toluene' },
+      xylene: { fr: 'Xylène', en: 'Xylene' },
+      acetone: { fr: 'Acétone', en: 'Acetone' },
+      formaldehyde: { fr: 'Formaldéhyde', en: 'Formaldehyde' }
     };
 
     const gas = gasName[reading.gasType]?.[language] || reading.gasType;
@@ -705,7 +939,7 @@ export class DataFormatter {
   }
 
   private static generateAtmosphericAccessibility(
-    reading: AtmosphericReading,
+    reading: LocalAtmosphericReading,
     language: 'fr' | 'en'
   ): string {
     const alarmFormat = this.formatAlarmLevel(reading.alarmLevel, { language });
@@ -717,7 +951,7 @@ export class DataFormatter {
     }
   }
 
-  private static generateAtmosphericClassName(reading: AtmosphericReading): string {
+  private static generateAtmosphericClassName(reading: LocalAtmosphericReading): string {
     return `atmospheric-reading gas-${reading.gasType} alarm-${reading.alarmLevel}`;
   }
 
@@ -772,11 +1006,11 @@ export class DataFormatter {
 export function quickFormatAtmospheric(
   value: number,
   unit: string,
-  gasType: GasType,
-  alarmLevel: AlarmLevel,
+  gasType: LocalGasType,
+  alarmLevel: LocalAlarmLevel,
   language: 'fr' | 'en' = 'fr'
 ): string {
-  const reading: AtmosphericReading = {
+  const reading: LocalAtmosphericReading = {
     id: 'temp',
     timestamp: Date.now(),
     gasType,
@@ -832,14 +1066,14 @@ export function quickFormatMoney(
 /**
  * Obtenir couleur pour niveau d'alarme
  */
-export function getAlarmColor(alarmLevel: AlarmLevel): string {
+export function getAlarmColor(alarmLevel: LocalAlarmLevel): string {
   return ALARM_LEVEL_COLORS[alarmLevel];
 }
 
 /**
  * Obtenir icône pour type de gaz
  */
-export function getGasIcon(gasType: GasType): string {
+export function getGasIcon(gasType: LocalGasType): string {
   return GAS_ICONS[gasType] || '🧪';
 }
 
@@ -847,8 +1081,8 @@ export function getGasIcon(gasType: GasType): string {
  * Obtenir classe CSS pour lecture atmosphérique
  */
 export function getAtmosphericClassName(
-  gasType: GasType,
-  alarmLevel: AlarmLevel
+  gasType: LocalGasType,
+  alarmLevel: LocalAlarmLevel
 ): string {
   return `atmospheric-reading gas-${gasType} alarm-${alarmLevel}`;
 }
@@ -871,7 +1105,7 @@ export function formatRange(
  * Formater liste bilingue
  */
 export function formatBilingualList(
-  items: BilingualText[],
+  items: LocalBilingualText[],
   language: 'fr' | 'en' = 'fr',
   separator: string = ', '
 ): string {
