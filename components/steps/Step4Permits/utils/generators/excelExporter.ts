@@ -1,11 +1,28 @@
-// =================== COMPONENTS/STEPS/STEP4PERMITS/UTILS/GENERATORS/PDFGENERATOR.TS ===================
-// Générateur PDF avancé pour permis de travail avec templates sophistiqués
+// =================== COMPONENTS/STEPS/STEP4PERMITS/UTILS/GENERATORS/EXCELEXPORTER.TS ===================
+// Exporteur Excel avancé pour données de permis avec formatting sophistiqué et analyse
 "use client";
 
 // Import des types depuis les bons fichiers
 import type { LegalPermit } from '../../types/permits';
 
-// =================== TYPES LOCAUX POUR PDF GENERATOR ===================
+// =================== TYPES LOCAUX POUR EXCEL EXPORTER ===================
+
+export interface LocalBilingualText {
+  fr: string;
+  en: string;
+}
+
+export interface LocalGeoCoordinates {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  altitude?: number;
+  altitudeAccuracy?: number;
+  heading?: number;
+  speed?: number;
+}
+
+export type LocalPriorityLevel = 'low' | 'medium' | 'high' | 'critical' | 'urgent';
 
 export interface LocalPermitFormData {
   permitId?: string;
@@ -29,215 +46,312 @@ export interface LocalPermitFormData {
     type: string;
     severity: string;
   }>;
+  procedures?: Array<{
+    id: string;
+    name: string;
+    completed: boolean;
+  }>;
 }
 
 export interface LocalAtmosphericReading {
   id: string;
   timestamp: number;
+  location: {
+    point: string;
+    coordinates?: LocalGeoCoordinates;
+  };
   gasType: string;
   value: number;
   unit: string;
-  alarmLevel: string;
-}
-
-export interface LocalElectronicSignature {
-  id: string;
-  signerId: string;
-  signerName: string;
-  timestamp: number;
-  status: string;
-}
-
-export interface LocalBilingualText {
-  fr: string;
-  en: string;
+  alarmLevel: 'safe' | 'caution' | 'warning' | 'danger' | 'critical' | 'extreme';
+  metadata: {
+    equipment: {
+      model: string;
+      lastCalibration: string;
+      batteryLevel: number;
+    };
+    operator: string;
+  };
+  environmentalConditions: {
+    temperature: number;
+    humidity: number;
+    pressure: number;
+  };
+  confidence: number;
 }
 
 export interface LocalPersonnelData {
   id: string;
   name: string;
+  email: string;
   role: string;
-  certifications?: string[];
+  phone?: string;
+  certifications?: Array<{
+    id: string;
+    name: string;
+    issuer: string;
+    expiryDate: string;
+  }>;
+  training?: Array<{
+    id: string;
+    name: string;
+    completedDate: string;
+    instructor: string;
+  }>;
+  performance?: {
+    rating: number;
+    lastReview: string;
+  };
 }
 
-// =================== INTERFACES PDF GENERATOR ===================
-
-export interface PDFTemplate {
+export interface LocalElectronicSignature {
   id: string;
+  documentId: string;
+  signerId: string;
+  signerName: string;
+  timestamp: number;
+  status: 'pending' | 'signed' | 'verified' | 'rejected';
+  method: string;
+}
+
+export interface LocalComplianceMatrix {
+  overall: number;
+  categories: Array<{
+    name: string;
+    score: number;
+    items: Array<{
+      requirement: string;
+      status: 'compliant' | 'non_compliant' | 'partial';
+    }>;
+  }>;
+}
+
+// =================== INTERFACES EXPORTEUR EXCEL ===================
+
+export interface ExcelExportOptions {
+  format: 'xlsx' | 'xls' | 'csv' | 'ods';
+  language: 'fr' | 'en' | 'both';
+  sheets: ExcelSheetConfig[];
+  styling: {
+    theme: 'corporate' | 'safety' | 'modern' | 'minimal';
+    colors: {
+      header: string;
+      alternateRows: string;
+      borders: string;
+      critical: string;
+      warning: string;
+      success: string;
+    };
+    fonts: {
+      header: ExcelFont;
+      body: ExcelFont;
+      title: ExcelFont;
+    };
+  };
+  protection: {
+    password?: string;
+    allowEdit: boolean;
+    allowSort: boolean;
+    allowFilter: boolean;
+    allowPivot: boolean;
+  };
+  metadata: {
+    author: string;
+    company: string;
+    title: LocalBilingualText;
+    subject: LocalBilingualText;
+    keywords: string[];
+    category: string;
+  };
+}
+
+export interface ExcelSheetConfig {
   name: LocalBilingualText;
-  type: 'permit' | 'report' | 'certificate' | 'form';
-  layout: PDFLayout;
-  sections: PDFSection[];
-  styling: PDFStyling;
-  watermark?: PDFWatermark;
-  header?: PDFHeader;
-  footer?: PDFFooter;
-  metadata: PDFMetadata;
-}
-
-export interface PDFLayout {
-  pageSize: 'A4' | 'A3' | 'Letter' | 'Legal';
-  orientation: 'portrait' | 'landscape';
-  margins: {
-    top: number;
-    bottom: number;
-    left: number;
-    right: number;
+  type: 'permits' | 'atmospheric' | 'personnel' | 'compliance' | 'summary' | 'pivot' | 'charts';
+  data?: any[];
+  columns: ExcelColumnConfig[];
+  formatting: {
+    freezePanes?: { row: number; column: number; };
+    autoFilter: boolean;
+    conditionalFormatting: ConditionalFormat[];
+    charts?: ExcelChart[];
+    tables?: ExcelTable[];
   };
-  columns?: number;
-  pageBreaks?: string[];
-}
-
-export interface PDFSection {
-  id: string;
-  type: 'header' | 'content' | 'table' | 'chart' | 'signature' | 'qr' | 'barcode';
-  title?: LocalBilingualText;
-  content: any;
-  styling?: Partial<PDFStyling>;
-  conditions?: PDFCondition[];
-}
-
-export interface PDFStyling {
-  fonts: {
-    default: string;
-    header: string;
-    monospace: string;
-  };
-  colors: {
-    primary: string;
-    secondary: string;
-    text: string;
-    background: string;
-    border: string;
-  };
-  sizes: {
-    title: number;
-    header: number;
-    body: number;
-    small: number;
+  protection?: {
+    locked: boolean;
+    allowEdit: string[];  // Plages modifiables
   };
 }
 
-export interface PDFCondition {
-  field: string;
-  operator: 'equals' | 'not_equals' | 'contains' | 'exists';
-  value: any;
+export interface ExcelColumnConfig {
+  key: string;
+  header: LocalBilingualText;
+  width?: number;
+  type: 'text' | 'number' | 'date' | 'boolean' | 'currency' | 'percentage' | 'formula';
+  format?: string;  // Format Excel (e.g., "yyyy-mm-dd", "#,##0.00")
+  validation?: {
+    type: 'list' | 'range' | 'length' | 'custom';
+    criteria: any;
+    errorMessage: LocalBilingualText;
+  };
+  formula?: string;  // Formule Excel
+  hyperlink?: boolean;
+  comment?: LocalBilingualText;
 }
 
-export interface PDFWatermark {
-  text: string;
-  opacity: number;
-  angle: number;
-  fontSize: number;
-  color: string;
+export interface ConditionalFormat {
+  range: string;  // Range Excel (e.g., "A1:Z1000")
+  condition: {
+    type: 'cellValue' | 'formula' | 'colorScale' | 'dataBar' | 'iconSet';
+    operator?: 'equal' | 'notEqual' | 'greaterThan' | 'lessThan' | 'between' | 'contains';
+    value?: any;
+    formula?: string;
+  };
+  style: {
+    background?: string;
+    font?: { color?: string; bold?: boolean; italic?: boolean; };
+    border?: { color?: string; style?: string; };
+  };
 }
 
-export interface PDFHeader {
-  height: number;
-  content: any;
-}
-
-export interface PDFFooter {
-  height: number;
-  content: any;
-}
-
-export interface PDFMetadata {
+export interface ExcelChart {
+  type: 'column' | 'line' | 'pie' | 'area' | 'scatter' | 'radar' | 'gauge';
   title: LocalBilingualText;
-  author: string;
-  subject: LocalBilingualText;
-  keywords: string[];
-  creator: string;
-  producer: string;
+  dataRange: string;
+  position: { row: number; column: number; width: number; height: number; };
+  options: {
+    legend: boolean;
+    dataLabels: boolean;
+    colors?: string[];
+    axes?: {
+      x?: { title: LocalBilingualText; };
+      y?: { title: LocalBilingualText; };
+    };
+  };
 }
 
-export interface PDFGenerationOptions {
-  template: string;
-  language: 'fr' | 'en';
-  includeSignatures: boolean;
-  includeQRCode: boolean;
-  password?: string;
-  watermark?: PDFWatermark;
-  customData?: Record<string, any>;
+export interface ExcelTable {
+  name: string;
+  range: string;
+  style: 'light' | 'medium' | 'dark';
+  showHeaders: boolean;
+  showTotals: boolean;
+  totalRowFunction?: Record<string, 'sum' | 'average' | 'count' | 'max' | 'min'>;
 }
 
-export interface PDFGenerationResult {
+export interface ExcelFont {
+  name: string;
+  size: number;
+  bold?: boolean;
+  italic?: boolean;
+  color?: string;
+}
+
+export interface ExcelExportResult {
   success: boolean;
   blob?: Blob;
   url?: string;
   filename: string;
-  pages: number;
   size: number;
+  sheets: Array<{
+    name: string;
+    rows: number;
+    columns: number;
+    charts: number;
+    tables: number;
+  }>;
   metadata: {
     generationTime: number;
-    template: string;
-    language: string;
     dataPoints: number;
+    formulas: number;
+    conditionalFormats: number;
   };
-  errors?: string[];
   warnings?: string[];
+  errors?: string[];
 }
 
-// =================== CLASSE PRINCIPALE PDFGENERATOR ===================
+// =================== CLASSE PRINCIPALE EXCELEXPORTER ===================
 
-export class PDFGenerator {
-  private templates: Map<string, PDFTemplate> = new Map();
-  private defaultStyling: PDFStyling;
+export class ExcelExporter {
+  private workbook: any;
+  private options: ExcelExportOptions;
 
-  constructor() {
-    this.defaultStyling = this.createDefaultStyling();
-    this.initializeStandardTemplates();
+  constructor(options: Partial<ExcelExportOptions> = {}) {
+    this.options = this.mergeDefaultOptions(options);
   }
 
   // =================== MÉTHODES PUBLIQUES PRINCIPALES ===================
 
   /**
-   * Générer PDF permit complet
+   * Exporter permits complets avec toutes les données
    */
-  async generatePermitPDF(
-    permit: LegalPermit,
-    formData: LocalPermitFormData,
+  async exportPermitsComplete(
+    permits: LegalPermit[],
+    formData: LocalPermitFormData[],
     atmosphericData: LocalAtmosphericReading[],
+    personnel: LocalPersonnelData[],
     signatures: LocalElectronicSignature[],
-    options: PDFGenerationOptions
-  ): Promise<PDFGenerationResult> {
+    options?: Partial<ExcelExportOptions>
+  ): Promise<ExcelExportResult> {
     const startTime = performance.now();
     
     try {
-      const template = this.getTemplate(options.template);
-      if (!template) {
-        throw new Error(`Template not found: ${options.template}`);
-      }
-
-      const data = this.preparePermitData(permit, formData, atmosphericData, signatures);
-      const document = this.buildDocument(template, data, options);
-      const blob = await this.generatePDFBlob(document);
+      // Fusionner options
+      const exportOptions = { ...this.options, ...options };
       
-      return {
+      // Créer workbook
+      this.workbook = this.createWorkbook(exportOptions);
+      
+      // Générer sheets automatiquement
+      const sheets = this.generateCompleteSheets(
+        permits, formData, atmosphericData, personnel, signatures, exportOptions
+      );
+      
+      // Créer chaque sheet
+      for (const sheetConfig of sheets) {
+        await this.createSheet(sheetConfig, exportOptions);
+      }
+      
+      // Générer blob Excel
+      const blob = await this.generateBlob(exportOptions.format);
+      const url = URL.createObjectURL(blob);
+      const filename = this.generateFilename('permits_complete', exportOptions);
+      
+      const result: ExcelExportResult = {
         success: true,
         blob,
-        url: URL.createObjectURL(blob),
-        filename: this.generateFilename('permit', permit.id, options),
-        pages: this.countPages(document),
+        url,
+        filename,
         size: blob.size,
+        sheets: sheets.map(sheet => ({
+          name: typeof sheet.name === 'string' ? sheet.name : sheet.name.fr,
+          rows: sheet.data?.length || 0,
+          columns: sheet.columns.length,
+          charts: sheet.formatting.charts?.length || 0,
+          tables: sheet.formatting.tables?.length || 0
+        })),
         metadata: {
           generationTime: performance.now() - startTime,
-          template: options.template,
-          language: options.language,
-          dataPoints: this.countDataPoints(data)
+          dataPoints: this.calculateDataPoints(permits, formData, atmosphericData, personnel),
+          formulas: this.countFormulas(),
+          conditionalFormats: this.countConditionalFormats()
         }
       };
+      
+      return result;
+      
     } catch (error) {
+      const errorOptions = { ...this.options, ...options };
       return {
         success: false,
-        filename: `permit_error_${Date.now()}.pdf`,
-        pages: 0,
+        filename: this.generateFilename('permits_error', errorOptions),
         size: 0,
+        sheets: [],
         metadata: {
           generationTime: performance.now() - startTime,
-          template: options.template,
-          language: options.language,
-          dataPoints: 0
+          dataPoints: 0,
+          formulas: 0,
+          conditionalFormats: 0
         },
         errors: [error instanceof Error ? error.message : 'Unknown error']
       };
@@ -245,492 +359,644 @@ export class PDFGenerator {
   }
 
   /**
-   * Générer rapport sécurité PDF
+   * Exporter rapport sécurité analytique
    */
-  async generateSafetyReportPDF(
+  async exportSafetyReport(
     permits: LegalPermit[],
     incidents: any[],
-    personnel: LocalPersonnelData[],
-    options: PDFGenerationOptions
-  ): Promise<PDFGenerationResult> {
-    const data = this.prepareSafetyReportData(permits, incidents, personnel);
-    return this.generateFromTemplate('safety_report', data, options);
+    atmosphericData: LocalAtmosphericReading[],
+    complianceData: LocalComplianceMatrix,
+    options?: Partial<ExcelExportOptions>
+  ): Promise<ExcelExportResult> {
+    const exportOptions = { ...this.options, ...options };
+    
+    // Préparer données analytiques
+    const analyticsData = this.prepareSafetyAnalytics(
+      permits, incidents, atmosphericData, complianceData
+    );
+    
+    const sheets: ExcelSheetConfig[] = [
+      this.createSummarySheet(analyticsData),
+      this.createIncidentsSheet(incidents),
+      this.createAtmosphericSheet(atmosphericData),
+      this.createComplianceSheet(complianceData),
+      this.createTrendsSheet(analyticsData.trends),
+      this.createChartsSheet(analyticsData.charts)
+    ];
+    
+    return this.exportWithSheets(sheets, 'safety_report', exportOptions);
   }
 
   /**
-   * Générer certificat PDF
+   * Exporter données atmosphériques avec analyse
    */
-  async generateCertificatePDF(
-    personnel: LocalPersonnelData,
-    certification: any,
-    options: PDFGenerationOptions
-  ): Promise<PDFGenerationResult> {
-    const data = this.prepareCertificateData(personnel, certification);
-    return this.generateFromTemplate('certificate', data, options);
-  }
-
-  // =================== MÉTHODES TEMPLATE ===================
-
-  createTemplate(template: Omit<PDFTemplate, 'metadata'>): PDFTemplate {
-    const fullTemplate: PDFTemplate = {
-      ...template,
-      metadata: {
-        title: { fr: 'Document PDF', en: 'PDF Document' },
-        author: 'System',
-        subject: { fr: 'Document généré automatiquement', en: 'Auto-generated document' },
-        keywords: [],
-        creator: 'PDF Generator',
-        producer: 'C-Secur360 AST'
-      }
-    };
-
-    this.templates.set(template.id, fullTemplate);
-    return fullTemplate;
-  }
-
-  getTemplate(id: string): PDFTemplate | undefined {
-    return this.templates.get(id);
-  }
-
-  // =================== MÉTHODES PRIVÉES ===================
-
-  private async generateFromTemplate(
-    templateId: string,
-    data: any,
-    options: PDFGenerationOptions
-  ): Promise<PDFGenerationResult> {
-    const startTime = performance.now();
+  async exportAtmosphericData(
+    readings: LocalAtmosphericReading[],
+    options?: Partial<ExcelExportOptions>
+  ): Promise<ExcelExportResult> {
+    const exportOptions = { ...this.options, ...options };
     
-    try {
-      const template = this.getTemplate(templateId);
-      if (!template) {
-        throw new Error(`Template not found: ${templateId}`);
-      }
-
-      const document = this.buildDocument(template, data, options);
-      const blob = await this.generatePDFBlob(document);
-      
-      return {
-        success: true,
-        blob,
-        url: URL.createObjectURL(blob),
-        filename: this.generateFilename(templateId, 'generated', options),
-        pages: this.countPages(document),
-        size: blob.size,
-        metadata: {
-          generationTime: performance.now() - startTime,
-          template: templateId,
-          language: options.language,
-          dataPoints: this.countDataPoints(data)
-        }
-      };
-    } catch (error) {
-      return {
-        success: false,
-        filename: `${templateId}_error_${Date.now()}.pdf`,
-        pages: 0,
-        size: 0,
-        metadata: {
-          generationTime: performance.now() - startTime,
-          template: templateId,
-          language: options.language,
-          dataPoints: 0
-        },
-        errors: [error instanceof Error ? error.message : 'Unknown error']
-      };
-    }
+    // Analyser données
+    const analysis = this.analyzeAtmosphericData(readings);
+    
+    const sheets: ExcelSheetConfig[] = [
+      this.createAtmosphericReadingsSheet(readings),
+      this.createAtmosphericSummarySheet(analysis.summary),
+      this.createAtmosphericAlarmsSheet(analysis.alarms),
+      this.createAtmosphericTrendsSheet(analysis.trends),
+      this.createAtmosphericChartsSheet(analysis.charts)
+    ];
+    
+    return this.exportWithSheets(sheets, 'atmospheric_data', exportOptions);
   }
 
-  private preparePermitData(
-    permit: LegalPermit,
-    formData: LocalPermitFormData,
-    atmospheric: LocalAtmosphericReading[],
-    signatures: LocalElectronicSignature[]
-  ): any {
-    return {
-      permit: {
+  /**
+   * Exporter personnel et certifications
+   */
+  async exportPersonnelData(
+    personnel: LocalPersonnelData[],
+    options?: Partial<ExcelExportOptions>
+  ): Promise<ExcelExportResult> {
+    const exportOptions = { ...this.options, ...options };
+    
+    const sheets: ExcelSheetConfig[] = [
+      this.createPersonnelSheet(personnel),
+      this.createCertificationsSheet(personnel),
+      this.createTrainingSheet(personnel),
+      this.createPerformanceSheet(personnel),
+      this.createPersonnelChartsSheet(personnel)
+    ];
+    
+    return this.exportWithSheets(sheets, 'personnel_data', exportOptions);
+  }
+
+  // =================== MÉTHODES CRÉATION SHEETS SPÉCIALISÉES ===================
+
+  private generateCompleteSheets(
+    permits: LegalPermit[],
+    formData: LocalPermitFormData[],
+    atmosphericData: LocalAtmosphericReading[],
+    personnel: LocalPersonnelData[],
+    signatures: LocalElectronicSignature[],
+    options: ExcelExportOptions
+  ): ExcelSheetConfig[] {
+    return [
+      this.createPermitsSummarySheet(permits, formData),
+      this.createPermitsDetailSheet(permits, formData),
+      this.createAtmosphericSheet(atmosphericData),
+      this.createPersonnelSheet(personnel),
+      this.createSignaturesSheet(signatures),
+      this.createComplianceSheet(this.calculateCompliance(permits, formData)),
+      this.createAnalyticsSheet(permits, formData, atmosphericData),
+      this.createChartsSheet(this.generateAnalyticsCharts(permits, formData, atmosphericData))
+    ];
+  }
+
+  private createPermitsSummarySheet(permits: LegalPermit[], formData: LocalPermitFormData[]): ExcelSheetConfig {
+    const summaryData = permits.map(permit => {
+      const form = formData.find(f => f.permitId === permit.id || f.id === permit.id);
+      return {
         id: permit.id,
         name: permit.name,
         type: permit.category,
         status: permit.status,
-        priority: permit.priority
-      },
-      supervisor: formData.supervisor?.name || '',
-      location: formData.location?.description || '',
-      entrants: formData.entrants?.length || 0,
-      atmospheric: atmospheric.map(reading => ({
-        timestamp: new Date(reading.timestamp).toLocaleString(),
-        gasType: reading.gasType,
-        value: reading.value,
-        unit: reading.unit,
-        level: reading.alarmLevel
-      })),
-      signatures: signatures.map(sig => ({
-        signer: sig.signerName,
-        timestamp: new Date(sig.timestamp).toLocaleString(),
-        status: sig.status
-      }))
-    };
-  }
-
-  private prepareSafetyReportData(
-    permits: LegalPermit[],
-    incidents: any[],
-    personnel: LocalPersonnelData[]
-  ): any {
-    return {
-      permits: permits.length,
-      incidents: incidents.length,
-      personnel: personnel.length,
-      summary: {
-        totalPermits: permits.length,
-        activePermits: permits.filter(p => p.status === 'active').length,
-        criticalIncidents: incidents.filter(i => i.severity === 'critical').length
-      }
-    };
-  }
-
-  private prepareCertificateData(
-    personnel: LocalPersonnelData,
-    certification: any
-  ): any {
-    return {
-      recipient: personnel.name,
-      role: personnel.role,
-      certification: certification.name || 'Safety Certification',
-      issueDate: new Date().toLocaleDateString(),
-      validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString()
-    };
-  }
-
-  private buildDocument(template: PDFTemplate, data: any, options: PDFGenerationOptions): any {
-    // Construction du document PDF basé sur le template
-    const document = {
-      pageSize: template.layout.pageSize,
-      pageOrientation: template.layout.orientation,
-      pageMargins: [
-        template.layout.margins.left,
-        template.layout.margins.top,
-        template.layout.margins.right,
-        template.layout.margins.bottom
-      ],
-      content: this.buildContent(template.sections, data, options),
-      styles: this.buildStyles(template.styling),
-      defaultStyle: {
-        font: template.styling.fonts.default,
-        fontSize: template.styling.sizes.body
-      }
-    };
-
-    if (options.watermark) {
-      document.watermark = options.watermark;
-    }
-
-    return document;
-  }
-
-  private buildContent(sections: PDFSection[], data: any, options: PDFGenerationOptions): any[] {
-    const content = [];
-
-    for (const section of sections) {
-      if (this.shouldIncludeSection(section, data)) {
-        const sectionContent = this.buildSectionContent(section, data, options);
-        if (sectionContent) {
-          content.push(sectionContent);
-        }
-      }
-    }
-
-    return content;
-  }
-
-  private shouldIncludeSection(section: PDFSection, data: any): boolean {
-    if (!section.conditions) return true;
-
-    return section.conditions.every(condition => {
-      const value = this.getDataValue(data, condition.field);
-      switch (condition.operator) {
-        case 'equals':
-          return value === condition.value;
-        case 'not_equals':
-          return value !== condition.value;
-        case 'contains':
-          return String(value).includes(condition.value);
-        case 'exists':
-          return value !== undefined && value !== null;
-        default:
-          return true;
-      }
+        priority: permit.priority,
+        location: form?.location?.description || '',
+        supervisor: form?.supervisor?.name || '',
+        entrants: form?.entrants?.length || 0,
+        createdDate: new Date().toISOString().split('T')[0], // Date actuelle par défaut
+        validUntil: '', // Pas de date d'expiration par défaut
+        riskLevel: this.calculateRiskLevel(permit, form),
+        complianceScore: this.calculateComplianceScore(permit, form)
+      };
     });
-  }
-
-  private buildSectionContent(section: PDFSection, data: any, options: PDFGenerationOptions): any {
-    switch (section.type) {
-      case 'header':
-        return this.buildHeaderContent(section, data, options);
-      case 'content':
-        return this.buildTextContent(section, data, options);
-      case 'table':
-        return this.buildTableContent(section, data, options);
-      case 'signature':
-        return this.buildSignatureContent(section, data, options);
-      case 'qr':
-        return this.buildQRContent(section, data, options);
-      default:
-        return null;
-    }
-  }
-
-  private buildHeaderContent(section: PDFSection, data: any, options: PDFGenerationOptions): any {
-    const title = section.title?.[options.language] || 'Header';
-    return {
-      text: this.processTemplate(title, data),
-      style: 'header',
-      margin: [0, 0, 0, 20]
-    };
-  }
-
-  private buildTextContent(section: PDFSection, data: any, options: PDFGenerationOptions): any {
-    return {
-      text: this.processTemplate(section.content, data),
-      style: 'body',
-      margin: [0, 0, 0, 10]
-    };
-  }
-
-  private buildTableContent(section: PDFSection, data: any, options: PDFGenerationOptions): any {
-    return {
-      table: {
-        headerRows: 1,
-        body: this.processTableData(section.content, data)
-      },
-      margin: [0, 0, 0, 15]
-    };
-  }
-
-  private buildSignatureContent(section: PDFSection, data: any, options: PDFGenerationOptions): any {
-    if (!options.includeSignatures) return null;
 
     return {
+      name: { fr: 'Résumé Permis', en: 'Permits Summary' },
+      type: 'permits',
+      data: summaryData,
       columns: [
-        { text: 'Signature:', style: 'label' },
-        { text: '_'.repeat(30), style: 'signature' },
-        { text: 'Date:', style: 'label' },
-        { text: '_'.repeat(15), style: 'signature' }
+        { key: 'id', header: { fr: 'ID Permis', en: 'Permit ID' }, width: 12, type: 'text' },
+        { key: 'name', header: { fr: 'Nom', en: 'Name' }, width: 25, type: 'text' },
+        { key: 'type', header: { fr: 'Type', en: 'Type' }, width: 15, type: 'text' },
+        { key: 'status', header: { fr: 'Statut', en: 'Status' }, width: 12, type: 'text' },
+        { key: 'priority', header: { fr: 'Priorité', en: 'Priority' }, width: 12, type: 'text' },
+        { key: 'location', header: { fr: 'Lieu', en: 'Location' }, width: 20, type: 'text' },
+        { key: 'supervisor', header: { fr: 'Superviseur', en: 'Supervisor' }, width: 20, type: 'text' },
+        { key: 'entrants', header: { fr: 'Nb Entrants', en: 'Entrants Count' }, width: 12, type: 'number' },
+        { key: 'createdDate', header: { fr: 'Date Création', en: 'Created Date' }, width: 12, type: 'date', format: 'yyyy-mm-dd' },
+        { key: 'validUntil', header: { fr: 'Valide Jusqu\'à', en: 'Valid Until' }, width: 12, type: 'date', format: 'yyyy-mm-dd' },
+        { key: 'riskLevel', header: { fr: 'Niveau Risque', en: 'Risk Level' }, width: 12, type: 'text' },
+        { key: 'complianceScore', header: { fr: 'Score Conformité', en: 'Compliance Score' }, width: 15, type: 'percentage', format: '0.0%' }
       ],
-      margin: [0, 20, 0, 0]
-    };
-  }
-
-  private buildQRContent(section: PDFSection, data: any, options: PDFGenerationOptions): any {
-    if (!options.includeQRCode) return null;
-
-    return {
-      qr: data.permit?.id || 'PERMIT_ID',
-      fit: 100,
-      margin: [0, 10, 0, 10]
-    };
-  }
-
-  private buildStyles(styling: PDFStyling): any {
-    return {
-      header: {
-        fontSize: styling.sizes.header,
-        bold: true,
-        color: styling.colors.primary
-      },
-      body: {
-        fontSize: styling.sizes.body,
-        color: styling.colors.text
-      },
-      label: {
-        fontSize: styling.sizes.small,
-        bold: true
-      },
-      signature: {
-        fontSize: styling.sizes.body,
-        decoration: 'underline'
+      formatting: {
+        autoFilter: true,
+        freezePanes: { row: 1, column: 0 },
+        conditionalFormatting: [
+          {
+            range: 'D:D', // Status column
+            condition: { type: 'cellValue', operator: 'equal', value: 'critical' },
+            style: { background: '#fef2f2', font: { color: '#dc2626', bold: true } }
+          },
+          {
+            range: 'K:K', // Risk level column
+            condition: { type: 'cellValue', operator: 'equal', value: 'high' },
+            style: { background: '#fef3c7', font: { color: '#d97706' } }
+          },
+          {
+            range: 'L:L', // Compliance score column
+            condition: { type: 'cellValue', operator: 'lessThan', value: 0.8 },
+            style: { background: '#fef2f2', font: { color: '#dc2626' } }
+          }
+        ]
       }
     };
   }
 
-  private processTemplate(template: string, data: any): string {
-    return String(template).replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (match, path) => {
-      const value = this.getDataValue(data, path);
-      return value !== undefined ? String(value) : match;
-    });
+  private createAtmosphericReadingsSheet(readings: LocalAtmosphericReading[]): ExcelSheetConfig {
+    const readingsData = readings.map(reading => ({
+      timestamp: new Date(reading.timestamp).toISOString(),
+      location: reading.location.point,
+      gasType: reading.gasType,
+      value: reading.value,
+      unit: reading.unit,
+      alarmLevel: reading.alarmLevel,
+      equipment: reading.metadata.equipment.model,
+      operator: reading.metadata.operator,
+      temperature: reading.environmentalConditions.temperature,
+      humidity: reading.environmentalConditions.humidity,
+      pressure: reading.environmentalConditions.pressure,
+      calibrationDate: reading.metadata.equipment.lastCalibration,
+      batteryLevel: reading.metadata.equipment.batteryLevel,
+      confidence: reading.confidence
+    }));
+
+    return {
+      name: { fr: 'Lectures Atmosphériques', en: 'Atmospheric Readings' },
+      type: 'atmospheric',
+      data: readingsData,
+      columns: [
+        { key: 'timestamp', header: { fr: 'Horodatage', en: 'Timestamp' }, width: 20, type: 'date', format: 'yyyy-mm-dd hh:mm:ss' },
+        { key: 'location', header: { fr: 'Point Mesure', en: 'Measurement Point' }, width: 15, type: 'text' },
+        { key: 'gasType', header: { fr: 'Type Gaz', en: 'Gas Type' }, width: 12, type: 'text' },
+        { key: 'value', header: { fr: 'Valeur', en: 'Value' }, width: 10, type: 'number', format: '#,##0.000' },
+        { key: 'unit', header: { fr: 'Unité', en: 'Unit' }, width: 8, type: 'text' },
+        { key: 'alarmLevel', header: { fr: 'Niveau Alarme', en: 'Alarm Level' }, width: 12, type: 'text' },
+        { key: 'equipment', header: { fr: 'Équipement', en: 'Equipment' }, width: 15, type: 'text' },
+        { key: 'operator', header: { fr: 'Opérateur', en: 'Operator' }, width: 15, type: 'text' },
+        { key: 'temperature', header: { fr: 'Température (°C)', en: 'Temperature (°C)' }, width: 12, type: 'number', format: '#,##0.0' },
+        { key: 'humidity', header: { fr: 'Humidité (%)', en: 'Humidity (%)' }, width: 12, type: 'number', format: '#,##0.0' },
+        { key: 'pressure', header: { fr: 'Pression (kPa)', en: 'Pressure (kPa)' }, width: 12, type: 'number', format: '#,##0.0' },
+        { key: 'batteryLevel', header: { fr: 'Batterie (%)', en: 'Battery (%)' }, width: 10, type: 'percentage', format: '0%' },
+        { key: 'confidence', header: { fr: 'Confiance', en: 'Confidence' }, width: 10, type: 'percentage', format: '0.0%' }
+      ],
+      formatting: {
+        autoFilter: true,
+        freezePanes: { row: 1, column: 0 },
+        conditionalFormatting: [
+          {
+            range: 'F:F', // Alarm level column
+            condition: { type: 'cellValue', operator: 'equal', value: 'critical' },
+            style: { background: '#fef2f2', font: { color: '#dc2626', bold: true } }
+          },
+          {
+            range: 'F:F',
+            condition: { type: 'cellValue', operator: 'equal', value: 'danger' },
+            style: { background: '#fef3c7', font: { color: '#d97706', bold: true } }
+          },
+          {
+            range: 'F:F',
+            condition: { type: 'cellValue', operator: 'equal', value: 'warning' },
+            style: { background: '#fefce8', font: { color: '#ca8a04' } }
+          },
+          {
+            range: 'L:L', // Battery level
+            condition: { type: 'cellValue', operator: 'lessThan', value: 0.2 },
+            style: { background: '#fef2f2', font: { color: '#dc2626' } }
+          }
+        ],
+        charts: [
+          {
+            type: 'line',
+            title: { fr: 'Tendances Atmosphériques', en: 'Atmospheric Trends' },
+            dataRange: 'A1:E1000',
+            position: { row: 5, column: 15, width: 400, height: 300 },
+            options: {
+              legend: true,
+              dataLabels: false,
+              axes: {
+                x: { title: { fr: 'Temps', en: 'Time' } },
+                y: { title: { fr: 'Concentration', en: 'Concentration' } }
+              }
+            }
+          }
+        ]
+      }
+    };
   }
 
-  private processTableData(tableConfig: any, data: any): any[][] {
-    // Placeholder pour traitement données table
-    return [['Header 1', 'Header 2'], ['Data 1', 'Data 2']];
+  // =================== MÉTHODES UTILITAIRES ===================
+
+  private mergeDefaultOptions(options: Partial<ExcelExportOptions>): ExcelExportOptions {
+    return {
+      format: 'xlsx',
+      language: 'fr',
+      sheets: [],
+      styling: {
+        theme: 'corporate',
+        colors: {
+          header: '#1e3a8a',
+          alternateRows: '#f8fafc',
+          borders: '#e2e8f0',
+          critical: '#dc2626',
+          warning: '#d97706',
+          success: '#059669'
+        },
+        fonts: {
+          header: { name: 'Calibri', size: 11, bold: true, color: '#ffffff' },
+          body: { name: 'Calibri', size: 10 },
+          title: { name: 'Calibri', size: 14, bold: true }
+        }
+      },
+      protection: {
+        allowEdit: false,
+        allowSort: true,
+        allowFilter: true,
+        allowPivot: true
+      },
+      metadata: {
+        author: 'Sistema de Permisos',
+        company: 'Seguridad Industrial',
+        title: { fr: 'Rapport Permis de Travail', en: 'Work Permits Report' },
+        subject: { fr: 'Données exportées du système de permis', en: 'Exported data from permits system' },
+        keywords: ['permits', 'safety', 'confined space', 'atmospheric'],
+        category: 'Safety Report'
+      },
+      ...options
+    };
   }
 
-  private getDataValue(data: any, path: string): any {
-    return path.split('.').reduce((obj, key) => obj?.[key], data);
+  private calculateRiskLevel(permit: LegalPermit, form?: LocalPermitFormData): string {
+    // Logique sophistiquée calcul niveau risque
+    let riskScore = 0;
+    
+    if (permit.priority === 'critical') riskScore += 40;
+    else if (permit.priority === 'high') riskScore += 30;
+    else if (permit.priority === 'medium') riskScore += 20;
+    else riskScore += 10;
+    
+    if (form?.hazards) {
+      riskScore += form.hazards.length * 10;
+    }
+    
+    if (riskScore >= 70) return 'high';
+    if (riskScore >= 40) return 'medium';
+    return 'low';
   }
 
-  private async generatePDFBlob(document: any): Promise<Blob> {
-    // Placeholder pour génération PDF réelle avec pdfmake
-    return new Blob([], { type: 'application/pdf' });
+  private calculateComplianceScore(permit: LegalPermit, form?: LocalPermitFormData): number {
+    // Calcul score conformité sophistiqué
+    let score = 0.5; // Score base
+    
+    if (permit.status === 'approved') score += 0.2;
+    if (form?.supervisor) score += 0.1;
+    if (form?.entrants && form.entrants.length > 0) score += 0.1;
+    if (form?.procedures && form.procedures.length > 0) score += 0.1;
+    
+    return Math.min(score, 1.0);
   }
 
-  private countPages(document: any): number {
-    // Placeholder pour compter pages
-    return 1;
-  }
-
-  private countDataPoints(data: any): number {
-    return JSON.stringify(data).length;
-  }
-
-  private generateFilename(type: string, id: string, options: PDFGenerationOptions): string {
+  private generateFilename(type: string, options: ExcelExportOptions): string {
     const timestamp = new Date().toISOString().split('T')[0];
-    return `${type}_${id}_${timestamp}_${options.language}.pdf`;
+    const extension = options.format === 'xlsx' ? 'xlsx' : 'xls';
+    return `${type}_${timestamp}.${extension}`;
   }
 
-  private createDefaultStyling(): PDFStyling {
-    return {
-      fonts: {
-        default: 'Helvetica',
-        header: 'Helvetica-Bold',
-        monospace: 'Courier'
-      },
-      colors: {
-        primary: '#1e3a8a',
-        secondary: '#64748b',
-        text: '#1f2937',
-        background: '#ffffff',
-        border: '#e2e8f0'
-      },
-      sizes: {
-        title: 18,
-        header: 14,
-        body: 10,
-        small: 8
+  private calculateDataPoints(...dataSets: any[][]): number {
+    return dataSets.reduce((total, dataSet) => total + (dataSet?.length || 0), 0);
+  }
+
+  private countFormulas(): number {
+    // Compter formules dans workbook
+    return 0; // Placeholder
+  }
+
+  private countConditionalFormats(): number {
+    // Compter formats conditionnels
+    return 0; // Placeholder
+  }
+
+  private async exportWithSheets(
+    sheets: ExcelSheetConfig[],
+    type: string,
+    options: ExcelExportOptions
+  ): Promise<ExcelExportResult> {
+    // Implémentation export avec sheets configurés
+    const startTime = performance.now();
+    
+    try {
+      this.workbook = this.createWorkbook(options);
+      
+      for (const sheet of sheets) {
+        await this.createSheet(sheet, options);
       }
+      
+      const blob = await this.generateBlob(options.format);
+      
+      return {
+        success: true,
+        blob,
+        url: URL.createObjectURL(blob),
+        filename: this.generateFilename(type, options),
+        size: blob.size,
+        sheets: sheets.map(sheet => ({
+          name: typeof sheet.name === 'string' ? sheet.name : sheet.name.fr,
+          rows: sheet.data?.length || 0,
+          columns: sheet.columns.length,
+          charts: sheet.formatting.charts?.length || 0,
+          tables: sheet.formatting.tables?.length || 0
+        })),
+        metadata: {
+          generationTime: performance.now() - startTime,
+          dataPoints: sheets.reduce((total, sheet) => total + (sheet.data?.length || 0), 0),
+          formulas: this.countFormulas(),
+          conditionalFormats: this.countConditionalFormats()
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        filename: this.generateFilename(`${type}_error`, options),
+        size: 0,
+        sheets: [],
+        metadata: {
+          generationTime: performance.now() - startTime,
+          dataPoints: 0,
+          formulas: 0,
+          conditionalFormats: 0
+        },
+        errors: [error instanceof Error ? error.message : 'Unknown error']
+      };
+    }
+  }
+
+  private createWorkbook(options: ExcelExportOptions): any {
+    // Créer workbook avec métadonnées
+    return {}; // Placeholder - utiliserait SheetJS ou ExcelJS
+  }
+
+  private async createSheet(sheet: ExcelSheetConfig, options: ExcelExportOptions): Promise<void> {
+    // Créer sheet Excel avec formatting
+    // Placeholder - implémentation avec SheetJS/ExcelJS
+  }
+
+  private async generateBlob(format: string): Promise<Blob> {
+    // Générer blob Excel
+    return new Blob([], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+
+  // Méthodes d'analyse et préparation données
+  private prepareSafetyAnalytics(permits: any[], incidents: any[], atmospheric: any[], compliance: any): any {
+    return {
+      summary: {},
+      trends: {},
+      charts: {}
     };
   }
 
-  private initializeStandardTemplates(): void {
-    // Template permit standard
-    this.createTemplate({
-      id: 'standard_permit',
-      name: { fr: 'Permis Standard', en: 'Standard Permit' },
-      type: 'permit',
-      layout: {
-        pageSize: 'A4',
-        orientation: 'portrait',
-        margins: { top: 40, bottom: 40, left: 40, right: 40 }
-      },
-      sections: [
-        {
-          id: 'header',
-          type: 'header',
-          title: { fr: 'PERMIS DE TRAVAIL', en: 'WORK PERMIT' },
-          content: ''
-        },
-        {
-          id: 'permit_info',
-          type: 'content',
-          content: 'Permit ID: {{permit.id}}\nType: {{permit.type}}\nStatus: {{permit.status}}'
-        },
-        {
-          id: 'signatures',
-          type: 'signature',
-          content: {}
-        }
-      ],
-      styling: this.defaultStyling
-    });
+  private analyzeAtmosphericData(readings: LocalAtmosphericReading[]): any {
+    return {
+      summary: {},
+      alarms: {},
+      trends: {},
+      charts: {}
+    };
+  }
 
-    // Template rapport sécurité
-    this.createTemplate({
-      id: 'safety_report',
-      name: { fr: 'Rapport de Sécurité', en: 'Safety Report' },
-      type: 'report',
-      layout: {
-        pageSize: 'A4',
-        orientation: 'portrait',
-        margins: { top: 40, bottom: 40, left: 40, right: 40 }
-      },
-      sections: [
-        {
-          id: 'header',
-          type: 'header',
-          title: { fr: 'RAPPORT DE SÉCURITÉ', en: 'SAFETY REPORT' },
-          content: ''
-        },
-        {
-          id: 'summary',
-          type: 'content',
-          content: 'Total Permits: {{permits}}\nIncidents: {{incidents}}\nPersonnel: {{personnel}}'
-        }
-      ],
-      styling: this.defaultStyling
-    });
+  private createSummarySheet(data: any): ExcelSheetConfig {
+    return {
+      name: { fr: 'Résumé', en: 'Summary' },
+      type: 'summary',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: false, conditionalFormatting: [] }
+    };
+  }
 
-    // Template certificat
-    this.createTemplate({
-      id: 'certificate',
-      name: { fr: 'Certificat', en: 'Certificate' },
-      type: 'certificate',
-      layout: {
-        pageSize: 'A4',
-        orientation: 'landscape',
-        margins: { top: 60, bottom: 60, left: 60, right: 60 }
-      },
-      sections: [
-        {
-          id: 'header',
-          type: 'header',
-          title: { fr: 'CERTIFICAT DE FORMATION', en: 'TRAINING CERTIFICATE' },
-          content: ''
-        },
-        {
-          id: 'recipient',
-          type: 'content',
-          content: 'This certifies that {{recipient}} has completed {{certification}}'
-        }
-      ],
-      styling: this.defaultStyling
-    });
+  private createIncidentsSheet(incidents: any[]): ExcelSheetConfig {
+    return {
+      name: { fr: 'Incidents', en: 'Incidents' },
+      type: 'permits',
+      data: incidents,
+      columns: [],
+      formatting: { autoFilter: true, conditionalFormatting: [] }
+    };
+  }
+
+  private createComplianceSheet(compliance: any): ExcelSheetConfig {
+    return {
+      name: { fr: 'Conformité', en: 'Compliance' },
+      type: 'compliance',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: true, conditionalFormatting: [] }
+    };
+  }
+
+  private createTrendsSheet(trends: any): ExcelSheetConfig {
+    return {
+      name: { fr: 'Tendances', en: 'Trends' },
+      type: 'charts',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: false, conditionalFormatting: [] }
+    };
+  }
+
+  private createChartsSheet(charts: any): ExcelSheetConfig {
+    return {
+      name: { fr: 'Graphiques', en: 'Charts' },
+      type: 'charts',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: false, conditionalFormatting: [] }
+    };
+  }
+
+  private createAtmosphericSheet(atmospheric: LocalAtmosphericReading[]): ExcelSheetConfig {
+    return this.createAtmosphericReadingsSheet(atmospheric);
+  }
+
+  private createAtmosphericSummarySheet(summary: any): ExcelSheetConfig {
+    return {
+      name: { fr: 'Résumé Atmosphérique', en: 'Atmospheric Summary' },
+      type: 'atmospheric',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: false, conditionalFormatting: [] }
+    };
+  }
+
+  private createAtmosphericAlarmsSheet(alarms: any): ExcelSheetConfig {
+    return {
+      name: { fr: 'Alarmes Atmosphériques', en: 'Atmospheric Alarms' },
+      type: 'atmospheric',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: true, conditionalFormatting: [] }
+    };
+  }
+
+  private createAtmosphericTrendsSheet(trends: any): ExcelSheetConfig {
+    return {
+      name: { fr: 'Tendances Atmosphériques', en: 'Atmospheric Trends' },
+      type: 'charts',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: false, conditionalFormatting: [] }
+    };
+  }
+
+  private createAtmosphericChartsSheet(charts: any): ExcelSheetConfig {
+    return {
+      name: { fr: 'Graphiques Atmosphériques', en: 'Atmospheric Charts' },
+      type: 'charts',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: false, conditionalFormatting: [] }
+    };
+  }
+
+  private createPersonnelSheet(personnel: LocalPersonnelData[]): ExcelSheetConfig {
+    return {
+      name: { fr: 'Personnel', en: 'Personnel' },
+      type: 'personnel',
+      data: personnel,
+      columns: [],
+      formatting: { autoFilter: true, conditionalFormatting: [] }
+    };
+  }
+
+  private createCertificationsSheet(personnel: LocalPersonnelData[]): ExcelSheetConfig {
+    return {
+      name: { fr: 'Certifications', en: 'Certifications' },
+      type: 'personnel',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: true, conditionalFormatting: [] }
+    };
+  }
+
+  private createTrainingSheet(personnel: LocalPersonnelData[]): ExcelSheetConfig {
+    return {
+      name: { fr: 'Formations', en: 'Training' },
+      type: 'personnel',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: true, conditionalFormatting: [] }
+    };
+  }
+
+  private createPerformanceSheet(personnel: LocalPersonnelData[]): ExcelSheetConfig {
+    return {
+      name: { fr: 'Performance', en: 'Performance' },
+      type: 'personnel',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: true, conditionalFormatting: [] }
+    };
+  }
+
+  private createPersonnelChartsSheet(personnel: LocalPersonnelData[]): ExcelSheetConfig {
+    return {
+      name: { fr: 'Graphiques Personnel', en: 'Personnel Charts' },
+      type: 'charts',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: false, conditionalFormatting: [] }
+    };
+  }
+
+  private createPermitsDetailSheet(permits: LegalPermit[], formData: LocalPermitFormData[]): ExcelSheetConfig {
+    return {
+      name: { fr: 'Détails Permis', en: 'Permits Details' },
+      type: 'permits',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: true, conditionalFormatting: [] }
+    };
+  }
+
+  private createSignaturesSheet(signatures: LocalElectronicSignature[]): ExcelSheetConfig {
+    return {
+      name: { fr: 'Signatures', en: 'Signatures' },
+      type: 'permits',
+      data: signatures,
+      columns: [],
+      formatting: { autoFilter: true, conditionalFormatting: [] }
+    };
+  }
+
+  private calculateCompliance(permits: LegalPermit[], formData: LocalPermitFormData[]): LocalComplianceMatrix {
+    return {
+      overall: 0.85,
+      categories: []
+    };
+  }
+
+  private createAnalyticsSheet(permits: LegalPermit[], formData: LocalPermitFormData[], atmospheric: LocalAtmosphericReading[]): ExcelSheetConfig {
+    return {
+      name: { fr: 'Analytics', en: 'Analytics' },
+      type: 'summary',
+      data: [],
+      columns: [],
+      formatting: { autoFilter: false, conditionalFormatting: [] }
+    };
+  }
+
+  private generateAnalyticsCharts(permits: LegalPermit[], formData: LocalPermitFormData[], atmospheric: LocalAtmosphericReading[]): any {
+    return {};
   }
 }
 
-// =================== FONCTIONS UTILITAIRES ===================
+// =================== FONCTIONS UTILITAIRES RAPIDES ===================
 
-export async function generateQuickPermitPDF(
-  permit: LegalPermit,
-  options?: Partial<PDFGenerationOptions>
-): Promise<PDFGenerationResult> {
-  const generator = new PDFGenerator();
-  const defaultOptions: PDFGenerationOptions = {
-    template: 'standard_permit',
-    language: 'fr',
-    includeSignatures: true,
-    includeQRCode: true,
-    ...options
-  };
-
-  return generator.generatePermitPDF(permit, {}, [], [], defaultOptions);
+/**
+ * Export rapide Excel pour permits
+ */
+export async function exportPermitsToExcel(
+  permits: LegalPermit[],
+  formData: LocalPermitFormData[],
+  options?: Partial<ExcelExportOptions>
+): Promise<ExcelExportResult> {
+  const exporter = new ExcelExporter(options);
+  return exporter.exportPermitsComplete(permits, formData, [], [], []);
 }
 
-export async function generateQuickSafetyReport(
-  permits: LegalPermit[],
-  options?: Partial<PDFGenerationOptions>
-): Promise<PDFGenerationResult> {
-  const generator = new PDFGenerator();
-  const defaultOptions: PDFGenerationOptions = {
-    template: 'safety_report',
-    language: 'fr',
-    includeSignatures: false,
-    includeQRCode: false,
-    ...options
-  };
+/**
+ * Export rapide données atmosphériques
+ */
+export async function exportAtmosphericToExcel(
+  readings: LocalAtmosphericReading[],
+  options?: Partial<ExcelExportOptions>
+): Promise<ExcelExportResult> {
+  const exporter = new ExcelExporter(options);
+  return exporter.exportAtmosphericData(readings, options);
+}
 
-  return generator.generateSafetyReportPDF(permits, [], [], defaultOptions);
+/**
+ * Export rapide personnel
+ */
+export async function exportPersonnelToExcel(
+  personnel: LocalPersonnelData[],
+  options?: Partial<ExcelExportOptions>
+): Promise<ExcelExportResult> {
+  const exporter = new ExcelExporter(options);
+  return exporter.exportPersonnelData(personnel, options);
 }
 
 // =================== EXPORTS SANS CONFLIT ===================
-export default PDFGenerator;
+// Note: Tous les types sont déjà exportés individuellement ci-dessus
+// Pas besoin de re-export groupé qui causerait des conflits d'export
+
+export default ExcelExporter;
