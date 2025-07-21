@@ -539,12 +539,27 @@ export class SystemDiagnosticsHelper {
     const start = performance.now();
     
     // Test calculs
-    quickPpmToMgPerM3(100, 'carbon_monoxide');
-    quickCalculateLEL(2.5, '%', 'methane');
+    AtmosphericCalculations.ppmToMgPerM3(100, 'carbon_monoxide', { temperature: 20, pressure: 101.325, humidity: 50 });
+    AtmosphericCalculations.calculateLELPercentage(2.5, '%', 'methane', { temperature: 20, pressure: 101.325, humidity: 50 });
     
     // Test formatage
-    quickFormatAtmospheric(85, 'ppm', 'carbon_monoxide', 'danger');
-    quickFormatTime(Date.now(), 'relative');
+    DataFormatter.formatAtmosphericReading({
+      id: 'test',
+      timestamp: Date.now(),
+      gasType: 'carbon_monoxide',
+      value: 85,
+      unit: 'ppm',
+      alarmLevel: 'danger',
+      confidence: 0.95,
+      location: { coordinates: { latitude: 0, longitude: 0 }, point: 'test' },
+      environmentalConditions: { temperature: 20, humidity: 50, pressure: 101.3 },
+      metadata: {
+        equipment: { model: 'test', serialNumber: 'test', lastCalibration: 0, batteryLevel: 1 },
+        operator: 'test',
+        qualityAssurance: { validated: true, flagged: false, notes: [] }
+      }
+    });
+    DataFormatter.formatTimestamp(Date.now(), 'relative');
     
     const calculationsTime = performance.now() - start;
     
