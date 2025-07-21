@@ -1053,7 +1053,6 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                       onDuplicate={duplicatePermit}
                       onDelete={handleDeletePermit}
                       onValidate={handleValidatePermit}
-                      onAddToSurveillance={addToSurveillance}
                       showValidationStatus={true}
                     />
                   ))}
