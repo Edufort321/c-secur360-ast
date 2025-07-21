@@ -2,28 +2,84 @@
 // Templates emails automatiques pour système de permis avec notifications intelligentes
 "use client";
 
-import type { 
-  LegalPermit,
-  PermitFormData,
-  PersonnelData,
-  AtmosphericReading,
-  ElectronicSignature,
-  BilingualText,
-  PriorityLevel,
-  ProvinceCode
-} from '../../types';
+// Import des types depuis les bons fichiers
+import type { LegalPermit } from '../../types/permits';
+import type { ProvinceCode } from '../../constants/provinces';
+
+// =================== TYPES LOCAUX POUR EMAIL TEMPLATES ===================
+
+export interface LocalBilingualText {
+  fr: string;
+  en: string;
+}
+
+export type LocalPriorityLevel = 'low' | 'medium' | 'high' | 'critical' | 'urgent';
+
+export interface LocalPermitFormData {
+  id?: string;
+  supervisor?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  entrants?: Array<{
+    id: string;
+    name: string;
+    role: string;
+  }>;
+  location?: {
+    description: string;
+    address: string;
+  };
+}
+
+export interface LocalPersonnelData {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  phone?: string;
+  certifications?: string[];
+}
+
+export interface LocalAtmosphericReading {
+  id: string;
+  parameter: string;
+  value: number;
+  unit: string;
+  timestamp: number;
+  location: {
+    point: string;
+    coordinates?: { lat: number; lng: number; };
+  };
+  alarmLevel: 'safe' | 'caution' | 'warning' | 'danger' | 'critical' | 'extreme';
+  deviceId: string;
+  operator: string;
+  isValid: boolean;
+  notes?: string;
+}
+
+export interface LocalElectronicSignature {
+  id: string;
+  documentId: string;
+  signerId: string;
+  signerName: string;
+  timestamp: number;
+  status: 'pending' | 'signed' | 'verified' | 'rejected';
+  method: string;
+}
 
 // =================== INTERFACES EMAIL TEMPLATES ===================
 
 export interface EmailTemplate {
   id: string;
-  name: BilingualText;
+  name: LocalBilingualText;
   type: EmailType;
   category: EmailCategory;
-  priority: PriorityLevel;
-  subject: BilingualText;
-  htmlContent: BilingualText;
-  textContent: BilingualText;
+  priority: LocalPriorityLevel;
+  subject: LocalBilingualText;
+  htmlContent: LocalBilingualText;
+  textContent: LocalBilingualText;
   variables: EmailVariable[];
   attachments?: EmailAttachment[];
   metadata: {
@@ -66,7 +122,7 @@ export type EmailCategory =
 export interface EmailVariable {
   name: string;
   type: 'string' | 'number' | 'date' | 'boolean' | 'array' | 'object';
-  description: BilingualText;
+  description: LocalBilingualText;
   required: boolean;
   defaultValue?: any;
   validation?: {
@@ -84,8 +140,8 @@ export interface EmailVariable {
 
 export interface EmailAttachment {
   type: 'pdf' | 'excel' | 'image' | 'qr_code' | 'certificate';
-  name: BilingualText;
-  description: BilingualText;
+  name: LocalBilingualText;
+  description: LocalBilingualText;
   generateOnSend: boolean;
   template?: string;
   data?: any;
@@ -101,7 +157,7 @@ export interface EmailBranding {
     url: string;
     width: number;
     height: number;
-    altText: BilingualText;
+    altText: LocalBilingualText;
   };
   colors: {
     primary: string;
@@ -120,8 +176,8 @@ export interface EmailBranding {
       small: number;
     };
   };
-  footer: BilingualText;
-  disclaimer: BilingualText;
+  footer: LocalBilingualText;
+  disclaimer: LocalBilingualText;
 }
 
 export interface EmailScheduling {
@@ -149,7 +205,7 @@ export interface EmailCompliance {
   consentType: 'explicit' | 'implicit' | 'legitimate_interest';
   dataRetention: number;         // Jours
   unsubscribeLink: boolean;
-  privacyNotice: BilingualText;
+  privacyNotice: LocalBilingualText;
   jurisdiction: ProvinceCode[];
   regulations: string[];         // PIPEDA, CAN-SPAM, CASL
 }
@@ -170,10 +226,10 @@ export interface EmailRecipient {
 
 export interface EmailContext {
   permit?: LegalPermit;
-  formData?: PermitFormData;
-  personnel?: PersonnelData;
-  atmospheric?: AtmosphericReading[];
-  signature?: ElectronicSignature;
+  formData?: LocalPermitFormData;
+  personnel?: LocalPersonnelData;
+  atmospheric?: LocalAtmosphericReading[];
+  signature?: LocalElectronicSignature;
   incident?: any;
   user?: {
     id: string;
@@ -195,6 +251,7 @@ export interface EmailContext {
     supportEmail: string;
     emergencyPhone: string;
   };
+  customVariables?: Record<string, any>;
 }
 
 export interface EmailSendResult {
@@ -247,7 +304,7 @@ export class EmailTemplateManager {
     context: EmailContext,
     options?: {
       language?: 'fr' | 'en';
-      priority?: PriorityLevel;
+      priority?: LocalPriorityLevel;
       trackingEnabled?: boolean;
       customVariables?: Record<string, any>;
     }
@@ -332,7 +389,7 @@ export class EmailTemplateManager {
   async sendPermitNotification(
     type: 'approved' | 'rejected' | 'expired' | 'reminder',
     permit: LegalPermit,
-    formData: PermitFormData,
+    formData: LocalPermitFormData,
     recipients: EmailRecipient[],
     options?: any
   ): Promise<EmailSendResult> {
@@ -355,8 +412,8 @@ export class EmailTemplateManager {
    * Alertes atmosphériques urgentes
    */
   async sendAtmosphericAlert(
-    readings: AtmosphericReading[],
-    criticalReadings: AtmosphericReading[],
+    readings: LocalAtmosphericReading[],
+    criticalReadings: LocalAtmosphericReading[],
     emergencyContacts: EmailRecipient[],
     options?: any
   ): Promise<EmailSendResult> {
@@ -559,6 +616,9 @@ export class EmailTemplateManager {
       permitType: context.permit?.category || '',
       permitStatus: context.permit?.status || '',
       permitPriority: context.permit?.priority || '',
+
+      // Variables contexte personnalisé
+      ...context.customVariables,
 
       // Variables personnalisées
       ...customVariables
@@ -905,7 +965,7 @@ export class EmailTemplateManager {
     return frCount >= enCount ? 'fr' : 'en';
   }
 
-  private calculateMaxAlertLevel(readings: AtmosphericReading[]): string {
+  private calculateMaxAlertLevel(readings: LocalAtmosphericReading[]): string {
     const levels = ['safe', 'caution', 'warning', 'danger', 'critical', 'extreme'];
     const maxLevel = readings.reduce((max, reading) => {
       const currentIndex = levels.indexOf(reading.alarmLevel);
@@ -986,7 +1046,7 @@ export async function sendQuickPermitNotification(
   return manager.sendPermitNotification(
     type,
     { id: permitId } as LegalPermit,
-    {} as PermitFormData,
+    {} as LocalPermitFormData,
     [{ type: 'to', email: recipientEmail, language }]
   );
 }
@@ -995,7 +1055,7 @@ export async function sendQuickPermitNotification(
  * Envoyer alerte atmosphérique rapide
  */
 export async function sendQuickAtmosphericAlert(
-  reading: AtmosphericReading,
+  reading: LocalAtmosphericReading,
   emergencyEmails: string[]
 ): Promise<EmailSendResult> {
   const manager = new EmailTemplateManager();
@@ -1013,5 +1073,8 @@ export async function sendQuickAtmosphericAlert(
   );
 }
 
-// =================== EXPORTS ===================
+// =================== EXPORTS SANS CONFLIT ===================
+// Note: Tous les types sont déjà exportés individuellement ci-dessus
+// Pas besoin de re-export groupé qui causerait des conflits d'export
+
 export default EmailTemplateManager;
