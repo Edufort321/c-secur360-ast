@@ -1204,12 +1204,14 @@ export class ReportGenerator {
   }
 
   private generateHTMLContent(reportData: ReportData, options: ReportOptions): string {
+    const titleText = (options.language === 'fr' || options.language === 'both') ? reportData.metadata.title.fr : reportData.metadata.title.en;
+    
     return `
       <!DOCTYPE html>
       <html lang="${options.language}">
       <head>
         <meta charset="UTF-8">
-        <title>${reportData.metadata.title[options.language]}</title>
+        <title>${titleText}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 40px; }
           .header { color: ${options.branding.colors.primary}; }
@@ -1218,18 +1220,26 @@ export class ReportGenerator {
         </style>
       </head>
       <body>
-        <h1 class="header">${reportData.metadata.title[options.language]}</h1>
-        ${reportData.sections.map(section => `
+        <h1 class="header">${titleText}</h1>
+        ${reportData.sections.map(section => {
+          const sectionTitle = (options.language === 'fr' || options.language === 'both') ? section.title.fr : section.title.en;
+          const sectionText = section.content.text ? ((options.language === 'fr' || options.language === 'both') ? section.content.text.fr : section.content.text.en) : '';
+          
+          return `
           <div class="section">
-            <h2>${section.title[options.language]}</h2>
-            ${section.content.text ? `<p>${section.content.text[options.language]}</p>` : ''}
-            ${section.content.metrics ? section.content.metrics.map(metric => `
+            <h2>${sectionTitle}</h2>
+            ${sectionText ? `<p>${sectionText}</p>` : ''}
+            ${section.content.metrics ? section.content.metrics.map(metric => {
+              const metricName = (options.language === 'fr' || options.language === 'both') ? metric.name.fr : metric.name.en;
+              return `
               <div class="metric">
-                <strong>${metric.name[options.language]}:</strong> ${metric.value} ${metric.unit}
+                <strong>${metricName}:</strong> ${metric.value} ${metric.unit}
               </div>
-            `).join('') : ''}
+            `;
+            }).join('') : ''}
           </div>
-        `).join('')}
+        `;
+        }).join('')}
       </body>
       </html>
     `;
