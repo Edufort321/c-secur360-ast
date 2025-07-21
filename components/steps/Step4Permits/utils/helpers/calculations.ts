@@ -2,14 +2,75 @@
 // Calculs spécialisés pour données atmosphériques, sécurité et conformité réglementaire
 "use client";
 
-import type { 
-  AtmosphericReading,
-  GasType,
-  AlarmLevel,
-  NumericValue,
-  GeoCoordinates,
-  ProvinceCode
-} from '../../types';
+// Import uniquement des types existants
+import type { ProvinceCode } from '../../constants/provinces';
+
+// Types définis localement pour éviter les dépendances manquantes
+export type LocalGasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export type LocalAlarmLevel = 'safe' | 'low' | 'medium' | 'high' | 'danger' | 'critical' | 'extreme';
+
+export interface LocalNumericValue {
+  value: number;
+  unit: string;
+  precision?: number;
+  range?: { min: number; max: number; };
+}
+
+export interface LocalGeoCoordinates {
+  latitude: number;
+  longitude: number;
+  altitude?: number;
+  accuracy?: number;
+}
+
+export interface LocalAtmosphericReading {
+  id: string;
+  timestamp: number;
+  gasType: LocalGasType;
+  value: number;
+  unit: string;
+  alarmLevel: LocalAlarmLevel;
+  confidence: number;
+  location: {
+    coordinates: LocalGeoCoordinates;
+    point: string;
+  };
+  environmentalConditions: {
+    temperature: number;
+    humidity: number;
+    pressure: number;
+  };
+  metadata: {
+    equipment: {
+      model: string;
+      serialNumber: string;
+      lastCalibration: number;
+      batteryLevel: number;
+    };
+    operator: string;
+    qualityAssurance: {
+      validated: boolean;
+      flagged: boolean;
+      notes: string[];
+    };
+  };
+}
 
 // =================== INTERFACES CALCULS ===================
 
@@ -196,7 +257,7 @@ export const PHYSICAL_CONSTANTS = {
 
 // =================== PROPRIÉTÉS GAZ ===================
 
-export const GAS_PROPERTIES: Record<GasType, GasProperties> = {
+export const GAS_PROPERTIES: Record<LocalGasType, GasProperties> = {
   oxygen: {
     molecularWeight: 31.998,
     density: 1.429,
@@ -276,8 +337,174 @@ export const GAS_PROPERTIES: Record<GasType, GasProperties> = {
       stel: 1000,
     }
   },
-  // Ajouter autres gaz selon besoins...
-} as any;
+  carbon_dioxide: {
+    molecularWeight: 44.010,
+    density: 1.977,
+    boilingPoint: -79,
+    meltingPoint: -57,
+    vaporPressure: 5720,
+    solubility: 1700,
+    flamabilityLimits: { lel: 0, uel: 0 }, // Non inflammable
+    autoIgnitionTemp: 0,
+    toxicityData: {
+      twa: 5000,      // ACGIH TWA
+      stel: 30000,    // ACGIH STEL
+    }
+  },
+  ammonia: {
+    molecularWeight: 17.031,
+    density: 0.769,
+    boilingPoint: -33,
+    meltingPoint: -78,
+    vaporPressure: 857,
+    solubility: 531000,
+    flamabilityLimits: { lel: 15.0, uel: 28.0 },
+    autoIgnitionTemp: 651,
+    odorThreshold: 5,
+    toxicityData: {
+      twa: 25,        // ACGIH TWA
+      stel: 35,       // ACGIH STEL
+      ceiling: 50,    // OSHA Ceiling
+      idlh: 300,      // NIOSH IDLH
+    }
+  },
+  chlorine: {
+    molecularWeight: 70.906,
+    density: 3.214,
+    boilingPoint: -34,
+    meltingPoint: -101,
+    vaporPressure: 679,
+    solubility: 7160,
+    flamabilityLimits: { lel: 0, uel: 0 }, // Non inflammable
+    autoIgnitionTemp: 0,
+    odorThreshold: 0.1,
+    toxicityData: {
+      twa: 0.5,       // ACGIH TWA
+      stel: 1,        // ACGIH STEL
+      ceiling: 1,     // OSHA Ceiling
+      idlh: 10,       // NIOSH IDLH
+    }
+  },
+  nitrogen_dioxide: {
+    molecularWeight: 46.006,
+    density: 2.052,
+    boilingPoint: 21,
+    meltingPoint: -11,
+    vaporPressure: 96,
+    solubility: 0,
+    flamabilityLimits: { lel: 0, uel: 0 }, // Non inflammable
+    autoIgnitionTemp: 0,
+    odorThreshold: 0.1,
+    toxicityData: {
+      twa: 3,         // ACGIH TWA
+      stel: 5,        // ACGIH STEL
+      ceiling: 5,     // OSHA Ceiling
+      idlh: 20,       // NIOSH IDLH
+    }
+  },
+  sulfur_dioxide: {
+    molecularWeight: 64.066,
+    density: 2.927,
+    boilingPoint: -10,
+    meltingPoint: -73,
+    vaporPressure: 330,
+    solubility: 94000,
+    flamabilityLimits: { lel: 0, uel: 0 }, // Non inflammable
+    autoIgnitionTemp: 0,
+    odorThreshold: 0.3,
+    toxicityData: {
+      twa: 2,         // ACGIH TWA
+      stel: 5,        // ACGIH STEL
+      ceiling: 5,     // OSHA Ceiling
+      idlh: 100,      // NIOSH IDLH
+    }
+  },
+  benzene: {
+    molecularWeight: 78.114,
+    density: 3.486,
+    boilingPoint: 80,
+    meltingPoint: 6,
+    vaporPressure: 13,
+    solubility: 1790,
+    flamabilityLimits: { lel: 1.2, uel: 7.8 },
+    autoIgnitionTemp: 498,
+    odorThreshold: 1.5,
+    toxicityData: {
+      twa: 0.5,       // ACGIH TWA (cancérigène)
+      stel: 2.5,      // ACGIH STEL
+      ceiling: 25,    // OSHA Ceiling
+      idlh: 500,      // NIOSH IDLH
+    }
+  },
+  toluene: {
+    molecularWeight: 92.141,
+    density: 4.110,
+    boilingPoint: 111,
+    meltingPoint: -95,
+    vaporPressure: 3.8,
+    solubility: 526,
+    flamabilityLimits: { lel: 1.1, uel: 7.1 },
+    autoIgnitionTemp: 480,
+    odorThreshold: 2.1,
+    toxicityData: {
+      twa: 20,        // ACGIH TWA
+      stel: 0,        // Pas de STEL ACGIH
+      ceiling: 200,   // OSHA Ceiling
+      idlh: 500,      // NIOSH IDLH
+    }
+  },
+  xylene: {
+    molecularWeight: 106.168,
+    density: 4.737,
+    boilingPoint: 144,
+    meltingPoint: -47,
+    vaporPressure: 1.1,
+    solubility: 198,
+    flamabilityLimits: { lel: 0.9, uel: 6.7 },
+    autoIgnitionTemp: 464,
+    odorThreshold: 1.1,
+    toxicityData: {
+      twa: 100,       // ACGIH TWA
+      stel: 150,      // ACGIH STEL
+      ceiling: 0,     // Pas de ceiling OSHA
+      idlh: 900,      // NIOSH IDLH
+    }
+  },
+  acetone: {
+    molecularWeight: 58.080,
+    density: 2.590,
+    boilingPoint: 56,
+    meltingPoint: -95,
+    vaporPressure: 31,
+    solubility: 1000000,
+    flamabilityLimits: { lel: 2.5, uel: 12.8 },
+    autoIgnitionTemp: 465,
+    odorThreshold: 100,
+    toxicityData: {
+      twa: 500,       // ACGIH TWA
+      stel: 750,      // ACGIH STEL
+      ceiling: 1000,  // OSHA Ceiling
+      idlh: 2500,     // NIOSH IDLH
+    }
+  },
+  formaldehyde: {
+    molecularWeight: 30.026,
+    density: 1.340,
+    boilingPoint: -19,
+    meltingPoint: -92,
+    vaporPressure: 518,
+    solubility: 400000,
+    flamabilityLimits: { lel: 7.0, uel: 73.0 },
+    autoIgnitionTemp: 424,
+    odorThreshold: 0.5,
+    toxicityData: {
+      twa: 0.1,       // ACGIH TWA (cancérigène)
+      stel: 0.3,      // ACGIH STEL
+      ceiling: 2,     // OSHA Ceiling
+      idlh: 20,       // NIOSH IDLH
+    }
+  }
+};
 
 // =================== CLASSE PRINCIPALE CALCULATIONS ===================
 
@@ -290,7 +517,7 @@ export class AtmosphericCalculations {
    */
   static ppmToMgPerM3(
     ppm: number, 
-    gasType: GasType, 
+    gasType: LocalGasType, 
     conditions: EnvironmentalConditions
   ): AtmosphericCalculationResult {
     const gasProps = GAS_PROPERTIES[gasType];
@@ -343,7 +570,7 @@ export class AtmosphericCalculations {
    */
   static mgPerM3ToPpm(
     mgPerM3: number, 
-    gasType: GasType, 
+    gasType: LocalGasType, 
     conditions: EnvironmentalConditions
   ): AtmosphericCalculationResult {
     const gasProps = GAS_PROPERTIES[gasType];
@@ -393,7 +620,7 @@ export class AtmosphericCalculations {
   static calculateLELPercentage(
     concentration: number, 
     unit: string, 
-    gasType: GasType,
+    gasType: LocalGasType,
     conditions: EnvironmentalConditions
   ): AtmosphericCalculationResult {
     const gasProps = GAS_PROPERTIES[gasType];
@@ -454,7 +681,7 @@ export class AtmosphericCalculations {
    */
   static calculateVentilationRequirements(
     spaceVolume: number, // m³
-    gasType: GasType,
+    gasType: LocalGasType,
     currentConcentration: number, // ppm
     targetConcentration: number, // ppm
     conditions: EnvironmentalConditions,
@@ -517,7 +744,7 @@ export class AtmosphericCalculations {
    * Évaluer risques atmosphériques
    */
   static assessAtmosphericRisk(
-    readings: AtmosphericReading[],
+    readings: LocalAtmosphericReading[],
     spaceCharacteristics: {
       volume: number;
       depth: number;
@@ -572,9 +799,9 @@ export class AtmosphericCalculations {
    * Calculer exposition personnel
    */
   static calculatePersonnelExposure(
-    readings: AtmosphericReading[],
+    readings: LocalAtmosphericReading[],
     exposureDuration: number, // minutes
-    gasType: GasType,
+    gasType: LocalGasType,
     activityLevel: 'light' | 'moderate' | 'heavy' = 'moderate'
   ): ExposureCalculation {
     const gasProps = GAS_PROPERTIES[gasType];
@@ -652,7 +879,7 @@ export class AtmosphericCalculations {
 
   private static calculateAtmosphericCorrections(
     value: number,
-    gasType: GasType,
+    gasType: LocalGasType,
     conditions: EnvironmentalConditions
   ): AtmosphericCorrection[] {
     const corrections: AtmosphericCorrection[] = [];
@@ -698,7 +925,7 @@ export class AtmosphericCalculations {
 
   private static calculateTemperatureLELCorrection(
     temperature: number,
-    gasType: GasType
+    gasType: LocalGasType
   ): number {
     // Correction température pour LEL (approximation)
     // LEL diminue avec l'augmentation de température
@@ -742,7 +969,7 @@ export class AtmosphericCalculations {
   private static generateVentilationRecommendation(
     ach: number,
     concentration: number,
-    gasType: GasType,
+    gasType: LocalGasType,
     volume: number
   ): VentilationRecommendation {
     const gasProps = GAS_PROPERTIES[gasType];
@@ -759,7 +986,7 @@ export class AtmosphericCalculations {
     };
   }
 
-  private static evaluateAtmosphericFactor(reading: AtmosphericReading): RiskFactor {
+  private static evaluateAtmosphericFactor(reading: LocalAtmosphericReading): RiskFactor {
     const gasProps = GAS_PROPERTIES[reading.gasType];
     let score = 0;
     
@@ -769,7 +996,7 @@ export class AtmosphericCalculations {
     
     if (reading.alarmLevel === 'critical') score += 30;
     else if (reading.alarmLevel === 'danger') score += 20;
-    else if (reading.alarmLevel === 'warning') score += 10;
+    else if (reading.alarmLevel === 'medium') score += 10;
 
     return {
       category: 'atmospheric',
@@ -859,7 +1086,7 @@ export class AtmosphericCalculations {
     };
   }
 
-  private static calculateSTEL(readings: AtmosphericReading[], duration: number): number {
+  private static calculateSTEL(readings: LocalAtmosphericReading[], duration: number): number {
     // Calculer maximum mobile sur période donnée
     let maxSTEL = 0;
     
@@ -939,7 +1166,7 @@ export class AtmosphericCalculations {
  */
 export function quickPpmToMgPerM3(
   ppm: number,
-  gasType: GasType,
+  gasType: LocalGasType,
   temperature: number = 20,
   pressure: number = 101.325
 ): number {
@@ -957,7 +1184,7 @@ export function quickPpmToMgPerM3(
 export function quickCalculateLEL(
   concentration: number,
   unit: string,
-  gasType: GasType
+  gasType: LocalGasType
 ): number {
   const result = AtmosphericCalculations.calculateLELPercentage(
     concentration,
@@ -971,7 +1198,7 @@ export function quickCalculateLEL(
 /**
  * Évaluer risque simple
  */
-export function quickRiskAssessment(readings: AtmosphericReading[]): RiskLevel {
+export function quickRiskAssessment(readings: LocalAtmosphericReading[]): RiskLevel {
   const assessment = AtmosphericCalculations.assessAtmosphericRisk(
     readings,
     { volume: 100, depth: 2, ventilation: 'none', access: 'top', drainage: false },
@@ -988,7 +1215,7 @@ export function quickVentilationCalc(
   volume: number,
   currentPpm: number,
   targetPpm: number,
-  gasType: GasType
+  gasType: LocalGasType
 ): number {
   const ventilation = AtmosphericCalculations.calculateVentilationRequirements(
     volume,
