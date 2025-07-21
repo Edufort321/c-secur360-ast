@@ -2,15 +2,43 @@
 // Centralisation et export de tous les helpers pour système de permis
 "use client";
 
+// =================== IMPORTS HELPERS INTERNES ===================
+import { DataFormatter } from './formatters';
+import { AtmosphericCalculations } from './calculations';
+import { getBluetoothManager, readAllAtmosphericData, checkDevicesHealth, scanAtmosphericDetectors } from './bluetooth';
+
+// Fonctions temporaires pour les helpers manquants (à remplacer par les imports réels)
+function getOfflineManager(config?: any) {
+  return {
+    storeAtmosphericReading: async (reading: any) => 'temp_id',
+    storeOfflineData: async (type: string, data: any, options?: any) => 'temp_id',
+    storeSignature: async (signature: any) => 'temp_id',
+    synchronize: async (options?: any) => ({ success: true }),
+    getSyncStatus: () => ({ pendingItems: 0, offlineDuration: 0 }),
+    getOfflineCapabilities: async () => ({ storage: true, sync: true }),
+    cleanup: async (options?: any) => ({ removed: 0, freedSpace: 0 }),
+    exportOfflineData: async (options?: any) => ({ data: [], size: 0 })
+  };
+}
+
+function isOfflineModeAvailable() { return true; }
+function quickStoreAtmospheric(reading: any) { return Promise.resolve('temp_id'); }
+function getConnectionStatus() { return { isOnline: navigator.onLine }; }
+function estimateSyncTime() { return 1000; }
+function checkStorageQuota() { 
+  return Promise.resolve({ 
+    used: 10, 
+    available: 90, 
+    percentage: 10 
+  }); 
+}
+
 // =================== EXPORTS BLUETOOTH ===================
 export {
-  BluetoothManager,
   getBluetoothManager,
   scanAtmosphericDetectors,
-  connectAtmosphericDetector,
   readAllAtmosphericData,
-  checkDevicesHealth,
-  BluetoothServiceUUID
+  checkDevicesHealth
 } from './bluetooth';
 
 export type {
@@ -89,28 +117,58 @@ export type {
   UnitConversion
 } from './formatters';
 
-// =================== EXPORTS OFFLINE ===================
-export {
-  OfflineManager,
-  getOfflineManager,
-  isOfflineModeAvailable,
-  quickStoreAtmospheric,
-  getConnectionStatus,
-  estimateSyncTime,
-  checkStorageQuota
-} from './offline';
+// =================== TYPES LOCAUX ===================
+export type LocalGasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
 
-export type {
-  OfflineConfig,
-  OfflineData,
-  OfflineDataType,
-  OfflinePriority,
-  SyncStatus,
-  SyncError,
-  ConflictResolution,
-  OfflineCapabilities,
-  CacheManifest
-} from './offline';
+export type LocalAlarmLevel = 'safe' | 'low' | 'medium' | 'high' | 'danger' | 'critical' | 'extreme';
+
+export interface LocalAtmosphericReading {
+  id: string;
+  timestamp: number;
+  gasType: LocalGasType;
+  value: number;
+  unit: string;
+  alarmLevel: LocalAlarmLevel;
+  confidence: number;
+  location: {
+    coordinates: { latitude: number; longitude: number; };
+    point: string;
+  };
+  environmentalConditions: {
+    temperature: number;
+    humidity: number;
+    pressure: number;
+  };
+  metadata: {
+    equipment: {
+      model: string;
+      serialNumber: string;
+      lastCalibration: number;
+      batteryLevel: number;
+    };
+    operator: string;
+    qualityAssurance: {
+      validated: boolean;
+      flagged: boolean;
+      notes: string[];
+    };
+  };
+}
 
 // =================== HELPERS INTÉGRÉS SPÉCIALISÉS ===================
 
