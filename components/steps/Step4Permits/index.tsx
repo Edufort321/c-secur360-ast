@@ -367,7 +367,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     canAudit: false
   }
 }) => {
-  // =================== HOOKS PERSONNALISÉS ===================
+  // =================== HOOKS DE BASE (SANS DÉPENDANCES) ===================
   const {
     permits,
     setPermits,
@@ -385,7 +385,23 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     setValidationResults
   } = usePermitValidation();
 
-  // =================== UTILITAIRES VALIDATION ===================
+  // =================== HOOKS UTILITAIRES ===================
+  const {
+    showToast,
+    notifications,
+    clearNotification
+  } = useNotifications();
+
+  const {
+    isActive: surveillanceActive,
+    timeRemaining,
+    status: surveillanceStatus,
+    startSurveillance,
+    stopSurveillance,
+    extendTime,
+    setTimeRemaining,
+    setStatus
+  } = useSurveillance();
 
   // =================== SURVEILLANCE LOCALE ===================
   const [surveillancePermits, setSurveillancePermits] = useState<LegalPermit[]>([]);
@@ -412,22 +428,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     );
   }, [setPermits]);
 
-  const {
-    isActive: surveillanceActive,
-    timeRemaining,
-    status: surveillanceStatus,
-    startSurveillance,
-    stopSurveillance,
-    extendTime,
-    setTimeRemaining,
-    setStatus
-  } = useSurveillance();
-
-  const {
-    showToast,
-    notifications,
-    clearNotification
-  } = useNotifications();
+  // =================== UTILITAIRES VALIDATION ===================
   const validateAllPermits = useCallback(async () => {
     if (!permissions.canValidate || permits.length === 0) {
       showToast('error', language === 'fr' ? 'Permission refusée ou aucun permis' : 'Permission denied or no permits');
@@ -443,6 +444,8 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
       showToast('error', language === 'fr' ? 'Erreur de validation' : 'Validation error');
     }
   }, [permits, validatePermit, permissions.canValidate, showToast, language]);
+
+  // =================== UTILITAIRES PERMIS ===================
   const savePermit = useCallback((permit: LegalPermit) => {
     if (permits.find(p => p.id === permit.id)) {
       updatePermit(permit.id, permit);
@@ -703,7 +706,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     setCurrentView('validate');
     
     try {
-      await validatePermit(permit.id);
+      await validatePermit(permit);
       showToast('success', language === 'fr' ? 'Validation terminée' : 'Validation completed');
     } catch (error) {
       showToast('error', language === 'fr' ? 'Erreur de validation' : 'Validation error');
@@ -751,7 +754,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
               
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => validatePermit(selectedPermit.id)}
+                  onClick={() => validatePermit(selectedPermit)}
                   disabled={validationLoading}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 min-h-[44px]"
                 >
