@@ -425,19 +425,6 @@ export interface AtmosphericReport {
   };
 }
 
-// =================== TYPES EXPORT ===================
-
-export type {
-  GasType,
-  MeasurementUnit,
-  AlarmLevel,
-  TestStatus,
-  AtmosphericReading,
-  AtmosphericLimits,
-  AtmosphericTest,
-  AtmosphericAlert,
-  AtmosphericTrend,
-  GasProperties,
-  CalibrationRecord,
-  AtmosphericReport
-};
+// =================== EXPORTS (SANS CONFLIT) ===================
+// Note: Les types sont déjà exportés individuellement ci-dessus
+// Pas besoin de re-export groupé qui cause des conflits
