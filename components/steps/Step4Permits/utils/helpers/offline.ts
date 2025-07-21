@@ -1021,9 +1021,9 @@ export class OfflineManager {
     // Persister vers IndexedDB (placeholder)
   }
 
-  private async loadFromIndexedDB(id: string): Promise<OfflineData | null> {
+  private async loadFromIndexedDB(id: string): Promise<OfflineData | undefined> {
     // Charger depuis IndexedDB (placeholder)
-    return null;
+    return undefined;
   }
 
   private async removeFromIndexedDB(id: string): Promise<void> {
