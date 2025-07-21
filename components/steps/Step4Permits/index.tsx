@@ -380,10 +380,9 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
 
   const {
     validatePermit,
-    validateAllPermits,
     validationResults,
-    validationLoading,
-    validationError
+    isValidating: validationLoading,
+    setValidationResults
   } = usePermitValidation(permits, setPermits, province);
 
   const {
@@ -399,7 +398,22 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     clearNotification
   } = useNotifications();
 
-  // =================== UTILITAIRES PERMIS ===================
+  // =================== UTILITAIRES VALIDATION ===================
+  const validateAllPermits = useCallback(async () => {
+    if (!permissions.canValidate || permits.length === 0) {
+      showToast('error', language === 'fr' ? 'Permission refusée ou aucun permis' : 'Permission denied or no permits');
+      return;
+    }
+
+    try {
+      for (const permit of permits) {
+        await validatePermit(permit);
+      }
+      showToast('success', language === 'fr' ? 'Validation terminée pour tous les permis' : 'Validation completed for all permits');
+    } catch (error) {
+      showToast('error', language === 'fr' ? 'Erreur de validation' : 'Validation error');
+    }
+  }, [permits, validatePermit, permissions.canValidate, showToast, language]);
   const savePermit = useCallback((permit: LegalPermit) => {
     if (permits.find(p => p.id === permit.id)) {
       updatePermit(permit.id, permit);
