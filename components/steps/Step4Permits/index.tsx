@@ -538,7 +538,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
         permit.site.toLowerCase().includes(query) ||
         permit.secteur.toLowerCase().includes(query) ||
         permit.description[language].toLowerCase().includes(query) ||
-        permit.tags.some(tag => tag.toLowerCase().includes(query))
+        permit.tags.some((tag: string) => tag.toLowerCase().includes(query))
       );
     }
 
