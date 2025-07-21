@@ -377,14 +377,14 @@ export class BluetoothManager {
       throw new Error(`Device not found: ${deviceId}`);
     }
 
-    const connectionOptions = {
+    const connectionOptions: BluetoothConnectionOptions = {
       timeout: 30000,
       retryAttempts: 3,
       retryDelay: 2000,
       autoReconnect: true,
       keepAlive: true,
       subscribeToNotifications: true,
-      securityLevel: 'medium',
+      securityLevel: 'medium' as const,
       ...options
     };
 
