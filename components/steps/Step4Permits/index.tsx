@@ -815,8 +815,8 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                     <div className="flex items-center gap-2">
                       <TabIcon size={20} />
                       <span>{tabConfig.label[language]}</span>
-                      {validationResultsData?.[validationType] && (
-                        validationResultsData[validationType].isValid ? 
+                      {validationResultsData?.[validationType as keyof typeof validationResultsData] && (
+                        (validationResultsData[validationType as keyof typeof validationResultsData] as any)?.isValid ? 
                           <CheckCircle size={16} className="text-green-500" /> :
                           <XCircle size={16} className="text-red-500" />
                       )}
