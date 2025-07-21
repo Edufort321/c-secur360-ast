@@ -5,9 +5,25 @@
 import type { ProvinceCode } from '../constants/provinces';
 import type { PersonnelRole } from './personnel';
 import type { ProcedureType } from './procedures';
-import type { Timestamped, BilingualText, PriorityLevel } from './index';
 
-// =================== TYPES DE BASE ===================
+// =================== TYPES DE BASE LOCAUX ===================
+
+// Interface pour horodatage (remplace Timestamped manquant)
+export interface LocalTimestamped {
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+// Interface pour texte bilingue (local)
+export interface LocalBilingualText {
+  fr: string;
+  en: string;
+}
+
+// Type pour niveau de priorité (local)
+export type LocalPriorityLevel = 'low' | 'medium' | 'high' | 'critical' | 'urgent';
 
 export type RegulatoryAuthority = 
   | 'federal'                  // Fédéral
@@ -46,27 +62,27 @@ export type JurisdictionCode = ProvinceCode | 'CA' | 'US' | 'INTL';
 
 // =================== INTERFACES PRINCIPALES ===================
 
-export interface RegulatoryStandard extends Timestamped {
+export interface RegulatoryStandard extends LocalTimestamped {
   id: string;                              // ID unique standard
   code: string;                            // Code officiel (ex: RSST Art. 297)
-  title: BilingualText;                    // Titre officiel bilingue
-  shortTitle: BilingualText;               // Titre abrégé
-  description: BilingualText;              // Description détaillée
+  title: LocalBilingualText;               // Titre officiel bilingue
+  shortTitle: LocalBilingualText;          // Titre abrégé
+  description: LocalBilingualText;         // Description détaillée
   type: StandardType;                      // Type standard
   authority: {                            // Autorité émettrice
     type: RegulatoryAuthority;
-    name: BilingualText;                  // Nom officiel
+    name: LocalBilingualText;              // Nom officiel
     acronym: string;                      // Acronyme (CNESST, OHSA, etc.)
     jurisdiction: JurisdictionCode[];     // Juridictions
     website: string;                      // Site web officiel
     contactInfo: {                       // Coordonnées
       phone: string;
       email: string;
-      address: BilingualText;
+      address: LocalBilingualText;
       emergencyLine?: string;
     };
-    mandate: BilingualText;               // Mandat
-    powers: BilingualText[];              // Pouvoirs
+    mandate: LocalBilingualText;          // Mandat
+    powers: LocalBilingualText[];         // Pouvoirs
   };
   hierarchy: {                            // Hiérarchie réglementaire
     parent?: string;                      // Standard parent
@@ -78,27 +94,27 @@ export interface RegulatoryStandard extends Timestamped {
     references: string[];                 // Références croisées
   };
   scope: {                               // Portée d'application
-    applicability: BilingualText;         // Applicabilité
+    applicability: LocalBilingualText;    // Applicabilité
     workplaces: string[];                 // Types milieux travail
     activities: string[];                 // Activités visées
     equipment: string[];                  // Équipements concernés
     substances: string[];                 // Substances réglementées
     personnel: PersonnelRole[];           // Personnel visé
-    exclusions: BilingualText[];          // Exclusions
+    exclusions: LocalBilingualText[];     // Exclusions
     thresholds: Array<{                  // Seuils déclencheurs
       parameter: string;
       value: number;
       unit: string;
-      condition: BilingualText;
+      condition: LocalBilingualText;
     }>;
   };
   requirements: Array<{                   // Exigences
     id: string;
     category: string;                     // Catégorie exigence
-    requirement: BilingualText;           // Exigence détaillée
+    requirement: LocalBilingualText;      // Exigence détaillée
     mandatory: boolean;                   // Obligatoire
     measurable: boolean;                  // Mesurable
-    criteria: BilingualText[];            // Critères conformité
+    criteria: LocalBilingualText[];       // Critères conformité
     verification: {                      // Méthodes vérification
       methods: string[];
       frequency: string;
@@ -106,33 +122,33 @@ export interface RegulatoryStandard extends Timestamped {
       documentation: string[];
     };
     deadlines: Array<{                   // Échéances
-      description: BilingualText;
+      description: LocalBilingualText;
       date: string;
       type: 'implementation' | 'compliance' | 'reporting' | 'renewal';
       grace_period?: number;              // Période grâce (jours)
     }>;
     penalties: Array<{                   // Pénalités non-conformité
       type: 'warning' | 'fine' | 'order' | 'prosecution' | 'closure';
-      description: BilingualText;
+      description: LocalBilingualText;
       amount?: {                        // Montant si amende
         min: number;
         max: number;
         currency: string;
       };
-      conditions: BilingualText[];
+      conditions: LocalBilingualText[];
     }>;
   }>;
   compliance: {                          // Conformité
     assessmentMethods: Array<{           // Méthodes évaluation
       method: string;
-      description: BilingualText;
+      description: LocalBilingualText;
       frequency: string;
       cost?: number;
       duration?: number;                  // Minutes
       expertise: string[];
     }>;
     documentation: Array<{               // Documentation requise
-      document: BilingualText;
+      document: LocalBilingualText;
       type: 'record' | 'certificate' | 'report' | 'plan' | 'log';
       retention: number;                  // Années conservation
       accessibility: string[];           // Qui doit y avoir accès
@@ -144,15 +160,15 @@ export interface RegulatoryStandard extends Timestamped {
       format: string;
       recipients: string[];
       deadline: string;                   // Délai soumission
-      consequences: BilingualText[];      // Conséquences retard
+      consequences: LocalBilingualText[]; // Conséquences retard
     };
     auditing: {                         // Audit/inspection
       frequency: string;
       notice: number;                     // Préavis (heures)
       scope: string[];
-      inspector_powers: BilingualText[];
+      inspector_powers: LocalBilingualText[];
       cooperation_required: boolean;
-      obstruction_penalties: BilingualText[];
+      obstruction_penalties: LocalBilingualText[];
     };
   };
   updates: {                             // Mises à jour
@@ -164,7 +180,7 @@ export interface RegulatoryStandard extends Timestamped {
       version: string;
       date: string;
       type: 'amendment' | 'clarification' | 'correction' | 'addition';
-      summary: BilingualText;
+      summary: LocalBilingualText;
       impact: 'major' | 'minor' | 'administrative';
       transitionPeriod?: number;          // Période transition (mois)
     }>;
@@ -176,40 +192,40 @@ export interface RegulatoryStandard extends Timestamped {
   };
   interpretation: {                      // Interprétation
     guidelines: Array<{                  // Guides d'interprétation
-      title: BilingualText;
+      title: LocalBilingualText;
       document: string;                   // URL document
-      summary: BilingualText;
-      examples: BilingualText[];
+      summary: LocalBilingualText;
+      examples: LocalBilingualText[];
     }>;
     precedents: Array<{                  // Précédents juridiques
       case: string;                       // Référence cause
       court: string;                      // Tribunal
       date: string;
-      ruling: BilingualText;              // Décision
-      impact: BilingualText;              // Impact sur interprétation
+      ruling: LocalBilingualText;         // Décision
+      impact: LocalBilingualText;         // Impact sur interprétation
     }>;
     clarifications: Array<{              // Clarifications officielles
-      question: BilingualText;
-      answer: BilingualText;
+      question: LocalBilingualText;
+      answer: LocalBilingualText;
       source: string;                     // Source clarification
       date: string;
       binding: boolean;                   // Caractère contraignant
     }>;
   };
   enforcement: {                         // Application
-    inspectorPowers: BilingualText[];     // Pouvoirs inspecteurs
+    inspectorPowers: LocalBilingualText[];// Pouvoirs inspecteurs
     violationTypes: Array<{              // Types violations
       type: string;
-      description: BilingualText;
+      description: LocalBilingualText;
       severity: 'minor' | 'moderate' | 'major' | 'critical';
-      typical_penalty: BilingualText;
+      typical_penalty: LocalBilingualText;
     }>;
     appealProcess: {                     // Processus appel
       available: boolean;
       timeLimit: number;                  // Délai (jours)
       authority: string;                  // Autorité d'appel
-      procedure: BilingualText;
-      costs: BilingualText;
+      procedure: LocalBilingualText;
+      costs: LocalBilingualText;
     };
     statistics: {                        // Statistiques application
       inspections_per_year: number;
@@ -222,22 +238,22 @@ export interface RegulatoryStandard extends Timestamped {
   resources: {                           // Ressources
     training: Array<{                    // Formations disponibles
       provider: string;
-      course: BilingualText;
+      course: LocalBilingualText;
       duration: number;                   // Heures
       cost?: number;
       certification: boolean;
       online: boolean;
     }>;
     tools: Array<{                       // Outils conformité
-      name: BilingualText;
+      name: LocalBilingualText;
       type: 'checklist' | 'calculator' | 'template' | 'software' | 'app';
       url?: string;
       cost: 'free' | 'paid' | 'subscription';
-      description: BilingualText;
+      description: LocalBilingualText;
     }>;
     consultants: Array<{                 // Consultants spécialisés
       organization: string;
-      services: BilingualText[];
+      services: LocalBilingualText[];
       certification: string[];
       contact: string;
       coverage: ProvinceCode[];
@@ -246,24 +262,24 @@ export interface RegulatoryStandard extends Timestamped {
   relatedStandards: Array<{              // Standards connexes
     standardId: string;
     relationship: 'references' | 'referenced_by' | 'complements' | 'supersedes' | 'superseded_by';
-    description: BilingualText;
+    description: LocalBilingualText;
     relevance: 'high' | 'medium' | 'low';
   }>;
 }
 
-export interface ComplianceRequirement extends Timestamped {
+export interface ComplianceRequirement extends LocalTimestamped {
   id: string;                             // ID exigence
   standardId: string;                     // ID standard parent
   code: string;                           // Code exigence
-  title: BilingualText;                   // Titre exigence
-  description: BilingualText;             // Description détaillée
+  title: LocalBilingualText;              // Titre exigence
+  description: LocalBilingualText;        // Description détaillée
   category: string;                       // Catégorie
   mandatory: boolean;                     // Caractère obligatoire
   applicability: {                       // Applicabilité
     workplaces: string[];                 // Milieux travail
     activities: string[];                 // Activités
-    conditions: BilingualText[];          // Conditions d'application
-    exemptions: BilingualText[];          // Exemptions
+    conditions: LocalBilingualText[];     // Conditions d'application
+    exemptions: LocalBilingualText[];     // Exemptions
     thresholds: Array<{                  // Seuils déclencheurs
       parameter: string;
       operator: '>' | '<' | '>=' | '<=' | '=' | '!=';
@@ -272,7 +288,7 @@ export interface ComplianceRequirement extends Timestamped {
     }>;
   };
   specifications: {                      // Spécifications techniques
-    technical: BilingualText[];           // Exigences techniques
+    technical: LocalBilingualText[];      // Exigences techniques
     performance: Array<{                 // Critères performance
       metric: string;
       target: number;
@@ -280,37 +296,37 @@ export interface ComplianceRequirement extends Timestamped {
       unit: string;
       measurement: string;
     }>;
-    qualitative: BilingualText[];         // Critères qualitatifs
+    qualitative: LocalBilingualText[];    // Critères qualitatifs
     standards_referenced: string[];       // Standards référencés
   };
   implementation: {                      // Implémentation
     timeline: Array<{                    // Échéancier
-      milestone: BilingualText;
+      milestone: LocalBilingualText;
       deadline: string;
       critical: boolean;
     }>;
     resources: Array<{                   // Ressources requises
       type: 'personnel' | 'equipment' | 'training' | 'documentation' | 'financial';
-      description: BilingualText;
+      description: LocalBilingualText;
       quantity?: number;
       cost?: number;
     }>;
     responsibilities: Array<{            // Responsabilités
       role: PersonnelRole;
-      tasks: BilingualText[];
-      authority: BilingualText[];
-      accountability: BilingualText[];
+      tasks: LocalBilingualText[];
+      authority: LocalBilingualText[];
+      accountability: LocalBilingualText[];
     }>;
     dependencies: Array<{                // Dépendances
       requirement: string;
       type: 'prerequisite' | 'concurrent' | 'subsequent';
-      description: BilingualText;
+      description: LocalBilingualText;
     }>;
   };
   verification: {                        // Vérification conformité
     methods: Array<{                     // Méthodes vérification
       method: string;
-      description: BilingualText;
+      description: LocalBilingualText;
       frequency: string;
       responsible: PersonnelRole;
       tools: string[];
@@ -318,26 +334,26 @@ export interface ComplianceRequirement extends Timestamped {
     }>;
     evidence: Array<{                    // Preuves requises
       type: 'document' | 'record' | 'measurement' | 'observation' | 'testimony';
-      description: BilingualText;
+      description: LocalBilingualText;
       format: string;
       retention: number;                  // Années
       access: PersonnelRole[];
     }>;
     nonCompliance: {                     // Non-conformité
-      indicators: BilingualText[];        // Indicateurs
-      consequences: BilingualText[];      // Conséquences
-      corrective_actions: BilingualText[];// Actions correctives
+      indicators: LocalBilingualText[];   // Indicateurs
+      consequences: LocalBilingualText[]; // Conséquences
+      corrective_actions: LocalBilingualText[];// Actions correctives
       timeframes: Array<{                // Délais correction
-        action: BilingualText;
+        action: LocalBilingualText;
         deadline: number;                 // Jours
-        escalation?: BilingualText;
+        escalation?: LocalBilingualText;
       }>;
     };
   };
   monitoring: {                          // Surveillance continue
     indicators: Array<{                  // Indicateurs performance
       name: string;
-      description: BilingualText;
+      description: LocalBilingualText;
       measurement: string;
       frequency: string;
       target?: number;
@@ -347,12 +363,12 @@ export interface ComplianceRequirement extends Timestamped {
       frequency: string;
       format: string;
       recipients: PersonnelRole[];
-      content: BilingualText[];
+      content: LocalBilingualText[];
     };
     review: {                           // Révision périodique
       frequency: string;
-      triggers: BilingualText[];          // Déclencheurs révision
-      scope: BilingualText[];             // Portée révision
+      triggers: LocalBilingualText[];     // Déclencheurs révision
+      scope: LocalBilingualText[];        // Portée révision
       participants: PersonnelRole[];
     };
   };
@@ -362,9 +378,9 @@ export interface SafetyStandard extends RegulatoryStandard {
   safetySpecific: {                      // Spécifique sécurité
     hazardCategories: Array<{            // Catégories dangers
       category: string;
-      description: BilingualText;
-      examples: BilingualText[];
-      controls: BilingualText[];
+      description: LocalBilingualText;
+      examples: LocalBilingualText[];
+      controls: LocalBilingualText[];
       monitoring: string[];
     }>;
     riskAssessment: {                    // Évaluation risques
@@ -373,7 +389,7 @@ export interface SafetyStandard extends RegulatoryStandard {
       frequency: string;
       qualifications: string[];
       documentation: boolean;
-      review_triggers: BilingualText[];
+      review_triggers: LocalBilingualText[];
     };
     incidentReporting: {                 // Signalement incidents
       mandatory: boolean;
@@ -388,16 +404,16 @@ export interface SafetyStandard extends RegulatoryStandard {
     };
     emergencyPreparedness: {             // Préparation urgence
       planRequired: boolean;
-      components: BilingualText[];
+      components: LocalBilingualText[];
       testing_frequency: string;
-      training_requirements: BilingualText[];
+      training_requirements: LocalBilingualText[];
       communication_systems: string[];
     };
     personalProtection: {                // Protection individuelle
       required: string[];                 // EPI requis
       standards: string[];                // Normes EPI
-      maintenance: BilingualText[];       // Entretien
-      replacement: BilingualText[];       // Remplacement
+      maintenance: LocalBilingualText[];  // Entretien
+      replacement: LocalBilingualText[];  // Remplacement
       training: boolean;                  // Formation utilisation
     };
   };
@@ -414,7 +430,7 @@ export interface IndustryStandard extends RegulatoryStandard {
       meeting_frequency: string;
     };
     consensusProcess: {                  // Processus consensus
-      development_stages: BilingualText[];
+      development_stages: LocalBilingualText[];
       public_review: boolean;
       comment_period: number;             // Jours
       balloting: boolean;
@@ -428,7 +444,7 @@ export interface IndustryStandard extends RegulatoryStandard {
     };
     maintenance: {                       // Maintenance standard
       review_cycle: number;               // Années
-      update_triggers: BilingualText[];
+      update_triggers: LocalBilingualText[];
       backward_compatibility: boolean;
       transition_periods: Array<{
         version: string;
@@ -445,18 +461,18 @@ export interface InternationalStandard extends RegulatoryStandard {
     adoptionStatus: {                    // Statut adoption
       canada: 'adopted' | 'modified' | 'referenced' | 'under_consideration' | 'rejected';
       provinces: Record<ProvinceCode, 'adopted' | 'modified' | 'referenced' | 'under_consideration' | 'rejected'>;
-      modifications: BilingualText[];     // Modifications canadiennes
+      modifications: LocalBilingualText[];// Modifications canadiennes
     };
     harmonization: {                     // Harmonisation
       regions: string[];                  // Régions harmonisées
       trade_agreements: string[];         // Accords commerciaux
       mutual_recognition: string[];       // Reconnaissance mutuelle
-      barriers: BilingualText[];          // Obstacles commerciaux
+      barriers: LocalBilingualText[];     // Obstacles commerciaux
     };
     implementation: {                    // Implémentation
       national_body: string;              // Organisme national
       local_adaptation: boolean;
-      support_documents: BilingualText[];
+      support_documents: LocalBilingualText[];
       training_available: boolean;
       certification_available: boolean;
     };
@@ -487,9 +503,9 @@ export interface ComplianceMatrix {
       requirementId: string;
       status: ComplianceStatus;
       evidence: string[];                 // Preuves conformité
-      gaps: BilingualText[];              // Écarts identifiés
-      recommendations: BilingualText[];   // Recommandations
-      priority: PriorityLevel;
+      gaps: LocalBilingualText[];         // Écarts identifiés
+      recommendations: LocalBilingualText[];// Recommandations
+      priority: LocalPriorityLevel;
       deadline?: string;                  // Échéance correction
     }>;
     overallCompliance: number;            // Conformité globale %
@@ -509,12 +525,12 @@ export interface ComplianceMatrix {
     };
   };
   actionPlan: Array<{                    // Plan d'action
-    priority: PriorityLevel;
-    action: BilingualText;
+    priority: LocalPriorityLevel;
+    action: LocalBilingualText;
     responsible: string;
     deadline: string;
     resources: string[];
-    success_criteria: BilingualText[];
+    success_criteria: LocalBilingualText[];
     dependencies: string[];
     status: 'planned' | 'in_progress' | 'completed' | 'overdue';
   }>;
@@ -533,14 +549,14 @@ export interface ComplianceMatrix {
   };
 }
 
-export interface RegulatoryAudit extends Timestamped {
+export interface RegulatoryAudit extends LocalTimestamped {
   id: string;                             // ID audit
   type: 'regulatory' | 'compliance' | 'certification' | 'surveillance' | 'special';
   initiator: {                          // Initiateur
     type: 'regulator' | 'organization' | 'third_party' | 'complaint';
     name: string;
     authority?: string;
-    mandate?: BilingualText;
+    mandate?: LocalBilingualText;
   };
   scope: {                               // Portée audit
     standards: string[];                  // Standards audités
@@ -553,7 +569,7 @@ export interface RegulatoryAudit extends Timestamped {
     sampling: {                          // Échantillonnage
       method: string;
       size: number;
-      criteria: BilingualText;
+      criteria: LocalBilingualText;
     };
   };
   methodology: {                         // Méthodologie
@@ -582,7 +598,7 @@ export interface RegulatoryAudit extends Timestamped {
     qualifications: string[];
     experience: string;
     independence: boolean;
-    conflicts?: BilingualText[];
+    conflicts?: LocalBilingualText[];
   }>;
   findings: Array<{                      // Constatations
     id: string;
@@ -590,21 +606,21 @@ export interface RegulatoryAudit extends Timestamped {
     severity: 'critical' | 'major' | 'minor' | 'observation';
     standard: string;                     // Standard concerné
     requirement: string;                  // Exigence
-    description: BilingualText;           // Description constatation
-    evidence: BilingualText[];            // Preuves
+    description: LocalBilingualText;      // Description constatation
+    evidence: LocalBilingualText[];       // Preuves
     location?: string;                    // Lieu
     personnel?: string[];                 // Personnel impliqué
     immediate_risk: boolean;              // Risque immédiat
-    regulatory_consequence: BilingualText;// Conséquence réglementaire
-    recommendation: BilingualText;        // Recommandation
+    regulatory_consequence: LocalBilingualText;// Conséquence réglementaire
+    recommendation: LocalBilingualText;   // Recommandation
   }>;
   enforcement: Array<{                   // Mesures d'application
     findingId: string;                    // Constatation liée
     action: 'warning' | 'order' | 'fine' | 'prosecution' | 'closure' | 'license_suspension';
-    description: BilingualText;           // Description mesure
+    description: LocalBilingualText;      // Description mesure
     amount?: number;                      // Montant si amende
     deadline?: string;                    // Échéance
-    appeal_rights: BilingualText;         // Droits d'appel
+    appeal_rights: LocalBilingualText;    // Droits d'appel
     compliance_verification: {           // Vérification conformité
       required: boolean;
       method: string;
@@ -612,15 +628,15 @@ export interface RegulatoryAudit extends Timestamped {
     };
   }>;
   report: {                              // Rapport audit
-    executive_summary: BilingualText;     // Résumé exécutif
-    methodology_summary: BilingualText;   // Résumé méthodologie
-    key_findings: BilingualText[];        // Constatations clés
+    executive_summary: LocalBilingualText;// Résumé exécutif
+    methodology_summary: LocalBilingualText;// Résumé méthodologie
+    key_findings: LocalBilingualText[];   // Constatations clés
     recommendations: Array<{             // Recommandations
-      priority: PriorityLevel;
-      recommendation: BilingualText;
+      priority: LocalPriorityLevel;
+      recommendation: LocalBilingualText;
       timeline: string;
       responsible: string[];
-      resources?: BilingualText;
+      resources?: LocalBilingualText;
     }>;
     distribution: {                      // Distribution
       recipients: string[];
@@ -630,14 +646,14 @@ export interface RegulatoryAudit extends Timestamped {
   };
   followUp: {                            // Suivi
     corrective_actions: Array<{          // Actions correctives
-      action: BilingualText;
+      action: LocalBilingualText;
       responsible: string;
       deadline: string;
       status: 'planned' | 'in_progress' | 'completed' | 'overdue';
       verification: {                    // Vérification
         method: string;
         date?: string;
-        result?: BilingualText;
+        result?: LocalBilingualText;
       };
     }>;
     monitoring: {                        // Surveillance
@@ -650,47 +666,47 @@ export interface RegulatoryAudit extends Timestamped {
       scheduled: boolean;
       date?: string;
       scope?: string[];
-      triggers?: BilingualText[];
+      triggers?: LocalBilingualText[];
     };
   };
 }
 
-export interface ViolationRecord extends Timestamped {
+export interface ViolationRecord extends LocalTimestamped {
   id: string;                             // ID violation
   organizationId: string;                 // ID organisation
   facilityId?: string;                    // ID installation
   violation: {                           // Violation
     standard: string;                     // Standard violé
     requirement: string;                  // Exigence
-    description: BilingualText;           // Description violation
+    description: LocalBilingualText;      // Description violation
     severity: 'minor' | 'moderate' | 'major' | 'critical';
     category: string;                     // Catégorie violation
     discovery: {                         // Découverte
       method: 'inspection' | 'audit' | 'complaint' | 'incident' | 'self_report';
       date: string;
       discoverer: string;
-      circumstances: BilingualText;
+      circumstances: LocalBilingualText;
     };
   };
   investigation: {                       // Enquête
     investigator: string;                 // Enquêteur
     start_date: string;                   // Début enquête
     completion_date?: string;             // Fin enquête
-    methodology: BilingualText;           // Méthodologie
+    methodology: LocalBilingualText;      // Méthodologie
     evidence: Array<{                    // Preuves
       type: 'document' | 'photo' | 'video' | 'testimony' | 'measurement';
-      description: BilingualText;
+      description: LocalBilingualText;
       source: string;
       date: string;
       reliability: 'high' | 'medium' | 'low';
     }>;
-    root_cause: BilingualText;            // Cause racine
-    contributing_factors: BilingualText[];// Facteurs contributeurs
+    root_cause: LocalBilingualText;       // Cause racine
+    contributing_factors: LocalBilingualText[];// Facteurs contributeurs
   };
   enforcement: {                         // Application
     actions: Array<{                     // Mesures prises
       type: 'warning' | 'order' | 'fine' | 'prosecution' | 'administrative';
-      description: BilingualText;
+      description: LocalBilingualText;
       date: string;
       amount?: number;                    // Montant si applicable
       deadline?: string;                  // Échéance
@@ -698,17 +714,17 @@ export interface ViolationRecord extends Timestamped {
     }>;
     appeals: Array<{                     // Appels
       date: string;
-      grounds: BilingualText;             // Motifs
+      grounds: LocalBilingualText;        // Motifs
       authority: string;                  // Instance d'appel
       status: 'pending' | 'upheld' | 'overturned' | 'modified';
-      decision?: BilingualText;
+      decision?: LocalBilingualText;
     }>;
   };
   remediation: {                         // Correction
-    immediate_actions: BilingualText[];   // Actions immédiates
+    immediate_actions: LocalBilingualText[];// Actions immédiates
     corrective_plan: {                   // Plan correctif
       actions: Array<{
-        action: BilingualText;
+        action: LocalBilingualText;
         responsible: string;
         deadline: string;
         status: 'planned' | 'in_progress' | 'completed' | 'overdue';
@@ -716,21 +732,21 @@ export interface ViolationRecord extends Timestamped {
           required: boolean;
           method?: string;
           date?: string;
-          result?: BilingualText;
+          result?: LocalBilingualText;
         };
       }>;
       completion_date?: string;
       effectiveness: {                   // Efficacité
         assessed: boolean;
         date?: string;
-        result?: BilingualText;
-        follow_up?: BilingualText[];
+        result?: LocalBilingualText;
+        follow_up?: LocalBilingualText[];
       };
     };
-    preventive_measures: BilingualText[]; // Mesures préventives
+    preventive_measures: LocalBilingualText[];// Mesures préventives
   };
   impact: {                              // Impact
-    operational: BilingualText;           // Impact opérationnel
+    operational: LocalBilingualText;      // Impact opérationnel
     financial: {                         // Impact financier
       fines: number;
       remediation_costs: number;
@@ -738,19 +754,19 @@ export interface ViolationRecord extends Timestamped {
       legal_costs: number;
       total: number;
     };
-    reputational: BilingualText;          // Impact réputationnel
-    regulatory: BilingualText;            // Impact réglementaire
+    reputational: LocalBilingualText;     // Impact réputationnel
+    regulatory: LocalBilingualText;       // Impact réglementaire
   };
-  lessons_learned: BilingualText[];       // Leçons apprises
+  lessons_learned: LocalBilingualText[];  // Leçons apprises
   status: 'open' | 'under_remediation' | 'closed' | 'appealed';
 }
 
 // =================== MISES À JOUR RÉGLEMENTAIRES ===================
 
-export interface RegulatoryUpdate extends Timestamped {
+export interface RegulatoryUpdate extends LocalTimestamped {
   id: string;                             // ID mise à jour
   type: 'new_regulation' | 'amendment' | 'clarification' | 'repeal' | 'consolidation';
-  priority: PriorityLevel;                // Priorité
+  priority: LocalPriorityLevel;           // Priorité
   source: {                              // Source
     authority: string;                    // Autorité
     document: string;                     // Document source
@@ -763,19 +779,19 @@ export interface RegulatoryUpdate extends Timestamped {
     change_type: 'new' | 'modified' | 'deleted' | 'superseded';
     sections: string[];                   // Sections affectées
     impact: 'major' | 'minor' | 'technical';
-    summary: BilingualText;
+    summary: LocalBilingualText;
   }>;
   changes: {                             // Changements
-    summary: BilingualText;               // Résumé changements
+    summary: LocalBilingualText;          // Résumé changements
     detailed: Array<{                    // Détails par section
       section: string;
-      old_text?: BilingualText;          // Ancien texte
-      new_text?: BilingualText;          // Nouveau texte
+      old_text?: LocalBilingualText;     // Ancien texte
+      new_text?: LocalBilingualText;     // Nouveau texte
       change_type: 'addition' | 'modification' | 'deletion';
-      rationale: BilingualText;          // Justification
+      rationale: LocalBilingualText;     // Justification
     }>;
-    technical_changes: BilingualText[];   // Changements techniques
-    procedural_changes: BilingualText[];  // Changements procéduraux
+    technical_changes: LocalBilingualText[];// Changements techniques
+    procedural_changes: LocalBilingualText[];// Changements procéduraux
   };
   impact_assessment: {                   // Évaluation impact
     affected_organizations: number;       // Organisations affectées
@@ -783,36 +799,36 @@ export interface RegulatoryUpdate extends Timestamped {
       low_estimate: number;
       high_estimate: number;
       currency: string;
-      basis: BilingualText;
+      basis: LocalBilingualText;
     };
     compliance_timeline: {               // Échéancier conformité
-      immediate: BilingualText[];         // Actions immédiates
+      immediate: LocalBilingualText[];    // Actions immédiates
       short_term: Array<{                // Court terme (3-6 mois)
-        action: BilingualText;
+        action: LocalBilingualText;
         deadline: string;
       }>;
       medium_term: Array<{               // Moyen terme (6-18 mois)
-        action: BilingualText;
+        action: LocalBilingualText;
         deadline: string;
       }>;
       long_term: Array<{                 // Long terme (18+ mois)
-        action: BilingualText;
+        action: LocalBilingualText;
         deadline: string;
       }>;
     };
-    benefits: BilingualText[];            // Bénéfices attendus
-    challenges: BilingualText[];          // Défis identifiés
+    benefits: LocalBilingualText[];       // Bénéfices attendus
+    challenges: LocalBilingualText[];     // Défis identifiés
   };
   implementation_support: {              // Support implémentation
     guidance_documents: Array<{          // Documents guide
-      title: BilingualText;
+      title: LocalBilingualText;
       url?: string;
-      summary: BilingualText;
+      summary: LocalBilingualText;
       audience: string[];
     }>;
     training_available: boolean;
     webinars: Array<{                    // Webinaires
-      title: BilingualText;
+      title: LocalBilingualText;
       date: string;
       duration: number;                   // Minutes
       registration_url?: string;
@@ -821,8 +837,8 @@ export interface RegulatoryUpdate extends Timestamped {
     consultation_available: boolean;
     transition_period: {                 // Période transition
       duration: number;                   // Mois
-      provisions: BilingualText[];        // Dispositions transitoires
-      enforcement_approach: BilingualText;
+      provisions: LocalBilingualText[];   // Dispositions transitoires
+      enforcement_approach: LocalBilingualText;
     };
   };
   notification: {                        // Notification
@@ -842,27 +858,27 @@ export interface RegulatoryUpdate extends Timestamped {
       methods: string[];
     };
     comments_received: number;            // Commentaires reçus
-    major_concerns: BilingualText[];      // Préoccupations majeures
-    modifications_made: BilingualText[];  // Modifications apportées
+    major_concerns: LocalBilingualText[]; // Préoccupations majeures
+    modifications_made: LocalBilingualText[];// Modifications apportées
   };
   tracking: {                            // Suivi
     awareness_rate: number;               // Taux sensibilisation %
     compliance_rate: number;              // Taux conformité %
-    implementation_challenges: BilingualText[];
-    success_stories: BilingualText[];
-    lessons_learned: BilingualText[];
+    implementation_challenges: LocalBilingualText[];
+    success_stories: LocalBilingualText[];
+    lessons_learned: LocalBilingualText[];
   };
 }
 
-export interface StandardRevision extends Timestamped {
+export interface StandardRevision extends LocalTimestamped {
   id: string;                             // ID révision
   standardId: string;                     // ID standard
   revision_type: 'periodic' | 'triggered' | 'emergency' | 'harmonization';
   trigger: {                             // Déclencheur
     type: 'scheduled' | 'incident' | 'technology' | 'best_practice' | 'stakeholder_request';
-    description: BilingualText;
+    description: LocalBilingualText;
     date: string;
-    urgency: PriorityLevel;
+    urgency: LocalPriorityLevel;
   };
   revision_process: {                    // Processus révision
     committee: {                         // Comité révision
@@ -886,8 +902,8 @@ export interface StandardRevision extends Timestamped {
         name: string;
         start_date: string;
         end_date: string;
-        deliverables: BilingualText[];
-        milestones: BilingualText[];
+        deliverables: LocalBilingualText[];
+        milestones: LocalBilingualText[];
       }>;
       total_duration: number;             // Mois
     };
@@ -896,65 +912,65 @@ export interface StandardRevision extends Timestamped {
     identification: Array<{              // Identification
       stakeholder: string;
       type: 'regulator' | 'industry' | 'labor' | 'academic' | 'public' | 'international';
-      interest: BilingualText;
+      interest: LocalBilingualText;
       influence: 'high' | 'medium' | 'low';
     }>;
     consultation: Array<{                // Consultation
       method: 'survey' | 'workshop' | 'interview' | 'focus_group' | 'public_hearing';
       participants: number;
       date: string;
-      key_input: BilingualText[];
+      key_input: LocalBilingualText[];
     }>;
     feedback_analysis: {                 // Analyse rétroaction
-      themes: BilingualText[];
-      consensus_areas: BilingualText[];
-      contentious_issues: BilingualText[];
-      resolution_approach: BilingualText[];
+      themes: LocalBilingualText[];
+      consensus_areas: LocalBilingualText[];
+      contentious_issues: LocalBilingualText[];
+      resolution_approach: LocalBilingualText[];
     };
   };
   research_findings: {                   // Résultats recherche
     literature_review: {                 // Revue littérature
       sources: number;
-      key_findings: BilingualText[];
-      gaps_identified: BilingualText[];
+      key_findings: LocalBilingualText[];
+      gaps_identified: LocalBilingualText[];
     };
     comparative_analysis: {              // Analyse comparative
       jurisdictions: string[];
-      approaches: BilingualText[];
-      best_practices: BilingualText[];
-      lessons_learned: BilingualText[];
+      approaches: LocalBilingualText[];
+      best_practices: LocalBilingualText[];
+      lessons_learned: LocalBilingualText[];
     };
     case_studies: Array<{                // Études de cas
-      title: BilingualText;
+      title: LocalBilingualText;
       organization: string;
       methodology: string;
-      findings: BilingualText[];
-      implications: BilingualText[];
+      findings: LocalBilingualText[];
+      implications: LocalBilingualText[];
     }>;
     expert_input: Array<{                // Avis experts
       expert: string;
       credentials: string;
-      opinion: BilingualText;
-      evidence: BilingualText[];
+      opinion: LocalBilingualText;
+      evidence: LocalBilingualText[];
     }>;
   };
   proposed_changes: Array<{              // Changements proposés
     section: string;
     change_type: 'addition' | 'modification' | 'deletion' | 'restructure';
-    current_provision: BilingualText;
-    proposed_provision: BilingualText;
-    justification: BilingualText;
+    current_provision: LocalBilingualText;
+    proposed_provision: LocalBilingualText;
+    justification: LocalBilingualText;
     impact_assessment: {
-      operational: BilingualText;
-      financial: BilingualText;
-      safety: BilingualText;
-      compliance: BilingualText;
+      operational: LocalBilingualText;
+      financial: LocalBilingualText;
+      safety: LocalBilingualText;
+      compliance: LocalBilingualText;
     };
     stakeholder_support: {
       supporters: string[];
       opponents: string[];
       neutral: string[];
-      key_arguments: BilingualText[];
+      key_arguments: LocalBilingualText[];
     };
   }>;
   validation: {                          // Validation
@@ -962,19 +978,19 @@ export interface StandardRevision extends Timestamped {
       conducted: boolean;
       sites?: number;
       duration?: number;                  // Mois
-      results?: BilingualText[];
+      results?: LocalBilingualText[];
     };
     peer_review: {                       // Révision par pairs
       reviewers: string[];
       methodology: string;
-      findings: BilingualText[];
-      recommendations: BilingualText[];
+      findings: LocalBilingualText[];
+      recommendations: LocalBilingualText[];
     };
     regulatory_review: {                 // Révision réglementaire
       authority: string;
-      scope: BilingualText;
+      scope: LocalBilingualText;
       approval_status: 'pending' | 'approved' | 'conditional' | 'rejected';
-      conditions?: BilingualText[];
+      conditions?: LocalBilingualText[];
     };
   };
   finalization: {                        // Finalisation
@@ -996,8 +1012,8 @@ export interface StandardRevision extends Timestamped {
     implementation: {                    // Implémentation
       effective_date: string;
       transition_period: number;          // Mois
-      support_materials: BilingualText[];
-      training_plan: BilingualText;
+      support_materials: LocalBilingualText[];
+      training_plan: LocalBilingualText;
     };
   };
   post_implementation: {                 // Post-implémentation
@@ -1009,22 +1025,22 @@ export interface StandardRevision extends Timestamped {
     };
     evaluation: {                        // Évaluation
       schedule: string;
-      criteria: BilingualText[];
+      criteria: LocalBilingualText[];
       methodology: string;
       stakeholders: string[];
     };
     continuous_improvement: {            // Amélioration continue
       feedback_mechanisms: string[];
-      review_triggers: BilingualText[];
-      update_process: BilingualText;
+      review_triggers: LocalBilingualText[];
+      update_process: LocalBilingualText;
     };
   };
 }
 
-export interface ComplianceAlert extends Timestamped {
+export interface ComplianceAlert extends LocalTimestamped {
   id: string;                             // ID alerte
   type: 'regulatory_change' | 'deadline_approaching' | 'non_compliance' | 'audit_required' | 'training_due';
-  priority: PriorityLevel;                // Priorité
+  priority: LocalPriorityLevel;           // Priorité
   severity: 'info' | 'warning' | 'critical' | 'urgent';
   scope: {                               // Portée
     organizations: string[];              // Organisations affectées
@@ -1033,34 +1049,34 @@ export interface ComplianceAlert extends Timestamped {
     activities: string[];                 // Activités affectées
   };
   message: {                             // Message
-    title: BilingualText;                 // Titre alerte
-    summary: BilingualText;               // Résumé
-    details: BilingualText;               // Détails complets
-    implications: BilingualText[];        // Implications
-    recommendations: BilingualText[];     // Recommandations
+    title: LocalBilingualText;            // Titre alerte
+    summary: LocalBilingualText;          // Résumé
+    details: LocalBilingualText;          // Détails complets
+    implications: LocalBilingualText[];   // Implications
+    recommendations: LocalBilingualText[];// Recommandations
   };
   timeline: {                            // Échéancier
     effective_date?: string;              // Date entrée vigueur
     deadline?: string;                    // Échéance action
     grace_period?: number;                // Période grâce (jours)
     milestone_dates: Array<{             // Dates jalons
-      milestone: BilingualText;
+      milestone: LocalBilingualText;
       date: string;
       critical: boolean;
     }>;
   };
   actions_required: Array<{              // Actions requises
-    action: BilingualText;
+    action: LocalBilingualText;
     responsible: PersonnelRole[];
     deadline: string;
-    priority: PriorityLevel;
+    priority: LocalPriorityLevel;
     estimated_effort: string;
     dependencies: string[];
-    resources: BilingualText[];
+    resources: LocalBilingualText[];
   }>;
   resources: {                           // Ressources
     guidance_documents: Array<{
-      title: BilingualText;
+      title: LocalBilingualText;
       url?: string;
       type: 'guide' | 'checklist' | 'template' | 'faq';
     }>;
@@ -1072,7 +1088,7 @@ export interface ComplianceAlert extends Timestamped {
       contact: string;
     }>;
     tools_available: Array<{
-      name: BilingualText;
+      name: LocalBilingualText;
       type: 'software' | 'calculator' | 'checklist';
       url?: string;
       cost: 'free' | 'paid';
@@ -1087,18 +1103,18 @@ export interface ComplianceAlert extends Timestamped {
     progress: {                          // Progrès
       tracked: boolean;
       milestones: Array<{
-        description: BilingualText;
+        description: LocalBilingualText;
         target_date: string;
         status: 'pending' | 'in_progress' | 'completed' | 'overdue';
         completion_date?: string;
       }>;
     };
     escalation: {                        // Escalade
-      triggers: BilingualText[];
+      triggers: LocalBilingualText[];
       levels: Array<{
         level: string;
         responsible: PersonnelRole;
-        actions: BilingualText[];
+        actions: LocalBilingualText[];
         timeframe: number;                // Heures
       }>;
     };
@@ -1113,39 +1129,22 @@ export interface ComplianceAlert extends Timestamped {
     reminders: Array<{                   // Rappels
       date: string;
       type: 'gentle' | 'firm' | 'urgent';
-      message: BilingualText;
+      message: LocalBilingualText;
     }>;
     status_updates: Array<{              // Mises à jour statut
       date: string;
-      status: BilingualText;
-      details: BilingualText;
-      next_steps: BilingualText[];
+      status: LocalBilingualText;
+      details: LocalBilingualText;
+      next_steps: LocalBilingualText[];
     }>;
     closure: {                           // Fermeture
-      criteria: BilingualText[];
+      criteria: LocalBilingualText[];
       verification: string;
       documentation: boolean;
     };
   };
 }
 
-// =================== EXPORT TYPES ===================
-
-export type {
-  RegulatoryAuthority,
-  StandardType,
-  ComplianceStatus,
-  EnforcementLevel,
-  JurisdictionCode,
-  RegulatoryStandard,
-  ComplianceRequirement,
-  SafetyStandard,
-  IndustryStandard,
-  InternationalStandard,
-  ComplianceMatrix,
-  RegulatoryAudit,
-  ViolationRecord,
-  RegulatoryUpdate,
-  StandardRevision,
-  ComplianceAlert
-};
+// =================== EXPORTS (SANS CONFLIT) ===================
+// Note: Tous les types sont déjà exportés individuellement ci-dessus
+// Pas besoin de re-export groupé qui causerait des conflits d'export
