@@ -2,13 +2,70 @@
 // Helper Bluetooth pour connexion détecteurs atmosphériques et équipements de sécurité
 "use client";
 
-import type { 
-  AtmosphericReading,
-  GasType,
-  AlarmLevel,
-  BilingualText,
-  NumericValue
-} from '../../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface LocalBilingualText {
+  fr: string;
+  en: string;
+}
+
+export type LocalGasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export type LocalAlarmLevel = 'safe' | 'low' | 'medium' | 'high' | 'danger' | 'critical' | 'extreme';
+
+export interface LocalNumericValue {
+  value: number;
+  unit: string;
+  precision?: number;
+  range?: { min: number; max: number; };
+}
+
+export interface LocalAtmosphericReading {
+  id: string;
+  timestamp: number;
+  gasType: LocalGasType;
+  value: number;
+  unit: string;
+  alarmLevel: LocalAlarmLevel;
+  confidence: number;
+  location: {
+    coordinates: any;
+    point: string;
+  };
+  environmentalConditions: {
+    temperature: number;
+    humidity: number;
+    pressure: number;
+  };
+  metadata: {
+    equipment: {
+      model: string;
+      serialNumber: string;
+      lastCalibration: number;
+      batteryLevel: number;
+    };
+    operator: string;
+    qualityAssurance: {
+      validated: boolean;
+      flagged: boolean;
+      notes: string[];
+    };
+  };
+}
 
 // =================== INTERFACES BLUETOOTH ===================
 
@@ -53,8 +110,8 @@ export type BluetoothConnectionStatus =
 
 export interface BluetoothCapability {
   type: 'gas_detection' | 'environmental' | 'communication' | 'control' | 'data_storage';
-  gases?: GasType[];
-  ranges?: Array<{ gas: GasType; min: number; max: number; unit: string; }>;
+  gases?: LocalGasType[];
+  ranges?: Array<{ gas: LocalGasType; min: number; max: number; unit: string; }>;
   accuracy?: number;
   responseTime?: number;
   features: string[];
@@ -64,7 +121,7 @@ export interface BluetoothCharacteristic {
   uuid: string;
   name: string;
   properties: ('read' | 'write' | 'notify' | 'indicate')[];
-  description: BilingualText;
+  description: LocalBilingualText;
   dataType: 'string' | 'number' | 'boolean' | 'bytes' | 'json';
   format?: string;
   unit?: string;
@@ -143,10 +200,10 @@ export interface BluetoothReading {
 
 export interface BluetoothReadingData {
   gasReadings?: Array<{
-    gasType: GasType;
+    gasType: LocalGasType;
     value: number;
     unit: string;
-    alarmLevel: AlarmLevel;
+    alarmLevel: LocalAlarmLevel;
     confidence: number;
   }>;
   environmental?: {
@@ -179,7 +236,7 @@ export interface BluetoothReadingQuality {
 
 export interface BluetoothCalibration {
   deviceId: string;
-  gasType: GasType;
+  gasType: LocalGasType;
   referenceValue: number;
   measuredValue: number;
   deviation: number;
@@ -458,7 +515,7 @@ export class BluetoothManager {
    */
   async calibrateDevice(
     deviceId: string,
-    gasType: GasType,
+    gasType: LocalGasType,
     referenceValue: number,
     conditions: { temperature: number; humidity: number; pressure: number; }
   ): Promise<BluetoothCalibration> {
@@ -551,7 +608,7 @@ export class BluetoothManager {
   convertToAtmosphericReading(
     reading: BluetoothReading,
     location: { coordinates: any; point: string; }
-  ): AtmosphericReading[] {
+  ): LocalAtmosphericReading[] {
     if (!reading.data.gasReadings) return [];
 
     return reading.data.gasReadings.map(gasReading => ({
@@ -781,10 +838,10 @@ export class BluetoothManager {
     return {
       gasReadings: [
         {
-          gasType: 'oxygen' as GasType,
+          gasType: 'oxygen' as LocalGasType,
           value: 20.9,
           unit: '%',
-          alarmLevel: 'safe' as AlarmLevel,
+          alarmLevel: 'safe' as LocalAlarmLevel,
           confidence: 0.95
         }
       ],
@@ -855,7 +912,7 @@ export class BluetoothManager {
     }, this.readingInterval);
   }
 
-  private async performCalibration(deviceId: string, gasType: GasType, referenceValue: number): Promise<number> {
+  private async performCalibration(deviceId: string, gasType: LocalGasType, referenceValue: number): Promise<number> {
     // TODO: implémenter vraie calibration
     const variance = (Math.random() - 0.5) * 0.1; // ±5% variance
     return referenceValue * (1 + variance);
@@ -951,10 +1008,10 @@ export async function connectAtmosphericDetector(deviceId: string): Promise<bool
 /**
  * Lire données atmosphériques de tous les détecteurs connectés
  */
-export async function readAllAtmosphericData(): Promise<AtmosphericReading[]> {
+export async function readAllAtmosphericData(): Promise<LocalAtmosphericReading[]> {
   const manager = getBluetoothManager();
   const detectors = manager.getAtmosphericDetectors();
-  const allReadings: AtmosphericReading[] = [];
+  const allReadings: LocalAtmosphericReading[] = [];
 
   for (const detector of detectors) {
     try {
