@@ -383,7 +383,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     validationResults,
     isValidating: validationLoading,
     setValidationResults
-  } = usePermitValidation(permits, setPermits, province);
+  } = usePermitValidation();
 
   const {
     surveillancePermits,
