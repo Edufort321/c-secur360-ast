@@ -384,7 +384,7 @@ export class PDFGenerator {
       personnel: personnel.length,
       summary: {
         totalPermits: permits.length,
-        activePermits: permits.filter(p => p.status === 'active').length,
+        activePermits: permits.filter(p => p.status === 'approved').length,
         criticalIncidents: incidents.filter(i => i.severity === 'critical').length
       }
     };
