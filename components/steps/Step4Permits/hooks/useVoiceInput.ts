@@ -4,6 +4,49 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 
+// =================== DÉCLARATIONS TYPESCRIPT ===================
+
+// Déclarations pour Web Speech API
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+  
+  interface Navigator {
+    vibrate(pattern: number | number[]): boolean;
+  }
+}
+
+// Interface pour SpeechRecognitionResult
+interface SpeechRecognitionResult {
+  readonly length: number;
+  readonly isFinal: boolean;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  readonly transcript: string;
+  readonly confidence: number;
+}
+
+interface SpeechRecognitionResultList {
+  readonly length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionEvent {
+  readonly resultIndex: number;
+  readonly results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent {
+  readonly error: string;
+  readonly message: string;
+}
+
 // =================== INTERFACES ===================
 
 interface VoiceInputConfig {
@@ -178,7 +221,7 @@ const DEFAULT_VOICE_COMMANDS: VoiceCommand[] = [
     parameters: [{
       name: 'level',
       type: 'number',
-      pattern: /(\\d+(?:\\.\\d+)?)/,
+      pattern: /(\d+(?:\.\d+)?)/,
       required: true,
       validation: (val) => val >= 0 && val <= 100
     }],
@@ -305,8 +348,8 @@ export function useVoiceInput(config: VoiceInputConfig = {}) {
   
   // Vérifier compatibilité navigateur
   const checkBrowserCompatibility = useCallback((): BrowserCompatibility => {
-    const hasWebkitSpeech = 'webkitSpeechRecognition' in window;
-    const hasSpeech = 'SpeechRecognition' in window;
+    const hasWebkitSpeech = typeof window !== 'undefined' && 'webkitSpeechRecognition' in window;
+    const hasSpeech = typeof window !== 'undefined' && 'SpeechRecognition' in window;
     
     return {
       hasSpeechRecognition: hasSpeech,
@@ -391,7 +434,7 @@ export function useVoiceInput(config: VoiceInputConfig = {}) {
             execution.success = true;
             
             // Feedback haptique si activé
-            if (finalConfig.enableHapticFeedback && 'vibrate' in navigator) {
+            if (finalConfig.enableHapticFeedback && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
               navigator.vibrate([50, 100, 50]); // Pattern succès commande
             }
             
@@ -431,6 +474,11 @@ export function useVoiceInput(config: VoiceInputConfig = {}) {
   
   // Initialiser reconnaissance vocale
   const initializeRecognition = useCallback(() => {
+    if (typeof window === 'undefined') {
+      setError('Speech recognition only available in browser environment');
+      return null;
+    }
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
     if (!SpeechRecognition) {
@@ -456,7 +504,7 @@ export function useVoiceInput(config: VoiceInputConfig = {}) {
       setCurrentSession(session);
       
       // Démarrer enregistrement audio si supporté
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia({ audio: true })
           .then(stream => {
             const mediaRecorder = new MediaRecorder(stream);
@@ -477,7 +525,7 @@ export function useVoiceInput(config: VoiceInputConfig = {}) {
       }
     };
     
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       setIsProcessing(true);
       
       let interimTranscript = '';
@@ -544,7 +592,7 @@ export function useVoiceInput(config: VoiceInputConfig = {}) {
       setIsProcessing(false);
     };
     
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       setError(`Speech recognition error: ${event.error}`);
       setIsListening(false);
       setIsProcessing(false);
