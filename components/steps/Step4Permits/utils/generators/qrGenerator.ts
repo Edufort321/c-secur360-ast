@@ -1016,8 +1016,8 @@ export async function validateScannedQR(qrCodeData: string): Promise<{
 
 // =================== EXPORT ===================
 
+export default QRGenerator;
 export {
-  QRGenerator,
   type QRCodeOptions,
   type ConfinedSpaceData,
   type QRCodeData,
