@@ -2,18 +2,100 @@
 // Générateur de rapports analytics avancés pour système de permis de travail
 "use client";
 
-import type { 
-  LegalPermit,
-  PermitFormData,
-  ElectronicSignature,
-  AtmosphericReading,
-  Personnel,
-  ViolationRecord,
-  ComplianceMatrix,
-  BilingualText,
-  Timestamped
-} from '../../types';
+// Import des types depuis les bons fichiers
+import type { LegalPermit } from '../../types/permits';
 import type { ProvinceCode } from '../../constants/provinces';
+
+// =================== TYPES LOCAUX POUR REPORT GENERATOR ===================
+
+export interface LocalBilingualText {
+  fr: string;
+  en: string;
+}
+
+export interface LocalTimestamped {
+  createdAt: number;
+  updatedAt?: number;
+}
+
+export interface LocalPermitFormData {
+  permitId?: string;
+  id?: string;
+  supervisor?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  entrants?: Array<{
+    id: string;
+    name: string;
+    role: string;
+  }>;
+  location?: {
+    description: string;
+    address: string;
+  };
+  hazards?: Array<{
+    id: string;
+    type: string;
+    severity: string;
+  }>;
+}
+
+export interface LocalElectronicSignature {
+  id: string;
+  documentId: string;
+  signerId: string;
+  signerName: string;
+  timestamp: number;
+  status: 'pending' | 'signed' | 'verified' | 'rejected';
+  method: string;
+}
+
+export interface LocalAtmosphericReading {
+  id: string;
+  timestamp: number;
+  gasType: string;
+  value: number;
+  unit: string;
+  alarmLevel: string;
+  createdAt?: number;
+}
+
+export interface LocalPersonnel {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  phone?: string;
+  certifications?: Array<{
+    id: string;
+    name: string;
+    issuer: string;
+    expiryDate: string;
+  }>;
+}
+
+export interface LocalViolationRecord {
+  id: string;
+  type: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  date: string;
+  createdAt?: number;
+}
+
+export interface LocalComplianceMatrix {
+  overall: number;
+  categories: Array<{
+    name: string;
+    score: number;
+    items: Array<{
+      requirement: string;
+      status: 'compliant' | 'non_compliant' | 'partial';
+    }>;
+  }>;
+}
 
 // =================== TYPES RAPPORTS ===================
 
@@ -66,8 +148,8 @@ export interface ReportOptions {
 export interface ReportData {
   metadata: {
     id: string;                           // ID rapport
-    title: BilingualText;                 // Titre rapport
-    subtitle?: BilingualText;             // Sous-titre
+    title: LocalBilingualText;                 // Titre rapport
+    subtitle?: LocalBilingualText;             // Sous-titre
     generated: number;                    // Timestamp génération
     period: ReportOptions['period'];      // Période couverte
     generator: string;                    // Générateur (utilisateur/système)
@@ -92,16 +174,16 @@ export interface ReportData {
 
 export interface ReportSection {
   id: string;                             // ID section
-  title: BilingualText;                   // Titre section
+  title: LocalBilingualText;                   // Titre section
   type: 'summary' | 'analysis' | 'trends' | 'compliance' | 'incidents' | 'recommendations' | 'financial' | 'operational';
   priority: 'high' | 'medium' | 'low';    // Priorité section
   content: {
-    text?: BilingualText;                 // Texte descriptif
+    text?: LocalBilingualText;                 // Texte descriptif
     metrics?: ReportMetric[];             // Métriques
     charts?: ReportChart[];               // Graphiques
     tables?: ReportTable[];               // Tableaux
     maps?: ReportMap[];                   // Cartes
-    insights?: BilingualText[];           // Insights clés
+    insights?: LocalBilingualText[];           // Insights clés
     recommendations?: ReportRecommendation[]; // Recommandations
   };
   styling?: {
@@ -113,7 +195,7 @@ export interface ReportSection {
 
 export interface ReportMetric {
   id: string;                             // ID métrique
-  name: BilingualText;                    // Nom métrique
+  name: LocalBilingualText;                    // Nom métrique
   value: number;                          // Valeur
   unit: string;                           // Unité
   trend: {
@@ -123,7 +205,7 @@ export interface ReportMetric {
   };
   target?: number;                        // Cible/objectif
   status: 'excellent' | 'good' | 'warning' | 'critical'; // Statut
-  context: BilingualText;                 // Contexte/explication
+  context: LocalBilingualText;                 // Contexte/explication
   drilldown?: {                          // Détail disponible
     available: boolean;
     data?: any[];
@@ -132,7 +214,7 @@ export interface ReportMetric {
 
 export interface ReportChart {
   id: string;                             // ID graphique
-  title: BilingualText;                   // Titre graphique
+  title: LocalBilingualText;                   // Titre graphique
   type: 'line' | 'bar' | 'pie' | 'area' | 'scatter' | 'heatmap' | 'gauge' | 'funnel' | 'radar';
   data: {
     labels: string[];                     // Étiquettes
@@ -155,13 +237,13 @@ export interface ReportChart {
       color?: string;
     }>;
   };
-  insights?: BilingualText[];             // Insights graphique
+  insights?: LocalBilingualText[];             // Insights graphique
 }
 
 export interface ReportTable {
   id: string;                             // ID tableau
-  title: BilingualText;                   // Titre tableau
-  headers: BilingualText[];               // En-têtes
+  title: LocalBilingualText;                   // Titre tableau
+  headers: LocalBilingualText[];               // En-têtes
   rows: any[][];                          // Données lignes
   formatting?: {
     columnWidths?: number[];              // Largeurs colonnes
@@ -189,7 +271,7 @@ export interface ReportTable {
 
 export interface ReportMap {
   id: string;                             // ID carte
-  title: BilingualText;                   // Titre carte
+  title: LocalBilingualText;                   // Titre carte
   type: 'heat' | 'cluster' | 'choropleth' | 'point';
   data: Array<{                          // Points données
     lat: number;
@@ -205,15 +287,15 @@ export interface ReportMap {
     layers: string[];                     // Couches actives
     legend: boolean;                      // Légende
   };
-  insights?: BilingualText[];             // Insights géographiques
+  insights?: LocalBilingualText[];             // Insights géographiques
 }
 
 export interface ReportRecommendation {
   id: string;                             // ID recommandation
   priority: 'critical' | 'high' | 'medium' | 'low';
   category: 'safety' | 'compliance' | 'efficiency' | 'cost' | 'quality' | 'training';
-  title: BilingualText;                   // Titre
-  description: BilingualText;             // Description
+  title: LocalBilingualText;                   // Titre
+  description: LocalBilingualText;             // Description
   impact: {                              // Impact estimé
     safety?: number;                      // Score sécurité (0-100)
     cost?: number;                        // Coût/économie ($)
@@ -223,12 +305,12 @@ export interface ReportRecommendation {
   implementation: {                      // Implémentation
     effort: 'low' | 'medium' | 'high';   // Effort requis
     timeline: string;                     // Échéancier
-    resources: BilingualText[];           // Ressources requises
+    resources: LocalBilingualText[];           // Ressources requises
     responsible?: string;                 // Responsable
     dependencies?: string[];              // Dépendances
   };
   metrics: {                             // Métriques succès
-    kpis: BilingualText[];                // KPIs mesure
+    kpis: LocalBilingualText[];                // KPIs mesure
     targets: Array<{                     // Cibles
       metric: string;
       target: number;
@@ -236,7 +318,7 @@ export interface ReportRecommendation {
     }>;
   };
   evidence: {                            // Preuves/justification
-    data: BilingualText[];                // Données support
+    data: LocalBilingualText[];                // Données support
     sources: string[];                    // Sources
     confidence: number;                   // Niveau confiance %
   };
@@ -244,7 +326,7 @@ export interface ReportRecommendation {
 
 export interface ReportAppendix {
   id: string;                             // ID annexe
-  title: BilingualText;                   // Titre annexe
+  title: LocalBilingualText;                   // Titre annexe
   type: 'data' | 'methodology' | 'glossary' | 'references' | 'calculations' | 'raw_data';
   content: any;                           // Contenu annexe
   pagination?: boolean;                   // Pagination si long
@@ -252,8 +334,8 @@ export interface ReportAppendix {
 
 export interface ReportTemplate {
   id: string;                             // ID template
-  name: BilingualText;                    // Nom template
-  description: BilingualText;             // Description
+  name: LocalBilingualText;                    // Nom template
+  description: LocalBilingualText;             // Description
   type: ReportOptions['type'];            // Type rapport
   sections: Array<{                      // Sections prédéfinies
     sectionType: ReportSection['type'];
@@ -268,7 +350,7 @@ export interface ReportTemplate {
   };
   compliance?: {                         // Conformité
     standards: string[];                  // Standards respectés
-    requirements: BilingualText[];        // Exigences
+    requirements: LocalBilingualText[];        // Exigences
     approvalRequired?: boolean;           // Approbation requise
   };
 }
@@ -316,7 +398,7 @@ export class ReportGenerator {
   async generateSafetyReport(
     permits: LegalPermit[],
     incidents: any[],
-    atmosphericData: AtmosphericReading[],
+    atmosphericData: LocalAtmosphericReading[],
     options: Partial<ReportOptions> = {}
   ): Promise<ReportGenerationResult> {
     const reportOptions = this.mergeOptions('safety', options);
@@ -370,8 +452,8 @@ export class ReportGenerator {
    * Génère un rapport de conformité
    */
   async generateComplianceReport(
-    complianceMatrix: ComplianceMatrix,
-    violations: ViolationRecord[],
+    complianceMatrix: LocalComplianceMatrix,
+    violations: LocalViolationRecord[],
     audits: any[],
     options: Partial<ReportOptions> = {}
   ): Promise<ReportGenerationResult> {
@@ -422,7 +504,7 @@ export class ReportGenerator {
    */
   async generateOperationalReport(
     permits: LegalPermit[],
-    personnel: Personnel[],
+    personnel: LocalPersonnel[],
     equipment: any[],
     options: Partial<ReportOptions> = {}
   ): Promise<ReportGenerationResult> {
@@ -474,8 +556,8 @@ export class ReportGenerator {
     allData: {
       permits: LegalPermit[];
       incidents: any[];
-      compliance: ComplianceMatrix;
-      personnel: Personnel[];
+      compliance: LocalComplianceMatrix;
+      personnel: LocalPersonnel[];
       financial: any[];
     },
     options: Partial<ReportOptions> = {}
@@ -576,7 +658,7 @@ export class ReportGenerator {
   private async collectSafetyData(
     permits: LegalPermit[],
     incidents: any[],
-    atmosphericData: AtmosphericReading[],
+    atmosphericData: LocalAtmosphericReading[],
     options: ReportOptions
   ): Promise<any> {
     // Filtrer les données selon la période et les filtres
@@ -587,8 +669,8 @@ export class ReportGenerator {
     // Calculer les métriques de sécurité
     const summary = {
       totalPermits: filteredPermits.length,
-      activePermits: filteredPermits.filter(p => p.status === 'active').length,
-      completedPermits: filteredPermits.filter(p => p.status === 'completed').length,
+      activePermits: filteredPermits.filter(p => p.status === 'approved').length,
+      completedPermits: filteredPermits.filter(p => p.status === 'archived').length,
       overduePermits: filteredPermits.filter(p => this.isOverdue(p)).length,
       incidentCount: filteredIncidents.length,
       complianceRate: this.calculateComplianceRate(filteredPermits),
@@ -617,8 +699,8 @@ export class ReportGenerator {
   }
 
   private async collectComplianceData(
-    complianceMatrix: ComplianceMatrix,
-    violations: ViolationRecord[],
+    complianceMatrix: LocalComplianceMatrix,
+    violations: LocalViolationRecord[],
     audits: any[],
     options: ReportOptions
   ): Promise<any> {
@@ -652,7 +734,7 @@ export class ReportGenerator {
 
   private async collectOperationalData(
     permits: LegalPermit[],
-    personnel: Personnel[],
+    personnel: LocalPersonnel[],
     equipment: any[],
     options: ReportOptions
   ): Promise<any> {
@@ -660,8 +742,8 @@ export class ReportGenerator {
     
     const summary = {
       totalPermits: filteredPermits.length,
-      activePermits: filteredPermits.filter(p => p.status === 'active').length,
-      completedPermits: filteredPermits.filter(p => p.status === 'completed').length,
+      activePermits: filteredPermits.filter(p => p.status === 'approved').length,
+      completedPermits: filteredPermits.filter(p => p.status === 'archived').length,
       overduePermits: filteredPermits.filter(p => this.isOverdue(p)).length,
       incidentCount: 0,
       complianceRate: this.calculateComplianceRate(filteredPermits),
@@ -693,8 +775,8 @@ export class ReportGenerator {
     
     const summary = {
       totalPermits: filteredPermits.length,
-      activePermits: filteredPermits.filter(p => p.status === 'active').length,
-      completedPermits: filteredPermits.filter(p => p.status === 'completed').length,
+      activePermits: filteredPermits.filter(p => p.status === 'approved').length,
+      completedPermits: filteredPermits.filter(p => p.status === 'archived').length,
       overduePermits: filteredPermits.filter(p => this.isOverdue(p)).length,
       incidentCount: filteredIncidents.length,
       complianceRate: this.calculateOverallComplianceRate(allData.compliance),
@@ -1209,22 +1291,22 @@ export class ReportGenerator {
 
   // Méthodes de génération de contenu (stubs pour exemple)
   private generateSafetyMetrics(data: any): ReportMetric[] { return []; }
-  private generateSafetyInsights(data: any): BilingualText[] { return []; }
+  private generateSafetyInsights(data: any): LocalBilingualText[] { return []; }
   private generateIncidentCharts(incidents: any[]): ReportChart[] { return []; }
   private generateIncidentTables(incidents: any[]): ReportTable[] { return []; }
-  private generateIncidentInsights(incidents: any[]): BilingualText[] { return []; }
+  private generateIncidentInsights(incidents: any[]): LocalBilingualText[] { return []; }
   private generateAtmosphericCharts(analysis: any): ReportChart[] { return []; }
-  private generateAtmosphericInsights(analysis: any): BilingualText[] { return []; }
+  private generateAtmosphericInsights(analysis: any): LocalBilingualText[] { return []; }
   private generateSafetyRecommendations(data: any): ReportRecommendation[] { return []; }
   private generateComplianceMetrics(data: any): ReportMetric[] { return []; }
   private generateComplianceCharts(data: any): ReportChart[] { return []; }
-  private generateComplianceInsights(data: any): BilingualText[] { return []; }
+  private generateComplianceInsights(data: any): LocalBilingualText[] { return []; }
   private generateViolationTables(violations: any[]): ReportTable[] { return []; }
   private generateViolationCharts(trends: any): ReportChart[] { return []; }
   private generateComplianceRecommendations(data: any): ReportRecommendation[] { return []; }
   private generateEfficiencyMetrics(efficiency: any): ReportMetric[] { return []; }
   private generateEfficiencyCharts(efficiency: any): ReportChart[] { return []; }
-  private generateEfficiencyInsights(efficiency: any): BilingualText[] { return []; }
+  private generateEfficiencyInsights(efficiency: any): LocalBilingualText[] { return []; }
   private generateResourceCharts(utilization: any): ReportChart[] { return []; }
   private generateResourceTables(utilization: any): ReportTable[] { return []; }
   private generateExecutiveMetrics(kpis: any): ReportMetric[] { return []; }
@@ -1243,7 +1325,7 @@ export class ReportGenerator {
   private analyzeResourceUtilization(personnel: any[], equipment: any[]): any { return {}; }
   private identifyBottlenecks(permits: any[]): any { return {}; }
   private calculateExecutiveKPIs(data: any): any { return {}; }
-  private generateStrategicInsights(data: any): BilingualText[] { return []; }
+  private generateStrategicInsights(data: any): LocalBilingualText[] { return []; }
   private generateExecutiveRecommendations(data: any): ReportRecommendation[] { return []; }
   private calculateCostSavings(financial: any[]): number { return 50000; }
   private calculateRiskReduction(permits: any[], incidents: any[]): number { return 25; }
@@ -1267,7 +1349,7 @@ export function createReportGenerator(): ReportGenerator {
 export async function generateQuickSafetyReport(
   permits: LegalPermit[],
   incidents: any[] = [],
-  atmosphericData: AtmosphericReading[] = []
+  atmosphericData: LocalAtmosphericReading[] = []
 ): Promise<ReportGenerationResult> {
   const generator = createReportGenerator();
   return generator.generateSafetyReport(permits, incidents, atmosphericData, {
@@ -1280,8 +1362,8 @@ export async function generateQuickSafetyReport(
  * Génère un rapport de conformité détaillé
  */
 export async function generateDetailedComplianceReport(
-  complianceMatrix: ComplianceMatrix,
-  violations: ViolationRecord[],
+  complianceMatrix: LocalComplianceMatrix,
+  violations: LocalViolationRecord[],
   audits: any[]
 ): Promise<ReportGenerationResult> {
   const generator = createReportGenerator();
@@ -1301,11 +1383,4 @@ export async function generateDetailedComplianceReport(
 
 // =================== EXPORT ===================
 
-export {
-  ReportGenerator,
-  type ReportOptions,
-  type ReportData,
-  type ReportSection,
-  type ReportGenerationResult,
-  type ReportTemplate
-};
+export default ReportGenerator;
