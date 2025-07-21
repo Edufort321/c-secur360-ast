@@ -5,9 +5,32 @@
 import type { ProvinceCode } from '../constants/provinces';
 import type { PersonnelRole } from './personnel';
 import type { GasType, MeasurementUnit } from './atmospheric';
-import type { Timestamped, BilingualText, GeoCoordinates, PriorityLevel } from './index';
 
-// =================== TYPES DE BASE ===================
+// =================== TYPES DE BASE LOCAUX ===================
+
+// Interface pour horodatage (remplace Timestamped manquant)
+export interface LocalTimestamped {
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+// Interface pour texte bilingue (local)
+export interface LocalBilingualText {
+  fr: string;
+  en: string;
+}
+
+// Interface pour coordonnées géographiques (local)
+export interface LocalGeoCoordinates {
+  latitude: number;
+  longitude: number;
+  altitude?: number;
+}
+
+// Type pour niveau de priorité (local)
+export type LocalPriorityLevel = 'low' | 'medium' | 'high' | 'critical' | 'urgent';
 
 export type ProcedureType = 
   | 'work_instruction'         // Instruction de travail
@@ -59,16 +82,16 @@ export type HazardLevel =
 
 // =================== INTERFACES PRINCIPALES ===================
 
-export interface StandardProcedure extends Timestamped {
+export interface StandardProcedure extends LocalTimestamped {
   id: string;                              // ID unique procédure
   code: string;                            // Code procédure (ex: SP-001)
-  title: BilingualText;                    // Titre bilingue
-  description: BilingualText;              // Description bilingue
+  title: LocalBilingualText;               // Titre bilingue
+  description: LocalBilingualText;         // Description bilingue
   type: ProcedureType;                     // Type procédure
   category: string;                        // Catégorie (confined_space, hot_work, etc.)
   status: ProcedureStatus;                 // Statut
   complexity: ProcedureComplexity;         // Complexité
-  priority: PriorityLevel;                 // Priorité
+  priority: LocalPriorityLevel;            // Priorité
   version: {                              // Versioning
     current: string;                       // Version actuelle (ex: 2.1)
     previous?: string;                     // Version précédente
@@ -76,15 +99,15 @@ export interface StandardProcedure extends Timestamped {
     changelog: Array<{                     // Journal modifications
       version: string;
       date: string;
-      changes: BilingualText[];
+      changes: LocalBilingualText[];
       author: string;
       reason: string;
     }>;
   };
   scope: {                                // Portée
-    applicability: BilingualText;          // Applicabilité
-    limitations: BilingualText[];          // Limitations
-    exclusions: BilingualText[];           // Exclusions
+    applicability: LocalBilingualText;     // Applicabilité
+    limitations: LocalBilingualText[];     // Limitations
+    exclusions: LocalBilingualText[];      // Exclusions
     jurisdiction: ProvinceCode[];          // Juridictions
     workTypes: string[];                   // Types travaux
     environments: string[];                // Environnements
@@ -103,7 +126,7 @@ export interface StandardProcedure extends Timestamped {
       };
     }>;
     equipment: Array<{                     // Équipement requis
-      name: BilingualText;
+      name: LocalBilingualText;
       type: string;
       specifications: string;
       quantity: number;
@@ -115,8 +138,8 @@ export interface StandardProcedure extends Timestamped {
       };
     }>;
     conditions: Array<{                    // Conditions requises
-      name: BilingualText;
-      description: BilingualText;
+      name: LocalBilingualText;
+      description: LocalBilingualText;
       measurable: boolean;
       threshold?: {                       // Seuil si mesurable
         min?: number;
@@ -126,7 +149,7 @@ export interface StandardProcedure extends Timestamped {
       verification: string;                // Méthode vérification
     }>;
     documentation: Array<{                 // Documentation requise
-      name: BilingualText;
+      name: LocalBilingualText;
       type: 'permit' | 'certificate' | 'plan' | 'drawing' | 'specification' | 'other';
       mandatory: boolean;
       version?: string;
@@ -137,21 +160,21 @@ export interface StandardProcedure extends Timestamped {
   checkpoints: ProcedureCheckpoint[];      // Points contrôle
   hazards: Array<{                        // Dangers identifiés
     id: string;
-    name: BilingualText;
-    description: BilingualText;
+    name: LocalBilingualText;
+    description: LocalBilingualText;
     level: HazardLevel;
     probability: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
     severity: 'negligible' | 'minor' | 'moderate' | 'major' | 'catastrophic';
     riskRating: number;                    // Score risque (1-25)
     controls: Array<{                      // Contrôles
       type: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
-      description: BilingualText;
+      description: LocalBilingualText;
       effectiveness: number;               // Efficacité (0-100%)
       implementation: string;
       responsibility: PersonnelRole;
     }>;
     residualRisk: number;                  // Risque résiduel
-  });
+  }>;
   quality: {                              // Assurance qualité
     reviewCycle: number;                   // Cycle révision (mois)
     lastReview: string;                    // Dernière révision
@@ -181,7 +204,7 @@ export interface StandardProcedure extends Timestamped {
     regulatoryRequirements: Array<{        // Exigences réglementaires
       standard: string;                    // Standard (RSST, OHSA, etc.)
       section: string;                     // Section spécifique
-      requirement: BilingualText;          // Exigence
+      requirement: LocalBilingualText;     // Exigence
       compliance: boolean;                 // Conforme
       evidence?: string;                   // Preuve conformité
     }>;
@@ -194,11 +217,11 @@ export interface StandardProcedure extends Timestamped {
     auditTrail: Array<{                    // Piste audit
       date: string;
       auditor: string;
-      findings: BilingualText[];
+      findings: LocalBilingualText[];
       nonConformities: Array<{
-        description: BilingualText;
+        description: LocalBilingualText;
         severity: 'minor' | 'major' | 'critical';
-        correctiveAction: BilingualText;
+        correctiveAction: LocalBilingualText;
         targetDate: string;
         status: 'open' | 'in_progress' | 'closed';
       }>;
@@ -242,14 +265,14 @@ export interface StandardProcedure extends Timestamped {
   references: {                           // Références
     relatedProcedures: string[];           // Procédures liées
     supportingDocuments: Array<{           // Documents support
-      name: BilingualText;
+      name: LocalBilingualText;
       type: string;
       url?: string;
       version: string;
       relevance: 'essential' | 'helpful' | 'reference';
     }>;
     externalReferences: Array<{            // Références externes
-      title: BilingualText;
+      title: LocalBilingualText;
       source: string;
       url?: string;
       accessDate?: string;
@@ -273,12 +296,12 @@ export interface StandardProcedure extends Timestamped {
     methods: Array<{                      // Méthodes formation
       type: 'classroom' | 'hands_on' | 'simulation' | 'online' | 'mentoring';
       duration: number;
-      description: BilingualText;
+      description: LocalBilingualText;
       materials: string[];
     }>;
     competencyAssessment: {               // Évaluation compétences
       required: boolean;
-      criteria: BilingualText[];
+      criteria: LocalBilingualText[];
       passingScore: number;
       reassessmentPeriod: number;          // Mois
     };
@@ -293,14 +316,14 @@ export interface StandardProcedure extends Timestamped {
   };
   multimedia: {                          // Contenu multimédia
     diagrams: Array<{                     // Diagrammes
-      title: BilingualText;
+      title: LocalBilingualText;
       type: 'flowchart' | 'layout' | 'schematic' | 'photo' | 'video';
       url: string;
-      description: BilingualText;
+      description: LocalBilingualText;
       relevantSteps: number[];             // Étapes concernées
     }>;
     videos: Array<{                       // Vidéos
-      title: BilingualText;
+      title: LocalBilingualText;
       url: string;
       duration: number;                    // Secondes
       language: 'fr' | 'en' | 'both';
@@ -308,10 +331,10 @@ export interface StandardProcedure extends Timestamped {
       type: 'demonstration' | 'training' | 'safety' | 'inspection';
     }>;
     animations: Array<{                   // Animations
-      title: BilingualText;
+      title: LocalBilingualText;
       url: string;
       type: '3d' | '2d' | 'interactive';
-      description: BilingualText;
+      description: LocalBilingualText;
       complexity: 'simple' | 'moderate' | 'complex';
     }>;
   };
@@ -320,8 +343,8 @@ export interface StandardProcedure extends Timestamped {
 export interface ProcedureStep {
   id: string;                             // ID étape
   sequenceNumber: number;                 // Numéro séquence
-  title: BilingualText;                   // Titre étape
-  description: BilingualText;             // Description détaillée
+  title: LocalBilingualText;              // Titre étape
+  description: LocalBilingualText;        // Description détaillée
   type: StepType;                         // Type étape
   mandatory: boolean;                     // Obligatoire
   duration: {                            // Durée
@@ -332,21 +355,21 @@ export interface ProcedureStep {
   };
   prerequisites: {                       // Prérequis étape
     previousSteps: number[];              // Étapes précédentes requises
-    conditions: BilingualText[];          // Conditions
-    verifications: BilingualText[];       // Vérifications
+    conditions: LocalBilingualText[];     // Conditions
+    verifications: LocalBilingualText[];  // Vérifications
   };
   instructions: {                        // Instructions
-    action: BilingualText;                // Action à effectuer
-    method: BilingualText;                // Méthode
+    action: LocalBilingualText;           // Action à effectuer
+    method: LocalBilingualText;           // Méthode
     tools: string[];                      // Outils requis
     materials: string[];                  // Matériaux
-    safety: BilingualText[];              // Consignes sécurité
-    quality: BilingualText[];             // Critères qualité
+    safety: LocalBilingualText[];         // Consignes sécurité
+    quality: LocalBilingualText[];        // Critères qualité
   };
   verification: {                        // Vérification
     required: boolean;                    // Vérification requise
     method: string;                       // Méthode vérification
-    criteria: BilingualText[];            // Critères
+    criteria: LocalBilingualText[];       // Critères
     tolerance?: {                        // Tolérance (si mesurable)
       min?: number;
       max?: number;
@@ -362,20 +385,20 @@ export interface ProcedureStep {
     specialist?: PersonnelRole;           // Spécialiste si requis
   };
   riskFactors: Array<{                   // Facteurs risque
-    factor: BilingualText;
+    factor: LocalBilingualText;
     level: HazardLevel;
-    mitigation: BilingualText;
+    mitigation: LocalBilingualText;
     monitoring: string;
   }>;
   alternatives: Array<{                  // Alternatives
-    condition: BilingualText;             // Condition d'usage
-    alternativeSteps: BilingualText[];    // Étapes alternatives
+    condition: LocalBilingualText;        // Condition d'usage
+    alternativeSteps: LocalBilingualText[]; // Étapes alternatives
     approval: PersonnelRole;              // Approbation requise
   }>;
   troubleshooting: Array<{               // Dépannage
-    problem: BilingualText;               // Problème
-    possibleCauses: BilingualText[];      // Causes possibles
-    solutions: BilingualText[];           // Solutions
+    problem: LocalBilingualText;          // Problème
+    possibleCauses: LocalBilingualText[]; // Causes possibles
+    solutions: LocalBilingualText[];      // Solutions
     escalation?: PersonnelRole;           // Escalade si nécessaire
   }>;
   documentation: {                       // Documentation
@@ -395,8 +418,8 @@ export interface ProcedureStep {
 
 export interface ProcedureCheckpoint {
   id: string;                             // ID checkpoint
-  name: BilingualText;                    // Nom checkpoint
-  description: BilingualText;             // Description
+  name: LocalBilingualText;               // Nom checkpoint
+  description: LocalBilingualText;        // Description
   type: 'safety' | 'quality' | 'compliance' | 'progress' | 'decision';
   timing: {                              // Timing
     afterStep?: number;                   // Après étape #
@@ -405,7 +428,7 @@ export interface ProcedureCheckpoint {
     eventTriggered?: string;              // Déclenché par événement
   };
   criteria: Array<{                      // Critères validation
-    criterion: BilingualText;
+    criterion: LocalBilingualText;
     type: 'boolean' | 'numeric' | 'text' | 'selection';
     required: boolean;
     acceptableValues?: any[];             // Valeurs acceptables
@@ -417,8 +440,8 @@ export interface ProcedureCheckpoint {
     verification: string;                 // Méthode vérification
   }>;
   actions: {                             // Actions
-    onPass: BilingualText[];              // Si réussi
-    onFail: BilingualText[];              // Si échec
+    onPass: LocalBilingualText[];         // Si réussi
+    onFail: LocalBilingualText[];         // Si échec
     escalation?: {                       // Escalade
       level: PersonnelRole;
       timeframe: number;                  // Minutes
@@ -460,7 +483,7 @@ export interface WorkInstruction extends StandardProcedure {
       mitigation: string[];
     }>;
     toolsAndEquipment: Array<{           // Outils et équipement
-      name: BilingualText;
+      name: LocalBilingualText;
       type: 'hand_tool' | 'power_tool' | 'measuring_device' | 'safety_equipment' | 'specialty';
       specifications: string;
       inspection: {
@@ -488,10 +511,10 @@ export interface WorkInstruction extends StandardProcedure {
     }>;
     inspectionPoints: Array<{            // Points inspection
       stage: string;                      // Étape
-      what: BilingualText;                // Quoi inspecter
-      how: BilingualText;                 // Comment inspecter
+      what: LocalBilingualText;           // Quoi inspecter
+      how: LocalBilingualText;            // Comment inspecter
       frequency: string;                  // Fréquence
-      acceptanceCriteria: BilingualText[];// Critères acceptation
+      acceptanceCriteria: LocalBilingualText[]; // Critères acceptation
     }>;
     documentation: {                     // Documentation qualité
       required: boolean;
@@ -505,10 +528,10 @@ export interface WorkInstruction extends StandardProcedure {
 export interface SafetyGuideline extends StandardProcedure {
   safetySpecific: {                      // Spécifique sécurité
     hazardAnalysis: Array<{              // Analyse dangers
-      hazard: BilingualText;
+      hazard: LocalBilingualText;
       source: string;
       exposure: 'continuous' | 'frequent' | 'occasional' | 'remote';
-      consequences: BilingualText[];
+      consequences: LocalBilingualText[];
       likelihood: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
       riskMatrix: {                      // Matrice risque
         probability: number;              // 1-5
@@ -519,7 +542,7 @@ export interface SafetyGuideline extends StandardProcedure {
     }>;
     protectiveMeasures: Array<{          // Mesures protection
       hierarchy: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
-      measure: BilingualText;
+      measure: LocalBilingualText;
       effectiveness: number;              // 0-100%
       implementation: {
         responsible: PersonnelRole;
@@ -534,9 +557,9 @@ export interface SafetyGuideline extends StandardProcedure {
       };
     }>;
     emergencyProcedures: Array<{         // Procédures urgence
-      scenario: BilingualText;
-      triggers: BilingualText[];
-      immediateActions: BilingualText[];
+      scenario: LocalBilingualText;
+      triggers: LocalBilingualText[];
+      immediateActions: LocalBilingualText[];
       notifications: Array<{
         who: string;
         when: string;
@@ -550,7 +573,7 @@ export interface SafetyGuideline extends StandardProcedure {
         accountability: string;
       };
       medicalResponse: {
-        firstAid: BilingualText[];
+        firstAid: LocalBilingualText[];
         medicalAttention: boolean;
         transportation: string;
         documentation: string[];
@@ -559,7 +582,7 @@ export interface SafetyGuideline extends StandardProcedure {
     trainingRequirements: {              // Exigences formation
       initial: {
         duration: number;                 // Heures
-        content: BilingualText[];
+        content: LocalBilingualText[];
         competencies: string[];
         assessment: boolean;
       };
@@ -584,8 +607,8 @@ export interface EmergencyProcedure extends StandardProcedure {
     severity: 'minor' | 'moderate' | 'major' | 'catastrophic';
     scope: 'local' | 'facility' | 'community' | 'regional';
     triggers: Array<{                    // Déclencheurs
-      condition: BilingualText;
-      indicators: BilingualText[];
+      condition: LocalBilingualText;
+      indicators: LocalBilingualText[];
       threshold?: {
         value: number;
         unit: MeasurementUnit;
@@ -597,7 +620,7 @@ export interface EmergencyProcedure extends StandardProcedure {
       primary: string;                    // Titulaire principal
       backup: string;                     // Suppléant
       qualifications: string[];
-      responsibilities: BilingualText[];
+      responsibilities: LocalBilingualText[];
       contactInfo: {
         phone: string;
         radio?: string;
@@ -609,7 +632,7 @@ export interface EmergencyProcedure extends StandardProcedure {
       internalNotifications: Array<{
         audience: string;
         method: 'phone' | 'radio' | 'pa_system' | 'alarm' | 'app';
-        message: BilingualText;
+        message: LocalBilingualText;
         timing: string;
         responsibility: string;
       }>;
@@ -624,12 +647,12 @@ export interface EmergencyProcedure extends StandardProcedure {
         required: boolean;
         channels: string[];
         spokesperson: string;
-        keyMessages: BilingualText[];
+        keyMessages: LocalBilingualText[];
       };
     };
     resources: {                         // Ressources
       equipment: Array<{
-        item: BilingualText;
+        item: LocalBilingualText;
         location: string;
         quantity: number;
         condition: string;
@@ -650,10 +673,10 @@ export interface EmergencyProcedure extends StandardProcedure {
       }>;
     };
     recovery: {                          // Récupération
-      priorities: BilingualText[];
+      priorities: LocalBilingualText[];
       phases: Array<{
         name: string;
-        objectives: BilingualText[];
+        objectives: LocalBilingualText[];
         duration: string;
         responsible: string;
         resources: string[];
@@ -698,14 +721,14 @@ export interface ProcedureCompliance {
     auditor: string;
     findings: Array<{
       type: 'major' | 'minor' | 'observation' | 'opportunity';
-      description: BilingualText;
+      description: LocalBilingualText;
       evidence: string[];
       requirement: string;
-      recommendation: BilingualText;
+      recommendation: LocalBilingualText;
     }>;
     correctiveActions: Array<{
       finding: string;
-      action: BilingualText;
+      action: LocalBilingualText;
       responsible: string;
       targetDate: string;
       status: 'planned' | 'in_progress' | 'completed' | 'overdue';
@@ -719,7 +742,7 @@ export interface ProcedureCompliance {
   }>;
 }
 
-export interface ProcedureAudit extends Timestamped {
+export interface ProcedureAudit extends LocalTimestamped {
   id: string;                             // ID audit
   procedureId: string;                    // ID procédure auditée
   type: 'scheduled' | 'triggered' | 'follow_up' | 'complaint_driven';
@@ -753,13 +776,13 @@ export interface ProcedureAudit extends Timestamped {
     id: string;
     category: 'conformity' | 'non_conformity' | 'observation' | 'best_practice';
     severity: 'critical' | 'major' | 'minor' | 'informational';
-    title: BilingualText;
-    description: BilingualText;
+    title: LocalBilingualText;
+    description: LocalBilingualText;
     evidence: string[];
     requirements: string[];               // Exigences non respectées
-    impact: BilingualText;
-    rootCause?: BilingualText;
-    recommendation: BilingualText;
+    impact: LocalBilingualText;
+    rootCause?: LocalBilingualText;
+    recommendation: LocalBilingualText;
   }>;
   metrics: {                             // Métriques audit
     conformityRate: number;               // Taux conformité (%)
@@ -774,7 +797,7 @@ export interface ProcedureAudit extends Timestamped {
   };
   actionPlan: Array<{                    // Plan d'action
     findingId: string;
-    action: BilingualText;
+    action: LocalBilingualText;
     type: 'immediate' | 'corrective' | 'preventive' | 'improvement';
     responsible: string;
     targetDate: string;
@@ -783,9 +806,9 @@ export interface ProcedureAudit extends Timestamped {
     monitoring: string;                   // Suivi
   }>;
   report: {                              // Rapport
-    summary: BilingualText;
-    conclusions: BilingualText[];
-    recommendations: BilingualText[];
+    summary: LocalBilingualText;
+    conclusions: LocalBilingualText[];
+    recommendations: LocalBilingualText[];
     distribution: string[];               // Distribution
     confidentiality: 'public' | 'internal' | 'restricted' | 'confidential';
     followUpRequired: boolean;
@@ -793,9 +816,9 @@ export interface ProcedureAudit extends Timestamped {
   };
 }
 
-export interface ComplianceReport extends Timestamped {
+export interface ComplianceReport extends LocalTimestamped {
   id: string;                             // ID rapport
-  title: BilingualText;                   // Titre rapport
+  title: LocalBilingualText;              // Titre rapport
   period: {                              // Période couverte
     start: string;
     end: string;
@@ -823,19 +846,19 @@ export interface ComplianceReport extends Timestamped {
     date: string;
     type: 'violation' | 'near_miss' | 'deviation' | 'gap';
     procedure: string;
-    description: BilingualText;
+    description: LocalBilingualText;
     severity: 'low' | 'medium' | 'high' | 'critical';
-    impact: BilingualText;
-    rootCause: BilingualText;
-    corrective: BilingualText;
+    impact: LocalBilingualText;
+    rootCause: LocalBilingualText;
+    corrective: LocalBilingualText;
     status: 'open' | 'in_progress' | 'closed';
   }>;
   improvements: Array<{                  // Améliorations
     area: string;
-    description: BilingualText;
-    benefit: BilingualText;
+    description: LocalBilingualText;
+    benefit: LocalBilingualText;
     implementation: {
-      plan: BilingualText;
+      plan: LocalBilingualText;
       timeline: string;
       resources: string[];
       responsible: string;
@@ -847,15 +870,15 @@ export interface ComplianceReport extends Timestamped {
     };
   }>;
   recommendations: Array<{               // Recommandations
-    priority: PriorityLevel;
+    priority: LocalPriorityLevel;
     category: 'procedure_update' | 'training' | 'resource' | 'system' | 'culture';
-    recommendation: BilingualText;
-    justification: BilingualText;
-    implementation: BilingualText;
+    recommendation: LocalBilingualText;
+    justification: LocalBilingualText;
+    implementation: LocalBilingualText;
     timeline: string;
     responsible: string;
     cost?: number;
-    benefit: BilingualText;
+    benefit: LocalBilingualText;
   }>;
   distribution: {                        // Distribution
     recipients: Array<{
@@ -872,7 +895,7 @@ export interface ComplianceReport extends Timestamped {
 
 // =================== RÉVISION ET AMÉLIORATION ===================
 
-export interface ProcedureRevision extends Timestamped {
+export interface ProcedureRevision extends LocalTimestamped {
   id: string;                             // ID révision
   procedureId: string;                    // ID procédure
   version: {                             // Version
@@ -884,20 +907,20 @@ export interface ProcedureRevision extends Timestamped {
     userId: string;
     name: string;
     role: string;
-    reason: BilingualText;
+    reason: LocalBilingualText;
   };
   scope: {                               // Portée révision
     sections: string[];                   // Sections affectées
     impact: 'content' | 'format' | 'process' | 'safety' | 'compliance';
-    urgency: PriorityLevel;
+    urgency: LocalPriorityLevel;
   };
   changes: Array<{                       // Changements
     section: string;
     type: 'addition' | 'modification' | 'deletion' | 'restructure';
-    current: BilingualText;               // Contenu actuel
-    proposed: BilingualText;              // Contenu proposé
-    justification: BilingualText;         // Justification
-    impact: BilingualText;                // Impact
+    current: LocalBilingualText;          // Contenu actuel
+    proposed: LocalBilingualText;         // Contenu proposé
+    justification: LocalBilingualText;    // Justification
+    impact: LocalBilingualText;           // Impact
     validation: {                        // Validation
       required: boolean;
       method: string;
@@ -911,7 +934,7 @@ export interface ProcedureRevision extends Timestamped {
       duration: number;                   // Jours
       criteria: string[];
       status: 'pending' | 'in_progress' | 'completed' | 'rejected';
-      feedback?: BilingualText;
+      feedback?: LocalBilingualText;
     }>;
     currentStage: number;
     timeline: {
@@ -928,7 +951,7 @@ export interface ProcedureRevision extends Timestamped {
     feedback?: {
       provided: boolean;
       date?: string;
-      comments?: BilingualText;
+      comments?: LocalBilingualText;
       approval?: boolean;
     };
   }>;
@@ -937,13 +960,13 @@ export interface ProcedureRevision extends Timestamped {
       required: boolean;
       method?: string;
       participants?: string[];
-      results?: BilingualText;
+      results?: LocalBilingualText;
     };
     pilot: {
       required: boolean;
       scope?: string;
       duration?: number;
-      results?: BilingualText;
+      results?: LocalBilingualText;
     };
     training: {
       required: boolean;
@@ -953,16 +976,16 @@ export interface ProcedureRevision extends Timestamped {
     };
   };
   implementation: {                      // Implémentation
-    plan: BilingualText;
+    plan: LocalBilingualText;
     phases: Array<{
       name: string;
-      activities: BilingualText[];
+      activities: LocalBilingualText[];
       duration: number;
       responsible: string;
       dependencies: string[];
     }>;
     communication: {
-      strategy: BilingualText;
+      strategy: LocalBilingualText;
       channels: string[];
       timeline: string;
       responsible: string;
@@ -977,37 +1000,37 @@ export interface ProcedureRevision extends Timestamped {
   outcome: {                             // Résultat
     status: 'approved' | 'rejected' | 'deferred' | 'withdrawn';
     effectiveDate?: string;
-    decision: BilingualText;
-    conditions?: BilingualText[];
+    decision: LocalBilingualText;
+    conditions?: LocalBilingualText[];
     nextReview?: string;
   };
 }
 
-export interface ProcedureUpdate extends Timestamped {
+export interface ProcedureUpdate extends LocalTimestamped {
   id: string;                             // ID mise à jour
   procedureId: string;                    // ID procédure
   updateType: 'content' | 'format' | 'reference' | 'metadata' | 'translation';
   urgency: 'routine' | 'expedited' | 'emergency';
-  description: BilingualText;             // Description mise à jour
+  description: LocalBilingualText;        // Description mise à jour
   changes: Array<{                       // Changements détaillés
     field: string;                        // Champ modifié
     oldValue: any;                        // Ancienne valeur
     newValue: any;                        // Nouvelle valeur
-    reason: BilingualText;                // Raison changement
+    reason: LocalBilingualText;           // Raison changement
   }>;
   impact: {                              // Impact
     safety: boolean;                      // Impact sécurité
     compliance: boolean;                  // Impact conformité
     operations: boolean;                  // Impact opérations
     training: boolean;                    // Impact formation
-    assessment: BilingualText;            // Évaluation impact
+    assessment: LocalBilingualText;       // Évaluation impact
   };
   approval: {                            // Approbation
     required: boolean;
     level: 'supervisor' | 'manager' | 'director' | 'executive';
     approver?: string;
     date?: string;
-    conditions?: BilingualText[];
+    conditions?: LocalBilingualText[];
   };
   implementation: {                      // Implémentation
     immediate: boolean;                   // Immédiate
@@ -1016,7 +1039,7 @@ export interface ProcedureUpdate extends Timestamped {
       required: boolean;
       recipients: PersonnelRole[];
       method: string[];
-      message: BilingualText;
+      message: LocalBilingualText;
     };
     training: {                          // Formation
       required: boolean;
@@ -1031,15 +1054,15 @@ export interface ProcedureUpdate extends Timestamped {
     effectiveness: {                     // Efficacité
       measured: boolean;
       date?: string;
-      results?: BilingualText;
+      results?: LocalBilingualText;
     };
   };
 }
 
-export interface ChangeRequest extends Timestamped {
+export interface ChangeRequest extends LocalTimestamped {
   id: string;                             // ID demande changement
-  title: BilingualText;                   // Titre demande
-  description: BilingualText;             // Description
+  title: LocalBilingualText;              // Titre demande
+  description: LocalBilingualText;        // Description
   requestor: {                           // Demandeur
     userId: string;
     name: string;
@@ -1047,7 +1070,7 @@ export interface ChangeRequest extends Timestamped {
     contactInfo: string;
   };
   category: 'safety_improvement' | 'efficiency' | 'compliance' | 'cost_reduction' | 'quality' | 'other';
-  priority: PriorityLevel;                // Priorité
+  priority: LocalPriorityLevel;           // Priorité
   scope: {                               // Portée
     procedures: string[];                 // Procédures affectées
     departments: string[];                // Départements
@@ -1055,18 +1078,18 @@ export interface ChangeRequest extends Timestamped {
     systems: string[];                    // Systèmes affectés
   };
   justification: {                       // Justification
-    problem: BilingualText;               // Problème actuel
-    solution: BilingualText;              // Solution proposée
-    benefits: BilingualText[];            // Bénéfices attendus
-    risks: BilingualText[];               // Risques identifiés
-    alternatives: BilingualText[];        // Alternatives considérées
+    problem: LocalBilingualText;          // Problème actuel
+    solution: LocalBilingualText;         // Solution proposée
+    benefits: LocalBilingualText[];       // Bénéfices attendus
+    risks: LocalBilingualText[];          // Risques identifiés
+    alternatives: LocalBilingualText[];   // Alternatives considérées
   };
   impact: {                              // Impact
     safety: {
       positive: boolean;
       neutral: boolean;
       negative: boolean;
-      assessment: BilingualText;
+      assessment: LocalBilingualText;
     };
     operational: {
       efficiency: number;                 // % amélioration efficacité
@@ -1078,7 +1101,7 @@ export interface ChangeRequest extends Timestamped {
       improves: boolean;
       maintains: boolean;
       risks: boolean;
-      details: BilingualText;
+      details: LocalBilingualText;
     };
     training: {
       required: boolean;
@@ -1093,23 +1116,23 @@ export interface ChangeRequest extends Timestamped {
       criterion: string;
       weight: number;                     // Poids (0-100)
       score?: number;                     // Score (1-5)
-      comments?: BilingualText;
+      comments?: LocalBilingualText;
     }>;
     recommendation: 'approve' | 'reject' | 'defer' | 'modify';
-    conditions?: BilingualText[];         // Conditions si approbation
+    conditions?: LocalBilingualText[];    // Conditions si approbation
     timeline?: string;                    // Échéancier si approuvé
   };
   status: 'submitted' | 'under_review' | 'approved' | 'rejected' | 'deferred' | 'implemented';
   outcome: {                             // Résultat
-    decision: BilingualText;
+    decision: LocalBilingualText;
     decisionDate?: string;
     decisionBy?: string;
     implementation?: {
-      plan: BilingualText;
+      plan: LocalBilingualText;
       responsible: string;
       timeline: string;
       budget?: number;
-      success?: BilingualText[];          // Critères succès
+      success: LocalBilingualText[];      // Critères succès
     };
     followUp?: {
       required: boolean;
@@ -1119,24 +1142,6 @@ export interface ChangeRequest extends Timestamped {
   };
 }
 
-// =================== EXPORT TYPES ===================
-
-export type {
-  ProcedureType,
-  ProcedureStatus,
-  ProcedureComplexity,
-  StepType,
-  HazardLevel,
-  StandardProcedure,
-  ProcedureStep,
-  ProcedureCheckpoint,
-  WorkInstruction,
-  SafetyGuideline,
-  EmergencyProcedure,
-  ProcedureCompliance,
-  ProcedureAudit,
-  ComplianceReport,
-  ProcedureRevision,
-  ProcedureUpdate,
-  ChangeRequest
-};
+// =================== EXPORTS (SANS CONFLIT) ===================
+// Note: Tous les types sont déjà exportés individuellement ci-dessus
+// Pas besoin de re-export groupé qui causerait des conflits d'export
