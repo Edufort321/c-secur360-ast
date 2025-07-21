@@ -678,18 +678,25 @@ export class BluetoothManager {
       return;
     }
 
-    // Écouter événements Bluetooth système
+    // Écouter événements Bluetooth système (si supporté)
     if ('bluetooth' in navigator && navigator.bluetooth) {
-      navigator.bluetooth.addEventListener('availabilitychanged', (event: any) => {
-        this.emitEvent({
-          type: 'device_connected',
-          deviceId: 'system',
-          timestamp: Date.now(),
-          data: { available: event.value },
-          severity: 'info',
-          handled: false
-        });
-      });
+      try {
+        // Note: addEventListener peut ne pas être disponible sur tous les navigateurs
+        if ('addEventListener' in navigator.bluetooth) {
+          (navigator.bluetooth as any).addEventListener('availabilitychanged', (event: any) => {
+            this.emitEvent({
+              type: 'device_connected',
+              deviceId: 'system',
+              timestamp: Date.now(),
+              data: { available: event.value },
+              severity: 'info',
+              handled: false
+            });
+          });
+        }
+      } catch (error) {
+        console.warn('Bluetooth event listeners not supported:', error);
+      }
     }
   }
 
