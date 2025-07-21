@@ -405,7 +405,7 @@ export class PDFGenerator {
 
   private buildDocument(template: PDFTemplate, data: any, options: PDFGenerationOptions): any {
     // Construction du document PDF basé sur le template
-    const document = {
+    const document: any = {
       pageSize: template.layout.pageSize,
       pageOrientation: template.layout.orientation,
       pageMargins: [
