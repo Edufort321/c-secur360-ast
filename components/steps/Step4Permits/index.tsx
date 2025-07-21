@@ -386,19 +386,48 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
   } = usePermitValidation();
 
   const {
-    surveillancePermits,
-    addToSurveillance,
-    removeFromSurveillance,
-    updateSurveillanceStatus
+    isActive: surveillanceActive,
+    timeRemaining,
+    status: surveillanceStatus,
+    startSurveillance,
+    stopSurveillance,
+    extendTime,
+    setTimeRemaining,
+    setStatus
   } = useSurveillance();
+
+  // =================== SURVEILLANCE LOCALE ===================
+  const [surveillancePermits, setSurveillancePermits] = useState<LegalPermit[]>([]);
+  
+  const addToSurveillance = useCallback((permit: LegalPermit) => {
+    setSurveillancePermits(prev => {
+      if (prev.find(p => p.id === permit.id)) return prev;
+      return [...prev, permit];
+    });
+    showToast('success', language === 'fr' ? 'Permis ajouté à la surveillance' : 'Permit added to monitoring');
+  }, [showToast, language]);
+
+  const removeFromSurveillance = useCallback((permitId: string) => {
+    setSurveillancePermits(prev => prev.filter(p => p.id !== permitId));
+    showToast('info', language === 'fr' ? 'Permis retiré de la surveillance' : 'Permit removed from monitoring');
+  }, [showToast, language]);
+
+  const updateSurveillanceStatus = useCallback((permitId: string, newStatus: PermitStatus) => {
+    setSurveillancePermits(prev => 
+      prev.map(p => p.id === permitId ? { ...p, status: newStatus } : p)
+    );
+    setPermits(prev => 
+      prev.map(p => p.id === permitId ? { ...p, status: newStatus } : p)
+    );
+  }, [setPermits]);
+
+  // =================== UTILITAIRES VALIDATION ===================
 
   const {
     showToast,
     notifications,
     clearNotification
   } = useNotifications();
-
-  // =================== UTILITAIRES VALIDATION ===================
   const validateAllPermits = useCallback(async () => {
     if (!permissions.canValidate || permits.length === 0) {
       showToast('error', language === 'fr' ? 'Permission refusée ou aucun permis' : 'Permission denied or no permits');
@@ -1001,6 +1030,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                       onDuplicate={duplicatePermit}
                       onDelete={handleDeletePermit}
                       onValidate={handleValidatePermit}
+                      onAddToSurveillance={addToSurveillance}
                       showValidationStatus={true}
                     />
                   ))}
@@ -1080,36 +1110,83 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
               <h2 className="text-xl font-bold text-gray-900">
                 {language === 'fr' ? 'Surveillance temps réel' : 'Real-time monitoring'}
               </h2>
-              <button
-                onClick={() => setCurrentView('list')}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-              >
-                <X size={20} />
-                <span>{language === 'fr' ? 'Fermer' : 'Close'}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const activePermits = permits.filter(p => p.status === 'active');
+                    setSurveillancePermits(activePermits);
+                    showToast('info', language === 'fr' ? 'Permis actifs ajoutés' : 'Active permits added');
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
+                >
+                  <Plus size={20} />
+                  <span>{language === 'fr' ? 'Ajouter actifs' : 'Add active'}</span>
+                </button>
+                <button
+                  onClick={() => setCurrentView('list')}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                  <X size={20} />
+                  <span>{language === 'fr' ? 'Fermer' : 'Close'}</span>
+                </button>
+              </div>
             </div>
 
             {surveillancePermits.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {surveillancePermits.map(permit => (
-                  <TimerSurveillance
-                    key={permit.id}
-                    config={{
-                      permitId: permit.id,
-                      permitType: permit.type,
-                      workingTime: 480,
-                      warningTime: 60,
-                      criticalTime: 15,
-                      checkInInterval: 30,
-                      autoExtendEnabled: false,
-                      autoExtendDuration: 60,
-                      emergencyContacts: []
-                    }}
-                    language={language}
-                    isActive={permit.status === 'active'}
-                    onTimerExpired={() => updateSurveillanceStatus(permit.id, 'expired')}
-                    touchOptimized={touchOptimized}
-                  />
+                  <div key={permit.id} className="bg-white rounded-lg border p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{PERMIT_TYPES_CONFIG[permit.type].iconEmoji}</span>
+                        <div>
+                          <h3 className="font-medium text-gray-900">{permit.name}</h3>
+                          <p className="text-sm text-gray-600">{permit.location}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeFromSurveillance(permit.id)}
+                        className="p-2 text-gray-400 hover:text-red-600"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>{language === 'fr' ? 'Statut:' : 'Status:'}</span>
+                        <StatusBadge status={permit.status} language={language} />
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>{language === 'fr' ? 'Expiration:' : 'Expires:'}</span>
+                        <span className={`${permit.dateExpiration < new Date() ? 'text-red-600' : 'text-gray-600'}`}>
+                          {permit.dateExpiration.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>{language === 'fr' ? 'Progression:' : 'Progress:'}</span>
+                        <span>{permit.progress}%</span>
+                      </div>
+                      
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => handleValidatePermit(permit)}
+                          className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200"
+                        >
+                          {language === 'fr' ? 'Valider' : 'Validate'}
+                        </button>
+                        <button
+                          onClick={() => updateSurveillanceStatus(permit.id, permit.status === 'active' ? 'paused' : 'active')}
+                          className="flex-1 px-3 py-2 bg-yellow-100 text-yellow-700 rounded text-sm hover:bg-yellow-200"
+                        >
+                          {permit.status === 'active' ? 
+                            (language === 'fr' ? 'Suspendre' : 'Pause') : 
+                            (language === 'fr' ? 'Reprendre' : 'Resume')
+                          }
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : (
@@ -1118,6 +1195,9 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   {language === 'fr' ? 'Aucun permis en surveillance' : 'No permits under monitoring'}
                 </h3>
+                <p className="text-gray-600 mb-4">
+                  {language === 'fr' ? 'Ajoutez des permis actifs pour commencer la surveillance' : 'Add active permits to start monitoring'}
+                </p>
               </div>
             )}
           </motion.div>
