@@ -598,8 +598,8 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
           comparison = a.status.localeCompare(b.status);
           break;
         case 'priority':
-          const priorityOrder = { 'critical': 4, 'high': 3, 'medium': 2, 'low': 1 };
-          comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
+          const priorityOrder: Record<'critical' | 'high' | 'medium' | 'low', number> = { 'critical': 4, 'high': 3, 'medium': 2, 'low': 1 };
+          comparison = priorityOrder[a.priority as 'critical' | 'high' | 'medium' | 'low'] - priorityOrder[b.priority as 'critical' | 'high' | 'medium' | 'low'];
           break;
         case 'validation':
           const aValid = a.validationResults?.overall?.isValid === true ? 1 : 0;
