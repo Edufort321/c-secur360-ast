@@ -465,7 +465,7 @@ export class ExcelExporter {
         supervisor: form?.supervisor?.name || '',
         entrants: form?.entrants?.length || 0,
         createdDate: new Date().toISOString().split('T')[0], // Date actuelle par défaut
-        validUntil: permit.validUntil ? new Date(permit.validUntil).toISOString().split('T')[0] : '',
+        validUntil: '', // Pas de date d'expiration par défaut
         riskLevel: this.calculateRiskLevel(permit, form),
         complianceScore: this.calculateComplianceScore(permit, form)
       };
