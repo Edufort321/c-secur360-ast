@@ -337,7 +337,7 @@ export class BluetoothManager {
       };
 
       // Utiliser Web Bluetooth API
-      const device = await navigator.bluetooth.requestDevice({
+      const device = await navigator.bluetooth!.requestDevice({
         filters: this.createBluetoothFilters(scanOptions),
         optionalServices: Object.values(BluetoothServiceUUID)
       });
@@ -679,7 +679,7 @@ export class BluetoothManager {
     }
 
     // Écouter événements Bluetooth système
-    if ('bluetooth' in navigator) {
+    if ('bluetooth' in navigator && navigator.bluetooth) {
       navigator.bluetooth.addEventListener('availabilitychanged', (event: any) => {
         this.emitEvent({
           type: 'device_connected',
@@ -694,7 +694,9 @@ export class BluetoothManager {
   }
 
   private isBluetoothSupported(): boolean {
-    return 'bluetooth' in navigator && typeof navigator.bluetooth.requestDevice === 'function';
+    return 'bluetooth' in navigator && 
+           navigator.bluetooth && 
+           typeof navigator.bluetooth.requestDevice === 'function';
   }
 
   private createBluetoothFilters(options: BluetoothScanOptions): any[] {
