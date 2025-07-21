@@ -385,16 +385,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     setValidationResults
   } = usePermitValidation();
 
-  const {
-    isActive: surveillanceActive,
-    timeRemaining,
-    status: surveillanceStatus,
-    startSurveillance,
-    stopSurveillance,
-    extendTime,
-    setTimeRemaining,
-    setStatus
-  } = useSurveillance();
+  // =================== UTILITAIRES VALIDATION ===================
 
   // =================== SURVEILLANCE LOCALE ===================
   const [surveillancePermits, setSurveillancePermits] = useState<LegalPermit[]>([]);
@@ -421,7 +412,16 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     );
   }, [setPermits]);
 
-  // =================== UTILITAIRES VALIDATION ===================
+  const {
+    isActive: surveillanceActive,
+    timeRemaining,
+    status: surveillanceStatus,
+    startSurveillance,
+    stopSurveillance,
+    extendTime,
+    setTimeRemaining,
+    setStatus
+  } = useSurveillance();
 
   const {
     showToast,
