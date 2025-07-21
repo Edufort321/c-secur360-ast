@@ -181,23 +181,6 @@ export interface PermitFormProps {
   onSave?: (data: any) => Promise<{ success: boolean; message: string }>;
 }
 
-// =================== EXPORT DE TOUS LES TYPES ===================
-export type {
-  LegalPermit,
-  Entrant,
-  Surveillant,
-  Superviseur,
-  SurveillantIncendie,
-  SurveillantExterieur,
-  PersonneCompetente,
-  PermitStatus,
-  PermitPriority,
-  PermitCategory,
-  ComplianceInfo,
-  PermitValidity,
-  SignatureElectronique,
-  PermitStats,
-  Step4PermitsProps,
-  PermitCardProps,
-  PermitFormProps
-};
+// =================== EXPORTS (SANS CONFLIT) ===================
+// Note: Tous les types sont déjà exportés individuellement ci-dessus
+// Pas besoin de re-export groupé qui causerait des conflits d'export
