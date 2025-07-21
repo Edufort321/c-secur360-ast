@@ -2,10 +2,22 @@
 // Générateur QR codes pour espaces clos avec tracking avancé et intégration Supabase
 "use client";
 
-import type { 
-  GeoCoordinates, 
-  BilingualText 
-} from '../../types';
+// =================== TYPES LOCAUX POUR QR GENERATOR ===================
+
+export interface LocalGeoCoordinates {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  altitude?: number;
+  altitudeAccuracy?: number;
+  heading?: number;
+  speed?: number;
+}
+
+export interface LocalBilingualText {
+  fr: string;
+  en: string;
+}
 
 // =================== TYPES QR CODES ===================
 
@@ -45,17 +57,17 @@ export interface QRCodeOptions {
 
 export interface ConfinedSpaceData {
   id: string;                             // ID unique espace
-  name: BilingualText;                    // Nom espace
+  name: LocalBilingualText;                    // Nom espace
   type: 'tank' | 'vessel' | 'pit' | 'trench' | 'silo' | 'tunnel' | 'shaft' | 'vault' | 'bin' | 'other';
-  description: BilingualText;             // Description
+  description: LocalBilingualText;             // Description
   location: {
-    coordinates: GeoCoordinates;          // Position GPS
-    address: BilingualText;               // Adresse complète
+    coordinates: LocalGeoCoordinates;          // Position GPS
+    address: LocalBilingualText;               // Adresse complète
     building?: string;                    // Bâtiment
     floor?: string;                       // Étage
     room?: string;                        // Local
     zone?: string;                        // Zone
-    landmark?: BilingualText;             // Point repère
+    landmark?: LocalBilingualText;             // Point repère
   };
   specifications: {
     dimensions: {                         // Dimensions
@@ -76,7 +88,7 @@ export interface ConfinedSpaceData {
         type: 'manhole' | 'hatch' | 'door' | 'opening';
         size: string;                     // Dimensions
         location: string;                 // Emplacement
-        restrictions?: BilingualText;     // Restrictions
+        restrictions?: LocalBilingualText;     // Restrictions
       }>;
       emergencyExits: Array<{            // Sorties urgence
         type: string;
@@ -86,9 +98,9 @@ export interface ConfinedSpaceData {
     };
     hazards: Array<{                     // Dangers
       type: string;                       // Type danger
-      description: BilingualText;         // Description
+      description: LocalBilingualText;         // Description
       severity: 'low' | 'medium' | 'high' | 'critical';
-      controls: BilingualText[];          // Contrôles
+      controls: LocalBilingualText[];          // Contrôles
       monitoring?: string;                // Surveillance
     }>;
   };
@@ -96,7 +108,7 @@ export interface ConfinedSpaceData {
     natural: {
       available: boolean;
       effectiveness: 'poor' | 'fair' | 'good' | 'excellent';
-      description?: BilingualText;
+      description?: LocalBilingualText;
     };
     mechanical: {
       available: boolean;
@@ -120,7 +132,7 @@ export interface ConfinedSpaceData {
       responsible: string;
       status: 'operational' | 'maintenance' | 'out_of_service';
     };
-    accessibility: BilingualText;         // Accessibilité
+    accessibility: LocalBilingualText;         // Accessibilité
   }>;
   contacts: {                            // Contacts
     emergency: Array<{                   // Urgence
@@ -157,7 +169,7 @@ export interface ConfinedSpaceData {
     version: number;                      // Version
     status: 'active' | 'inactive' | 'under_maintenance' | 'decommissioned';
     tags: string[];                       // Tags
-    notes?: BilingualText;                // Notes
+    notes?: LocalBilingualText;                // Notes
   };
 }
 
@@ -200,7 +212,7 @@ export interface QRCodeResult {
   data: QRCodeData;                      // Données encodées
   printable?: {
     pdf: Blob;                           // PDF imprimable
-    instructions: BilingualText;         // Instructions
+    instructions: LocalBilingualText;         // Instructions
     qrPosition: { x: number; y: number; }; // Position QR
   };
   error?: string;                        // Erreur si échec
