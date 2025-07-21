@@ -110,7 +110,7 @@ export interface LegalPermit extends PermitData {
   location: string;
   site: string;
   secteur: string;
-  description: string;
+  description: BilingualText; // ← CORRIGÉ: BilingualText au lieu de string
   entrants?: PersonnelData[];
   superviseur?: string;
   formData?: any;
@@ -345,6 +345,9 @@ const PERMIT_TYPES_CONFIG = {
   }
 } as const;
 
+// =================== UTILITAIRES BILINGUES ===================
+const createBilingualText = (fr: string, en: string): BilingualText => ({ fr, en });
+
 // =================== COMPOSANT PRINCIPAL ===================
 export const Step4Permits: React.FC<Step4PermitsProps> = ({
   language,
@@ -440,7 +443,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
         permit.location.toLowerCase().includes(query) ||
         permit.site.toLowerCase().includes(query) ||
         permit.secteur.toLowerCase().includes(query) ||
-        permit.description.toLowerCase().includes(query) ||
+        permit.description[language].toLowerCase().includes(query) ||
         permit.tags.some(tag => tag.toLowerCase().includes(query))
       );
     }
@@ -515,7 +518,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     });
 
     return filtered;
-  }, [permits, searchQuery, filters, sortField, sortDirection]);
+  }, [permits, searchQuery, filters, sortField, sortDirection, language]);
 
   const summaryStats = useMemo(() => {
     const statusSummary = permits.reduce((acc, permit) => {
@@ -567,7 +570,10 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
       location: '',
       site: '',
       secteur: '',
-      description: '',
+      description: createBilingualText(
+        PERMIT_TYPES_CONFIG[type].description.fr,
+        PERMIT_TYPES_CONFIG[type].description.en
+      ),
       priority: 'medium',
       progress: 0,
       tags: [],
