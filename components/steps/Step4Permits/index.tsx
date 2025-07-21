@@ -424,7 +424,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
   const [surveillancePermits, setSurveillancePermits] = useState<LegalPermit[]>([]);
   
   const addToSurveillance = useCallback((permit: LegalPermit) => {
-    setSurveillancePermits(prev => {
+    setSurveillancePermits((prev: LegalPermit[]) => {
       if (prev.find(p => p.id === permit.id)) return prev;
       return [...prev, permit];
     });
@@ -432,15 +432,15 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
   }, [showToast, language]);
 
   const removeFromSurveillance = useCallback((permitId: string) => {
-    setSurveillancePermits(prev => prev.filter(p => p.id !== permitId));
+    setSurveillancePermits((prev: LegalPermit[]) => prev.filter(p => p.id !== permitId));
     showToast('info', language === 'fr' ? 'Permis retiré de la surveillance' : 'Permit removed from monitoring');
   }, [showToast, language]);
 
   const updateSurveillanceStatus = useCallback((permitId: string, newStatus: PermitStatus) => {
-    setSurveillancePermits(prev => 
+    setSurveillancePermits((prev: LegalPermit[]) => 
       prev.map(p => p.id === permitId ? { ...p, status: newStatus } : p)
     );
-    setPermits(prev => 
+    setPermits((prev: LegalPermit[]) => 
       prev.map(p => p.id === permitId ? { ...p, status: newStatus } : p)
     );
   }, [setPermits]);
@@ -745,7 +745,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
       onConfirm: () => {
         deletePermit(permit.id);
         showToast('success', language === 'fr' ? 'Permis supprimé' : 'Permit deleted');
-        setConfirmDialog(prev => ({ ...prev, show: false }));
+        setConfirmDialog((prev: any) => ({ ...prev, show: false }));
       }
     });
   }, [permissions.canDelete, showToast, language, deletePermit]);
@@ -791,7 +791,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
 
             {/* Onglets de validation */}
             <div className="flex border-b border-gray-200 overflow-x-auto">
-              {requiredValidations.map((validationType) => {
+              {requiredValidations.map((validationType: string) => {
                 const tabConfig = {
                   atmospheric: { icon: Activity, label: { fr: 'Atmosphérique', en: 'Atmospheric' } },
                   equipment: { icon: Wrench, label: { fr: 'Équipement', en: 'Equipment' } },
@@ -806,7 +806,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                 return (
                   <button
                     key={validationType}
-                    onClick={() => setActiveValidationTab(validationType)}
+                    onClick={() => setActiveValidationTab(validationType as ValidationTab)}
                     className={`px-4 py-2 font-medium border-b-2 whitespace-nowrap ${
                       activeValidationTab === validationType
                         ? 'border-blue-500 text-blue-600'
@@ -858,7 +858,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                 language={language}
                 validationResult={validationResultsData?.atmospheric}
                 regulationConfig={regulationConfig}
-                onDataUpdate={(data) => {
+                onDataUpdate={(data: AtmosphericData[]) => {
                   const updated = { 
                     ...selectedPermit, 
                     atmosphericData: data,
@@ -866,7 +866,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                     modifiedBy: userRole
                   };
                   setSelectedPermit(updated);
-                  setPermits(prev => prev.map(p => p.id === updated.id ? updated : p));
+                  setPermits((prev: LegalPermit[]) => prev.map(p => p.id === updated.id ? updated : p));
                 }}
               />
             )}
@@ -877,7 +877,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                 language={language}
                 validationResult={validationResultsData?.equipment}
                 regulationConfig={regulationConfig}
-                onDataUpdate={(data) => {
+                onDataUpdate={(data: EquipmentData[]) => {
                   const updated = { 
                     ...selectedPermit, 
                     equipmentData: data,
@@ -885,7 +885,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                     modifiedBy: userRole
                   };
                   setSelectedPermit(updated);
-                  setPermits(prev => prev.map(p => p.id === updated.id ? updated : p));
+                  setPermits((prev: LegalPermit[]) => prev.map(p => p.id === updated.id ? updated : p));
                 }}
               />
             )}
@@ -896,7 +896,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                 language={language}
                 validationResult={validationResultsData?.personnel}
                 regulationConfig={regulationConfig}
-                onDataUpdate={(data) => {
+                onDataUpdate={(data: PersonnelData[]) => {
                   const updated = { 
                     ...selectedPermit, 
                     personnelData: data,
@@ -904,7 +904,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                     modifiedBy: userRole
                   };
                   setSelectedPermit(updated);
-                  setPermits(prev => prev.map(p => p.id === updated.id ? updated : p));
+                  setPermits((prev: LegalPermit[]) => prev.map(p => p.id === updated.id ? updated : p));
                 }}
               />
             )}
@@ -915,7 +915,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                 language={language}
                 validationResult={validationResultsData?.procedures}
                 regulationConfig={regulationConfig}
-                onDataUpdate={(data) => {
+                onDataUpdate={(data: ProcedureData[]) => {
                   const updated = { 
                     ...selectedPermit, 
                     procedureData: data,
@@ -923,7 +923,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                     modifiedBy: userRole
                   };
                   setSelectedPermit(updated);
-                  setPermits(prev => prev.map(p => p.id === updated.id ? updated : p));
+                  setPermits((prev: LegalPermit[]) => prev.map(p => p.id === updated.id ? updated : p));
                 }}
               />
             )}
@@ -1045,7 +1045,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                       language={language}
                       touchOptimized={touchOptimized}
                       compactMode={compactMode}
-                      onView={(permit) => handleValidatePermit(permit)}
+                      onView={(permit: LegalPermit) => handleValidatePermit(permit)}
                       onEdit={handleEditPermit}
                       onDuplicate={duplicatePermit}
                       onDelete={handleDeletePermit}
@@ -1226,7 +1226,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
 
       {/* Notifications */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
-        {notifications.map(notification => (
+        {notifications.map((notification: any) => (
           <ToastNotification
             key={notification.id}
             notification={notification}
@@ -1241,7 +1241,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
         title={confirmDialog.title}
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog(prev => ({ ...prev, show: false }))}
+        onCancel={() => setConfirmDialog((prev: any) => ({ ...prev, show: false }))}
         language={language}
       />
 
