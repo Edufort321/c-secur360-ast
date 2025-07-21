@@ -657,7 +657,7 @@ export class AtmosphericCalculations {
       unit: '%LEL',
       confidence: 0.90,
       method: 'empirical',
-      inputs: { concentration, unit, temperature: conditions.temperature },
+      inputs: { concentration, unit: unit as any, temperature: conditions.temperature },
       corrections: [{
         type: 'temperature',
         factor: tempCorrectionFactor,
