@@ -341,9 +341,10 @@ export class ExcelExporter {
       return result;
       
     } catch (error) {
+      const errorOptions = { ...this.options, ...options };
       return {
         success: false,
-        filename: this.generateFilename('permits_error', exportOptions),
+        filename: this.generateFilename('permits_error', errorOptions),
         size: 0,
         sheets: [],
         metadata: {
