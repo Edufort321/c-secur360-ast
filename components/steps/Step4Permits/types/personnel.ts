@@ -3,9 +3,29 @@
 "use client";
 
 import type { ProvinceCode } from '../constants/provinces';
-import type { Timestamped, BilingualText, GeoCoordinates } from './index';
 
-// =================== TYPES DE BASE ===================
+// =================== TYPES DE BASE LOCAUX ===================
+
+// Interface pour horodatage (remplace Timestamped manquant)
+export interface TimestampedEntity {
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+// Interface pour texte bilingue (local)
+export interface LocalBilingualText {
+  fr: string;
+  en: string;
+}
+
+// Interface pour coordonnées géographiques (local)
+export interface LocalGeoCoordinates {
+  latitude: number;
+  longitude: number;
+  altitude?: number;
+}
 
 export type PersonnelRole = 
   | 'supervisor'               // Superviseur général
@@ -67,7 +87,7 @@ export type TrainingStatus =
 
 // =================== INTERFACES PRINCIPALES ===================
 
-export interface Personnel extends Timestamped {
+export interface Personnel extends TimestampedEntity {
   id: string;                               // ID unique
   employeeNumber: string;                   // Numéro employé
   personalInfo: {                          // Informations personnelles
@@ -220,16 +240,16 @@ export interface EmergencyContact {
 
 // =================== CERTIFICATIONS ===================
 
-export interface Certification extends Timestamped {
+export interface Certification extends TimestampedEntity {
   id: string;                             // ID certification
-  name: BilingualText;                    // Nom bilingue
+  name: LocalBilingualText;               // Nom bilingue
   code: string;                           // Code certification
   type: string;                           // Type (safety, technical, medical)
   category: string;                       // Catégorie
   level: CertificationLevel;              // Niveau
   status: CertificationStatus;            // Statut
   issuingOrganization: {                  // Organisme émetteur
-    name: BilingualText;
+    name: LocalBilingualText;
     code: string;
     country: string;
     province?: ProvinceCode;
@@ -314,15 +334,15 @@ export interface Certification extends Timestamped {
 
 // =================== FORMATIONS ===================
 
-export interface Training extends Timestamped {
+export interface Training extends TimestampedEntity {
   id: string;                             // ID formation
-  title: BilingualText;                   // Titre bilingue
+  title: LocalBilingualText;              // Titre bilingue
   code: string;                           // Code formation
   type: 'mandatory' | 'optional' | 'refresher' | 'advanced' | 'specialized';
   category: string;                       // Catégorie
   status: TrainingStatus;                 // Statut
   provider: {                            // Fournisseur
-    name: BilingualText;
+    name: LocalBilingualText;
     code: string;
     accreditation: string[];
     instructors: Array<{
@@ -348,7 +368,7 @@ export interface Training extends Timestamped {
     location?: {                         // Lieu (si présentiel)
       name: string;
       address: string;
-      coordinates?: GeoCoordinates;
+      coordinates?: LocalGeoCoordinates;
     };
     sessions: Array<{                    // Séances
       date: string;
@@ -360,10 +380,10 @@ export interface Training extends Timestamped {
     }>;
   };
   content: {                             // Contenu
-    objectives: BilingualText[];          // Objectifs
+    objectives: LocalBilingualText[];     // Objectifs
     modules: Array<{                     // Modules
-      title: BilingualText;
-      description: BilingualText;
+      title: LocalBilingualText;
+      description: LocalBilingualText;
       duration: number;                   // minutes
       materials: string[];                // Matériaux requis
       assessment?: {                     // Évaluation
@@ -448,7 +468,7 @@ export interface Training extends Timestamped {
 
 // =================== HABILITATION MÉDICALE ===================
 
-export interface MedicalClearance extends Timestamped {
+export interface MedicalClearance extends TimestampedEntity {
   id: string;                             // ID habilitation
   personnelId: string;                    // ID personnel
   status: MedicalStatus;                  // Statut médical
@@ -475,7 +495,7 @@ export interface MedicalClearance extends Timestamped {
   restrictions: Array<{                   // Restrictions médicales
     id: string;
     type: string;                         // Type restriction
-    description: BilingualText;           // Description
+    description: LocalBilingualText;      // Description
     severity: 'minor' | 'moderate' | 'major' | 'absolute';
     startDate: string;                    // Date début
     endDate?: string;                     // Date fin (si temporaire)
@@ -526,7 +546,7 @@ export interface MedicalClearance extends Timestamped {
 
 export interface Competency {
   id: string;                             // ID compétence
-  name: BilingualText;                    // Nom bilingue
+  name: LocalBilingualText;               // Nom bilingue
   category: string;                       // Catégorie
   level: 'novice' | 'competent' | 'proficient' | 'expert' | 'master';
   assessment: {                          // Évaluation
@@ -572,7 +592,7 @@ export interface Competency {
 
 export interface Qualification {
   id: string;                             // ID qualification
-  name: BilingualText;                    // Nom bilingue
+  name: LocalBilingualText;               // Nom bilingue
   type: 'education' | 'professional' | 'trade' | 'license' | 'permit';
   level: string;                          // Niveau
   institution: {                         // Institution
@@ -606,7 +626,7 @@ export interface Qualification {
 
 // =================== ÉVALUATION PERSONNEL ===================
 
-export interface PersonnelEvaluation extends Timestamped {
+export interface PersonnelEvaluation extends TimestampedEntity {
   id: string;                             // ID évaluation
   personnelId: string;                    // ID personnel
   evaluatorId: string;                    // ID évaluateur
@@ -793,22 +813,6 @@ export interface IncidentHistory {
   };
 }
 
-// =================== EXPORT TYPES ===================
-
-export type {
-  PersonnelRole,
-  CertificationLevel,
-  CertificationStatus,
-  MedicalStatus,
-  TrainingStatus,
-  Personnel,
-  EmergencyContact,
-  Certification,
-  Training,
-  MedicalClearance,
-  Competency,
-  Qualification,
-  PersonnelEvaluation,
-  PerformanceMetrics,
-  IncidentHistory
-};
+// =================== EXPORTS (SANS CONFLIT) ===================
+// Note: Tous les types sont déjà exportés individuellement ci-dessus
+// Pas besoin de re-export groupé qui causerait des conflits d'export
