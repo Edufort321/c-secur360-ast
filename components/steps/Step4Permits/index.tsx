@@ -1177,7 +1177,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>{language === 'fr' ? 'Statut:' : 'Status:'}</span>
-                        <StatusBadge status={permit.status} language={language} />
+                        <StatusBadge status={permit.status} />
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>{language === 'fr' ? 'Expiration:' : 'Expires:'}</span>
