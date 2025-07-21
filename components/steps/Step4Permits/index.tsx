@@ -110,7 +110,7 @@ export interface LegalPermit extends PermitData {
   location: string;
   site: string;
   secteur: string;
-  description: BilingualText; // ← CORRIGÉ: BilingualText au lieu de string
+  description: BilingualText;
   entrants?: PersonnelData[];
   superviseur?: string;
   formData?: any;
@@ -367,15 +367,15 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     canAudit: false
   }
 }) => {
-  // =================== HOOKS DE BASE (SANS DÉPENDANCES) ===================
+  // =================== HOOKS DE BASE ===================
   const {
     permits,
-    setPermits,
     loading: dataLoading,
     error: dataError,
     addPermit,
     updatePermit,
-    deletePermit
+    deletePermit,
+    setPermits
   } = usePermitData(initialPermits, onPermitChange);
 
   const {
@@ -440,10 +440,9 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     setSurveillancePermits((prev: LegalPermit[]) => 
       prev.map(p => p.id === permitId ? { ...p, status: newStatus } : p)
     );
-    setPermits((prev: LegalPermit[]) => 
-      prev.map(p => p.id === permitId ? { ...p, status: newStatus } : p)
-    );
-  }, [setPermits]);
+    const updatedPermits = permits.map(p => p.id === permitId ? { ...p, status: newStatus } : p);
+    setPermits(updatedPermits);
+  }, [setPermits, permits]);
 
   // =================== UTILITAIRES VALIDATION ===================
   const validateAllPermits = useCallback(async () => {
@@ -745,7 +744,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
       onConfirm: () => {
         deletePermit(permit.id);
         showToast('success', language === 'fr' ? 'Permis supprimé' : 'Permit deleted');
-        setConfirmDialog((prev: any) => ({ ...prev, show: false }));
+        setConfirmDialog(prev => ({ ...prev, show: false }));
       }
     });
   }, [permissions.canDelete, showToast, language, deletePermit]);
@@ -866,7 +865,8 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                     modifiedBy: userRole
                   };
                   setSelectedPermit(updated);
-                  setPermits((prev: LegalPermit[]) => prev.map(p => p.id === updated.id ? updated : p));
+                  const updatedPermits = permits.map(p => p.id === updated.id ? updated : p);
+                  setPermits(updatedPermits);
                 }}
               />
             )}
@@ -885,7 +885,8 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                     modifiedBy: userRole
                   };
                   setSelectedPermit(updated);
-                  setPermits((prev: LegalPermit[]) => prev.map(p => p.id === updated.id ? updated : p));
+                  const updatedPermits = permits.map(p => p.id === updated.id ? updated : p);
+                  setPermits(updatedPermits);
                 }}
               />
             )}
@@ -904,7 +905,8 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                     modifiedBy: userRole
                   };
                   setSelectedPermit(updated);
-                  setPermits((prev: LegalPermit[]) => prev.map(p => p.id === updated.id ? updated : p));
+                  const updatedPermits = permits.map(p => p.id === updated.id ? updated : p);
+                  setPermits(updatedPermits);
                 }}
               />
             )}
@@ -923,7 +925,8 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                     modifiedBy: userRole
                   };
                   setSelectedPermit(updated);
-                  setPermits((prev: LegalPermit[]) => prev.map(p => p.id === updated.id ? updated : p));
+                  const updatedPermits = permits.map(p => p.id === updated.id ? updated : p);
+                  setPermits(updatedPermits);
                 }}
               />
             )}
@@ -944,7 +947,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
         </div>
       </div>
     );
-  }, [selectedPermit, language, validationLoading, validatePermit, activeValidationTab, regulationConfig, userRole, setPermits, showToast]);
+  }, [selectedPermit, language, validationLoading, validatePermit, activeValidationTab, regulationConfig, userRole, permits, setPermits, showToast]);
 
   // =================== RENDU PRINCIPAL ===================
   return (
@@ -1241,7 +1244,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
         title={confirmDialog.title}
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog((prev: any) => ({ ...prev, show: false }))}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, show: false }))}
         language={language}
       />
 
