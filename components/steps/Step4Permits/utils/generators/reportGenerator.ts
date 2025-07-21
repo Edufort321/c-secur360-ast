@@ -1034,7 +1034,7 @@ export class ReportGenerator {
     // Simulation génération Excel
     const excelData = {
       sheets: reportData.sections.map(section => ({
-        name: section.title[options.language] || section.title.fr,
+        name: (options.language === 'fr' || options.language === 'both') ? section.title.fr : section.title.en,
         data: this.extractTableData(section)
       }))
     };
