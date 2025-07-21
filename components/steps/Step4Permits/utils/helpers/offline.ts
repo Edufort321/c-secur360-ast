@@ -2,14 +2,183 @@
 // Gestionnaire mode hors ligne pour continuité opérationnelle critique
 "use client";
 
-import type { 
-  AtmosphericReading,
-  LegalPermit,
-  PermitFormData,
-  PersonnelData,
-  ElectronicSignature,
-  BilingualText
-} from '../../types';
+// Types définis localement pour éviter les dépendances manquantes
+export type LocalGasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export type LocalAlarmLevel = 'safe' | 'low' | 'medium' | 'high' | 'danger' | 'critical' | 'extreme';
+
+export interface LocalBilingualText {
+  fr: string;
+  en: string;
+}
+
+export interface LocalAtmosphericReading {
+  id: string;
+  timestamp: number;
+  gasType: LocalGasType;
+  value: number;
+  unit: string;
+  alarmLevel: LocalAlarmLevel;
+  confidence: number;
+  location: {
+    coordinates: { latitude: number; longitude: number; };
+    point: string;
+  };
+  environmentalConditions: {
+    temperature: number;
+    humidity: number;
+    pressure: number;
+  };
+  metadata: {
+    equipment: {
+      model: string;
+      serialNumber: string;
+      lastCalibration: number;
+      batteryLevel: number;
+    };
+    operator: string;
+    qualityAssurance: {
+      validated: boolean;
+      flagged: boolean;
+      notes: string[];
+    };
+  };
+}
+
+export interface LocalLegalPermit {
+  id: string;
+  name: string;
+  category: string;
+  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'expired' | 'suspended' | 'completed';
+  priority: 'low' | 'medium' | 'high' | 'critical' | 'emergency';
+  validFrom: number;
+  validUntil: number;
+  location: {
+    coordinates: { latitude: number; longitude: number; };
+    address: string;
+    description: LocalBilingualText;
+  };
+  hazards: Array<{
+    type: string;
+    severity: LocalAlarmLevel;
+    mitigation: string[];
+  }>;
+  requirements: {
+    personnel: number;
+    equipment: string[];
+    procedures: string[];
+    training: string[];
+  };
+  approvals: Array<{
+    role: string;
+    name: string;
+    timestamp: number;
+    signature?: string;
+  }>;
+}
+
+export interface LocalPermitFormData {
+  permitId: string;
+  entrants: Array<{
+    id: string;
+    name: string;
+    role: string;
+    certifications: string[];
+  }>;
+  supervisor: {
+    id: string;
+    name: string;
+    contact: string;
+  };
+  equipment: Array<{
+    type: string;
+    model: string;
+    serialNumber: string;
+    calibrationDate: number;
+  }>;
+  procedures: string[];
+  emergencyContacts: Array<{
+    name: string;
+    role: string;
+    phone: string;
+  }>;
+}
+
+export interface LocalPersonnelData {
+  id: string;
+  personal: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    employeeId: string;
+  };
+  role: 'supervisor' | 'safety_officer' | 'entrant' | 'attendant';
+  certifications: Array<{
+    type: string;
+    number: string;
+    issuer: string;
+    validFrom: number;
+    validUntil: number;
+  }>;
+  medicalClearance: {
+    status: 'valid' | 'expired' | 'pending';
+    expiryDate: number;
+    restrictions: string[];
+    doctorName: string;
+  };
+  emergencyContact: {
+    name: string;
+    relationship: string;
+    phone: string;
+    email?: string;
+  };
+}
+
+export interface LocalElectronicSignature {
+  id: string;
+  signerId: string;
+  signerName: string;
+  timestamp: number;
+  type: 'standard' | 'advanced' | 'qualified';
+  documentId?: string;
+  ipAddress: string;
+  userAgent: string;
+  biometricData?: {
+    fingerprint?: string;
+    voiceprint?: string;
+    typing_pattern?: Array<{ key: string; duration: number; }>;
+  };
+  certificate: {
+    issuer: string;
+    serialNumber: string;
+    validFrom: number;
+    validUntil: number;
+    algorithm: string;
+  };
+  metadata: {
+    documentHash: string;
+    signatureHash: string;
+    timestampHash: string;
+    verificationType: 'standard' | 'advanced' | 'qualified';
+    legalCompliance: string[];
+  };
+}
 
 // =================== INTERFACES OFFLINE ===================
 
@@ -568,7 +737,7 @@ export class OfflineManager {
   /**
    * Stocker lecture atmosphérique critique
    */
-  async storeAtmosphericReading(reading: AtmosphericReading): Promise<string> {
+  async storeAtmosphericReading(reading: LocalAtmosphericReading): Promise<string> {
     const priority: OfflinePriority = ['danger', 'critical', 'extreme'].includes(reading.alarmLevel) ? 
       'critical' : 'high';
 
@@ -583,7 +752,7 @@ export class OfflineManager {
   /**
    * Stocker signature électronique
    */
-  async storeSignature(signature: ElectronicSignature): Promise<string> {
+  async storeSignature(signature: LocalElectronicSignature): Promise<string> {
     return this.storeOfflineData('signature', signature, {
       priority: 'critical',
       encrypt: true,
@@ -596,7 +765,7 @@ export class OfflineManager {
   /**
    * Stocker permis complet
    */
-  async storePermit(permit: LegalPermit, formData?: PermitFormData): Promise<string[]> {
+  async storePermit(permit: LocalLegalPermit, formData?: LocalPermitFormData): Promise<string[]> {
     const ids: string[] = [];
 
     // Stocker permis
@@ -623,10 +792,10 @@ export class OfflineManager {
    * Récupérer données critiques pour mode hors ligne
    */
   async getCriticalOfflineData(): Promise<{
-    atmosphericReadings: AtmosphericReading[];
-    permits: LegalPermit[];
-    personnel: PersonnelData[];
-    signatures: ElectronicSignature[];
+    atmosphericReadings: LocalAtmosphericReading[];
+    permits: LocalLegalPermit[];
+    personnel: LocalPersonnelData[];
+    signatures: LocalElectronicSignature[];
   }> {
     const [atmosphericReadings, permits, personnel, signatures] = await Promise.all([
       this.queryOfflineData('atmospheric_reading', { priority: 'critical', limit: 100 }),
@@ -929,7 +1098,7 @@ export class OfflineManager {
       data: {}
     };
 
-    const types = options?.types || Object.keys(this.storage.values().next().value?.type || {});
+    const types = options?.types || ['atmospheric_reading', 'permit', 'signature'];
     
     for (const type of types) {
       const items = await this.queryOfflineData(type as OfflineDataType);
@@ -1009,7 +1178,7 @@ export function isOfflineModeAvailable(): boolean {
 /**
  * Stocker rapidement lecture atmosphérique
  */
-export async function quickStoreAtmospheric(reading: AtmosphericReading): Promise<string> {
+export async function quickStoreAtmospheric(reading: LocalAtmosphericReading): Promise<string> {
   const manager = getOfflineManager();
   return manager.storeAtmosphericReading(reading);
 }
