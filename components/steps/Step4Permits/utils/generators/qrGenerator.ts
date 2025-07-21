@@ -1017,11 +1017,3 @@ export async function validateScannedQR(qrCodeData: string): Promise<{
 // =================== EXPORT ===================
 
 export default QRGenerator;
-export {
-  type QRCodeOptions,
-  type ConfinedSpaceData,
-  type QRCodeData,
-  type QRCodeResult,
-  type QRBatchResult,
-  type PrintableQROptions
-};
