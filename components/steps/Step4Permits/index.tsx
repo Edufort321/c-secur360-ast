@@ -373,9 +373,9 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     setPermits,
     loading: dataLoading,
     error: dataError,
-    savePermit,
-    deletePermit,
-    duplicatePermit
+    addPermit,
+    updatePermit,
+    deletePermit
   } = usePermitData(initialPermits, onPermitChange);
 
   const {
@@ -398,6 +398,38 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
     notifications,
     clearNotification
   } = useNotifications();
+
+  // =================== UTILITAIRES PERMIS ===================
+  const savePermit = useCallback((permit: LegalPermit) => {
+    if (permits.find(p => p.id === permit.id)) {
+      updatePermit(permit.id, permit);
+    } else {
+      addPermit(permit);
+    }
+  }, [permits, addPermit, updatePermit]);
+
+  const duplicatePermit = useCallback((permit: LegalPermit) => {
+    const duplicated: LegalPermit = {
+      ...permit,
+      id: `permit_${Date.now()}`,
+      name: `${permit.name} (Copie)`,
+      dateCreation: new Date(),
+      dateExpiration: new Date(Date.now() + 8 * 60 * 60 * 1000),
+      status: 'draft',
+      progress: 0,
+      lastModified: new Date(),
+      modifiedBy: userRole,
+      auditTrail: [{
+        id: `audit_${Date.now()}`,
+        timestamp: new Date(),
+        user: userRole,
+        action: 'PERMIT_DUPLICATED',
+        details: { originalId: permit.id }
+      }]
+    };
+    addPermit(duplicated);
+    showToast('success', language === 'fr' ? 'Permis dupliqué' : 'Permit duplicated');
+  }, [addPermit, userRole, showToast, language]);
 
   // =================== STATE MANAGEMENT ===================
   const [selectedPermit, setSelectedPermit] = useState<LegalPermit | null>(null);
