@@ -1198,7 +1198,7 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                           {language === 'fr' ? 'Valider' : 'Validate'}
                         </button>
                         <button
-                          onClick={() => updateSurveillanceStatus(permit.id, permit.status === 'active' ? 'paused' : 'active')}
+                          onClick={() => updateSurveillanceStatus(permit.id, permit.status === 'active' ? 'suspended' : 'active')}
                           className="flex-1 px-3 py-2 bg-yellow-100 text-yellow-700 rounded text-sm hover:bg-yellow-200"
                         >
                           {permit.status === 'active' ? 
