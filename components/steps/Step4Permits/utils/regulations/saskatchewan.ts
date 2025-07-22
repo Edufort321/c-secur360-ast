@@ -7,18 +7,135 @@
  * 
  * Provincial Focus: Agriculture, potash mining, oil & gas, uranium mining
  */
+"use client";
 
-import type { 
-  RegulationStandard, 
-  PersonnelQualification, 
-  ComplianceCheck,
-  BilingualText,
-  AtmosphericReading,
-  LegalPermit,
-  PersonnelData,
-  ComplianceResult,
-  ActionPlan
-} from '../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type ProvinceCode = 
+  | 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' 
+  | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export interface RegulationStandard {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  section: string;
+  category: string;
+  mandatory: boolean;
+  criteria: string[];
+  skSpecific?: Record<string, any>;
+  penalties?: {
+    individual: { min: number; max: number; };
+    corporation: { min: number; max: number; };
+  };
+  references?: Array<{
+    type: string;
+    title: string;
+    citation: string;
+    url?: string;
+  }>;
+  standards?: Record<string, { min?: number; max?: number; unit: string; }>;
+  implementation?: {
+    timeline: string;
+    resources: string[];
+    responsibilities: string[];
+  };
+}
+
+export interface PersonnelQualification {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  requirements: string[];
+  skSpecific?: Record<string, any>;
+  certification: string;
+  validity: string;
+  mandatoryTraining?: string[];
+}
+
+export interface ComplianceCheck {
+  standardId: string;
+  requirementId: string;
+  status: 'compliant' | 'non_compliant' | 'partially_compliant';
+  evidence: string[];
+  gaps?: string[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface AtmosphericReading {
+  gasType: string;
+  value: number;
+  unit: string;
+  timestamp: number;
+  location?: string;
+  weatherCompensation?: any;
+}
+
+export interface LegalPermit {
+  id: string;
+  spaceDetails?: {
+    identification?: string;
+    regulatoryClassification?: string[];
+  };
+  hazardAssessment?: {
+    climaticFactors?: string[];
+    industrySpecific?: Record<string, any>;
+  };
+  entryPermit?: {
+    weatherConsiderations?: any;
+    operationalCoordination?: any;
+  };
+}
+
+export interface PersonnelData {
+  role: string;
+  preferredLanguage?: string;
+  qualifications?: Array<{
+    type: string;
+    valid: boolean;
+  }>;
+}
+
+export interface ComplianceResult {
+  jurisdiction: string;
+  overallCompliance: number;
+  results: ComplianceCheck[];
+  criticalNonCompliance: number;
+  skSpecific?: Record<string, any>;
+  actionPlan: ActionPlan[];
+}
+
+export interface ActionPlan {
+  standardId: string;
+  action: BilingualText;
+  responsible: string;
+  deadline: string;
+  resources: string[];
+  verification: string;
+}
 
 // =================== SASKATCHEWAN AUTHORITY ===================
 
@@ -28,8 +145,8 @@ export const WCB_SK_AUTHORITY = {
   jurisdiction: ['SK'] as const,
   website: 'https://www.wcbsask.com',
   contactInfo: {
-    phone: '1-800-667-7590',              // Ligne principale WCB SK
-    preventionPhone: '306-787-4370',       // Services prévention
+    phone: '1-800-667-7590',
+    preventionPhone: '306-787-4370',
     email: 'prevention@wcbsask.com',
     address: '200 - 1881 Scarth Street, Regina, SK S4P 4L1'
   },
@@ -41,12 +158,12 @@ export const WCB_SK_AUTHORITY = {
     { region: 'North Battleford', phone: '306-446-7492', coverage: 'Northwest SK, Agriculture' },
     { region: 'Yorkton', phone: '306-786-1421', coverage: 'East SK, Agriculture, Food Processing' }
   ],
-  languages: ['en', 'fr'] as const,        // English primary, French services available
+  languages: ['en', 'fr'] as const,
   specializedUnits: [
-    'potash_mining_safety_division',       // Division sécurité mines potasse
-    'oil_gas_safety_unit',                // Unité sécurité pétrole gaz
-    'agriculture_safety_program',          // Programme sécurité agriculture
-    'uranium_mining_safety_unit'           // Unité sécurité mines uranium
+    'potash_mining_safety_division',
+    'oil_gas_safety_unit',
+    'agriculture_safety_program',
+    'uranium_mining_safety_unit'
   ],
   powers: [
     'Workplace inspections and investigations',
@@ -55,13 +172,13 @@ export const WCB_SK_AUTHORITY = {
     'Administrative penalties up to $500,000',
     'Prosecutions under provincial law'
   ]
-} as const;
+};
 
 // =================== SK SPECIFIC FEATURES ===================
 
 export const SK_SPECIFIC_FEATURES = {
   potashMiningOperations: [
-    'nutrien_potash_mines_saskatoon_area',  // Mines potasse Nutrien région Saskatoon
+    'nutrien_potash_mines_saskatoon_area',
     'mosaic_potash_mines_esterhazy_belle_plaine',
     'potash_solution_mining_operations',
     'underground_potash_mining_shafts',
@@ -75,21 +192,21 @@ export const SK_SPECIFIC_FEATURES = {
     'farm_fuel_storage_systems'
   ],
   oilGasOperations: [
-    'heavy_oil_extraction_lloydminster',    // Extraction pétrole lourd Lloydminster
+    'heavy_oil_extraction_lloydminster',
     'oil_sands_mining_operations',
     'natural_gas_processing_plants',
     'pipeline_compression_stations',
     'oilfield_tank_battery_operations'
   ],
   uraniumMiningOperations: [
-    'cameco_uranium_mines_northern_sk',     // Mines uranium Cameco nord SK
+    'cameco_uranium_mines_northern_sk',
     'mcarthur_river_cigar_lake_mines',
     'uranium_milling_processing_facilities',
     'underground_uranium_mining_operations',
     'radiation_protection_requirements'
   ],
   climaticChallenges: [
-    'extreme_cold_winter_operations',       // Opérations hiver froid extrême
+    'extreme_cold_winter_operations',
     'prairie_wind_exposure_factors',
     'seasonal_access_remote_locations',
     'ice_road_winter_transportation',
@@ -103,12 +220,12 @@ export const SK_SPECIFIC_FEATURES = {
     'satellite_communication_dependency'
   ],
   regulatoryIntegration: [
-    'canadian_nuclear_safety_commission',   // Commission sûreté nucléaire Canada
-    'saskatchewan_energy_regulator',       // Régulateur énergie Saskatchewan
+    'canadian_nuclear_safety_commission',
+    'saskatchewan_energy_regulator',
     'environment_climate_change_saskatchewan',
-    'saskpower_coordination'               // Coordination SaskPower
+    'saskpower_coordination'
   ]
-} as const;
+};
 
 // =================== SK REGULATION STANDARDS ===================
 
@@ -129,7 +246,7 @@ export const SK_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       'Not designed or intended for human occupancy',
       'Has restricted means for entry or exit',
       'May become hazardous to any person entering it',
-      'Includes potash mines, grain facilities, oil & gas, and uranium operations'  // SK specific
+      'Includes potash mines, grain facilities, oil & gas, and uranium operations'
     ],
     skSpecific: {
       potashMiningDefinitions: [
@@ -158,7 +275,7 @@ export const SK_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       ]
     },
     penalties: {
-      individual: { min: 500, max: 50000 },     // 2023 amounts
+      individual: { min: 500, max: 50000 },
       corporation: { min: 5000, max: 500000 }
     },
     references: [
@@ -387,38 +504,38 @@ export const SK_ATMOSPHERIC_STANDARDS = {
   
   // SK Potash Mining Industry Specific
   potashMiningSpecific: {
-    potash_dust: { max: 1, unit: 'mg/m³' },             // Respirable potash dust
-    brine_vapors: { max: 5, unit: 'mg/m³' },            // Sodium chloride vapors
-    methane_underground: { max: 1.0, unit: '%' },       // Underground methane
-    diesel_exhaust: { max: 1.5, unit: 'mg/m³' }         // Underground diesel equipment
+    potash_dust: { max: 1, unit: 'mg/m³' },
+    brine_vapors: { max: 5, unit: 'mg/m³' },
+    methane_underground: { max: 1.0, unit: '%' },
+    diesel_exhaust: { max: 1.5, unit: 'mg/m³' }
   },
   
   // SK Agriculture Industry Specific  
   agricultureSpecific: {
-    grain_dust: { max: 4, unit: 'mg/m³' },              // Total grain dust
-    phosphine_fumigation: { max: 0.3, unit: 'ppm' },    // Grain fumigation
-    hexane_canola: { max: 176, unit: 'mg/m³' },         // Canola oil extraction
-    ammonia_livestock: { max: 25, unit: 'ppm' },        // Livestock operations
-    methane_manure: { max: 1000, unit: 'ppm' }          // Manure storage
+    grain_dust: { max: 4, unit: 'mg/m³' },
+    phosphine_fumigation: { max: 0.3, unit: 'ppm' },
+    hexane_canola: { max: 176, unit: 'mg/m³' },
+    ammonia_livestock: { max: 25, unit: 'ppm' },
+    methane_manure: { max: 1000, unit: 'ppm' }
   },
   
   // SK Oil & Gas Industry Specific
   oilGasSpecific: {
-    hydrogen_sulfide_sour: { max: 10, unit: 'ppm' },    // Sour gas operations
-    methane_natural_gas: { max: 1000, unit: 'ppm' },    // Natural gas operations
-    benzene_crude_oil: { max: 0.5, unit: 'ppm' },       // Crude oil operations
-    propane_processing: { max: 1000, unit: 'ppm' },     // Gas processing
-    mercaptans_odorant: { max: 0.5, unit: 'ppm' }       // Natural gas odorant
+    hydrogen_sulfide_sour: { max: 10, unit: 'ppm' },
+    methane_natural_gas: { max: 1000, unit: 'ppm' },
+    benzene_crude_oil: { max: 0.5, unit: 'ppm' },
+    propane_processing: { max: 1000, unit: 'ppm' },
+    mercaptans_odorant: { max: 0.5, unit: 'ppm' }
   },
   
   // SK Uranium Mining Industry Specific
   uraniumMiningSpecific: {
-    radon_decay_products: { max: 0.33, unit: 'WL' },    // Working Level radon
-    uranium_dust: { max: 0.2, unit: 'mg/m³' },          // Uranium dust
-    yellowcake_dust: { max: 0.05, unit: 'mg/m³' },      // Yellowcake production
-    acid_vapors: { max: 1, unit: 'mg/m³' }              // Acid processing vapors
+    radon_decay_products: { max: 0.33, unit: 'WL' },
+    uranium_dust: { max: 0.2, unit: 'mg/m³' },
+    yellowcake_dust: { max: 0.05, unit: 'mg/m³' },
+    acid_vapors: { max: 1, unit: 'mg/m³' }
   }
-} as const;
+};
 
 // =================== SK PERSONNEL QUALIFICATIONS ===================
 
@@ -580,40 +697,40 @@ export const SK_EMERGENCY_SERVICES = {
   },
   
   potashMining: {
-    potashMineRescue: '306-933-8118',        // Potash mine rescue Saskatchewan
-    nutrienEmergency: '306-933-3030',        // Nutrien potash emergency
-    mosaicEmergency: '306-783-8200',         // Mosaic potash emergency
-    miningAssociation: '306-757-9505'        // Saskatchewan Mining Association
+    potashMineRescue: '306-933-8118',
+    nutrienEmergency: '306-933-3030',
+    mosaicEmergency: '306-783-8200',
+    miningAssociation: '306-757-9505'
   },
   
   agriculture: {
-    agriculturalSafety: '306-933-7484',      // Saskatchewan Farm Safety
-    grainElevatorEmergency: '306-525-4490', // Saskatchewan Wheat Pool emergency
-    livestockEmergency: '306-787-5420',     // Saskatchewan Agriculture emergency
-    cooperativeEmergency: '306-244-3311'   // Federated Co-operatives emergency
+    agriculturalSafety: '306-933-7484',
+    grainElevatorEmergency: '306-525-4490',
+    livestockEmergency: '306-787-5420',
+    cooperativeEmergency: '306-244-3311'
   },
   
   oilGas: {
-    saskEnergyEmergency: '306-787-2584',     // Saskatchewan Energy emergency
-    oilGasAssociation: '306-525-0171',      // Petroleum Technology Research
-    pipelineEmergency: '1-800-667-8293',   // Pipeline emergency coordination
-    wellSiteEmergency: '306-787-2584'      // Oil & gas well site emergency
+    saskEnergyEmergency: '306-787-2584',
+    oilGasAssociation: '306-525-0171',
+    pipelineEmergency: '1-800-667-8293',
+    wellSiteEmergency: '306-787-2584'
   },
   
   uraniumMining: {
-    camecoEmergency: '306-956-6200',         // Cameco Corporation emergency
-    cnscEmergency: '613-995-5894',          // Canadian Nuclear Safety Commission
-    nuclearEmergency: '306-787-8130',      // Saskatchewan nuclear emergency
-    radiationEmergency: '306-787-6334'     // Radiation health emergency
+    camecoEmergency: '306-956-6200',
+    cnscEmergency: '613-995-5894',
+    nuclearEmergency: '306-787-8130',
+    radiationEmergency: '306-787-6334'
   },
   
   regionalEmergency: {
-    reginaEmergency: '306-777-7000',         // Regina emergency services
-    saskatoonEmergency: '306-975-2476',     // Saskatoon emergency services
-    princeAlbertEmergency: '306-953-4222',  // Prince Albert emergency
-    estevanEmergency: '306-637-4044',       // Estevan emergency services
-    yorktonEmergency: '306-786-1757',       // Yorkton emergency services
-    northBattlefordEmergency: '306-445-1710' // North Battleford emergency
+    reginaEmergency: '306-777-7000',
+    saskatoonEmergency: '306-975-2476',
+    princeAlbertEmergency: '306-953-4222',
+    estevanEmergency: '306-637-4044',
+    yorktonEmergency: '306-786-1757',
+    northBattlefordEmergency: '306-445-1710'
   },
   
   specializedRescue: {
@@ -623,7 +740,7 @@ export const SK_EMERGENCY_SERVICES = {
     nuclearRescue: 'nuclear_emergency_response_team_canada',
     agriculturalRescue: 'volunteer_fire_department_farm_rescue'
   }
-} as const;
+};
 
 // =================== COMPLIANCE CHECKING ===================
 
