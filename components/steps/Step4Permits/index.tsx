@@ -35,13 +35,44 @@ export type PermitStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'expi
 export type PermitTypeEnum = 'confined_space' | 'hot_work' | 'excavation' | 'lifting' | 'height_work' | 'electrical';
 
 // Interface LegalPermit compatible avec le hook
-export interface LegalPermit extends HookLegalPermit {
+export interface LegalPermit {
+  // Propriétés du hook (héritées)
+  id: string;
+  name: string;
+  category: string;
+  authority: string;
+  province: ProvinceCode[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  selected: boolean;
+  formData: any;
+  code: string;
+  status: PermitStatus;
+  dateCreated: string;
+  dateModified: string;
+  legalRequirements: {
+    permitRequired: boolean;
+    atmosphericTesting: boolean;
+    entryProcedure: boolean;
+    emergencyPlan: boolean;
+    equipmentCheck: boolean;
+    attendantRequired: boolean;
+    documentation: boolean;
+  };
+  validity: {
+    startDate: string;
+    endDate: string;
+    isValid: boolean;
+  };
+  compliance: Record<string, boolean>;
+  
+  // Propriétés supplémentaires pour notre interface
   type: PermitTypeEnum;
   dateCreation: Date;
   dateExpiration: Date;
   location: string;
   site: string;
   secteur: string;
+  description: BilingualText;
   entrants?: any[];
   superviseur?: string;
   progress: number;
@@ -304,7 +335,10 @@ const convertPermitType = (hookType: PermitType): PermitTypeEnum => {
 // Fonction pour convertir un permis du hook vers l'interface locale
 const convertHookPermitToLocal = (hookPermit: HookLegalPermit): LegalPermit => {
   return {
+    // Propriétés du hook (copiées directement)
     ...hookPermit,
+    
+    // Propriétés converties
     type: convertPermitType('espace-clos'), // Par défaut
     dateCreation: new Date(hookPermit.dateCreated),
     dateExpiration: new Date(hookPermit.validity.endDate),
