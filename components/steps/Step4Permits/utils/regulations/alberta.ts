@@ -504,6 +504,7 @@ export const ALBERTA_OHS_STANDARDS: Record<string, RegulatoryStandard> = {
       {
         type: 'guideline',
         title: 'Confined Space Entry Guidelines',
+        citation: 'Alberta OHS Guideline CS-001',
         publisher: 'Alberta OHS',
         url: 'https://www.alberta.ca/ohs-confined-space-entry'
       }
