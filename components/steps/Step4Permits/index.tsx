@@ -25,6 +25,13 @@ interface Step4PermitsProps {
   language: 'fr' | 'en';
   tenant: string;
   errors?: any;
+  // Propriétés supplémentaires requises par ASTForm
+  province: string;
+  userRole: string;
+  touchOptimized: boolean;
+  compactMode: boolean;
+  onPermitChange: (permits: any) => void;
+  initialPermits: any[];
 }
 
 interface BilingualText {
@@ -539,7 +546,13 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   onDataChange,
   language = 'fr',
   tenant,
-  errors
+  errors,
+  province,
+  userRole,
+  touchOptimized,
+  compactMode,
+  onPermitChange,
+  initialPermits
 }) => {
   const texts = getTexts(language);
   const config = getPermitTypesConfig(language);
@@ -571,10 +584,14 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   
   // =================== GÉNÉRATION PERMIS ===================
   const [permits, setPermits] = useState<LegalPermit[]>(() => {
+    // Prioriser initialPermits, puis hookPermits, puis génération automatique
+    if (initialPermits && initialPermits.length > 0) {
+      return initialPermits.map(convertHookPermitToLocal);
+    }
     if (hookPermits.length > 0) {
       return hookPermits.map(convertHookPermitToLocal);
     }
-    return generatePermitsList(language, (formData.projectInfo?.province || 'QC') as ProvinceCode);
+    return generatePermitsList(language, (province || formData.projectInfo?.province || 'QC') as ProvinceCode);
   });
   
   // =================== FONCTION CONVERSION ===================
@@ -731,7 +748,13 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
       }
     };
     
+    // Appeler onDataChange pour la compatibilité avec les autres steps
     onDataChange('permits', permitsData);
+    
+    // Appeler onPermitChange pour la compatibilité avec ASTForm
+    if (onPermitChange) {
+      onPermitChange(selectedList);
+    }
   };
   
   // =================== FONCTIONS UTILITAIRES ===================
@@ -1399,6 +1422,27 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             margin: 0;
             font-size: '14px';
           }
+          
+          /* Adaptations pour touchOptimized et compactMode */
+          .permit-card {
+            ${touchOptimized ? 'min-height: 44px; padding: 16px;' : ''}
+            ${compactMode ? 'padding: 12px;' : ''}
+          }
+          
+          .permit-checkbox {
+            ${touchOptimized ? 'width: 28px; height: 28px;' : ''}
+          }
+          
+          .validation-checkbox {
+            ${touchOptimized ? 'width: 20px; height: 20px;' : ''}
+          }
+          
+          ${compactMode ? `
+            .summary-header { padding: 16px; margin-bottom: 16px; }
+            .search-section { padding: 16px; margin-bottom: 16px; }
+            .permits-grid { gap: 12px; }
+            .validation-panels { padding: 12px; }
+          ` : ''}
           
           /* =================== RESPONSIVE =================== */
           @media (max-width: 768px) {
