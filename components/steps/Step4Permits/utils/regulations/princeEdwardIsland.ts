@@ -7,18 +7,136 @@
  * 
  * Provincial Focus: Agriculture, fisheries, food processing, tourism facilities
  */
+"use client";
 
-import type { 
-  RegulationStandard, 
-  PersonnelQualification, 
-  ComplianceCheck,
-  BilingualText,
-  AtmosphericReading,
-  LegalPermit,
-  PersonnelData,
-  ComplianceResult,
-  ActionPlan
-} from '../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type ProvinceCode = 
+  | 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' 
+  | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export interface RegulationStandard {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  section: string;
+  category: string;
+  mandatory: boolean;
+  criteria: string[];
+  peiSpecific?: Record<string, any>;
+  penalties?: {
+    individual: { min: number; max: number; };
+    corporation: { min: number; max: number; };
+  };
+  references?: Array<{
+    type: string;
+    title: string;
+    citation: string;
+    url?: string;
+  }>;
+  standards?: Record<string, { min?: number; max?: number; unit: string; }>;
+  implementation?: {
+    timeline: string;
+    resources: string[];
+    responsibilities: string[];
+  };
+}
+
+export interface PersonnelQualification {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  requirements: string[];
+  peiSpecific?: Record<string, any>;
+  certification: string;
+  validity: string;
+  mandatoryTraining?: string[];
+}
+
+export interface ComplianceCheck {
+  standardId: string;
+  requirementId: string;
+  status: 'compliant' | 'non_compliant' | 'partially_compliant';
+  evidence: string[];
+  gaps?: string[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface AtmosphericReading {
+  gasType: string;
+  value: number;
+  unit: string;
+  timestamp: number;
+  location?: string;
+  seasonalFactors?: any;
+}
+
+export interface LegalPermit {
+  id: string;
+  spaceDetails?: {
+    identification?: string;
+    regulatoryClassification?: string[];
+  };
+  hazardAssessment?: {
+    seasonalFactors?: any;
+    islandChallenges?: any;
+    industrySpecific?: Record<string, any>;
+  };
+  entryPermit?: {
+    emergencyCoordination?: any;
+    seasonalCoordination?: any;
+  };
+}
+
+export interface PersonnelData {
+  role: string;
+  preferredLanguage?: string;
+  qualifications?: Array<{
+    type: string;
+    valid: boolean;
+  }>;
+}
+
+export interface ComplianceResult {
+  jurisdiction: string;
+  overallCompliance: number;
+  results: ComplianceCheck[];
+  criticalNonCompliance: number;
+  peiSpecific?: Record<string, any>;
+  actionPlan: ActionPlan[];
+}
+
+export interface ActionPlan {
+  standardId: string;
+  action: BilingualText;
+  responsible: string;
+  deadline: string;
+  resources: string[];
+  verification: string;
+}
 
 // =================== PRINCE EDWARD ISLAND AUTHORITY ===================
 
@@ -28,8 +146,8 @@ export const WCB_PEI_AUTHORITY = {
   jurisdiction: ['PE'] as const,
   website: 'https://wcb.pe.ca',
   contactInfo: {
-    phone: '1-800-237-5049',              // Ligne principale WCB PEI
-    preventionPhone: '902-368-5680',       // Services prévention
+    phone: '1-800-237-5049',
+    preventionPhone: '902-368-5680',
     email: 'prevention@wcb.pe.ca',
     address: '14 Weymouth Street, Charlottetown, PE C1A 4Z1'
   },
@@ -38,12 +156,12 @@ export const WCB_PEI_AUTHORITY = {
     { region: 'Summerside', phone: '902-888-8218', coverage: 'Western PEI, Food Processing, Agriculture' },
     { region: 'Montague', phone: '902-838-0700', coverage: 'Eastern PEI, Fisheries, Rural Operations' }
   ],
-  languages: ['en', 'fr'] as const,        // English primary, French services available
+  languages: ['en', 'fr'] as const,
   specializedUnits: [
-    'agriculture_safety_program',          // Programme sécurité agriculture
-    'fisheries_safety_initiative',         // Initiative sécurité pêches
-    'food_processing_safety_unit',         // Unité sécurité transformation alimentaire
-    'tourism_hospitality_safety_program'   // Programme sécurité tourisme
+    'agriculture_safety_program',
+    'fisheries_safety_initiative',
+    'food_processing_safety_unit',
+    'tourism_hospitality_safety_program'
   ],
   powers: [
     'Workplace inspections and investigations',
@@ -52,7 +170,7 @@ export const WCB_PEI_AUTHORITY = {
     'Administrative penalties',
     'Prosecutions under provincial law'
   ]
-} as const;
+};
 
 // =================== PEI SPECIFIC FEATURES ===================
 
@@ -105,7 +223,7 @@ export const PEI_SPECIFIC_FEATURES = {
     'agriculture_agri_food_canada',
     'fisheries_oceans_canada_coordination'
   ]
-} as const;
+};
 
 // =================== PEI REGULATION STANDARDS ===================
 
@@ -126,7 +244,7 @@ export const PEI_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       'Not designed or intended for human occupancy',
       'Has restricted means for entry or exit',
       'May become hazardous to any person entering it',
-      'Includes agricultural, fisheries, and food processing facilities'  // PEI specific
+      'Includes agricultural, fisheries, and food processing facilities'
     ],
     peiSpecific: {
       agricultureDefinitions: [
@@ -158,7 +276,7 @@ export const PEI_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       ]
     },
     penalties: {
-      individual: { min: 250, max: 25000 },     // 2023 amounts
+      individual: { min: 250, max: 25000 },
       corporation: { min: 2500, max: 250000 }
     },
     references: [
@@ -362,38 +480,38 @@ export const PEI_ATMOSPHERIC_STANDARDS = {
   
   // PEI Agriculture Industry Specific
   agricultureSpecific: {
-    methane_manure: { max: 1000, unit: 'ppm' },         // Livestock manure storage
-    ammonia_livestock: { max: 25, unit: 'ppm' },        // Animal feeding operations
-    carbon_dioxide_storage: { max: 5000, unit: 'ppm' }, // Potato/grain respiration
-    phosphine_fumigation: { max: 0.3, unit: 'ppm' },    // Grain fumigation
-    ethylene_ripening: { max: 100, unit: 'ppm' }        // Potato storage
+    methane_manure: { max: 1000, unit: 'ppm' },
+    ammonia_livestock: { max: 25, unit: 'ppm' },
+    carbon_dioxide_storage: { max: 5000, unit: 'ppm' },
+    phosphine_fumigation: { max: 0.3, unit: 'ppm' },
+    ethylene_ripening: { max: 100, unit: 'ppm' }
   },
   
   // PEI Fisheries Industry Specific  
   fisheriesSpecific: {
-    ammonia_refrigeration: { max: 25, unit: 'ppm' },    // Seafood processing refrigeration
-    hydrogen_sulfide_decomp: { max: 10, unit: 'ppm' },  // Fish decomposition
-    carbon_dioxide_preservation: { max: 5000, unit: 'ppm' }, // Seafood preservation
-    steam_displacement: 'oxygen_monitoring_required'     // Steam cooking operations
+    ammonia_refrigeration: { max: 25, unit: 'ppm' },
+    hydrogen_sulfide_decomp: { max: 10, unit: 'ppm' },
+    carbon_dioxide_preservation: { max: 5000, unit: 'ppm' },
+    steam_displacement: 'oxygen_monitoring_required'
   },
   
   // PEI Food Processing Industry Specific
   foodProcessingSpecific: {
-    acrylamide_vapor: { max: 0.03, unit: 'mg/m³' },     // Potato processing
-    yeast_alcohol: { max: 1000, unit: 'ppm' },          // Bakery fermentation
-    flour_dust: { max: 4, unit: 'mg/m³' },              // Flour mill operations
-    cleaning_chemicals: 'per_material_safety_data_sheet', // Food processing sanitizers
+    acrylamide_vapor: { max: 0.03, unit: 'mg/m³' },
+    yeast_alcohol: { max: 1000, unit: 'ppm' },
+    flour_dust: { max: 4, unit: 'mg/m³' },
+    cleaning_chemicals: 'per_material_safety_data_sheet',
     pasteurization_steam: 'oxygen_displacement_monitoring'
   },
   
   // PEI Tourism/Hospitality Specific
   tourismSpecific: {
-    kitchen_exhaust: { max: 25, unit: 'ppm' },          // Restaurant CO
-    pool_chemicals: { max: 1, unit: 'ppm' },            // Chlorine/chloramine
-    boiler_exhaust: { max: 35, unit: 'ppm' },           // Hotel heating systems
+    kitchen_exhaust: { max: 25, unit: 'ppm' },
+    pool_chemicals: { max: 1, unit: 'ppm' },
+    boiler_exhaust: { max: 35, unit: 'ppm' },
     maintenance_solvents: 'per_material_safety_data_sheet'
   }
-} as const;
+};
 
 // =================== PEI PERSONNEL QUALIFICATIONS ===================
 
@@ -538,42 +656,42 @@ export const PEI_EMERGENCY_SERVICES = {
   },
   
   islandServices: {
-    emergencyMeasures: '902-894-0385',        // PEI Emergency Measures Organization
-    healthEmergency: '902-368-6130',          // Health PEI Emergency Services
-    marinEmergency: '1-800-565-1582',         // Coast Guard Charlottetown
-    environmentalEmergency: '902-368-5000'    // Environment, Water and Climate Change
+    emergencyMeasures: '902-894-0385',
+    healthEmergency: '902-368-6130',
+    marinEmergency: '1-800-565-1582',
+    environmentalEmergency: '902-368-5000'
   },
   
   agriculture: {
-    agricultureEmergency: '902-368-4880',     // Agriculture and Land Department
-    potatoBoard: '902-892-6551',              // PEI Potato Board
-    dairyBoard: '902-566-3804',               // PEI Dairy Board
-    livestockEmergency: '902-368-4852',       // Animal Health Division
-    farmSafety: '902-368-4990'                // Farm Safety Association PEI
+    agricultureEmergency: '902-368-4880',
+    potatoBoard: '902-892-6551',
+    dairyBoard: '902-566-3804',
+    livestockEmergency: '902-368-4852',
+    farmSafety: '902-368-4990'
   },
   
   fisheries: {
-    fisheriesEmergency: '902-368-6230',       // PEI Fisheries and Communities
-    dfoEmergency: '902-566-7810',             // Fisheries and Oceans Canada
-    lobsterBoard: '902-566-4050',             // PEI Lobster Marketing Board
-    aquacultureEmergency: '902-368-6265',     // Aquaculture and Fisheries Development
-    harborAuthority: '902-566-7923'          // Charlottetown Harbour Authority
+    fisheriesEmergency: '902-368-6230',
+    dfoEmergency: '902-566-7810',
+    lobsterBoard: '902-566-4050',
+    aquacultureEmergency: '902-368-6265',
+    harborAuthority: '902-566-7923'
   },
   
   foodProcessing: {
-    cfiaEmergency: '902-566-7890',            // Canadian Food Inspection Agency
-    cavendishFarms: '902-836-3301',           // Cavendish Farms Emergency
-    adlEmergency: '902-566-3020',             // Amalgamated Dairies Limited
-    foodSafety: '902-368-4185',               // Food Safety and Inspection
-    processingAssociation: '902-894-6868'    // Food Processors Association
+    cfiaEmergency: '902-566-7890',
+    cavendishFarms: '902-836-3301',
+    adlEmergency: '902-566-3020',
+    foodSafety: '902-368-4185',
+    processingAssociation: '902-894-6868'
   },
   
   tourism: {
-    tourismEmergency: '902-368-4444',         // Tourism PEI Emergency
-    hotelAssociation: '902-892-1853',         // Hotel and Motel Association
-    restaurantAssociation: '902-894-7411',    // Restaurant and Foodservices Association
-    attractionEmergency: '902-368-4444',      // Tourist Attraction Emergency
-    conventionCentre: '902-629-1864'         // Charlottetown Conference Centre
+    tourismEmergency: '902-368-4444',
+    hotelAssociation: '902-892-1853',
+    restaurantAssociation: '902-894-7411',
+    attractionEmergency: '902-368-4444',
+    conventionCentre: '902-629-1864'
   },
   
   specializedRescue: {
@@ -582,7 +700,7 @@ export const PEI_EMERGENCY_SERVICES = {
     agriculturalRescue: 'volunteer_fire_department_farm_rescue',
     industrialRescue: 'charlottetown_fire_hazmat_team'
   }
-} as const;
+};
 
 // =================== COMPLIANCE CHECKING ===================
 
