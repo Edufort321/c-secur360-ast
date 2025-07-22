@@ -28,8 +28,8 @@ export interface BilingualText {
   en: string;
 }
 
-// Status enum
-export type PermitStatus = 'draft' | 'pending' | 'approved' | 'active' | 'completed' | 'expired' | 'cancelled' | 'suspended';
+// Status enum - compatible avec le hook
+export type PermitStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'expired' | 'active' | 'completed' | 'cancelled' | 'suspended';
 
 // Types de permis adaptés au hook
 export type PermitTypeEnum = 'confined_space' | 'hot_work' | 'excavation' | 'lifting' | 'height_work' | 'electrical';
@@ -212,15 +212,16 @@ const PermitCard: React.FC<{
   );
 };
 
-// Composant StatusBadge temporaire
+// Composant StatusBadge temporaire - compatible avec tous les statuts
 const StatusBadge: React.FC<{ status: PermitStatus }> = ({ status }) => {
   const statusConfig = {
     draft: { label: 'Brouillon', color: 'bg-gray-100 text-gray-800' },
     pending: { label: 'En attente', color: 'bg-yellow-100 text-yellow-800' },
     approved: { label: 'Approuvé', color: 'bg-green-100 text-green-800' },
+    rejected: { label: 'Rejeté', color: 'bg-red-100 text-red-800' },
+    expired: { label: 'Expiré', color: 'bg-red-100 text-red-800' },
     active: { label: 'Actif', color: 'bg-blue-100 text-blue-800' },
     completed: { label: 'Terminé', color: 'bg-purple-100 text-purple-800' },
-    expired: { label: 'Expiré', color: 'bg-red-100 text-red-800' },
     cancelled: { label: 'Annulé', color: 'bg-gray-100 text-gray-800' },
     suspended: { label: 'Suspendu', color: 'bg-orange-100 text-orange-800' }
   };
