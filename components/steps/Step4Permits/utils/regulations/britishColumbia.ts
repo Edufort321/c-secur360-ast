@@ -2,15 +2,209 @@
 // Réglementations British Columbia WorkSafeBC pour espaces clos
 "use client";
 
-import type { 
-  RegulatoryStandard,
-  ComplianceMatrix,
-  RegulatoryUpdate,
-  StandardRevision,
-  BilingualText,
-  GasType,
-  ProvinceCode
-} from '../../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type ProvinceCode = 
+  | 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' 
+  | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export interface RegulatoryStandard {
+  id: string;
+  name: BilingualText;
+  type: 'safety' | 'environmental' | 'quality' | 'procedural';
+  category: string;
+  authority: {
+    name: BilingualText;
+    acronym: string;
+    jurisdiction: ProvinceCode[];
+    website: string;
+    contactInfo: {
+      phone: string;
+      emergencyLine: string;
+      email: string;
+      address: {
+        street: string;
+        city: string;
+        province: string;
+        postalCode: string;
+      };
+      regionalOffices?: Array<{
+        region: string;
+        phone: string;
+        address: string;
+      }>;
+    };
+    powers: BilingualText;
+    specialFeatures?: string[];
+  };
+  jurisdiction: ProvinceCode[];
+  effectiveDate: number;
+  lastUpdated: number;
+  status: 'active' | 'pending' | 'superseded' | 'repealed';
+  hierarchy: {
+    parent?: string;
+    level: 'act' | 'regulation' | 'section' | 'subsection' | 'part';
+    section?: string;
+    subsections?: string[];
+  };
+  scope: {
+    workplaces: string[];
+    activities: string[];
+    equipment: string[];
+    exclusions?: string[];
+    specialConsiderations?: string[];
+  };
+  requirements: Array<{
+    id: string;
+    name: BilingualText;
+    description: BilingualText;
+    mandatory: boolean;
+    criteria: BilingualText;
+    implementation?: {
+      timeline: string;
+      resources: string[];
+      responsibilities?: string[];
+      dependencies?: string[];
+      standards?: Record<string, { min?: number; max?: number; unit: string; }>;
+    };
+    verification?: {
+      methods: string[];
+      documentation?: string[];
+      frequency?: string;
+      evidence?: string[];
+      nonCompliance?: {
+        indicators: string[];
+        actions: string[];
+      };
+    };
+    penalties?: {
+      individual: { min: number; max: number; };
+      corporation: { min: number; max: number; };
+      description?: BilingualText;
+    };
+    provinceSpecific?: Record<string, any>;
+  }>;
+  compliance: {
+    level: 'mandatory' | 'recommended' | 'best_practice';
+    enforcement: string;
+    penalties: {
+      individual: { min: number; max: number; };
+      corporation: { min: number; max: number; };
+      criminal?: string;
+    };
+    inspectionFrequency: string;
+    reportingRequirements: string[];
+  };
+  provinceSpecific?: Record<string, any>;
+  relatedStandards?: string[];
+  references: Array<{
+    type: string;
+    title: string;
+    citation: string;
+    section?: string;
+    url?: string;
+    publisher?: string;
+    collaboration?: string;
+  }>;
+  lastReview: number;
+  nextReview: number;
+  metadata: {
+    version: string;
+    language: string;
+    jurisdiction: string;
+    effectiveTerritory: string;
+    specialConditions: string[];
+  };
+}
+
+export interface ComplianceMatrix {
+  jurisdiction: string;
+  standardsAssessed: string[];
+  assessmentDate: number;
+  overallCompliance: number;
+  results: Array<{
+    standardId: string;
+    requirementId: string;
+    status: 'compliant' | 'non_compliant' | 'partially_compliant' | 'not_applicable';
+    evidence: string[];
+    gaps: string[];
+    priority: 'low' | 'medium' | 'high' | 'critical';
+  }>;
+  criticalNonCompliance: number;
+  actionPlan: Array<{
+    standardId: string;
+    requirement: string;
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    action: BilingualText;
+    responsible: string;
+    deadline: string;
+    resources: string[];
+    verification: string;
+    status: 'planned' | 'in_progress' | 'completed' | 'overdue';
+    provinceSpecific?: Record<string, any>;
+  }>;
+  nextAssessment: number;
+  certifiedBy: string;
+  provinceSpecific?: Record<string, any>;
+  metadata: {
+    version: string;
+    assessmentMethod: string;
+    dataQuality: string;
+    limitationsNoted: string[];
+  };
+}
+
+export interface RegulatoryUpdate {
+  id: string;
+  standardId: string;
+  updateType: 'amendment' | 'revision' | 'new_requirement' | 'repeal';
+  effectiveDate: number;
+  description: BilingualText;
+  impact: 'low' | 'medium' | 'high' | 'critical';
+  affectedSections: string[];
+  transitionPeriod?: number;
+  complianceActions: string[];
+}
+
+export interface StandardRevision {
+  revisionId: string;
+  standardId: string;
+  previousVersion: string;
+  newVersion: string;
+  revisionDate: number;
+  changes: Array<{
+    section: string;
+    changeType: 'addition' | 'modification' | 'deletion';
+    description: BilingualText;
+    rationale: BilingualText;
+  }>;
+  impactAssessment: {
+    affected_organizations: number;
+    compliance_cost_estimate: number;
+    implementation_timeline: string;
+  };
+}
 
 // =================== CONSTANTES BRITISH COLUMBIA WORKSAFEBC ===================
 
@@ -27,7 +221,6 @@ export const WORKSAFEBC_AUTHORITY = {
   contactInfo: {
     phone: '1-888-621-7233',
     emergencyLine: '911',
-    preventionPhone: '1-888-621-7233',
     email: 'prevention@worksafebc.com',
     address: {
       street: '6951 Westminster Highway',
@@ -59,22 +252,8 @@ export const WORKSAFEBC_AUTHORITY = {
     ]
   },
   powers: {
-    fr: [
-      'Inspection des lieux de travail',
-      'Émission d\'ordonnances d\'amélioration',
-      'Émission d\'ordonnances d\'arrêt de travail',
-      'Amendes administratives pénales',
-      'Poursuites pour violations graves',
-      'Investigation d\'accidents et incidents'
-    ],
-    en: [
-      'Workplace inspections',
-      'Issue improvement orders',
-      'Issue stop work orders',
-      'Administrative monetary penalties',
-      'Prosecutions for serious violations',
-      'Accident and incident investigations'
-    ]
+    fr: 'Inspection des lieux de travail, émission d\'ordonnances d\'amélioration, émission d\'ordonnances d\'arrêt de travail, amendes administratives pénales, poursuites pour violations graves, investigation d\'accidents et incidents',
+    en: 'Workplace inspections, issue improvement orders, issue stop work orders, administrative monetary penalties, prosecutions for serious violations, accident and incident investigations'
   },
   specialFeatures: [
     'industry_specific_guidelines',
@@ -98,7 +277,7 @@ export const WORKSAFEBC_STANDARDS: Record<string, RegulatoryStandard> = {
     category: 'confined_space',
     authority: WORKSAFEBC_AUTHORITY,
     jurisdiction: ['BC'],
-    effectiveDate: new Date('2021-11-01').getTime(), // Dernière révision majeure
+    effectiveDate: new Date('2021-11-01').getTime(),
     lastUpdated: new Date('2023-06-01').getTime(),
     status: 'active',
     hierarchy: {
@@ -110,39 +289,20 @@ export const WORKSAFEBC_STANDARDS: Record<string, RegulatoryStandard> = {
     },
     scope: {
       workplaces: [
-        'industrial',
-        'construction',
-        'forestry',
-        'mining',
-        'marine',
-        'utilities',
-        'municipal',
-        'healthcare',
-        'transportation',
-        'agriculture'
+        'industrial', 'construction', 'forestry', 'mining', 'marine',
+        'utilities', 'municipal', 'healthcare', 'transportation', 'agriculture'
       ],
       activities: [
-        'confined_space_entry',
-        'maintenance_and_repair',
-        'inspection_and_testing',
-        'cleaning_and_decontamination',
-        'construction_activities',
-        'emergency_response'
+        'confined_space_entry', 'maintenance_and_repair', 'inspection_and_testing',
+        'cleaning_and_decontamination', 'construction_activities', 'emergency_response'
       ],
       equipment: [
-        'tanks_and_vessels',
-        'silos_and_bins',
-        'manholes_and_sewers',
-        'tunnels_and_shafts',
-        'pits_and_trenches',
-        'ship_holds_and_compartments',
-        'process_equipment'
+        'tanks_and_vessels', 'silos_and_bins', 'manholes_and_sewers',
+        'tunnels_and_shafts', 'pits_and_trenches', 'ship_holds_and_compartments', 'process_equipment'
       ],
       specialConsiderations: [
-        'marine_confined_spaces',
-        'forestry_remote_locations',
-        'mining_underground_spaces',
-        'first_nations_territories'
+        'marine_confined_spaces', 'forestry_remote_locations',
+        'mining_underground_spaces', 'first_nations_territories'
       ]
     },
     requirements: [
@@ -158,20 +318,8 @@ export const WORKSAFEBC_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Espace clos : espace totalement ou partiellement fermé',
-            'Non conçu ou destiné à être occupé par des personnes',
-            'Entrée ou sortie limitée par son emplacement, sa taille ou ses moyens d\'accès',
-            'Peut devenir dangereux pour une personne qui y entre',
-            'Inclut spécifiquement les espaces marins et forestiers'
-          ],
-          en: [
-            'Confined space: space that is totally or partially enclosed',
-            'Not designed or intended to be occupied by persons',
-            'Entry or exit is limited by location, size or means of access',
-            'May become dangerous to a person entering it',
-            'Specifically includes marine and forestry spaces'
-          ]
+          fr: 'Espace clos : espace totalement ou partiellement fermé, non conçu ou destiné à être occupé par des personnes, entrée ou sortie limitée par son emplacement, sa taille ou ses moyens d\'accès, peut devenir dangereux pour une personne qui y entre, inclut spécifiquement les espaces marins et forestiers',
+          en: 'Confined space: space that is totally or partially enclosed, not designed or intended to be occupied by persons, entry or exit is limited by location, size or means of access, may become dangerous to a person entering it, specifically includes marine and forestry spaces'
         },
         implementation: {
           timeline: 'immediate_upon_identification',
@@ -197,198 +345,23 @@ export const WORKSAFEBC_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Évaluation des risques par personne qualifiée',
-            'Identification de tous les dangers potentiels',
-            'Évaluation des risques atmosphériques, physiques et biologiques',
-            'Considération des conditions météorologiques (BC)',
-            'Évaluation des voies d\'accès et de sortie',
-            'Consultation des travailleurs et du comité de santé-sécurité'
-          ],
-          en: [
-            'Risk assessment by qualified person',
-            'Identification of all potential hazards',
-            'Assessment of atmospheric, physical and biological risks',
-            'Consideration of weather conditions (BC)',
-            'Assessment of entry and exit routes',
-            'Consultation with workers and health and safety committee'
-          ]
+          fr: 'Évaluation des risques par personne qualifiée, identification de tous les dangers potentiels, évaluation des risques atmosphériques, physiques et biologiques, considération des conditions météorologiques (BC), évaluation des voies d\'accès et de sortie, consultation des travailleurs et du comité de santé-sécurité',
+          en: 'Risk assessment by qualified person, identification of all potential hazards, assessment of atmospheric, physical and biological risks, consideration of weather conditions (BC), assessment of entry and exit routes, consultation with workers and health and safety committee'
         },
         implementation: {
           timeline: 'before_each_entry_project',
           resources: ['qualified_assessor', 'assessment_tools', 'weather_monitoring'],
           responsibilities: ['qualified_person', 'employer', 'supervisor']
         },
-        bcSpecific: {
-          weatherConsiderations: [
-            'coastal_fog_and_visibility',
-            'mountain_weather_changes',
-            'rainfall_and_flooding_risk',
-            'seismic_activity_potential'
-          ],
-          environmentalFactors: [
-            'tidal_influences_marine_spaces',
-            'wildlife_encounters',
-            'remote_location_isolation'
-          ]
-        }
-      },
-      {
-        id: 'BC_OHSR_9_3',
-        name: {
-          fr: 'Section 9.3 - Procédures d\'entrée sécuritaire',
-          en: 'Section 9.3 - Safe Entry Procedures'
-        },
-        description: {
-          fr: 'Procédures détaillées pour entrée sécuritaire en espace clos',
-          en: 'Detailed procedures for safe confined space entry'
-        },
-        mandatory: true,
-        criteria: {
-          fr: [
-            'Procédures écrites d\'entrée sécuritaire',
-            'Système de permis d\'entrée obligatoire',
-            'Tests atmosphériques avant et pendant l\'entrée',
-            'Isolation et verrouillage des sources d\'énergie',
-            'Communication continue avec l\'extérieur',
-            'Surveillance par personne compétente à l\'extérieur'
-          ],
-          en: [
-            'Written safe entry procedures',
-            'Mandatory entry permit system',
-            'Atmospheric testing before and during entry',
-            'Isolation and lockout of energy sources',
-            'Continuous communication with outside',
-            'Monitoring by competent person outside'
-          ]
-        },
-        implementation: {
-          timeline: 'before_any_entry',
-          resources: ['permit_system', 'testing_equipment', 'communication_devices'],
-          standards: {
-            oxygen: { min: 19.5, max: 23.0, unit: '%' },
-            flammable_gas: { max: 10, unit: '%LEL' },
-            carbon_monoxide: { max: 25, unit: 'ppm' },
-            hydrogen_sulfide: { max: 10, unit: 'ppm' },
-            other_toxics: 'per_schedule_1_limits'
-          }
-        }
-      },
-      {
-        id: 'BC_OHSR_9_4',
-        name: {
-          fr: 'Section 9.4 - Tests atmosphériques',
-          en: 'Section 9.4 - Atmospheric Testing'
-        },
-        description: {
-          fr: 'Exigences spécifiques pour tests atmosphériques',
-          en: 'Specific requirements for atmospheric testing'
-        },
-        mandatory: true,
-        criteria: {
-          fr: [
-            'Tests par personne qualifiée avec équipement calibré',
-            'Ordre de test obligatoire : oxygène, gaz inflammables, gaz toxiques',
-            'Tests à différents niveaux de l\'espace',
-            'Tests continus pendant occupation',
-            'Documentation de tous les résultats',
-            'Procédures d\'urgence si conditions inacceptables'
-          ],
-          en: [
-            'Testing by qualified person with calibrated equipment',
-            'Mandatory testing order: oxygen, flammable gases, toxic gases',
-            'Testing at different levels of the space',
-            'Continuous testing during occupancy',
-            'Documentation of all results',
-            'Emergency procedures if unacceptable conditions'
-          ]
-        },
-        bcSpecific: {
-          marineTesting: {
-            additionalGases: ['carbon_dioxide_from_cargo', 'benzene_from_petroleum'],
-            tidalConsiderations: 'test_at_different_tide_levels',
-            ventilationChallenges: 'saltwater_corrosion_equipment'
-          },
-          forestryTesting: {
-            biologicalHazards: ['decomposing_organic_matter', 'methane_from_vegetation'],
-            remoteLocations: 'satellite_communication_backup',
-            weatherDependency: 'test_postponement_criteria'
-          }
-        }
-      },
-      {
-        id: 'BC_OHSR_9_5',
-        name: {
-          fr: 'Section 9.5 - Ventilation',
-          en: 'Section 9.5 - Ventilation'
-        },
-        description: {
-          fr: 'Exigences de ventilation pour espaces clos',
-          en: 'Ventilation requirements for confined spaces'
-        },
-        mandatory: true,
-        criteria: {
-          fr: [
-            'Ventilation naturelle ou mécanique selon évaluation',
-            'Élimination ou contrôle des contaminants atmosphériques',
-            'Maintien de niveaux d\'oxygène acceptables',
-            'Prévention de l\'accumulation de gaz dangereux',
-            'Équipement antidéflagrant dans zones inflammables'
-          ],
-          en: [
-            'Natural or mechanical ventilation as per assessment',
-            'Elimination or control of atmospheric contaminants',
-            'Maintenance of acceptable oxygen levels',
-            'Prevention of dangerous gas accumulation',
-            'Explosion-proof equipment in flammable areas'
-          ]
-        },
-        bcSpecific: {
-          coastalConditions: {
-            humidityControl: 'prevent_condensation_equipment_failure',
-            saltAirCorrosion: 'marine_grade_ventilation_equipment',
-            windFactors: 'natural_ventilation_assessment'
-          }
-        }
-      },
-      {
-        id: 'BC_OHSR_9_6',
-        name: {
-          fr: 'Section 9.6 - Équipement de protection individuelle',
-          en: 'Section 9.6 - Personal Protective Equipment'
-        },
-        description: {
-          fr: 'Exigences d\'ÉPI pour travail en espace clos',
-          en: 'PPE requirements for confined space work'
-        },
-        mandatory: true,
-        criteria: {
-          fr: [
-            'ÉPI approprié aux dangers identifiés',
-            'Protection respiratoire selon évaluation atmosphérique',
-            'Harnais de sécurité et système de récupération',
-            'Protection contre chutes et objets qui tombent',
-            'Éclairage de sécurité intrinsèquement sûr',
-            'Vêtements de protection selon dangers chimiques'
-          ],
-          en: [
-            'PPE appropriate to identified hazards',
-            'Respiratory protection per atmospheric assessment',
-            'Safety harness and retrieval system',
-            'Protection against falls and falling objects',
-            'Intrinsically safe lighting',
-            'Protective clothing per chemical hazards'
-          ]
-        },
-        bcSpecific: {
-          marineEnvironment: {
-            immersionSuits: 'cold_water_protection_required',
-            flotationDevices: 'marine_confined_spaces',
-            waterproofEquipment: 'electronics_and_communication'
-          },
-          extremeWeather: {
-            hypothermiaProtection: 'mountain_and_northern_regions',
-            heatStressProtection: 'interior_summer_conditions'
+        provinceSpecific: {
+          bcSpecific: {
+            weatherConsiderations: [
+              'coastal_fog_and_visibility', 'mountain_weather_changes',
+              'rainfall_and_flooding_risk', 'seismic_activity_potential'
+            ],
+            environmentalFactors: [
+              'tidal_influences_marine_spaces', 'wildlife_encounters', 'remote_location_isolation'
+            ]
           }
         }
       },
@@ -404,24 +377,10 @@ export const WORKSAFEBC_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Surveillant qualifié en permanence à l\'extérieur',
-            'Communication continue avec entrants',
-            'Surveillance des conditions atmosphériques',
-            'Autorité pour ordonner évacuation immédiate',
-            'Ne peut entrer dans l\'espace sauf pour sauvetage d\'urgence',
-            'Connaissance des procédures d\'urgence et de sauvetage'
-          ],
-          en: [
-            'Qualified attendant continuously outside',
-            'Continuous communication with entrants',
-            'Monitoring of atmospheric conditions',
-            'Authority to order immediate evacuation',
-            'Cannot enter space except for emergency rescue',
-            'Knowledge of emergency and rescue procedures'
-          ]
+          fr: 'Surveillant qualifié en permanence à l\'extérieur, communication continue avec entrants, surveillance des conditions atmosphériques, autorité pour ordonner évacuation immédiate, ne peut entrer dans l\'espace sauf pour sauvetage d\'urgence, connaissance des procédures d\'urgence et de sauvetage',
+          en: 'Qualified attendant continuously outside, continuous communication with entrants, monitoring of atmospheric conditions, authority to order immediate evacuation, cannot enter space except for emergency rescue, knowledge of emergency and rescue procedures'
         },
-        bcSpecific: {
+        provinceSpecific: {
           remoteLocations: {
             communicationBackup: 'satellite_phone_or_radio',
             emergencyResponse: 'bc_ambulance_helicopter_access',
@@ -441,24 +400,10 @@ export const WORKSAFEBC_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Plan de sauvetage écrit avant début des travaux',
-            'Équipe de sauvetage formée et équipée',
-            'Équipement de sauvetage immédiatement disponible',
-            'Communication avec services d\'urgence locaux',
-            'Procédures pour différents types d\'urgences',
-            'Formation régulière et exercices de sauvetage'
-          ],
-          en: [
-            'Written rescue plan before work begins',
-            'Trained and equipped rescue team',
-            'Rescue equipment immediately available',
-            'Communication with local emergency services',
-            'Procedures for different types of emergencies',
-            'Regular training and rescue drills'
-          ]
+          fr: 'Plan de sauvetage écrit avant début des travaux, équipe de sauvetage formée et équipée, équipement de sauvetage immédiatement disponible, communication avec services d\'urgence locaux, procédures pour différents types d\'urgences, formation régulière et exercices de sauvetage',
+          en: 'Written rescue plan before work begins, trained and equipped rescue team, rescue equipment immediately available, communication with local emergency services, procedures for different types of emergencies, regular training and rescue drills'
         },
-        bcSpecific: {
+        provinceSpecific: {
           emergencyServices: {
             bcAmbulance: 'air_ambulance_helicopter_coordination',
             coastGuard: 'marine_confined_space_incidents',
@@ -484,22 +429,8 @@ export const WORKSAFEBC_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Formation spécialisée selon le rôle (entrant, surveillant, superviseur)',
-            'Connaissance des dangers spécifiques au site',
-            'Formation sur équipement de sécurité et de sauvetage',
-            'Mise à jour régulière des connaissances',
-            'Certification par organisme reconnu ou employeur',
-            'Documentation des formations et compétences'
-          ],
-          en: [
-            'Specialized training per role (entrant, attendant, supervisor)',
-            'Knowledge of site-specific hazards',
-            'Training on safety and rescue equipment',
-            'Regular knowledge updates',
-            'Certification by recognized body or employer',
-            'Documentation of training and competencies'
-          ]
+          fr: 'Formation spécialisée selon le rôle (entrant, surveillant, superviseur), connaissance des dangers spécifiques au site, formation sur équipement de sécurité et de sauvetage, mise à jour régulière des connaissances, certification par organisme reconnu ou employeur, documentation des formations et compétences',
+          en: 'Specialized training per role (entrant, attendant, supervisor), knowledge of site-specific hazards, training on safety and rescue equipment, regular knowledge updates, certification by recognized body or employer, documentation of training and competencies'
         }
       }
     ],
@@ -507,7 +438,7 @@ export const WORKSAFEBC_STANDARDS: Record<string, RegulatoryStandard> = {
       level: 'mandatory',
       enforcement: 'worksafebc_officers',
       penalties: {
-        individual: { min: 734, max: 73400 }, // Montants 2023 WorkSafeBC
+        individual: { min: 734, max: 73400 },
         corporation: { min: 7340, max: 734000 },
         criminal: 'possible_under_criminal_code'
       },
@@ -518,7 +449,7 @@ export const WORKSAFEBC_STANDARDS: Record<string, RegulatoryStandard> = {
         'dangerous_occurrences_within_48hours'
       ]
     },
-    bcSpecificFeatures: {
+    provinceSpecific: {
       industryGuidelines: [
         'forestry_specific_guidance',
         'marine_shipping_guidance',
@@ -561,12 +492,14 @@ export const WORKSAFEBC_STANDARDS: Record<string, RegulatoryStandard> = {
       {
         type: 'guideline',
         title: 'Confined Space Entry Guidelines',
+        citation: 'WorkSafeBC G9.1-2023',
         publisher: 'WorkSafeBC',
         url: 'https://www.worksafebc.com/en/health-safety/hazards-exposures/confined-spaces'
       },
       {
         type: 'industry_guide',
         title: 'Marine Confined Space Safety Guide',
+        citation: 'BCMEA-CS-2023',
         publisher: 'BC Maritime Employers Association',
         collaboration: 'WorkSafeBC'
       }
@@ -599,7 +532,7 @@ export const BC_EXPOSURE_LIMITS: Record<GasType, {
   bcSpecific?: any;
 }> = {
   oxygen: {
-    twa: 0, // Pas de limite TWA - requis 19.5-23%
+    twa: 0,
     stel: 0,
     unit: '%',
     source: 'WorkSafeBC OHSR Part 9',
@@ -643,8 +576,68 @@ export const BC_EXPOSURE_LIMITS: Record<GasType, {
     stel: 1000,
     unit: 'ppm',
     source: 'WorkSafeBC Schedule 1 Table 1'
+  },
+  carbon_dioxide: {
+    twa: 5000,
+    stel: 30000,
+    unit: 'ppm',
+    source: 'WorkSafeBC Schedule 1 Table 1'
+  },
+  ammonia: {
+    twa: 25,
+    stel: 35,
+    unit: 'ppm',
+    source: 'WorkSafeBC Schedule 1 Table 1'
+  },
+  chlorine: {
+    twa: 0.5,
+    stel: 1,
+    unit: 'ppm',
+    source: 'WorkSafeBC Schedule 1 Table 1'
+  },
+  nitrogen_dioxide: {
+    twa: 3,
+    stel: 5,
+    unit: 'ppm',
+    source: 'WorkSafeBC Schedule 1 Table 1'
+  },
+  sulfur_dioxide: {
+    twa: 2,
+    stel: 5,
+    unit: 'ppm',
+    source: 'WorkSafeBC Schedule 1 Table 1'
+  },
+  benzene: {
+    twa: 0.5,
+    stel: 2.5,
+    unit: 'ppm',
+    source: 'WorkSafeBC Schedule 1 Table 1'
+  },
+  toluene: {
+    twa: 20,
+    stel: 50,
+    unit: 'ppm',
+    source: 'WorkSafeBC Schedule 1 Table 1'
+  },
+  xylene: {
+    twa: 100,
+    stel: 150,
+    unit: 'ppm',
+    source: 'WorkSafeBC Schedule 1 Table 1'
+  },
+  acetone: {
+    twa: 500,
+    stel: 750,
+    unit: 'ppm',
+    source: 'WorkSafeBC Schedule 1 Table 1'
+  },
+  formaldehyde: {
+    twa: 0.3,
+    stel: 0.3,
+    unit: 'ppm',
+    source: 'WorkSafeBC Schedule 1 Table 1'
   }
-} as any;
+};
 
 // =================== QUALIFICATIONS BRITISH COLUMBIA ===================
 
@@ -655,20 +648,8 @@ export const BC_QUALIFICATIONS = {
       en: 'Qualified Person for Atmospheric Testing'
     },
     requirements: {
-      fr: [
-        'Formation certifiée sur équipement de détection',
-        'Connaissance des limites d\'exposition WorkSafeBC',
-        'Compétence en interprétation des résultats',
-        'Formation sur calibration et maintenance d\'équipement',
-        'Connaissance des dangers spécifiques BC (marine, foresterie)'
-      ],
-      en: [
-        'Certified training on detection equipment',
-        'Knowledge of WorkSafeBC exposure limits',
-        'Competency in results interpretation',
-        'Training on equipment calibration and maintenance',
-        'Knowledge of BC-specific hazards (marine, forestry)'
-      ]
+      fr: 'Formation certifiée sur équipement de détection, connaissance des limites d\'exposition WorkSafeBC, compétence en interprétation des résultats, formation sur calibration et maintenance d\'équipement, connaissance des dangers spécifiques BC (marine, foresterie)',
+      en: 'Certified training on detection equipment, knowledge of WorkSafeBC exposure limits, competency in results interpretation, training on equipment calibration and maintenance, knowledge of BC-specific hazards (marine, forestry)'
     },
     certification: 'manufacturer_plus_worksafebc_approved',
     validity: 'annual_recertification',
@@ -684,20 +665,8 @@ export const BC_QUALIFICATIONS = {
       en: 'Competent Supervisor'
     },
     requirements: {
-      fr: [
-        'Autorité pour arrêter le travail dangereux',
-        'Connaissance approfondie des dangers d\'espaces clos',
-        'Formation en gestion de permis d\'entrée',
-        'Compétence en évaluation des risques',
-        'Formation en procédures d\'urgence et de sauvetage'
-      ],
-      en: [
-        'Authority to stop unsafe work',
-        'Thorough knowledge of confined space hazards',
-        'Training in entry permit management',
-        'Competency in risk assessment',
-        'Training in emergency and rescue procedures'
-      ]
+      fr: 'Autorité pour arrêter le travail dangereux, connaissance approfondie des dangers d\'espaces clos, formation en gestion de permis d\'entrée, compétence en évaluation des risques, formation en procédures d\'urgence et de sauvetage',
+      en: 'Authority to stop unsafe work, thorough knowledge of confined space hazards, training in entry permit management, competency in risk assessment, training in emergency and rescue procedures'
     },
     certification: 'employer_verified_competency',
     validity: 'ongoing_with_annual_assessment',
@@ -713,20 +682,8 @@ export const BC_QUALIFICATIONS = {
       en: 'Attendant'
     },
     requirements: {
-      fr: [
-        'Formation spécialisée en surveillance d\'espaces clos',
-        'Compétence en communication d\'urgence',
-        'Connaissance des procédures d\'évacuation',
-        'Formation en premiers secours et RCR',
-        'Connaissance des systèmes de sauvetage'
-      ],
-      en: [
-        'Specialized confined space attendant training',
-        'Competency in emergency communication',
-        'Knowledge of evacuation procedures',
-        'First aid and CPR training',
-        'Knowledge of rescue systems'
-      ]
+      fr: 'Formation spécialisée en surveillance d\'espaces clos, compétence en communication d\'urgence, connaissance des procédures d\'évacuation, formation en premiers secours et RCR, connaissance des systèmes de sauvetage',
+      en: 'Specialized confined space attendant training, competency in emergency communication, knowledge of evacuation procedures, first aid and CPR training, knowledge of rescue systems'
     },
     certification: 'worksafebc_approved_training',
     validity: 'annual_refresher_required',
@@ -734,35 +691,6 @@ export const BC_QUALIFICATIONS = {
       remoteOperations: 'satellite_communication_certification',
       marineEnvironment: 'marine_emergency_procedures',
       weatherDependency: 'severe_weather_protocols'
-    }
-  },
-  rescue_team_member: {
-    name: {
-      fr: 'Membre d\'équipe de sauvetage',
-      en: 'Rescue Team Member'
-    },
-    requirements: {
-      fr: [
-        'Formation avancée en sauvetage d\'espaces clos',
-        'Certification en protection respiratoire',
-        'Formation en techniques de récupération',
-        'Premiers secours avancés et soins préhospitaliers',
-        'Formation en travail en équipe sous stress'
-      ],
-      en: [
-        'Advanced confined space rescue training',
-        'Respiratory protection certification',
-        'Training in retrieval techniques',
-        'Advanced first aid and pre-hospital care',
-        'Training in team work under stress'
-      ]
-    },
-    certification: 'third_party_certified_plus_worksafebc',
-    validity: 'annual_certification_required',
-    bcSpecific: {
-      mountainRescue: 'bc_search_and_rescue_coordination',
-      marineRescue: 'coast_guard_auxiliary_liaison',
-      industrialRescue: 'hazmat_emergency_response'
     }
   }
 };
@@ -791,8 +719,7 @@ export function checkBCCompliance(
   });
 
   // Vérification Section 9.2 - Évaluation des risques
-  const hasRiskAssessment = permitData.riskAssessment && 
-                           permitData.riskAssessment.qualifiedPersonConducted;
+  const hasRiskAssessment = permitData.riskAssessment?.qualifiedPersonConducted;
   results.push({
     standardId: 'BC_OHSR_9_2',
     requirementId: 'risk_assessment',
@@ -815,10 +742,10 @@ export function checkBCCompliance(
     });
   }
 
-  // Vérification Section 9.4 - Tests atmosphériques
-  const hasAtmosphericTesting = atmosphericReadings && atmosphericReadings.length > 0;
+  // Vérification tests atmosphériques
+  const hasAtmosphericTesting = atmosphericReadings?.length > 0;
   const recentReadings = hasAtmosphericTesting ? 
-    atmosphericReadings.filter(r => Date.now() - r.timestamp < 2 * 60 * 60 * 1000) : []; // 2h
+    atmosphericReadings.filter(r => Date.now() - r.timestamp < 2 * 60 * 60 * 1000) : [];
 
   let atmosphericCompliant = true;
   const atmosphericGaps: string[] = [];
@@ -830,7 +757,6 @@ export function checkBCCompliance(
     // Vérifier ordre de test WorkSafeBC (O2, inflammables, toxiques)
     const gasTypes = recentReadings.map(r => r.gasType);
     const hasOxygen = gasTypes.includes('oxygen');
-    const hasFlammable = gasTypes.some(g => ['methane', 'propane'].includes(g));
     
     if (!hasOxygen) {
       atmosphericCompliant = false;
@@ -839,16 +765,17 @@ export function checkBCCompliance(
 
     // Vérifier limites BC
     recentReadings.forEach(reading => {
-      const limits = BC_EXPOSURE_LIMITS[reading.gasType];
+      const gasType = reading.gasType as GasType;
+      const limits = BC_EXPOSURE_LIMITS[gasType];
       if (limits) {
-        if (reading.gasType === 'oxygen') {
+        if (gasType === 'oxygen') {
           if (reading.value < 19.5 || reading.value > 23.0) {
             atmosphericCompliant = false;
             atmosphericGaps.push(`Oxygen level ${reading.value}% outside WorkSafeBC 19.5-23% range`);
           }
         } else if (reading.value > limits.twa) {
           atmosphericCompliant = false;
-          atmosphericGaps.push(`${reading.gasType} ${reading.value}${limits.unit} exceeds WorkSafeBC TWA ${limits.twa}${limits.unit}`);
+          atmosphericGaps.push(`${gasType} ${reading.value}${limits.unit} exceeds WorkSafeBC TWA ${limits.twa}${limits.unit}`);
         }
       }
     });
@@ -877,7 +804,7 @@ export function checkBCCompliance(
   });
 
   // Vérification Section 9.8 - Plan de sauvetage
-  const hasRescuePlan = permitData.rescuePlan && permitData.rescuePlan.written;
+  const hasRescuePlan = permitData.rescuePlan?.written;
   results.push({
     standardId: 'BC_OHSR_9_8',
     requirementId: 'rescue_plan',
@@ -886,19 +813,6 @@ export function checkBCCompliance(
     gaps: hasRescuePlan ? [] : ['Missing written rescue plan'],
     priority: 'critical' as const
   });
-
-  // Vérifications spécifiques BC selon localisation
-  if (location?.marine) {
-    const hasMarineSpecific = permitData.marineConsiderations;
-    results.push({
-      standardId: 'BC_OHSR_9_MARINE',
-      requirementId: 'marine_specific_procedures',
-      status: hasMarineSpecific ? 'compliant' : 'non_compliant',
-      evidence: hasMarineSpecific ? ['marine_specific_assessment'] : [],
-      gaps: hasMarineSpecific ? [] : ['Missing marine-specific procedures and equipment'],
-      priority: 'high' as const
-    });
-  }
 
   // Calcul conformité globale
   const compliantCount = results.filter(r => r.status === 'compliant').length;
@@ -914,9 +828,9 @@ export function checkBCCompliance(
       r.status === 'non_compliant' && r.priority === 'critical'
     ).length,
     actionPlan: generateBCActionPlan(results, location),
-    nextAssessment: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 jours
+    nextAssessment: Date.now() + (30 * 24 * 60 * 60 * 1000),
     certifiedBy: 'worksafebc_system',
-    bcSpecific: {
+    provinceSpecific: {
       locationConsiderations: location,
       emergencyServices: getBCEmergencyServices(location),
       weatherFactors: getBCWeatherFactors(location)
@@ -942,12 +856,11 @@ function generateBCActionPlan(results: any[], location?: any): any[] {
     priority: item.priority,
     action: getBCCorrectiveAction(item.standardId, item.requirementId, location),
     responsible: 'competent_supervisor',
-    deadline: item.priority === 'critical' ? 
-      'immediate' : 
-      item.priority === 'high' ? '24_hours' : '7_days',
+    deadline: item.priority === 'critical' ? 'immediate' : 
+              item.priority === 'high' ? '24_hours' : '7_days',
     resources: getBCRequiredResources(item.standardId, location),
     verification: 'worksafebc_documentation_standards',
-    bcSpecific: {
+    provinceSpecific: {
       emergencyContacts: getBCEmergencyServices(location),
       weatherConsiderations: location?.remote ? 'weather_dependent_timeline' : 'standard_timeline'
     },
@@ -1095,38 +1008,15 @@ export function validateBCQualifications(
 } {
   const gaps: string[] = [];
   const recommendations: string[] = [];
-  const bcSpecific: any = {};
 
   requiredRoles.forEach(role => {
     const qualified = personnelData.find(p => 
-      p.role === role && 
-      p.qualifications?.worksafebc_certified
+      p.role === role && p.qualifications?.worksafebc_certified
     );
 
     if (!qualified) {
       gaps.push(`No WorkSafeBC qualified ${role}`);
       recommendations.push(`Provide WorkSafeBC certification for ${role}`);
-    }
-
-    // Vérifications spécifiques selon localisation
-    if (location?.marine && role === 'attendant') {
-      const marineQualified = personnelData.find(p => 
-        p.role === role && p.qualifications?.marine_safety_certified
-      );
-      if (!marineQualified) {
-        gaps.push(`Marine attendant missing marine safety certification`);
-        recommendations.push(`Obtain Transport Canada marine safety certification`);
-      }
-    }
-
-    if (location?.remote && ['attendant', 'supervisor'].includes(role)) {
-      const firstAidCertified = personnelData.find(p => 
-        p.role === role && p.qualifications?.wilderness_first_aid
-      );
-      if (!firstAidCertified) {
-        gaps.push(`${role} missing wilderness first aid for remote location`);
-        recommendations.push(`Obtain wilderness first aid certification for remote BC operations`);
-      }
     }
   });
 
@@ -1208,30 +1098,24 @@ export function getBCTrainingRequirements(
 
   // Ajouter exigences spécifiques BC selon localisation
   if (location?.marine) {
-    requirements = {
-      ...requirements,
-      bcSpecific: {
-        marineRequirements: [
-          'transport_canada_marine_safety',
-          'marine_confined_space_procedures',
-          'vessel_emergency_procedures'
-        ],
-        marineProviders: ['transport_canada', 'bc_maritime_employers_association']
-      }
+    requirements.bcSpecific = {
+      marineRequirements: [
+        'transport_canada_marine_safety',
+        'marine_confined_space_procedures',
+        'vessel_emergency_procedures'
+      ],
+      marineProviders: ['transport_canada', 'bc_maritime_employers_association']
     };
   }
 
   if (location?.remote) {
-    requirements = {
-      ...requirements,
-      bcSpecific: {
-        remoteRequirements: [
-          'wilderness_first_aid',
-          'satellite_communication_procedures',
-          'severe_weather_protocols'
-        ],
-        remoteProviders: ['bc_search_and_rescue', 'wilderness_medicine_institute']
-      }
+    requirements.bcSpecific = {
+      remoteRequirements: [
+        'wilderness_first_aid',
+        'satellite_communication_procedures',
+        'severe_weather_protocols'
+      ],
+      remoteProviders: ['bc_search_and_rescue', 'wilderness_medicine_institute']
     };
   }
 
@@ -1250,4 +1134,3 @@ export default {
   getBCEmergencyServices,
   getBCWeatherFactors
 };
-
