@@ -73,7 +73,7 @@ const PERMIT_TYPES_CONFIG = {
     estimatedTime: 30,
     tags: { fr: ['soudage', 'feu', 'surveillance'], en: ['welding', 'fire', 'watch'] },
     legislation: 'NFPA 51B, RSST Art. 323',
-    formComponent: null, // À créer
+    formComponent: null,
     requiredSections: ['identification', 'personnel', 'fire-safety', 'equipment', 'validation'],
     provinces: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL'] as ProvinceCode[]
   },
@@ -187,7 +187,7 @@ const PERMIT_TYPES_CONFIG = {
 const getTexts = (language: 'fr' | 'en') => {
   if (language === 'en') {
     return {
-      title: "📄 Work Permits & Legal Authorizations",
+      title: "Work Permits & Legal Authorizations",
       subtitle: "Complete Canadian work permits with real-time validation and QR code generation",
       searchPlaceholder: "Search permits by type, location, or regulation...",
       allCategories: "All permit types",
@@ -226,7 +226,7 @@ const getTexts = (language: 'fr' | 'en') => {
   }
   
   return {
-    title: "📄 Permis de Travail & Autorisations Légales",
+    title: "Permis de Travail & Autorisations Légales",
     subtitle: "Permis de travail canadiens complets avec validation temps réel et génération QR",
     searchPlaceholder: "Rechercher par type, lieu ou réglementation...",
     allCategories: "Tous les types de permis",
@@ -781,14 +781,14 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             province={province as any}
             userRole={userRole || 'user'}
             touchOptimized={touchOptimized}
-            onSave={async (data) => {
+            onSave={async (data: any) => {
               const updatedPermits = permits.map(p => 
                 p.id === permit.id ? { ...p, formData: data } : p
               );
               setPermits(updatedPermits);
               updateFormData(updatedPermits);
             }}
-            onSubmit={async (data) => {
+            onSubmit={async (data: any) => {
               const updatedPermits = permits.map(p => 
                 p.id === permit.id ? { ...p, formData: data, status: 'pending' as const } : p
               );
@@ -803,130 +803,94 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     );
   };
 
-  // =================== RENDU PRINCIPAL ===================
+  // =================== RENDU PRINCIPAL (MÊME STYLE QUE TES STEPS) ===================
   return (
-    <>
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .step4-container { padding: 0; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; }
-          .header { background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 16px; padding: 24px; margin-bottom: 24px; position: relative; overflow: hidden; }
-          .header::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.1), transparent); animation: shine 3s ease-in-out infinite; }
-          @keyframes shine { 0% { left: -100%; } 50% { left: 100%; } 100% { left: 100%; } }
-          .header-title { color: #ef4444; font-size: 20px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
-          .header-subtitle { color: #dc2626; font-size: 14px; line-height: 1.5; position: relative; z-index: 1; }
-          .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-top: 16px; position: relative; z-index: 1; }
-          .stat-item { text-align: center; background: rgba(15, 23, 42, 0.6); padding: 16px; border-radius: 12px; transition: all 0.3s ease; backdrop-filter: blur(10px); }
-          .stat-item:hover { transform: translateY(-2px); background: rgba(15, 23, 42, 0.8); }
-          .stat-value { font-size: 24px; font-weight: 800; color: #ef4444; margin-bottom: 4px; }
-          .stat-label { font-size: 12px; color: #dc2626; font-weight: 600; }
-          .search-section { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
-          .search-grid { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
-          .search-input-wrapper { position: relative; }
-          .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; z-index: 10; }
-          .search-field { width: 100%; padding: 12px 12px 12px 40px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; color: #ffffff; font-size: 14px; transition: all 0.3s ease; }
-          .search-field:focus { outline: none; border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1); }
-          .category-select { padding: 12px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; color: #ffffff; font-size: 14px; cursor: pointer; transition: all 0.3s ease; min-width: 200px; }
-          .category-select:focus { outline: none; border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1); }
-          .permits-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
-          .permit-card { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 16px; overflow: hidden; transition: all 0.3s ease; }
-          .permit-card:hover { transform: translateY(-4px); border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 8px 25px rgba(239, 68, 68, 0.15); }
-          .permit-card.selected { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
-          .permit-header { padding: 20px; cursor: pointer; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid rgba(100, 116, 139, 0.2); }
-          .permit-header:hover { background: rgba(30, 41, 59, 0.3); }
-          .permit-icon { font-size: 36px; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.1); border-radius: 16px; }
-          .permit-main-info { flex: 1; }
-          .permit-name { color: #ffffff; font-size: 18px; font-weight: 600; margin: 0 0 8px; }
-          .permit-code { color: #94a3b8; font-size: 12px; font-weight: 500; margin-bottom: 4px; }
-          .permit-authority { color: #60a5fa; font-size: 12px; font-weight: 500; }
-          .permit-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-          .permit-status { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
-          .status-draft { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
-          .status-pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
-          .status-approved { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
-          .permit-checkbox { width: 24px; height: 24px; border: 2px solid rgba(100, 116, 139, 0.5); border-radius: 6px; background: rgba(15, 23, 42, 0.8); display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
-          .permit-checkbox.checked { background: #ef4444; border-color: #ef4444; color: white; }
-          .permit-details { padding: 0; max-height: 0; overflow: hidden; transition: all 0.3s ease; }
-          .permit-details.expanded { max-height: 1000px; padding: 0 20px 20px; }
-          .expand-icon { color: #94a3b8; transition: transform 0.3s ease; }
-          .expand-icon.expanded { transform: rotate(90deg); }
-          .risk-badge { padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; }
-          .time-badge { background: rgba(59, 130, 246, 0.1); color: #60a5fa; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; }
-          .legislation-badge { background: rgba(59, 130, 246, 0.1); color: #60a5fa; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 500; text-align: center; margin-top: 8px; }
-          .no-permits { text-align: center; padding: 60px 20px; color: #94a3b8; background: rgba(30, 41, 59, 0.6); border-radius: 16px; border: 1px solid rgba(100, 116, 139, 0.3); backdrop-filter: blur(20px); }
-          @media (max-width: 768px) { .permits-grid { grid-template-columns: 1fr; } .search-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
-        `
-      }} />
-
-      <div className="step4-container">
-        {/* En-tête avec statistiques */}
-        <div className="header">
-          <div className="header-title">
-            <Shield size={28} />
-            {texts.title}
-          </div>
-          <p className="header-subtitle">
-            {texts.subtitle}
-          </p>
-          
-          {stats.selectedPermits > 0 && (
-            <div className="stats-grid">
-              <div className="stat-item">
-                <div className="stat-value">{stats.totalPermits}</div>
-                <div className="stat-label">Total Disponible</div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* Header dans le style de tes Steps 1-2-3 */}
+        <div className="bg-gradient-to-r from-red-900/20 to-orange-900/20 border border-red-500/30 rounded-2xl p-8 mb-8 backdrop-blur-sm relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-red-600/5 to-orange-600/5"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-16 h-16 bg-red-600/20 rounded-2xl flex items-center justify-center">
+                <Shield className="w-8 h-8 text-red-400" />
               </div>
-              <div className="stat-item">
-                <div className="stat-value">{stats.selectedPermits}</div>
-                <div className="stat-label">Sélectionnés</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-value">{stats.criticalPermits}</div>
-                <div className="stat-label">Critiques</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-value">{stats.validationRate}%</div>
-                <div className="stat-label">Validation</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-value">{stats.averageProgress}%</div>
-                <div className="stat-label">Progression</div>
+              <div>
+                <h1 className="text-3xl font-bold text-white mb-2">
+                  📄 {texts.title}
+                </h1>
+                <p className="text-red-200 text-lg">
+                  {texts.subtitle}
+                </p>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Section de recherche */}
-        <div className="search-section">
-          <div className="search-grid">
-            <div className="search-input-wrapper">
-              <Search className="search-icon" size={18} />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={texts.searchPlaceholder}
-                className="search-field"
-              />
-            </div>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="category-select"
-            >
-              <option value="all">{texts.allCategories} ({permits.length})</option>
-              {categories.map(category => {
-                const count = permits.filter(p => p.category === category || p.priority === category).length;
-                return (
-                  <option key={category} value={category}>
-                    {category} ({count})
-                  </option>
-                );
-              })}
-            </select>
+            
+            {/* Statistiques dans le style de tes Steps */}
+            {stats.selectedPermits > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
+                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
+                  <div className="text-2xl font-bold text-white">{stats.totalPermits}</div>
+                  <div className="text-slate-300 text-sm">Total Disponible</div>
+                </div>
+                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
+                  <div className="text-2xl font-bold text-red-400">{stats.selectedPermits}</div>
+                  <div className="text-slate-300 text-sm">Sélectionnés</div>
+                </div>
+                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
+                  <div className="text-2xl font-bold text-orange-400">{stats.criticalPermits}</div>
+                  <div className="text-slate-300 text-sm">Critiques</div>
+                </div>
+                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
+                  <div className="text-2xl font-bold text-blue-400">{stats.validationRate}%</div>
+                  <div className="text-slate-300 text-sm">Validation</div>
+                </div>
+                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
+                  <div className="text-2xl font-bold text-green-400">{stats.averageProgress}%</div>
+                  <div className="text-slate-300 text-sm">Progression</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Grille des permis */}
-        <div className="permits-grid">
+        {/* Section de recherche dans le style de tes Steps */}
+        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={texts.searchPlaceholder}
+                  className="w-full pl-12 pr-4 py-3 bg-slate-900/50 border border-slate-600/30 rounded-xl text-white placeholder-slate-400 focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20 transition-all"
+                />
+              </div>
+            </div>
+            <div>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600/30 rounded-xl text-white focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20 transition-all"
+              >
+                <option value="all">{texts.allCategories} ({permits.length})</option>
+                {categories.map(category => {
+                  const count = permits.filter(p => p.category === category || p.priority === category).length;
+                  return (
+                    <option key={category} value={category}>
+                      {category} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Grille des permis dans le style de tes Steps */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredPermits.map(permit => {
             const isSelected = permit.selected;
             const isExpanded = expandedPermits.has(permit.id);
@@ -936,71 +900,97 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             return (
               <div 
                 key={permit.id} 
-                className={`permit-card ${isSelected ? 'selected' : ''}`}
+                className={`
+                  bg-slate-800/30 backdrop-blur-sm border rounded-2xl p-6 transition-all duration-300 hover:transform hover:scale-[1.02]
+                  ${isSelected 
+                    ? 'border-red-500/50 bg-red-900/20 shadow-lg shadow-red-500/20' 
+                    : 'border-slate-600/30 hover:border-slate-500/50'
+                  }
+                `}
               >
                 {/* Header du permis */}
-                <div className="permit-header">
-                  <div className="permit-icon">
+                <div className="flex items-start gap-4 mb-4">
+                  <div 
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                    style={{ 
+                      background: `${config?.color || '#6b7280'}20`,
+                      border: `1px solid ${config?.color || '#6b7280'}30`
+                    }}
+                  >
                     {config?.iconEmoji || '📄'}
                   </div>
                   
-                  <div className="permit-main-info">
-                    <h3 className="permit-name">{permit.name}</h3>
-                    <div className="permit-code">{permit.code}</div>
-                    <div className="permit-authority">{permit.authority}</div>
-                  </div>
-                  
-                  <div className="permit-meta">
-                    <div className={`permit-status status-${permit.status}`}>
-                      {permit.status}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold text-white mb-1">
+                      {permit.name}
+                    </h3>
+                    <div className="text-slate-400 text-sm mb-1">
+                      {permit.code}
                     </div>
-                    
-                    <div
-                      className="risk-badge"
-                      style={{ 
-                        background: `${config?.color || '#6b7280'}20`,
-                        color: config?.color || '#6b7280'
-                      }}
-                    >
-                      {texts.riskLevels[permit.priority as keyof typeof texts.riskLevels]}
-                    </div>
-                    
-                    <div className="time-badge">
-                      {config?.estimatedTime || 30} {texts.minutes}
+                    <div className="text-blue-400 text-xs">
+                      {permit.authority}
                     </div>
                   </div>
                   
-                  <div className="flex flex-col items-center gap-2">
-                    <div 
-                      className={`permit-checkbox ${isSelected ? 'checked' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePermitToggle(permit.id);
-                      }}
+                  <div className="flex flex-col items-end gap-2">
+                    <button
+                      onClick={() => handlePermitToggle(permit.id)}
+                      className={`
+                        w-6 h-6 rounded border-2 transition-all flex items-center justify-center
+                        ${isSelected 
+                          ? 'bg-red-500 border-red-500' 
+                          : 'border-slate-500 hover:border-slate-400'
+                        }
+                      `}
                     >
-                      {isSelected && <CheckCircle size={18} />}
-                    </div>
+                      {isSelected && <CheckCircle className="w-4 h-4 text-white" />}
+                    </button>
                     
-                    <ChevronRight 
-                      className={`expand-icon ${isExpanded ? 'expanded' : ''}`} 
-                      size={20}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePermitExpand(permit.id);
-                      }}
-                    />
+                    <button
+                      onClick={() => handlePermitExpand(permit.id)}
+                      className="text-slate-400 hover:text-white transition-colors"
+                    >
+                      <ChevronRight 
+                        className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                      />
+                    </button>
                   </div>
+                </div>
+
+                {/* Badges de statut */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span 
+                    className="px-3 py-1 rounded-full text-xs font-medium"
+                    style={{ 
+                      background: `${config?.color || '#6b7280'}20`,
+                      color: config?.color || '#6b7280'
+                    }}
+                  >
+                    {texts.riskLevels[permit.priority as keyof typeof texts.riskLevels]}
+                  </span>
+                  
+                  <span className="px-3 py-1 bg-blue-900/30 text-blue-300 rounded-full text-xs font-medium">
+                    {config?.estimatedTime || 30} {texts.minutes}
+                  </span>
+                  
+                  <span className={`
+                    px-3 py-1 rounded-full text-xs font-medium
+                    ${permit.status === 'draft' ? 'bg-gray-900/30 text-gray-300' :
+                      permit.status === 'pending' ? 'bg-yellow-900/30 text-yellow-300' :
+                      permit.status === 'approved' ? 'bg-green-900/30 text-green-300' :
+                      'bg-gray-900/30 text-gray-300'
+                    }
+                  `}>
+                    {permit.status.toUpperCase()}
+                  </span>
                 </div>
 
                 {/* Détails expandables */}
-                <div className={`permit-details ${isExpanded ? 'expanded' : ''}`}>
-                  {isExpanded && renderAdvancedFeatures(permit)}
-                </div>
-
-                {/* Législation footer */}
-                <div className="legislation-badge">
-                  📋 {config?.legislation || 'Réglementation provinciale'}
-                </div>
+                {isExpanded && (
+                  <div className="mt-4 pt-4 border-t border-slate-600/30">
+                    {renderAdvancedFeatures(permit)}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -1008,12 +998,14 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
 
         {/* Message si aucun résultat */}
         {filteredPermits.length === 0 && (
-          <div className="no-permits">
-            <Shield size={48} />
-            <h3 style={{ margin: '16px 0 8px', fontSize: '18px', color: '#e2e8f0' }}>
+          <div className="text-center py-16">
+            <div className="w-24 h-24 bg-slate-800/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Shield className="w-12 h-12 text-slate-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">
               Aucun permis trouvé
             </h3>
-            <p style={{ margin: 0, fontSize: '14px' }}>
+            <p className="text-slate-400">
               Modifiez vos critères de recherche pour voir plus de permis
             </p>
           </div>
@@ -1021,31 +1013,17 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
 
         {/* Notifications */}
         {notifications.length > 0 && (
-          <div style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            zIndex: 1000,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            maxWidth: '300px'
-          }}>
-            {notifications.slice(0, 3).map((notification, index) => (
+          <div className="fixed top-6 right-6 z-50 space-y-3 max-w-sm">
+            {notifications.slice(0, 3).map((notification: any, index: number) => (
               <div
                 key={notification.id || `notification-${index}`}
-                style={{
-                  background: notification.type === 'error' ? 'rgba(239, 68, 68, 0.9)' : 
-                             notification.type === 'warning' ? 'rgba(251, 191, 36, 0.9)' :
-                             'rgba(34, 197, 94, 0.9)',
-                  color: 'white',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                  backdropFilter: 'blur(10px)'
-                }}
+                className={`
+                  p-4 rounded-xl backdrop-blur-sm border font-medium
+                  ${notification.type === 'error' ? 'bg-red-900/50 border-red-500/50 text-red-100' :
+                    notification.type === 'warning' ? 'bg-yellow-900/50 border-yellow-500/50 text-yellow-100' :
+                    'bg-green-900/50 border-green-500/50 text-green-100'
+                  }
+                `}
               >
                 {notification.message}
               </div>
@@ -1055,27 +1033,15 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
 
         {/* Auto-save indicator */}
         {(isAutoSaving || lastSaved) && (
-          <div style={{
-            position: 'fixed',
-            bottom: '20px',
-            left: '20px',
-            background: 'rgba(0, 0, 0, 0.8)',
-            color: 'white',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
+          <div className="fixed bottom-6 left-6 bg-slate-900/90 backdrop-blur-sm border border-slate-600/50 rounded-xl px-4 py-2 text-white text-sm flex items-center gap-2">
             {isAutoSaving ? (
               <>
-                <Activity size={14} className="animate-spin" />
+                <Activity className="w-4 h-4 animate-spin" />
                 {texts.autoSaving}
               </>
             ) : lastSaved ? (
               <>
-                <CheckCircle size={14} />
+                <CheckCircle className="w-4 h-4 text-green-400" />
                 {texts.lastSaved} {lastSaved.toLocaleTimeString()}
               </>
             ) : null}
@@ -1085,7 +1051,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
 
       {/* Modal de formulaire */}
       {renderFormModal()}
-    </>
+    </div>
   );
 };
 
