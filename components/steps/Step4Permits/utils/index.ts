@@ -1,17 +1,17 @@
 // =================== STEP4 PERMITS UTILS - INDEX COMPLET ===================
 // Fichier: components/steps/Step4Permits/utils/index.ts
 
-// =================== IMPORTS TYPES ===================
-import type {
-  LegalPermit,
-  ValidationPanel,
-  ValidationItem,
-  Standard,
-  PermitTypeEnum,
-  PermitStatus,
-  ProvinceCode,
-  BilingualText
-} from '../types';
+// =================== TYPES LOCAUX ===================
+type ProvinceCodeType = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+type PermitStatusType = 'draft' | 'pending' | 'approved' | 'rejected' | 'expired' | 'active' | 'completed' | 'cancelled' | 'suspended';
+type PermitTypeEnum = 'confined_space' | 'hot_work' | 'excavation' | 'lifting' | 'height_work' | 'electrical';
+type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+type PriorityLevel = 'low' | 'medium' | 'high' | 'critical';
+
+interface BilingualText {
+  fr: string;
+  en: string;
+}
 
 // =================== TYPES UTILITAIRES ===================
 type ProvinceCodeType = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
