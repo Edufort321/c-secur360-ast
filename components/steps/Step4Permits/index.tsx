@@ -42,7 +42,7 @@ try {
     useSupabase: !!useSupabaseHook
   });
   
-} catch (e) {
+} catch (e: any) {
   console.log('⚠️ Hooks non trouvés, utilisation des fallbacks:', e.message);
   usePermitsHook = {
     usePermits: () => [[], {}],
@@ -68,14 +68,14 @@ try {
 
 try {
   ConfinedSpaceFormComponent = require('./components/forms/ConfinedSpaceForm').default;
-} catch (e) {
+} catch (e: any) {
   console.log('⚠️ ConfinedSpaceForm non trouvé');
   ConfinedSpaceFormComponent = null;
 }
 
 try {
   AtmosphericSectionComponent = require('./components/forms/shared/AtmosphericSection').AtmosphericSection;
-} catch (e) {
+} catch (e: any) {
   console.log('⚠️ AtmosphericSection non trouvé');
   AtmosphericSectionComponent = null;
 }
