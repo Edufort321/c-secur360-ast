@@ -8,13 +8,46 @@
  * - Validation conformité standards réglementaires
  * - Validation qualité données et cohérence temporelle
  */
+"use client";
 
-import type { 
-  AtmosphericReading, 
-  GasType, 
-  AlarmLevel,
-  BilingualText 
-} from '../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export type AlarmLevel = 'safe' | 'caution' | 'warning' | 'danger' | 'critical';
+
+export interface AtmosphericReading {
+  gasType: GasType;
+  value: number;
+  unit: string;
+  timestamp: number | string | Date;
+  location?: string;
+  equipment?: string;
+  confidence?: number;
+  temperature?: number;
+  humidity?: number;
+  alarmLevel?: AlarmLevel;
+  [key: string]: any;
+}
 
 // =================== TYPES VALIDATION ===================
 
@@ -101,9 +134,12 @@ const PHYSICAL_LIMITS: Record<GasType, { min: number; max: number; unit: string 
   chlorine: { min: 0, max: 100, unit: 'ppm' },
   nitrogen_dioxide: { min: 0, max: 100, unit: 'ppm' },
   sulfur_dioxide: { min: 0, max: 100, unit: 'ppm' },
+  propane: { min: 0, max: 100, unit: '%' },
   benzene: { min: 0, max: 1000, unit: 'ppm' },
   toluene: { min: 0, max: 1000, unit: 'ppm' },
-  xylene: { min: 0, max: 1000, unit: 'ppm' }
+  xylene: { min: 0, max: 1000, unit: 'ppm' },
+  acetone: { min: 0, max: 1000, unit: 'ppm' },
+  formaldehyde: { min: 0, max: 100, unit: 'ppm' }
 };
 
 const TYPICAL_RANGES: Record<GasType, { safe: { min: number; max: number }; concern: { min: number; max: number } }> = {
@@ -143,6 +179,10 @@ const TYPICAL_RANGES: Record<GasType, { safe: { min: number; max: number }; conc
     safe: { min: 0, max: 2 }, 
     concern: { min: 2, max: 20 } 
   },
+  propane: { 
+    safe: { min: 0, max: 1 }, 
+    concern: { min: 1, max: 5 } 
+  },
   benzene: { 
     safe: { min: 0, max: 0.5 }, 
     concern: { min: 0.5, max: 5 } 
@@ -154,6 +194,14 @@ const TYPICAL_RANGES: Record<GasType, { safe: { min: number; max: number }; conc
   xylene: { 
     safe: { min: 0, max: 100 }, 
     concern: { min: 100, max: 400 } 
+  },
+  acetone: { 
+    safe: { min: 0, max: 500 }, 
+    concern: { min: 500, max: 1000 } 
+  },
+  formaldehyde: { 
+    safe: { min: 0, max: 0.75 }, 
+    concern: { min: 0.75, max: 5 } 
   }
 };
 
