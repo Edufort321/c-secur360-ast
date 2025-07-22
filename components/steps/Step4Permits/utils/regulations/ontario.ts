@@ -707,7 +707,7 @@ export const ON_EMERGENCY_SERVICES = {
   construction: {
     infrastructureOntario: '416-327-1234',
     metrolinxEmergency: '416-202-4900',
-    407ETREmergency: '905-264-5407',
+    '407ETREmergency': '905-264-5407',
     torontoHydro: '416-542-8000',
     hydroOne: '1-800-434-1235'
   },
