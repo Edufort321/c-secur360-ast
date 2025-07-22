@@ -261,7 +261,7 @@ export const WORKSAFEBC_AUTHORITY = {
     'first_nations_collaboration',
     'multilingual_resources'
   ]
-} as const;
+};
 
 // =================== STANDARDS WORKSAFEBC ===================
 
