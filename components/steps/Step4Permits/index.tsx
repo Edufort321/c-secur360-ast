@@ -195,7 +195,7 @@ const PermitCard: React.FC<{
           <span className="text-2xl">{config?.iconEmoji || '📋'}</span>
           <div>
             <h3 className="font-semibold text-gray-900">{permit.name}</h3>
-            <p className="text-sm text-gray-600">{permit.description}</p>
+            <p className="text-sm text-gray-600">{permit.description[language]}</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
