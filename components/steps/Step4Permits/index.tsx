@@ -532,7 +532,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             formattedAddress: `Permis ${permit.code}`,
             city: 'Montreal',
             province: province,
-            postalCode: 'H1H 1H1'
+            postalCode: 'H1H 1H1',
+            country: 'Canada',
+            confidence: 0.95
           };
 
           const spaceId = await qrCodeHook.createConfinedSpace(
