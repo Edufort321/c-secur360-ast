@@ -43,8 +43,13 @@ const useSurveillance = () => ({
 });
 
 const useNotifications = () => ({
-  notifications: [],
-  addNotification: () => {}
+  notifications: [] as Array<{
+    id: string;
+    type: 'error' | 'warning' | 'success' | 'info';
+    message: string;
+    timestamp?: string;
+  }>,
+  addNotification: (notification: any) => {}
 });
 
 // Types de base
@@ -1857,9 +1862,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             gap: '8px',
             maxWidth: '300px'
           }}>
-            {notifications.slice(0, 3).map(notification => (
+            {notifications.slice(0, 3).map((notification, index) => (
               <div
-                key={notification.id}
+                key={notification.id || `notification-${index}`}
                 style={{
                   background: notification.type === 'error' ? 'rgba(239, 68, 68, 0.9)' : 
                              notification.type === 'warning' ? 'rgba(251, 191, 36, 0.9)' :
