@@ -7,18 +7,131 @@
  * 
  * Provincial Focus: Offshore oil & gas, fisheries, mining, marine operations, remote locations
  */
+"use client";
 
-import type { 
-  RegulationStandard, 
-  PersonnelQualification, 
-  ComplianceCheck,
-  BilingualText,
-  AtmosphericReading,
-  LegalPermit,
-  PersonnelData,
-  ComplianceResult,
-  ActionPlan
-} from '../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type ProvinceCode = 
+  | 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' 
+  | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export interface RegulationStandard {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  section: string;
+  category: string;
+  mandatory: boolean;
+  criteria: string[];
+  nlSpecific?: Record<string, any>;
+  penalties?: {
+    individual: { min: number; max: number; };
+    corporation: { min: number; max: number; };
+  };
+  references?: Array<{
+    type: string;
+    title: string;
+    citation: string;
+    url?: string;
+  }>;
+  standards?: Record<string, { min?: number; max?: number; unit: string; }>;
+  implementation?: {
+    timeline: string;
+    resources: string[];
+    responsibilities: string[];
+  };
+}
+
+export interface PersonnelQualification {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  requirements: string[];
+  nlSpecific?: Record<string, any>;
+  certification: string;
+  validity: string;
+  mandatoryTraining?: string[];
+}
+
+export interface ComplianceCheck {
+  standardId: string;
+  requirementId: string;
+  status: 'compliant' | 'non_compliant' | 'partially_compliant';
+  evidence: string[];
+  gaps?: string[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface AtmosphericReading {
+  gasType: string;
+  value: number;
+  unit: string;
+  timestamp: number;
+  location?: string;
+}
+
+export interface LegalPermit {
+  id: string;
+  spaceDetails?: {
+    identification?: string;
+  };
+  hazardAssessment?: {
+    industrySpecific?: Record<string, any>;
+  };
+  entryPermit?: {
+    industrySpecific?: Record<string, any>;
+  };
+}
+
+export interface PersonnelData {
+  role: string;
+  preferredLanguage?: string;
+  qualifications?: Array<{
+    type: string;
+    valid: boolean;
+  }>;
+}
+
+export interface ComplianceResult {
+  jurisdiction: string;
+  overallCompliance: number;
+  results: ComplianceCheck[];
+  criticalNonCompliance: number;
+  nlSpecific?: Record<string, any>;
+  actionPlan: ActionPlan[];
+}
+
+export interface ActionPlan {
+  standardId: string;
+  action: BilingualText;
+  responsible: string;
+  deadline: string;
+  resources: string[];
+  verification: string;
+}
 
 // =================== NEWFOUNDLAND & LABRADOR AUTHORITY ===================
 
@@ -28,8 +141,8 @@ export const WORKPLACENL_AUTHORITY = {
   jurisdiction: ['NL'] as const,
   website: 'https://workplacenl.ca',
   contactInfo: {
-    phone: '1-800-563-9000',              // Ligne principale WorkplaceNL
-    preventionPhone: '709-778-1000',       // Prévention
+    phone: '1-800-563-9000',
+    preventionPhone: '709-778-1000',
     email: 'prevention@workplacenl.ca',
     address: '146-148 Forest Road, St. John\'s, NL A1E 1E5'
   },
@@ -39,11 +152,11 @@ export const WORKPLACENL_AUTHORITY = {
     { region: 'Corner Brook', phone: '709-637-2200', coverage: 'Western NL' },
     { region: 'Happy Valley-Goose Bay', phone: '709-896-3391', coverage: 'Labrador' }
   ],
-  languages: ['en'] as const,              // English primary, French services available
+  languages: ['en'] as const,
   specializedUnits: [
-    'offshore_safety_division',             // Division sécurité offshore
-    'mining_safety_unit',                   // Unité sécurité minière
-    'fisheries_safety_program'              // Programme sécurité pêches
+    'offshore_safety_division',
+    'mining_safety_unit',
+    'fisheries_safety_program'
   ],
   powers: [
     'Workplace inspections and investigations',
@@ -52,7 +165,7 @@ export const WORKPLACENL_AUTHORITY = {
     'Administrative penalties',
     'Prosecutions and fines'
   ]
-} as const;
+};
 
 // =================== NL SPECIFIC FEATURES ===================
 
@@ -73,7 +186,7 @@ export const NL_SPECIFIC_FEATURES = {
     'marine_transportation'
   ],
   miningOperations: [
-    'iron_ore_mines_labrador',              // Mines fer Labrador
+    'iron_ore_mines_labrador',
     'underground_mining_operations',
     'mineral_processing_facilities',
     'tailing_pond_operations',
@@ -94,12 +207,12 @@ export const NL_SPECIFIC_FEATURES = {
     'emergency_evacuation_challenges'
   ],
   regulatoryIntegration: [
-    'canada_offshore_petroleum_board',      // C-NLOPB integration
+    'canada_offshore_petroleum_board',
     'transport_canada_marine_safety',
     'environment_climate_change_canada',
     'fisheries_oceans_canada'
   ]
-} as const;
+};
 
 // =================== NL REGULATION STANDARDS ===================
 
@@ -120,7 +233,7 @@ export const NL_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       'Not designed or intended for human occupancy',
       'Has restricted means for entry or exit',
       'May become hazardous to any person entering it',
-      'Includes offshore platforms, vessels, and mining facilities'  // NL specific
+      'Includes offshore platforms, vessels, and mining facilities'
     ],
     nlSpecific: {
       offshoreDefinitions: [
@@ -143,7 +256,7 @@ export const NL_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       ]
     },
     penalties: {
-      individual: { min: 500, max: 50000 },    // 2023 amounts
+      individual: { min: 500, max: 50000 },
       corporation: { min: 5000, max: 500000 }
     },
     references: [
@@ -322,26 +435,26 @@ export const NL_ATMOSPHERIC_STANDARDS = {
   
   // NL Offshore Industry Specific
   offshoreSpecific: {
-    hydrogen_sulfide_sour_gas: { max: 5, unit: 'ppm' },    // Stricter for offshore
-    mercaptans: { max: 0.5, unit: 'ppm' },                 // Natural gas odorant
-    aromatic_hydrocarbons: { max: 1, unit: 'ppm' },        // Benzene, toluene
+    hydrogen_sulfide_sour_gas: { max: 5, unit: 'ppm' },
+    mercaptans: { max: 0.5, unit: 'ppm' },
+    aromatic_hydrocarbons: { max: 1, unit: 'ppm' },
     drilling_mud_gases: 'per_material_safety_data_sheet'
   },
   
   // NL Fisheries Industry Specific  
   fisheriesSpecific: {
-    ammonia_refrigeration: { max: 25, unit: 'ppm' },       // Fish processing plants
-    carbon_dioxide_refrigeration: { max: 5000, unit: 'ppm' }, // CO2 refrigeration systems
-    decomposition_gases: 'continuous_monitoring_required'   // Fish spoilage gases
+    ammonia_refrigeration: { max: 25, unit: 'ppm' },
+    carbon_dioxide_refrigeration: { max: 5000, unit: 'ppm' },
+    decomposition_gases: 'continuous_monitoring_required'
   },
   
   // NL Mining Industry Specific
   miningSpecific: {
-    methane_underground: { max: 1.25, unit: '%' },         // Underground mining
-    nitrogen_oxides: { max: 3, unit: 'ppm' },              // Blasting operations
-    dust_particulates: { max: 3, unit: 'mg/m³' }           // Respirable dust
+    methane_underground: { max: 1.25, unit: '%' },
+    nitrogen_oxides: { max: 3, unit: 'ppm' },
+    dust_particulates: { max: 3, unit: 'mg/m³' }
   }
-} as const;
+};
 
 // =================== NL PERSONNEL QUALIFICATIONS ===================
 
@@ -466,35 +579,35 @@ export const NL_EMERGENCY_SERVICES = {
   },
   
   offshore: {
-    coastGuard: '1-800-565-1582',            // Maritime Rescue Coordination Centre Halifax
-    offshoreSafety: '1-800-563-3638',        // C-NLOPB 24-hour emergency line
+    coastGuard: '1-800-565-1582',
+    offshoreSafety: '1-800-563-3638',
     helicopterServices: {
-      cougarHelicopters: '709-758-7050',      // Cougar Helicopters - St. John's
-      exxonMobilHelicopter: '709-778-8000'   // ExxonMobil helicopter operations
+      cougarHelicopters: '709-758-7050',
+      exxonMobilHelicopter: '709-778-8000'
     },
     offshoreInstallations: {
-      hibernia: '709-778-8000',              // Hibernia Management and Development Company
-      terraNova: '709-778-1400',             // Suncor Energy - Terra Nova
-      whiteRose: '709-778-9000',             // Husky Energy - White Rose
-      hebron: '709-778-8700'                 // ExxonMobil - Hebron
+      hibernia: '709-778-8000',
+      terraNova: '709-778-1400',
+      whiteRose: '709-778-9000',
+      hebron: '709-778-8700'
     }
   },
   
   fisheries: {
-    coastGuardRescue: '1-800-565-1582',      // Marine Search and Rescue
-    fisheriesSafety: '709-772-4423',         // Professional Fish Harvesters Certification Board
-    marinetTransportation: '709-729-3080',   // Marine Services Division
+    coastGuardRescue: '1-800-565-1582',
+    fisheriesSafety: '709-772-4423',
+    marinetTransportation: '709-729-3080',
     portAuthorities: {
-      stJohns: '709-758-2688',               // St. John's Port Authority
-      cornerBrook: '709-637-2626'            // Port of Corner Brook
+      stJohns: '709-758-2688',
+      cornerBrook: '709-637-2626'
     }
   },
   
   mining: {
     mineRescue: '911_request_mine_rescue_team',
     laboradorMining: {
-      ironOreCompany: '709-944-8000',        // Iron Ore Company of Canada - Labrador City
-      miningAssociation: '709-754-4160'     // Newfoundland and Labrador Mining Association
+      ironOreCompany: '709-944-8000',
+      miningAssociation: '709-754-4160'
     },
     undergroundEmergency: 'mine_specific_emergency_response_teams'
   },
@@ -505,7 +618,7 @@ export const NL_EMERGENCY_SERVICES = {
     marineRescue: 'canadian_coast_guard_auxiliary_newfoundland',
     mineRescue: 'provincial_mine_rescue_association'
   }
-} as const;
+};
 
 // =================== COMPLIANCE CHECKING ===================
 
@@ -846,7 +959,7 @@ function getNLStandardsForIndustry(industryType?: string) {
 
 function isReadingCompliant(reading: AtmosphericReading, standards: any): boolean {
   const gasStandard = standards[reading.gasType];
-  if (!gasStandard) return true; // No standard defined, assume compliant
+  if (!gasStandard) return true;
   
   if ('min' in gasStandard && 'max' in gasStandard) {
     return reading.value >= gasStandard.min && reading.value <= gasStandard.max;
