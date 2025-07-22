@@ -380,6 +380,8 @@ export const MANITOBA_WSH_STANDARDS: Record<string, RegulatoryStandard> = {
           en: 'Mandatory atmospheric testing before entry, testing by competent person with calibrated equipment, testing order: oxygen, flammable gases, toxic gases, testing at all levels of the space, continuous monitoring during occupancy, documentation of all results'
         },
         implementation: {
+          timeline: 'before_entry_and_continuous',
+          resources: ['multi_gas_detectors', 'calibration_gases', 'documentation_forms'],
           standards: {
             oxygen: { min: 19.5, max: 23.0, unit: '%' },
             flammable_gas: { max: 10, unit: '%LEL' },
