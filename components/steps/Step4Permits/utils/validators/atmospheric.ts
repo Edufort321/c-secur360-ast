@@ -1055,7 +1055,7 @@ function generateQualityReport(result: ValidationResult, language: 'fr' | 'en' =
 }
 
 // Export des fonctions principales
-export { validateAtmosphericReading, validateAtmosphericReadings };
+export { validateAtmosphericReading, validateAtmosphericReadings, formatValidationResult, generateQualityReport };
 
 export default {
   validateAtmosphericReading,
