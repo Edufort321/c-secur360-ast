@@ -2,15 +2,215 @@
 // Réglementations Manitoba Workplace Safety and Health pour espaces clos
 "use client";
 
-import type { 
-  RegulatoryStandard,
-  ComplianceMatrix,
-  RegulatoryUpdate,
-  StandardRevision,
-  BilingualText,
-  GasType,
-  ProvinceCode
-} from '../../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type ProvinceCode = 
+  | 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' 
+  | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export interface RegulatoryStandard {
+  id: string;
+  name: BilingualText;
+  type: 'safety' | 'environmental' | 'quality' | 'procedural';
+  category: string;
+  authority: {
+    name: BilingualText;
+    acronym: string;
+    jurisdiction: ProvinceCode[];
+    website: string;
+    contactInfo: {
+      phone: string;
+      emergencyLine: string;
+      email: string;
+      address: {
+        street: string;
+        city: string;
+        province: string;
+        postalCode: string;
+      };
+      regionalOffices?: Array<{
+        region: string;
+        phone: string;
+        address: string;
+      }>;
+    };
+    powers: BilingualText;
+    specialFeatures?: string[];
+  };
+  jurisdiction: ProvinceCode[];
+  effectiveDate: number;
+  lastUpdated: number;
+  status: 'active' | 'pending' | 'superseded' | 'repealed';
+  hierarchy: {
+    parent?: string;
+    level: 'act' | 'regulation' | 'section' | 'subsection' | 'part';
+    section?: string;
+    subsections?: string[];
+  };
+  scope: {
+    workplaces: string[];
+    activities: string[];
+    equipment: string[];
+    exclusions?: string[];
+    specialConsiderations?: string[];
+    mbSpecificInclusions?: string[];
+  };
+  requirements: Array<{
+    id: string;
+    name: BilingualText;
+    description: BilingualText;
+    mandatory: boolean;
+    criteria: BilingualText;
+    implementation?: {
+      timeline: string;
+      resources: string[];
+      responsibilities?: string[];
+      dependencies?: string[];
+      standards?: Record<string, { min?: number; max?: number; unit: string; }>;
+      equipment?: string[];
+      frequency?: string;
+      retentionPeriod?: string;
+      format?: string;
+      accessibility?: string;
+    };
+    verification?: {
+      methods: string[];
+      documentation?: string[];
+      frequency?: string;
+      evidence?: string[];
+      nonCompliance?: {
+        indicators: string[];
+        actions: string[];
+      };
+    };
+    penalties?: {
+      individual: { min: number; max: number; };
+      corporation: { min: number; max: number; };
+      description?: BilingualText;
+    };
+    mbSpecific?: Record<string, any>;
+  }>;
+  compliance: {
+    level: 'mandatory' | 'recommended' | 'best_practice';
+    enforcement: string;
+    penalties: {
+      individual: { min: number; max: number; };
+      corporation: { min: number; max: number; };
+      criminal?: string;
+    };
+    inspectionFrequency: string;
+    reportingRequirements: string[];
+  };
+  mbSpecificFeatures?: Record<string, any>;
+  relatedStandards?: string[];
+  references: Array<{
+    type: string;
+    title: string;
+    citation: string;
+    section?: string;
+    url?: string;
+    publisher?: string;
+    collaboration?: string;
+  }>;
+  lastReview: number;
+  nextReview: number;
+  metadata: {
+    version: string;
+    language: string;
+    jurisdiction: string;
+    effectiveTerritory: string;
+    specialConditions: string[];
+  };
+}
+
+export interface ComplianceMatrix {
+  jurisdiction: string;
+  standardsAssessed: string[];
+  assessmentDate: number;
+  overallCompliance: number;
+  results: Array<{
+    standardId: string;
+    requirementId: string;
+    status: 'compliant' | 'non_compliant' | 'partially_compliant' | 'not_applicable';
+    evidence: string[];
+    gaps: string[];
+    priority: 'low' | 'medium' | 'high' | 'critical';
+  }>;
+  criticalNonCompliance: number;
+  actionPlan: Array<{
+    standardId: string;
+    requirement: string;
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    action: BilingualText;
+    responsible: string;
+    deadline: string;
+    resources: string[];
+    verification: string;
+    status: 'planned' | 'in_progress' | 'completed' | 'overdue';
+    mbSpecific?: Record<string, any>;
+  }>;
+  nextAssessment: number;
+  certifiedBy: string;
+  mbSpecific?: Record<string, any>;
+  metadata: {
+    version: string;
+    assessmentMethod: string;
+    dataQuality: string;
+    limitationsNoted: string[];
+  };
+}
+
+export interface RegulatoryUpdate {
+  id: string;
+  standardId: string;
+  updateType: 'amendment' | 'revision' | 'new_requirement' | 'repeal';
+  effectiveDate: number;
+  description: BilingualText;
+  impact: 'low' | 'medium' | 'high' | 'critical';
+  affectedSections: string[];
+  transitionPeriod?: number;
+  complianceActions: string[];
+}
+
+export interface StandardRevision {
+  revisionId: string;
+  standardId: string;
+  previousVersion: string;
+  newVersion: string;
+  revisionDate: number;
+  changes: Array<{
+    section: string;
+    changeType: 'addition' | 'modification' | 'deletion';
+    description: BilingualText;
+    rationale: BilingualText;
+  }>;
+  impactAssessment: {
+    affected_organizations: number;
+    compliance_cost_estimate: number;
+    implementation_timeline: string;
+  };
+}
 
 // =================== CONSTANTES MANITOBA WSH ===================
 
@@ -27,7 +227,6 @@ export const MANITOBA_WSH_AUTHORITY = {
   contactInfo: {
     phone: '1-855-957-7233',
     emergencyLine: '911',
-    inspectionLine: '204-945-3446',
     email: 'safety@gov.mb.ca',
     address: {
       street: '401 York Avenue, Suite 1000',
@@ -59,22 +258,8 @@ export const MANITOBA_WSH_AUTHORITY = {
     ]
   },
   powers: {
-    fr: [
-      'Inspection des lieux de travail',
-      'Émission d\'ordonnances d\'amélioration',
-      'Émission d\'ordres d\'arrêt de travail',
-      'Amendes et poursuites',
-      'Investigation d\'accidents',
-      'Éducation et prévention'
-    ],
-    en: [
-      'Workplace inspections',
-      'Issue improvement orders',
-      'Issue stop work orders',
-      'Fines and prosecutions',
-      'Accident investigations',
-      'Education and prevention'
-    ]
+    fr: 'Inspection des lieux de travail, émission d\'ordonnances d\'amélioration, émission d\'ordres d\'arrêt de travail, amendes et poursuites, investigation d\'accidents, éducation et prévention',
+    en: 'Workplace inspections, issue improvement orders, issue stop work orders, fines and prosecutions, accident investigations, education and prevention'
   },
   specialFeatures: [
     'agricultural_safety_focus',
@@ -82,7 +267,7 @@ export const MANITOBA_WSH_AUTHORITY = {
     'northern_remote_operations',
     'bilingual_services_available'
   ]
-} as const;
+};
 
 // =================== STANDARDS MANITOBA WSH ===================
 
@@ -109,38 +294,20 @@ export const MANITOBA_WSH_STANDARDS: Record<string, RegulatoryStandard> = {
     },
     scope: {
       workplaces: [
-        'industrial',
-        'construction', 
-        'agricultural',
-        'mining',
-        'utilities',
-        'municipal',
-        'healthcare',
-        'transportation',
-        'manufacturing'
+        'industrial', 'construction', 'agricultural', 'mining', 'utilities',
+        'municipal', 'healthcare', 'transportation', 'manufacturing'
       ],
       activities: [
-        'confined_space_entry',
-        'maintenance_operations',
-        'inspection_activities',
-        'cleaning_operations',
-        'emergency_response',
-        'construction_in_confined_spaces'
+        'confined_space_entry', 'maintenance_operations', 'inspection_activities',
+        'cleaning_operations', 'emergency_response', 'construction_in_confined_spaces'
       ],
       equipment: [
-        'storage_tanks',
-        'process_vessels',
-        'grain_bins_silos',
-        'manholes_sewers',
-        'underground_vaults',
-        'rail_cars_tank_trucks',
-        'boilers_pressure_vessels'
+        'storage_tanks', 'process_vessels', 'grain_bins_silos', 'manholes_sewers',
+        'underground_vaults', 'rail_cars_tank_trucks', 'boilers_pressure_vessels'
       ],
       mbSpecificInclusions: [
-        'agricultural_grain_storage',
-        'mining_underground_spaces',
-        'northern_remote_facilities',
-        'hydro_generating_stations'
+        'agricultural_grain_storage', 'mining_underground_spaces',
+        'northern_remote_facilities', 'hydro_generating_stations'
       ]
     },
     requirements: [
@@ -156,33 +323,17 @@ export const MANITOBA_WSH_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Espace clos : espace totalement ou partiellement fermé',
-            'Non conçu pour occupation humaine continue',
-            'Moyens d\'entrée et de sortie limités',
-            'Peut contenir ou développer une atmosphère dangereuse',
-            'Inclut spécifiquement les silos à grains et espaces agricoles'
-          ],
-          en: [
-            'Confined space: space that is totally or partially enclosed',
-            'Not designed for continuous human occupancy',
-            'Limited means of entry and exit',
-            'May contain or develop a hazardous atmosphere',
-            'Specifically includes grain silos and agricultural spaces'
-          ]
+          fr: 'Espace clos : espace totalement ou partiellement fermé, non conçu pour occupation humaine continue, moyens d\'entrée et de sortie limités, peut contenir ou développer une atmosphère dangereuse, inclut spécifiquement les silos à grains et espaces agricoles',
+          en: 'Confined space: space that is totally or partially enclosed, not designed for continuous human occupancy, limited means of entry and exit, may contain or develop a hazardous atmosphere, specifically includes grain silos and agricultural spaces'
         },
         mbSpecific: {
           agriculturalFocus: [
-            'grain_storage_bins_silos',
-            'livestock_manure_pits',
-            'feed_storage_structures',
-            'agricultural_processing_tanks'
+            'grain_storage_bins_silos', 'livestock_manure_pits',
+            'feed_storage_structures', 'agricultural_processing_tanks'
           ],
           miningInclusions: [
-            'underground_mine_workings',
-            'ore_storage_bins',
-            'processing_plant_vessels',
-            'tailings_ponds_structures'
+            'underground_mine_workings', 'ore_storage_bins',
+            'processing_plant_vessels', 'tailings_ponds_structures'
           ]
         },
         verification: {
@@ -203,77 +354,14 @@ export const MANITOBA_WSH_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Développer programme écrit de sécurité pour espaces clos',
-            'Identifier et évaluer tous les espaces clos du lieu de travail',
-            'Établir procédures d\'entrée sécuritaire',
-            'Fournir formation appropriée aux travailleurs',
-            'Assurer disponibilité d\'équipement de sécurité',
-            'Maintenir registres et documentation'
-          ],
-          en: [
-            'Develop written confined space safety program',
-            'Identify and assess all confined spaces in workplace',
-            'Establish safe entry procedures',
-            'Provide appropriate worker training',
-            'Ensure availability of safety equipment',
-            'Maintain records and documentation'
-          ]
+          fr: 'Développer programme écrit de sécurité pour espaces clos, identifier et évaluer tous les espaces clos du lieu de travail, établir procédures d\'entrée sécuritaire, fournir formation appropriée aux travailleurs, assurer disponibilité d\'équipement de sécurité, maintenir registres et documentation',
+          en: 'Develop written confined space safety program, identify and assess all confined spaces in workplace, establish safe entry procedures, provide appropriate worker training, ensure availability of safety equipment, maintain records and documentation'
         },
         implementation: {
           timeline: 'within_30_days_of_identification',
           resources: ['competent_person', 'safety_program_template', 'training_materials'],
           responsibilities: ['employer', 'safety_coordinator', 'supervisors'],
           dependencies: ['space_identification', 'hazard_assessment', 'worker_consultation']
-        }
-      },
-      {
-        id: 'MB_WSH_12_3',
-        name: {
-          fr: 'Section 12.3 - Évaluation et contrôle des dangers',
-          en: 'Section 12.3 - Hazard Assessment and Control'
-        },
-        description: {
-          fr: 'Exigences d\'évaluation et de contrôle des dangers',
-          en: 'Requirements for hazard assessment and control'
-        },
-        mandatory: true,
-        criteria: {
-          fr: [
-            'Évaluation complète des dangers avant chaque entrée',
-            'Identification des dangers atmosphériques et physiques',
-            'Mise en œuvre de mesures de contrôle appropriées',
-            'Isolation et verrouillage des sources d\'énergie',
-            'Contrôle des substances dangereuses',
-            'Évaluation continue pendant les travaux'
-          ],
-          en: [
-            'Complete hazard assessment before each entry',
-            'Identification of atmospheric and physical hazards',
-            'Implementation of appropriate control measures',
-            'Isolation and lockout of energy sources',
-            'Control of hazardous substances',
-            'Ongoing assessment during work'
-          ]
-        },
-        mbSpecific: {
-          agriculturalHazards: [
-            'grain_dust_explosions',
-            'methane_from_manure_decomposition',
-            'hydrogen_sulfide_livestock_operations',
-            'engulfment_in_grain_or_feed'
-          ],
-          miningHazards: [
-            'underground_gases_methane_co',
-            'oxygen_deficiency_underground',
-            'ground_instability',
-            'mining_equipment_hazards'
-          ],
-          climateConsiderations: [
-            'extreme_cold_equipment_failure',
-            'ice_formation_access_issues',
-            'heating_equipment_carbon_monoxide'
-          ]
         }
       },
       {
@@ -288,22 +376,8 @@ export const MANITOBA_WSH_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Tests atmosphériques obligatoires avant entrée',
-            'Tests par personne compétente avec équipement calibré',
-            'Ordre de test : oxygène, gaz inflammables, gaz toxiques',
-            'Tests à tous les niveaux de l\'espace',
-            'Surveillance continue pendant occupation',
-            'Documentation de tous les résultats'
-          ],
-          en: [
-            'Mandatory atmospheric testing before entry',
-            'Testing by competent person with calibrated equipment',
-            'Testing order: oxygen, flammable gases, toxic gases',
-            'Testing at all levels of the space',
-            'Continuous monitoring during occupancy',
-            'Documentation of all results'
-          ]
+          fr: 'Tests atmosphériques obligatoires avant entrée, tests par personne compétente avec équipement calibré, ordre de test : oxygène, gaz inflammables, gaz toxiques, tests à tous les niveaux de l\'espace, surveillance continue pendant occupation, documentation de tous les résultats',
+          en: 'Mandatory atmospheric testing before entry, testing by competent person with calibrated equipment, testing order: oxygen, flammable gases, toxic gases, testing at all levels of the space, continuous monitoring during occupancy, documentation of all results'
         },
         implementation: {
           standards: {
@@ -329,45 +403,6 @@ export const MANITOBA_WSH_STANDARDS: Record<string, RegulatoryStandard> = {
         }
       },
       {
-        id: 'MB_WSH_12_5',
-        name: {
-          fr: 'Section 12.5 - Ventilation',
-          en: 'Section 12.5 - Ventilation'
-        },
-        description: {
-          fr: 'Exigences de ventilation pour espaces clos',
-          en: 'Ventilation requirements for confined spaces'
-        },
-        mandatory: true,
-        criteria: {
-          fr: [
-            'Ventilation adéquate pour maintenir atmosphère sécuritaire',
-            'Ventilation mécanique si ventilation naturelle insuffisante',
-            'Prévention de création d\'atmosphère dangereuse',
-            'Équipement électrique approprié aux dangers',
-            'Surveillance de l\'efficacité de la ventilation'
-          ],
-          en: [
-            'Adequate ventilation to maintain safe atmosphere',
-            'Mechanical ventilation if natural ventilation insufficient',
-            'Prevention of hazardous atmosphere creation',
-            'Electrical equipment appropriate to hazards',
-            'Monitoring of ventilation effectiveness'
-          ]
-        },
-        mbSpecific: {
-          coldWeatherOperations: {
-            heatingConsiderations: 'carbon_monoxide_prevention',
-            equipmentProtection: 'cold_weather_equipment_specifications',
-            ventilationChallenges: 'ice_formation_prevention'
-          },
-          agriculturalVentilation: {
-            grainDustControl: 'explosion_proof_equipment_required',
-            manurePitVentilation: 'continuous_exhaust_systems'
-          }
-        }
-      },
-      {
         id: 'MB_WSH_12_6',
         name: {
           fr: 'Section 12.6 - Systèmes de permis',
@@ -379,63 +414,8 @@ export const MANITOBA_WSH_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Système de permis écrit pour toutes les entrées',
-            'Autorisation par personne compétente',
-            'Validité limitée dans le temps',
-            'Vérification de toutes les mesures de sécurité',
-            'Signatures et approbations requises',
-            'Annulation si conditions changent'
-          ],
-          en: [
-            'Written permit system for all entries',
-            'Authorization by competent person',
-            'Time-limited validity',
-            'Verification of all safety measures',
-            'Required signatures and approvals',
-            'Cancellation if conditions change'
-          ]
-        }
-      },
-      {
-        id: 'MB_WSH_12_7',
-        name: {
-          fr: 'Section 12.7 - Équipement de protection et de sauvetage',
-          en: 'Section 12.7 - Protective and Rescue Equipment'
-        },
-        description: {
-          fr: 'Exigences d\'équipement de protection et de sauvetage',
-          en: 'Protective and rescue equipment requirements'
-        },
-        mandatory: true,
-        criteria: {
-          fr: [
-            'ÉPI approprié aux dangers identifiés',
-            'Équipement de protection respiratoire si requis',
-            'Dispositifs de récupération et lignes de vie',
-            'Équipement de communication fiable',
-            'Éclairage sécuritaire approprié',
-            'Équipement de sauvetage immédiatement disponible'
-          ],
-          en: [
-            'PPE appropriate to identified hazards',
-            'Respiratory protection equipment if required',
-            'Retrieval devices and lifelines',
-            'Reliable communication equipment',
-            'Appropriate safe lighting',
-            'Rescue equipment immediately available'
-          ]
-        },
-        mbSpecific: {
-          coldWeatherEquipment: {
-            thermalProtection: 'hypothermia_prevention_gear',
-            equipmentReliability: 'cold_weather_tested_equipment',
-            batteryPerformance: 'cold_weather_battery_backup'
-          },
-          agriculturalEquipment: {
-            grainRescue: 'grain_rescue_tubes_and_equipment',
-            livestockFacilities: 'gas_monitoring_for_manure_pits'
-          }
+          fr: 'Système de permis écrit pour toutes les entrées, autorisation par personne compétente, validité limitée dans le temps, vérification de toutes les mesures de sécurité, signatures et approbations requises, annulation si conditions changent',
+          en: 'Written permit system for all entries, authorization by competent person, time-limited validity, verification of all safety measures, required signatures and approvals, cancellation if conditions change'
         }
       },
       {
@@ -450,22 +430,8 @@ export const MANITOBA_WSH_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Attendant compétent en permanence à l\'extérieur',
-            'Communication continue avec entrants',
-            'Surveillance des conditions atmosphériques',
-            'Autorité pour ordonner évacuation',
-            'Ne peut quitter son poste',
-            'Formation en procédures d\'urgence'
-          ],
-          en: [
-            'Competent attendant continuously outside',
-            'Continuous communication with entrants',
-            'Monitoring of atmospheric conditions',
-            'Authority to order evacuation',
-            'Cannot leave post',
-            'Training in emergency procedures'
-          ]
+          fr: 'Attendant compétent en permanence à l\'extérieur, communication continue avec entrants, surveillance des conditions atmosphériques, autorité pour ordonner évacuation, ne peut quitter son poste, formation en procédures d\'urgence',
+          en: 'Competent attendant continuously outside, continuous communication with entrants, monitoring of atmospheric conditions, authority to order evacuation, cannot leave post, training in emergency procedures'
         },
         mbSpecific: {
           remoteOperations: {
@@ -487,22 +453,8 @@ export const MANITOBA_WSH_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Plan d\'urgence écrit spécifique au site',
-            'Équipe de sauvetage formée et équipée',
-            'Coordination avec services d\'urgence locaux',
-            'Procédures pour différents types d\'urgences',
-            'Exercices réguliers de sauvetage',
-            'Équipement de sauvetage maintenu et testé'
-          ],
-          en: [
-            'Written site-specific emergency plan',
-            'Trained and equipped rescue team',
-            'Coordination with local emergency services',
-            'Procedures for different emergency types',
-            'Regular rescue drills',
-            'Rescue equipment maintained and tested'
-          ]
+          fr: 'Plan d\'urgence écrit spécifique au site, équipe de sauvetage formée et équipée, coordination avec services d\'urgence locaux, procédures pour différents types d\'urgences, exercices réguliers de sauvetage, équipement de sauvetage maintenu et testé',
+          en: 'Written site-specific emergency plan, trained and equipped rescue team, coordination with local emergency services, procedures for different emergency types, regular rescue drills, rescue equipment maintained and tested'
         },
         mbSpecific: {
           emergencyServices: {
@@ -528,22 +480,8 @@ export const MANITOBA_WSH_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Formation spécialisée selon le rôle assigné',
-            'Connaissance des dangers spécifiques au lieu de travail',
-            'Formation sur utilisation d\'équipement de sécurité',
-            'Procédures d\'urgence et de sauvetage',
-            'Mise à jour régulière des compétences',
-            'Documentation des formations reçues'
-          ],
-          en: [
-            'Specialized training according to assigned role',
-            'Knowledge of workplace-specific hazards',
-            'Training on safety equipment use',
-            'Emergency and rescue procedures',
-            'Regular skills updating',
-            'Documentation of training received'
-          ]
+          fr: 'Formation spécialisée selon le rôle assigné, connaissance des dangers spécifiques au lieu de travail, formation sur utilisation d\'équipement de sécurité, procédures d\'urgence et de sauvetage, mise à jour régulière des compétences, documentation des formations reçues',
+          en: 'Specialized training according to assigned role, knowledge of workplace-specific hazards, training on safety equipment use, emergency and rescue procedures, regular skills updating, documentation of training received'
         }
       },
       {
@@ -558,22 +496,8 @@ export const MANITOBA_WSH_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Registres de tous les permis d\'entrée',
-            'Documentation des tests atmosphériques',
-            'Registres de formation du personnel',
-            'Documentation des inspections d\'équipement',
-            'Rapports d\'incidents et d\'accidents',
-            'Conservation des registres pendant période requise'
-          ],
-          en: [
-            'Records of all entry permits',
-            'Documentation of atmospheric testing',
-            'Personnel training records',
-            'Equipment inspection documentation',
-            'Incident and accident reports',
-            'Record retention for required period'
-          ]
+          fr: 'Registres de tous les permis d\'entrée, documentation des tests atmosphériques, registres de formation du personnel, documentation des inspections d\'équipement, rapports d\'incidents et d\'accidents, conservation des registres pendant période requise',
+          en: 'Records of all entry permits, documentation of atmospheric testing, personnel training records, equipment inspection documentation, incident and accident reports, record retention for required period'
         },
         implementation: {
           retentionPeriod: '3_years_minimum',
@@ -644,12 +568,14 @@ export const MANITOBA_WSH_STANDARDS: Record<string, RegulatoryStandard> = {
       {
         type: 'guideline',
         title: 'Confined Space Safety Guidelines',
+        citation: 'MB WSH CS-2022',
         publisher: 'Manitoba WSH',
         url: 'https://www.gov.mb.ca/labour/safety/confined_spaces.html'
       },
       {
         type: 'industry_guide',
         title: 'Agricultural Confined Space Safety',
+        citation: 'MB AG-CS-2022',
         publisher: 'Manitoba Agriculture',
         collaboration: 'Manitoba WSH'
       }
@@ -682,7 +608,7 @@ export const MANITOBA_EXPOSURE_LIMITS: Record<GasType, {
   mbSpecific?: any;
 }> = {
   oxygen: {
-    twa: 0, // Pas de limite TWA - requis 19.5-23%
+    twa: 0,
     stel: 0,
     unit: '%',
     source: 'Manitoba WSH Regulation Part 12',
@@ -694,7 +620,7 @@ export const MANITOBA_EXPOSURE_LIMITS: Record<GasType, {
   carbon_monoxide: {
     twa: 25,
     stel: 125,
-    ceiling: 35, // Limite pour espaces clos Manitoba
+    ceiling: 35,
     unit: 'ppm',
     source: 'Manitoba WSH Regulation Schedule A',
     mbSpecific: {
@@ -705,7 +631,7 @@ export const MANITOBA_EXPOSURE_LIMITS: Record<GasType, {
   hydrogen_sulfide: {
     twa: 10,
     stel: 15,
-    ceiling: 10, // Limite espaces clos
+    ceiling: 10,
     unit: 'ppm',
     source: 'Manitoba WSH Regulation Schedule A',
     mbSpecific: {
@@ -728,8 +654,68 @@ export const MANITOBA_EXPOSURE_LIMITS: Record<GasType, {
     stel: 1000,
     unit: 'ppm',
     source: 'Manitoba WSH Regulation Schedule A'
+  },
+  carbon_dioxide: {
+    twa: 5000,
+    stel: 30000,
+    unit: 'ppm',
+    source: 'Manitoba WSH Regulation Schedule A'
+  },
+  ammonia: {
+    twa: 25,
+    stel: 35,
+    unit: 'ppm',
+    source: 'Manitoba WSH Regulation Schedule A'
+  },
+  chlorine: {
+    twa: 0.5,
+    stel: 1,
+    unit: 'ppm',
+    source: 'Manitoba WSH Regulation Schedule A'
+  },
+  nitrogen_dioxide: {
+    twa: 3,
+    stel: 5,
+    unit: 'ppm',
+    source: 'Manitoba WSH Regulation Schedule A'
+  },
+  sulfur_dioxide: {
+    twa: 2,
+    stel: 5,
+    unit: 'ppm',
+    source: 'Manitoba WSH Regulation Schedule A'
+  },
+  benzene: {
+    twa: 0.5,
+    stel: 2.5,
+    unit: 'ppm',
+    source: 'Manitoba WSH Regulation Schedule A'
+  },
+  toluene: {
+    twa: 20,
+    stel: 50,
+    unit: 'ppm',
+    source: 'Manitoba WSH Regulation Schedule A'
+  },
+  xylene: {
+    twa: 100,
+    stel: 150,
+    unit: 'ppm',
+    source: 'Manitoba WSH Regulation Schedule A'
+  },
+  acetone: {
+    twa: 500,
+    stel: 750,
+    unit: 'ppm',
+    source: 'Manitoba WSH Regulation Schedule A'
+  },
+  formaldehyde: {
+    twa: 0.3,
+    stel: 0.3,
+    unit: 'ppm',
+    source: 'Manitoba WSH Regulation Schedule A'
   }
-} as any;
+};
 
 // =================== QUALIFICATIONS MANITOBA ===================
 
@@ -740,20 +726,8 @@ export const MANITOBA_QUALIFICATIONS = {
       en: 'Competent Person'
     },
     requirements: {
-      fr: [
-        'Connaissance, formation et expérience appropriées',
-        'Familiarité avec la Loi et règlements Manitoba WSH',
-        'Connaissance des dangers des espaces clos',
-        'Autorité pour prendre mesures correctives',
-        'Capacité d\'identifier conditions dangereuses'
-      ],
-      en: [
-        'Appropriate knowledge, training and experience',
-        'Familiarity with Manitoba WSH Act and regulations',
-        'Knowledge of confined space hazards',
-        'Authority to take corrective measures',
-        'Ability to identify hazardous conditions'
-      ]
+      fr: 'Connaissance, formation et expérience appropriées, familiarité avec la Loi et règlements Manitoba WSH, connaissance des dangers des espaces clos, autorité pour prendre mesures correctives, capacité d\'identifier conditions dangereuses',
+      en: 'Appropriate knowledge, training and experience, familiarity with Manitoba WSH Act and regulations, knowledge of confined space hazards, authority to take corrective measures, ability to identify hazardous conditions'
     },
     certification: 'employer_designated_competency_verified',
     validity: 'ongoing_with_annual_verification',
@@ -769,20 +743,8 @@ export const MANITOBA_QUALIFICATIONS = {
       en: 'Qualified Atmospheric Tester'
     },
     requirements: {
-      fr: [
-        'Formation sur équipement de détection de gaz',
-        'Connaissance des limites d\'exposition Manitoba',
-        'Compétence en calibration d\'équipement',
-        'Interprétation des résultats de tests',
-        'Procédures d\'urgence si conditions dangereuses'
-      ],
-      en: [
-        'Training on gas detection equipment',
-        'Knowledge of Manitoba exposure limits',
-        'Competency in equipment calibration',
-        'Interpretation of test results',
-        'Emergency procedures if hazardous conditions'
-      ]
+      fr: 'Formation sur équipement de détection de gaz, connaissance des limites d\'exposition Manitoba, compétence en calibration d\'équipement, interprétation des résultats de tests, procédures d\'urgence si conditions dangereuses',
+      en: 'Training on gas detection equipment, knowledge of Manitoba exposure limits, competency in equipment calibration, interpretation of test results, emergency procedures if hazardous conditions'
     },
     certification: 'manufacturer_training_plus_workplace_verification',
     validity: 'annual_recertification_required',
@@ -798,20 +760,8 @@ export const MANITOBA_QUALIFICATIONS = {
       en: 'Confined Space Attendant'
     },
     requirements: {
-      fr: [
-        'Formation spécialisée en surveillance d\'espaces clos',
-        'Connaissance des procédures d\'urgence',
-        'Compétence en communication d\'urgence',
-        'Formation en premiers secours (recommandée)',
-        'Connaissance des systèmes de récupération'
-      ],
-      en: [
-        'Specialized confined space attendant training',
-        'Knowledge of emergency procedures',
-        'Competency in emergency communication',
-        'First aid training (recommended)',
-        'Knowledge of retrieval systems'
-      ]
+      fr: 'Formation spécialisée en surveillance d\'espaces clos, connaissance des procédures d\'urgence, compétence en communication d\'urgence, formation en premiers secours (recommandée), connaissance des systèmes de récupération',
+      en: 'Specialized confined space attendant training, knowledge of emergency procedures, competency in emergency communication, first aid training (recommended), knowledge of retrieval systems'
     },
     certification: 'employer_training_program_verified',
     validity: 'annual_refresher_training',
@@ -819,35 +769,6 @@ export const MANITOBA_QUALIFICATIONS = {
       ruralOperations: 'limited_emergency_service_response_training',
       agricultureSpecific: 'grain_rescue_procedures_training',
       winterOperations: 'cold_weather_emergency_procedures'
-    }
-  },
-  rescue_team_member: {
-    name: {
-      fr: 'Membre d\'équipe de sauvetage',
-      en: 'Rescue Team Member'
-    },
-    requirements: {
-      fr: [
-        'Formation avancée en sauvetage d\'espaces clos',
-        'Certification en protection respiratoire',
-        'Formation en techniques de récupération',
-        'Premiers secours et RCR',
-        'Travail d\'équipe sous stress'
-      ],
-      en: [
-        'Advanced confined space rescue training',
-        'Respiratory protection certification',
-        'Training in retrieval techniques',
-        'First aid and CPR',
-        'Team work under stress'
-      ]
-    },
-    certification: 'professional_rescue_organization_certified',
-    validity: 'annual_certification_maintenance',
-    mbSpecific: {
-      agriculturalRescue: 'grain_engulfment_rescue_specialization',
-      miningRescue: 'underground_mine_rescue_certification',
-      ruralRescue: 'limited_resource_rescue_techniques'
     }
   }
 };
@@ -876,8 +797,7 @@ export function checkManitobaCompliance(
   });
 
   // Vérification Section 12.2 - Programme de sécurité
-  const hasWrittenProgram = permitData.safetyProgram && 
-                           permitData.safetyProgram.written;
+  const hasWrittenProgram = permitData.safetyProgram?.written;
   results.push({
     standardId: 'MB_WSH_12_2',
     requirementId: 'written_safety_program',
@@ -888,9 +808,9 @@ export function checkManitobaCompliance(
   });
 
   // Vérification Section 12.4 - Tests atmosphériques
-  const hasAtmosphericTesting = atmosphericReadings && atmosphericReadings.length > 0;
+  const hasAtmosphericTesting = atmosphericReadings?.length > 0;
   const recentReadings = hasAtmosphericTesting ? 
-    atmosphericReadings.filter(r => Date.now() - r.timestamp < 4 * 60 * 60 * 1000) : []; // 4h
+    atmosphericReadings.filter(r => Date.now() - r.timestamp < 4 * 60 * 60 * 1000) : [];
 
   let atmosphericCompliant = true;
   const atmosphericGaps: string[] = [];
@@ -910,16 +830,17 @@ export function checkManitobaCompliance(
 
     // Vérifier limites Manitoba
     recentReadings.forEach(reading => {
-      const limits = MANITOBA_EXPOSURE_LIMITS[reading.gasType];
+      const gasType = reading.gasType as GasType;
+      const limits = MANITOBA_EXPOSURE_LIMITS[gasType];
       if (limits) {
-        if (reading.gasType === 'oxygen') {
+        if (gasType === 'oxygen') {
           if (reading.value < 19.5 || reading.value > 23.0) {
             atmosphericCompliant = false;
             atmosphericGaps.push(`Oxygen level ${reading.value}% outside Manitoba WSH 19.5-23% range`);
           }
         } else if (limits.ceiling && reading.value > limits.ceiling) {
           atmosphericCompliant = false;
-          atmosphericGaps.push(`${reading.gasType} ${reading.value}${limits.unit} exceeds Manitoba ceiling ${limits.ceiling}${limits.unit}`);
+          atmosphericGaps.push(`${gasType} ${reading.value}${limits.unit} exceeds Manitoba ceiling ${limits.ceiling}${limits.unit}`);
         }
       }
     });
@@ -946,18 +867,6 @@ export function checkManitobaCompliance(
     priority: 'critical' as const
   });
 
-  // Vérification Section 12.6 - Système de permis
-  const hasPermitSystem = permitData.permitSystem && 
-                         permitData.permitSystem.written;
-  results.push({
-    standardId: 'MB_WSH_12_6',
-    requirementId: 'permit_system',
-    status: hasPermitSystem ? 'compliant' : 'non_compliant',
-    evidence: hasPermitSystem ? ['written_permit_system'] : [],
-    gaps: hasPermitSystem ? [] : ['Missing written permit system'],
-    priority: 'critical' as const
-  });
-
   // Vérification Section 12.8 - Attendant
   const hasAttendant = personnel.some(p => 
     p.role === 'attendant' && p.qualifications?.manitoba_wsh_trained
@@ -972,8 +881,7 @@ export function checkManitobaCompliance(
   });
 
   // Vérification Section 12.9 - Plan d'urgence
-  const hasEmergencyPlan = permitData.emergencyPlan && 
-                          permitData.emergencyPlan.siteSpecific;
+  const hasEmergencyPlan = permitData.emergencyPlan?.siteSpecific;
   results.push({
     standardId: 'MB_WSH_12_9',
     requirementId: 'emergency_plan',
@@ -997,7 +905,7 @@ export function checkManitobaCompliance(
       r.status === 'non_compliant' && r.priority === 'critical'
     ).length,
     actionPlan: generateManitobaActionPlan(results, workplaceType),
-    nextAssessment: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 jours
+    nextAssessment: Date.now() + (30 * 24 * 60 * 60 * 1000),
     certifiedBy: 'manitoba_wsh_system',
     mbSpecific: {
       workplaceType,
@@ -1028,9 +936,8 @@ function generateManitobaActionPlan(
     priority: item.priority,
     action: getManitobaCorrectiveAction(item.standardId, item.requirementId, workplaceType),
     responsible: 'competent_person',
-    deadline: item.priority === 'critical' ? 
-      'immediate' : 
-      item.priority === 'high' ? '48_hours' : '7_days',
+    deadline: item.priority === 'critical' ? 'immediate' : 
+              item.priority === 'high' ? '48_hours' : '7_days',
     resources: getManitobaRequiredResources(item.standardId, workplaceType),
     verification: 'manitoba_wsh_documentation_standards',
     mbSpecific: {
@@ -1058,10 +965,6 @@ function getManitobaCorrectiveAction(
     'MB_WSH_12_4_atmospheric_testing': {
       fr: 'Effectuer tests atmosphériques par personne compétente Manitoba',
       en: 'Conduct atmospheric testing by Manitoba competent person'
-    },
-    'MB_WSH_12_6_permit_system': {
-      fr: 'Implémenter système de permis écrit Manitoba WSH',
-      en: 'Implement written permit system per Manitoba WSH'
     },
     'MB_WSH_12_8_competent_attendant': {
       fr: 'Assigner attendant compétent formé Manitoba WSH',
@@ -1105,7 +1008,6 @@ function getManitobaRequiredResources(
   const baseResources: Record<string, string[]> = {
     'MB_WSH_12_2': ['competent_person_mb', 'safety_program_template', 'workplace_assessment'],
     'MB_WSH_12_4': ['calibrated_detectors', 'competent_atmospheric_tester', 'documentation_forms'],
-    'MB_WSH_12_6': ['permit_system_forms', 'competent_person_authorization'],
     'MB_WSH_12_8': ['trained_attendant_mb', 'communication_equipment', 'monitoring_devices'],
     'MB_WSH_12_9': ['emergency_response_team', 'rescue_equipment', 'emergency_communication']
   };
@@ -1130,12 +1032,12 @@ function getManitobaRequiredResources(
  */
 function getManitobaClimateFactors(): string[] {
   return [
-    'extreme_cold_temperatures',      // -40°C et moins
-    'equipment_winterization_needs',  // Équipement hivernisé
-    'ice_formation_issues',          // Formation de glace
-    'snow_access_limitations',       // Accès limité par neige
-    'heating_equipment_co_risk',     // Risque CO équipement chauffage
-    'battery_performance_cold'       // Performance batteries froid
+    'extreme_cold_temperatures',
+    'equipment_winterization_needs',
+    'ice_formation_issues',
+    'snow_access_limitations',
+    'heating_equipment_co_risk',
+    'battery_performance_cold'
   ];
 }
 
@@ -1193,34 +1095,12 @@ export function validateManitobaQualifications(
 
   requiredRoles.forEach(role => {
     const qualified = personnelData.find(p => 
-      p.role === role && 
-      p.qualifications?.manitoba_wsh_competent
+      p.role === role && p.qualifications?.manitoba_wsh_competent
     );
 
     if (!qualified) {
       gaps.push(`No Manitoba WSH competent ${role}`);
       recommendations.push(`Ensure ${role} meets Manitoba WSH competency requirements`);
-    }
-
-    // Vérifications spécifiques selon type de lieu de travail
-    if (workplaceType === 'agricultural' && role === 'competent_person') {
-      const agricultureCompetent = personnelData.find(p => 
-        p.role === role && p.qualifications?.agricultural_safety_training
-      );
-      if (!agricultureCompetent) {
-        gaps.push(`Competent person missing agricultural safety training`);
-        recommendations.push(`Obtain agricultural-specific safety training`);
-      }
-    }
-
-    if (workplaceType === 'mining' && ['competent_person', 'attendant'].includes(role)) {
-      const miningCompetent = personnelData.find(p => 
-        p.role === role && p.qualifications?.mining_safety_certified
-      );
-      if (!miningCompetent) {
-        gaps.push(`${role} missing mining safety certification`);
-        recommendations.push(`Obtain mining-specific safety certification`);
-      }
     }
   });
 
@@ -1304,32 +1184,26 @@ export function getManitobaTrainingRequirements(
 
   // Ajouter exigences spécifiques selon type de lieu de travail
   if (workplaceType === 'agricultural') {
-    requirements = {
-      ...requirements,
-      mbSpecific: {
-        agriculturalRequirements: [
-          'grain_storage_safety',
-          'livestock_facility_safety',
-          'manure_gas_awareness',
-          'farm_equipment_safety'
-        ],
-        agriculturalProviders: ['manitoba_farm_safety', 'agricultural_safety_associations']
-      }
+    requirements.mbSpecific = {
+      agriculturalRequirements: [
+        'grain_storage_safety',
+        'livestock_facility_safety',
+        'manure_gas_awareness',
+        'farm_equipment_safety'
+      ],
+      agriculturalProviders: ['manitoba_farm_safety', 'agricultural_safety_associations']
     };
   }
 
   if (workplaceType === 'mining') {
-    requirements = {
-      ...requirements,
-      mbSpecific: {
-        miningRequirements: [
-          'underground_mining_safety',
-          'mine_gas_monitoring',
-          'mine_rescue_procedures',
-          'mining_equipment_safety'
-        ],
-        miningProviders: ['manitoba_mining_association', 'mine_safety_training_centers']
-      }
+    requirements.mbSpecific = {
+      miningRequirements: [
+        'underground_mining_safety',
+        'mine_gas_monitoring',
+        'mine_rescue_procedures',
+        'mining_equipment_safety'
+      ],
+      miningProviders: ['manitoba_mining_association', 'mine_safety_training_centers']
     };
   }
 
