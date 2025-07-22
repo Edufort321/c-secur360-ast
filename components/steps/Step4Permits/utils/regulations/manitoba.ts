@@ -502,6 +502,8 @@ export const MANITOBA_WSH_STANDARDS: Record<string, RegulatoryStandard> = {
           en: 'Records of all entry permits, documentation of atmospheric testing, personnel training records, equipment inspection documentation, incident and accident reports, record retention for required period'
         },
         implementation: {
+          timeline: 'ongoing_throughout_operations',
+          resources: ['documentation_systems', 'record_storage', 'filing_procedures'],
           retentionPeriod: '3_years_minimum',
           format: 'written_or_electronic_acceptable',
           accessibility: 'available_to_inspectors_and_workers'
