@@ -1,18 +1,79 @@
 // components/steps/Step4Permits/utils/validators/index.ts - SYNTAX CORRECTED
+"use client";
 
-// =================== EXPORTS DES VALIDATEURS EXISTANTS ===================
+// =================== EXPORTS SÉLECTIFS POUR ÉVITER LES CONFLITS ===================
 
-// Validateurs atmosphériques
-export * from './atmospheric';
+// Validateurs atmosphériques - export sélectif
+export {
+  validateAtmosphericReading,
+  validateAtmosphericReadings,
+  formatValidationResult as formatAtmosphericValidationResult,
+  generateQualityReport as generateAtmosphericQualityReport,
+  type AtmosphericReading,
+  type ValidationResult as AtmosphericValidationResult,
+  type ValidationWarning as AtmosphericValidationWarning,
+  type ValidationError as AtmosphericValidationError,
+  type ValidationSuggestion as AtmosphericValidationSuggestion,
+  type DataQualityMetrics,
+  type GasType,
+  type AlarmLevel
+} from './atmospheric';
 
-// Validateurs équipement
-export * from './equipment';
+// Validateurs équipement - export sélectif  
+export {
+  validateEquipment,
+  validateEquipmentSet,
+  EQUIPMENT_SPECIFICATIONS,
+  SAFETY_CRITICAL_EQUIPMENT,
+  type EquipmentData,
+  type EquipmentType,
+  type EquipmentValidationResult,
+  type EquipmentStatus,
+  type CertificationStatus,
+  type MaintenanceStatus,
+  type CalibrationValidationStatus,
+  type SafetyComplianceStatus,
+  type EquipmentIssue,
+  type EquipmentIssueType,
+  type SafetyRating,
+  type CalibrationStatus,
+  type MaintenanceRecord
+} from './equipment';
 
-// Validateurs personnel
-export * from './personnel';
+// Type commun BilingualText défini ici pour éviter les conflits
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
 
-// Validateurs procédures
-export * from './procedures';
+// Types génériques de validation
+export interface BaseValidationResult {
+  isValid: boolean;
+  errors: BaseValidationError[];
+  warnings: BaseValidationWarning[];
+  suggestions: BaseValidationSuggestion[];
+  confidence: number;
+}
+
+export interface BaseValidationError {
+  type: string;
+  message: BilingualText;
+  field: string;
+  critical: boolean;
+}
+
+export interface BaseValidationWarning {
+  type: string;
+  message: BilingualText;
+  field: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
+export interface BaseValidationSuggestion {
+  type: string;
+  message: BilingualText;
+  priority: 'low' | 'medium' | 'high';
+}
 
 // =================== TYPES POUR VALIDATION MOBILE ===================
 export interface MobileValidationOptions {
