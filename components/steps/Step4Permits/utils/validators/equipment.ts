@@ -1,14 +1,103 @@
 // components/steps/Step4Permits/utils/validators/equipment.ts
+"use client";
 
-import { 
-  EquipmentData, 
-  EquipmentType, 
-  ValidationResult, 
-  CalibrationStatus,
-  MaintenanceRecord,
-  BilingualText,
-  SafetyRating 
-} from '../../types/equipment';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type EquipmentType = 
+  | 'gas_detector_portable'
+  | 'gas_detector_fixed'
+  | 'ventilation_fan'
+  | 'air_pump'
+  | 'communication_system'
+  | 'tripod_winch'
+  | 'fall_protection'
+  | 'scba'
+  | 'emergency_lighting';
+
+export type SafetyRating = 1 | 2 | 3 | 4 | 5;
+
+export type CalibrationStatus = 'valid' | 'expired' | 'due_soon' | 'overdue' | 'unknown';
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: ValidationError[];
+  warnings: ValidationWarning[];
+  criticalIssues: ValidationError[];
+  suggestions: ValidationSuggestion[];
+  confidence: number;
+}
+
+export interface ValidationError {
+  type: string;
+  message: BilingualText;
+  field: string;
+  critical: boolean;
+}
+
+export interface ValidationWarning {
+  type: string;
+  message: BilingualText;
+  field: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
+export interface ValidationSuggestion {
+  type: string;
+  message: BilingualText;
+  priority: 'low' | 'medium' | 'high';
+}
+
+export interface MaintenanceRecord {
+  id: string;
+  date: string | Date;
+  scheduledDate?: string | Date;
+  type: string;
+  description: string;
+  technician?: string;
+  completed: boolean;
+}
+
+export interface EquipmentData {
+  id: string;
+  type: EquipmentType;
+  serialNumber?: string;
+  manufacturer?: string;
+  model?: string;
+  purchaseDate?: string | Date;
+  warrantyExpiry?: string | Date;
+  lastInspection?: string | Date;
+  safetyRating?: SafetyRating;
+  safetyStandards?: string[];
+  operatingConditions?: {
+    temperature?: number;
+    humidity?: number;
+    pressure?: number;
+  };
+  specifications?: {
+    voltage?: number;
+    communicationProtocol?: string;
+    [key: string]: any;
+  };
+  calibration?: {
+    lastDate?: string | Date;
+    nextDate?: string | Date;
+    accuracy?: number;
+    drift?: number;
+    status?: CalibrationStatus;
+  };
+  certification?: {
+    authority?: string;
+    level?: string;
+    expiryDate?: string | Date;
+    number?: string;
+  };
+  maintenanceHistory?: MaintenanceRecord[];
+  [key: string]: any;
+}
 
 // =================== TYPES VALIDATION ÉQUIPEMENT ===================
 
@@ -362,9 +451,9 @@ export function validateEquipmentSet(equipments: EquipmentData[]): EquipmentVali
  * Validation données de base équipement
  */
 function validateBasicEquipmentData(equipment: EquipmentData): ValidationResult {
-  const errors: any[] = [];
-  const warnings: any[] = [];
-  const suggestions: any[] = [];
+  const errors: ValidationError[] = [];
+  const warnings: ValidationWarning[] = [];
+  const suggestions: ValidationSuggestion[] = [];
 
   // Champs obligatoires
   if (!equipment.id) {
@@ -436,9 +525,9 @@ function validateBasicEquipmentData(equipment: EquipmentData): ValidationResult 
  * Validation par type d'équipement
  */
 function validateEquipmentByType(equipment: EquipmentData): ValidationResult {
-  const errors: any[] = [];
-  const warnings: any[] = [];
-  const suggestions: any[] = [];
+  const errors: ValidationError[] = [];
+  const warnings: ValidationWarning[] = [];
+  const suggestions: ValidationSuggestion[] = [];
 
   if (!equipment.type) return { isValid: false, errors, warnings, criticalIssues: [], suggestions, confidence: 0 };
 
@@ -568,7 +657,7 @@ function assessEquipmentStatus(equipment: EquipmentData): EquipmentStatus {
     operational,
     readiness,
     issues,
-    lastInspection: equipment.lastInspection || null,
+    lastInspection: equipment.lastInspection ? new Date(equipment.lastInspection) : null,
     nextMaintenanceDue: calculateNextMaintenance(equipment)
   };
 }
@@ -754,9 +843,9 @@ function validateSafetyCompliance(equipment: EquipmentData): SafetyComplianceSta
  * Valide compatibilité entre équipements
  */
 function validateEquipmentCompatibility(equipments: EquipmentData[]): ValidationResult {
-  const errors: any[] = [];
-  const warnings: any[] = [];
-  const suggestions: any[] = [];
+  const errors: ValidationError[] = [];
+  const warnings: ValidationWarning[] = [];
+  const suggestions: ValidationSuggestion[] = [];
 
   // Vérifier compatibilité électrique
   const electricalCheck = checkElectricalCompatibility(equipments);
@@ -764,6 +853,7 @@ function validateEquipmentCompatibility(equipments: EquipmentData[]): Validation
     warnings.push({
       type: 'compatibility_issue',
       message: electricalCheck.message,
+      field: 'electrical',
       severity: 'high'
     });
   }
@@ -774,6 +864,7 @@ function validateEquipmentCompatibility(equipments: EquipmentData[]): Validation
     warnings.push({
       type: 'compatibility_issue', 
       message: commCheck.message,
+      field: 'communication',
       severity: 'medium'
     });
   }
@@ -792,9 +883,9 @@ function validateEquipmentCompatibility(equipments: EquipmentData[]): Validation
  * Valide redondance équipements critiques
  */
 function validateEquipmentRedundancy(equipments: EquipmentData[]): ValidationResult {
-  const errors: any[] = [];
-  const warnings: any[] = [];
-  const suggestions: any[] = [];
+  const errors: ValidationError[] = [];
+  const warnings: ValidationWarning[] = [];
+  const suggestions: ValidationSuggestion[] = [];
 
   // Vérifier redondance détecteurs gaz
   const gasDetectors = equipments.filter(eq => 
@@ -808,6 +899,7 @@ function validateEquipmentRedundancy(equipments: EquipmentData[]): ValidationRes
         fr: 'Redondance insuffisante pour détecteurs gaz',
         en: 'Insufficient redundancy for gas detectors'
       },
+      field: 'gas_detectors',
       severity: 'high'
     });
 
@@ -830,6 +922,7 @@ function validateEquipmentRedundancy(equipments: EquipmentData[]): ValidationRes
         fr: 'Système communication requis',
         en: 'Communication system required'
       },
+      field: 'communication',
       critical: true
     });
   }
