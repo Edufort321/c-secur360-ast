@@ -225,7 +225,7 @@ const CORRELATION_COEFFICIENTS: Record<string, { gases: [GasType, GasType]; expe
 /**
  * Valide une lecture atmosphérique complète
  */
-export function validateAtmosphericReading(
+function validateAtmosphericReading(
   reading: AtmosphericReading,
   previousReadings?: AtmosphericReading[],
   regulatoryStandards?: Record<GasType, any>
@@ -282,7 +282,7 @@ export function validateAtmosphericReading(
 /**
  * Valide un ensemble de lectures atmosphériques
  */
-export function validateAtmosphericReadings(
+function validateAtmosphericReadings(
   readings: AtmosphericReading[],
   regulatoryStandards?: Record<GasType, any>
 ): ValidationResult {
@@ -989,7 +989,7 @@ function calculateConfidence(
 /**
  * Formate résultat validation pour affichage
  */
-export function formatValidationResult(result: ValidationResult, language: 'fr' | 'en' = 'fr'): string {
+function formatValidationResult(result: ValidationResult, language: 'fr' | 'en' = 'fr'): string {
   const lines: string[] = [];
   
   lines.push(`${language === 'fr' ? 'Résultat validation' : 'Validation Result'}: ${result.isValid ? '✅ Valide' : '❌ Invalide'}`);
@@ -1023,7 +1023,7 @@ export function formatValidationResult(result: ValidationResult, language: 'fr' 
 /**
  * Génère rapport qualité détaillé
  */
-export function generateQualityReport(result: ValidationResult, language: 'fr' | 'en' = 'fr'): object {
+function generateQualityReport(result: ValidationResult, language: 'fr' | 'en' = 'fr'): object {
   return {
     summary: {
       valid: result.isValid,
