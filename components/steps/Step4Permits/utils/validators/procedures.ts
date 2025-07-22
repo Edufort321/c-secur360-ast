@@ -1437,6 +1437,9 @@ function createEmptyProcedureValidationResult(message: string): ProcedureValidat
 // Export des constantes pour l'index
 export { REQUIRED_PROCEDURES, REGULATORY_REQUIREMENTS, EMERGENCY_DRILL_INTERVALS };
 
+// Export des fonctions principales
+export { validateProcedure, validateProcedureSet };
+
 export default {
   validateProcedure,
   validateProcedureSet,
