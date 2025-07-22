@@ -7,18 +7,138 @@
  * 
  * Territorial Focus: Mining, tourism, extreme northern conditions, indigenous communities
  */
+"use client";
 
-import type { 
-  RegulationStandard, 
-  PersonnelQualification, 
-  ComplianceCheck,
-  BilingualText,
-  AtmosphericReading,
-  LegalPermit,
-  PersonnelData,
-  ComplianceResult,
-  ActionPlan
-} from '../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type ProvinceCode = 
+  | 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' 
+  | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export interface RegulationStandard {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  section: string;
+  category: string;
+  mandatory: boolean;
+  criteria: string[];
+  ytSpecific?: Record<string, any>;
+  penalties?: {
+    individual: { min: number; max: number; };
+    corporation: { min: number; max: number; };
+  };
+  references?: Array<{
+    type: string;
+    title: string;
+    citation: string;
+    url?: string;
+  }>;
+  standards?: Record<string, { min?: number; max?: number; unit: string; }>;
+  implementation?: {
+    timeline: string;
+    resources: string[];
+    responsibilities: string[];
+  };
+}
+
+export interface PersonnelQualification {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  requirements: string[];
+  ytSpecific?: Record<string, any>;
+  certification: string;
+  validity: string;
+  mandatoryTraining?: string[];
+}
+
+export interface ComplianceCheck {
+  standardId: string;
+  requirementId: string;
+  status: 'compliant' | 'non_compliant' | 'partially_compliant';
+  evidence: string[];
+  gaps?: string[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface AtmosphericReading {
+  gasType: string;
+  value: number;
+  unit: string;
+  timestamp: number;
+  location?: string;
+  equipmentRating?: string[];
+  temperatureCompensation?: any;
+}
+
+export interface LegalPermit {
+  id: string;
+  spaceDetails?: {
+    identification?: string;
+    environmentalFactors?: string[];
+  };
+  hazardAssessment?: {
+    environmentalHazards?: string[];
+    traditionalKnowledge?: any;
+    operationSpecific?: Record<string, any>;
+  };
+  entryPermit?: {
+    weatherLimitations?: any;
+    emergencyEvacuation?: string[];
+    communicationPlan?: any;
+  };
+}
+
+export interface PersonnelData {
+  role: string;
+  preferredLanguage?: string;
+  qualifications?: Array<{
+    type: string;
+    valid: boolean;
+  }>;
+}
+
+export interface ComplianceResult {
+  jurisdiction: string;
+  overallCompliance: number;
+  results: ComplianceCheck[];
+  criticalNonCompliance: number;
+  ytSpecific?: Record<string, any>;
+  actionPlan: ActionPlan[];
+}
+
+export interface ActionPlan {
+  standardId: string;
+  action: BilingualText;
+  responsible: string;
+  deadline: string;
+  resources: string[];
+  verification: string;
+}
 
 // =================== YUKON AUTHORITY ===================
 
@@ -28,8 +148,8 @@ export const WSCC_YT_AUTHORITY = {
   jurisdiction: ['YT'] as const,
   website: 'https://www.wcb.yk.ca',
   contactInfo: {
-    phone: '1-800-661-0443',              // Ligne principale WSCC Yukon
-    preventionPhone: '867-667-5450',       // Services prévention
+    phone: '1-800-661-0443',
+    preventionPhone: '867-667-5450',
     email: 'prevention@wcb.yk.ca',
     address: '401 Strickland Street, Whitehorse, YT Y1A 5N8'
   },
@@ -40,15 +160,15 @@ export const WSCC_YT_AUTHORITY = {
     { region: 'Mayo', phone: '867-996-2221', coverage: 'Central Yukon, Mining Operations' },
     { region: 'Faro', phone: '867-994-2728', coverage: 'Mining Legacy Sites' }
   ],
-  languages: ['en', 'fr'] as const,        // English primary, French services available
-  indigenousLanguages: [                   // Services langues autochtones disponibles
+  languages: ['en', 'fr'] as const,
+  indigenousLanguages: [
     'gwich_in', 'han', 'northern_tutchone', 'southern_tutchone', 'champagne_aishihik', 'vuntut_gwitchin'
   ],
   specializedUnits: [
-    'mining_safety_division',             // Division sécurité minière
-    'tourism_safety_program',             // Programme sécurité tourisme
-    'indigenous_safety_initiative',       // Initiative sécurité autochtone
-    'remote_operations_unit'              // Unité opérations isolées
+    'mining_safety_division',
+    'tourism_safety_program',
+    'indigenous_safety_initiative',
+    'remote_operations_unit'
   ],
   powers: [
     'Workplace inspections and investigations',
@@ -57,60 +177,60 @@ export const WSCC_YT_AUTHORITY = {
     'Administrative penalties up to $300,000',
     'Prosecutions under territorial law'
   ]
-} as const;
+};
 
 // =================== YT SPECIFIC FEATURES ===================
 
 export const YT_SPECIFIC_FEATURES = {
   miningOperations: [
-    'placer_gold_mining_klondike_region',   // Mines or placer région Klondike
-    'hard_rock_mining_casino_coffee_eagle', // Mines roche dure Casino, Coffee, Eagle
-    'legacy_mining_sites_faro_anvil',      // Sites miniers patrimoniaux Faro, Anvil
+    'placer_gold_mining_klondike_region',
+    'hard_rock_mining_casino_coffee_eagle',
+    'legacy_mining_sites_faro_anvil',
     'mineral_exploration_remote_areas',
     'underground_mining_limited_operations'
   ],
   tourismOperations: [
-    'wilderness_lodge_remote_locations',    // Pourvoiries isolées
+    'wilderness_lodge_remote_locations',
     'adventure_tourism_extreme_activities',
     'cruise_ship_operations_whitehorse',
     'heritage_tourism_dawson_city',
     'outdoor_recreation_facilities'
   ],
   extremeNorthernConditions: [
-    'temperatures_below_minus_50_celsius',  // Températures sous -50°C
+    'temperatures_below_minus_50_celsius',
     'continuous_permafrost_throughout_territory',
     'midnight_sun_continuous_daylight_summer',
     'polar_darkness_continuous_winter',
     'extreme_weather_variability'
   ],
   indigenousCommunities: [
-    'first_nations_traditional_territories', // Territoires traditionnels Premières Nations
+    'first_nations_traditional_territories',
     'champagne_aishihik_first_nations',
     'vuntut_gwitchin_first_nation',
     'tr_ondek_hwech_in_first_nation',
     'little_salmon_carmacks_first_nation'
   ],
   remoteOperations: [
-    'fly_in_access_only_locations',        // Accès avion seulement
+    'fly_in_access_only_locations',
     'seasonal_ice_road_access_winter',
     'helicopter_access_mining_exploration',
     'satellite_communication_dependency',
     'extended_isolation_periods'
   ],
   wildernessFactors: [
-    'wildlife_encounters_bears_wolves',     // Rencontres faune ours loups
+    'wildlife_encounters_bears_wolves',
     'wilderness_survival_requirements',
     'search_rescue_coordination',
     'emergency_evacuation_weather_dependent',
     'traditional_survival_skills_integration'
   ],
   regulatoryIntegration: [
-    'yukon_environmental_socio_economic_assessment', // YESAB
+    'yukon_environmental_socio_economic_assessment',
     'yukon_energy_corporation_coordination',
     'parks_canada_heritage_sites',
     'first_nations_land_claims_agreements'
   ]
-} as const;
+};
 
 // =================== YT REGULATION STANDARDS ===================
 
@@ -131,7 +251,7 @@ export const YT_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       'Not designed or intended for human occupancy',
       'Has restricted means for entry or exit',
       'May become hazardous to any person entering it',
-      'Includes northern mining, tourism, and remote operations'  // YT specific
+      'Includes northern mining, tourism, and remote operations'
     ],
     ytSpecific: {
       miningDefinitions: [
@@ -159,7 +279,7 @@ export const YT_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       ]
     },
     penalties: {
-      individual: { min: 500, max: 50000 },     // 2023 amounts
+      individual: { min: 500, max: 50000 },
       corporation: { min: 2500, max: 300000 }
     },
     references: [
@@ -377,29 +497,29 @@ export const YT_ATMOSPHERIC_STANDARDS = {
   
   // YT Mining Industry Specific
   miningSpecific: {
-    radon_uranium: { max: 0.3, unit: 'WL' },            // Working Level radon
-    methane_placer: { max: 1000, unit: 'ppm' },         // Placer mining methane
-    cyanide_processing: { max: 4.7, unit: 'mg/m³' },    // Gold processing
-    heavy_metal_vapors: { max: 0.05, unit: 'mg/m³' },   // Legacy mining sites
-    diesel_exhaust_mining: { max: 1.5, unit: 'mg/m³' }  // Mining equipment exhaust
+    radon_uranium: { max: 0.3, unit: 'WL' },
+    methane_placer: { max: 1000, unit: 'ppm' },
+    cyanide_processing: { max: 4.7, unit: 'mg/m³' },
+    heavy_metal_vapors: { max: 0.05, unit: 'mg/m³' },
+    diesel_exhaust_mining: { max: 1.5, unit: 'mg/m³' }
   },
   
   // YT Tourism Industry Specific  
   tourismSpecific: {
-    propane_heating: { max: 1000, unit: 'ppm' },        // Wilderness lodge heating
-    generator_exhaust: { max: 25, unit: 'ppm' },        // Remote generator CO
-    fuel_vapors_remote: { max: 100, unit: 'mg/m³' },    // Remote fuel storage
-    preservation_chemicals: 'per_material_safety_data_sheet' // Heritage preservation
+    propane_heating: { max: 1000, unit: 'ppm' },
+    generator_exhaust: { max: 25, unit: 'ppm' },
+    fuel_vapors_remote: { max: 100, unit: 'mg/m³' },
+    preservation_chemicals: 'per_material_safety_data_sheet'
   },
   
   // YT Extreme Northern Conditions
   extremeNorthernSpecific: {
-    permafrost_gases: 'seasonal_monitoring_required',    // Permafrost gas emissions
-    heating_system_exhaust: { max: 35, unit: 'ppm' },   // Arctic heating systems
+    permafrost_gases: 'seasonal_monitoring_required',
+    heating_system_exhaust: { max: 35, unit: 'ppm' },
     fuel_additives_arctic: 'per_arctic_fuel_specifications',
-    equipment_refrigerants: { max: 1000, unit: 'ppm' }  // Equipment refrigerants
+    equipment_refrigerants: { max: 1000, unit: 'ppm' }
   }
-} as const;
+};
 
 // =================== YT PERSONNEL QUALIFICATIONS ===================
 
@@ -563,59 +683,59 @@ export const YT_EMERGENCY_SERVICES = {
   },
   
   territorialServices: {
-    emergencyMeasures: '867-667-5220',        // Yukon Emergency Measures Organization
-    healthEmergency: '867-393-8700',          // Yukon Health and Social Services
-    searchRescue: '1-800-267-7270',           // Joint Rescue Coordination Centre Trenton
-    environmentalEmergency: '867-667-7244',   // Yukon Environment
-    wildlifeConflict: '1-800-661-0525'       // Yukon Wildlife Conflict
+    emergencyMeasures: '867-667-5220',
+    healthEmergency: '867-393-8700',
+    searchRescue: '1-800-267-7270',
+    environmentalEmergency: '867-667-7244',
+    wildlifeConflict: '1-800-661-0525'
   },
   
   mining: {
-    mineRescue: '867-667-5450',              // Yukon mine rescue coordination
+    mineRescue: '867-667-5450',
     northernMines: {
-      casino: '867-334-1238',                // Casino Mining Corporation
-      coffee: '867-334-4614',                // Newmont Coffee Gold
-      eagle: '867-993-2464'                  // Victoria Gold Eagle Mine
+      casino: '867-334-1238',
+      coffee: '867-334-4614',
+      eagle: '867-993-2464'
     },
-    placerMining: '867-993-7200',            // Placer mining association
-    yukonMinersAssociation: '867-668-4118'   // Yukon Miners Association
+    placerMining: '867-993-7200',
+    yukonMinersAssociation: '867-668-4118'
   },
   
   tourism: {
     wildernessLodges: {
-      lodgeAssociation: '867-668-3331',       // Wilderness Tourism Association
-      guideOutfitters: '867-668-4118'        // Yukon Outfitters Association
+      lodgeAssociation: '867-668-3331',
+      guideOutfitters: '867-668-4118'
     },
-    adventureTourism: '867-667-5036',        // Tourism Yukon emergency
+    adventureTourism: '867-667-5036',
     heritageOperations: {
-      parksCanada: '867-667-3910',           // Parks Canada Yukon
-      heritageYukon: '867-667-4704'          // Heritage Yukon
+      parksCanada: '867-667-3910',
+      heritageYukon: '867-667-4704'
     },
-    cruiseOperations: '867-668-9229'         // Whitehorse cruise operations
+    cruiseOperations: '867-668-9229'
   },
   
   indigenousCommunities: {
-    champagneAishihik: '867-634-4200',       // Champagne and Aishihik First Nations
-    vuntutGwitchin: '867-966-3261',          // Vuntut Gwitchin First Nation
-    trondekHwechin: '867-993-7100',          // Tr'ondëk Hwëch'in First Nation
-    littleSalmon: '867-863-5576',            // Little Salmon/Carmacks First Nation
-    whiteRiverFirst: '867-862-7802',         // White River First Nation
-    councilFirstNations: '867-393-9200'     // Council of Yukon First Nations
+    champagneAishihik: '867-634-4200',
+    vuntutGwitchin: '867-966-3261',
+    trondekHwechin: '867-993-7100',
+    littleSalmon: '867-863-5576',
+    whiteRiverFirst: '867-862-7802',
+    councilFirstNations: '867-393-9200'
   },
   
   remoteOperations: {
     aircraftServices: {
-      airNorth: '867-668-2228',              // Air North emergency
-      alkanAir: '867-668-6616',              // Alkan Air Services
-      helicopterServices: '867-668-2643'    // Trans North Helicopters
+      airNorth: '867-668-2228',
+      alkanAir: '867-668-6616',
+      helicopterServices: '867-668-2643'
     },
     communicationServices: {
-      northwestel: '1-888-423-2333',         // Northwestel emergency
-      satelliteServices: '1-866-947-9669'   // Satellite communication emergency
+      northwestel: '1-888-423-2333',
+      satelliteServices: '1-866-947-9669'
     },
     supplySystems: {
-      fuelDelivery: '867-668-5081',          // Northern fuel delivery
-      emergencySupplies: '867-667-5220'     // Emergency supply coordination
+      fuelDelivery: '867-668-5081',
+      emergencySupplies: '867-667-5220'
     }
   },
   
@@ -626,7 +746,7 @@ export const YT_EMERGENCY_SERVICES = {
     aircraftRescue: 'joint_rescue_coordination_centre_trenton',
     indigenousRescue: 'first_nations_traditional_knowledge_emergency'
   }
-} as const;
+};
 
 // =================== COMPLIANCE CHECKING ===================
 
