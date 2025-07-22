@@ -1810,19 +1810,23 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
           />
         );
       case 4:
-        return (
-        <Step4Permits
-          language={currentLanguage}
-          province={'QC'}
-          userRole={'worker'}
-          touchOptimized={true}
-          compactMode={false}
-          onPermitChange={(permits) => {
-          handleStep4DataChange('permits', permits);
-        }}
+  return (
+    <Step4Permits
+      formData={astData}
+      onDataChange={handleStep4DataChange}
+      language={currentLanguage}
+      tenant={tenant}
+      errors={{}}
+      province={'QC'}
+      userRole={'worker'}
+      touchOptimized={true}
+      compactMode={false}
+      onPermitChange={(permits) => {
+        handleStep4DataChange('permits', permits);
+      }}
       initialPermits={[]}
     />
-        );
+  );
       case 5:
         return (
           <Step5Validation
