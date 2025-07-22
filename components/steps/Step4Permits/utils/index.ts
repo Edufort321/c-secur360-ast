@@ -13,12 +13,6 @@ interface BilingualText {
   en: string;
 }
 
-// =================== TYPES UTILITAIRES ===================
-type ProvinceCodeType = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
-type PermitStatusType = 'draft' | 'pending' | 'approved' | 'rejected' | 'expired' | 'active' | 'completed' | 'cancelled' | 'suspended';
-type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
-type PriorityLevel = 'low' | 'medium' | 'high' | 'critical';
-
 // =================== INTERFACES UTILITAIRES ===================
 interface ValidationResult {
   isValid: boolean;
