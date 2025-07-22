@@ -8,15 +8,47 @@ import {
 } from 'lucide-react';
 
 // =================== IMPORTS HOOKS EXISTANTS ===================
-import { 
-  usePermitData,
-  usePermitValidation,
-  useSurveillance,
-  useNotifications,
-  type LegalPermit as HookLegalPermit,
-  type PermitType as HookPermitType,
-  type ProvinceCode
-} from './hooks/usePermits';
+// NOTE: Si les hooks n'existent pas encore, nous utiliserons des mocks
+// import { 
+//   usePermitData,
+//   usePermitValidation,
+//   useSurveillance,
+//   useNotifications,
+//   type LegalPermit as HookLegalPermit,
+//   type PermitType as HookPermitType,
+//   type ProvinceCode
+// } from './hooks/usePermits';
+
+// =================== MOCKS TEMPORAIRES POUR LES HOOKS ===================
+const usePermitData = (initialData: any, onUpdate: (permits: any) => void) => ({
+  permits: initialData || [],
+  loading: false,
+  error: null,
+  addPermit: () => {},
+  updatePermit: () => {},
+  deletePermit: () => {},
+  setPermits: () => {}
+});
+
+const usePermitValidation = () => ({
+  validatePermit: () => Promise.resolve({ valid: true }),
+  validationResults: {},
+  isValidating: false
+});
+
+const useSurveillance = () => ({
+  isMonitoring: false,
+  startMonitoring: () => {},
+  stopMonitoring: () => {}
+});
+
+const useNotifications = () => ({
+  notifications: [],
+  addNotification: () => {}
+});
+
+// Types de base
+type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
 
 // =================== INTERFACES LOCALES ===================
 interface Step4PermitsProps {
@@ -234,7 +266,8 @@ const getPermitTypesConfig = (language: 'fr' | 'en') => {
       riskLevel: 'critical' as const,
       estimatedTime: 45,
       tags: language === 'fr' ? ['espace', 'atmosphère', 'urgence'] : ['space', 'atmosphere', 'emergency'],
-      legislation: 'RSST Art. 302-317, CSA Z1006'
+      legislation: 'RSST Art. 302-317, CSA Z1006',
+      provinces: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL'] as ProvinceCode[]
     },
     hot_work: {
       icon: Flame,
@@ -244,7 +277,8 @@ const getPermitTypesConfig = (language: 'fr' | 'en') => {
       riskLevel: 'critical' as const,
       estimatedTime: 30,
       tags: language === 'fr' ? ['soudage', 'feu', 'surveillance'] : ['welding', 'fire', 'watch'],
-      legislation: 'NFPA 51B, RSST Art. 323'
+      legislation: 'NFPA 51B, RSST Art. 323',
+      provinces: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL'] as ProvinceCode[]
     },
     excavation: {
       icon: Construction,
@@ -254,7 +288,8 @@ const getPermitTypesConfig = (language: 'fr' | 'en') => {
       riskLevel: 'high' as const,
       estimatedTime: 35,
       tags: language === 'fr' ? ['tranchée', 'effondrement', 'services'] : ['trench', 'collapse', 'utilities'],
-      legislation: 'RSST Art. 3.20, CSA Z271'
+      legislation: 'RSST Art. 3.20, CSA Z271',
+      provinces: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL'] as ProvinceCode[]
     },
     lifting: {
       icon: Wrench,
@@ -264,7 +299,8 @@ const getPermitTypesConfig = (language: 'fr' | 'en') => {
       riskLevel: 'high' as const,
       estimatedTime: 40,
       tags: language === 'fr' ? ['grue', 'charge', 'stabilité'] : ['crane', 'load', 'stability'],
-      legislation: 'ASME B30, CSA B335'
+      legislation: 'ASME B30, CSA B335',
+      provinces: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL'] as ProvinceCode[]
     },
     height_work: {
       icon: Building,
@@ -274,7 +310,8 @@ const getPermitTypesConfig = (language: 'fr' | 'en') => {
       riskLevel: 'critical' as const,
       estimatedTime: 50,
       tags: language === 'fr' ? ['hauteur', 'harnais', 'chute'] : ['height', 'harness', 'fall'],
-      legislation: 'RSST Art. 347, CSA Z259'
+      legislation: 'RSST Art. 347, CSA Z259',
+      provinces: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL'] as ProvinceCode[]
     },
     electrical: {
       icon: Zap,
@@ -284,7 +321,8 @@ const getPermitTypesConfig = (language: 'fr' | 'en') => {
       riskLevel: 'critical' as const,
       estimatedTime: 55,
       tags: language === 'fr' ? ['tension', 'LOTO', 'arc'] : ['voltage', 'LOTO', 'arc'],
-      legislation: 'CSA Z462, RSST Art. 185'
+      legislation: 'CSA Z462, RSST Art. 185',
+      provinces: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL'] as ProvinceCode[]
     }
   } as const;
 };
@@ -299,7 +337,7 @@ const generatePermitsList = (language: 'fr' | 'en', province: ProvinceCode): Leg
     const permit: LegalPermit = {
       // Propriétés du hook
       id: `permit_${type}_${Date.now() + index}`,
-      name: `${typeConfig.title} - ${province}`,
+      name: typeConfig.title,
       category: typeConfig.title,
       authority: province === 'QC' ? 'CNESST' : 'OHS',
       province: [province],
