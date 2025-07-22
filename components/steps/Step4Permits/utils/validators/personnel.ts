@@ -1,15 +1,103 @@
 // components/steps/Step4Permits/utils/validators/personnel.ts
+"use client";
 
-import {
-  PersonnelData,
-  PersonnelRole,
-  CertificationRecord,
-  TrainingRecord,
-  MedicalClearance,
-  ValidationResult,
-  BilingualText,
-  EmergencyContact
-} from '../../types/personnel';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type PersonnelRole = 
+  | 'entry_supervisor'
+  | 'entrant'
+  | 'attendant'
+  | 'rescue_team_member'
+  | 'safety_officer'
+  | 'support_personnel';
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: ValidationError[];
+  warnings: ValidationWarning[];
+  criticalIssues: ValidationError[];
+  suggestions: ValidationSuggestion[];
+  confidence: number;
+}
+
+export interface ValidationError {
+  type: string;
+  message: BilingualText;
+  field: string;
+  critical: boolean;
+}
+
+export interface ValidationWarning {
+  type: string;
+  message: BilingualText;
+  field: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
+export interface ValidationSuggestion {
+  type: string;
+  message: BilingualText;
+  priority: 'low' | 'medium' | 'high';
+}
+
+export interface CertificationRecord {
+  id: string;
+  type: string;
+  issuedBy: string;
+  issueDate: string | Date;
+  expiryDate?: string | Date;
+  certificateNumber?: string;
+  status: 'valid' | 'expired' | 'suspended' | 'pending';
+}
+
+export interface TrainingRecord {
+  id: string;
+  course: string;
+  provider: string;
+  completionDate: string | Date;
+  instructor?: string;
+  score?: number;
+  duration?: number; // heures
+  status: 'completed' | 'in_progress' | 'failed' | 'expired';
+}
+
+export interface MedicalClearance {
+  status: 'cleared' | 'restricted' | 'unfit' | 'pending';
+  lastExam?: string | Date;
+  nextExamDue?: string | Date;
+  examiningPhysician?: string;
+  restrictions?: MedicalRestriction[];
+  fitnessLevel?: FitnessLevel;
+  notes?: string;
+}
+
+export interface EmergencyContact {
+  name: string;
+  relationship: string;
+  phone: string;
+  alternatePhone?: string;
+  email?: string;
+  address?: string;
+}
+
+export interface PersonnelData {
+  id: string;
+  name: string;
+  employeeId?: string;
+  role: PersonnelRole;
+  hireDate?: string | Date;
+  experienceYears?: number;
+  certifications?: CertificationRecord[];
+  training?: TrainingRecord[];
+  medicalClearance?: MedicalClearance;
+  emergencyContact?: EmergencyContact;
+  communicationDevice?: string;
+  [key: string]: any;
+}
 
 // =================== TYPES VALIDATION PERSONNEL ===================
 
@@ -86,6 +174,7 @@ export interface MedicalRestriction {
   limitations: string[];
   accommodations?: string[];
   reviewDate?: Date;
+  severity?: 'low' | 'medium' | 'high' | 'absolute';
 }
 
 export type RestrictionType = 
@@ -435,9 +524,9 @@ export function validatePersonnelTeam(team: PersonnelData[]): PersonnelValidatio
  * Validation données de base personnel
  */
 function validateBasicPersonnelData(personnel: PersonnelData): ValidationResult {
-  const errors: any[] = [];
-  const warnings: any[] = [];
-  const suggestions: any[] = [];
+  const errors: ValidationError[] = [];
+  const warnings: ValidationWarning[] = [];
+  const suggestions: ValidationSuggestion[] = [];
 
   // Champs obligatoires
   if (!personnel.id) {
@@ -708,8 +797,8 @@ function validateEmergencyReadiness(personnel: PersonnelData): EmergencyReadines
  * Valide contact d'urgence
  */
 function validateEmergencyContact(contact: EmergencyContact): ValidationResult {
-  const errors: any[] = [];
-  const warnings: any[] = [];
+  const errors: ValidationError[] = [];
+  const warnings: ValidationWarning[] = [];
 
   if (!contact.name || !contact.name.trim()) {
     errors.push({
@@ -754,9 +843,9 @@ function validateEmergencyContact(contact: EmergencyContact): ValidationResult {
  * Valide composition équipe
  */
 function validateTeamComposition(team: PersonnelData[]): ValidationResult {
-  const errors: any[] = [];
-  const warnings: any[] = [];
-  const suggestions: any[] = [];
+  const errors: ValidationError[] = [];
+  const warnings: ValidationWarning[] = [];
+  const suggestions: ValidationSuggestion[] = [];
 
   // Compter rôles présents
   const roleCounts = team.reduce((counts, person) => {
@@ -809,9 +898,9 @@ function validateTeamComposition(team: PersonnelData[]): ValidationResult {
  * Valide structure supervision
  */
 function validateSupervisionStructure(team: PersonnelData[]): ValidationResult {
-  const errors: any[] = [];
-  const warnings: any[] = [];
-  const suggestions: any[] = [];
+  const errors: ValidationError[] = [];
+  const warnings: ValidationWarning[] = [];
+  const suggestions: ValidationSuggestion[] = [];
 
   // Vérifier ratios supervision
   const entrants = team.filter(p => p.role === 'entrant').length;
@@ -862,9 +951,9 @@ function validateSupervisionStructure(team: PersonnelData[]): ValidationResult {
  * Valide équilibre expérience
  */
 function validateExperienceBalance(team: PersonnelData[]): ValidationResult {
-  const errors: any[] = [];
-  const warnings: any[] = [];
-  const suggestions: any[] = [];
+  const errors: ValidationError[] = [];
+  const warnings: ValidationWarning[] = [];
+  const suggestions: ValidationSuggestion[] = [];
 
   const experiences = team.map(p => calculateExperience(p));
   const avgExperience = experiences.reduce((sum, exp) => sum + exp, 0) / experiences.length;
@@ -919,8 +1008,6 @@ function validateExperienceBalance(team: PersonnelData[]): ValidationResult {
 // =================== FONCTIONS UTILITAIRES ===================
 
 function calculateExperience(personnel: PersonnelData): number {
-  if (!personnel.experienceYears && !personnel.hireDate) return 0;
-  
   if (personnel.experienceYears !== undefined) {
     return personnel.experienceYears;
   }
@@ -1107,6 +1194,9 @@ function createEmptyPersonnelValidationResult(message: string): PersonnelValidat
 }
 
 // =================== EXPORTS ===================
+
+// Export des constantes pour l'index
+export { ROLE_REQUIREMENTS, TRAINING_REFRESH_INTERVALS, CERTIFICATION_VALIDITY, MEDICAL_EXAM_INTERVALS };
 
 export default {
   validatePersonnel,
