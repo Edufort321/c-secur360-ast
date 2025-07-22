@@ -388,7 +388,7 @@ const MINIMUM_TEAM_COMPOSITION = {
 /**
  * Valide un membre du personnel
  */
-export function validatePersonnel(personnel: PersonnelData): PersonnelValidationResult {
+function validatePersonnel(personnel: PersonnelData): PersonnelValidationResult {
   const baseValidation = validateBasicPersonnelData(personnel);
   
   // Validations spécialisées
@@ -428,7 +428,7 @@ export function validatePersonnel(personnel: PersonnelData): PersonnelValidation
 /**
  * Valide une équipe de personnel
  */
-export function validatePersonnelTeam(team: PersonnelData[]): PersonnelValidationResult {
+function validatePersonnelTeam(team: PersonnelData[]): PersonnelValidationResult {
   if (team.length === 0) {
     return createEmptyPersonnelValidationResult('Aucun personnel assigné');
   }
