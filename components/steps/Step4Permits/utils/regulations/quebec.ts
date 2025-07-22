@@ -7,18 +7,143 @@
  * 
  * Provincial Focus: Manufacturing, mining, hydroelectric, aerospace, bilingual requirements
  */
+"use client";
 
-import type { 
-  RegulationStandard, 
-  PersonnelQualification, 
-  ComplianceCheck,
-  BilingualText,
-  AtmosphericReading,
-  LegalPermit,
-  PersonnelData,
-  ComplianceResult,
-  ActionPlan
-} from '../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type ProvinceCode = 
+  | 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' 
+  | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export interface RegulationStandard {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  section: string;
+  category: string;
+  mandatory: boolean;
+  criteria: string[];
+  qcSpecific?: Record<string, any>;
+  penalties?: {
+    individual: { min: number; max: number; };
+    corporation: { min: number; max: number; };
+  };
+  references?: Array<{
+    type: string;
+    title: string;
+    citation: string;
+    url?: string;
+  }>;
+  standards?: Record<string, { min?: number; max?: number; unit: string; }>;
+  implementation?: {
+    timeline: string;
+    resources: string[];
+    responsibilities: string[];
+  };
+}
+
+export interface PersonnelQualification {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  requirements: string[];
+  qcSpecific?: Record<string, any>;
+  certification: string;
+  validity: string;
+  mandatoryTraining?: string[];
+}
+
+export interface ComplianceCheck {
+  standardId: string;
+  requirementId: string;
+  status: 'compliant' | 'non_compliant' | 'partially_compliant';
+  evidence: string[];
+  gaps?: string[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface AtmosphericReading {
+  gasType: string;
+  value: number;
+  unit: string;
+  timestamp: number;
+  location?: string;
+  testerQualification?: string[];
+  language?: string;
+}
+
+export interface LegalPermit {
+  id: string;
+  spaceDetails?: {
+    identification?: string;
+    regulatoryClassification?: string[];
+  };
+  hazardAssessment?: {
+    climaticFactors?: string[];
+    industrySpecific?: Record<string, any>;
+    language?: string;
+  };
+  entryPermit?: {
+    writtenProcedures?: any;
+    operationalCoordination?: any;
+    language?: string;
+  };
+  documentation?: Array<{
+    language: string;
+    type: string;
+  }>;
+}
+
+export interface PersonnelData {
+  role: string;
+  preferredLanguage?: string;
+  languages?: string[];
+  qualifications?: Array<{
+    type: string;
+    valid: boolean;
+  }>;
+}
+
+export interface ComplianceResult {
+  jurisdiction: string;
+  overallCompliance: number;
+  results: ComplianceCheck[];
+  criticalNonCompliance: number;
+  qcSpecific?: Record<string, any>;
+  actionPlan: ActionPlan[];
+}
+
+export interface ActionPlan {
+  standardId: string;
+  action: BilingualText;
+  responsible: string;
+  deadline: string;
+  resources: string[];
+  verification: string;
+}
 
 // =================== QUÉBEC AUTHORITY ===================
 
@@ -28,8 +153,8 @@ export const CNESST_QC_AUTHORITY = {
   jurisdiction: ['QC'] as const,
   website: 'https://www.cnesst.gouv.qc.ca',
   contactInfo: {
-    phone: '1-844-838-0808',              // Ligne principale CNESST
-    preventionPhone: '418-266-4000',       // Services prévention
+    phone: '1-844-838-0808',
+    preventionPhone: '418-266-4000',
     email: 'prevention@cnesst.gouv.qc.ca',
     address: '524, rue Bourdages, Québec (Québec) G1K 7E2'
   },
@@ -43,12 +168,12 @@ export const CNESST_QC_AUTHORITY = {
     { region: 'Rouyn-Noranda', phone: '819-763-3585', coverage: 'Abitibi-Témiscamingue, Mines' },
     { region: 'Sept-Îles', phone: '418-964-8888', coverage: 'Côte-Nord, Mines de fer' }
   ],
-  languages: ['fr', 'en'] as const,        // Province officiellement francophone
+  languages: ['fr', 'en'] as const,
   specializedUnits: [
-    'division_securite_miniere',           // Division sécurité minière
-    'unite_hydroelectricite',              // Unité hydroélectricité
-    'programme_aerospatiale',              // Programme aérospatiale
-    'services_bilingues'                   // Services bilingues
+    'division_securite_miniere',
+    'unite_hydroelectricite',
+    'programme_aerospatiale',
+    'services_bilingues'
   ],
   powers: [
     'Inspections et enquêtes en milieu de travail',
@@ -57,52 +182,52 @@ export const CNESST_QC_AUTHORITY = {
     'Amendes administratives jusqu\'à 2 000 000 $',
     'Poursuites pénales sous la loi provinciale'
   ]
-} as const;
+};
 
 // =================== QC SPECIFIC FEATURES ===================
 
 export const QC_SPECIFIC_FEATURES = {
   manufacturingOperations: [
-    'aerospace_bombardier_pratt_whitney',   // Aérospatiale Bombardier, Pratt & Whitney
-    'aluminum_smelters_alcoa_rio_tinto',    // Alumineries Alcoa, Rio Tinto
-    'pulp_paper_mills_resolute_cascades',  // Pâtes et papiers Résolu, Cascades
+    'aerospace_bombardier_pratt_whitney',
+    'aluminum_smelters_alcoa_rio_tinto',
+    'pulp_paper_mills_resolute_cascades',
     'pharmaceutical_manufacturing_montreal',
     'textile_manufacturing_traditional'
   ],
   hydroelectricOperations: [
-    'hydro_quebec_generating_stations',     // Centrales Hydro-Québec
-    'james_bay_hydroelectric_complex',     // Complexe hydroélectrique Baie-James
+    'hydro_quebec_generating_stations',
+    'james_bay_hydroelectric_complex',
     'churchill_falls_labrador_transmission',
     'dam_spillway_maintenance_operations',
     'transmission_substation_facilities'
   ],
   miningOperations: [
-    'iron_ore_mining_sept_iles_fermont',   // Mines fer Sept-Îles, Fermont
-    'gold_mining_abitibi_temiscamingue',   // Mines or Abitibi-Témiscamingue
-    'copper_zinc_mining_noranda',          // Mines cuivre-zinc Noranda
-    'asbestos_mining_legacy_sites',        // Sites miniers amiante patrimoniaux
-    'rare_earth_mining_exploration'        // Exploration terres rares
+    'iron_ore_mining_sept_iles_fermont',
+    'gold_mining_abitibi_temiscamingue',
+    'copper_zinc_mining_noranda',
+    'asbestos_mining_legacy_sites',
+    'rare_earth_mining_exploration'
   ],
   bilingualRequirements: [
-    'documentation_obligatoire_francais',   // Documentation obligatoire français
-    'formation_securite_langue_francaise',  // Formation sécurité langue française
-    'affichage_securite_francais_priorite', // Affichage sécurité français priorité
-    'services_anglais_disponibles',         // Services anglais disponibles
-    'communications_urgence_bilingues'      // Communications urgence bilingues
+    'documentation_obligatoire_francais',
+    'formation_securite_langue_francaise',
+    'affichage_securite_francais_priorite',
+    'services_anglais_disponibles',
+    'communications_urgence_bilingues'
   ],
   charteLangue: [
-    'charte_langue_francaise_article_46',   // Charte langue française article 46
-    'francisation_entreprises_obligatoire', // Francisation entreprises obligatoire
-    'terminologie_securite_francaise',      // Terminologie sécurité française
-    'formation_personnel_francais'          // Formation personnel français
+    'charte_langue_francaise_article_46',
+    'francisation_entreprises_obligatoire',
+    'terminologie_securite_francaise',
+    'formation_personnel_francais'
   ],
   regulatoryIntegration: [
-    'regie_batiment_quebec_rbq',           // Régie du bâtiment Québec
-    'ministere_environnement_quebec',      // Ministère Environnement Québec
-    'hydro_quebec_coordination',           // Coordination Hydro-Québec
-    'societes_etat_quebec'                 // Sociétés d'État Québec
+    'regie_batiment_quebec_rbq',
+    'ministere_environnement_quebec',
+    'hydro_quebec_coordination',
+    'societes_etat_quebec'
   ]
-} as const;
+};
 
 // =================== QC REGULATION STANDARDS ===================
 
@@ -123,7 +248,7 @@ export const QC_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       'Non conçu pour être occupé par des personnes',
       'Moyens d\'accès ou d\'évacuation limités',
       'Peut présenter des risques pour la santé et la sécurité',
-      'Inclut les installations manufacturières, minières et hydroélectriques du Québec'  // QC specific
+      'Inclut les installations manufacturières, minières et hydroélectriques du Québec'
     ],
     qcSpecific: {
       manufacturingDefinitions: [
@@ -151,7 +276,7 @@ export const QC_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       ]
     },
     penalties: {
-      individual: { min: 600, max: 300000 },     // 2023 amounts
+      individual: { min: 600, max: 300000 },
       corporation: { min: 6000, max: 2000000 }
     },
     references: [
@@ -234,7 +359,7 @@ export const QC_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
     ],
     standards: {
       oxygen: { min: 19.5, max: 23.0, unit: '%' },
-      flammable_gas: { max: 10, unit: '%LIE' },    // %LIE en français
+      flammable_gas: { max: 10, unit: '%LIE' },
       carbon_monoxide: { max: 35, unit: 'ppm' },
       hydrogen_sulfide: { max: 10, unit: 'ppm' }
     },
@@ -353,36 +478,36 @@ export const QC_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
 
 export const QC_ATMOSPHERIC_STANDARDS = {
   oxygen: { min: 19.5, max: 23.0, unit: '%' },
-  flammable_gas: { max: 10, unit: '%LIE' },       // %LIE en français
+  flammable_gas: { max: 10, unit: '%LIE' },
   carbon_monoxide: { max: 35, unit: 'ppm' },
   hydrogen_sulfide: { max: 10, unit: 'ppm' },
   
   // QC Manufacturing Industry Specific
   manufacturingSpecific: {
-    toluène_aérospatiale: { max: 50, unit: 'ppm' },     // Aérospatiale solvants
-    isocyanates: { max: 0.005, unit: 'ppm' },           // Polyuréthanes
-    fluorure_hydrogène: { max: 0.5, unit: 'ppm' },      // Alumineries anodes
-    dioxyde_chlore: { max: 0.1, unit: 'ppm' },          // Papeteries blanchiment
-    vapeurs_aluminium: { max: 2, unit: 'mg/m³' }        // Électrolyse aluminium
+    toluène_aérospatiale: { max: 50, unit: 'ppm' },
+    isocyanates: { max: 0.005, unit: 'ppm' },
+    fluorure_hydrogène: { max: 0.5, unit: 'ppm' },
+    dioxyde_chlore: { max: 0.1, unit: 'ppm' },
+    vapeurs_aluminium: { max: 2, unit: 'mg/m³' }
   },
   
   // QC Hydroelectric Industry Specific  
   hydroelectricSpecific: {
-    sf6_disjoncteurs: { max: 1000, unit: 'ppm' },       // Hexafluorure soufre
-    ozone_équipements: { max: 0.1, unit: 'ppm' },       // Ozone équipements électriques
-    vapeurs_huiles: { max: 5, unit: 'mg/m³' },          // Huiles hydrauliques
-    radon_galeries: { max: 800, unit: 'Bq/m³' }         // Radon galeries souterraines
+    sf6_disjoncteurs: { max: 1000, unit: 'ppm' },
+    ozone_équipements: { max: 0.1, unit: 'ppm' },
+    vapeurs_huiles: { max: 5, unit: 'mg/m³' },
+    radon_galeries: { max: 800, unit: 'Bq/m³' }
   },
   
   // QC Mining Industry Specific
   miningSpecific: {
-    cyanure_extraction: { max: 4.7, unit: 'mg/m³' },    // Extraction or cyanure
-    silice_poussières: { max: 0.1, unit: 'mg/m³' },     // Silice cristalline respirable
-    xanthates_flotation: { max: 5, unit: 'mg/m³' },     // Xanthates flotation
-    ammoniac_explosifs: { max: 25, unit: 'ppm' },       // Ammoniac explosifs
-    méthane_souterrain: { max: 1.25, unit: '%' }        // Méthane mines souterraines
+    cyanure_extraction: { max: 4.7, unit: 'mg/m³' },
+    silice_poussières: { max: 0.1, unit: 'mg/m³' },
+    xanthates_flotation: { max: 5, unit: 'mg/m³' },
+    ammoniac_explosifs: { max: 25, unit: 'ppm' },
+    méthane_souterrain: { max: 1.25, unit: '%' }
   }
-} as const;
+};
 
 // =================== QC PERSONNEL QUALIFICATIONS ===================
 
@@ -531,44 +656,44 @@ export const QC_EMERGENCY_SERVICES = {
   
   manufacturingEmergency: {
     aérospatiale: {
-      bombardier: '514-855-5000',           // Bombardier Aéronautique
-      prattWhitney: '450-647-8000',         // Pratt & Whitney Canada
-      bell: '450-437-2862',                 // Bell Helicopter Textron
-      cae: '514-341-6780'                   // CAE Simulateurs
+      bombardier: '514-855-5000',
+      prattWhitney: '450-647-8000',
+      bell: '450-437-2862',
+      cae: '514-341-6780'
     },
     alumineries: {
-      alcoa: '418-549-4494',                // Alcoa Deschambault
-      rioTinto: '418-589-2431',             // Rio Tinto Alma
-      alouette: '514-384-4242'              // Aluminerie Alouette Sept-Îles
+      alcoa: '418-549-4494',
+      rioTinto: '418-589-2431',
+      alouette: '514-384-4242'
     },
     papeteries: {
-      résolu: '819-627-3000',               // Produits forestiers Résolu
-      cascades: '819-363-5100',             // Cascades
-      kruger: '819-762-3178'                // Kruger
+      résolu: '819-627-3000',
+      cascades: '819-363-5100',
+      kruger: '819-762-3178'
     }
   },
   
   hydroelectric: {
-    hydroQuébec: '1-800-790-2424',          // Hydro-Québec urgence
-    exploitationCentrales: '514-289-2211',  // Exploitation centrales
-    transport: '514-289-5120',              // Transport énergie
-    distribution: '1-800-790-2424',         // Distribution
-    répartitionCharge: '514-289-2211'       // Répartition charge
+    hydroQuébec: '1-800-790-2424',
+    exploitationCentrales: '514-289-2211',
+    transport: '514-289-5120',
+    distribution: '1-800-790-2424',
+    répartitionCharge: '514-289-2211'
   },
   
   mining: {
-    miningSafetyQuébec: '819-763-3585',     // Sécurité minière Québec
+    miningSafetyQuébec: '819-763-3585',
     minesAbitibi: {
-      agnicoEagle: '819-637-7146',          // Agnico Eagle Mines
-      iamgold: '819-797-4335',              // IAMGOLD
-      canadianMalartic: '819-757-3737'     // Canadian Malartic
+      agnicoEagle: '819-637-7146',
+      iamgold: '819-797-4335',
+      canadianMalartic: '819-757-3737'
     },
     minesSeptÎles: {
-      arcMittal: '418-968-3333',            // ArcelorMittal Mines Canada
-      iocc: '418-968-8000',                 // Iron Ore Company of Canada
-      quebec: '418-962-6032'                // Champion Iron
+      arcMittal: '418-968-3333',
+      iocc: '418-968-8000',
+      quebec: '418-962-6032'
     },
-    sauvetageMinier: '819-762-0931'         // Sauvetage minier Québec
+    sauvetageMinier: '819-762-0931'
   },
   
   specializedRescue: {
@@ -577,7 +702,7 @@ export const QC_EMERGENCY_SERVICES = {
     hydroelectricEmergency: 'plan_urgence_hydro_québec',
     mineRescue: 'association_sauvetage_minier_québec'
   }
-} as const;
+};
 
 // =================== COMPLIANCE CHECKING ===================
 
