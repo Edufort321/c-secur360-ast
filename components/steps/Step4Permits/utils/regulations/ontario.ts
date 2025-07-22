@@ -7,18 +7,136 @@
  * 
  * Provincial Focus: Manufacturing, construction, mining, nuclear, automotive
  */
+"use client";
 
-import type { 
-  RegulationStandard, 
-  PersonnelQualification, 
-  ComplianceCheck,
-  BilingualText,
-  AtmosphericReading,
-  LegalPermit,
-  PersonnelData,
-  ComplianceResult,
-  ActionPlan
-} from '../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type ProvinceCode = 
+  | 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' 
+  | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export interface RegulationStandard {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  section: string;
+  category: string;
+  mandatory: boolean;
+  criteria: string[];
+  onSpecific?: Record<string, any>;
+  penalties?: {
+    individual: { min: number; max: number; };
+    corporation: { min: number; max: number; };
+  };
+  references?: Array<{
+    type: string;
+    title: string;
+    citation: string;
+    url?: string;
+  }>;
+  standards?: Record<string, { min?: number; max?: number; unit: string; }>;
+  implementation?: {
+    timeline: string;
+    resources: string[];
+    responsibilities: string[];
+  };
+}
+
+export interface PersonnelQualification {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  requirements: string[];
+  onSpecific?: Record<string, any>;
+  certification: string;
+  validity: string;
+  mandatoryTraining?: string[];
+}
+
+export interface ComplianceCheck {
+  standardId: string;
+  requirementId: string;
+  status: 'compliant' | 'non_compliant' | 'partially_compliant';
+  evidence: string[];
+  gaps?: string[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface AtmosphericReading {
+  gasType: string;
+  value: number;
+  unit: string;
+  timestamp: number;
+  location?: string;
+  equipmentRating?: string[];
+  testerQualification?: string[];
+}
+
+export interface LegalPermit {
+  id: string;
+  spaceDetails?: {
+    identification?: string;
+    regulatoryClassification?: string[];
+  };
+  hazardAssessment?: {
+    industrySpecific?: Record<string, any>;
+    adjacentOperations?: any;
+  };
+  entryPermit?: {
+    writtenProcedures?: any;
+    operationalCoordination?: any;
+  };
+}
+
+export interface PersonnelData {
+  role: string;
+  preferredLanguage?: string;
+  qualifications?: Array<{
+    type: string;
+    valid: boolean;
+  }>;
+}
+
+export interface ComplianceResult {
+  jurisdiction: string;
+  overallCompliance: number;
+  results: ComplianceCheck[];
+  criticalNonCompliance: number;
+  onSpecific?: Record<string, any>;
+  actionPlan: ActionPlan[];
+}
+
+export interface ActionPlan {
+  standardId: string;
+  action: BilingualText;
+  responsible: string;
+  deadline: string;
+  resources: string[];
+  verification: string;
+}
 
 // =================== ONTARIO AUTHORITY ===================
 
@@ -28,8 +146,8 @@ export const WSIB_ON_AUTHORITY = {
   jurisdiction: ['ON'] as const,
   website: 'https://www.wsib.ca',
   contactInfo: {
-    phone: '1-800-387-0750',              // Ligne principale WSIB
-    preventionPhone: '1-877-202-0008',     // Services prévention
+    phone: '1-800-387-0750',
+    preventionPhone: '1-877-202-0008',
     email: 'prevention@wsib.on.ca',
     address: '200 Front Street West, Toronto, ON M5V 3J1'
   },
@@ -43,13 +161,13 @@ export const WSIB_ON_AUTHORITY = {
     { region: 'Windsor', phone: '519-973-4510', coverage: 'Automotive Manufacturing' },
     { region: 'Kitchener', phone: '519-571-0444', coverage: 'Technology Corridor' }
   ],
-  languages: ['en', 'fr'] as const,        // Officially bilingual province
+  languages: ['en', 'fr'] as const,
   specializedUnits: [
-    'manufacturing_safety_division',       // Division sécurité manufacturière
-    'mining_safety_unit',                  // Unité sécurité minière
-    'nuclear_safety_program',              // Programme sécurité nucléaire
-    'automotive_safety_initiative',        // Initiative sécurité automobile
-    'construction_safety_association'      // Association sécurité construction
+    'manufacturing_safety_division',
+    'mining_safety_unit',
+    'nuclear_safety_program',
+    'automotive_safety_initiative',
+    'construction_safety_association'
   ],
   powers: [
     'Workplace inspections and investigations',
@@ -58,7 +176,7 @@ export const WSIB_ON_AUTHORITY = {
     'Administrative penalties up to $1,500,000',
     'Prosecutions under provincial law'
   ]
-} as const;
+};
 
 // =================== ON SPECIFIC FEATURES ===================
 
@@ -71,14 +189,14 @@ export const ON_SPECIFIC_FEATURES = {
     'pharmaceutical_manufacturing_mississauga'
   ],
   miningOperations: [
-    'nickel_mining_sudbury_basin',          // Bassin minier Sudbury
+    'nickel_mining_sudbury_basin',
     'gold_mining_timmins_kirkland_lake',
     'uranium_mining_elliot_lake',
     'salt_mining_goderich_windsor',
     'aggregate_quarries_throughout_province'
   ],
   nuclearOperations: [
-    'bruce_nuclear_generating_station',     // Centrale nucléaire Bruce
+    'bruce_nuclear_generating_station',
     'pickering_nuclear_generating_station',
     'darlington_nuclear_generating_station',
     'ontario_power_generation_facilities',
@@ -98,12 +216,12 @@ export const ON_SPECIFIC_FEATURES = {
     'bilingual_emergency_response_procedures'
   ],
   regulatoryIntegration: [
-    'canadian_nuclear_safety_commission',   // Commission sûreté nucléaire Canada
+    'canadian_nuclear_safety_commission',
     'transport_canada_dangerous_goods',
     'environment_climate_change_canada',
-    'technical_standards_safety_authority'  // TSSA Ontario
+    'technical_standards_safety_authority'
   ]
-} as const;
+};
 
 // =================== ON REGULATION STANDARDS ===================
 
@@ -124,7 +242,7 @@ export const ON_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       'Not designed or intended for human occupancy',
       'Has restricted means for entry or exit',
       'May become hazardous to any person entering it',
-      'Includes manufacturing, mining, nuclear, and construction spaces'  // ON specific
+      'Includes manufacturing, mining, nuclear, and construction spaces'
     ],
     onSpecific: {
       manufacturingDefinitions: [
@@ -153,7 +271,7 @@ export const ON_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       ]
     },
     penalties: {
-      individual: { min: 1000, max: 100000 },   // 2023 amounts
+      individual: { min: 1000, max: 100000 },
       corporation: { min: 50000, max: 1500000 }
     },
     references: [
@@ -359,25 +477,25 @@ export const ON_ATMOSPHERIC_STANDARDS = {
   
   // ON Manufacturing Industry Specific
   manufacturingSpecific: {
-    toluene_automotive: { max: 50, unit: 'ppm' },       // Automotive paint operations
-    isocyanates: { max: 0.005, unit: 'ppm' },           // Automotive adhesives
-    benzene_petrochemical: { max: 0.5, unit: 'ppm' },  // Petrochemical operations
-    ammonia_food: { max: 25, unit: 'ppm' },             // Food processing refrigeration
-    metal_fumes_steel: { max: 5, unit: 'mg/m³' }        // Steel production
+    toluene_automotive: { max: 50, unit: 'ppm' },
+    isocyanates: { max: 0.005, unit: 'ppm' },
+    benzene_petrochemical: { max: 0.5, unit: 'ppm' },
+    ammonia_food: { max: 25, unit: 'ppm' },
+    metal_fumes_steel: { max: 5, unit: 'mg/m³' }
   },
   
   // ON Mining Industry Specific  
   miningSpecific: {
-    methane_underground: { max: 1.0, unit: '%' },       // Underground mining
-    silica_dust: { max: 0.1, unit: 'mg/m³' },          // Respirable crystalline silica
-    cyanide_gold: { max: 4.7, unit: 'mg/m³' },         // Gold processing
+    methane_underground: { max: 1.0, unit: '%' },
+    silica_dust: { max: 0.1, unit: 'mg/m³' },
+    cyanide_gold: { max: 4.7, unit: 'mg/m³' },
     flotation_chemicals: 'per_material_safety_data_sheet',
-    nitrogen_oxides_blasting: { max: 3, unit: 'ppm' }   // Post-blasting
+    nitrogen_oxides_blasting: { max: 3, unit: 'ppm' }
   },
   
   // ON Nuclear Industry Specific
   nuclearSpecific: {
-    tritium_vapor: { max: 40, unit: 'Bq/m³' },         // Tritium operations
+    tritium_vapor: { max: 40, unit: 'Bq/m³' },
     noble_gases: 'continuous_radiation_monitoring',
     activation_products: 'radiation_work_permit_limits',
     ventilation_effectiveness: 'negative_pressure_maintained'
@@ -385,12 +503,12 @@ export const ON_ATMOSPHERIC_STANDARDS = {
   
   // ON Construction Industry Specific
   constructionSpecific: {
-    methane_landfill: { max: 1000, unit: 'ppm' },      // Landfill gas
-    hydrogen_sulfide_sewer: { max: 10, unit: 'ppm' },  // Sewer work
-    equipment_exhaust: { max: 25, unit: 'ppm' },       // Construction equipment CO
+    methane_landfill: { max: 1000, unit: 'ppm' },
+    hydrogen_sulfide_sewer: { max: 10, unit: 'ppm' },
+    equipment_exhaust: { max: 25, unit: 'ppm' },
     utility_gases: 'natural_gas_leak_detection_required'
   }
-} as const;
+};
 
 // =================== ON PERSONNEL QUALIFICATIONS ===================
 
@@ -549,49 +667,49 @@ export const ON_EMERGENCY_SERVICES = {
   
   manufacturingEmergency: {
     automotiveEmergency: {
-      fordMotor: '519-973-9441',             // Ford Motor Company Windsor
-      generalMotors: '905-644-5000',         // GM Oshawa
-      chrysler: '519-973-2000',              // Stellantis Windsor
-      toyotaMotor: '519-451-0100'            // Toyota Motor Manufacturing Cambridge
+      fordMotor: '519-973-9441',
+      generalMotors: '905-644-5000',
+      chrysler: '519-973-2000',
+      toyotaMotor: '519-451-0100'
     },
     steelIndustry: {
-      arcMittal: '905-548-7200',             // ArcelorMittal Dofasco Hamilton
-      algomaSteelSault: '705-945-2351',      // Algoma Steel Sault Ste. Marie
-      nucorYamachiche: '819-296-2121'        // Nucor Steel Gallatin
+      arcMittal: '905-548-7200',
+      algomaSteelSault: '705-945-2351',
+      nucorYamachiche: '819-296-2121'
     },
     petrochemicals: {
-      imperialOil: '519-339-2716',           // Imperial Oil Sarnia
-      shellCanada: '519-339-1311',           // Shell Canada Sarnia
-      nova: '519-339-6111'                   // NOVA Chemicals Sarnia
+      imperialOil: '519-339-2716',
+      shellCanada: '519-339-1311',
+      nova: '519-339-6111'
     }
   },
   
   mining: {
     northernOntarioMines: {
-      valeInco: '705-693-2761',              // Vale Inco Sudbury
-      glencore: '705-693-2911',              // Glencore Sudbury
-      barrickGold: '705-267-6271',           // Barrick Gold Hemlo
-      newmontGold: '705-235-3291'            // Newmont Borden Lake
+      valeInco: '705-693-2761',
+      glencore: '705-693-2911',
+      barrickGold: '705-267-6271',
+      newmontGold: '705-235-3291'
     },
-    mineRescue: '705-670-5707',              // Ontario Mine Rescue
-    miningAssociation: '416-364-9301',       // Ontario Mining Association
-    northernDevelopment: '705-564-5927'     // Northern Ontario Heritage Fund
+    mineRescue: '705-670-5707',
+    miningAssociation: '416-364-9301',
+    northernDevelopment: '705-564-5927'
   },
   
   nuclear: {
-    bruceNuclear: '519-361-7777',            // Bruce Nuclear Emergency
-    pickeringNuclear: '905-839-1151',        // Pickering Nuclear Emergency
-    darlingtonNuclear: '905-697-1800',       // Darlington Nuclear Emergency
-    opg: '416-592-2555',                     // Ontario Power Generation Emergency
-    cnsc: '613-995-5894'                     // Canadian Nuclear Safety Commission
+    bruceNuclear: '519-361-7777',
+    pickeringNuclear: '905-839-1151',
+    darlingtonNuclear: '905-697-1800',
+    opg: '416-592-2555',
+    cnsc: '613-995-5894'
   },
   
   construction: {
-    infrastructureOntario: '416-327-1234',   // Infrastructure Ontario
-    metrolinxEmergency: '416-202-4900',      // Metrolinx Construction Emergency
-    407ETREmergency: '905-264-5407',         // 407 ETR Emergency
-    torontoHydro: '416-542-8000',            // Toronto Hydro Emergency
-    hydroOne: '1-800-434-1235'              // Hydro One Emergency
+    infrastructureOntario: '416-327-1234',
+    metrolinxEmergency: '416-202-4900',
+    407ETREmergency: '905-264-5407',
+    torontoHydro: '416-542-8000',
+    hydroOne: '1-800-434-1235'
   },
   
   specializedRescue: {
@@ -601,7 +719,7 @@ export const ON_EMERGENCY_SERVICES = {
     mineRescue: 'ontario_mine_rescue_association',
     constructionRescue: 'infrastructure_emergency_response_team'
   }
-} as const;
+};
 
 // =================== COMPLIANCE CHECKING ===================
 
