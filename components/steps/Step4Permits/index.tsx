@@ -229,15 +229,62 @@ const PermitCard: React.FC<{
           <StatusBadge status={permit.status} />
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-600">{language === 'fr' ? 'Créé:' : 'Created:'}</span>
-          <span>{permit.dateCreation.toLocaleDateString()}</span>
+          <span className="text-gray-600">{language === 'fr' ? 'Priorité:' : 'Priority:'}</span>
+          <PriorityBadge priority={permit.priority} />
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-600">{language === 'fr' ? 'Progression:' : 'Progress:'}</span>
+          <div className="flex items-center gap-2">
+            <div className="w-16 h-2 bg-gray-200 rounded-full">
+              <div 
+                className="h-2 bg-blue-500 rounded-full transition-all" 
+                style={{ width: `${permit.progress}%` }}
+              />
+            </div>
+            <span className="text-xs text-gray-500">{permit.progress}%</span>
+          </div>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-600">{language === 'fr' ? 'Expire:' : 'Expires:'}</span>
-          <span className={permit.dateExpiration < new Date() ? 'text-red-600' : 'text-gray-600'}>
+          <span className={permit.dateExpiration < new Date() ? 'text-red-600 font-medium' : 'text-gray-600'}>
             {permit.dateExpiration.toLocaleDateString()}
           </span>
         </div>
+        {permit.location && (
+          <div className="flex justify-between">
+            <span className="text-gray-600">{language === 'fr' ? 'Lieu:' : 'Location:'}</span>
+            <span className="text-xs text-gray-500 text-right max-w-[150px] truncate">{permit.location}</span>
+          </div>
+        )}
+        {permit.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {permit.tags.slice(0, 3).map(tag => (
+              <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                {tag}
+              </span>
+            ))}
+            {permit.tags.length > 3 && (
+              <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded">
+                +{permit.tags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+        {permit.validationResults?.overall && (
+          <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+            <span className="text-gray-600 text-xs">{language === 'fr' ? 'Validation:' : 'Validation:'}</span>
+            <div className="flex items-center gap-1">
+              {permit.validationResults.overall.isValid ? (
+                <CheckCircle size={14} className="text-green-500" />
+              ) : (
+                <XCircle size={14} className="text-red-500" />
+              )}
+              <span className={`text-xs ${permit.validationResults.overall.isValid ? 'text-green-600' : 'text-red-600'}`}>
+                {permit.validationResults.overall.score || 0}%
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -312,10 +359,214 @@ const LoadingSpinner = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
   );
 };
 
+// =================== DONNÉES D'EXEMPLE ===================
+const generateSamplePermits = (language: 'fr' | 'en', province: ProvinceCode): LegalPermit[] => {
+  const now = new Date();
+  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  
+  return [
+    {
+      id: `sample_confined_space_${Date.now()}`,
+      name: language === 'fr' ? 'Inspection canalisation principale' : 'Main pipeline inspection',
+      category: 'Espace Clos',
+      authority: province === 'QC' ? 'CNESST' : 'OHS',
+      province: [province],
+      priority: 'high',
+      selected: false,
+      formData: {},
+      code: 'EC-001-2025',
+      status: 'pending',
+      dateCreated: now.toISOString(),
+      dateModified: now.toISOString(),
+      legalRequirements: {
+        permitRequired: true,
+        atmosphericTesting: true,
+        entryProcedure: true,
+        emergencyPlan: true,
+        equipmentCheck: true,
+        attendantRequired: true,
+        documentation: true
+      },
+      validity: {
+        startDate: now.toISOString(),
+        endDate: tomorrow.toISOString(),
+        isValid: false
+      },
+      compliance: { [province.toLowerCase()]: false },
+      type: 'confined_space',
+      dateCreation: now,
+      dateExpiration: tomorrow,
+      location: language === 'fr' ? 'Sous-sol technique Bâtiment A' : 'Technical basement Building A',
+      site: language === 'fr' ? 'Site industriel Montréal' : 'Montreal industrial site',
+      secteur: language === 'fr' ? 'Maintenance' : 'Maintenance',
+      description: createBilingualText(
+        'Inspection et nettoyage de la canalisation principale du système de ventilation',
+        'Inspection and cleaning of main ventilation system pipeline'
+      ),
+      progress: 25,
+      tags: ['urgent', 'maintenance', 'ventilation'],
+      attachments: [],
+      lastModified: now,
+      modifiedBy: 'Jean Supervisor',
+      entrants: [
+        { name: 'Marc Technicien', role: 'Entrant principal', certifications: ['Espace clos niveau 2'] }
+      ],
+      superviseur: 'Jean Supervisor',
+      atmosphericData: [
+        { timestamp: now.toISOString(), oxygen: 20.8, co: 5, h2s: 0, lel: 0, status: 'safe' }
+      ]
+    },
+    {
+      id: `sample_hot_work_${Date.now() + 1}`,
+      name: language === 'fr' ? 'Soudage réparation tuyauterie' : 'Pipeline repair welding',
+      category: 'Travail à Chaud',
+      authority: province === 'QC' ? 'CNESST' : 'OHS',
+      province: [province],
+      priority: 'critical',
+      selected: false,
+      formData: {},
+      code: 'TC-002-2025',
+      status: 'approved',
+      dateCreated: now.toISOString(),
+      dateModified: now.toISOString(),
+      legalRequirements: {
+        permitRequired: true,
+        atmosphericTesting: true,
+        entryProcedure: false,
+        emergencyPlan: true,
+        equipmentCheck: true,
+        attendantRequired: true,
+        documentation: true
+      },
+      validity: {
+        startDate: now.toISOString(),
+        endDate: nextWeek.toISOString(),
+        isValid: true
+      },
+      compliance: { [province.toLowerCase()]: true },
+      type: 'hot_work',
+      dateCreation: now,
+      dateExpiration: nextWeek,
+      location: language === 'fr' ? 'Atelier de fabrication - Zone 3' : 'Manufacturing workshop - Zone 3',
+      site: language === 'fr' ? 'Usine Laval' : 'Laval plant',
+      secteur: language === 'fr' ? 'Production' : 'Production',
+      description: createBilingualText(
+        'Réparation par soudage de la tuyauterie haute pression du système hydraulique',
+        'Welding repair of high-pressure hydraulic system piping'
+      ),
+      progress: 75,
+      tags: ['soudage', 'réparation', 'hydraulique'],
+      attachments: [],
+      lastModified: now,
+      modifiedBy: 'Marie Ingénieur',
+      superviseur: 'Pierre Soudeur',
+      validationResults: {
+        overall: { isValid: true, score: 92 },
+        equipment: { isValid: true, issues: [] },
+        personnel: { isValid: true, issues: [] }
+      }
+    },
+    {
+      id: `sample_excavation_${Date.now() + 2}`,
+      name: language === 'fr' ? 'Excavation fondations nouveau bâtiment' : 'New building foundation excavation',
+      category: 'Excavation',
+      authority: province === 'QC' ? 'CNESST' : 'OHS',
+      province: [province],
+      priority: 'medium',
+      selected: false,
+      formData: {},
+      code: 'EX-003-2025',
+      status: 'draft',
+      dateCreated: now.toISOString(),
+      dateModified: now.toISOString(),
+      legalRequirements: {
+        permitRequired: true,
+        atmosphericTesting: false,
+        entryProcedure: true,
+        emergencyPlan: true,
+        equipmentCheck: true,
+        attendantRequired: false,
+        documentation: true
+      },
+      validity: {
+        startDate: now.toISOString(),
+        endDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        isValid: false
+      },
+      compliance: { [province.toLowerCase()]: false },
+      type: 'excavation',
+      dateCreation: now,
+      dateExpiration: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+      location: language === 'fr' ? 'Terrain vacant Lot 15' : 'Vacant lot 15',
+      site: language === 'fr' ? 'Complexe résidentiel Brossard' : 'Brossard residential complex',
+      secteur: language === 'fr' ? 'Construction' : 'Construction',
+      description: createBilingualText(
+        'Excavation pour fondations du nouveau bâtiment résidentiel de 12 étages',
+        'Excavation for foundations of new 12-story residential building'
+      ),
+      progress: 10,
+      tags: ['construction', 'fondations', 'résidentiel'],
+      attachments: [],
+      lastModified: now,
+      modifiedBy: 'Carlos Contremaître'
+    },
+    {
+      id: `sample_height_work_${Date.now() + 3}`,
+      name: language === 'fr' ? 'Maintenance éoliennes Parc A' : 'Wind turbine maintenance Park A',
+      category: 'Travail en Hauteur',
+      authority: province === 'QC' ? 'CNESST' : 'OHS',
+      province: [province],
+      priority: 'high',
+      selected: false,
+      formData: {},
+      code: 'TH-004-2025',
+      status: 'active',
+      dateCreated: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),
+      dateModified: now.toISOString(),
+      legalRequirements: {
+        permitRequired: true,
+        atmosphericTesting: false,
+        entryProcedure: false,
+        emergencyPlan: true,
+        equipmentCheck: true,
+        attendantRequired: false,
+        documentation: true
+      },
+      validity: {
+        startDate: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),
+        endDate: new Date(now.getTime() + 6 * 60 * 60 * 1000).toISOString(),
+        isValid: true
+      },
+      compliance: { [province.toLowerCase()]: true },
+      type: 'height_work',
+      dateCreation: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+      dateExpiration: new Date(now.getTime() + 6 * 60 * 60 * 1000),
+      location: language === 'fr' ? 'Parc éolien - Éoliennes 7 à 12' : 'Wind farm - Turbines 7 to 12',
+      site: language === 'fr' ? 'Parc éolien Gaspésie' : 'Gaspésie wind farm',
+      secteur: language === 'fr' ? 'Énergie renouvelable' : 'Renewable energy',
+      description: createBilingualText(
+        'Maintenance préventive des systèmes électriques et mécaniques des éoliennes',
+        'Preventive maintenance of wind turbine electrical and mechanical systems'
+      ),
+      progress: 60,
+      tags: ['éolien', 'hauteur', 'maintenance', 'électrique'],
+      attachments: [],
+      lastModified: now,
+      modifiedBy: 'Sophie Technicienne',
+      superviseur: 'André Spécialiste Hauteur',
+      validationResults: {
+        overall: { isValid: true, score: 88 },
+        equipment: { isValid: true, issues: [] },
+        personnel: { isValid: true, issues: [] },
+        procedures: { isValid: true, issues: [] }
+      }
+    }
+  ];
+};
+
 // =================== UTILITAIRES ===================
 const createBilingualText = (fr: string, en: string): BilingualText => ({ fr, en });
-
-// Fonction pour convertir le type de permis
 const convertPermitType = (hookType: PermitType): PermitTypeEnum => {
   const typeMapping: Record<PermitType, PermitTypeEnum> = {
     'espace-clos': 'confined_space',
@@ -421,8 +672,12 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
 
   // =================== CONVERSION DES PERMIS ===================
   const permits = useMemo(() => {
+    // Si pas de permis du hook, créer des exemples
+    if (hookPermits.length === 0) {
+      return generateSamplePermits(language, province);
+    }
     return hookPermits.map(convertHookPermitToLocal);
-  }, [hookPermits]);
+  }, [hookPermits, language, province]);
 
   // =================== UTILITAIRES ===================
   const showToast = useCallback((type: 'success' | 'error' | 'info' | 'warning', message: string) => {
