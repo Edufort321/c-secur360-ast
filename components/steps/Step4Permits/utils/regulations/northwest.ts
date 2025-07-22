@@ -7,18 +7,135 @@
  * 
  * Territorial Focus: Mining operations, remote communities, extreme weather, indigenous workforce
  */
+"use client";
 
-import type { 
-  RegulationStandard, 
-  PersonnelQualification, 
-  ComplianceCheck,
-  BilingualText,
-  AtmosphericReading,
-  LegalPermit,
-  PersonnelData,
-  ComplianceResult,
-  ActionPlan
-} from '../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type ProvinceCode = 
+  | 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' 
+  | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export interface RegulationStandard {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  section: string;
+  category: string;
+  mandatory: boolean;
+  criteria: string[];
+  ntSpecific?: Record<string, any>;
+  penalties?: {
+    individual: { min: number; max: number; };
+    corporation: { min: number; max: number; };
+  };
+  references?: Array<{
+    type: string;
+    title: string;
+    citation: string;
+    url?: string;
+  }>;
+  standards?: Record<string, { min?: number; max?: number; unit: string; }>;
+  implementation?: {
+    timeline: string;
+    resources: string[];
+    responsibilities: string[];
+  };
+}
+
+export interface PersonnelQualification {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  requirements: string[];
+  ntSpecific?: Record<string, any>;
+  certification: string;
+  validity: string;
+  mandatoryTraining?: string[];
+}
+
+export interface ComplianceCheck {
+  standardId: string;
+  requirementId: string;
+  status: 'compliant' | 'non_compliant' | 'partially_compliant';
+  evidence: string[];
+  gaps?: string[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface AtmosphericReading {
+  gasType: string;
+  value: number;
+  unit: string;
+  timestamp: number;
+  location?: string;
+  temperatureCompensation?: boolean;
+}
+
+export interface LegalPermit {
+  id: string;
+  spaceDetails?: {
+    identification?: string;
+    environmentalFactors?: string[];
+  };
+  hazardAssessment?: {
+    environmentalHazards?: string[];
+    operationSpecific?: Record<string, any>;
+  };
+  entryPermit?: {
+    communicationPlan?: any;
+    emergencyProcedures?: string[];
+  };
+}
+
+export interface PersonnelData {
+  role: string;
+  preferredLanguage?: string;
+  qualifications?: Array<{
+    type: string;
+    valid: boolean;
+  }>;
+}
+
+export interface ComplianceResult {
+  jurisdiction: string;
+  overallCompliance: number;
+  results: ComplianceCheck[];
+  criticalNonCompliance: number;
+  ntSpecific?: Record<string, any>;
+  actionPlan: ActionPlan[];
+}
+
+export interface ActionPlan {
+  standardId: string;
+  action: BilingualText;
+  responsible: string;
+  deadline: string;
+  resources: string[];
+  verification: string;
+}
 
 // =================== NORTHWEST TERRITORIES AUTHORITY ===================
 
@@ -28,8 +145,8 @@ export const WSCC_NT_AUTHORITY = {
   jurisdiction: ['NT'] as const,
   website: 'https://www.wscc.nt.ca',
   contactInfo: {
-    phone: '1-800-661-0792',              // Ligne principale WSCC
-    preventionPhone: '867-920-3888',       // Prévention
+    phone: '1-800-661-0792',
+    preventionPhone: '867-920-3888',
     email: 'prevention@wscc.nt.ca',
     address: 'Centre Square Tower, 5th Floor, 5022 49th Street, Yellowknife, NT X1A 1P5'
   },
@@ -39,14 +156,14 @@ export const WSCC_NT_AUTHORITY = {
     { region: 'Inuvik', phone: '867-678-2301', coverage: 'Western Arctic, Oil & Gas' },
     { region: 'Fort Smith', phone: '867-872-6192', coverage: 'Eastern NT, Parks Canada' }
   ],
-  languages: ['en', 'fr'] as const,        // English primary, French services available
-  indigenousLanguages: [                   // Services disponibles langues autochtones
+  languages: ['en', 'fr'] as const,
+  indigenousLanguages: [
     'dene', 'inuktitut', 'inuvialuktun', 'gwich_in', 'tlicho'
   ],
   specializedUnits: [
-    'mining_safety_division',             // Division sécurité minière
-    'remote_operations_unit',             // Unité opérations isolées
-    'indigenous_safety_program'           // Programme sécurité autochtone
+    'mining_safety_division',
+    'remote_operations_unit',
+    'indigenous_safety_program'
   ],
   powers: [
     'Workplace inspections and investigations',
@@ -55,13 +172,13 @@ export const WSCC_NT_AUTHORITY = {
     'Administrative penalties',
     'Prosecutions under territorial law'
   ]
-} as const;
+};
 
 // =================== NT SPECIFIC FEATURES ===================
 
 export const NT_SPECIFIC_FEATURES = {
   miningOperations: [
-    'diamond_mining_ekati_diavik',         // Mines diamant Ekati/Diavik
+    'diamond_mining_ekati_diavik',
     'gold_mining_operations',
     'rare_earth_mineral_extraction',
     'underground_mining_northern_conditions',
@@ -69,39 +186,39 @@ export const NT_SPECIFIC_FEATURES = {
   ],
   remoteOperations: [
     'isolated_community_access',
-    'seasonal_ice_road_dependency',       // Dépendance routes glace saisonnières
-    'extreme_weather_operations',         // -50°C opérations
+    'seasonal_ice_road_dependency',
+    'extreme_weather_operations',
     'satellite_communication_dependency',
     'limited_emergency_services_access'
   ],
   indigenousWorkforce: [
     'first_nations_dene_workers',
     'inuit_workforce_integration',
-    'traditional_knowledge_integration',   // Intégration savoirs traditionnels
+    'traditional_knowledge_integration',
     'cultural_safety_considerations',
     'language_barrier_accommodations'
   ],
   environmentalChallenges: [
-    'permafrost_ground_conditions',       // Conditions pergélisol
+    'permafrost_ground_conditions',
     'extreme_cold_equipment_challenges',
-    'daylight_seasonal_variations',       // Variations lumière saisonnières
+    'daylight_seasonal_variations',
     'wildlife_encounter_protocols',
     'environmental_protection_requirements'
   ],
   emergencyResponse: [
-    'medevac_helicopter_dependency',      // Dépendance évacuation médicale hélico
+    'medevac_helicopter_dependency',
     'volunteer_fire_departments',
     'community_emergency_response',
     'search_rescue_coordination',
     'satellite_emergency_beacons'
   ],
   regulatoryIntegration: [
-    'indigenous_self_government_agreements', // Accords autonomie gouvernementale
+    'indigenous_self_government_agreements',
     'land_claim_agreement_compliance',
     'environmental_assessment_requirements',
     'federal_territorial_jurisdiction_coordination'
   ]
-} as const;
+};
 
 // =================== NT REGULATION STANDARDS ===================
 
@@ -122,7 +239,7 @@ export const NT_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       'Not designed or intended for human occupancy',
       'Has limited means for entry or exit',
       'May become hazardous to any person entering it',
-      'Includes northern mining and remote operation facilities'  // NT specific
+      'Includes northern mining and remote operation facilities'
     ],
     ntSpecific: {
       miningDefinitions: [
@@ -144,7 +261,7 @@ export const NT_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       ]
     },
     penalties: {
-      individual: { min: 500, max: 100000 },   // 2023 amounts
+      individual: { min: 500, max: 100000 },
       corporation: { min: 2500, max: 1000000 }
     },
     references: [
@@ -329,19 +446,19 @@ export const NT_ATMOSPHERIC_STANDARDS = {
   
   // NT Mining Industry Specific
   miningSpecific: {
-    methane_permafrost: { max: 1.0, unit: '%' },        // Methane from permafrost
-    radon_uranium: { max: 0.2, unit: 'pCi/L' },         // Radon from uranium deposits
-    cyanide_gold: { max: 4.7, unit: 'mg/m³' },          // Gold processing
-    ammonia_explosives: { max: 25, unit: 'ppm' },       // Explosive storage
-    diesel_exhaust: { max: 1.5, unit: 'mg/m³' }         // Underground diesel equipment
+    methane_permafrost: { max: 1.0, unit: '%' },
+    radon_uranium: { max: 0.2, unit: 'pCi/L' },
+    cyanide_gold: { max: 4.7, unit: 'mg/m³' },
+    ammonia_explosives: { max: 25, unit: 'ppm' },
+    diesel_exhaust: { max: 1.5, unit: 'mg/m³' }
   },
   
   // NT Remote Operations Specific  
   remoteOperationsSpecific: {
-    diesel_vapors: { max: 100, unit: 'mg/m³' },         // Heating fuel storage
-    propane_heating: { max: 1000, unit: 'ppm' },        // Propane heating systems
-    generator_exhaust: { max: 25, unit: 'ppm' },        // Backup generator CO
-    fuel_additives: 'per_material_safety_data_sheet'    // Arctic fuel additives
+    diesel_vapors: { max: 100, unit: 'mg/m³' },
+    propane_heating: { max: 1000, unit: 'ppm' },
+    generator_exhaust: { max: 25, unit: 'ppm' },
+    fuel_additives: 'per_material_safety_data_sheet'
   },
   
   // Cold Weather Adjustments
@@ -350,7 +467,7 @@ export const NT_ATMOSPHERIC_STANDARDS = {
     equipmentLimitations: 'sensor_accuracy_below_minus_30C',
     calibrationFrequency: 'increased_calibration_cold_conditions'
   }
-} as const;
+};
 
 // =================== NT PERSONNEL QUALIFICATIONS ===================
 
@@ -491,33 +608,33 @@ export const NT_EMERGENCY_SERVICES = {
   },
   
   territorialServices: {
-    emergencyMeasures: '867-873-7750',        // NT Emergency Measures Organization
-    healthEmergency: '867-777-7400',          // Health and Social Services Emergency
-    searchRescue: '1-800-267-7270',           // Joint Rescue Coordination Centre Trenton
-    environmentalEmergency: '867-767-9235'    // Environment and Natural Resources
+    emergencyMeasures: '867-873-7750',
+    healthEmergency: '867-777-7400',
+    searchRescue: '1-800-267-7270',
+    environmentalEmergency: '867-767-9235'
   },
   
   mining: {
     mineRescue: '911_request_mine_rescue_team',
     diamondMines: {
-      ekatiMine: '867-669-6500',             // Ekati Diamond Mine
-      diavikMine: '867-669-6210'            // Diavik Diamond Mine
+      ekatiMine: '867-669-6500',
+      diavikMine: '867-669-6210'
     },
-    miningAssociation: '867-873-5281',       // NWT & Nunavut Chamber of Mines
-    transportationEmergency: '867-767-9088'  // Department of Infrastructure
+    miningAssociation: '867-873-5281',
+    transportationEmergency: '867-767-9088'
   },
   
   remoteOperations: {
     communityEmergency: 'local_community_emergency_coordinator',
     medicalEvacuation: {
-      yellowknifeBase: '867-920-8888',       // Yellowknife medevac
-      inuvikBase: '867-777-7400',            // Inuvik health centre
-      fortSmithBase: '867-872-0111'          // Fort Smith health centre
+      yellowknifeBase: '867-920-8888',
+      inuvikBase: '867-777-7400',
+      fortSmithBase: '867-872-0111'
     },
     satelliteEmergency: {
-      sar: 'personal_locator_beacon_406_mhz', // Search and Rescue satellite
-      spot: 'spot_satellite_messenger',       // SPOT emergency beacon
-      inreach: 'garmin_inreach_satellite'     // Garmin satellite communication
+      sar: 'personal_locator_beacon_406_mhz',
+      spot: 'spot_satellite_messenger',
+      inreach: 'garmin_inreach_satellite'
     }
   },
   
@@ -534,7 +651,7 @@ export const NT_EMERGENCY_SERVICES = {
     wildernessRescue: 'canadian_rangers_coordination',
     helicopterRescue: 'northern_helicopter_service_providers'
   }
-} as const;
+};
 
 // =================== COMPLIANCE CHECKING ===================
 
@@ -845,7 +962,7 @@ function checkNorthernAttendantRequirements(personnel: PersonnelData[], operatio
   const attendantHasNorthernTraining = personnel
     .filter(p => p.role === 'attendant')
     .every(p => hasNorthernSpecificTraining(p, operationType));
-  const hasBackupAttendant = personnel.filter(p => p.role === 'attendant').length >= 2; // Remote operations require backup
+  const hasBackupAttendant = personnel.filter(p => p.role === 'attendant').length >= 2;
   
   return {
     standardId: 'NT_GSR_9_20',
