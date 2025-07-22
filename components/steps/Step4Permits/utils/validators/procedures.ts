@@ -556,7 +556,7 @@ const EMERGENCY_DRILL_INTERVALS = { // mois
 /**
  * Valide une procédure complète
  */
-export function validateProcedure(procedure: ProcedureData): ProcedureValidationResult {
+function validateProcedure(procedure: ProcedureData): ProcedureValidationResult {
   const baseValidation = validateBasicProcedureData(procedure);
   
   // Validations spécialisées
@@ -593,7 +593,7 @@ export function validateProcedure(procedure: ProcedureData): ProcedureValidation
 /**
  * Valide un ensemble de procédures
  */
-export function validateProcedureSet(procedures: ProcedureData[]): ProcedureValidationResult {
+function validateProcedureSet(procedures: ProcedureData[]): ProcedureValidationResult {
   if (procedures.length === 0) {
     return createEmptyProcedureValidationResult('Aucune procédure fournie');
   }
