@@ -218,22 +218,10 @@ export const ALBERTA_AUTHORITY = {
     }
   },
   powers: {
-    fr: [
-      'Inspection des lieux de travail',
-      'Émission d\'ordonnances d\'amélioration',
-      'Émission d\'ordonnances d\'arrêt de travail',
-      'Poursuites et amendes',
-      'Investigation d\'accidents'
-    ],
-    en: [
-      'Workplace inspections',
-      'Issue improvement orders',
-      'Issue stop work orders', 
-      'Prosecutions and fines',
-      'Accident investigations'
-    ]
+    fr: 'Inspection des lieux de travail, émission d\'ordonnances d\'amélioration, émission d\'ordonnances d\'arrêt de travail, poursuites et amendes, investigation d\'accidents',
+    en: 'Workplace inspections, issue improvement orders, issue stop work orders, prosecutions and fines, accident investigations'
   }
-} as const;
+};
 
 // =================== STANDARDS ALBERTA OHS ===================
 
@@ -304,18 +292,8 @@ export const ALBERTA_OHS_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Espace clos défini comme espace substantiellement fermé',
-            'Non conçu pour occupation humaine continue',
-            'Accès limité pour entrée et sortie',
-            'Peut présenter risques pour la santé et sécurité'
-          ],
-          en: [
-            'Confined space defined as substantially enclosed space',
-            'Not designed for continuous human occupancy',
-            'Limited access for entry and exit',
-            'May present health and safety hazards'
-          ]
+          fr: 'Espace clos défini comme espace substantiellement fermé, non conçu pour occupation humaine continue, accès limité pour entrée et sortie, peut présenter risques pour la santé et sécurité',
+          en: 'Confined space defined as substantially enclosed space, not designed for continuous human occupancy, limited access for entry and exit, may present health and safety hazards'
         },
         verification: {
           methods: ['visual_inspection', 'design_review', 'hazard_assessment'],
@@ -343,20 +321,8 @@ export const ALBERTA_OHS_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Évaluation écrite des dangers requise avant entrée',
-            'Identification de tous les dangers potentiels',
-            'Évaluation des risques atmosphériques',
-            'Considération des dangers mécaniques, physiques et chimiques',
-            'Révision lors de changement des conditions'
-          ],
-          en: [
-            'Written hazard assessment required before entry',
-            'Identification of all potential hazards',
-            'Assessment of atmospheric hazards',
-            'Consideration of mechanical, physical and chemical hazards',
-            'Review when conditions change'
-          ]
+          fr: 'Évaluation écrite des dangers requise avant entrée, identification de tous les dangers potentiels, évaluation des risques atmosphériques, considération des dangers mécaniques, physiques et chimiques, révision lors de changement des conditions',
+          en: 'Written hazard assessment required before entry, identification of all potential hazards, assessment of atmospheric hazards, consideration of mechanical, physical and chemical hazards, review when conditions change'
         },
         implementation: {
           timeline: 'before_each_entry',
@@ -385,20 +351,8 @@ export const ALBERTA_OHS_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Permis d\'entrée écrit requis pour chaque entrée',
-            'Autorisation par personne compétente',
-            'Validité limitée dans le temps',
-            'Spécification des mesures de contrôle',
-            'Signatures des personnes autorisées'
-          ],
-          en: [
-            'Written entry permit required for each entry',
-            'Authorization by competent person',
-            'Time-limited validity',
-            'Specification of control measures',
-            'Signatures of authorized persons'
-          ]
+          fr: 'Permis d\'entrée écrit requis pour chaque entrée, autorisation par personne compétente, validité limitée dans le temps, spécification des mesures de contrôle, signatures des personnes autorisées',
+          en: 'Written entry permit required for each entry, authorization by competent person, time-limited validity, specification of control measures, signatures of authorized persons'
         },
         implementation: {
           timeline: 'before_each_entry_shift',
@@ -418,20 +372,8 @@ export const ALBERTA_OHS_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Tests atmosphériques requis avant entrée',
-            'Ordre de test : oxygène, gaz inflammables, gaz toxiques',
-            'Tests continus pendant occupation',
-            'Équipement calibré et certifié',
-            'Tests par personne qualifiée'
-          ],
-          en: [
-            'Atmospheric testing required before entry',
-            'Testing order: oxygen, flammable gases, toxic gases',
-            'Continuous testing during occupancy',
-            'Calibrated and certified equipment',
-            'Testing by qualified person'
-          ]
+          fr: 'Tests atmosphériques requis avant entrée, ordre de test : oxygène, gaz inflammables, gaz toxiques, tests continus pendant occupation, équipement calibré et certifié, tests par personne qualifiée',
+          en: 'Atmospheric testing required before entry, testing order: oxygen, flammable gases, toxic gases, continuous testing during occupancy, calibrated and certified equipment, testing by qualified person'
         },
         implementation: {
           timeline: 'before_entry_and_continuous',
@@ -456,20 +398,8 @@ export const ALBERTA_OHS_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Ventilation mécanique requise si nécessaire',
-            'Élimination des dangers atmosphériques',
-            'Maintien des conditions acceptables',
-            'Ventilation continue pendant occupation',
-            'Équipement antidéflagrant si requis'
-          ],
-          en: [
-            'Mechanical ventilation required if necessary',
-            'Elimination of atmospheric hazards',
-            'Maintenance of acceptable conditions',
-            'Continuous ventilation during occupancy',
-            'Explosion-proof equipment if required'
-          ]
+          fr: 'Ventilation mécanique requise si nécessaire, élimination des dangers atmosphériques, maintien des conditions acceptables, ventilation continue pendant occupation, équipement antidéflagrant si requis',
+          en: 'Mechanical ventilation required if necessary, elimination of atmospheric hazards, maintenance of acceptable conditions, continuous ventilation during occupancy, explosion-proof equipment if required'
         }
       },
       {
@@ -484,20 +414,8 @@ export const ALBERTA_OHS_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Surveillant qualifié requis à l\'extérieur',
-            'Communication constante avec entrants',
-            'Surveillance des conditions',
-            'Autorité d\'ordonner évacuation',
-            'Ne doit pas quitter son poste'
-          ],
-          en: [
-            'Qualified attendant required outside',
-            'Constant communication with entrants',
-            'Monitoring of conditions',
-            'Authority to order evacuation',
-            'Must not leave post'
-          ]
+          fr: 'Surveillant qualifié requis à l\'extérieur, communication constante avec entrants, surveillance des conditions, autorité d\'ordonner évacuation, ne doit pas quitter son poste',
+          en: 'Qualified attendant required outside, constant communication with entrants, monitoring of conditions, authority to order evacuation, must not leave post'
         }
       },
       {
@@ -512,20 +430,8 @@ export const ALBERTA_OHS_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'ÉPI approprié aux dangers identifiés',
-            'Équipement de protection respiratoire si requis',
-            'Harnais et système de récupération',
-            'Éclairage sécuritaire',
-            'Équipement de communication'
-          ],
-          en: [
-            'PPE appropriate to identified hazards',
-            'Respiratory protection equipment if required',
-            'Harness and retrieval system',
-            'Safe lighting',
-            'Communication equipment'
-          ]
+          fr: 'ÉPI approprié aux dangers identifiés, équipement de protection respiratoire si requis, harnais et système de récupération, éclairage sécuritaire, équipement de communication',
+          en: 'PPE appropriate to identified hazards, respiratory protection equipment if required, harness and retrieval system, safe lighting, communication equipment'
         }
       },
       {
@@ -540,20 +446,8 @@ export const ALBERTA_OHS_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Plan d\'urgence écrit requis',
-            'Procédures de sauvetage établies',
-            'Équipe de sauvetage disponible',
-            'Communication avec services d\'urgence',
-            'Formation du personnel aux procédures'
-          ],
-          en: [
-            'Written emergency plan required',
-            'Rescue procedures established',
-            'Rescue team available',
-            'Communication with emergency services',
-            'Personnel training on procedures'
-          ]
+          fr: 'Plan d\'urgence écrit requis, procédures de sauvetage établies, équipe de sauvetage disponible, communication avec services d\'urgence, formation du personnel aux procédures',
+          en: 'Written emergency plan required, rescue procedures established, rescue team available, communication with emergency services, personnel training on procedures'
         }
       },
       {
@@ -568,20 +462,8 @@ export const ALBERTA_OHS_STANDARDS: Record<string, RegulatoryStandard> = {
         },
         mandatory: true,
         criteria: {
-          fr: [
-            'Formation spécifique aux espaces clos',
-            'Reconnaissance des dangers',
-            'Utilisation d\'équipement de sécurité',
-            'Procédures d\'urgence et de sauvetage',
-            'Formation de recyclage périodique'
-          ],
-          en: [
-            'Confined space specific training',
-            'Hazard recognition',
-            'Safety equipment use',
-            'Emergency and rescue procedures',
-            'Periodic refresher training'
-          ]
+          fr: 'Formation spécifique aux espaces clos, reconnaissance des dangers, utilisation d\'équipement de sécurité, procédures d\'urgence et de sauvetage, formation de recyclage périodique',
+          en: 'Confined space specific training, hazard recognition, safety equipment use, emergency and rescue procedures, periodic refresher training'
         }
       }
     ],
