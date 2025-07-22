@@ -332,7 +332,7 @@ const MAINTENANCE_GRACE_PERIOD = 14; // jours
 /**
  * Valide un équipement complet
  */
-export function validateEquipment(equipment: EquipmentData): EquipmentValidationResult {
+function validateEquipment(equipment: EquipmentData): EquipmentValidationResult {
   const baseValidation = validateBasicEquipmentData(equipment);
   
   // Validation spécialisée selon type
@@ -372,7 +372,7 @@ export function validateEquipment(equipment: EquipmentData): EquipmentValidation
 /**
  * Valide un ensemble d'équipements
  */
-export function validateEquipmentSet(equipments: EquipmentData[]): EquipmentValidationResult {
+function validateEquipmentSet(equipments: EquipmentData[]): EquipmentValidationResult {
   if (equipments.length === 0) {
     return createEmptyValidationResult('Aucun équipement fourni');
   }
@@ -1195,6 +1195,12 @@ function createEmptyValidationResult(message: string): EquipmentValidationResult
 }
 
 // =================== EXPORTS ===================
+
+// Export des constantes pour l'index
+export { EQUIPMENT_SPECIFICATIONS, SAFETY_CRITICAL_EQUIPMENT };
+
+// Export des fonctions principales
+export { validateEquipment, validateEquipmentSet };
 
 export default {
   validateEquipment,
