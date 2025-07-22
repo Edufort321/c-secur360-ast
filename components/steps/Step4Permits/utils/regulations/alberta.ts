@@ -771,16 +771,17 @@ export function checkAlbertaCompliance(
     atmosphericGaps.push('No recent atmospheric testing');
   } else {
     latestReadings.forEach(reading => {
-      const limits = ALBERTA_EXPOSURE_LIMITS[reading.gasType];
+      const gasType = reading.gasType as GasType;
+      const limits = ALBERTA_EXPOSURE_LIMITS[gasType];
       if (limits) {
-        if (reading.gasType === 'oxygen') {
+        if (gasType === 'oxygen') {
           if (reading.value < 19.5 || reading.value > 23.0) {
             atmosphericCompliant = false;
             atmosphericGaps.push(`Oxygen level ${reading.value}% outside 19.5-23% range`);
           }
         } else if (limits.ceiling && reading.value > limits.ceiling) {
           atmosphericCompliant = false;
-          atmosphericGaps.push(`${reading.gasType} ${reading.value}${limits.unit} exceeds ceiling ${limits.ceiling}${limits.unit}`);
+          atmosphericGaps.push(`${gasType} ${reading.value}${limits.unit} exceeds ceiling ${limits.ceiling}${limits.unit}`);
         }
       }
     });
