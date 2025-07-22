@@ -628,8 +628,8 @@ function assessPersonnelStatus(personnel: PersonnelData): PersonnelStatus {
   const authorized = restrictions.filter(r => r.severity === 'absolute').length === 0;
   const readyForEntry = authorized && 
                        personnel.medicalClearance?.status === 'cleared' &&
-                       personnel.certifications?.length > 0 &&
-                       personnel.training?.length > 0;
+                       (personnel.certifications?.length || 0) > 0 &&
+                       (personnel.training?.length || 0) > 0;
 
   const lastMedicalExam = personnel.medicalClearance?.lastExam ? 
     new Date(personnel.medicalClearance.lastExam) : null;
