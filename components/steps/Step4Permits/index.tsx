@@ -25,13 +25,13 @@ interface Step4PermitsProps {
   language: 'fr' | 'en';
   tenant: string;
   errors?: any;
-  // Propriétés supplémentaires requises par ASTForm
-  province: string;
-  userRole: string;
-  touchOptimized: boolean;
-  compactMode: boolean;
-  onPermitChange: (permits: any) => void;
-  initialPermits: any[];
+  // Propriétés supplémentaires (optionnelles pour compatibilité)
+  province?: string;
+  userRole?: string;
+  touchOptimized?: boolean;
+  compactMode?: boolean;
+  onPermitChange?: (permits: any) => void;
+  initialPermits?: any[];
 }
 
 interface BilingualText {
@@ -549,8 +549,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   errors,
   province,
   userRole,
-  touchOptimized,
-  compactMode,
+  touchOptimized = false,
+  compactMode = false,
   onPermitChange,
   initialPermits
 }) => {
@@ -591,7 +591,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     if (hookPermits.length > 0) {
       return hookPermits.map(convertHookPermitToLocal);
     }
-    return generatePermitsList(language, (province || formData.projectInfo?.province || 'QC') as ProvinceCode);
+    // Utiliser province prop, sinon formData, sinon 'QC' par défaut
+    const targetProvince = province || formData.projectInfo?.province || 'QC';
+    return generatePermitsList(language, targetProvince as ProvinceCode);
   });
   
   // =================== FONCTION CONVERSION ===================
@@ -1442,6 +1444,21 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             .search-section { padding: 16px; margin-bottom: 16px; }
             .permits-grid { gap: 12px; }
             .validation-panels { padding: 12px; }
+          ` : ''}
+          
+          /* Debug info pour développement */
+          ${process.env.NODE_ENV === 'development' ? `
+            .step4-container::before {
+              content: 'Step4Permits - Province: ${province || 'default'} - User: ${userRole || 'default'}';
+              display: block;
+              background: rgba(59, 130, 246, 0.1);
+              color: #60a5fa;
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-size: 10px;
+              margin-bottom: 8px;
+              text-align: center;
+            }
           ` : ''}
           
           /* =================== RESPONSIVE =================== */
