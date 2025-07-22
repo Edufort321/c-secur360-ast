@@ -290,7 +290,24 @@ const PermitCard: React.FC<{
   );
 };
 
-// Composant StatusBadge temporaire - compatible avec tous les statuts
+// Composant PriorityBadge
+const PriorityBadge: React.FC<{ priority: 'low' | 'medium' | 'high' | 'critical' }> = ({ priority }) => {
+  const priorityConfig = {
+    low: { label: 'Faible', color: 'bg-gray-100 text-gray-700', icon: '⬇️' },
+    medium: { label: 'Moyen', color: 'bg-blue-100 text-blue-700', icon: '➡️' },
+    high: { label: 'Élevé', color: 'bg-orange-100 text-orange-700', icon: '⬆️' },
+    critical: { label: 'Critique', color: 'bg-red-100 text-red-700', icon: '🚨' }
+  };
+
+  const config = priorityConfig[priority] || priorityConfig.medium;
+  
+  return (
+    <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${config.color}`}>
+      <span className="text-xs">{config.icon}</span>
+      {config.label}
+    </span>
+  );
+};
 const StatusBadge: React.FC<{ status: PermitStatus }> = ({ status }) => {
   const statusConfig = {
     draft: { label: 'Brouillon', color: 'bg-gray-100 text-gray-800' },
@@ -836,10 +853,23 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
       return acc;
     }, {} as Record<PermitStatus, number>);
 
+    const validationSummary = permits.reduce((acc, permit) => {
+      const validationStatus = permit.validationResults?.overall?.isValid === true ? 'valid' :
+                             permit.validationResults?.overall?.isValid === false ? 'invalid' : 'pending';
+      acc[validationStatus] = (acc[validationStatus] || 0) + 1;
+      return acc;
+    }, {} as Record<'valid' | 'invalid' | 'pending', number>);
+
+    const prioritySummary = permits.reduce((acc, permit) => {
+      acc[permit.priority] = (acc[permit.priority] || 0) + 1;
+      return acc;
+    }, {} as Record<'low' | 'medium' | 'high' | 'critical', number>);
+
     return {
       total: permits.length,
       status: statusSummary,
-      validation: { valid: 0, invalid: 0, pending: permits.length },
+      validation: validationSummary,
+      priority: prioritySummary
     };
   }, [permits]);
 
@@ -867,7 +897,9 @@ export const Step4Permits: React.FC<Step4PermitsProps> = ({
                     <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                       <span>{summaryStats.total} {language === 'fr' ? 'permis total' : 'total permits'}</span>
                       <span className="text-green-600">✓ {summaryStats.validation.valid} valides</span>
+                      <span className="text-red-600">✗ {summaryStats.validation.invalid} invalides</span>
                       <span className="text-yellow-600">⏳ {summaryStats.validation.pending} en attente</span>
+                      <span className="text-blue-600">🔄 {summaryStats.status.active || 0} actifs</span>
                     </div>
                   </div>
                   
