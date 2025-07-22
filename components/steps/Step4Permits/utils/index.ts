@@ -159,13 +159,17 @@ export {
   checkStorageQuota
 } from './helpers/offline';
 
-// Export des types helpers
+// Export des types helpers (avec gestion des exports manquants)
 export type {
   FormattingOptions,
   FormattedValue,
   ColorScale,
   IconMapping,
-  UnitConversion,
+  UnitConversion
+} from './helpers';
+
+// Export des types offline depuis le bon module
+export type {
   OfflineConfig,
   OfflineData,
   OfflineDataType,
@@ -175,7 +179,7 @@ export type {
   ConflictResolution,
   OfflineCapabilities,
   CacheManifest
-} from './helpers';
+} from './helpers/offline';
 
 // =================== EXPORTS RÉGLEMENTATIONS ===================
 
