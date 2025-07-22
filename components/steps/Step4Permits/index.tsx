@@ -1917,8 +1917,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                   <div className="legislation-info">{permit.legislation}</div>
                 </div>
 
-                {/* Section progression (si sélectionné) */}
-                {isSelected && permit.progress > 0 && (
+                {/* Section progression (TOUJOURS AFFICHER) */}
+                {permit.progress > 0 && (
                   <div className="progress-section">
                     <div className="progress-header">
                       <span className="progress-label">Progression</span>
@@ -1933,8 +1933,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                   </div>
                 )}
 
-                {/* Section panneaux de validation (si sélectionné) */}
-                {isSelected && permit.validationPanels && permit.validationPanels.length > 0 && (
+                {/* Section panneaux de validation (TOUJOURS AFFICHER) */}
+                {permit.validationPanels && permit.validationPanels.length > 0 && (
                   <div className="validation-panels">
                     <div className="panels-header">
                       <Eye size={16} />
