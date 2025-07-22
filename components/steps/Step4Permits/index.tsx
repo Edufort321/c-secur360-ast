@@ -5,7 +5,7 @@ import {
   Shield, Search, CheckCircle, AlertTriangle, FileText, Settings, 
   Users, Clock, Eye, Zap, Wind, Flame, Construction, Building, 
   Activity, BarChart3, Star, Plus, Wrench, Home, Target, ChevronDown, ChevronRight,
-  Camera, MapPin, Bluetooth, Battery, Signal, Play, Pause, Mic, Upload, Download
+  Camera, MapPin, Bluetooth, Battery, Signal, Play, Pause, Mic, Upload, Download, Gauge
 } from 'lucide-react';
 
 // =================== IMPORTS DE TA STRUCTURE EXISTANTE ===================
