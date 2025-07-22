@@ -2,15 +2,197 @@
 // Réglementations Alberta Occupational Health and Safety (OHS) pour espaces clos
 "use client";
 
-import type { 
-  RegulatoryStandard,
-  ComplianceMatrix,
-  RegulatoryUpdate,
-  StandardRevision,
-  BilingualText,
-  GasType,
-  ProvinceCode
-} from '../../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type ProvinceCode = 
+  | 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' 
+  | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export interface RegulatoryStandard {
+  id: string;
+  name: BilingualText;
+  type: 'safety' | 'environmental' | 'quality' | 'procedural';
+  category: string;
+  authority: {
+    name: BilingualText;
+    acronym: string;
+    jurisdiction: ProvinceCode[];
+    website: string;
+    contactInfo: {
+      phone: string;
+      emergencyLine: string;
+      email: string;
+      address: {
+        street: string;
+        city: string;
+        province: string;
+        postalCode: string;
+      };
+    };
+    powers: BilingualText;
+  };
+  jurisdiction: ProvinceCode[];
+  effectiveDate: number;
+  lastUpdated: number;
+  status: 'active' | 'pending' | 'superseded' | 'repealed';
+  hierarchy: {
+    parent?: string;
+    level: 'act' | 'regulation' | 'section' | 'subsection';
+    section?: string;
+    subsections?: string[];
+  };
+  scope: {
+    workplaces: string[];
+    activities: string[];
+    equipment: string[];
+    exclusions: string[];
+  };
+  requirements: Array<{
+    id: string;
+    name: BilingualText;
+    description: BilingualText;
+    mandatory: boolean;
+    criteria: BilingualText;
+    implementation?: {
+      timeline: string;
+      resources: string[];
+      responsibilities?: string[];
+      dependencies?: string[];
+      standards?: Record<string, { min?: number; max?: number; unit: string; }>;
+    };
+    verification?: {
+      methods: string[];
+      documentation?: string[];
+      frequency?: string;
+      evidence?: string[];
+      nonCompliance?: {
+        indicators: string[];
+        actions: string[];
+      };
+    };
+    penalties?: {
+      individual: { min: number; max: number; };
+      corporation: { min: number; max: number; };
+      description?: BilingualText;
+    };
+  }>;
+  compliance: {
+    level: 'mandatory' | 'recommended' | 'best_practice';
+    enforcement: 'regulatory' | 'contractual' | 'voluntary';
+    penalties: {
+      individual: { min: number; max: number; };
+      corporation: { min: number; max: number; };
+      criminal?: string;
+    };
+    inspectionFrequency: string;
+    reportingRequirements: string[];
+  };
+  relatedStandards: string[];
+  references: Array<{
+    type: string;
+    title: string;
+    citation: string;
+    section?: string;
+    url?: string;
+    publisher?: string;
+  }>;
+  lastReview: number;
+  nextReview: number;
+  metadata: {
+    version: string;
+    language: string;
+    jurisdiction: string;
+    effectiveTerritory: string;
+    specialConditions: string[];
+  };
+}
+
+export interface ComplianceMatrix {
+  jurisdiction: string;
+  standardsAssessed: string[];
+  assessmentDate: number;
+  overallCompliance: number;
+  results: Array<{
+    standardId: string;
+    requirementId: string;
+    status: 'compliant' | 'non_compliant' | 'partially_compliant' | 'not_applicable';
+    evidence: string[];
+    gaps: string[];
+    priority: 'low' | 'medium' | 'high' | 'critical';
+  }>;
+  criticalNonCompliance: number;
+  actionPlan: Array<{
+    standardId: string;
+    requirement: string;
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    action: BilingualText;
+    responsible: string;
+    deadline: string;
+    resources: string[];
+    verification: string;
+    status: 'planned' | 'in_progress' | 'completed' | 'overdue';
+  }>;
+  nextAssessment: number;
+  certifiedBy: string;
+  metadata: {
+    version: string;
+    assessmentMethod: string;
+    dataQuality: string;
+    limitationsNoted: string[];
+  };
+}
+
+export interface RegulatoryUpdate {
+  id: string;
+  standardId: string;
+  updateType: 'amendment' | 'revision' | 'new_requirement' | 'repeal';
+  effectiveDate: number;
+  description: BilingualText;
+  impact: 'low' | 'medium' | 'high' | 'critical';
+  affectedSections: string[];
+  transitionPeriod?: number;
+  complianceActions: string[];
+}
+
+export interface StandardRevision {
+  revisionId: string;
+  standardId: string;
+  previousVersion: string;
+  newVersion: string;
+  revisionDate: number;
+  changes: Array<{
+    section: string;
+    changeType: 'addition' | 'modification' | 'deletion';
+    description: BilingualText;
+    rationale: BilingualText;
+  }>;
+  impactAssessment: {
+    affected_organizations: number;
+    compliance_cost_estimate: number;
+    implementation_timeline: string;
+  };
+}
 
 // =================== CONSTANTES ALBERTA OHS ===================
 
@@ -500,8 +682,68 @@ export const ALBERTA_EXPOSURE_LIMITS: Record<GasType, {
     stel: 1000,
     unit: 'ppm',
     source: 'Alberta OHS Schedule 1 Table 2'
+  },
+  carbon_dioxide: {
+    twa: 5000,
+    stel: 30000,
+    unit: 'ppm',
+    source: 'Alberta OHS Schedule 1 Table 2'
+  },
+  ammonia: {
+    twa: 25,
+    stel: 35,
+    unit: 'ppm',
+    source: 'Alberta OHS Schedule 1 Table 2'
+  },
+  chlorine: {
+    twa: 0.5,
+    stel: 1,
+    unit: 'ppm',
+    source: 'Alberta OHS Schedule 1 Table 2'
+  },
+  nitrogen_dioxide: {
+    twa: 3,
+    stel: 5,
+    unit: 'ppm',
+    source: 'Alberta OHS Schedule 1 Table 2'
+  },
+  sulfur_dioxide: {
+    twa: 2,
+    stel: 5,
+    unit: 'ppm',
+    source: 'Alberta OHS Schedule 1 Table 2'
+  },
+  benzene: {
+    twa: 0.5,
+    stel: 2.5,
+    unit: 'ppm',
+    source: 'Alberta OHS Schedule 1 Table 2'
+  },
+  toluene: {
+    twa: 20,
+    stel: 50,
+    unit: 'ppm',
+    source: 'Alberta OHS Schedule 1 Table 2'
+  },
+  xylene: {
+    twa: 100,
+    stel: 150,
+    unit: 'ppm',
+    source: 'Alberta OHS Schedule 1 Table 2'
+  },
+  acetone: {
+    twa: 500,
+    stel: 750,
+    unit: 'ppm',
+    source: 'Alberta OHS Schedule 1 Table 2'
+  },
+  formaldehyde: {
+    twa: 0.3,
+    stel: 0.3,
+    unit: 'ppm',
+    source: 'Alberta OHS Schedule 1 Table 2'
   }
-} as any;
+};
 
 // =================== QUALIFICATIONS ALBERTA ===================
 
@@ -730,11 +972,8 @@ function generateAlbertaActionPlan(results: any[]): any[] {
 /**
  * Obtenir action corrective spécifique Alberta
  */
-function getAlbertaCorrectiveAction(standardId: string, requirementId: string): {
-  fr: string;
-  en: string;
-} {
-  const actions: Record<string, { fr: string; en: string; }> = {
+function getAlbertaCorrectiveAction(standardId: string, requirementId: string): BilingualText {
+  const actions: Record<string, BilingualText> = {
     'AB_OHS_117_space_classification': {
       fr: 'Compléter la classification de l\'espace selon la section 117',
       en: 'Complete space classification per section 117'
