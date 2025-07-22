@@ -999,7 +999,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             gap: '8px',
             maxWidth: '300px'
           }}>
-            {notifications.slice(0, 3).map((notification, index) => (
+            {notifications.slice(0, 3).map((notification: any, index: number) => (
               <div
                 key={notification.id || `notification-${index}`}
                 style={{
