@@ -86,12 +86,11 @@ export type SuggestionType =
 
 // =================== EXPORTS HELPERS ===================
 
-// Export des helpers principaux
+// Export des helpers principaux (avec gestion des exports manquants)
 export {
   DataFormatter,
   AtmosphericCalculations,
   getBluetoothManager,
-  getOfflineManager,
   
   // Fonctions utilitaires
   quickFormatAtmospheric,
@@ -137,6 +136,9 @@ export {
   ERROR_MESSAGES
 } from './helpers';
 
+// Export spécifique pour getOfflineManager depuis le bon module
+export { getOfflineManager } from './helpers/offline';
+
 // Export des utilitaires de calculs
 export {
   PHYSICAL_CONSTANTS,
@@ -147,7 +149,7 @@ export {
   quickVentilationCalc
 } from './helpers/calculations';
 
-// Export des utilitaires offline
+// Export des utilitaires offline (avec gestion des exports manquants)
 export {
   OfflineManager,
   isOfflineModeAvailable,
