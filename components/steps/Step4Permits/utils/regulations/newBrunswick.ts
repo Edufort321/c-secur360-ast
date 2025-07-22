@@ -7,18 +7,130 @@
  * 
  * Provincial Focus: Maritime industry, forestry, fisheries, oil refining, bilingual requirements
  */
+"use client";
 
-import type { 
-  RegulationStandard, 
-  PersonnelQualification, 
-  ComplianceCheck,
-  BilingualText,
-  AtmosphericReading,
-  LegalPermit,
-  PersonnelData,
-  ComplianceResult,
-  ActionPlan
-} from '../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type ProvinceCode = 
+  | 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' 
+  | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export interface RegulationStandard {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  section: string;
+  category: string;
+  mandatory: boolean;
+  criteria: string[];
+  nbSpecific?: Record<string, any>;
+  penalties?: {
+    individual: { min: number; max: number; };
+    corporation: { min: number; max: number; };
+  };
+  references?: Array<{
+    type: string;
+    title: string;
+    citation: string;
+    url?: string;
+  }>;
+  standards?: Record<string, { min?: number; max?: number; unit: string; }>;
+  implementation?: {
+    timeline: string;
+    resources: string[];
+    responsibilities: string[];
+  };
+}
+
+export interface PersonnelQualification {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  requirements: string[];
+  nbSpecific?: Record<string, any>;
+  certification: string;
+  validity: string;
+  mandatoryTraining?: string[];
+}
+
+export interface ComplianceCheck {
+  standardId: string;
+  requirementId: string;
+  status: 'compliant' | 'non_compliant' | 'partially_compliant';
+  evidence: string[];
+  gaps?: string[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface AtmosphericReading {
+  gasType: string;
+  value: number;
+  unit: string;
+  timestamp: number;
+  location?: string;
+}
+
+export interface LegalPermit {
+  id: string;
+  spaceDetails?: {
+    identification?: string;
+  };
+  safetyProgram?: any;
+  documentation?: Array<{
+    language: string;
+    type: string;
+  }>;
+}
+
+export interface PersonnelData {
+  role: string;
+  preferredLanguage?: string;
+  qualifications?: Array<{
+    type: string;
+    valid: boolean;
+  }>;
+}
+
+export interface ComplianceResult {
+  jurisdiction: string;
+  overallCompliance: number;
+  results: ComplianceCheck[];
+  criticalNonCompliance: number;
+  nbSpecific?: Record<string, any>;
+  actionPlan: ActionPlan[];
+}
+
+export interface ActionPlan {
+  standardId: string;
+  action: BilingualText;
+  responsible: string;
+  deadline: string;
+  resources: string[];
+  verification: string;
+}
 
 // =================== NEW BRUNSWICK AUTHORITY ===================
 
@@ -28,8 +140,8 @@ export const WORKSAFENB_AUTHORITY = {
   jurisdiction: ['NB'] as const,
   website: 'https://www.worksafenb.ca',
   contactInfo: {
-    phone: '1-800-222-9775',              // Ligne principale WorkSafeNB
-    preventionPhone: '506-632-2200',       // Prévention
+    phone: '1-800-222-9775',
+    preventionPhone: '506-632-2200',
     email: 'prevention@worksafenb.ca',
     address: '1 Portland Street, P.O. Box 160, Saint John, NB E2L 3X9'
   },
@@ -40,7 +152,7 @@ export const WORKSAFENB_AUTHORITY = {
     { region: 'Bathurst', phone: '506-547-2020', languages: ['fr', 'en'] },
     { region: 'Edmundston', phone: '506-735-2025', languages: ['fr', 'en'] }
   ],
-  languages: ['en', 'fr'] as const,        // Province officiellement bilingue
+  languages: ['en', 'fr'] as const,
   powers: [
     'Workplace inspections and investigations',
     'Issuing compliance orders',
@@ -48,7 +160,7 @@ export const WORKSAFENB_AUTHORITY = {
     'Prosecutions and fines',
     'Accident investigations'
   ]
-} as const;
+};
 
 // =================== NB SPECIFIC FEATURES ===================
 
@@ -68,7 +180,7 @@ export const NB_SPECIFIC_FEATURES = {
     'sawmill_equipment_spaces'
   ],
   oilRefining: [
-    'irving_oil_refinery_compliance',      // Major NB employer
+    'irving_oil_refinery_compliance',
     'petroleum_storage_tanks',
     'process_vessels_and_reactors',
     'pipeline_maintenance_operations'
@@ -80,12 +192,12 @@ export const NB_SPECIFIC_FEATURES = {
     'inspection_communication_preference'
   ],
   tidalInfluences: [
-    'bay_of_fundy_extreme_tides',          // Marées extrêmes Baie de Fundy
+    'bay_of_fundy_extreme_tides',
     'tidal_access_considerations',
     'marine_confined_space_timing',
     'emergency_evacuation_tide_dependency'
   ]
-} as const;
+};
 
 // =================== NB REGULATION STANDARDS ===================
 
@@ -106,7 +218,7 @@ export const NB_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       'Not designed or intended for human occupancy',
       'Has restricted means of entry or exit',
       'May become hazardous to any person entering it',
-      'Includes marine vessels, tanks, and forestry equipment'  // NB specific
+      'Includes marine vessels, tanks, and forestry equipment'
     ],
     nbSpecific: {
       maritimeDefinitions: [
@@ -122,7 +234,7 @@ export const NB_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       ]
     },
     penalties: {
-      individual: { min: 295, max: 50000 },    // 2023 amounts
+      individual: { min: 295, max: 50000 },
       corporation: { min: 1475, max: 500000 }
     },
     references: [
@@ -243,19 +355,19 @@ export const NB_ATMOSPHERIC_STANDARDS = {
   
   // NB Maritime Industry Specific
   maritimeSpecific: {
-    benzene: { max: 1, unit: 'ppm' },                // Petroleum operations
-    inert_gas_oxygen: { min: 5, max: 8, unit: '%' }, // Cargo tank inerting
+    benzene: { max: 1, unit: 'ppm' },
+    inert_gas_oxygen: { min: 5, max: 8, unit: '%' },
     cargo_vapors: 'per_material_safety_data_sheet'
   },
   
   // NB Forestry Industry Specific  
   forestrySpecific: {
-    chlorine_dioxide: { max: 0.1, unit: 'ppm' },     // Pulp bleaching
-    sulfur_dioxide: { max: 2, unit: 'ppm' },         // Kraft process
-    methanol: { max: 200, unit: 'ppm' },             // Pulp mill operations
-    turpentine_vapors: { max: 100, unit: 'ppm' }     // Wood processing
+    chlorine_dioxide: { max: 0.1, unit: 'ppm' },
+    sulfur_dioxide: { max: 2, unit: 'ppm' },
+    methanol: { max: 200, unit: 'ppm' },
+    turpentine_vapors: { max: 100, unit: 'ppm' }
   }
-} as const;
+};
 
 // =================== NB PERSONNEL QUALIFICATIONS ===================
 
@@ -358,19 +470,19 @@ export const NB_EMERGENCY_SERVICES = {
   },
   
   maritime: {
-    coastGuard: '1-800-565-1582',            // Maritime Rescue Sub-Centre Halifax
-    marineEmergency: 'VHF Channel 16',        // International distress frequency
+    coastGuard: '1-800-565-1582',
+    marineEmergency: 'VHF Channel 16',
     portAuthority: {
-      saintJohn: '506-636-4869',             // Port Saint John Authority
-      belledune: '506-522-1200'              // Port of Belledune
+      saintJohn: '506-636-4869',
+      belledune: '506-522-1200'
     }
   },
   
   forestry: {
-    dnrFire: '1-800-442-4804',               // Department Natural Resources - Forest Fire
+    dnrFire: '1-800-442-4804',
     pulpMillEmergency: {
-      irvingPulp: '506-648-3200',            // Irving Pulp & Paper Saint John
-      twinRivers: '506-735-6700'             // Twin Rivers Paper Edmundston
+      irvingPulp: '506-648-3200',
+      twinRivers: '506-735-6700'
     }
   },
   
@@ -379,7 +491,7 @@ export const NB_EMERGENCY_SERVICES = {
     marineRescue: 'canadian_coast_guard_auxiliary',
     technicalRescue: 'local_fire_department_technical_rescue'
   }
-} as const;
+};
 
 // =================== COMPLIANCE CHECKING ===================
 
