@@ -790,7 +790,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             }}
             onSubmit={async (data) => {
               const updatedPermits = permits.map(p => 
-                p.id === permit.id ? { ...p, formData: data, status: 'pending' } : p
+                p.id === permit.id ? { ...p, formData: data, status: 'pending' as const } : p
               );
               setPermits(updatedPermits);
               updateFormData(updatedPermits);
