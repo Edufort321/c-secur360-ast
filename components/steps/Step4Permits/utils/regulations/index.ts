@@ -698,11 +698,7 @@ export const validatePersonnelRequirements = (
   };
 };
 
-// =================== EXPORTS PRINCIPAUX ===================
-export {
-  type RegulationConfig
-};
-
+// =================== EXPORT DEFAULT ===================
 export default {
   getRegulationConfig,
   validateRegulatory,
