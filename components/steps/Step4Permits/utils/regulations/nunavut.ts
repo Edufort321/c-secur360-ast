@@ -7,18 +7,139 @@
  * 
  * Territorial Focus: Arctic operations, mining, remote Inuit communities, extreme weather
  */
+"use client";
 
-import type { 
-  RegulationStandard, 
-  PersonnelQualification, 
-  ComplianceCheck,
-  BilingualText,
-  AtmosphericReading,
-  LegalPermit,
-  PersonnelData,
-  ComplianceResult,
-  ActionPlan
-} from '../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+  iu?: string; // Inuktitut pour Nunavut
+}
+
+export type ProvinceCode = 
+  | 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' 
+  | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export interface RegulationStandard {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  section: string;
+  category: string;
+  mandatory: boolean;
+  criteria: string[];
+  nuSpecific?: Record<string, any>;
+  penalties?: {
+    individual: { min: number; max: number; };
+    corporation: { min: number; max: number; };
+  };
+  references?: Array<{
+    type: string;
+    title: string;
+    citation: string;
+    url?: string;
+  }>;
+  standards?: Record<string, { min?: number; max?: number; unit: string; }>;
+  implementation?: {
+    timeline: string;
+    resources: string[];
+    responsibilities: string[];
+  };
+}
+
+export interface PersonnelQualification {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  requirements: string[];
+  nuSpecific?: Record<string, any>;
+  certification: string;
+  validity: string;
+  mandatoryTraining?: string[];
+}
+
+export interface ComplianceCheck {
+  standardId: string;
+  requirementId: string;
+  status: 'compliant' | 'non_compliant' | 'partially_compliant';
+  evidence: string[];
+  gaps?: string[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface AtmosphericReading {
+  gasType: string;
+  value: number;
+  unit: string;
+  timestamp: number;
+  location?: string;
+  equipmentRating?: string[];
+  temperatureCompensation?: boolean;
+}
+
+export interface LegalPermit {
+  id: string;
+  spaceDetails?: {
+    identification?: string;
+    environmentalFactors?: string[];
+  };
+  hazardAssessment?: {
+    environmentalHazards?: string[];
+    traditionalKnowledge?: any;
+    operationSpecific?: Record<string, any>;
+  };
+  entryPermit?: {
+    weatherLimitations?: any;
+    emergencyEvacuation?: string[];
+    communicationPlan?: any;
+  };
+}
+
+export interface PersonnelData {
+  role: string;
+  preferredLanguage?: string;
+  qualifications?: Array<{
+    type: string;
+    valid: boolean;
+  }>;
+}
+
+export interface ComplianceResult {
+  jurisdiction: string;
+  overallCompliance: number;
+  results: ComplianceCheck[];
+  criticalNonCompliance: number;
+  nuSpecific?: Record<string, any>;
+  actionPlan: ActionPlan[];
+}
+
+export interface ActionPlan {
+  standardId: string;
+  action: BilingualText;
+  responsible: string;
+  deadline: string;
+  resources: string[];
+  verification: string;
+}
 
 // =================== NUNAVUT AUTHORITY ===================
 
@@ -28,8 +149,8 @@ export const WSCC_NU_AUTHORITY = {
   jurisdiction: ['NU'] as const,
   website: 'https://www.wscc.nt.ca',
   contactInfo: {
-    phone: '1-800-661-0792',              // Ligne principale WSCC
-    nunavutPhone: '867-979-8500',          // Bureau Nunavut
+    phone: '1-800-661-0792',
+    nunavutPhone: '867-979-8500',
     email: 'prevention@wscc.nt.ca',
     address: 'Qamutiq Building, 2nd Floor, 1120 Brown Street, Iqaluit, NU X0A 0H0'
   },
@@ -38,14 +159,14 @@ export const WSCC_NU_AUTHORITY = {
     { region: 'Rankin Inlet', phone: '867-645-8136', coverage: 'Kivalliq Region, Mining Operations' },
     { region: 'Cambridge Bay', phone: '867-983-4625', coverage: 'Kitikmeot Region, Arctic Operations' }
   ],
-  languages: ['en', 'fr', 'iu'] as const,  // English, French, Inuktitut
-  indigenousLanguages: [                   // Services langues inuit
+  languages: ['en', 'fr', 'iu'] as const,
+  indigenousLanguages: [
     'inuktitut', 'inuinnaqtun', 'inuvialuktun'
   ],
   specializedUnits: [
-    'arctic_mining_safety_division',       // Division sécurité minière arctique
-    'inuit_safety_program',                // Programme sécurité inuit
-    'remote_arctic_operations_unit'        // Unité opérations arctiques isolées
+    'arctic_mining_safety_division',
+    'inuit_safety_program',
+    'remote_arctic_operations_unit'
   ],
   powers: [
     'Workplace inspections and investigations',
@@ -54,61 +175,61 @@ export const WSCC_NU_AUTHORITY = {
     'Administrative penalties up to $1,000,000',
     'Prosecutions under territorial law'
   ]
-} as const;
+};
 
 // =================== NU SPECIFIC FEATURES ===================
 
 export const NU_SPECIFIC_FEATURES = {
   arcticMining: [
-    'baffinland_mary_river_iron_mine',     // Mine fer Mary River Baffinland
-    'agnico_eagle_meadowbank_mine',        // Mine or Meadowbank Agnico Eagle
+    'baffinland_mary_river_iron_mine',
+    'agnico_eagle_meadowbank_mine',
     'hope_bay_gold_mine_tmac',
     'back_river_gold_project',
     'diamond_exploration_projects'
   ],
   extremeArcticConditions: [
-    'temperatures_below_minus_60_celsius',  // Températures -60°C
-    'polar_night_continuous_darkness',     // Nuit polaire continue
-    'midnight_sun_continuous_daylight',    // Soleil minuit continu
+    'temperatures_below_minus_60_celsius',
+    'polar_night_continuous_darkness',
+    'midnight_sun_continuous_daylight',
     'extreme_wind_chill_factors',
     'ground_blizzard_whiteout_conditions'
   ],
   inuitCommunities: [
-    'traditional_knowledge_integration',    // Intégration savoirs traditionnels
-    'inuktitut_safety_communication',      // Communication sécurité inuktitut
-    'community_based_safety_programs',     // Programmes sécurité communautaires
-    'elder_consultation_protocols',        // Protocoles consultation aînés
-    'cultural_safety_considerations'       // Considérations sécurité culturelle
+    'traditional_knowledge_integration',
+    'inuktitut_safety_communication',
+    'community_based_safety_programs',
+    'elder_consultation_protocols',
+    'cultural_safety_considerations'
   ],
   remoteOperations: [
-    'fly_in_fly_out_arctic_operations',    // Opérations rotation arctique
-    'ice_road_seasonal_access_only',       // Accès route glace saisonnier
-    'satellite_communication_dependency',   // Dépendance communication satellite
-    'emergency_evacuation_weather_dependent', // Évacuation urgence dépendante météo
-    'supply_chain_seasonal_limitations'    // Limitations chaîne approvisionnement
+    'fly_in_fly_out_arctic_operations',
+    'ice_road_seasonal_access_only',
+    'satellite_communication_dependency',
+    'emergency_evacuation_weather_dependent',
+    'supply_chain_seasonal_limitations'
   ],
   environmentalChallenges: [
-    'permafrost_throughout_territory',     // Pergélisol partout territoire
-    'arctic_wildlife_polar_bear_encounters', // Rencontres ours polaires
-    'sea_ice_formation_timing',            // Formation glace marine
-    'tundra_ecosystem_protection',         // Protection écosystème toundra
-    'traditional_hunting_fishing_areas'    // Aires chasse pêche traditionnelles
+    'permafrost_throughout_territory',
+    'arctic_wildlife_polar_bear_encounters',
+    'sea_ice_formation_timing',
+    'tundra_ecosystem_protection',
+    'traditional_hunting_fishing_areas'
   ],
   emergencyResponse: [
-    'medevac_weather_dependent_evacuation', // Évacuation médicale dépendante météo
-    'volunteer_community_emergency_response', // Réponse urgence bénévole communautaire
-    'search_rescue_joint_task_force_north', // Recherche sauvetage force task nord
-    'satellite_emergency_beacon_dependency', // Dépendance balise urgence satellite
-    'traditional_survival_skills_integration' // Intégration compétences survie traditionnelles
+    'medevac_weather_dependent_evacuation',
+    'volunteer_community_emergency_response',
+    'search_rescue_joint_task_force_north',
+    'satellite_emergency_beacon_dependency',
+    'traditional_survival_skills_integration'
   ],
   regulatoryIntegration: [
-    'nunavut_land_claims_agreement',       // Accord revendications territoriales Nunavut
-    'inuit_impact_benefit_agreements',     // Accords impact bénéfice inuit
-    'traditional_territory_protocols',     // Protocoles territoire traditionnel
-    'federal_territorial_jurisdiction_coordination', // Coordination juridiction fédérale-territoriale
-    'environmental_assessment_nunavut_impact_review_board' // Évaluation environnementale NIRB
+    'nunavut_land_claims_agreement',
+    'inuit_impact_benefit_agreements',
+    'traditional_territory_protocols',
+    'federal_territorial_jurisdiction_coordination',
+    'environmental_assessment_nunavut_impact_review_board'
   ]
-} as const;
+};
 
 // =================== NU REGULATION STANDARDS ===================
 
@@ -118,7 +239,7 @@ export const NU_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
     title: { 
       en: 'Confined Space Definition for Arctic Operations', 
       fr: 'Définition d\'Espace Clos pour Opérations Arctiques',
-      iu: 'Anerniqsaijuq Inuksugait Ukiulingnik Pijariit'  // Inuktitut
+      iu: 'Anerniqsaijuq Inuksugait Ukiulingnik Pijariit'
     },
     authority: 'WSCC',
     jurisdiction: ['NU'],
@@ -130,7 +251,7 @@ export const NU_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       'Not designed or intended for human occupancy',
       'Has limited means for entry or exit',
       'May become hazardous to any person entering it',
-      'Includes arctic mining and remote community facilities'  // NU specific
+      'Includes arctic mining and remote community facilities'
     ],
     nuSpecific: {
       arcticMiningDefinitions: [
@@ -153,7 +274,7 @@ export const NU_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       ]
     },
     penalties: {
-      individual: { min: 1000, max: 300000 },   // Higher penalties for arctic conditions
+      individual: { min: 1000, max: 300000 },
       corporation: { min: 10000, max: 2000000 }
     },
     references: [
@@ -354,18 +475,18 @@ export const NU_ATMOSPHERIC_STANDARDS = {
   
   // NU Arctic Mining Specific
   arcticMiningSpecific: {
-    methane_permafrost: { max: 0.5, unit: '%' },        // Permafrost methane release
-    radon_uranium: { max: 0.1, unit: 'pCi/L' },         // Uranium mining radon
-    diesel_exhaust_arctic: { max: 1.0, unit: 'mg/m³' }, // Arctic diesel equipment
-    gold_processing_cyanide: { max: 4.7, unit: 'mg/m³' }, // Gold processing
+    methane_permafrost: { max: 0.5, unit: '%' },
+    radon_uranium: { max: 0.1, unit: 'pCi/L' },
+    diesel_exhaust_arctic: { max: 1.0, unit: 'mg/m³' },
+    gold_processing_cyanide: { max: 4.7, unit: 'mg/m³' },
     flotation_chemicals: 'per_material_safety_data_sheet'
   },
   
   // NU Community Operations Specific  
   communityOperationsSpecific: {
-    heating_fuel_vapors: { max: 100, unit: 'mg/m³' },   // Community heating fuel
-    sewage_methane: { max: 1000, unit: 'ppm' },         // Sewage lagoon methane
-    generator_exhaust: { max: 25, unit: 'ppm' },        // Community generator CO
+    heating_fuel_vapors: { max: 100, unit: 'mg/m³' },
+    sewage_methane: { max: 1000, unit: 'ppm' },
+    generator_exhaust: { max: 25, unit: 'ppm' },
     traditional_food_gases: 'monitoring_required_fermentation'
   },
   
@@ -376,7 +497,7 @@ export const NU_ATMOSPHERIC_STANDARDS = {
     calibrationFrequency: 'daily_calibration_extreme_conditions',
     moistureCompensation: 'humidity_freeze_adjustment_factors'
   }
-} as const;
+};
 
 // =================== NU PERSONNEL QUALIFICATIONS ===================
 
@@ -529,38 +650,38 @@ export const NU_EMERGENCY_SERVICES = {
   },
   
   territorialServices: {
-    emergencyMeasures: '867-975-5403',        // NU Emergency Management
-    healthEmergency: '867-975-5700',          // Health and Social Services
-    searchRescue: '1-800-267-7270',           // Joint Rescue Coordination Centre Trenton
-    environmentalEmergency: '867-975-7700',   // Environment
-    arcticEmergency: '867-975-6000'           // Arctic Emergency Response
+    emergencyMeasures: '867-975-5403',
+    healthEmergency: '867-975-5700',
+    searchRescue: '1-800-267-7270',
+    environmentalEmergency: '867-975-7700',
+    arcticEmergency: '867-975-6000'
   },
   
   mining: {
     mineRescue: '911_request_mine_rescue_team',
     arcticMines: {
-      baffinlandMaryRiver: '867-899-2342',    // Baffinland Iron Mines
-      agnicoEagleMeadowbank: '867-462-7800',  // Agnico Eagle Mines
-      hopeBayGold: '867-873-5281'            // TMAC Resources Hope Bay
+      baffinlandMaryRiver: '867-899-2342',
+      agnicoEagleMeadowbank: '867-462-7800',
+      hopeBayGold: '867-873-5281'
     },
-    miningAssociation: '867-920-2267',        // NWT & Nunavut Chamber of Mines
-    arcticTransportation: '867-975-7800'     // Department of Economic Development and Transportation
+    miningAssociation: '867-920-2267',
+    arcticTransportation: '867-975-7800'
   },
   
   remoteArctic: {
-    jointTaskForceNorth: '1-800-267-7270',   // Joint Task Force North - Yellowknife
+    jointTaskForceNorth: '1-800-267-7270',
     arcticResponse: {
-      iqaluitBase: '867-979-6262',           // Iqaluit SAR base
-      rankinInletBase: '867-645-2800',       // Rankin Inlet health centre
-      cambridgeBayBase: '867-983-4500'       // Cambridge Bay health centre
+      iqaluitBase: '867-979-6262',
+      rankinInletBase: '867-645-2800',
+      cambridgeBayBase: '867-983-4500'
     },
     satelliteEmergency: {
-      cospas: 'cospas_sarsat_406_mhz_beacon', // International satellite SAR
-      spot: 'spot_satellite_messenger_sos',   // SPOT emergency messaging
-      inreach: 'garmin_inreach_satellite_sos' // Garmin satellite SOS
+      cospas: 'cospas_sarsat_406_mhz_beacon',
+      spot: 'spot_satellite_messenger_sos',
+      inreach: 'garmin_inreach_satellite_sos'
     },
     traditionaResponse: {
-      canadianRangers: 'canadian_rangers_arctic_patrol', // Canadian Rangers Arctic
+      canadianRangers: 'canadian_rangers_arctic_patrol',
       inuitGuides: 'community_inuit_guide_emergency_support'
     }
   },
@@ -568,10 +689,10 @@ export const NU_EMERGENCY_SERVICES = {
   inuitCommunities: {
     hamletCouncils: 'local_hamlet_council_emergency_coordinator',
     inuitOrganizations: {
-      nunavutTunngavik: '867-975-4900',      // Nunavut Tunngavik Incorporated
-      qikiqtaniInuit: '867-975-8400',        // Qikiqtani Inuit Association
-      kivalliqInuit: '867-645-4800',         // Kivalliq Inuit Association
-      kitikmeotInuit: '867-983-2458'         // Kitikmeot Inuit Association
+      nunavutTunngavik: '867-975-4900',
+      qikiqtaniInuit: '867-975-8400',
+      kivalliqInuit: '867-645-4800',
+      kitikmeotInuit: '867-983-2458'
     },
     elders: 'community_elder_traditional_knowledge_emergency',
     traditionalKnowledge: 'inuit_qaujimajatuqangit_emergency_protocols'
@@ -583,7 +704,7 @@ export const NU_EMERGENCY_SERVICES = {
     mineRescue: 'territorial_mine_rescue_association',
     traditionalRescue: 'canadian_rangers_inuit_guides_coordination'
   }
-} as const;
+};
 
 // =================== COMPLIANCE CHECKING ===================
 
@@ -762,29 +883,35 @@ function getNUCorrectiveAction(requirementId: string, operationType?: string): B
   const actions: Record<string, BilingualText> = {
     arctic_confined_space_identification: {
       en: `Identify and classify all confined spaces in ${operationType || 'arctic'} operations with permafrost and cultural considerations`,
-      fr: `Identifier et classifier tous les espaces clos dans les opérations ${operationType || 'arctiques'} avec considérations pergélisol et culturelles`
+      fr: `Identifier et classifier tous les espaces clos dans les opérations ${operationType || 'arctiques'} avec considérations pergélisol et culturelles`,
+      iu: `Anerniqsaijut takujuq pausimajut ${operationType || 'ukiulingnik'} pijariit inuit qaujimajatuqangit`
     },
     arctic_hazard_assessment: {
       en: `Conduct comprehensive hazard assessment including arctic conditions and traditional knowledge for ${operationType || 'general'} operations`,
-      fr: `Effectuer évaluation complète des dangers incluant conditions arctiques et savoirs traditionnels pour opérations ${operationType || 'générales'}`
+      fr: `Effectuer évaluation complète des dangers incluant conditions arctiques et savoirs traditionnels pour opérations ${operationType || 'générales'}`,
+      iu: `Anernirnik isumaqatigiit ukiulingnik inuit qaujimajatuqangit ${operationType || 'tamanik'} pijarijit`
     },
     atmospheric_testing: {
       en: `Perform atmospheric testing with arctic-rated equipment and temperature compensation for ${operationType || 'general'} operations`,
-      fr: `Effectuer tests atmosphériques avec équipement arctique et compensation température pour opérations ${operationType || 'générales'}`
+      fr: `Effectuer tests atmosphériques avec équipement arctique et compensation température pour opérations ${operationType || 'générales'}`,
+      iu: `Anerniq qimmisimajuq ukiulingnik pijariit ${operationType || 'tamanik'} atilirijit`
     },
     entry_permit: {
       en: `Implement entry permit system with arctic conditions and ${operationType || 'general'} operation requirements`,
-      fr: `Implémenter système permis d'entrée avec conditions arctiques et exigences opérations ${operationType || 'générales'}`
+      fr: `Implémenter système permis d'entrée avec conditions arctiques et exigences opérations ${operationType || 'générales'}`,
+      iu: `Itijaujuq papiit sila ukiulingnik ${operationType || 'tamanik'} pijariit atuniqaqtit`
     },
     attendant_present: {
       en: `Assign qualified attendant with arctic training and cultural competency for ${operationType || 'general'} operations`,
-      fr: `Assigner surveillant qualifié avec formation arctique et compétence culturelle pour opérations ${operationType || 'générales'}`
+      fr: `Assigner surveillant qualifié avec formation arctique et compétence culturelle pour opérations ${operationType || 'générales'}`,
+      iu: `Saqijuq ilisaijuq ukiulingnik inuit qaujimajatuqangit ${operationType || 'tamanik'} pijariit`
     }
   };
   
   return actions[requirementId] || {
     en: 'Address identified non-compliance according to WSCC requirements for arctic operations',
-    fr: 'Traiter non-conformité identifiée selon exigences WSCC pour opérations arctiques'
+    fr: 'Traiter non-conformité identifiée selon exigences WSCC pour opérations arctiques',
+    iu: 'Angirutivut WSCC malikkuaq ukiulingnik pijariit'
   };
 }
 
@@ -919,7 +1046,7 @@ function checkArcticAttendantRequirements(personnel: PersonnelData[], operationT
   const attendantHasArcticTraining = personnel
     .filter(p => p.role === 'attendant')
     .every(p => hasArcticSpecificTraining(p, operationType));
-  const hasMinimumTeam = personnel.filter(p => p.role === 'attendant').length >= 3; // Arctic requires minimum 3-person team
+  const hasMinimumTeam = personnel.filter(p => p.role === 'attendant').length >= 3;
   const hasCulturalCompetency = personnel
     .filter(p => p.role === 'attendant')
     .some(p => p.qualifications?.some(q => q.type === 'inuit_cultural_safety'));
