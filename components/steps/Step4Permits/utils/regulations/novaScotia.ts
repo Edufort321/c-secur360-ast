@@ -7,18 +7,135 @@
  * 
  * Provincial Focus: Maritime operations, offshore oil & gas, fisheries, forestry, shipbuilding
  */
+"use client";
 
-import type { 
-  RegulationStandard, 
-  PersonnelQualification, 
-  ComplianceCheck,
-  BilingualText,
-  AtmosphericReading,
-  LegalPermit,
-  PersonnelData,
-  ComplianceResult,
-  ActionPlan
-} from '../types';
+// Types définis localement pour éviter les dépendances manquantes
+export interface BilingualText {
+  fr: string;
+  en: string;
+}
+
+export type ProvinceCode = 
+  | 'QC' | 'ON' | 'AB' | 'BC' | 'SK' | 'MB' 
+  | 'NB' | 'NS' | 'PE' | 'NL' | 'NT' | 'NU' | 'YT';
+
+export type GasType = 
+  | 'oxygen'
+  | 'carbon_monoxide'
+  | 'hydrogen_sulfide'
+  | 'methane'
+  | 'carbon_dioxide'
+  | 'ammonia'
+  | 'chlorine'
+  | 'nitrogen_dioxide'
+  | 'sulfur_dioxide'
+  | 'propane'
+  | 'benzene'
+  | 'toluene'
+  | 'xylene'
+  | 'acetone'
+  | 'formaldehyde';
+
+export interface RegulationStandard {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  section: string;
+  category: string;
+  mandatory: boolean;
+  criteria: string[];
+  nsSpecific?: Record<string, any>;
+  penalties?: {
+    individual: { min: number; max: number; };
+    corporation: { min: number; max: number; };
+  };
+  references?: Array<{
+    type: string;
+    title: string;
+    citation: string;
+    url?: string;
+  }>;
+  standards?: Record<string, { min?: number; max?: number; unit: string; }>;
+  implementation?: {
+    timeline: string;
+    resources: string[];
+    responsibilities: string[];
+  };
+}
+
+export interface PersonnelQualification {
+  id: string;
+  title: BilingualText;
+  authority: string;
+  jurisdiction: ProvinceCode[];
+  requirements: string[];
+  nsSpecific?: Record<string, any>;
+  certification: string;
+  validity: string;
+  mandatoryTraining?: string[];
+}
+
+export interface ComplianceCheck {
+  standardId: string;
+  requirementId: string;
+  status: 'compliant' | 'non_compliant' | 'partially_compliant';
+  evidence: string[];
+  gaps?: string[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface AtmosphericReading {
+  gasType: string;
+  value: number;
+  unit: string;
+  timestamp: number;
+  location?: string;
+  equipmentRating?: string[];
+}
+
+export interface LegalPermit {
+  id: string;
+  spaceDetails?: {
+    identification?: string;
+    environmentalFactors?: string[];
+  };
+  hazardAssessment?: {
+    environmentalHazards?: string[];
+    industrySpecific?: Record<string, any>;
+  };
+  entryPermit?: {
+    weatherLimitations?: any;
+    maritimeCoordination?: any;
+  };
+}
+
+export interface PersonnelData {
+  role: string;
+  preferredLanguage?: string;
+  qualifications?: Array<{
+    type: string;
+    valid: boolean;
+  }>;
+}
+
+export interface ComplianceResult {
+  jurisdiction: string;
+  overallCompliance: number;
+  results: ComplianceCheck[];
+  criticalNonCompliance: number;
+  nsSpecific?: Record<string, any>;
+  actionPlan: ActionPlan[];
+}
+
+export interface ActionPlan {
+  standardId: string;
+  action: BilingualText;
+  responsible: string;
+  deadline: string;
+  resources: string[];
+  verification: string;
+}
 
 // =================== NOVA SCOTIA AUTHORITY ===================
 
@@ -28,8 +145,8 @@ export const WCB_NS_AUTHORITY = {
   jurisdiction: ['NS'] as const,
   website: 'https://www.wcb.ns.ca',
   contactInfo: {
-    phone: '1-800-870-3331',              // Ligne principale WCB NS
-    preventionPhone: '902-491-8999',       // Services prévention
+    phone: '1-800-870-3331',
+    preventionPhone: '902-491-8999',
     email: 'prevention@wcb.ns.ca',
     address: '5668 South Street, Halifax, NS B3J 2A4'
   },
@@ -40,12 +157,12 @@ export const WCB_NS_AUTHORITY = {
     { region: 'Truro', phone: '902-893-7281', coverage: 'Northern NS, Cumberland County' },
     { region: 'Yarmouth', phone: '902-742-7705', coverage: 'Southwestern NS, Fishing Industry' }
   ],
-  languages: ['en', 'fr'] as const,        // English primary, French services available
+  languages: ['en', 'fr'] as const,
   specializedUnits: [
-    'offshore_safety_division',             // Division sécurité offshore
-    'maritime_safety_unit',                 // Unité sécurité maritime
-    'forestry_safety_program',              // Programme sécurité forestière
-    'fisheries_safety_initiative'           // Initiative sécurité pêches
+    'offshore_safety_division',
+    'maritime_safety_unit',
+    'forestry_safety_program',
+    'fisheries_safety_initiative'
   ],
   powers: [
     'Workplace inspections and investigations',
@@ -54,20 +171,20 @@ export const WCB_NS_AUTHORITY = {
     'Administrative penalties',
     'Prosecutions under provincial law'
   ]
-} as const;
+};
 
 // =================== NS SPECIFIC FEATURES ===================
 
 export const NS_SPECIFIC_FEATURES = {
   maritimeOperations: [
-    'shipbuilding_irving_shipyard',        // Chantier naval Irving
+    'shipbuilding_irving_shipyard',
     'port_operations_halifax_sydney',
     'marine_vessel_maintenance_repair',
     'offshore_supply_vessel_operations',
     'coast_guard_vessel_maintenance'
   ],
   offshoreOperations: [
-    'sable_offshore_energy_project',       // Projet Sable Offshore
+    'sable_offshore_energy_project',
     'deep_panuke_offshore_platform',
     'offshore_exploration_drilling',
     'subsea_pipeline_operations',
@@ -88,7 +205,7 @@ export const NS_SPECIFIC_FEATURES = {
     'forest_harvesting_equipment'
   ],
   tidalInfluences: [
-    'bay_of_fundy_extreme_tides',          // Marées extrêmes Baie de Fundy
+    'bay_of_fundy_extreme_tides',
     'tidal_power_generation_facilities',
     'marine_confined_space_timing',
     'tidal_access_considerations'
@@ -100,12 +217,12 @@ export const NS_SPECIFIC_FEATURES = {
     'coastal_wind_exposure'
   ],
   regulatoryIntegration: [
-    'canada_nova_scotia_offshore_petroleum_board', // CNSOPB
+    'canada_nova_scotia_offshore_petroleum_board',
     'transport_canada_marine_safety',
     'fisheries_oceans_canada_integration',
     'environment_climate_change_canada'
   ]
-} as const;
+};
 
 // =================== NS REGULATION STANDARDS ===================
 
@@ -126,7 +243,7 @@ export const NS_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       'Not designed or intended for human occupancy',
       'Has restricted means for entry or exit',
       'May become hazardous to any person entering it',
-      'Includes marine vessels, offshore platforms, and coastal facilities'  // NS specific
+      'Includes marine vessels, offshore platforms, and coastal facilities'
     ],
     nsSpecific: {
       maritimeDefinitions: [
@@ -155,7 +272,7 @@ export const NS_REGULATION_STANDARDS: Record<string, RegulationStandard> = {
       ]
     },
     penalties: {
-      individual: { min: 500, max: 100000 },   // 2023 amounts
+      individual: { min: 500, max: 100000 },
       corporation: { min: 5000, max: 1000000 }
     },
     references: [
@@ -368,37 +485,37 @@ export const NS_ATMOSPHERIC_STANDARDS = {
   
   // NS Maritime Industry Specific
   maritimeSpecific: {
-    benzene_fuel: { max: 1, unit: 'ppm' },              // Marine fuel operations
-    inert_gas_oxygen: { min: 5, max: 8, unit: '%' },    // Cargo tank inerting
+    benzene_fuel: { max: 1, unit: 'ppm' },
+    inert_gas_oxygen: { min: 5, max: 8, unit: '%' },
     cargo_vapors: 'per_material_safety_data_sheet',
     ballast_gases: 'continuous_monitoring_required'
   },
   
   // NS Offshore Industry Specific  
   offshoreSpecific: {
-    hydrogen_sulfide_sour: { max: 5, unit: 'ppm' },     // Sour gas offshore
-    methane_natural_gas: { max: 1, unit: '%' },         // Natural gas operations
+    hydrogen_sulfide_sour: { max: 5, unit: 'ppm' },
+    methane_natural_gas: { max: 1, unit: '%' },
     drilling_mud_gases: 'per_drilling_program_requirements',
-    petroleum_vapors: { max: 100, unit: 'mg/m³' }       // Petroleum processing
+    petroleum_vapors: { max: 100, unit: 'mg/m³' }
   },
   
   // NS Fisheries Industry Specific
   fisheriesSpecific: {
-    ammonia_refrigeration: { max: 25, unit: 'ppm' },    // Fish processing refrigeration
-    carbon_dioxide_ref: { max: 5000, unit: 'ppm' },     // CO2 refrigeration systems
+    ammonia_refrigeration: { max: 25, unit: 'ppm' },
+    carbon_dioxide_ref: { max: 5000, unit: 'ppm' },
     decomposition_gases: 'continuous_biological_monitoring',
     fish_hold_atmosphere: 'oxygen_depletion_monitoring'
   },
   
   // NS Forestry Industry Specific
   forestrySpecific: {
-    chlorine_dioxide: { max: 0.1, unit: 'ppm' },        // Pulp bleaching
-    sulfur_dioxide: { max: 2, unit: 'ppm' },            // Kraft process
-    methanol: { max: 200, unit: 'ppm' },                // Pulp mill operations
-    wood_dust: { max: 1, unit: 'mg/m³' },               // Respirable wood dust
-    turpentine: { max: 100, unit: 'ppm' }               // Wood processing vapors
+    chlorine_dioxide: { max: 0.1, unit: 'ppm' },
+    sulfur_dioxide: { max: 2, unit: 'ppm' },
+    methanol: { max: 200, unit: 'ppm' },
+    wood_dust: { max: 1, unit: 'mg/m³' },
+    turpentine: { max: 100, unit: 'ppm' }
   }
-} as const;
+};
 
 // =================== NS PERSONNEL QUALIFICATIONS ===================
 
@@ -545,41 +662,41 @@ export const NS_EMERGENCY_SERVICES = {
   },
   
   maritime: {
-    coastGuard: '1-800-565-1582',            // Maritime Rescue Sub-Centre Halifax
-    marineEmergency: 'VHF Channel 16',        // International distress frequency
+    coastGuard: '1-800-565-1582',
+    marineEmergency: 'VHF Channel 16',
     portAuthorities: {
-      halifax: '902-426-8222',               // Halifax Port Authority
-      sydney: '902-564-7575',                // Sydney Port Corporation
-      yarmouth: '902-742-6635'               // Port of Yarmouth
+      halifax: '902-426-8222',
+      sydney: '902-564-7575',
+      yarmouth: '902-742-6635'
     },
     marineRescue: 'canadian_coast_guard_auxiliary_nova_scotia'
   },
   
   offshore: {
-    cnsopb: '902-422-5588',                  // Canada-Nova Scotia Offshore Petroleum Board
-    offshoreEmergency: '1-800-565-1633',     // Offshore emergency 24/7
+    cnsopb: '902-422-5588',
+    offshoreEmergency: '1-800-565-1633',
     helicopterServices: {
-      chc: '902-873-3500',                   // CHC Helicopter - Halifax
-      exxonMobil: '902-420-4000'            // ExxonMobil helicopter operations
+      chc: '902-873-3500',
+      exxonMobil: '902-420-4000'
     },
     platformEmergency: 'platform_specific_emergency_numbers'
   },
   
   fisheries: {
-    fisheriesSafety: '902-424-7773',         // NS Fisheries and Aquaculture Safety
-    marineEmergency: '1-800-565-1582',       // Coast Guard Marine Communications
-    fishingVesselSafety: '902-424-2522',     // Transport Canada Marine Safety
-    aquacultureEmergency: '902-424-4560'    // Aquaculture Emergency Response
+    fisheriesSafety: '902-424-7773',
+    marineEmergency: '1-800-565-1582',
+    fishingVesselSafety: '902-424-2522',
+    aquacultureEmergency: '902-424-4560'
   },
   
   forestry: {
-    forestryEmergency: '1-800-565-2224',     // NS Department of Lands and Forestry
+    forestryEmergency: '1-800-565-2224',
     pulpMillEmergency: {
-      northernPulp: '902-752-8927',          // Northern Pulp Nova Scotia
-      portHawkesbury: '902-625-3400'        // Port Hawkesbury Paper
+      northernPulp: '902-752-8927',
+      portHawkesbury: '902-625-3400'
     },
-    forestFireEmergency: '1-800-565-2224',   // Forest fire emergency
-    sawmillAssociation: '902-429-4255'      // Forest Nova Scotia
+    forestFireEmergency: '1-800-565-2224',
+    sawmillAssociation: '902-429-4255'
   },
   
   specializedRescue: {
@@ -588,7 +705,7 @@ export const NS_EMERGENCY_SERVICES = {
     offshoreEvacuation: 'chc_helicopter_search_rescue',
     industrialRescue: 'halifax_regional_fire_technical_rescue'
   }
-} as const;
+};
 
 // =================== COMPLIANCE CHECKING ===================
 
