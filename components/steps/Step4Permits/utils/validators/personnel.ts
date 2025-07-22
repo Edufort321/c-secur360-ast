@@ -1198,6 +1198,9 @@ function createEmptyPersonnelValidationResult(message: string): PersonnelValidat
 // Export des constantes pour l'index
 export { ROLE_REQUIREMENTS, TRAINING_REFRESH_INTERVALS, CERTIFICATION_VALIDITY, MEDICAL_EXAM_INTERVALS };
 
+// Export des fonctions principales
+export { validatePersonnel, validatePersonnelTeam };
+
 export default {
   validatePersonnel,
   validatePersonnelTeam,
