@@ -866,7 +866,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     );
   };
 
-  // =================== RENDU PRINCIPAL (MÊME STYLE QUE TES STEPS) ===================
+  // =================== RENDU PRINCIPAL ===================
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
       <div className="max-w-7xl mx-auto">
@@ -952,6 +952,19 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
           </div>
         </div>
 
+        {/* Debug info */}
+        <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-xl">
+          <h3 className="text-yellow-300 font-medium mb-2">🔍 Debug Info:</h3>
+          <div className="text-yellow-200 text-sm space-y-1">
+            <div>Total permits générés: {permits.length}</div>
+            <div>Permits filtrés: {filteredPermits.length}</div>
+            <div>Search term: "{searchTerm}"</div>
+            <div>Selected category: {selectedCategory}</div>
+            <div>Province: {province}</div>
+            <div>Language: {language}</div>
+          </div>
+        </div>
+
         {/* Grille des permis dans le style de tes Steps */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredPermits.map(permit => {
@@ -992,6 +1005,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                     </div>
                     <div className="text-blue-400 text-xs">
                       {permit.authority}
+                    </div>
+                    <div className="text-slate-300 text-xs mt-1">
+                      {permit.description}
                     </div>
                   </div>
                   
