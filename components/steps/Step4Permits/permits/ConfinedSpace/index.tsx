@@ -715,8 +715,8 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   const handleInputChange = (section: string, field: string, value: any) => {
     setPermitData(prev => ({
       ...prev,
-      [section]: typeof prev[section] === 'object' 
-        ? { ...prev[section], [field]: value }
+      [section]: typeof (prev as any)[section] === 'object' 
+        ? { ...(prev as any)[section], [field]: value }
         : value
     }));
   };
@@ -727,7 +727,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       personnel: {
         ...prev.personnel,
         [role]: {
-          ...prev.personnel[role],
+          ...(prev.personnel as any)[role],
           [field]: value
         }
       }
