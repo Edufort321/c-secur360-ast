@@ -125,7 +125,7 @@ const PERMIT_TYPES_CONFIG = {
     estimatedTime: 45,
     tags: { fr: ['espace', 'atmosphère', 'urgence'], en: ['space', 'atmosphere', 'emergency'] },
     legislation: 'RSST Art. 302-317, CSA Z1006',
-    formComponent: ConfinedSpaceForm,
+    formComponent: ConfinedSpaceFormComponent,
     requiredSections: ['identification', 'personnel', 'atmospheric', 'procedures', 'equipment', 'validation'],
     provinces: ['QC', 'ON', 'BC', 'AB', 'SK', 'MB', 'NB', 'NS', 'PE', 'NL'] as ProvinceCode[]
   },
