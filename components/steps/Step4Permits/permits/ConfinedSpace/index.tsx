@@ -108,7 +108,7 @@ interface HazardAssessment {
 }
 
 // =================== RÉGLEMENTATIONS PROVINCIALES ===================
-const PROVINCIAL_REGULATIONS = {
+const PROVINCIAL_REGULATIONS: Record<ProvinceCode, any> = {
   QC: {
     name: 'Québec',
     authority: 'CNESST',
@@ -144,8 +144,322 @@ const PROVINCIAL_REGULATIONS = {
       { name: 'CNESST Urgence', role: 'Accidents travail', phone: '1-844-838-0808', available_24h: true },
       { name: 'Centre Anti-Poison QC', role: 'Intoxications', phone: '1-800-463-5060', available_24h: true }
     ]
+  },
+  ON: {
+    name: 'Ontario',
+    authority: 'Ministry of Labour',
+    code: 'O. Reg. 632/05',
+    url: 'https://www.ontario.ca/laws/regulation/632',
+    atmospheric_testing: {
+      frequency_minutes: 30,
+      continuous_required: true,
+      pre_entry_required: true,
+      gases: ['O2', 'LEL', 'H2S', 'CO'],
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 20 },
+        co: { max: 35, critical: 200 }
+      }
+    },
+    personnel: {
+      attendant_required: true,
+      rescue_team_standby: true,
+      max_entrants: 'selon évaluation',
+      qualified_person_required: true
+    },
+    documentation: [
+      'Entry permit required',
+      'Continuous atmospheric monitoring',
+      'Rescue plan approved',
+      'Equipment verification',
+      'Personnel training documented'
+    ],
+    emergency_contacts: [
+      { name: '911', role: 'Emergency', phone: '911', available_24h: true },
+      { name: 'MOL Emergency', role: 'Workplace incidents', phone: '1-877-202-0008', available_24h: true }
+    ]
+  },
+  BC: {
+    name: 'British Columbia',
+    authority: 'WorkSafeBC',
+    code: 'Part 9 - Confined Spaces',
+    url: 'https://www.worksafebc.com/en/law-policy/occupational-health-safety/searchable-ohs-regulation/ohs-regulation/part-09-confined-spaces',
+    atmospheric_testing: {
+      frequency_minutes: 30,
+      continuous_required: true,
+      pre_entry_required: true,
+      gases: ['O2', 'LEL', 'H2S', 'CO'],
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 20 },
+        co: { max: 35, critical: 200 }
+      }
+    },
+    personnel: {
+      attendant_required: true,
+      rescue_team_standby: true,
+      max_entrants: 'selon évaluation',
+      qualified_person_required: true
+    },
+    documentation: [
+      'Entry permit required',
+      'Atmospheric testing documented',
+      'Emergency procedures',
+      'Equipment checks',
+      'Training records'
+    ],
+    emergency_contacts: [
+      { name: '911', role: 'Emergency', phone: '911', available_24h: true },
+      { name: 'WorkSafeBC Emergency', role: 'Workplace incidents', phone: '1-888-621-7233', available_24h: true }
+    ]
+  },
+  AB: {
+    name: 'Alberta',
+    authority: 'Alberta Occupational Health and Safety',
+    code: 'Part 46 - Confined Space Entry',
+    url: 'https://open.alberta.ca/publications/occupational-health-and-safety-regulation',
+    atmospheric_testing: {
+      frequency_minutes: 30,
+      continuous_required: true,
+      pre_entry_required: true,
+      gases: ['O2', 'LEL', 'H2S', 'CO'],
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 20 },
+        co: { max: 35, critical: 200 }
+      }
+    },
+    personnel: {
+      attendant_required: true,
+      rescue_team_standby: true,
+      max_entrants: 'selon évaluation',
+      qualified_person_required: true
+    },
+    documentation: [
+      'Entry permit required',
+      'Atmospheric monitoring',
+      'Emergency procedures',
+      'Equipment verification',
+      'Training documentation'
+    ],
+    emergency_contacts: [
+      { name: '911', role: 'Emergency', phone: '911', available_24h: true },
+      { name: 'Alberta OHS', role: 'Workplace safety', phone: '1-866-415-8690', available_24h: true }
+    ]
+  },
+  SK: {
+    name: 'Saskatchewan',
+    authority: 'Saskatchewan Employment Standards',
+    code: 'Part XVIII - Confined Spaces',
+    url: 'https://www.saskatchewan.ca/government/government-structure/boards-commissions-and-agencies/saskatchewan-employment-standards',
+    atmospheric_testing: {
+      frequency_minutes: 30,
+      continuous_required: true,
+      pre_entry_required: true,
+      gases: ['O2', 'LEL', 'H2S', 'CO'],
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 20 },
+        co: { max: 35, critical: 200 }
+      }
+    },
+    personnel: {
+      attendant_required: true,
+      rescue_team_standby: true,
+      max_entrants: 'selon évaluation',
+      qualified_person_required: true
+    },
+    documentation: [
+      'Entry permit required',
+      'Atmospheric testing',
+      'Emergency plan',
+      'Equipment checks',
+      'Training records'
+    ],
+    emergency_contacts: [
+      { name: '911', role: 'Emergency', phone: '911', available_24h: true },
+      { name: 'SK Employment Standards', role: 'Workplace safety', phone: '1-800-567-7233', available_24h: true }
+    ]
+  },
+  MB: {
+    name: 'Manitoba',
+    authority: 'Workplace Safety and Health',
+    code: 'Part 13 - Confined Spaces',
+    url: 'https://www.gov.mb.ca/labour/safety/',
+    atmospheric_testing: {
+      frequency_minutes: 30,
+      continuous_required: true,
+      pre_entry_required: true,
+      gases: ['O2', 'LEL', 'H2S', 'CO'],
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 20 },
+        co: { max: 35, critical: 200 }
+      }
+    },
+    personnel: {
+      attendant_required: true,
+      rescue_team_standby: true,
+      max_entrants: 'selon évaluation',
+      qualified_person_required: true
+    },
+    documentation: [
+      'Entry permit required',
+      'Atmospheric monitoring',
+      'Emergency procedures',
+      'Equipment verification',
+      'Training documentation'
+    ],
+    emergency_contacts: [
+      { name: '911', role: 'Emergency', phone: '911', available_24h: true },
+      { name: 'MB Safety & Health', role: 'Workplace incidents', phone: '1-855-957-7233', available_24h: true }
+    ]
+  },
+  NB: {
+    name: 'New Brunswick',
+    authority: 'WorkSafeNB',
+    code: 'General Regulation 91-191',
+    url: 'https://www.worksafenb.ca/',
+    atmospheric_testing: {
+      frequency_minutes: 30,
+      continuous_required: true,
+      pre_entry_required: true,
+      gases: ['O2', 'LEL', 'H2S', 'CO'],
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 20 },
+        co: { max: 35, critical: 200 }
+      }
+    },
+    personnel: {
+      attendant_required: true,
+      rescue_team_standby: true,
+      max_entrants: 'selon évaluation',
+      qualified_person_required: true
+    },
+    documentation: [
+      'Entry permit required',
+      'Atmospheric testing',
+      'Emergency plan',
+      'Equipment checks',
+      'Training records'
+    ],
+    emergency_contacts: [
+      { name: '911', role: 'Emergency', phone: '911', available_24h: true },
+      { name: 'WorkSafeNB', role: 'Workplace safety', phone: '1-800-222-9775', available_24h: true }
+    ]
+  },
+  NS: {
+    name: 'Nova Scotia',
+    authority: 'Labour Standards',
+    code: 'Occupational Health and Safety Regulations',
+    url: 'https://novascotia.ca/lae/healthandsafety/',
+    atmospheric_testing: {
+      frequency_minutes: 30,
+      continuous_required: true,
+      pre_entry_required: true,
+      gases: ['O2', 'LEL', 'H2S', 'CO'],
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 20 },
+        co: { max: 35, critical: 200 }
+      }
+    },
+    personnel: {
+      attendant_required: true,
+      rescue_team_standby: true,
+      max_entrants: 'selon évaluation',
+      qualified_person_required: true
+    },
+    documentation: [
+      'Entry permit required',
+      'Atmospheric monitoring',
+      'Emergency procedures',
+      'Equipment verification',
+      'Training documentation'
+    ],
+    emergency_contacts: [
+      { name: '911', role: 'Emergency', phone: '911', available_24h: true },
+      { name: 'NS Labour Standards', role: 'Workplace safety', phone: '1-800-952-2687', available_24h: true }
+    ]
+  },
+  PE: {
+    name: 'Prince Edward Island',
+    authority: 'Workers Compensation Board',
+    code: 'Occupational Health and Safety Regulations',
+    url: 'https://www.wcb.pe.ca/',
+    atmospheric_testing: {
+      frequency_minutes: 30,
+      continuous_required: true,
+      pre_entry_required: true,
+      gases: ['O2', 'LEL', 'H2S', 'CO'],
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 20 },
+        co: { max: 35, critical: 200 }
+      }
+    },
+    personnel: {
+      attendant_required: true,
+      rescue_team_standby: true,
+      max_entrants: 'selon évaluation',
+      qualified_person_required: true
+    },
+    documentation: [
+      'Entry permit required',
+      'Atmospheric testing',
+      'Emergency plan',
+      'Equipment checks',
+      'Training records'
+    ],
+    emergency_contacts: [
+      { name: '911', role: 'Emergency', phone: '911', available_24h: true },
+      { name: 'PEI WCB', role: 'Workplace safety', phone: '1-800-237-5049', available_24h: true }
+    ]
+  },
+  NL: {
+    name: 'Newfoundland and Labrador',
+    authority: 'Workplace Health, Safety and Compensation Commission',
+    code: 'Occupational Health and Safety Regulations',
+    url: 'https://www.whscc.nl.ca/',
+    atmospheric_testing: {
+      frequency_minutes: 30,
+      continuous_required: true,
+      pre_entry_required: true,
+      gases: ['O2', 'LEL', 'H2S', 'CO'],
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 20 },
+        co: { max: 35, critical: 200 }
+      }
+    },
+    personnel: {
+      attendant_required: true,
+      rescue_team_standby: true,
+      max_entrants: 'selon évaluation',
+      qualified_person_required: true
+    },
+    documentation: [
+      'Entry permit required',
+      'Atmospheric monitoring',
+      'Emergency procedures',
+      'Equipment verification',
+      'Training documentation'
+    ],
+    emergency_contacts: [
+      { name: '911', role: 'Emergency', phone: '911', available_24h: true },
+      { name: 'NL WHSCC', role: 'Workplace safety', phone: '1-800-563-9000', available_24h: true }
+    ]
   }
-  // Autres provinces...
 };
 
 // =================== TRADUCTIONS ===================
