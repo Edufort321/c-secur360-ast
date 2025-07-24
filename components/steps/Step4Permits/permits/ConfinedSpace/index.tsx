@@ -170,6 +170,7 @@ const PROVINCIAL_REGULATIONS = {
     name: 'Alberta',
     authority: 'Alberta OHS',
     code: 'OHS Code Part 46 - Confined and Restricted Spaces',
+    url: 'https://www.alberta.ca/ohs-code-part-46.aspx',
     atmospheric_testing: {
       frequency_minutes: 'as required by conditions',
       continuous_required: true,
@@ -191,6 +192,7 @@ const PROVINCIAL_REGULATIONS = {
     name: 'Saskatchewan',
     authority: 'Saskatchewan OHS',
     code: 'OHS Regulations 2020',
+    url: 'https://www.saskatchewan.ca/business/safety-in-the-workplace',
     atmospheric_testing: {
       frequency_minutes: 'continuous monitoring required',
       continuous_required: true,
@@ -212,6 +214,7 @@ const PROVINCIAL_REGULATIONS = {
     name: 'Manitoba',
     authority: 'Manitoba Workplace Safety',
     code: 'Workplace Safety and Health Regulation',
+    url: 'https://www.gov.mb.ca/labour/safety/',
     atmospheric_testing: {
       frequency_minutes: 'as necessary',
       continuous_required: true,
@@ -233,6 +236,7 @@ const PROVINCIAL_REGULATIONS = {
     name: 'New Brunswick',
     authority: 'WorkSafeNB',
     code: 'OHS Regulation 91-191',
+    url: 'https://www.worksafenb.ca/safety-topics/confined-spaces/',
     atmospheric_testing: {
       frequency_minutes: 'continuous',
       continuous_required: true,
@@ -254,6 +258,7 @@ const PROVINCIAL_REGULATIONS = {
     name: 'Nova Scotia',
     authority: 'Workers\' Compensation Board',
     code: 'OHS Regulations',
+    url: 'https://novascotia.ca/lae/healthandsafety/',
     atmospheric_testing: {
       frequency_minutes: 'continuous',
       continuous_required: true,
@@ -275,6 +280,7 @@ const PROVINCIAL_REGULATIONS = {
     name: 'Prince Edward Island',
     authority: 'PEI Workers Compensation Board',
     code: 'OHS Act General Regulations',
+    url: 'https://www.princeedwardisland.ca/en/topic/workplace-safety',
     atmospheric_testing: {
       frequency_minutes: 'as required',
       continuous_required: true,
@@ -296,6 +302,7 @@ const PROVINCIAL_REGULATIONS = {
     name: 'Newfoundland and Labrador',
     authority: 'WorkplaceNL',
     code: 'OHS Regulations',
+    url: 'https://workplacenl.ca/safety-and-prevention/',
     atmospheric_testing: {
       frequency_minutes: 'continuous',
       continuous_required: true,
