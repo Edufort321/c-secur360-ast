@@ -305,21 +305,20 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
       const PermitComponent = permit.component;
       
       return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-          <div className="max-w-4xl mx-auto">
-            
-            {/* Header de retour */}
-            <div className="mb-8">
-              <button
-                onClick={handleBackToSelection}
-                className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors mb-4"
-              >
-                <ArrowRight className="w-4 h-4 rotate-180" />
-                {texts.backToSelection}
-              </button>
-            </div>
+        <div className="space-y-6">
+          {/* Header de retour avec style cohérent */}
+          <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-4">
+            <button
+              onClick={handleBackToSelection}
+              className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
+            >
+              <ArrowRight className="w-4 h-4 rotate-180" />
+              {texts.backToSelection}
+            </button>
+          </div>
 
-            {/* Rendu du composant de permis */}
+          {/* Composant de permis intégré */}
+          <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6">
             <PermitComponent
               province={selectedProvince}
               language={language}
@@ -341,76 +340,74 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     } else {
       // Fallback pour les permis sans composant
       return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-          <div className="max-w-4xl mx-auto">
+        <div className="space-y-6">
+          {/* Header de retour avec style cohérent */}
+          <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-4">
+            <button
+              onClick={handleBackToSelection}
+              className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
+            >
+              <ArrowRight className="w-4 h-4 rotate-180" />
+              {texts.backToSelection}
+            </button>
+          </div>
+          
+          {/* En-tête du permis */}
+          <div className="bg-gradient-to-r from-slate-800/50 via-slate-700/50 to-slate-800/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6">
+            <div className="flex items-center gap-4">
+              <div 
+                className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
+                style={{ 
+                  background: `${permit?.color}20`,
+                  border: `1px solid ${permit?.color}30`
+                }}
+              >
+                {permit?.iconEmoji}
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  {permit?.name}
+                </h2>
+                <p className="text-slate-300">
+                  {permit?.description}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Contenu en développement */}
+          <div className="bg-slate-800/30 border border-slate-600/30 rounded-2xl p-8 text-center">
+            <div className="w-24 h-24 bg-yellow-600/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Construction className="w-12 h-12 text-yellow-400" />
+            </div>
             
-            {/* Header de retour */}
-            <div className="mb-8">
-              <button
-                onClick={handleBackToSelection}
-                className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors mb-4"
-              >
-                <ArrowRight className="w-4 h-4 rotate-180" />
-                {texts.backToSelection}
-              </button>
-              
-              <div className="bg-gradient-to-r from-red-900/20 to-orange-900/20 border border-red-500/30 rounded-2xl p-8">
-                <div className="flex items-center gap-4">
-                  <div 
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
-                    style={{ 
-                      background: `${permit?.color}20`,
-                      border: `1px solid ${permit?.color}30`
-                    }}
-                  >
-                    {permit?.iconEmoji}
+            <h3 className="text-2xl font-bold text-white mb-4">
+              Module en Développement
+            </h3>
+            
+            <p className="text-slate-300 mb-6 max-w-md mx-auto">
+              Le module <strong>{permit?.name}</strong> est actuellement en développement pour la province <strong>{PROVINCES_DATA[selectedProvince].name}</strong>. 
+              Il intégrera toutes les fonctionnalités avancées prévues selon les réglementations de {PROVINCES_DATA[selectedProvince].authority}.
+            </p>
+
+            <div className="bg-slate-900/50 rounded-xl p-6 max-w-md mx-auto mb-6">
+              <h4 className="text-lg font-semibold text-white mb-4">Fonctionnalités Prévues :</h4>
+              <div className="space-y-2 text-left">
+                {permit?.features.map((feature, index) => (
+                  <div key={index} className="flex items-center gap-2 text-sm text-slate-300">
+                    <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                    {feature}
                   </div>
-                  <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">
-                      {permit?.name}
-                    </h1>
-                    <p className="text-red-200 text-lg">
-                      {permit?.description}
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
 
-            {/* Contenu en développement */}
-            <div className="bg-slate-800/50 border border-slate-600/30 rounded-2xl p-8 text-center">
-              <div className="w-24 h-24 bg-yellow-600/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Construction className="w-12 h-12 text-yellow-400" />
-              </div>
-              
-              <h2 className="text-2xl font-bold text-white mb-4">
-                Module en Développement
-              </h2>
-              
-              <p className="text-slate-300 mb-6 max-w-md mx-auto">
-                Le module <strong>{permit?.name}</strong> est actuellement en développement pour la province <strong>{PROVINCES_DATA[selectedProvince].name}</strong>. 
-                Il intégrera toutes les fonctionnalités avancées prévues selon les réglementations de {PROVINCES_DATA[selectedProvince].authority}.
-              </p>
-
-              <div className="bg-slate-900/50 rounded-xl p-6 max-w-md mx-auto">
-                <h3 className="text-lg font-semibold text-white mb-4">Fonctionnalités Prévues :</h3>
-                <div className="space-y-2 text-left">
-                  {permit?.features.map((feature, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                      {feature}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                onClick={handleBackToSelection}
-                className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Retourner à la Sélection
-              </button>
-            </div>
+            <button
+              onClick={handleBackToSelection}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Retourner à la Sélection
+            </button>
           </div>
         </div>
       );
@@ -419,204 +416,203 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
 
   // Vue principale - Sélection des permis
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-      <div className="max-w-7xl mx-auto">
-        
-        {/* Header principal */}
-        <div className="bg-gradient-to-r from-red-900/20 to-orange-900/20 border border-red-500/30 rounded-2xl p-8 mb-8 backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-red-600/5 to-orange-600/5"></div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-16 h-16 bg-red-600/20 rounded-2xl flex items-center justify-center">
-                <Shield className="w-8 h-8 text-red-400" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-white mb-2">
-                  📄 {texts.title}
-                </h1>
-                <p className="text-red-200 text-lg">
-                  {texts.subtitle}
-                </p>
-              </div>
-            </div>
-            
-            {/* Statistiques globales */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
-                <div className="text-2xl font-bold text-white">{permits.length}</div>
-                <div className="text-slate-300 text-sm">Modules Disponibles</div>
-              </div>
-              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
-                <div className="text-2xl font-bold text-green-400">
-                  {permits.filter(p => p.status === 'completed').length}
-                </div>
-                <div className="text-slate-300 text-sm">Complétés</div>
-              </div>
-              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
-                <div className="text-2xl font-bold text-yellow-400">
-                  {permits.filter(p => p.status === 'in-progress').length}
-                </div>
-                <div className="text-slate-300 text-sm">En Cours</div>
-              </div>
-              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
-                <div className="text-2xl font-bold text-blue-400">{selectedProvince}</div>
-                <div className="text-slate-300 text-sm">Province</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Section sélection province */}
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6 mb-8">
+    <div className="space-y-6">
+      
+      {/* Header avec style cohérent Step 1-3 */}
+      <div className="bg-gradient-to-r from-slate-800/50 via-slate-700/50 to-slate-800/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-red-600/5 to-orange-600/5"></div>
+        <div className="relative z-10">
           <div className="flex items-center gap-4 mb-4">
-            <MapPin className="w-5 h-5 text-blue-400" />
-            <h2 className="text-xl font-semibold text-white">Sélection de la Province</h2>
+            <div className="w-12 h-12 bg-red-600/20 rounded-xl flex items-center justify-center">
+              <Shield className="w-6 h-6 text-red-400" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-1">
+                📄 {texts.title}
+              </h2>
+              <p className="text-slate-300">
+                {texts.subtitle}
+              </p>
+            </div>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {Object.entries(PROVINCES_DATA).map(([code, data]) => (
-              <button
-                key={code}
-                onClick={() => setSelectedProvince(code as ProvinceCode)}
-                className={`
-                  p-3 rounded-lg border-2 transition-all text-sm
-                  ${selectedProvince === code 
-                    ? 'border-blue-500 bg-blue-500/20 text-white' 
-                    : 'border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white'
-                  }
-                `}
-              >
-                <div className="font-medium">{data.name}</div>
-                <div className="text-xs opacity-75">{data.authority}</div>
-              </button>
-            ))}
-          </div>
-          
-          <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-            <div className="text-sm text-blue-200">
-              <strong>Province sélectionnée :</strong> {PROVINCES_DATA[selectedProvince].name} ({selectedProvince})<br/>
-              <strong>Autorité compétente :</strong> {PROVINCES_DATA[selectedProvince].authority}<br/>
-              <span className="text-xs opacity-75">
-                Les permis seront adaptés automatiquement aux réglementations de cette province
-              </span>
+          {/* Statistiques globales */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
+              <div className="text-2xl font-bold text-white">{permits.length}</div>
+              <div className="text-slate-300 text-sm">Modules Disponibles</div>
+            </div>
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
+              <div className="text-2xl font-bold text-green-400">
+                {permits.filter(p => p.status === 'completed').length}
+              </div>
+              <div className="text-slate-300 text-sm">Complétés</div>
+            </div>
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
+              <div className="text-2xl font-bold text-yellow-400">
+                {permits.filter(p => p.status === 'in-progress').length}
+              </div>
+              <div className="text-slate-300 text-sm">En Cours</div>
+            </div>
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
+              <div className="text-2xl font-bold text-blue-400">{selectedProvince}</div>
+              <div className="text-slate-300 text-sm">Province</div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Grille des modules de permis */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {permits.map(permit => (
-            <div 
-              key={permit.id}
-              className="bg-slate-800/30 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6 transition-all duration-300 hover:transform hover:scale-[1.02] hover:border-slate-500/50 cursor-pointer"
-              onClick={() => handlePermitSelect(permit.id)}
+      {/* Section sélection province avec style cohérent */}
+      <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6">
+        <div className="flex items-center gap-4 mb-4">
+          <MapPin className="w-5 h-5 text-blue-400" />
+          <h3 className="text-xl font-semibold text-white">Sélection de la Province</h3>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {Object.entries(PROVINCES_DATA).map(([code, data]) => (
+            <button
+              key={code}
+              onClick={() => setSelectedProvince(code as ProvinceCode)}
+              className={`
+                p-3 rounded-lg border-2 transition-all text-sm hover:scale-[1.02]
+                ${selectedProvince === code 
+                  ? 'border-blue-500 bg-blue-500/20 text-white shadow-lg shadow-blue-500/25' 
+                  : 'border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white hover:bg-slate-700/50'
+                }
+              `}
             >
-              {/* Header du module */}
-              <div className="flex items-start gap-4 mb-4">
-                <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
-                  style={{ 
-                    background: `${permit.color}20`,
-                    border: `1px solid ${permit.color}30`
-                  }}
-                >
-                  {permit.iconEmoji}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-white mb-1">
-                    {permit.name}
-                  </h3>
-                  <p className="text-slate-300 text-sm line-clamp-2">
-                    {permit.description}
-                  </p>
-                </div>
-
-                {/* Statut */}
-                <div className="flex flex-col items-end gap-2">
-                  <div className={`
-                    px-3 py-1 rounded-full text-xs font-medium
-                    ${permit.status === 'completed' ? 'bg-green-900/30 text-green-300' :
-                      permit.status === 'in-progress' ? 'bg-yellow-900/30 text-yellow-300' :
-                      'bg-slate-900/30 text-slate-300'
-                    }
-                  `}>
-                    {permit.status === 'completed' ? texts.completed :
-                     permit.status === 'in-progress' ? texts.inProgress :
-                     'Disponible'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Métadonnées */}
-              <div className="space-y-3 mb-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-400">{texts.riskLevel}:</span>
-                  <span 
-                    className="px-2 py-1 rounded text-xs font-medium"
-                    style={{ 
-                      background: `${permit.color}20`,
-                      color: permit.color
-                    }}
-                  >
-                    {texts.riskLevels[permit.riskLevel]}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-400">{texts.estimatedTime}:</span>
-                  <span className="text-sm text-blue-400">
-                    {permit.estimatedTime} {texts.minutes}
-                  </span>
-                </div>
-              </div>
-
-              {/* Réglementations */}
-              <div className="mb-4">
-                <div className="text-sm text-slate-400 mb-2">{texts.regulations}:</div>
-                <div className="flex flex-wrap gap-1">
-                  {permit.regulations.slice(0, 2).map((reg, index) => (
-                    <span 
-                      key={index}
-                      className="px-2 py-1 bg-blue-900/30 text-blue-300 rounded text-xs"
-                    >
-                      {reg}
-                    </span>
-                  ))}
-                  {permit.regulations.length > 2 && (
-                    <span className="px-2 py-1 bg-slate-700 text-slate-300 rounded text-xs">
-                      +{permit.regulations.length - 2}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Action */}
-              <button
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all group"
-              >
-                <FileText className="w-4 h-4" />
-                {permit.status === 'in-progress' ? texts.continuePermit : texts.startPermit}
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
+              <div className="font-medium">{data.name}</div>
+              <div className="text-xs opacity-75">{data.authority}</div>
+            </button>
           ))}
         </div>
-
-        {/* Footer informatif */}
-        <div className="mt-8 bg-slate-800/50 border border-slate-600/30 rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <AlertTriangle className="w-5 h-5 text-yellow-400" />
-            <h3 className="text-lg font-semibold text-white">Information Importante</h3>
+        
+        <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+          <div className="text-sm text-blue-200">
+            <strong>Province sélectionnée :</strong> {PROVINCES_DATA[selectedProvince].name} ({selectedProvince})<br/>
+            <strong>Autorité compétente :</strong> {PROVINCES_DATA[selectedProvince].authority}<br/>
+            <span className="text-xs opacity-75">
+              Les permis seront adaptés automatiquement aux réglementations de cette province
+            </span>
           </div>
-          <p className="text-slate-300 text-sm">
-            Tous les permis sont conçus pour respecter les réglementations provinciales en vigueur. 
-            Province sélectionnée : <strong>{PROVINCES_DATA[selectedProvince].name} ({selectedProvince})</strong> - {PROVINCES_DATA[selectedProvince].authority}.
-            <br />
-            Chaque module intègre les fonctionnalités avancées requises : signatures électroniques, 
-            horodatage sécurisé, photos géolocalisées, et archivage automatique dans Supabase.
-          </p>
         </div>
+      </div>
+
+      {/* Grille des modules de permis avec style Step 1-3 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {permits.map(permit => (
+          <div 
+            key={permit.id}
+            className="bg-slate-800/30 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6 transition-all duration-300 hover:transform hover:scale-[1.02] hover:border-slate-500/50 hover:shadow-xl hover:shadow-slate-900/25 cursor-pointer group"
+            onClick={() => handlePermitSelect(permit.id)}
+          >
+            {/* Header du module */}
+            <div className="flex items-start gap-4 mb-4">
+              <div 
+                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 group-hover:scale-110"
+                style={{ 
+                  background: `${permit.color}20`,
+                  border: `1px solid ${permit.color}30`
+                }}
+              >
+                {permit.iconEmoji}
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <h4 className="text-lg font-semibold text-white mb-1 group-hover:text-blue-200 transition-colors">
+                  {permit.name}
+                </h4>
+                <p className="text-slate-300 text-sm line-clamp-2">
+                  {permit.description}
+                </p>
+              </div>
+
+              {/* Statut */}
+              <div className="flex flex-col items-end gap-2">
+                <div className={`
+                  px-3 py-1 rounded-full text-xs font-medium transition-all
+                  ${permit.status === 'completed' ? 'bg-green-900/30 text-green-300 border border-green-500/30' :
+                    permit.status === 'in-progress' ? 'bg-yellow-900/30 text-yellow-300 border border-yellow-500/30' :
+                    'bg-slate-900/30 text-slate-300 border border-slate-500/30'
+                  }
+                `}>
+                  {permit.status === 'completed' ? texts.completed :
+                   permit.status === 'in-progress' ? texts.inProgress :
+                   'Disponible'}
+                </div>
+              </div>
+            </div>
+
+            {/* Métadonnées avec style cohérent */}
+            <div className="space-y-3 mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-400">{texts.riskLevel}:</span>
+                <span 
+                  className="px-2 py-1 rounded text-xs font-medium border"
+                  style={{ 
+                    background: `${permit.color}20`,
+                    color: permit.color,
+                    borderColor: `${permit.color}30`
+                  }}
+                >
+                  {texts.riskLevels[permit.riskLevel]}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-400">{texts.estimatedTime}:</span>
+                <span className="text-sm text-blue-400">
+                  {permit.estimatedTime} {texts.minutes}
+                </span>
+              </div>
+            </div>
+
+            {/* Réglementations */}
+            <div className="mb-4">
+              <div className="text-sm text-slate-400 mb-2">{texts.regulations}:</div>
+              <div className="flex flex-wrap gap-1">
+                {permit.regulations.slice(0, 2).map((reg, index) => (
+                  <span 
+                    key={index}
+                    className="px-2 py-1 bg-blue-900/30 text-blue-300 rounded text-xs border border-blue-500/30"
+                  >
+                    {reg}
+                  </span>
+                ))}
+                {permit.regulations.length > 2 && (
+                  <span className="px-2 py-1 bg-slate-700 text-slate-300 rounded text-xs border border-slate-500/30">
+                    +{permit.regulations.length - 2}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Action avec style cohérent */}
+            <button
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all group-hover:shadow-lg shadow-blue-500/25 font-medium"
+            >
+              <FileText className="w-4 h-4" />
+              {permit.status === 'in-progress' ? texts.continuePermit : texts.startPermit}
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer informatif avec style cohérent */}
+      <div className="bg-slate-800/30 border border-slate-600/30 rounded-2xl p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <AlertTriangle className="w-5 h-5 text-yellow-400" />
+          <h3 className="text-lg font-semibold text-white">Information Importante</h3>
+        </div>
+        <p className="text-slate-300 text-sm leading-relaxed">
+          Tous les permis sont conçus pour respecter les réglementations provinciales en vigueur. 
+          Province sélectionnée : <strong className="text-blue-400">{PROVINCES_DATA[selectedProvince].name} ({selectedProvince})</strong> - {PROVINCES_DATA[selectedProvince].authority}.
+          <br />
+          Chaque module intègre les fonctionnalités avancées requises : signatures électroniques, 
+          horodatage sécurisé, photos géolocalisées, et archivage automatique dans Supabase.
+        </p>
       </div>
     </div>
   );
