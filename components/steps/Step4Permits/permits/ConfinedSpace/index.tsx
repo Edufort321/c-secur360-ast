@@ -202,7 +202,11 @@ const PROVINCIAL_REGULATIONS = {
         h2s: { max: 10, critical: 20 },
         co: { max: 35, critical: 200 }
       }
-    }
+    },
+    emergency_contacts: [
+      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
+      { name: 'Saskatchewan OHS', role: 'Workplace Safety', phone: '1-800-667-7590', available_24h: false }
+    ]
   },
   MB: {
     name: 'Manitoba',
@@ -219,7 +223,11 @@ const PROVINCIAL_REGULATIONS = {
         h2s: { max: 10, critical: 20 },
         co: { max: 35, critical: 200 }
       }
-    }
+    },
+    emergency_contacts: [
+      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
+      { name: 'Manitoba Workplace Safety', role: 'Workplace Safety', phone: '1-855-957-7233', available_24h: false }
+    ]
   },
   NB: {
     name: 'New Brunswick',
@@ -236,7 +244,11 @@ const PROVINCIAL_REGULATIONS = {
         h2s: { max: 10, critical: 20 },
         co: { max: 35, critical: 200 }
       }
-    }
+    },
+    emergency_contacts: [
+      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
+      { name: 'WorkSafeNB', role: 'Workplace Safety', phone: '1-800-222-9775', available_24h: false }
+    ]
   },
   NS: {
     name: 'Nova Scotia',
@@ -253,7 +265,11 @@ const PROVINCIAL_REGULATIONS = {
         h2s: { max: 10, critical: 20 },
         co: { max: 35, critical: 200 }
       }
-    }
+    },
+    emergency_contacts: [
+      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
+      { name: 'NS Workers\' Compensation', role: 'Workplace Safety', phone: '1-800-870-3331', available_24h: false }
+    ]
   },
   PE: {
     name: 'Prince Edward Island',
@@ -270,7 +286,11 @@ const PROVINCIAL_REGULATIONS = {
         h2s: { max: 10, critical: 20 },
         co: { max: 35, critical: 200 }
       }
-    }
+    },
+    emergency_contacts: [
+      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
+      { name: 'PEI Workers Compensation', role: 'Workplace Safety', phone: '1-800-237-5049', available_24h: false }
+    ]
   },
   NL: {
     name: 'Newfoundland and Labrador',
@@ -287,7 +307,11 @@ const PROVINCIAL_REGULATIONS = {
         h2s: { max: 10, critical: 20 },
         co: { max: 35, critical: 200 }
       }
-    }
+    },
+    emergency_contacts: [
+      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
+      { name: 'WorkplaceNL', role: 'Workplace Safety', phone: '1-800-563-9000', available_24h: false }
+    ]
   }
 };
 
