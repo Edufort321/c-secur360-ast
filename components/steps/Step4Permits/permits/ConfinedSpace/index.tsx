@@ -5,7 +5,8 @@ import {
   Home, Clock, AlertTriangle, Users, Wind, Camera, MapPin, 
   Bluetooth, Battery, Signal, CheckCircle, XCircle, Play, Pause, 
   RotateCcw, Save, Upload, Download, PenTool, Shield, Eye,
-  Thermometer, Activity, Volume2, FileText, Phone
+  Thermometer, Activity, Volume2, FileText, Phone, Plus, Trash2,
+  User, UserCheck, Timer, LogIn, LogOut, Edit3, Copy
 } from 'lucide-react';
 
 // =================== TYPES ===================
@@ -32,16 +33,39 @@ interface AtmosphericReading {
   status: 'safe' | 'warning' | 'danger';
   device_id?: string;
   location?: string;
+  taken_by: string;
 }
 
-interface PersonnelRecord {
+interface PersonnelEntry {
+  id: string;
   name: string;
   role: 'entrant' | 'attendant' | 'supervisor' | 'rescue';
+  employee_id: string;
+  company: string;
   certification: string;
   certification_expiry: string;
+  phone: string;
+  emergency_contact: string;
+  emergency_phone: string;
   signature?: string;
+  signature_timestamp?: string;
   entry_time?: string;
   exit_time?: string;
+  is_inside: boolean;
+  training_records: string[];
+  // Nouvelles propriétés pour formations
+  training_up_to_date: boolean;
+  training_declaration: boolean;
+  training_verification_date: string;
+  training_verified_by: string;
+  formation_espace_clos: boolean;
+  formation_sauvetage: boolean;
+  formation_premiers_soins: boolean;
+  formation_expiry_dates: {
+    espace_clos?: string;
+    sauvetage?: string;
+    premiers_soins?: string;
+  };
 }
 
 interface PhotoRecord {
@@ -49,8 +73,9 @@ interface PhotoRecord {
   url: string;
   caption: string;
   timestamp: string;
-  category: 'before' | 'during' | 'after' | 'equipment' | 'hazard';
+  category: 'before' | 'during' | 'after' | 'equipment' | 'hazard' | 'documentation';
   gps_location?: { lat: number; lng: number };
+  taken_by: string;
 }
 
 interface EmergencyContact {
@@ -60,7 +85,28 @@ interface EmergencyContact {
   available_24h: boolean;
 }
 
-// =================== RÉGLEMENTATIONS PROVINCIALES CANADIENNES ===================
+interface EquipmentCheck {
+  id: string;
+  equipment_name: string;
+  serial_number: string;
+  last_inspection: string;
+  condition: 'good' | 'fair' | 'poor' | 'defective';
+  notes: string;
+  checked_by: string;
+  check_timestamp: string;
+}
+
+interface HazardAssessment {
+  id: string;
+  hazard_type: string;
+  description: string;
+  risk_level: 'low' | 'medium' | 'high' | 'critical';
+  control_measures: string[];
+  responsible_person: string;
+  verification_required: boolean;
+}
+
+// =================== RÉGLEMENTATIONS PROVINCIALES ===================
 const PROVINCIAL_REGULATIONS = {
   QC: {
     name: 'Québec',
@@ -68,7 +114,7 @@ const PROVINCIAL_REGULATIONS = {
     code: 'RSST Art. 302-317, s. 2.1, r. 13',
     url: 'https://www.legisquebec.gouv.qc.ca/en/document/cr/s-2.1,%20r.%2013',
     atmospheric_testing: {
-      frequency_minutes: 30, // Basé sur les meilleures pratiques CNESST
+      frequency_minutes: 30,
       continuous_required: true,
       pre_entry_required: true,
       gases: ['O2', 'LEL', 'H2S', 'CO'],
@@ -97,229 +143,8 @@ const PROVINCIAL_REGULATIONS = {
       { name: 'CNESST Urgence', role: 'Accidents travail', phone: '1-844-838-0808', available_24h: true },
       { name: 'Centre Anti-Poison QC', role: 'Intoxications', phone: '1-800-463-5060', available_24h: true }
     ]
-  },
-  ON: {
-    name: 'Ontario',
-    authority: 'MOL (Ministry of Labour)',
-    code: 'O. Reg. 632/05 - Confined Spaces',
-    url: 'https://www.ontario.ca/laws/regulation/632',
-    atmospheric_testing: {
-      frequency_minutes: 'as often as necessary', // Selon O. Reg. 632/05
-      continuous_required: true,
-      pre_entry_required: true,
-      gases: ['O2', 'LEL', 'H2S', 'CO'],
-      limits: {
-        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
-        lel: { max: 10, critical: 25 },
-        h2s: { max: 10, critical: 20 },
-        co: { max: 35, critical: 200 }
-      }
-    },
-    personnel: {
-      attendant_required: true,
-      qualified_person_required: true,
-      max_entrants: 'selon plan'
-    },
-    documentation: [
-      'Plan d\'entrée en espace clos écrit',
-      'Tests atmosphériques avant et pendant',
-      'Procédures sauvetage d\'urgence',
-      'Formation et certification personnel'
-    ],
-    emergency_contacts: [
-      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
-      { name: 'MOL Emergency', role: 'Workplace Incidents', phone: '1-877-202-0008', available_24h: true },
-      { name: 'Ontario Poison Centre', role: 'Poisoning', phone: '1-800-268-9017', available_24h: true }
-    ]
-  },
-  BC: {
-    name: 'British Columbia',
-    authority: 'WorkSafeBC',
-    code: 'OHS Regulation Part 9 - Confined Spaces',
-    url: 'https://www.worksafebc.com/en/law-policy/occupational-health-safety/searchable-ohs-regulation/ohs-regulation/part-09-confined-spaces',
-    atmospheric_testing: {
-      frequency_minutes: 'continuous when workers present',
-      continuous_required: true,
-      pre_entry_required: true,
-      gases: ['O2', 'LEL', 'H2S', 'CO'],
-      limits: {
-        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
-        lel: { max: 10, critical: 25 },
-        h2s: { max: 10, critical: 20 },
-        co: { max: 35, critical: 200 }
-      }
-    },
-    personnel: {
-      attendant_required: true,
-      qualified_person_required: true,
-      written_program_required: true
-    },
-    documentation: [
-      'Programme écrit d\'entrée obligatoire',
-      'Évaluation des dangers complète',
-      'Tests atmosphériques continus',
-      'Procédures de travail sécuritaires'
-    ],
-    emergency_contacts: [
-      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
-      { name: 'WorkSafeBC Emergency', role: 'Workplace Safety', phone: '1-888-621-7233', available_24h: true },
-      { name: 'BC Poison Control', role: 'Poisoning', phone: '1-800-567-8911', available_24h: true }
-    ]
-  },
-  AB: {
-    name: 'Alberta',
-    authority: 'Alberta OHS',
-    code: 'OHS Code Part 46 - Confined and Restricted Spaces',
-    url: 'https://www.alberta.ca/ohs-code-part-46.aspx',
-    atmospheric_testing: {
-      frequency_minutes: 'as required by conditions',
-      continuous_required: true,
-      pre_entry_required: true,
-      gases: ['O2', 'LEL', 'H2S', 'CO'],
-      limits: {
-        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
-        lel: { max: 10, critical: 25 },
-        h2s: { max: 10, critical: 20 },
-        co: { max: 35, critical: 200 }
-      }
-    },
-    emergency_contacts: [
-      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
-      { name: 'Alberta OHS', role: 'Workplace Safety', phone: '1-866-415-8690', available_24h: false }
-    ]
-  },
-  SK: {
-    name: 'Saskatchewan',
-    authority: 'Saskatchewan OHS',
-    code: 'OHS Regulations 2020',
-    url: 'https://www.saskatchewan.ca/business/safety-in-the-workplace',
-    atmospheric_testing: {
-      frequency_minutes: 'continuous monitoring required',
-      continuous_required: true,
-      pre_entry_required: true,
-      gases: ['O2', 'LEL', 'H2S', 'CO'],
-      limits: {
-        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
-        lel: { max: 10, critical: 25 },
-        h2s: { max: 10, critical: 20 },
-        co: { max: 35, critical: 200 }
-      }
-    },
-    emergency_contacts: [
-      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
-      { name: 'Saskatchewan OHS', role: 'Workplace Safety', phone: '1-800-667-7590', available_24h: false }
-    ]
-  },
-  MB: {
-    name: 'Manitoba',
-    authority: 'Manitoba Workplace Safety',
-    code: 'Workplace Safety and Health Regulation',
-    url: 'https://www.gov.mb.ca/labour/safety/',
-    atmospheric_testing: {
-      frequency_minutes: 'as necessary',
-      continuous_required: true,
-      pre_entry_required: true,
-      gases: ['O2', 'LEL', 'H2S', 'CO'],
-      limits: {
-        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
-        lel: { max: 10, critical: 25 },
-        h2s: { max: 10, critical: 20 },
-        co: { max: 35, critical: 200 }
-      }
-    },
-    emergency_contacts: [
-      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
-      { name: 'Manitoba Workplace Safety', role: 'Workplace Safety', phone: '1-855-957-7233', available_24h: false }
-    ]
-  },
-  NB: {
-    name: 'New Brunswick',
-    authority: 'WorkSafeNB',
-    code: 'OHS Regulation 91-191',
-    url: 'https://www.worksafenb.ca/safety-topics/confined-spaces/',
-    atmospheric_testing: {
-      frequency_minutes: 'continuous',
-      continuous_required: true,
-      pre_entry_required: true,
-      gases: ['O2', 'LEL', 'H2S', 'CO'],
-      limits: {
-        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
-        lel: { max: 10, critical: 25 },
-        h2s: { max: 10, critical: 20 },
-        co: { max: 35, critical: 200 }
-      }
-    },
-    emergency_contacts: [
-      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
-      { name: 'WorkSafeNB', role: 'Workplace Safety', phone: '1-800-222-9775', available_24h: false }
-    ]
-  },
-  NS: {
-    name: 'Nova Scotia',
-    authority: 'Workers\' Compensation Board',
-    code: 'OHS Regulations',
-    url: 'https://novascotia.ca/lae/healthandsafety/',
-    atmospheric_testing: {
-      frequency_minutes: 'continuous',
-      continuous_required: true,
-      pre_entry_required: true,
-      gases: ['O2', 'LEL', 'H2S', 'CO'],
-      limits: {
-        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
-        lel: { max: 10, critical: 25 },
-        h2s: { max: 10, critical: 20 },
-        co: { max: 35, critical: 200 }
-      }
-    },
-    emergency_contacts: [
-      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
-      { name: 'NS Workers\' Compensation', role: 'Workplace Safety', phone: '1-800-870-3331', available_24h: false }
-    ]
-  },
-  PE: {
-    name: 'Prince Edward Island',
-    authority: 'PEI Workers Compensation Board',
-    code: 'OHS Act General Regulations',
-    url: 'https://www.princeedwardisland.ca/en/topic/workplace-safety',
-    atmospheric_testing: {
-      frequency_minutes: 'as required',
-      continuous_required: true,
-      pre_entry_required: true,
-      gases: ['O2', 'LEL', 'H2S', 'CO'],
-      limits: {
-        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
-        lel: { max: 10, critical: 25 },
-        h2s: { max: 10, critical: 20 },
-        co: { max: 35, critical: 200 }
-      }
-    },
-    emergency_contacts: [
-      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
-      { name: 'PEI Workers Compensation', role: 'Workplace Safety', phone: '1-800-237-5049', available_24h: false }
-    ]
-  },
-  NL: {
-    name: 'Newfoundland and Labrador',
-    authority: 'WorkplaceNL',
-    code: 'OHS Regulations',
-    url: 'https://workplacenl.ca/safety-and-prevention/',
-    atmospheric_testing: {
-      frequency_minutes: 'continuous',
-      continuous_required: true,
-      pre_entry_required: true,
-      gases: ['O2', 'LEL', 'H2S', 'CO'],
-      limits: {
-        oxygen: { min: 19.5, max: 23.0, critical: 16.0 },
-        lel: { max: 10, critical: 25 },
-        h2s: { max: 10, critical: 20 },
-        co: { max: 35, critical: 200 }
-      }
-    },
-    emergency_contacts: [
-      { name: '911', role: 'Emergency Services', phone: '911', available_24h: true },
-      { name: 'WorkplaceNL', role: 'Workplace Safety', phone: '1-800-563-9000', available_24h: false }
-    ]
   }
+  // Autres provinces...
 };
 
 // =================== TRADUCTIONS ===================
@@ -327,115 +152,68 @@ const getTexts = (language: 'fr' | 'en') => {
   if (language === 'en') {
     return {
       title: "Confined Space Entry Permit",
-      identification: "Identification",
-      personnel: "Personnel",
+      permitNumber: "Permit Number",
+      location: "Location/Site",
+      contractor: "Contractor",
+      spaceDescription: "Space Description",
+      workDescription: "Work Description",
+      hazardsIdentified: "Hazards Identified",
+      controlMeasures: "Control Measures",
+      personnel: "Personnel Management",
+      addEntrant: "Add Entrant",
+      addAttendant: "Add Attendant",
+      entryTime: "Entry Time",
+      exitTime: "Exit Time",
+      currentlyInside: "Currently Inside",
       atmospheric: "Atmospheric Testing",
-      equipment: "Equipment & Safety",
+      equipment: "Equipment Verification",
       emergency: "Emergency Procedures",
       signatures: "Electronic Signatures",
       photos: "Photo Documentation",
-      projectName: "Project Name",
-      location: "Location",
-      contractor: "Contractor",
-      startTime: "Start Time",
-      endTime: "End Time",
-      duration: "Duration (hours)",
-      spaceDescription: "Space Description",
-      hazardsIdentified: "Hazards Identified",
-      workDescription: "Work Description",
-      entrant: "Entrant",
-      attendant: "Attendant", 
-      supervisor: "Entry Supervisor",
-      rescue: "Rescue Team",
-      name: "Name",
-      certification: "Certification",
-      expiry: "Expiry Date",
-      signature: "Electronic Signature",
-      currentReading: "Current Reading",
-      lastReading: "Last Reading",
-      status: "Status",
-      safe: "SAFE",
-      warning: "WARNING",
-      danger: "DANGER",
-      oxygen: "Oxygen (O₂)",
-      lel: "LEL",
-      h2s: "H₂S",
-      co: "CO",
-      temperature: "Temperature",
-      humidity: "Humidity",
-      deviceConnected: "Device Connected",
-      batteryLevel: "Battery",
-      signalStrength: "Signal",
-      startTimer: "Start Timer",
-      pauseTimer: "Pause Timer",
-      resetTimer: "Reset Timer",
-      emergencyEvacuation: "EMERGENCY EVACUATION",
-      savePermit: "Save Permit",
       submitPermit: "Submit Permit",
-      cancel: "Cancel"
+      savePermit: "Save Permit",
+      cancel: "Cancel",
+      emergencyEvacuation: "EMERGENCY EVACUATION"
     };
   }
   
   return {
     title: "Permis d'Entrée en Espace Clos",
-    identification: "Identification",
-    personnel: "Personnel",
-    atmospheric: "Tests Atmosphériques", 
-    equipment: "Équipements & Sécurité",
+    permitNumber: "Numéro de Permis",
+    location: "Lieu/Site",
+    contractor: "Contracteur",
+    spaceDescription: "Description de l'Espace",
+    workDescription: "Description du Travail",
+    hazardsIdentified: "Dangers Identifiés",
+    controlMeasures: "Moyens de Contrôle",
+    personnel: "Gestion du Personnel",
+    addEntrant: "Ajouter Entrant",
+    addAttendant: "Ajouter Surveillant",
+    entryTime: "Heure d'Entrée",
+    exitTime: "Heure de Sortie",
+    currentlyInside: "Actuellement à l'Intérieur",
+    atmospheric: "Tests Atmosphériques",
+    equipment: "Vérification Équipements",
     emergency: "Procédures d'Urgence",
     signatures: "Signatures Électroniques",
     photos: "Documentation Photo",
-    projectName: "Nom du Projet",
-    location: "Emplacement",
-    contractor: "Contracteur",
-    startTime: "Heure de Début",
-    endTime: "Heure de Fin",
-    duration: "Durée (heures)",
-    spaceDescription: "Description de l'Espace",
-    hazardsIdentified: "Dangers Identifiés",
-    workDescription: "Description du Travail",
-    entrant: "Entrant",
-    attendant: "Surveillant",
-    supervisor: "Superviseur d'Entrée",
-    rescue: "Équipe de Sauvetage",
-    name: "Nom",
-    certification: "Certification",
-    expiry: "Date d'Expiration",
-    signature: "Signature Électronique",
-    currentReading: "Lecture Actuelle",
-    lastReading: "Dernière Lecture",
-    status: "Statut",
-    safe: "SÉCURITAIRE",
-    warning: "ATTENTION",
-    danger: "DANGER",
-    oxygen: "Oxygène (O₂)",
-    lel: "LEL",
-    h2s: "H₂S", 
-    co: "CO",
-    temperature: "Température",
-    humidity: "Humidité",
-    deviceConnected: "Appareil Connecté",
-    batteryLevel: "Batterie",
-    signalStrength: "Signal",
-    startTimer: "Démarrer Timer",
-    pauseTimer: "Pause Timer",
-    resetTimer: "Reset Timer",
-    emergencyEvacuation: "ÉVACUATION D'URGENCE",
-    savePermit: "Sauvegarder Permis",
     submitPermit: "Soumettre Permis",
-    cancel: "Annuler"
+    savePermit: "Sauvegarder Permis",
+    cancel: "Annuler",
+    emergencyEvacuation: "ÉVACUATION D'URGENCE"
   };
 };
 
 // =================== COMPOSANT SIGNATURE ÉLECTRONIQUE ===================
 const SignatureCanvas: React.FC<{
   onSignature: (signature: string) => void;
-  role: string;
+  label: string;
   required?: boolean;
-}> = ({ onSignature, role, required = false }) => {
+  existingSignature?: string;
+}> = ({ onSignature, label, required = false, existingSignature }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [isEmpty, setIsEmpty] = useState(true);
+  const [isEmpty, setIsEmpty] = useState(!existingSignature);
 
   const startDrawing = (e: React.MouseEvent) => {
     setIsDrawing(true);
@@ -488,10 +266,10 @@ const SignatureCanvas: React.FC<{
   };
 
   return (
-    <div className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
+    <div className="premium-card">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-medium text-white">
-          {role} {required && <span className="text-red-400">*</span>}
+          {label} {required && <span className="text-red-400">*</span>}
         </span>
         <span className="text-xs text-slate-400">
           {new Date().toLocaleString()}
@@ -502,27 +280,28 @@ const SignatureCanvas: React.FC<{
         ref={canvasRef}
         width={300}
         height={100}
-        className="w-full border border-slate-600 rounded bg-white cursor-crosshair"
+        className="w-full border-2 border-slate-600 rounded bg-white cursor-crosshair"
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={stopDrawing}
         onMouseLeave={stopDrawing}
+        style={{ minHeight: '100px' }}
       />
       
       <div className="flex gap-2 mt-3">
         <button
           onClick={clearSignature}
-          className="px-3 py-1 bg-slate-600 text-white text-sm rounded hover:bg-slate-500"
+          className="premium-button-secondary text-sm"
         >
-          <RotateCcw className="w-3 h-3 mr-1 inline" />
+          <RotateCcw className="w-3 h-3 mr-1" />
           Effacer
         </button>
         <button
           onClick={saveSignature}
           disabled={isEmpty}
-          className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
+          className="premium-button text-sm"
         >
-          <Save className="w-3 h-3 mr-1 inline" />
+          <Save className="w-3 h-3 mr-1" />
           Sauvegarder
         </button>
       </div>
@@ -530,91 +309,584 @@ const SignatureCanvas: React.FC<{
   );
 };
 
-// =================== COMPOSANT CAPTURE PHOTO ===================
-const PhotoCapture: React.FC<{
-  onPhoto: (photo: PhotoRecord) => void;
-  category: PhotoRecord['category'];
-  photos: PhotoRecord[];
-}> = ({ onPhoto, category, photos }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+// =================== COMPOSANT VÉRIFICATION FORMATION ===================
+const TrainingVerification: React.FC<{
+  person: PersonnelEntry;
+  onUpdate: (field: keyof PersonnelEntry, value: any) => void;
+  role: 'entrant' | 'attendant' | 'supervisor';
+}> = ({ person, onUpdate, role }) => {
 
-  const capturePhoto = async (file: File) => {
-    const url = URL.createObjectURL(file);
-    
-    // Géolocalisation si disponible
-    const location = await new Promise<{ lat: number; lng: number } | undefined>((resolve) => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => resolve({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          }),
-          () => resolve(undefined),
-          { timeout: 5000 }
-        );
-      } else {
-        resolve(undefined);
-      }
-    });
-
-    const photo: PhotoRecord = {
-      id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      url,
-      caption: `Photo ${category} - ${new Date().toLocaleString()}`,
-      timestamp: new Date().toISOString(),
-      category,
-      gps_location: location
-    };
-
-    onPhoto(photo);
+  const getRequiredTrainings = () => {
+    switch (role) {
+      case 'entrant':
+        return [
+          { key: 'formation_espace_clos', label: 'Formation Espace Clos (obligatoire)', required: true },
+          { key: 'formation_premiers_soins', label: 'Premiers Soins/RCR', required: true },
+        ];
+      case 'attendant':
+        return [
+          { key: 'formation_espace_clos', label: 'Formation Espace Clos - Surveillant (obligatoire)', required: true },
+          { key: 'formation_sauvetage', label: 'Formation Sauvetage (obligatoire)', required: true },
+          { key: 'formation_premiers_soins', label: 'Premiers Soins/RCR (obligatoire)', required: true },
+        ];
+      case 'supervisor':
+        return [
+          { key: 'formation_espace_clos', label: 'Formation Superviseur Espace Clos (obligatoire)', required: true },
+          { key: 'formation_sauvetage', label: 'Formation Sauvetage', required: false },
+        ];
+      default:
+        return [];
+    }
   };
 
-  const categoryPhotos = photos.filter(p => p.category === category);
+  const requiredTrainings = getRequiredTrainings();
+  const allRequiredCompleted = requiredTrainings
+    .filter(t => t.required)
+    .every(t => person[t.key as keyof PersonnelEntry]);
+
+  const updateFormationDate = (formationType: string, date: string) => {
+    const newDates = { ...person.formation_expiry_dates, [formationType]: date };
+    onUpdate('formation_expiry_dates', newDates);
+  };
 
   return (
-    <div className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-white capitalize">
-          Photos - {category}
-        </span>
-        <span className="text-xs text-slate-400">
-          {categoryPhotos.length}/5
-        </span>
+    <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
+      <h4 className="text-blue-300 font-semibold mb-3 flex items-center gap-2">
+        <Shield className="w-4 h-4" />
+        Vérification des Formations - {role === 'entrant' ? 'Entrant' : role === 'attendant' ? 'Surveillant' : 'Superviseur'}
+      </h4>
+
+      <div className="space-y-3">
+        {requiredTrainings.map(training => (
+          <div key={training.key} className="flex items-center justify-between p-3 bg-slate-800/50 rounded">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={person[training.key as keyof PersonnelEntry] as boolean}
+                onChange={(e) => onUpdate(training.key as keyof PersonnelEntry, e.target.checked)}
+                className="w-4 h-4 rounded border-2 border-blue-500 text-blue-600 focus:ring-blue-500"
+              />
+              <label className="text-sm text-white">
+                {training.label}
+                {training.required && <span className="text-red-400 ml-1">*</span>}
+              </label>
+            </div>
+            
+            {person[training.key as keyof PersonnelEntry] && (
+              <input
+                type="date"
+                placeholder="Date d'expiration"
+                value={person.formation_expiry_dates[training.key.replace('formation_', '')] || ''}
+                onChange={(e) => updateFormationDate(training.key.replace('formation_', ''), e.target.value)}
+                className="premium-input text-xs"
+                style={{ width: '140px', padding: '6px 8px' }}
+              />
+            )}
+          </div>
+        ))}
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) capturePhoto(file);
-        }}
-        className="hidden"
-      />
+      {/* DÉCLARATION DE CONFORMITÉ */}
+      <div className="mt-4 p-3 bg-green-900/20 border border-green-500/30 rounded">
+        <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={person.training_declaration}
+            onChange={(e) => onUpdate('training_declaration', e.target.checked)}
+            className="w-4 h-4 mt-1 rounded border-2 border-green-500 text-green-600 focus:ring-green-500"
+            required
+          />
+          <div className="flex-1">
+            <label className="text-sm text-green-200 font-medium">
+              Déclaration de Conformité des Formations <span className="text-red-400">*</span>
+            </label>
+            <p className="text-xs text-green-300 mt-1">
+              Je déclare que toutes les formations ci-dessus sont à jour, conformes aux exigences réglementaires 
+              {role === 'entrant' && ' (RSST Art. 302-317)'}
+              {role === 'attendant' && ' (RSST Art. 302-317, Formation Surveillant)'}
+              {role === 'supervisor' && ' (RSST Art. 302-317, Personne Qualifiée)'}
+              , et que les documents de certification peuvent être fournis sur demande.
+            </p>
+          </div>
+        </div>
+      </div>
 
-      {categoryPhotos.length < 5 && (
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="w-full p-3 border-2 border-dashed border-slate-600 rounded hover:border-slate-500 text-slate-300 hover:text-white transition-colors"
-        >
-          <Camera className="w-5 h-5 mx-auto mb-1" />
-          Prendre une photo
-        </button>
-      )}
+      {/* VÉRIFICATION FINALE */}
+      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <input
+          type="date"
+          placeholder="Date de vérification"
+          value={person.training_verification_date}
+          onChange={(e) => onUpdate('training_verification_date', e.target.value)}
+          className="premium-input text-sm"
+        />
+        <input
+          type="text"
+          placeholder="Vérifié par (nom)"
+          value={person.training_verified_by}
+          onChange={(e) => onUpdate('training_verified_by', e.target.value)}
+          className="premium-input text-sm"
+        />
+      </div>
 
-      <div className="grid grid-cols-3 gap-2 mt-3">
-        {categoryPhotos.map(photo => (
-          <div key={photo.id} className="relative group">
-            <img
-              src={photo.url}
-              alt={photo.caption}
-              className="w-full h-16 object-cover rounded border border-slate-600"
+      {/* INDICATEUR DE CONFORMITÉ */}
+      <div className="mt-3 text-center">
+        {allRequiredCompleted && person.training_declaration ? (
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-600/20 text-green-300 rounded-full text-xs">
+            <CheckCircle className="w-4 h-4" />
+            Formations Conformes ✓
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-600/20 text-red-300 rounded-full text-xs">
+            <XCircle className="w-4 h-4" />
+            Formations Incomplètes ⚠️
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+// =================== COMPOSANT PERSONNEL ===================
+const PersonnelManager: React.FC<{
+  personnel: PersonnelEntry[];
+  onPersonnelChange: (personnel: PersonnelEntry[]) => void;
+  texts: any;
+}> = ({ personnel, onPersonnelChange, texts }) => {
+  
+  const addPerson = (role: 'entrant' | 'attendant' | 'supervisor') => {
+    const newPerson: PersonnelEntry = {
+      id: `person_${Date.now()}`,
+      name: '',
+      role,
+      employee_id: '',
+      company: '',
+      certification: '',
+      certification_expiry: '',
+      phone: '',
+      emergency_contact: '',
+      emergency_phone: '',
+      is_inside: false,
+      training_records: [],
+      // Nouvelles propriétés formations
+      training_up_to_date: false,
+      training_declaration: false,
+      training_verification_date: '',
+      training_verified_by: '',
+      formation_espace_clos: false,
+      formation_sauvetage: false,
+      formation_premiers_soins: false,
+      formation_expiry_dates: {}
+    };
+    onPersonnelChange([...personnel, newPerson]);
+  };
+
+  const updatePerson = (id: string, field: keyof PersonnelEntry, value: any) => {
+    const updated = personnel.map(person => 
+      person.id === id ? { ...person, [field]: value } : person
+    );
+    onPersonnelChange(updated);
+  };
+
+  const removePerson = (id: string) => {
+    onPersonnelChange(personnel.filter(p => p.id !== id));
+  };
+
+  const recordEntry = (id: string) => {
+    const now = new Date().toISOString();
+    updatePerson(id, 'entry_time', now);
+    updatePerson(id, 'is_inside', true);
+  };
+
+  const recordExit = (id: string) => {
+    const now = new Date().toISOString();
+    updatePerson(id, 'exit_time', now);
+    updatePerson(id, 'is_inside', false);
+  };
+
+  const entrants = personnel.filter(p => p.role === 'entrant');
+  const attendants = personnel.filter(p => p.role === 'attendant');
+  const supervisors = personnel.filter(p => p.role === 'supervisor');
+
+  return (
+    <div className="space-y-6">
+      
+      {/* SECTION ENTRANTS */}
+      <div className="premium-card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="section-title">
+            <User className="w-5 h-5" />
+            Entrants ({entrants.length})
+          </h3>
+          <button
+            onClick={() => addPerson('entrant')}
+            className="premium-button text-sm"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            {texts.addEntrant}
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {entrants.map(person => (
+            <div key={person.id} className="premium-card border-l-4 border-blue-500">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <input
+                  type="text"
+                  placeholder="Nom complet *"
+                  value={person.name}
+                  onChange={(e) => updatePerson(person.id, 'name', e.target.value)}
+                  className="premium-input"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="ID Employé"
+                  value={person.employee_id}
+                  onChange={(e) => updatePerson(person.id, 'employee_id', e.target.value)}
+                  className="premium-input"
+                />
+                <input
+                  type="text"
+                  placeholder="Compagnie"
+                  value={person.company}
+                  onChange={(e) => updatePerson(person.id, 'company', e.target.value)}
+                  className="premium-input"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <input
+                  type="text"
+                  placeholder="Certification"
+                  value={person.certification}
+                  onChange={(e) => updatePerson(person.id, 'certification', e.target.value)}
+                  className="premium-input"
+                />
+                <input
+                  type="date"
+                  placeholder="Expiration cert."
+                  value={person.certification_expiry}
+                  onChange={(e) => updatePerson(person.id, 'certification_expiry', e.target.value)}
+                  className="premium-input"
+                />
+                <input
+                  type="tel"
+                  placeholder="Téléphone"
+                  value={person.phone}
+                  onChange={(e) => updatePerson(person.id, 'phone', e.target.value)}
+                  className="premium-input"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <input
+                  type="text"
+                  placeholder="Contact d'urgence"
+                  value={person.emergency_contact}
+                  onChange={(e) => updatePerson(person.id, 'emergency_contact', e.target.value)}
+                  className="premium-input"
+                />
+                <input
+                  type="tel"
+                  placeholder="Tél. contact urgence"
+                  value={person.emergency_phone}
+                  onChange={(e) => updatePerson(person.id, 'emergency_phone', e.target.value)}
+                  className="premium-input"
+                />
+              </div>
+
+              {/* VÉRIFICATION FORMATION */}
+              <TrainingVerification
+                person={person}
+                onUpdate={(field, value) => updatePerson(person.id, field, value)}
+                role="entrant"
+              />
+
+              {/* CONTRÔLES ENTRÉE/SORTIE */}
+              <div className="flex items-center justify-between bg-slate-900/50 p-4 rounded-lg">
+                <div className="flex items-center gap-4">
+                  <div className={`w-3 h-3 rounded-full ${person.is_inside ? 'bg-red-400' : 'bg-green-400'}`}></div>
+                  <span className="text-sm font-medium">
+                    {person.is_inside ? '🔴 À L\'INTÉRIEUR' : '🟢 À L\'EXTÉRIEUR'}
+                  </span>
+                  
+                  {person.entry_time && (
+                    <span className="text-xs text-slate-400">
+                      Entrée: {new Date(person.entry_time).toLocaleTimeString()}
+                    </span>
+                  )}
+                  
+                  {person.exit_time && (
+                    <span className="text-xs text-slate-400">
+                      Sortie: {new Date(person.exit_time).toLocaleTimeString()}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => recordEntry(person.id)}
+                    disabled={person.is_inside}
+                    className="premium-button text-xs"
+                    style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)' }}
+                  >
+                    <LogIn className="w-3 h-3 mr-1" />
+                    Entrée
+                  </button>
+                  
+                  <button
+                    onClick={() => recordExit(person.id)}
+                    disabled={!person.is_inside}
+                    className="premium-button text-xs"
+                    style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}
+                  >
+                    <LogOut className="w-3 h-3 mr-1" />
+                    Sortie
+                  </button>
+                  
+                  <button
+                    onClick={() => removePerson(person.id)}
+                    className="premium-button-secondary text-xs"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+
+              {/* SIGNATURE AVEC VALIDATION FORMATION */}
+              <div className="mt-4">
+                {/* Vérification avant signature */}
+                {!(person.training_declaration && 
+                   person.formation_espace_clos && 
+                   person.formation_premiers_soins) && (
+                  <div className="mb-3 p-3 bg-red-900/30 border border-red-500/50 rounded text-red-200 text-sm">
+                    ⚠️ La signature ne sera possible qu'après validation complète des formations obligatoires.
+                  </div>
+                )}
+                
+                <SignatureCanvas
+                  label={`Signature - ${person.name || 'Entrant'} - Formations Conformes`}
+                  required
+                  onSignature={(sig) => {
+                    if (person.training_declaration && person.formation_espace_clos && person.formation_premiers_soins) {
+                      updatePerson(person.id, 'signature', sig);
+                      updatePerson(person.id, 'signature_timestamp', new Date().toISOString());
+                    } else {
+                      alert('⚠️ Veuillez d\'abord valider toutes les formations obligatoires avant de signer.');
+                    }
+                  }}
+                />
+                
+                {person.signature && (
+                  <div className="mt-2 p-2 bg-green-900/30 border border-green-500/50 rounded text-green-200 text-xs">
+                    ✅ Signé le {person.signature_timestamp ? new Date(person.signature_timestamp).toLocaleString() : ''} 
+                    - Formations validées et conformes
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* SECTION SURVEILLANTS */}
+      <div className="premium-card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="section-title">
+            <UserCheck className="w-5 h-5" />
+            Surveillants ({attendants.length})
+          </h3>
+          <button
+            onClick={() => addPerson('attendant')}
+            className="premium-button text-sm"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            {texts.addAttendant}
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {attendants.map(person => (
+            <div key={person.id} className="premium-card border-l-4 border-yellow-500">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <input
+                  type="text"
+                  placeholder="Nom complet *"
+                  value={person.name}
+                  onChange={(e) => updatePerson(person.id, 'name', e.target.value)}
+                  className="premium-input"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="ID Employé"
+                  value={person.employee_id}
+                  onChange={(e) => updatePerson(person.id, 'employee_id', e.target.value)}
+                  className="premium-input"
+                />
+                <input
+                  type="text"
+                  placeholder="Compagnie"
+                  value={person.company}
+                  onChange={(e) => updatePerson(person.id, 'company', e.target.value)}
+                  className="premium-input"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <input
+                  type="text"
+                  placeholder="Certification surveillance"
+                  value={person.certification}
+                  onChange={(e) => updatePerson(person.id, 'certification', e.target.value)}
+                  className="premium-input"
+                />
+                <input
+                  type="tel"
+                  placeholder="Téléphone"
+                  value={person.phone}
+                  onChange={(e) => updatePerson(person.id, 'phone', e.target.value)}
+                  className="premium-input"
+                />
+              </div>
+
+              {/* VÉRIFICATION FORMATION SURVEILLANT */}
+              <TrainingVerification
+                person={person}
+                onUpdate={(field, value) => updatePerson(person.id, field, value)}
+                role="attendant"
+              />
+
+              <div className="flex justify-end gap-2 mb-4">
+                <button
+                  onClick={() => removePerson(person.id)}
+                  className="premium-button-secondary text-xs"
+                >
+                  <Trash2 className="w-3 h-3 mr-1" />
+                  Retirer
+                </button>
+              </div>
+
+              {/* SIGNATURE SURVEILLANT AVEC VALIDATION FORMATION */}
+              <div className="mt-4">
+                {/* Vérification avant signature */}
+                {!(person.training_declaration && 
+                   person.formation_espace_clos && 
+                   person.formation_sauvetage &&
+                   person.formation_premiers_soins) && (
+                  <div className="mb-3 p-3 bg-red-900/30 border border-red-500/50 rounded text-red-200 text-sm">
+                    ⚠️ La signature ne sera possible qu'après validation complète des formations obligatoires de surveillant.
+                  </div>
+                )}
+                
+                <SignatureCanvas
+                  label={`Signature - ${person.name || 'Surveillant'} - Formations Surveillant Conformes`}
+                  required
+                  onSignature={(sig) => {
+                    if (person.training_declaration && 
+                        person.formation_espace_clos && 
+                        person.formation_sauvetage &&
+                        person.formation_premiers_soins) {
+                      updatePerson(person.id, 'signature', sig);
+                      updatePerson(person.id, 'signature_timestamp', new Date().toISOString());
+                    } else {
+                      alert('⚠️ Veuillez d\'abord valider toutes les formations obligatoires de surveillant avant de signer.');
+                    }
+                  }}
+                />
+                
+                {person.signature && (
+                  <div className="mt-2 p-2 bg-green-900/30 border border-green-500/50 rounded text-green-200 text-xs">
+                    ✅ Signé le {person.signature_timestamp ? new Date(person.signature_timestamp).toLocaleString() : ''} 
+                    - Formations surveillant validées et conformes
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* SECTION SUPERVISEUR */}
+      <div className="premium-card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="section-title">
+            <Shield className="w-5 h-5" />
+            Superviseur d'Entrée
+          </h3>
+          {supervisors.length === 0 && (
+            <button
+              onClick={() => addPerson('supervisor')}
+              className="premium-button text-sm"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Ajouter Superviseur
+            </button>
+          )}
+        </div>
+
+        {supervisors.map(person => (
+          <div key={person.id} className="premium-card border-l-4 border-green-500">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <input
+                type="text"
+                placeholder="Nom complet *"
+                value={person.name}
+                onChange={(e) => updatePerson(person.id, 'name', e.target.value)}
+                className="premium-input"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Titre/Position"
+                value={person.employee_id}
+                onChange={(e) => updatePerson(person.id, 'employee_id', e.target.value)}
+                className="premium-input"
+              />
+              <input
+                type="tel"
+                placeholder="Téléphone"
+                value={person.phone}
+                onChange={(e) => updatePerson(person.id, 'phone', e.target.value)}
+                className="premium-input"
+              />
+            </div>
+
+            {/* VÉRIFICATION FORMATION SUPERVISEUR */}
+            <TrainingVerification
+              person={person}
+              onUpdate={(field, value) => updatePerson(person.id, field, value)}
+              role="supervisor"
             />
-            {photo.gps_location && (
-              <MapPin className="absolute top-1 right-1 w-3 h-3 text-green-400" />
-            )}
+
+            {/* SIGNATURE SUPERVISEUR AVEC VALIDATION FORMATION */}
+            <div className="mt-4">
+              {!(person.training_declaration && person.formation_espace_clos) && (
+                <div className="mb-3 p-3 bg-red-900/30 border border-red-500/50 rounded text-red-200 text-sm">
+                  ⚠️ La signature ne sera possible qu'après validation des formations de superviseur.
+                </div>
+              )}
+              
+              <SignatureCanvas
+                label={`Signature Superviseur - ${person.name || 'Superviseur'} - Personne Qualifiée`}
+                required
+                onSignature={(sig) => {
+                  if (person.training_declaration && person.formation_espace_clos) {
+                    updatePerson(person.id, 'signature', sig);
+                    updatePerson(person.id, 'signature_timestamp', new Date().toISOString());
+                  } else {
+                    alert('⚠️ Veuillez d\'abord valider les formations de superviseur avant de signer.');
+                  }
+                }}
+              />
+              
+              {person.signature && (
+                <div className="mt-2 p-2 bg-green-900/30 border border-green-500/50 rounded text-green-200 text-xs">
+                  ✅ Signé le {person.signature_timestamp ? new Date(person.signature_timestamp).toLocaleString() : ''} 
+                  - Qualifications superviseur validées
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -636,92 +908,83 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
 
   // =================== ÉTAT PRINCIPAL ===================
   const [permitData, setPermitData] = useState({
-    // Identification
-    project_name: initialData?.project_name || '',
-    location: initialData?.location || '',
-    contractor: initialData?.contractor || '',
-    start_time: initialData?.start_time || '',
-    end_time: initialData?.end_time || '',
-    duration: initialData?.duration || 8,
+    // En-tête légal
+    permit_number: initialData?.permit_number || `CS-${province}-${Date.now().toString().slice(-6)}`,
+    issue_date: initialData?.issue_date || new Date().toISOString().split('T')[0],
+    issue_time: initialData?.issue_time || new Date().toTimeString().slice(0, 5),
+    expiry_date: initialData?.expiry_date || '',
+    expiry_time: initialData?.expiry_time || '',
+    
+    // Identification du site
+    site_name: initialData?.site_name || '',
+    site_address: initialData?.site_address || '',
+    gps_coordinates: initialData?.gps_coordinates || '',
+    
+    // Description de l'espace
+    space_location: initialData?.space_location || '',
     space_description: initialData?.space_description || '',
-    hazards_identified: initialData?.hazards_identified || '',
+    space_dimensions: initialData?.space_dimensions || '',
+    access_points: initialData?.access_points || '',
+    
+    // Travail à effectuer
     work_description: initialData?.work_description || '',
+    contractor_company: initialData?.contractor_company || '',
+    work_supervisor: initialData?.work_supervisor || '',
+    estimated_duration: initialData?.estimated_duration || '',
+    
+    // Évaluation des dangers
+    hazards_identified: initialData?.hazards_identified || [] as HazardAssessment[],
     
     // Personnel
-    personnel: initialData?.personnel || {
-      entrant: { name: '', certification: '', certification_expiry: '', signature: '' },
-      attendant: { name: '', certification: '', certification_expiry: '', signature: '' },
-      supervisor: { name: '', certification: '', certification_expiry: '', signature: '' }
-    },
+    personnel: initialData?.personnel || [] as PersonnelEntry[],
     
     // Tests atmosphériques
     atmospheric_readings: initialData?.atmospheric_readings || [] as AtmosphericReading[],
     
-    // Photos
-    photos: initialData?.photos || [] as PhotoRecord[]
+    // Vérification équipements
+    equipment_checks: initialData?.equipment_checks || [] as EquipmentCheck[],
+    
+    // Documentation
+    photos: initialData?.photos || [] as PhotoRecord[],
+    
+    // Conditions spéciales
+    special_conditions: initialData?.special_conditions || '',
+    rescue_plan: initialData?.rescue_plan || '',
+    emergency_procedures: initialData?.emergency_procedures || '',
+    
+    // Autorisation finale
+    authorized_by: initialData?.authorized_by || '',
+    authorization_timestamp: initialData?.authorization_timestamp || '',
+    final_signature: initialData?.final_signature || ''
   });
 
   // =================== TIMER ET MONITORING ===================
   const [timerState, setTimerState] = useState({
     elapsed: 0,
-    isRunning: false,
-    lastTestTime: 0
+    isRunning: false
   });
 
   const [bluetoothDevice, setBluetoothDevice] = useState<any>(null);
   const [currentReading, setCurrentReading] = useState<AtmosphericReading | null>(null);
 
-  // Timer principal avec fréquence provinciale
-  useEffect(() => {
-    if (!timerState.isRunning) return;
-
-    const interval = setInterval(() => {
-      setTimerState(prev => {
-        const newElapsed = prev.elapsed + 1;
-        
-        // Fréquence de test selon la province
-        let testIntervalSeconds;
-        const freqMinutes = regulations.atmospheric_testing.frequency_minutes;
-        
-        if (typeof freqMinutes === 'number') {
-          testIntervalSeconds = freqMinutes * 60;
-        } else {
-          // Pour les provinces avec "as necessary" ou "continuous", utiliser 30min par défaut
-          testIntervalSeconds = 30 * 60;
-        }
-        
-        // Notification de test requis
-        if (newElapsed % testIntervalSeconds === 0 && newElapsed > 0) {
-          const message = typeof freqMinutes === 'number' 
-            ? `🌬️ Test atmosphérique requis (${freqMinutes}min) - ${regulations.authority}`
-            : `🌬️ Test atmosphérique requis selon ${regulations.code}`;
-          alert(message);
-        }
-
-        return { ...prev, elapsed: newElapsed };
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [timerState.isRunning, regulations]);
-
-  // =================== SIMULATION BLUETOOTH 4-GAZ ===================
-  const simulateBluetoothReading = useCallback(() => {
+  // =================== SIMULATION TESTS ATMOSPHÉRIQUES ===================
+  const simulateAtmosphericReading = useCallback(() => {
     const reading: AtmosphericReading = {
       id: `reading_${Date.now()}`,
       timestamp: new Date().toISOString(),
-      oxygen: Math.random() * 2 + 20.5, // 20.5-22.5%
-      lel: Math.random() * 5, // 0-5%
-      h2s: Math.random() * 5, // 0-5 ppm
-      co: Math.random() * 15, // 0-15 ppm
-      temperature: Math.random() * 10 + 20, // 20-30°C
-      humidity: Math.random() * 20 + 40, // 40-60%
+      oxygen: Math.random() * 2 + 20.5,
+      lel: Math.random() * 5,
+      h2s: Math.random() * 5,
+      co: Math.random() * 15,
+      temperature: Math.random() * 10 + 20,
+      humidity: Math.random() * 20 + 40,
       status: 'safe',
       device_id: 'BW-GasAlert-001',
-      location: permitData.location
+      location: permitData.space_location,
+      taken_by: 'Système automatique'
     };
 
-    // Déterminer le statut
+    // Déterminer le statut selon les limites
     const limits = regulations.atmospheric_testing.limits;
     if (reading.oxygen < limits.oxygen.critical || 
         reading.lel > limits.lel.critical ||
@@ -740,44 +1003,24 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       ...prev,
       atmospheric_readings: [...prev.atmospheric_readings, reading]
     }));
-  }, [permitData.location, regulations.atmospheric_testing.limits]);
+  }, [permitData.space_location, regulations.atmospheric_testing.limits]);
 
   // =================== HANDLERS ===================
-  const handleInputChange = (section: string, field: string, value: any) => {
+  const handleInputChange = (field: string, value: any) => {
     setPermitData(prev => ({
       ...prev,
-      [section]: typeof (prev as any)[section] === 'object' 
-        ? { ...(prev as any)[section], [field]: value }
-        : value
+      [field]: value
     }));
   };
 
-  const handlePersonnelChange = (role: string, field: string, value: string) => {
+  const handlePersonnelChange = (personnel: PersonnelEntry[]) => {
     setPermitData(prev => ({
       ...prev,
-      personnel: {
-        ...prev.personnel,
-        [role]: {
-          ...(prev.personnel as any)[role],
-          [field]: value
-        }
-      }
-    }));
-  };
-
-  const handleSignature = (role: string, signature: string) => {
-    handlePersonnelChange(role, 'signature', signature);
-  };
-
-  const handlePhoto = (photo: PhotoRecord) => {
-    setPermitData(prev => ({
-      ...prev,
-      photos: [...prev.photos, photo]
+      personnel
     }));
   };
 
   const connectBluetoothDevice = async () => {
-    // Simulation connexion Bluetooth
     setBluetoothDevice({
       id: 'BW-GasAlert-001',
       name: 'BW GasAlert Quattro',
@@ -785,11 +1028,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       battery: 85,
       signal: 95
     });
-    
-    // Démarrer les lectures automatiques
-    const readingInterval = setInterval(simulateBluetoothReading, 30000); // Toutes les 30s
-    
-    return () => clearInterval(readingInterval);
   };
 
   const formatTime = (seconds: number) => {
@@ -799,492 +1037,609 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'safe': return 'text-green-400';
-      case 'warning': return 'text-yellow-400';
-      case 'danger': return 'text-red-400';
-      default: return 'text-slate-400';
-    }
-  };
+  // Timer effet
+  useEffect(() => {
+    if (!timerState.isRunning) return;
+
+    const interval = setInterval(() => {
+      setTimerState(prev => ({ ...prev, elapsed: prev.elapsed + 1 }));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timerState.isRunning]);
 
   // =================== RENDU ===================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <>
+      {/* CSS PREMIUM */}
+      <style jsx>{`
+        .premium-container {
+          background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%);
+          min-height: 100vh;
+          padding: 20px;
+        }
         
-        {/* HEADER AVEC TIMER */}
-        <div className="bg-gradient-to-r from-red-900/20 to-orange-900/20 border border-red-500/30 rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-red-600/20 rounded-xl flex items-center justify-center">
-                <Home className="w-6 h-6 text-red-400" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">{texts.title}</h1>
-                <p className="text-red-200">{regulations.name} - {regulations.code}</p>
-              </div>
-            </div>
-            
-            <div className="text-right">
-              <div className="text-3xl font-mono text-green-400">
-                {formatTime(timerState.elapsed)}
-              </div>
-              <div className="text-sm text-slate-400">Temps écoulé</div>
-            </div>
-          </div>
+        .glass-effect {
+          background: rgba(15, 23, 42, 0.7);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          border-radius: 20px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .premium-card {
+          background: rgba(30, 41, 59, 0.6);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(100, 116, 139, 0.3);
+          border-radius: 16px;
+          padding: 20px;
+          margin-bottom: 20px;
+          transition: all 0.3s ease;
+        }
+        
+        .premium-card:hover {
+          transform: translateY(-2px);
+          border-color: rgba(251, 191, 36, 0.5);
+          box-shadow: 0 12px 40px rgba(251, 191, 36, 0.15);
+        }
+        
+        .premium-input {
+          width: 100%;
+          padding: 12px 16px;
+          background: rgba(15, 23, 42, 0.8);
+          border: 2px solid rgba(100, 116, 139, 0.3);
+          border-radius: 12px;
+          color: #ffffff;
+          font-size: 14px;
+          transition: all 0.3s ease;
+        }
+        
+        .premium-input:focus {
+          outline: none;
+          border-color: #f59e0b;
+          background: rgba(15, 23, 42, 0.9);
+          box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+        }
+        
+        .premium-button {
+          padding: 10px 20px;
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%);
+          border: none;
+          border-radius: 12px;
+          color: white;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .premium-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(251, 191, 36, 0.4);
+        }
+        
+        .premium-button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          transform: none;
+        }
+        
+        .premium-button-secondary {
+          padding: 10px 20px;
+          background: linear-gradient(135deg, #64748b, #475569);
+          border: none;
+          border-radius: 12px;
+          color: white;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .premium-button-secondary:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(100, 116, 139, 0.4);
+        }
+        
+        .section-title {
+          color: #f59e0b;
+          font-size: 18px;
+          font-weight: 700;
+          margin: 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .timer-display {
+          font-family: 'Courier New', monospace;
+          font-size: 28px;
+          font-weight: bold;
+          color: #22c55e;
+          text-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+        }
+        
+        .status-safe { color: #22c55e; }
+        .status-warning { color: #f59e0b; }
+        .status-danger { color: #ef4444; }
+        
+        @media (max-width: 768px) {
+          .premium-container { padding: 12px; }
+          .premium-card { padding: 16px; margin-bottom: 16px; }
+          .timer-display { font-size: 20px; }
+        }
+      `}</style>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-slate-800/50 rounded-xl p-3 text-center">
-              <div className="text-lg font-bold text-white">{province}</div>
-              <div className="text-xs text-slate-400">Province</div>
-            </div>
-            <div className="bg-slate-800/50 rounded-xl p-3 text-center">
-              <div className="text-lg font-bold text-blue-400">
-                {typeof regulations.atmospheric_testing.frequency_minutes === 'number' 
-                  ? `${regulations.atmospheric_testing.frequency_minutes}min`
-                  : 'Continu'
-                }
-              </div>
-              <div className="text-xs text-slate-400">Fréq. Tests</div>
-            </div>
-            <div className="bg-slate-800/50 rounded-xl p-3 text-center">
-              <div className="text-lg font-bold text-yellow-400">
-                {permitData.atmospheric_readings.length}
-              </div>
-              <div className="text-xs text-slate-400">Tests Effectués</div>
-            </div>
-            <div className="bg-slate-800/50 rounded-xl p-3 text-center">
-              <div className="flex justify-center gap-2">
-                <button
-                  onClick={() => setTimerState(prev => ({ ...prev, isRunning: !prev.isRunning }))}
-                  className={`px-3 py-1 rounded text-sm font-medium ${
-                    timerState.isRunning 
-                      ? 'bg-red-600 text-white hover:bg-red-700' 
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  }`}
-                >
-                  {timerState.isRunning ? (
-                    <><Pause className="w-3 h-3 mr-1 inline" /> Pause</>
-                  ) : (
-                    <><Play className="w-3 h-3 mr-1 inline" /> Start</>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="premium-container">
+        <div className="max-w-6xl mx-auto">
           
-          {/* COLONNE GAUCHE */}
-          <div className="space-y-6">
-            
-            {/* SECTION IDENTIFICATION */}
-            <div className="bg-slate-800/30 border border-slate-600/30 rounded-xl p-6">
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                {texts.identification}
-              </h2>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    {texts.projectName} *
-                  </label>
-                  <input
-                    type="text"
-                    value={permitData.project_name}
-                    onChange={(e) => handleInputChange('project_name', '', e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-blue-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    {texts.location} *
-                  </label>
-                  <input
-                    type="text"
-                    value={permitData.location}
-                    onChange={(e) => handleInputChange('location', '', e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-blue-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    {texts.contractor}
-                  </label>
-                  <input
-                    type="text"
-                    value={permitData.contractor}
-                    onChange={(e) => handleInputChange('contractor', '', e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      {texts.startTime}
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={permitData.start_time}
-                      onChange={(e) => handleInputChange('start_time', '', e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      {texts.duration}
-                    </label>
-                    <input
-                      type="number"
-                      value={permitData.duration}
-                      onChange={(e) => handleInputChange('duration', '', Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-blue-500"
-                      min="1"
-                      max="24"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    {texts.spaceDescription}
-                  </label>
-                  <textarea
-                    value={permitData.space_description}
-                    onChange={(e) => handleInputChange('space_description', '', e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-blue-500"
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    {texts.hazardsIdentified}
-                  </label>
-                  <textarea
-                    value={permitData.hazards_identified}
-                    onChange={(e) => handleInputChange('hazards_identified', '', e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-blue-500"
-                    rows={3}
-                  />
-                </div>
+          {/* HEADER LÉGAL */}
+          <div className="glass-effect p-6 mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-3xl font-bold text-white mb-2">{texts.title}</h1>
+                <p className="text-slate-300">{regulations.name} - {regulations.code}</p>
+              </div>
+              <div className="text-right">
+                <div className="timer-display">{formatTime(timerState.elapsed)}</div>
+                <div className="text-sm text-slate-400">Temps permis actif</div>
               </div>
             </div>
 
-            {/* SECTION PERSONNEL */}
-            <div className="bg-slate-800/30 border border-slate-600/30 rounded-xl p-6">
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                {texts.personnel}
-              </h2>
-
-              <div className="space-y-6">
-                {['entrant', 'attendant', 'supervisor'].map((role) => (
-                  <div key={role}>
-                    <h3 className="text-lg font-medium text-white mb-3">
-                      {texts[role as keyof typeof texts]}
-                      {role !== 'supervisor' && <span className="text-red-400 ml-1">*</span>}
-                    </h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="block text-sm text-slate-300 mb-1">{texts.name}</label>
-                        <input
-                          type="text"
-                          value={permitData.personnel[role]?.name || ''}
-                          onChange={(e) => handlePersonnelChange(role, 'name', e.target.value)}
-                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:border-blue-500"
-                          required={role !== 'supervisor'}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-slate-300 mb-1">{texts.certification}</label>
-                        <input
-                          type="text"
-                          value={permitData.personnel[role]?.certification || ''}
-                          onChange={(e) => handlePersonnelChange(role, 'certification', e.target.value)}
-                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:border-blue-500"
-                        />
-                      </div>
-                    </div>
-
-                    <SignatureCanvas
-                      role={texts[role as keyof typeof texts]}
-                      onSignature={(sig) => handleSignature(role, sig)}
-                      required={role !== 'supervisor'}
-                    />
-                  </div>
-                ))}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="premium-card">
+                <label className="block text-sm text-slate-300 mb-2">{texts.permitNumber}</label>
+                <input
+                  type="text"
+                  value={permitData.permit_number}
+                  onChange={(e) => handleInputChange('permit_number', e.target.value)}
+                  className="premium-input"
+                  style={{ fontSize: '16px', fontWeight: 'bold', fontFamily: 'monospace' }}
+                />
+              </div>
+              
+              <div className="premium-card">
+                <label className="block text-sm text-slate-300 mb-2">Date d'émission</label>
+                <input
+                  type="date"
+                  value={permitData.issue_date}
+                  onChange={(e) => handleInputChange('issue_date', e.target.value)}
+                  className="premium-input"
+                />
+              </div>
+              
+              <div className="premium-card">
+                <label className="block text-sm text-slate-300 mb-2">Heure d'émission</label>
+                <input
+                  type="time"
+                  value={permitData.issue_time}
+                  onChange={(e) => handleInputChange('issue_time', e.target.value)}
+                  className="premium-input"
+                />
+              </div>
+              
+              <div className="premium-card">
+                <label className="block text-sm text-slate-300 mb-2">Valide jusqu'à</label>
+                <input
+                  type="datetime-local"
+                  value={permitData.expiry_date + 'T' + (permitData.expiry_time || '23:59')}
+                  onChange={(e) => {
+                    const [date, time] = e.target.value.split('T');
+                    handleInputChange('expiry_date', date);
+                    handleInputChange('expiry_time', time);
+                  }}
+                  className="premium-input"
+                />
               </div>
             </div>
           </div>
 
-          {/* COLONNE DROITE */}
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
-            {/* SECTION TESTS ATMOSPHÉRIQUES */}
-            <div className="bg-slate-800/30 border border-slate-600/30 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                  <Wind className="w-5 h-5" />
-                  {texts.atmospheric}
+            {/* COLONNE GAUCHE */}
+            <div className="space-y-6">
+              
+              {/* IDENTIFICATION DU SITE */}
+              <div className="premium-card">
+                <h2 className="section-title mb-4">
+                  <MapPin className="w-5 h-5" />
+                  Identification du Site
                 </h2>
                 
-                <div className="flex gap-2">
-                  {!bluetoothDevice ? (
-                    <button
-                      onClick={connectBluetoothDevice}
-                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-                    >
-                      <Bluetooth className="w-3 h-3 mr-1 inline" />
-                      Connecter 4-Gaz
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-2 px-3 py-1 bg-green-600/20 text-green-400 rounded text-sm">
-                      <Bluetooth className="w-3 h-3" />
-                      <span>{bluetoothDevice.name}</span>
-                      <Battery className="w-3 h-3" />
-                      <span>{bluetoothDevice.battery}%</span>
-                    </div>
-                  )}
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="Nom du site/projet *"
+                    value={permitData.site_name}
+                    onChange={(e) => handleInputChange('site_name', e.target.value)}
+                    className="premium-input"
+                    required
+                  />
                   
-                  <button
-                    onClick={simulateBluetoothReading}
-                    className="px-3 py-1 bg-cyan-600 text-white rounded text-sm hover:bg-cyan-700"
-                  >
-                    Test Manuel
-                  </button>
+                  <textarea
+                    placeholder="Adresse complète du site *"
+                    value={permitData.site_address}
+                    onChange={(e) => handleInputChange('site_address', e.target.value)}
+                    className="premium-input"
+                    rows={2}
+                    required
+                  />
+                  
+                  <input
+                    type="text"
+                    placeholder="Coordonnées GPS (optionnel)"
+                    value={permitData.gps_coordinates}
+                    onChange={(e) => handleInputChange('gps_coordinates', e.target.value)}
+                    className="premium-input"
+                  />
                 </div>
               </div>
 
-              {/* Lecture actuelle */}
-              {currentReading && (
-                <div className="mb-6 p-4 bg-slate-700/50 rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-white">{texts.currentReading}</span>
-                    <span className={`text-sm font-bold ${getStatusColor(currentReading.status)}`}>
-                      {texts[currentReading.status as keyof typeof texts]}
-                    </span>
-                  </div>
+              {/* DESCRIPTION DE L'ESPACE */}
+              <div className="premium-card">
+                <h2 className="section-title mb-4">
+                  <Home className="w-5 h-5" />
+                  Description de l'Espace Clos
+                </h2>
+                
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="Localisation exacte de l'espace *"
+                    value={permitData.space_location}
+                    onChange={(e) => handleInputChange('space_location', e.target.value)}
+                    className="premium-input"
+                    required
+                  />
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-cyan-400">
-                        {currentReading.oxygen.toFixed(1)}%
-                      </div>
-                      <div className="text-xs text-slate-400">{texts.oxygen}</div>
-                      <div className="text-xs text-slate-500">
-                        {regulations.atmospheric_testing.limits.oxygen.min}-{regulations.atmospheric_testing.limits.oxygen.max}%
-                      </div>
-                    </div>
-                    
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-yellow-400">
-                        {currentReading.lel.toFixed(1)}%
-                      </div>
-                      <div className="text-xs text-slate-400">{texts.lel}</div>
-                      <div className="text-xs text-slate-500">
-                        &lt;{regulations.atmospheric_testing.limits.lel.max}%
-                      </div>
-                    </div>
-                    
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-orange-400">
-                        {currentReading.h2s.toFixed(1)}
-                      </div>
-                      <div className="text-xs text-slate-400">{texts.h2s}</div>
-                      <div className="text-xs text-slate-500">
-                        &lt;{regulations.atmospheric_testing.limits.h2s.max}ppm
-                      </div>
-                    </div>
-                    
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-400">
-                        {currentReading.co.toFixed(1)}
-                      </div>
-                      <div className="text-xs text-slate-400">{texts.co}</div>
-                      <div className="text-xs text-slate-500">
-                        &lt;{regulations.atmospheric_testing.limits.co.max}ppm
-                      </div>
-                    </div>
-                  </div>
+                  <textarea
+                    placeholder="Description détaillée de l'espace clos *"
+                    value={permitData.space_description}
+                    onChange={(e) => handleInputChange('space_description', e.target.value)}
+                    className="premium-input"
+                    rows={3}
+                    required
+                  />
+                  
+                  <input
+                    type="text"
+                    placeholder="Dimensions approximatives"
+                    value={permitData.space_dimensions}
+                    onChange={(e) => handleInputChange('space_dimensions', e.target.value)}
+                    className="premium-input"
+                  />
+                  
+                  <input
+                    type="text"
+                    placeholder="Points d'accès/sorties"
+                    value={permitData.access_points}
+                    onChange={(e) => handleInputChange('access_points', e.target.value)}
+                    className="premium-input"
+                  />
+                </div>
+              </div>
 
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-green-400">
-                        {currentReading.temperature.toFixed(1)}°C
+              {/* TRAVAIL À EFFECTUER */}
+              <div className="premium-card">
+                <h2 className="section-title mb-4">
+                  <FileText className="w-5 h-5" />
+                  Travail à Effectuer
+                </h2>
+                
+                <div className="space-y-4">
+                  <textarea
+                    placeholder="Description détaillée du travail *"
+                    value={permitData.work_description}
+                    onChange={(e) => handleInputChange('work_description', e.target.value)}
+                    className="premium-input"
+                    rows={3}
+                    required
+                  />
+                  
+                  <input
+                    type="text"
+                    placeholder="Compagnie contracteur"
+                    value={permitData.contractor_company}
+                    onChange={(e) => handleInputChange('contractor_company', e.target.value)}
+                    className="premium-input"
+                  />
+                  
+                  <input
+                    type="text"
+                    placeholder="Superviseur des travaux"
+                    value={permitData.work_supervisor}
+                    onChange={(e) => handleInputChange('work_supervisor', e.target.value)}
+                    className="premium-input"
+                  />
+                  
+                  <input
+                    type="text"
+                    placeholder="Durée estimée"
+                    value={permitData.estimated_duration}
+                    onChange={(e) => handleInputChange('estimated_duration', e.target.value)}
+                    className="premium-input"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* COLONNE DROITE */}
+            <div className="space-y-6">
+              
+              {/* TESTS ATMOSPHÉRIQUES */}
+              <div className="premium-card">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="section-title">
+                    <Wind className="w-5 h-5" />
+                    Tests Atmosphériques
+                  </h2>
+                  
+                  <div className="flex gap-2">
+                    {!bluetoothDevice ? (
+                      <button
+                        onClick={connectBluetoothDevice}
+                        className="premium-button text-sm"
+                      >
+                        <Bluetooth className="w-3 h-3 mr-1" />
+                        Connecter 4-Gaz
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2 px-3 py-1 bg-green-600/20 text-green-400 rounded text-sm">
+                        <Bluetooth className="w-3 h-3" />
+                        <span>{bluetoothDevice.name}</span>
                       </div>
-                      <div className="text-xs text-slate-400">{texts.temperature}</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-blue-400">
-                        {currentReading.humidity.toFixed(1)}%
-                      </div>
-                      <div className="text-xs text-slate-400">{texts.humidity}</div>
-                    </div>
+                    )}
+                    
+                    <button
+                      onClick={simulateAtmosphericReading}
+                      className="premium-button text-sm"
+                      style={{ background: 'linear-gradient(135deg, #06b6d4, #0891b2)' }}
+                    >
+                      Test Manuel
+                    </button>
                   </div>
                 </div>
-              )}
 
-              {/* Historique des lectures */}
-              <div className="max-h-60 overflow-y-auto">
-                <h3 className="text-lg font-medium text-white mb-3">Historique des Tests</h3>
-                <div className="space-y-2">
-                  {permitData.atmospheric_readings.slice(-10).reverse().map((reading: AtmosphericReading) => (
-                    <div key={reading.id} className="flex items-center justify-between p-2 bg-slate-700/30 rounded">
-                      <span className="text-xs text-slate-400">
-                        {new Date(reading.timestamp).toLocaleTimeString()}
+                {/* Lecture actuelle */}
+                {currentReading && (
+                  <div className="premium-card">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-medium text-white">Lecture Actuelle</span>
+                      <span className={`text-sm font-bold status-${currentReading.status}`}>
+                        {currentReading.status.toUpperCase()}
                       </span>
-                      <div className="flex gap-4 text-xs">
-                        <span>O₂: {reading.oxygen.toFixed(1)}%</span>
-                        <span>LEL: {reading.lel.toFixed(1)}%</span>
-                        <span>H₂S: {reading.h2s.toFixed(1)}</span>
-                        <span>CO: {reading.co.toFixed(1)}</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-cyan-400">
+                          {currentReading.oxygen.toFixed(1)}%
+                        </div>
+                        <div className="text-xs text-slate-400">Oxygène (O₂)</div>
                       </div>
-                      <span className={`text-xs font-medium ${getStatusColor(reading.status)}`}>
-                        {reading.status.toUpperCase()}
-                      </span>
+                      
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-yellow-400">
+                          {currentReading.lel.toFixed(1)}%
+                        </div>
+                        <div className="text-xs text-slate-400">LEL</div>
+                      </div>
+                      
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-orange-400">
+                          {currentReading.h2s.toFixed(1)}
+                        </div>
+                        <div className="text-xs text-slate-400">H₂S (ppm)</div>
+                      </div>
+                      
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-purple-400">
+                          {currentReading.co.toFixed(1)}
+                        </div>
+                        <div className="text-xs text-slate-400">CO (ppm)</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Historique */}
+                <div className="max-h-40 overflow-y-auto">
+                  <h4 className="text-sm font-medium text-white mb-2">Historique ({permitData.atmospheric_readings.length})</h4>
+                  <div className="space-y-1">
+                    {permitData.atmospheric_readings.slice(-5).reverse().map((reading) => (
+                      <div key={reading.id} className="flex items-center justify-between text-xs p-2 bg-slate-900/50 rounded">
+                        <span className="text-slate-400">
+                          {new Date(reading.timestamp).toLocaleTimeString()}
+                        </span>
+                        <div className="flex gap-2">
+                          <span>O₂:{reading.oxygen.toFixed(1)}</span>
+                          <span>LEL:{reading.lel.toFixed(1)}</span>
+                          <span>H₂S:{reading.h2s.toFixed(1)}</span>
+                          <span>CO:{reading.co.toFixed(1)}</span>
+                        </div>
+                        <span className={`status-${reading.status} font-medium`}>
+                          {reading.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* CONDITIONS SPÉCIALES */}
+              <div className="premium-card">
+                <h2 className="section-title mb-4">
+                  <AlertTriangle className="w-5 h-5" />
+                  Conditions Spéciales & Sécurité
+                </h2>
+                
+                <div className="space-y-4">
+                  <textarea
+                    placeholder="Conditions spéciales, restrictions, précautions particulières..."
+                    value={permitData.special_conditions}
+                    onChange={(e) => handleInputChange('special_conditions', e.target.value)}
+                    className="premium-input"
+                    rows={3}
+                  />
+                  
+                  <textarea
+                    placeholder="Plan de sauvetage d'urgence..."
+                    value={permitData.rescue_plan}
+                    onChange={(e) => handleInputChange('rescue_plan', e.target.value)}
+                    className="premium-input"
+                    rows={3}
+                  />
+                  
+                  <textarea
+                    placeholder="Procédures d'urgence spécifiques..."
+                    value={permitData.emergency_procedures}
+                    onChange={(e) => handleInputChange('emergency_procedures', e.target.value)}
+                    className="premium-input"
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              {/* CONTACTS D'URGENCE */}
+              <div className="premium-card" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }}>
+                <h2 className="section-title mb-4" style={{ color: '#ef4444' }}>
+                  <Phone className="w-5 h-5" />
+                  Contacts d'Urgence
+                </h2>
+                
+                <div className="space-y-3">
+                  {regulations.emergency_contacts?.map((contact, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-red-800/20 rounded-lg">
+                      <div>
+                        <div className="font-medium text-white">{contact.name}</div>
+                        <div className="text-sm text-red-200">{contact.role}</div>
+                      </div>
+                      <a 
+                        href={`tel:${contact.phone}`} 
+                        className="text-lg font-bold text-red-400 hover:text-red-300"
+                      >
+                        {contact.phone}
+                      </a>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
-
-            {/* SECTION PHOTOS */}
-            <div className="bg-slate-800/30 border border-slate-600/30 rounded-xl p-6">
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                <Camera className="w-5 h-5" />
-                {texts.photos}
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <PhotoCapture
-                  onPhoto={handlePhoto}
-                  category="before"
-                  photos={permitData.photos}
-                />
-                <PhotoCapture
-                  onPhoto={handlePhoto}
-                  category="equipment"
-                  photos={permitData.photos}
-                />
-                <PhotoCapture
-                  onPhoto={handlePhoto}
-                  category="during"
-                  photos={permitData.photos}
-                />
-                <PhotoCapture
-                  onPhoto={handlePhoto}
-                  category="after"
-                  photos={permitData.photos}
-                />
-              </div>
-            </div>
-
-            {/* CONTACTS D'URGENCE */}
-            <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-6">
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                <Phone className="w-5 h-5" />
-                Contacts d'Urgence - {regulations.name}
-              </h2>
-              
-              <div className="space-y-3">
-                {regulations.emergency_contacts?.map((contact, index) => (
-                  <div key={index} className="flex justify-between items-center p-3 bg-red-800/20 rounded">
-                    <div>
-                      <div className="font-medium text-white">{contact.name}</div>
-                      <div className="text-sm text-red-200">{contact.role}</div>
-                      {contact.available_24h && (
-                        <div className="text-xs text-green-300">✓ Disponible 24h/24</div>
-                      )}
-                    </div>
-                    <a 
-                      href={`tel:${contact.phone}`} 
-                      className="text-lg font-bold text-red-400 hover:text-red-300"
-                    >
-                      {contact.phone}
-                    </a>
-                  </div>
-                )) || (
-                  <div className="text-center text-red-200">
-                    Contacts d'urgence non configurés pour cette province
-                  </div>
-                )}
-              </div>
-
-              {/* Informations réglementaires */}
-              <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded">
-                <div className="text-sm text-blue-200">
-                  <strong>Autorité :</strong> {regulations.authority}<br/>
-                  <strong>Réglementation :</strong> {regulations.code}<br/>
-                  {regulations.url && (
-                    <>
-                      <strong>Référence :</strong>{' '}
-                      <a 
-                        href={regulations.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:text-blue-300 underline"
-                      >
-                        Consulter la réglementation
-                      </a>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
 
-        {/* ACTIONS FINALES */}
-        <div className="bg-slate-800/30 border border-slate-600/30 rounded-xl p-6">
-          <div className="flex flex-wrap gap-4 justify-between">
-            <div className="flex gap-4">
-              <button
-                onClick={() => onSave?.(permitData)}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                {texts.savePermit}
-              </button>
-              
-              <button
-                onClick={() => onSubmit?.(permitData)}
-                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-              >
-                <Upload className="w-4 h-4" />
-                {texts.submitPermit}
-              </button>
+          {/* SECTION PERSONNEL */}
+          <div className="mt-6">
+            <PersonnelManager
+              personnel={permitData.personnel}
+              onPersonnelChange={handlePersonnelChange}
+              texts={texts}
+            />
+          </div>
+
+          {/* AUTORISATION FINALE */}
+          <div className="premium-card mt-6">
+            <h2 className="section-title mb-4">
+              <Shield className="w-5 h-5" />
+              Autorisation Finale
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <input
+                type="text"
+                placeholder="Autorisé par (nom complet) *"
+                value={permitData.authorized_by}
+                onChange={(e) => handleInputChange('authorized_by', e.target.value)}
+                className="premium-input"
+                required
+              />
+              <input
+                type="datetime-local"
+                value={permitData.authorization_timestamp}
+                onChange={(e) => handleInputChange('authorization_timestamp', e.target.value)}
+                className="premium-input"
+              />
             </div>
 
-            <div className="flex gap-4">
-              <button
-                onClick={() => alert('🚨 ÉVACUATION IMMÉDIATE ACTIVÉE')}
-                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2 animate-pulse"
-              >
-                <AlertTriangle className="w-4 h-4" />
-                {texts.emergencyEvacuation}
-              </button>
-              
-              <button
-                onClick={onCancel}
-                className="px-6 py-3 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
-              >
-                {texts.cancel}
-              </button>
+            <SignatureCanvas
+              label="Signature d'autorisation finale"
+              required
+              onSignature={(sig) => handleInputChange('final_signature', sig)}
+            />
+          </div>
+
+          {/* ACTIONS FINALES */}
+          <div className="premium-card">
+            <div className="flex flex-wrap gap-4 justify-between">
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    setTimerState(prev => ({ ...prev, isRunning: !prev.isRunning }));
+                  }}
+                  className={`premium-button ${timerState.isRunning ? 'bg-red-600' : 'bg-green-600'}`}
+                  style={{ 
+                    background: timerState.isRunning 
+                      ? 'linear-gradient(135deg, #ef4444, #dc2626)' 
+                      : 'linear-gradient(135deg, #22c55e, #16a34a)' 
+                  }}
+                >
+                  {timerState.isRunning ? (
+                    <><Pause className="w-4 h-4 mr-2" /> Suspendre Permis</>
+                  ) : (
+                    <><Play className="w-4 h-4 mr-2" /> Activer Permis</>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => onSave?.(permitData)}
+                  className="premium-button"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {texts.savePermit}
+                </button>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => alert('🚨 ÉVACUATION D\'URGENCE ACTIVÉE')}
+                  className="premium-button"
+                  style={{ 
+                    background: 'linear-gradient(135deg, #ef4444, #dc2626)', 
+                    animation: 'pulse 2s infinite',
+                    fontSize: '16px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  <AlertTriangle className="w-5 h-5 mr-2" />
+                  {texts.emergencyEvacuation}
+                </button>
+                
+                <button
+                  onClick={() => onSubmit?.(permitData)}
+                  className="premium-button"
+                  style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  {texts.submitPermit}
+                </button>
+                
+                <button
+                  onClick={onCancel}
+                  className="premium-button-secondary"
+                >
+                  {texts.cancel}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
