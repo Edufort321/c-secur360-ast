@@ -1829,7 +1829,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 </h2>
                 
                 <div className="space-y-3">
-                  {regulations.emergency_contacts?.map((contact, index) => (
+                  {regulations.emergency_contacts?.map((contact: EmergencyContact, index: number) => (
                     <div key={index} className="flex justify-between items-center p-3 bg-red-800/20 rounded-lg">
                       <div>
                         <div className="font-medium text-white">{contact.name}</div>
