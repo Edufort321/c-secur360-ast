@@ -1767,7 +1767,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 <div className="max-h-40 overflow-y-auto">
                   <h4 className="text-sm font-medium text-white mb-2">Historique ({permitData.atmospheric_readings.length})</h4>
                   <div className="space-y-1">
-                    {permitData.atmospheric_readings.slice(-5).reverse().map((reading) => (
+                    {permitData.atmospheric_readings.slice(-5).reverse().map((reading: AtmosphericReading) => (
                       <div key={reading.id} className="flex items-center justify-between text-xs p-2 bg-slate-900/50 rounded">
                         <span className="text-slate-400">
                           {new Date(reading.timestamp).toLocaleTimeString()}
