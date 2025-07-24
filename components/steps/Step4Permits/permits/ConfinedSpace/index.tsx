@@ -62,6 +62,7 @@ interface PersonnelEntry {
   formation_sauvetage: boolean;
   formation_premiers_soins: boolean;
   formation_expiry_dates: {
+    [key: string]: string;
     espace_clos?: string;
     sauvetage?: string;
     premiers_soins?: string;
@@ -376,7 +377,7 @@ const TrainingVerification: React.FC<{
               <input
                 type="date"
                 placeholder="Date d'expiration"
-                value={person.formation_expiry_dates[training.key.replace('formation_', '')] || ''}
+                value={(person.formation_expiry_dates as any)[training.key.replace('formation_', '')] || ''}
                 onChange={(e) => updateFormationDate(training.key.replace('formation_', ''), e.target.value)}
                 className="premium-input text-xs"
                 style={{ width: '140px', padding: '6px 8px' }}
