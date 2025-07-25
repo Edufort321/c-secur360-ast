@@ -99,6 +99,412 @@ interface EmergencyContact {
   available_24h: boolean;
 }
 
+// =================== PLANS DE SAUVETAGE ET PROCÉDURES D'URGENCE ===================
+const RESCUE_PLAN_DATABASE = {
+  rescue_types: {
+    non_entry: {
+      name: 'Sauvetage Sans Entrée (Non-Entry)',
+      description: 'Méthode privilégiée - extraction par systèmes mécaniques externes',
+      advantages: [
+        'Aucun risque additionnel pour les sauveteurs',
+        'Intervention rapide (< 2 minutes)',
+        'Équipement minimal requis',
+        'Formation réduite du personnel'
+      ],
+      limitations: [
+        'Victime ne doit pas être coincée/enchevêtrée',
+        'Ouverture suffisante pour extraction',
+        'Espace sans obstacles internes majeurs',
+        'Harnais complet obligatoire sur entrant'
+      ],
+      equipment_required: [
+        'Trépied de sauvetage certifié (charge 2300 lbs min)',
+        'Treuil mécanique homologué personnel (non-matériel)',
+        'Harnais complet classe E (CSA Z259.10)',
+        'Ligne de vie 100% Dyneema ou câble acier inox',
+        'Poulies doubles pour avantage mécanique',
+        'Points d\'ancrage certifiés 22kN (5000 lbs)'
+      ]
+    },
+    entry_rescue: {
+      name: 'Sauvetage avec Entrée (Entry Rescue)',
+      description: 'Équipe spécialisée entre dans l\'espace clos pour secourir',
+      when_required: [
+        'Victime coincée ou enchevêtrée',
+        'Obstacles empêchant extraction directe',
+        'Espaces horizontaux complexes',
+        'Urgence médicale nécessitant soins sur place'
+      ],
+      team_requirements: [
+        'Minimum 5 personnes: 2 sauveteurs + 1 surveillant + 1 coordonnateur + 1 secours médical',
+        'Formation NFPA 1006 Technician Level',
+        'Certification sauvetage technique 40h minimum',
+        'Exercices pratiques mensuels obligatoires'
+      ],
+      equipment_advanced: [
+        'Appareils respiratoires isolants (ARI) 30min min',
+        'Équipement de communication bidirectionnelle',
+        'Éclairage antidéflagrant portable',
+        'Matériel de désincarcération compact',
+        'Brancard rigide SKED ou équivalent',
+        'Équipement médical d\'urgence complet'
+      ]
+    }
+  },
+  rescue_scenarios: {
+    atmospheric_emergency: {
+      title: 'Urgence Atmosphérique (Évanouissement)',
+      trigger: 'Perte de conscience due aux gaz/manque O₂',
+      response_time: '< 4 minutes (limite survie cerveau)',
+      procedure: [
+        '1. ÉVACUATION immédiate via treuil',
+        '2. Ventilation maximale de l\'espace',
+        '3. ARI obligatoire pour tout sauveteur',
+        '4. RCR si nécessaire à l\'extérieur',
+        '5. Transport médical d\'urgence'
+      ]
+    },
+    fall_injury: {
+      title: 'Chute avec Blessures',
+      trigger: 'Chute sur fond d\'espace ou contre parois',
+      response_time: '< 10 minutes (trauma)',
+      procedure: [
+        '1. Évaluation verbale état victime',
+        '2. Immobilisation si possible par instructions',
+        '3. Descente équipe médicale si nécessaire',
+        '4. Immobilisation spinale avant extraction',
+        '5. Extraction contrôlée sur brancard rigide'
+      ]
+    },
+    entrapment: {
+      title: 'Ensevelissement/Coincement',
+      trigger: 'Victime coincée par matériaux ou équipements',
+      response_time: '< 30 minutes (asphyxie progressive)',
+      procedure: [
+        '1. Sécurisation zone pour empêcher aggravation',
+        '2. Communication constante avec victime',
+        '3. Entrée équipe spécialisée désincarcération',
+        '4. Dégagement progressif sans compromettre stabilité',
+        '5. Extraction rapide dès libération'
+      ]
+    },
+    fire_explosion: {
+      title: 'Incendie/Explosion',
+      trigger: 'Début d\'incendie ou explosion dans espace',
+      response_time: 'Immédiat (secondes)',
+      procedure: [
+        '1. ACTIVATION système suppression incendie',
+        '2. Coupure toutes énergies électriques',
+        '3. Évacuation par tous moyens disponibles',
+        '4. INTERDICTION entrée sauveteurs',
+        '5. Attente services incendie professionnels'
+      ]
+    }
+  },
+  communication_systems: {
+    primary: {
+      type: 'Radio bidirectionnelle',
+      specifications: 'Antidéflagrante classe I division 1',
+      range: 'Minimum 1 km en zone dégagée',
+      battery: 'Autonomie 8h minimum'
+    },
+    backup: {
+      type: 'Système filaire',
+      specifications: 'Câble blindé résistant traction',
+      advantages: 'Fonctionne sans batterie/interférences',
+      installation: 'Ligne dédiée non mélangée aux câbles d\'alimentation'
+    },
+    emergency: {
+      type: 'Signalement physique',
+      methods: ['Coups répétés sur ligne de vie', 'Sifflet haute fréquence', 'Signaux lumineux LED']
+    }
+  },
+  emergency_contacts: {
+    response_matrix: {
+      level_1: {
+        severity: 'Incident mineur - Pas de blessures',
+        contacts: ['Superviseur site', 'Sécurité entreprise'],
+        response_time: '15 minutes'
+      },
+      level_2: {
+        severity: 'Urgence médicale - Blessures non-critiques',
+        contacts: ['911', 'Superviseur', 'Sécurité', 'Autorité réglementaire'],
+        response_time: '5 minutes'
+      },
+      level_3: {
+        severity: 'Urgence critique - Danger de mort',
+        contacts: ['911 IMMÉDIAT', 'Équipe sauvetage technique', 'Direction', 'Autorités'],
+        response_time: 'Immédiat'
+      }
+    }
+  },
+  equipment_inspection: {
+    daily: [
+      'État visuel trépied (fissures, déformation)',
+      'Fonctionnement treuil (freinage, blocage)',
+      'Intégrité harnais et lignes de vie',
+      'Charge et fonctionnement équipements électroniques'
+    ],
+    weekly: [
+      'Calibration détecteurs de gaz',
+      'Test alarmes et communications',
+      'Vérification inventaire médical',
+      'Nettoyage et maintenance préventive'
+    ],
+    monthly: [
+      'Inspection certifiée par personne compétente',
+      'Test charge sur équipements critiques',
+      'Exercice pratique équipe sauvetage',
+      'Révision procédures et formation'
+    ]
+  }
+};
+
+// Calcul temps de réponse selon distance et circulation
+const calculateResponseTime = (distance: number, trafficLevel: 'low' | 'medium' | 'high') => {
+  const baseSpeed = trafficLevel === 'low' ? 60 : trafficLevel === 'medium' ? 40 : 25; // km/h
+  const travelTime = (distance / baseSpeed) * 60; // minutes
+  const setupTime = 5; // minutes pour déploiement équipement
+  return Math.round(travelTime + setupTime);
+};
+
+// =================== MESURES CORRECTIVES ET RECOMMANDATIONS ===================
+const CORRECTIVE_MEASURES_DATABASE = {
+  atmospheric_issues: {
+    low_oxygen: {
+      condition: 'Oxygène < 19.5% (ou < 20.5% au QC)',
+      immediate_actions: [
+        '🚨 ÉVACUATION IMMÉDIATE de tous les entrants',
+        '🚫 INTERDICTION d\'entrée jusqu\'à correction',
+        '📞 Notification du superviseur et autorité compétente'
+      ],
+      corrective_measures: [
+        {
+          type: 'Ventilation forcée',
+          description: 'Installation de ventilateurs mécaniques pour apport d\'air frais',
+          specifications: {
+            flow_rate: 'Minimum 6-10 changements d\'air par heure (ACH)',
+            cfm_calculation: 'CFM = (Volume espace en pi³ × ACH souhaité) ÷ 60 min',
+            example: 'Espace 20×10×8 pi = 1600 pi³, besoin 10 ACH = 267 CFM minimum',
+            safety_margin: 'Ajouter 25% pour résistance conduits (334 CFM final)'
+          },
+          equipment: [
+            'Ventilateur centrifuge 8-12 pouces pour espaces moyens',
+            'Conduits flexibles diamètre 8-12 pouces',
+            'Prévoir séparation entrée/sortie air (min 3 mètres)',
+            'Alarme de défaillance ventilation obligatoire'
+          ]
+        },
+        {
+          type: 'Ouvertures additionnelles',
+          description: 'Création d\'ouvertures pour circulation d\'air naturelle',
+          specifications: {
+            size: 'Minimum 1% de la surface au sol pour entrée d\'air',
+            location: 'Ouverture basse pour entrée, haute pour sortie',
+            requirement: 'Au moins 2 ouvertures opposées pour circulation croisée'
+          }
+        },
+        {
+          type: 'Purge à l\'azote (si applicable)',
+          description: 'Élimination des gaz inertes par purge contrôlée',
+          warning: '⚠️ Ne JAMAIS utiliser d\'oxygène pur - risque explosion'
+        }
+      ]
+    },
+    high_lel: {
+      condition: 'LEL > 5% (QC) ou > 10% (autres provinces)',
+      immediate_actions: [
+        '🚨 ÉVACUATION IMMÉDIATE - Atmosphère explosive',
+        '🚫 ÉLIMINATION de toutes sources d\'ignition',
+        '⚡ COUPER alimentation électrique si sécuritaire'
+      ],
+      corrective_measures: [
+        {
+          type: 'Purge d\'air forcée',
+          description: 'Élimination des vapeurs inflammables par dilution',
+          specifications: {
+            flow_rate: 'Minimum 20 changements d\'air par heure',
+            duration: 'Purge continue jusqu\'à LEL < 1%',
+            monitoring: 'Test atmosphérique continu pendant purge'
+          }
+        },
+        {
+          type: 'Isolation des sources',
+          description: 'Arrêt des sources de vapeurs inflammables',
+          methods: [
+            'Fermeture et cadenassage des valves en amont',
+            'Installation de brides aveugles si nécessaire',
+            'Vidange des résidus liquides inflammables'
+          ]
+        }
+      ]
+    },
+    toxic_gases: {
+      condition: 'H₂S > 10 ppm ou CO > 35 ppm',
+      immediate_actions: [
+        '🚨 ÉVACUATION IMMÉDIATE',
+        '😷 Port d\'ARI (Appareil Respiratoire Isolant) obligatoire',
+        '🚑 Surveillance médicale si exposition'
+      ],
+      corrective_measures: [
+        {
+          type: 'Ventilation par aspiration',
+          description: 'Extraction directe des gaz toxiques à la source',
+          specifications: {
+            velocity: 'Vitesse aspiration: 100-200 pi/min à la source',
+            cfm_calculation: 'CFM = Surface ouverture (pi²) × Vitesse (pi/min)',
+            location: 'Aspiration au point le plus bas (H₂S) ou niveau travail (CO)'
+          }
+        },
+        {
+          type: 'Neutralisation chimique',
+          description: 'Traitement des gaz selon leur nature',
+          methods: [
+            'H₂S: Injection d\'air ou oxydants contrôlés',
+            'CO: Ventilation et élimination source combustion',
+            'Lavage à l\'eau pour gaz solubles'
+          ]
+        }
+      ]
+    }
+  },
+  ventilation_systems: {
+    natural_ventilation: {
+      description: 'Ventilation par ouvertures naturelles',
+      limitations: [
+        '❌ Interdite en espace clos selon CSA et CNESST',
+        '❌ Inefficace pour élimination contaminants',
+        '❌ Non contrôlable en cas d\'urgence'
+      ],
+      acceptable_use: 'Uniquement comme complément à ventilation mécanique'
+    },
+    mechanical_ventilation: {
+      description: 'Ventilation forcée par ventilateurs',
+      types: [
+        {
+          name: 'Soufflage (Air Supply)',
+          usage: 'Apport d\'air frais dans l\'espace',
+          cfm_calc: 'Volume espace × 6-10 ACH ÷ 60',
+          placement: 'Entrée air par point bas, sortie naturelle point haut'
+        },
+        {
+          name: 'Extraction (Exhaust)',
+          usage: 'Évacuation air vicié de l\'espace',
+          cfm_calc: 'Volume espace × 8-12 ACH ÷ 60',
+          placement: 'Aspiration point haut pour vapeurs légères, bas pour lourdes'
+        },
+        {
+          name: 'Combiné (Push-Pull)',
+          usage: 'Soufflage + extraction simultanés',
+          cfm_calc: 'Soufflage légèrement > extraction (90-95%)',
+          advantage: 'Contrôle optimal circulation air'
+        }
+      ],
+      equipment_specs: {
+        fans: [
+          'Centrifuge: 200-2000 CFM, pression moyenne/élevée',
+          'Axial: 1000-10000 CFM, débit élevé, pression faible',
+          'Explosion-proof: Obligatoire si atmosphère inflammable'
+        ],
+        ducting: [
+          'Flexible: 4-12 pouces, installation rapide',
+          'Rigide: Meilleure efficacité, pertes charges réduites',
+          'Longueur max: 100 pieds pour maintenir débit'
+        ]
+      }
+    },
+    ventilation_calculations: {
+      cfm_formula: 'CFM = (L × W × H × ACH) ÷ 60',
+      ach_requirements: {
+        'Espace normal': '6-8 ACH',
+        'Présence toxiques': '10-15 ACH',
+        'Atmosphère explosive': '20+ ACH',
+        'Travail à chaud': '15-20 ACH'
+      },
+      pressure_loss: [
+        'Conduit droit: 0.1 pouce H₂O par 100 pieds',
+        'Coude 90°: +0.25 pouce H₂O',
+        'Réduction diamètre: +0.5 pouce H₂O',
+        'Filtre standard: +0.2-0.5 pouce H₂O'
+      ]
+    }
+  },
+  monitoring_systems: {
+    continuous_monitoring: {
+      description: 'Surveillance atmosphérique continue obligatoire',
+      equipment: [
+        'Détecteurs 4 gaz (O₂, LEL, H₂S, CO) fixes',
+        'Alarmes visuelles et sonores',
+        'Transmission données temps réel',
+        'Alimentation secours (batterie 24h min)'
+      ],
+      alarm_settings: {
+        oxygen: 'Bas: 19.5% (18% QC), Haut: 23.5%',
+        lel: 'Alarme: 10% LEL, Évacuation: 25% LEL',
+        h2s: 'Alarme: 10 ppm, Danger: 20 ppm',
+        co: 'Alarme: 35 ppm, Danger: 200 ppm'
+      }
+    },
+    portable_monitoring: {
+      description: 'Tests ponctuels par appareils portatifs',
+      frequency: 'Toutes les 30 minutes ou selon réglementation provinciale',
+      calibration: 'Étalonnage quotidien avant utilisation obligatoire'
+    }
+  },
+  emergency_procedures: {
+    ventilation_failure: {
+      immediate_response: [
+        '1. ÉVACUATION immédiate tous entrants',
+        '2. ARRÊT travaux et équipements électriques',
+        '3. ACTIVATION procédures sauvetage',
+        '4. INTERDICTION re-entrée sans correction'
+      ],
+      backup_systems: [
+        'Ventilateur de secours automatique',
+        'Alimentation électrique redondante',
+        'Détection panne avec alarme',
+        'Procédure manuelle démarrage secours'
+      ]
+    },
+    gas_leak: {
+      response_matrix: {
+        'Fuite mineure': [
+          'Augmentation ventilation × 2',
+          'Surveillance renforcée 15 min',
+          'Identification et colmatage source'
+        ],
+        'Fuite majeure': [
+          'Évacuation immédiate',
+          'Isolement source (valves, brides)',
+          'Ventilation purge maximale',
+          'Re-test avant re-entrée'
+        ]
+      }
+    }
+  }
+};
+
+// =================== CALCULS DE VENTILATION ===================
+const calculateVentilationRequirements = (
+  length: number, // pieds
+  width: number,  // pieds  
+  height: number, // pieds
+  ach: number = 10, // changements d'air par heure
+  safetyMargin: number = 25 // % marge sécurité
+) => {
+  const volume = length * width * height; // pi³
+  const baseCFM = (volume * ach) / 60;
+  const finalCFM = baseCFM * (1 + safetyMargin / 100);
+  
+  return {
+    volume,
+    baseCFM: Math.round(baseCFM),
+    finalCFM: Math.round(finalCFM),
+    ach,
+    recommendation: `Ventilateur minimum ${Math.round(finalCFM)} CFM pour ${ach} changements d'air/heure`
+  };
+};
+
 // =================== RÉGLEMENTATIONS CANADIENNES 2023 ===================
 const PROVINCIAL_REGULATIONS: Record<ProvinceCode, any> = {
   QC: {
@@ -1444,6 +1850,8 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       {[
         { id: 'site', label: '🏢 Site', icon: <Home className="w-4 h-4" /> },
         { id: 'atmospheric', label: '🌬️ Atmosphère', icon: <Wind className="w-4 h-4" /> },
+        { id: 'corrective', label: '🔧 Mesures Correctives', icon: <Activity className="w-4 h-4" /> },
+        { id: 'rescue', label: '🚑 Plan de Sauvetage', icon: <Shield className="w-4 h-4" /> },
         { id: 'personnel', label: '👥 Personnel', icon: <Users className="w-4 h-4" /> },
         { id: 'photos', label: '📸 Photos', icon: <Camera className="w-4 h-4" /> },
         { id: 'emergency', label: '🚨 Urgence', icon: <Phone className="w-4 h-4" /> }
@@ -1927,8 +2335,931 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     </div>
   );
 
-  // Rendu section contacts d'urgence
-  const renderEmergencySection = () => (
+  // Rendu section plan de sauvetage
+  const renderRescuePlanSection = () => {
+    const [selectedScenario, setSelectedScenario] = useState('atmospheric_emergency');
+    const [rescueTeamType, setRescueTeamType] = useState('internal');
+    const [spaceConfiguration, setSpaceConfiguration] = useState('vertical');
+    const [hospitalDistance, setHospitalDistance] = useState('5');
+    const [fireStationDistance, setFireStationDistance] = useState('3');
+    const [trafficLevel, setTrafficLevel] = useState<'low' | 'medium' | 'high'>('medium');
+    
+    // États pour le plan personnalisé
+    const [customPlan, setCustomPlan] = useState({
+      rescue_method: 'non_entry',
+      team_size: '3',
+      equipment_list: [] as string[],
+      emergency_procedures: '',
+      communication_plan: '',
+      medical_support: '',
+      backup_plan: ''
+    });
+
+    const hospitalResponseTime = calculateResponseTime(parseFloat(hospitalDistance), trafficLevel);
+    const fireResponseTime = calculateResponseTime(parseFloat(fireStationDistance), trafficLevel);
+
+    const getScenarioDetails = () => {
+      return RESCUE_PLAN_DATABASE.rescue_scenarios[selectedScenario as keyof typeof RESCUE_PLAN_DATABASE.rescue_scenarios];
+    };
+
+    const getRescueTypeDetails = () => {
+      return RESCUE_PLAN_DATABASE.rescue_types[customPlan.rescue_method as keyof typeof RESCUE_PLAN_DATABASE.rescue_types];
+    };
+
+    return (
+      <div className="space-y-6">
+        
+        {/* Configuration du plan */}
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <Shield className="w-5 h-5" />
+            Configuration du Plan de Sauvetage
+          </h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div>
+              <label className="block text-slate-400 text-sm font-medium mb-2">Type d'espace clos</label>
+              <select
+                value={spaceConfiguration}
+                onChange={(e) => setSpaceConfiguration(e.target.value)}
+                className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+              >
+                <option value="vertical">Vertical (réservoir, regard, puits)</option>
+                <option value="horizontal">Horizontal (tunnel, canalisation)</option>
+                <option value="complex">Complexe (multiple niveaux/chambers)</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-slate-400 text-sm font-medium mb-2">Type d'équipe de sauvetage</label>
+              <select
+                value={rescueTeamType}
+                onChange={(e) => setRescueTeamType(e.target.value)}
+                className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+              >
+                <option value="internal">Équipe interne entreprise</option>
+                <option value="external">Service incendie municipal</option>
+                <option value="specialist">Équipe spécialisée contractuelle</option>
+                <option value="hybrid">Combinaison (interne + externe)</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-slate-400 text-sm font-medium mb-2">Méthode de sauvetage privilégiée</label>
+              <select
+                value={customPlan.rescue_method}
+                onChange={(e) => setCustomPlan(prev => ({ ...prev, rescue_method: e.target.value }))}
+                className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+              >
+                <option value="non_entry">Sans entrée (recommandé)</option>
+                <option value="entry_rescue">Avec entrée (si nécessaire)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-slate-400 text-sm font-medium mb-2">Distance hôpital (km)</label>
+              <input
+                type="number"
+                value={hospitalDistance}
+                onChange={(e) => setHospitalDistance(e.target.value)}
+                className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+                min="0.5"
+                step="0.5"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-slate-400 text-sm font-medium mb-2">Distance caserne pompiers (km)</label>
+              <input
+                type="number"
+                value={fireStationDistance}
+                onChange={(e) => setFireStationDistance(e.target.value)}
+                className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+                min="0.5"
+                step="0.5"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-slate-400 text-sm font-medium mb-2">Niveau de circulation</label>
+              <select
+                value={trafficLevel}
+                onChange={(e) => setTrafficLevel(e.target.value as 'low' | 'medium' | 'high')}
+                className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+              >
+                <option value="low">Faible (rural/nuit)</option>
+                <option value="medium">Modéré (urbain normal)</option>
+                <option value="high">Élevé (centre-ville/heure pointe)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
+              <div className="text-green-300 font-medium">🚑 Temps réponse hôpital estimé</div>
+              <div className="text-white text-lg font-bold">{hospitalResponseTime} minutes</div>
+            </div>
+            <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+              <div className="text-red-300 font-medium">🚒 Temps réponse pompiers estimé</div>
+              <div className="text-white text-lg font-bold">{fireResponseTime} minutes</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Analyse des scénarios d'urgence */}
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5" />
+            Scénarios d'Urgence et Procédures
+          </h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-slate-400 text-sm font-medium mb-3">Sélectionner un scénario:</label>
+              <div className="space-y-2">
+                {Object.entries(RESCUE_PLAN_DATABASE.rescue_scenarios).map(([key, scenario]) => (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedScenario(key)}
+                    className={`w-full text-left p-3 rounded-lg border transition-all ${
+                      selectedScenario === key
+                        ? 'bg-blue-600 border-blue-400 text-white'
+                        : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    <div className="font-medium">{scenario.title}</div>
+                    <div className="text-sm opacity-75">{scenario.trigger}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="bg-slate-900/50 rounded-lg p-4">
+              {(() => {
+                const scenario = getScenarioDetails();
+                return (
+                  <div>
+                    <h4 className="text-white font-semibold mb-3">{scenario.title}</h4>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-slate-400 text-sm">Déclencheur:</span>
+                        <div className="text-white">{scenario.trigger}</div>
+                      </div>
+                      
+                      <div>
+                        <span className="text-red-300 text-sm font-medium">⏱️ Temps critique:</span>
+                        <div className="text-red-200">{scenario.response_time}</div>
+                      </div>
+                      
+                      <div>
+                        <span className="text-blue-300 text-sm font-medium">📋 Procédure d'intervention:</span>
+                        <ul className="mt-2 space-y-1">
+                          {scenario.procedure.map((step, index) => (
+                            <li key={index} className="text-slate-300 text-sm flex items-start gap-2">
+                              <span className="text-blue-400 font-bold">{step.split('.')[0]}.</span>
+                              <span>{step.split('.').slice(1).join('.')}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+
+        {/* Méthode de sauvetage sélectionnée */}
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <Users className="w-5 h-5" />
+            Méthode de Sauvetage: {getRescueTypeDetails().name}
+          </h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
+                <h4 className="text-blue-300 font-medium mb-3">Description</h4>
+                <p className="text-slate-300 text-sm">{getRescueTypeDetails().description}</p>
+              </div>
+              
+              {getRescueTypeDetails().advantages && (
+                <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+                  <h4 className="text-green-300 font-medium mb-3">✅ Avantages</h4>
+                  <ul className="space-y-1">
+                    {getRescueTypeDetails().advantages.map((advantage, index) => (
+                      <li key={index} className="text-green-200 text-sm flex items-start gap-2">
+                        <span className="text-green-400">•</span>
+                        {advantage}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {getRescueTypeDetails().when_required && (
+                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mt-4">
+                  <h4 className="text-yellow-300 font-medium mb-3">⚠️ Requis quand</h4>
+                  <ul className="space-y-1">
+                    {getRescueTypeDetails().when_required.map((condition, index) => (
+                      <li key={index} className="text-yellow-200 text-sm flex items-start gap-2">
+                        <span className="text-yellow-400">•</span>
+                        {condition}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            
+            <div>
+              {getRescueTypeDetails().limitations && (
+                <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 mb-4">
+                  <h4 className="text-red-300 font-medium mb-3">❌ Limitations</h4>
+                  <ul className="space-y-1">
+                    {getRescueTypeDetails().limitations.map((limitation, index) => (
+                      <li key={index} className="text-red-200 text-sm flex items-start gap-2">
+                        <span className="text-red-400">•</span>
+                        {limitation}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
+                <h4 className="text-purple-300 font-medium mb-3">🛠️ Équipements requis</h4>
+                <ul className="space-y-1">
+                  {(getRescueTypeDetails().equipment_required || getRescueTypeDetails().equipment_advanced || []).map((equipment, index) => (
+                    <li key={index} className="text-purple-200 text-sm flex items-start gap-2">
+                      <span className="text-purple-400">•</span>
+                      {equipment}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              
+              {getRescueTypeDetails().team_requirements && (
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mt-4">
+                  <h4 className="text-blue-300 font-medium mb-3">👥 Exigences équipe</h4>
+                  <ul className="space-y-1">
+                    {getRescueTypeDetails().team_requirements.map((requirement, index) => (
+                      <li key={index} className="text-blue-200 text-sm flex items-start gap-2">
+                        <span className="text-blue-400">•</span>
+                        {requirement}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Systèmes de communication */}
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <Volume2 className="w-5 h-5" />
+            Systèmes de Communication d'Urgence
+          </h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {Object.entries(RESCUE_PLAN_DATABASE.communication_systems).map(([level, system]) => (
+              <div key={level} className={`rounded-lg p-4 border ${
+                level === 'primary' ? 'bg-green-900/20 border-green-500/30' :
+                level === 'backup' ? 'bg-yellow-900/20 border-yellow-500/30' :
+                'bg-red-900/20 border-red-500/30'
+              }`}>
+                <h4 className={`font-medium mb-3 ${
+                  level === 'primary' ? 'text-green-300' :
+                  level === 'backup' ? 'text-yellow-300' :
+                  'text-red-300'
+                }`}>
+                  {level === 'primary' ? '📡 Primaire' : 
+                   level === 'backup' ? '🔌 Secours' : 
+                   '🚨 Urgence'}
+                </h4>
+                
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="text-slate-400">Type:</span>
+                    <div className="text-white">{system.type}</div>
+                  </div>
+                  
+                  {system.specifications && (
+                    <div>
+                      <span className="text-slate-400">Spécifications:</span>
+                      <div className="text-white">{system.specifications}</div>
+                    </div>
+                  )}
+                  
+                  {system.methods && (
+                    <div>
+                      <span className="text-slate-400">Méthodes:</span>
+                      <ul className="mt-1 space-y-1">
+                        {system.methods.map((method, idx) => (
+                          <li key={idx} className="text-white flex items-start gap-1">
+                            <span className="text-gray-400">•</span>
+                            {method}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Matrice de réponse d'urgence */}
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <Phone className="w-5 h-5" />
+            Matrice de Réponse d'Urgence
+          </h3>
+          
+          <div className="space-y-4">
+            {Object.entries(RESCUE_PLAN_DATABASE.emergency_contacts.response_matrix).map(([level, details]) => (
+              <div key={level} className={`rounded-lg p-4 border-l-4 ${
+                level === 'level_1' ? 'bg-blue-900/20 border-blue-500' :
+                level === 'level_2' ? 'bg-yellow-900/20 border-yellow-500' :
+                'bg-red-900/20 border-red-500'
+              }`}>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className={`font-semibold ${
+                    level === 'level_1' ? 'text-blue-300' :
+                    level === 'level_2' ? 'text-yellow-300' :
+                    'text-red-300'
+                  }`}>
+                    {level === 'level_1' ? '🟦 NIVEAU 1' :
+                     level === 'level_2' ? '🟨 NIVEAU 2' :
+                     '🟥 NIVEAU 3'}
+                  </h4>
+                  <span className={`text-sm px-3 py-1 rounded-full ${
+                    level === 'level_1' ? 'bg-blue-600 text-white' :
+                    level === 'level_2' ? 'bg-yellow-600 text-white' :
+                    'bg-red-600 text-white'
+                  }`}>
+                    {details.response_time}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-slate-400 text-sm">Gravité:</span>
+                    <div className="text-white">{details.severity}</div>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-sm">Contacts à prévenir:</span>
+                    <div className="text-white">
+                      {details.contacts.join(' • ')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Inspections et maintenance */}
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <CheckCircle className="w-5 h-5" />
+            Programme d'Inspection et Maintenance
+          </h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {Object.entries(RESCUE_PLAN_DATABASE.equipment_inspection).map(([frequency, tasks]) => (
+              <div key={frequency} className={`rounded-lg p-4 ${
+                frequency === 'daily' ? 'bg-green-900/20 border border-green-500/30' :
+                frequency === 'weekly' ? 'bg-yellow-900/20 border border-yellow-500/30' :
+                'bg-red-900/20 border border-red-500/30'
+              }`}>
+                <h4 className={`font-medium mb-3 ${
+                  frequency === 'daily' ? 'text-green-300' :
+                  frequency === 'weekly' ? 'text-yellow-300' :
+                  'text-red-300'
+                }`}>
+                  {frequency === 'daily' ? '📅 Quotidien' :
+                   frequency === 'weekly' ? '📅 Hebdomadaire' :
+                   '📅 Mensuel'}
+                </h4>
+                
+                <ul className="space-y-2">
+                  {tasks.map((task, index) => (
+                    <li key={index} className="text-slate-300 text-sm flex items-start gap-2">
+                      <input type="checkbox" className="mt-0.5 w-3 h-3" />
+                      <span>{task}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+            <h4 className="text-blue-300 font-medium mb-2">📋 Exigences Réglementaires</h4>
+            <div className="text-blue-200 text-sm space-y-1">
+              <div>• <strong>CNESST (QC):</strong> Plan de sauvetage obligatoire depuis juillet 2023</div>
+              <div>• <strong>Équipe formée:</strong> Formation spécialisée 40h + exercices mensuels</div>
+              <div>• <strong>Temps de réponse:</strong> Maximum 4 minutes pour urgence critique</div>
+              <div>• <strong>Documentation:</strong> Registre des exercices et inspections</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Plan personnalisé généré */}
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <FileText className="w-5 h-5" />
+            Plan de Sauvetage Personnalisé - Résumé Exécutif
+          </h3>
+          
+          <div className="bg-slate-900/50 rounded-lg p-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-blue-300 font-medium mb-2">🎯 Configuration</h4>
+                  <ul className="text-slate-300 text-sm space-y-1">
+                    <li>• Espace: {spaceConfiguration === 'vertical' ? 'Vertical' : spaceConfiguration === 'horizontal' ? 'Horizontal' : 'Complexe'}</li>
+                    <li>• Méthode: {getRescueTypeDetails().name}</li>
+                    <li>• Équipe: {rescueTeamType === 'internal' ? 'Interne' : rescueTeamType === 'external' ? 'Service incendie' : rescueTeamType === 'specialist' ? 'Spécialisée' : 'Hybride'}</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 className="text-green-300 font-medium mb-2">⏱️ Temps de Réponse</h4>
+                  <ul className="text-slate-300 text-sm space-y-1">
+                    <li>• Équipe interne: < 2 minutes</li>
+                    <li>• Pompiers: {fireResponseTime} minutes</li>
+                    <li>• Ambulance: {hospitalResponseTime} minutes</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-yellow-300 font-medium mb-2">🚨 Procédure d'Alerte</h4>
+                  <ol className="text-slate-300 text-sm space-y-1">
+                    <li>1. Évaluation rapide situation</li>
+                    <li>2. Activation plan selon niveau</li>
+                    <li>3. Communication équipe/911</li>
+                    <li>4. Déploiement équipements</li>
+                    <li>5. Intervention coordonnée</li>
+                  </ol>
+                </div>
+                
+                <div>
+                  <h4 className="text-red-300 font-medium mb-2">📞 Contacts Critiques</h4>
+                  <ul className="text-slate-300 text-sm space-y-1">
+                    <li>• Urgence: 911</li>
+                    <li>• {regulations.authority}: {regulations.authority_phone}</li>
+                    <li>• Direction entreprise</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 p-3 bg-blue-900/30 border border-blue-500/50 rounded-lg">
+              <div className="text-blue-200 text-sm">
+                <strong>⚠️ Note importante:</strong> Ce plan doit être révisé et approuvé par une personne qualifiée selon {regulations.code}. 
+                Des exercices pratiques mensuels sont obligatoires pour maintenir la certification de l'équipe de sauvetage.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+    const latestReading = atmosphericReadings[atmosphericReadings.length - 1];
+    const hasIssues = latestReading && latestReading.status !== 'safe';
+    
+    // Calcul automatique des recommandations de ventilation
+    const [spaceLength, setSpaceLength] = useState('20');
+    const [spaceWidth, setSpaceWidth] = useState('10');
+    const [spaceHeight, setSpaceHeight] = useState('8');
+    const [desiredACH, setDesiredACH] = useState('10');
+    
+    const ventilationCalc = calculateVentilationRequirements(
+      parseFloat(spaceLength) || 20,
+      parseFloat(spaceWidth) || 10,
+      parseFloat(spaceHeight) || 8,
+      parseFloat(desiredACH) || 10
+    );
+
+    // Analyse des problèmes détectés
+    const getDetectedIssues = () => {
+      if (!latestReading) return [];
+      
+      const issues = [];
+      const limits = regulations.atmospheric_testing.limits;
+      
+      if (latestReading.oxygen < limits.oxygen.min || latestReading.oxygen > limits.oxygen.max) {
+        issues.push({
+          type: 'oxygen',
+          severity: latestReading.oxygen <= limits.oxygen.critical_low || 
+                   latestReading.oxygen >= (limits.oxygen.critical_high || 25) ? 'critical' : 'warning',
+          value: latestReading.oxygen,
+          measures: CORRECTIVE_MEASURES_DATABASE.atmospheric_issues.low_oxygen
+        });
+      }
+      
+      if (latestReading.lel > limits.lel.max) {
+        issues.push({
+          type: 'lel',
+          severity: latestReading.lel >= limits.lel.critical ? 'critical' : 'warning',
+          value: latestReading.lel,
+          measures: CORRECTIVE_MEASURES_DATABASE.atmospheric_issues.high_lel
+        });
+      }
+      
+      if (latestReading.h2s > limits.h2s.max || latestReading.co > limits.co.max) {
+        issues.push({
+          type: 'toxic',
+          severity: latestReading.h2s >= limits.h2s.critical || 
+                   latestReading.co >= limits.co.critical ? 'critical' : 'warning',
+          values: { h2s: latestReading.h2s, co: latestReading.co },
+          measures: CORRECTIVE_MEASURES_DATABASE.atmospheric_issues.toxic_gases
+        });
+      }
+      
+      return issues;
+    };
+
+    const detectedIssues = getDetectedIssues();
+
+    return (
+      <div className="space-y-6">
+        
+        {/* Section calcul ventilation */}
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <Wind className="w-5 h-5" />
+            Calcul des Exigences de Ventilation
+          </h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h4 className="font-medium text-blue-300">Dimensions de l'Espace Clos</h4>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-slate-400 text-sm mb-2">Longueur (pieds)</label>
+                  <input
+                    type="number"
+                    value={spaceLength}
+                    onChange={(e) => setSpaceLength(e.target.value)}
+                    className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+                    min="1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 text-sm mb-2">Largeur (pieds)</label>
+                  <input
+                    type="number"
+                    value={spaceWidth}
+                    onChange={(e) => setSpaceWidth(e.target.value)}
+                    className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+                    min="1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 text-sm mb-2">Hauteur (pieds)</label>
+                  <input
+                    type="number"
+                    value={spaceHeight}
+                    onChange={(e) => setSpaceHeight(e.target.value)}
+                    className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+                    min="1"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-slate-400 text-sm mb-2">Changements d'air souhaités/heure (ACH)</label>
+                <select
+                  value={desiredACH}
+                  onChange={(e) => setDesiredACH(e.target.value)}
+                  className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+                >
+                  <option value="6">6 ACH - Espace normal, air propre</option>
+                  <option value="8">8 ACH - Présence légère de contaminants</option>
+                  <option value="10">10 ACH - Standard espace clos (recommandé)</option>
+                  <option value="12">12 ACH - Présence modérée de toxiques</option>
+                  <option value="15">15 ACH - Travail à chaud, soudage</option>
+                  <option value="20">20 ACH - Atmosphère explosive ou très toxique</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="bg-slate-900/50 rounded-lg p-4">
+              <h4 className="font-medium text-green-300 mb-3">📊 Résultats de Calcul</h4>
+              
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Volume total:</span>
+                  <span className="text-white font-mono">{ventilationCalc.volume.toLocaleString()} pi³</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">CFM de base:</span>
+                  <span className="text-white font-mono">{ventilationCalc.baseCFM} CFM</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">CFM final (+25%):</span>
+                  <span className="text-green-300 font-mono font-bold">{ventilationCalc.finalCFM} CFM</span>
+                </div>
+              </div>
+              
+              <div className="mt-4 p-3 bg-blue-900/30 border border-blue-500/50 rounded-lg">
+                <div className="text-blue-200 text-sm">
+                  <strong>📋 Recommandation:</strong><br />
+                  {ventilationCalc.recommendation}
+                </div>
+              </div>
+              
+              <div className="mt-3 text-xs text-slate-400">
+                <strong>Formule:</strong> CFM = (L × W × H × ACH) ÷ 60<br />
+                <strong>Marge sécurité:</strong> +25% pour résistance conduits
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Problèmes détectés et mesures correctives */}
+        {detectedIssues.length > 0 && (
+          <div className="bg-red-900/20 border-2 border-red-500/50 rounded-xl p-6">
+            <h3 className="text-red-300 font-bold text-lg mb-4 flex items-center gap-3">
+              <AlertTriangle className="w-6 h-6" />
+              🚨 PROBLÈMES ATMOSPHÉRIQUES DÉTECTÉS - MESURES CORRECTIVES REQUISES
+            </h3>
+            
+            {detectedIssues.map((issue, index) => (
+              <div key={index} className="mb-6 bg-slate-800/50 rounded-lg p-4">
+                <div className={`font-semibold mb-3 ${
+                  issue.severity === 'critical' ? 'text-red-300' : 'text-yellow-300'
+                }`}>
+                  {issue.severity === 'critical' ? '🚨 CRITIQUE' : '⚠️ ATTENTION'}: {issue.measures.condition}
+                </div>
+                
+                {/* Actions immédiates */}
+                <div className="mb-4">
+                  <h4 className="text-white font-medium mb-2">Actions Immédiates:</h4>
+                  <ul className="space-y-1">
+                    {issue.measures.immediate_actions.map((action, idx) => (
+                      <li key={idx} className="text-red-200 text-sm flex items-start gap-2">
+                        <span className="text-red-400 font-bold">•</span>
+                        {action}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                {/* Mesures correctives */}
+                <div>
+                  <h4 className="text-white font-medium mb-3">Mesures Correctives Recommandées:</h4>
+                  {issue.measures.corrective_measures.map((measure, idx) => (
+                    <div key={idx} className="mb-4 bg-slate-700/50 rounded-lg p-3">
+                      <h5 className="text-blue-300 font-medium mb-2">{measure.type}</h5>
+                      <p className="text-slate-300 text-sm mb-2">{measure.description}</p>
+                      
+                      {measure.specifications && (
+                        <div className="bg-slate-900/50 rounded p-3 text-sm">
+                          <div className="text-green-300 font-medium mb-1">Spécifications techniques:</div>
+                          {Object.entries(measure.specifications).map(([key, value]) => (
+                            <div key={key} className="text-slate-300">
+                              <strong>{key.replace('_', ' ')}:</strong> {value}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {measure.equipment && (
+                        <div className="mt-2">
+                          <div className="text-purple-300 font-medium mb-1">Équipements requis:</div>
+                          <ul className="text-slate-300 text-sm space-y-1">
+                            {measure.equipment.map((item, eqIdx) => (
+                              <li key={eqIdx} className="flex items-start gap-2">
+                                <span className="text-purple-400">•</span>
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {measure.methods && (
+                        <div className="mt-2">
+                          <div className="text-orange-300 font-medium mb-1">Méthodes:</div>
+                          <ul className="text-slate-300 text-sm space-y-1">
+                            {measure.methods.map((method, mIdx) => (
+                              <li key={mIdx} className="flex items-start gap-2">
+                                <span className="text-orange-400">•</span>
+                                {method}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {measure.warning && (
+                        <div className="mt-2 p-2 bg-red-900/30 border border-red-500/50 rounded text-red-200 text-sm">
+                          {measure.warning}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Systèmes de ventilation recommandés */}
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <Wind className="w-5 h-5" />
+            Systèmes de Ventilation Recommandés
+          </h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {CORRECTIVE_MEASURES_DATABASE.ventilation_systems.mechanical_ventilation.types.map((system, index) => (
+              <div key={index} className="bg-slate-900/50 rounded-lg p-4">
+                <h4 className="text-blue-300 font-semibold mb-2">{system.name}</h4>
+                <p className="text-slate-300 text-sm mb-3">{system.usage}</p>
+                
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="text-slate-400">Calcul CFM:</span>
+                    <span className="text-white ml-2 font-mono">{system.cfm_calc}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Placement:</span>
+                    <span className="text-white ml-2">{system.placement}</span>
+                  </div>
+                  {system.advantage && (
+                    <div className="text-green-300 text-sm">
+                      ✓ {system.advantage}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-6 bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+            <h4 className="text-blue-300 font-medium mb-3">🛠️ Spécifications Équipements</h4>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div>
+                <h5 className="text-white font-medium mb-2">Ventilateurs:</h5>
+                <ul className="space-y-1 text-sm text-slate-300">
+                  {CORRECTIVE_MEASURES_DATABASE.ventilation_systems.mechanical_ventilation.equipment_specs.fans.map((fan, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-blue-400">•</span>
+                      {fan}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div>
+                <h5 className="text-white font-medium mb-2">Conduits:</h5>
+                <ul className="space-y-1 text-sm text-slate-300">
+                  {CORRECTIVE_MEASURES_DATABASE.ventilation_systems.mechanical_ventilation.equipment_specs.ducting.map((duct, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-purple-400">•</span>
+                      {duct}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Surveillance continue */}
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <Activity className="w-5 h-5" />
+            Surveillance et Monitoring Continu
+          </h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-slate-900/50 rounded-lg p-4">
+              <h4 className="text-green-300 font-semibold mb-3">Monitoring Continu (Obligatoire)</h4>
+              
+              <div className="space-y-3">
+                <div>
+                  <h5 className="text-white font-medium mb-2">Équipements requis:</h5>
+                  <ul className="space-y-1 text-sm text-slate-300">
+                    {CORRECTIVE_MEASURES_DATABASE.monitoring_systems.continuous_monitoring.equipment.map((eq, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="text-green-400">•</span>
+                        {eq}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div>
+                  <h5 className="text-white font-medium mb-2">Seuils d'alarme:</h5>
+                  <div className="space-y-1 text-sm">
+                    {Object.entries(CORRECTIVE_MEASURES_DATABASE.monitoring_systems.continuous_monitoring.alarm_settings).map(([gas, settings]) => (
+                      <div key={gas} className="flex justify-between">
+                        <span className="text-slate-400 capitalize">{gas}:</span>
+                        <span className="text-white font-mono">{settings}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-slate-900/50 rounded-lg p-4">
+              <h4 className="text-yellow-300 font-semibold mb-3">Procédures d'Urgence</h4>
+              
+              <div className="space-y-3">
+                <div>
+                  <h5 className="text-white font-medium mb-2">Panne de ventilation:</h5>
+                  <ul className="space-y-1 text-sm text-slate-300">
+                    {CORRECTIVE_MEASURES_DATABASE.emergency_procedures.ventilation_failure.immediate_response.map((step, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="text-red-400 font-bold">{step.split('.')[0]}.</span>
+                        <span>{step.split('.').slice(1).join('.')}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div>
+                  <h5 className="text-white font-medium mb-2">Systèmes de secours:</h5>
+                  <ul className="space-y-1 text-sm text-slate-300">
+                    {CORRECTIVE_MEASURES_DATABASE.emergency_procedures.ventilation_failure.backup_systems.map((system, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="text-blue-400">•</span>
+                        {system}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Exigences réglementaires */}
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <Shield className="w-5 h-5" />
+            Exigences Réglementaires - {regulations.name}
+          </h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+              <h4 className="text-blue-300 font-medium mb-2">🌬️ Ventilation</h4>
+              <div className="text-sm text-slate-300 space-y-1">
+                <div>• Continue pendant présence entrants</div>
+                <div>• Tests chaque {regulations.atmospheric_testing.frequency_minutes} min</div>
+                <div>• Alarme défaillance obligatoire</div>
+                <div>• Backup système requis</div>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+              <h4 className="text-yellow-300 font-medium mb-2">👁️ Surveillance</h4>
+              <div className="text-sm text-slate-300 space-y-1">
+                <div>• Surveillant qualifié obligatoire</div>
+                <div>• Communication bidirectionnelle</div>
+                <div>• Monitoring atmosphérique continu</div>
+                <div>• Procédures sauvetage définies</div>
+              </div>
+            </div>
+            
+            <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+              <h4 className="text-green-300 font-medium mb-2">📋 Documentation</h4>
+              <div className="text-sm text-slate-300 space-y-1">
+                <div>• Permis d'entrée valide</div>
+                <div>• Plan de sauvetage écrit</div>
+                <div>• Formation personnel documentée</div>
+                <div>• Registre interventions tenu</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-4 p-3 bg-slate-900/50 border border-slate-600 rounded-lg text-sm text-slate-300">
+            <strong>Référence légale:</strong> {regulations.code}<br />
+            <strong>Autorité:</strong> {regulations.authority}<br />
+            <strong>Contact urgence:</strong> {regulations.authority_phone}
+          </div>
+        </div>
+      </div>
+    );
+  };
     <div className="space-y-6">
       <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
@@ -2022,6 +3353,8 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       <div className="space-y-8">
         {activeTab === 'site' && renderSiteSection()}
         {activeTab === 'atmospheric' && renderAtmosphericSection()}
+        {activeTab === 'corrective' && renderCorrectiveMeasuresSection()}
+        {activeTab === 'rescue' && renderRescuePlanSection()}
         {activeTab === 'personnel' && (
           <AdvancedPersonnelManager
             personnel={personnel}
