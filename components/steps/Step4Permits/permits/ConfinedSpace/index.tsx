@@ -91,8 +91,52 @@ interface EmergencyContact {
   available_24h: boolean;
 }
 
+interface AtmosphericLimits {
+  oxygen: {
+    min: number;
+    max: number;
+    critical_low: number;
+    critical_high: number;
+  };
+  lel: {
+    max: number;
+    critical: number;
+  };
+  h2s: {
+    max: number;
+    critical: number;
+  };
+  co: {
+    max: number;
+    critical: number;
+  };
+}
+
+interface RegulationData {
+  name: string;
+  authority: string;
+  authority_phone: string;
+  code: string;
+  url?: string;
+  atmospheric_testing: {
+    frequency_minutes: number;
+    continuous_monitoring_required?: boolean;
+    documentation_required?: boolean;
+    limits: AtmosphericLimits;
+  };
+  personnel_requirements: {
+    min_age: number;
+    attendant_required: boolean;
+    bidirectional_communication_required?: boolean;
+    rescue_plan_required?: boolean;
+    competent_person_required?: boolean;
+    max_work_period_hours?: number;
+  };
+  emergency_contacts: EmergencyContact[];
+}
+
 // =================== RÉGLEMENTATIONS CANADIENNES 2023 ===================
-const PROVINCIAL_REGULATIONS: Record<ProvinceCode, any> = {
+const PROVINCIAL_REGULATIONS: Record<ProvinceCode, RegulationData> = {
   QC: {
     name: 'Québec',
     authority: 'CNESST',
@@ -328,15 +372,17 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   const [activeTab, setActiveTab] = useState('site');
 
   // Validation des limites atmosphériques
-  const validateAtmosphericValue = (type: keyof typeof regulations.atmospheric_testing.limits, value: number) => {
+  const validateAtmosphericValue = (type: keyof AtmosphericLimits, value: number): 'safe' | 'warning' | 'danger' => {
     const limits = regulations.atmospheric_testing.limits[type];
     
     if (type === 'oxygen') {
-      if (value <= limits.critical_low || value >= (limits.critical_high || 25)) return 'danger';
-      if (value < limits.min || value > limits.max) return 'warning';
+      const oxygenLimits = limits as AtmosphericLimits['oxygen'];
+      if (value <= oxygenLimits.critical_low || value >= oxygenLimits.critical_high) return 'danger';
+      if (value < oxygenLimits.min || value > oxygenLimits.max) return 'warning';
     } else {
-      if (value >= limits.critical) return 'danger';
-      if (value > limits.max) return 'warning';
+      const gasLimits = limits as AtmosphericLimits['lel'] | AtmosphericLimits['h2s'] | AtmosphericLimits['co'];
+      if (value >= gasLimits.critical) return 'danger';
+      if (value > gasLimits.max) return 'warning';
     }
     
     return 'safe';
@@ -663,13 +709,13 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               <div className="space-y-1 text-sm">
                 {gas === 'oxygen' ? (
                   <>
-                    <div className="text-green-300">✅ {limits.min}-{limits.max}%</div>
-                    <div className="text-red-300">🚨 ≤{limits.critical_low}% ou ≥{limits.critical_high}%</div>
+                    <div className="text-green-300">✅ {(limits as AtmosphericLimits['oxygen']).min}-{(limits as AtmosphericLimits['oxygen']).max}%</div>
+                    <div className="text-red-300">🚨 ≤{(limits as AtmosphericLimits['oxygen']).critical_low}% ou ≥{(limits as AtmosphericLimits['oxygen']).critical_high}%</div>
                   </>
                 ) : (
                   <>
-                    <div className="text-green-300">✅ ≤{limits.max} ppm</div>
-                    <div className="text-red-300">🚨 ≥{limits.critical} ppm</div>
+                    <div className="text-green-300">✅ ≤{(limits as AtmosphericLimits['lel']).max} ppm</div>
+                    <div className="text-red-300">🚨 ≥{(limits as AtmosphericLimits['lel']).critical} ppm</div>
                   </>
                 )}
               </div>
