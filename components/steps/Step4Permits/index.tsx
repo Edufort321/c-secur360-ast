@@ -324,24 +324,22 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             </button>
           </div>
 
-          {/* Composant de permis intégré */}
-          <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6">
-            <PermitComponent
-              province={selectedProvince}
-              language={language}
-              onSave={(data: any) => {
-                console.log('Permis sauvegardé:', data);
-                updatePermitStatus(permit.id, 'in-progress', 50);
-              }}
-              onSubmit={(data: any) => {
-                console.log('Permis soumis:', data);
-                updatePermitStatus(permit.id, 'completed', 100);
-                handleBackToSelection();
-              }}
-              onCancel={handleBackToSelection}
-              initialData={formData[`permit_${permit.id}`] || {}}
-            />
-          </div>
+          {/* ✅ CORRECTION : Composant de permis sans wrapper qui écrase les styles */}
+          <PermitComponent
+            province={selectedProvince}
+            language={language}
+            onSave={(data: any) => {
+              console.log('Permis sauvegardé:', data);
+              updatePermitStatus(permit.id, 'in-progress', 50);
+            }}
+            onSubmit={(data: any) => {
+              console.log('Permis soumis:', data);
+              updatePermitStatus(permit.id, 'completed', 100);
+              handleBackToSelection();
+            }}
+            onCancel={handleBackToSelection}
+            initialData={formData[`permit_${permit.id}`] || {}}
+          />
         </div>
       );
     } else {
