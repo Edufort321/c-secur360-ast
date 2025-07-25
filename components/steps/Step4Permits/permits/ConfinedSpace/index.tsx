@@ -251,12 +251,108 @@ const PROVINCIAL_REGULATIONS: Record<ProvinceCode, RegulationData> = {
       { name: 'Alberta OHS', role: 'Workplace Safety', phone: '1-866-415-8690', available_24h: true }
     ]
   },
-  SK: { name: 'Saskatchewan', authority: 'Saskatchewan Employment Standards', authority_phone: '1-800-567-7233', code: 'Part XVIII', atmospheric_testing: { frequency_minutes: 30, limits: { oxygen: { min: 19.5, max: 23.0, critical_low: 16.0 }, lel: { max: 10, critical: 25 }, h2s: { max: 10, critical: 20 }, co: { max: 35, critical: 200 } } }, personnel_requirements: { min_age: 18, attendant_required: true }, emergency_contacts: [{ name: '911', role: 'Emergency', phone: '911', available_24h: true }] },
-  MB: { name: 'Manitoba', authority: 'Workplace Safety & Health', authority_phone: '1-855-957-7233', code: 'Part 13', atmospheric_testing: { frequency_minutes: 30, limits: { oxygen: { min: 19.5, max: 23.0, critical_low: 16.0 }, lel: { max: 10, critical: 25 }, h2s: { max: 10, critical: 20 }, co: { max: 35, critical: 200 } } }, personnel_requirements: { min_age: 18, attendant_required: true }, emergency_contacts: [{ name: '911', role: 'Emergency', phone: '911', available_24h: true }] },
-  NB: { name: 'New Brunswick', authority: 'WorkSafeNB', authority_phone: '1-800-222-9775', code: 'Reg 91-191', atmospheric_testing: { frequency_minutes: 30, limits: { oxygen: { min: 19.5, max: 23.0, critical_low: 16.0 }, lel: { max: 10, critical: 25 }, h2s: { max: 10, critical: 20 }, co: { max: 35, critical: 200 } } }, personnel_requirements: { min_age: 18, attendant_required: true }, emergency_contacts: [{ name: '911', role: 'Emergency', phone: '911', available_24h: true }] },
-  NS: { name: 'Nova Scotia', authority: 'Labour Standards', authority_phone: '1-800-952-2687', code: 'OHS Regulations', atmospheric_testing: { frequency_minutes: 30, limits: { oxygen: { min: 19.5, max: 23.0, critical_low: 16.0 }, lel: { max: 10, critical: 25 }, h2s: { max: 10, critical: 20 }, co: { max: 35, critical: 200 } } }, personnel_requirements: { min_age: 18, attendant_required: true }, emergency_contacts: [{ name: '911', role: 'Emergency', phone: '911', available_24h: true }] },
-  PE: { name: 'Prince Edward Island', authority: 'WCB PEI', authority_phone: '1-800-237-5049', code: 'OHS Regulations', atmospheric_testing: { frequency_minutes: 30, limits: { oxygen: { min: 19.5, max: 23.0, critical_low: 16.0 }, lel: { max: 10, critical: 25 }, h2s: { max: 10, critical: 20 }, co: { max: 35, critical: 200 } } }, personnel_requirements: { min_age: 18, attendant_required: true }, emergency_contacts: [{ name: '911', role: 'Emergency', phone: '911', available_24h: true }] },
-  NL: { name: 'Newfoundland and Labrador', authority: 'Workplace Health, Safety & Compensation Commission', authority_phone: '1-800-563-9000', code: 'OHS Regulations', atmospheric_testing: { frequency_minutes: 30, limits: { oxygen: { min: 19.5, max: 23.0, critical_low: 16.0 }, lel: { max: 10, critical: 25 }, h2s: { max: 10, critical: 20 }, co: { max: 35, critical: 200 } } }, personnel_requirements: { min_age: 18, attendant_required: true }, emergency_contacts: [{ name: '911', role: 'Emergency', phone: '911', available_24h: true }] }
+  SK: { 
+    name: 'Saskatchewan', 
+    authority: 'Saskatchewan Employment Standards', 
+    authority_phone: '1-800-567-7233', 
+    code: 'Part XVIII', 
+    atmospheric_testing: { 
+      frequency_minutes: 30, 
+      limits: { 
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 }, 
+        lel: { max: 10, critical: 25 }, 
+        h2s: { max: 10, critical: 20 }, 
+        co: { max: 35, critical: 200 } 
+      } 
+    }, 
+    personnel_requirements: { min_age: 18, attendant_required: true }, 
+    emergency_contacts: [{ name: '911', role: 'Emergency', phone: '911', available_24h: true }] 
+  },
+  MB: { 
+    name: 'Manitoba', 
+    authority: 'Workplace Safety & Health', 
+    authority_phone: '1-855-957-7233', 
+    code: 'Part 13', 
+    atmospheric_testing: { 
+      frequency_minutes: 30, 
+      limits: { 
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 }, 
+        lel: { max: 10, critical: 25 }, 
+        h2s: { max: 10, critical: 20 }, 
+        co: { max: 35, critical: 200 } 
+      } 
+    }, 
+    personnel_requirements: { min_age: 18, attendant_required: true }, 
+    emergency_contacts: [{ name: '911', role: 'Emergency', phone: '911', available_24h: true }] 
+  },
+  NB: { 
+    name: 'New Brunswick', 
+    authority: 'WorkSafeNB', 
+    authority_phone: '1-800-222-9775', 
+    code: 'Reg 91-191', 
+    atmospheric_testing: { 
+      frequency_minutes: 30, 
+      limits: { 
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 }, 
+        lel: { max: 10, critical: 25 }, 
+        h2s: { max: 10, critical: 20 }, 
+        co: { max: 35, critical: 200 } 
+      } 
+    }, 
+    personnel_requirements: { min_age: 18, attendant_required: true }, 
+    emergency_contacts: [{ name: '911', role: 'Emergency', phone: '911', available_24h: true }] 
+  },
+  NS: { 
+    name: 'Nova Scotia', 
+    authority: 'Labour Standards', 
+    authority_phone: '1-800-952-2687', 
+    code: 'OHS Regulations', 
+    atmospheric_testing: { 
+      frequency_minutes: 30, 
+      limits: { 
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 }, 
+        lel: { max: 10, critical: 25 }, 
+        h2s: { max: 10, critical: 20 }, 
+        co: { max: 35, critical: 200 } 
+      } 
+    }, 
+    personnel_requirements: { min_age: 18, attendant_required: true }, 
+    emergency_contacts: [{ name: '911', role: 'Emergency', phone: '911', available_24h: true }] 
+  },
+  PE: { 
+    name: 'Prince Edward Island', 
+    authority: 'WCB PEI', 
+    authority_phone: '1-800-237-5049', 
+    code: 'OHS Regulations', 
+    atmospheric_testing: { 
+      frequency_minutes: 30, 
+      limits: { 
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 }, 
+        lel: { max: 10, critical: 25 }, 
+        h2s: { max: 10, critical: 20 }, 
+        co: { max: 35, critical: 200 } 
+      } 
+    }, 
+    personnel_requirements: { min_age: 18, attendant_required: true }, 
+    emergency_contacts: [{ name: '911', role: 'Emergency', phone: '911', available_24h: true }] 
+  },
+  NL: { 
+    name: 'Newfoundland and Labrador', 
+    authority: 'Workplace Health, Safety & Compensation Commission', 
+    authority_phone: '1-800-563-9000', 
+    code: 'OHS Regulations', 
+    atmospheric_testing: { 
+      frequency_minutes: 30, 
+      limits: { 
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 }, 
+        lel: { max: 10, critical: 25 }, 
+        h2s: { max: 10, critical: 20 }, 
+        co: { max: 35, critical: 200 } 
+      } 
+    }, 
+    personnel_requirements: { min_age: 18, attendant_required: true }, 
+    emergency_contacts: [{ name: '911', role: 'Emergency', phone: '911', available_24h: true }] 
+  }
 };
 
 // =================== TRADUCTIONS COMPLÈTES ===================
