@@ -426,8 +426,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   const regulations = PROVINCIAL_REGULATIONS[province];
   
   // États principaux
+  const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province);
   const [permitData, setPermitData] = useState({
-    permit_number: initialData?.permit_number || `CS-${province}-${Date.now().toString().slice(-6)}`,
+    permit_number: initialData?.permit_number || `CS-${selectedProvince}-${Date.now().toString().slice(-6)}`,
     issue_date: new Date().toISOString().split('T')[0],
     issue_time: new Date().toTimeString().slice(0, 5),
     expiry_date: initialData?.expiry_date || '',
@@ -467,9 +468,18 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   // Navigation
   const [activeTab, setActiveTab] = useState('site');
 
+  // Mise à jour du numéro de permis lors du changement de province
+  useEffect(() => {
+    setPermitData(prev => ({
+      ...prev,
+      permit_number: `CS-${selectedProvince}-${Date.now().toString().slice(-6)}`
+    }));
+  }, [selectedProvince]);
+
   // Validation des limites atmosphériques
   const validateAtmosphericValue = (type: keyof AtmosphericLimits, value: number): 'safe' | 'warning' | 'danger' => {
-    const limits = regulations.atmospheric_testing.limits[type];
+    const currentRegulations = PROVINCIAL_REGULATIONS[selectedProvince];
+    const limits = currentRegulations.atmospheric_testing.limits[type];
     
     if (type === 'oxygen') {
       const oxygenLimits = limits as AtmosphericLimits['oxygen'];
@@ -598,7 +608,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
 
   // Rendu des onglets
   const renderTabs = () => (
-    <div className="flex flex-wrap gap-2 mb-8 border-b border-slate-700">
+    <div className="flex flex-wrap gap-2 mb-8 border-b border-gray-700">
       {[
         { id: 'site', label: '🏢 Site', icon: <Home className="w-4 h-4" /> },
         { id: 'atmospheric', label: '🌬️ Atmosphère', icon: <Wind className="w-4 h-4" /> },
@@ -612,7 +622,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           className={`flex items-center gap-2 px-4 py-3 rounded-t-lg font-medium transition-all ${
             activeTab === tab.id
               ? 'bg-blue-600 text-white border-b-2 border-blue-400'
-              : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'
+              : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
           }`}
         >
           {tab.icon}
@@ -625,19 +635,23 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   // Rendu section site
   const renderSiteSection = () => (
     <div className="space-y-6">
-      <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div>
             <h2 className="text-2xl font-bold text-white mb-2">{texts.title}</h2>
-            <p className="text-slate-400 mb-4">{texts.subtitle}</p>
+            <p className="text-gray-400 mb-4">{texts.subtitle}</p>
             <div className="text-sm text-blue-300">
               <div className="flex items-center gap-2 mb-1">
                 <Shield className="w-4 h-4" />
-                Réglementation: {regulations.code}
+                📍 Province: {PROVINCIAL_REGULATIONS[selectedProvince].name}
+              </div>
+              <div className="flex items-center gap-2 mb-1">
+                <FileText className="w-4 h-4" />
+                Réglementation: {PROVINCIAL_REGULATIONS[selectedProvince].code}
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4" />
-                Autorité: {regulations.authority} - {regulations.authority_phone}
+                Autorité: {PROVINCIAL_REGULATIONS[selectedProvince].authority} - {PROVINCIAL_REGULATIONS[selectedProvince].authority_phone}
               </div>
             </div>
           </div>
@@ -645,66 +659,69 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-slate-400 text-sm font-medium mb-2">N° Permis</label>
-                <input
-                  type="text"
-                  value={permitData.permit_number}
-                  onChange={(e) => setPermitData(prev => ({ ...prev, permit_number: e.target.value }))}
-                  className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
-                />
+                <label className="block text-gray-400 text-sm font-medium mb-2">N° Permis</label>
+                <div className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 font-mono text-lg font-bold">
+                  {permitData.permit_number}
+                </div>
               </div>
               <div>
-                <label className="block text-slate-400 text-sm font-medium mb-2">Province</label>
+                <label className="block text-gray-400 text-sm font-medium mb-2">Province</label>
                 <select
-                  value={province}
-                  onChange={() => {}}
-                  className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
-                  disabled
+                  value={selectedProvince}
+                  onChange={(e) => setSelectedProvince(e.target.value as ProvinceCode)}
+                  className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value={province}>{regulations.name}</option>
+                  {Object.entries(PROVINCIAL_REGULATIONS).map(([code, reg]) => (
+                    <option key={code} value={code}>
+                      {reg.name} ({code})
+                    </option>
+                  ))}
                 </select>
+                <div className="text-xs text-gray-500 mt-1">
+                  Autorité: {PROVINCIAL_REGULATIONS[selectedProvince].authority}
+                </div>
               </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-slate-400 text-sm font-medium mb-2">Date d'émission</label>
+                <label className="block text-gray-400 text-sm font-medium mb-2">Date d'émission</label>
                 <input
                   type="date"
                   value={permitData.issue_date}
                   onChange={(e) => setPermitData(prev => ({ ...prev, issue_date: e.target.value }))}
-                  className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+                  className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-slate-400 text-sm font-medium mb-2">Heure d'émission</label>
+                <label className="block text-gray-400 text-sm font-medium mb-2">Heure d'émission</label>
                 <input
                   type="time"
                   value={permitData.issue_time}
                   onChange={(e) => setPermitData(prev => ({ ...prev, issue_time: e.target.value }))}
-                  className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+                  className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-slate-400 text-sm font-medium mb-2">Date d'expiration</label>
+                <label className="block text-gray-400 text-sm font-medium mb-2">Date d'expiration</label>
                 <input
                   type="date"
                   value={permitData.expiry_date}
                   onChange={(e) => setPermitData(prev => ({ ...prev, expiry_date: e.target.value }))}
-                  className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+                  className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-slate-400 text-sm font-medium mb-2">Heure d'expiration</label>
+                <label className="block text-gray-400 text-sm font-medium mb-2">Heure d'expiration</label>
                 <input
                   type="time"
                   value={permitData.expiry_time}
                   onChange={(e) => setPermitData(prev => ({ ...prev, expiry_time: e.target.value }))}
-                  className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
+                  className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
@@ -713,7 +730,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         </div>
       </div>
 
-      <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
           <MapPin className="w-5 h-5" />
           {texts.siteIdentification}
@@ -722,59 +739,59 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         <div className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-400 text-sm font-medium mb-2">Nom du site *</label>
+              <label className="block text-gray-400 text-sm font-medium mb-2">Nom du site *</label>
               <input
                 type="text"
                 placeholder="Ex: Usine Pétrochimique Nord"
                 value={permitData.site_name}
                 onChange={(e) => setPermitData(prev => ({ ...prev, site_name: e.target.value }))}
-                className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full placeholder-slate-400"
+                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
             <div>
-              <label className="block text-slate-400 text-sm font-medium mb-2">Adresse complète</label>
+              <label className="block text-gray-400 text-sm font-medium mb-2">Adresse complète</label>
               <input
                 type="text"
                 placeholder="Ex: 123 Rue Industrielle, Ville, Province, Code postal"
                 value={permitData.site_address}
                 onChange={(e) => setPermitData(prev => ({ ...prev, site_address: e.target.value }))}
-                className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full placeholder-slate-400"
+                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
           
           <div>
-            <label className="block text-slate-400 text-sm font-medium mb-2">Localisation précise de l'espace clos *</label>
+            <label className="block text-gray-400 text-sm font-medium mb-2">Localisation précise de l'espace clos *</label>
             <input
               type="text"
               placeholder="Ex: Réservoir T-101, Niveau sous-sol, Section B"
               value={permitData.space_location}
               onChange={(e) => setPermitData(prev => ({ ...prev, space_location: e.target.value }))}
-              className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full placeholder-slate-400"
+              className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
           
           <div>
-            <label className="block text-slate-400 text-sm font-medium mb-2">Description de l'espace clos *</label>
+            <label className="block text-gray-400 text-sm font-medium mb-2">Description de l'espace clos *</label>
             <textarea
               placeholder="Ex: Réservoir cylindrique de 5m de diamètre et 8m de hauteur, utilisé pour stockage de produits chimiques"
               value={permitData.space_description}
               onChange={(e) => setPermitData(prev => ({ ...prev, space_description: e.target.value }))}
-              className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full placeholder-slate-400"
+              className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
               rows={3}
               required
             />
           </div>
           
           <div>
-            <label className="block text-slate-400 text-sm font-medium mb-2">Description des travaux à effectuer *</label>
+            <label className="block text-gray-400 text-sm font-medium mb-2">Description des travaux à effectuer *</label>
             <textarea
               placeholder="Ex: Inspection visuelle, nettoyage des parois, réparation de soudures, maintenance préventive"
               value={permitData.work_description}
               onChange={(e) => setPermitData(prev => ({ ...prev, work_description: e.target.value }))}
-              className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full placeholder-slate-400"
+              className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
               rows={3}
               required
             />
@@ -785,325 +802,343 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   );
 
   // Rendu section atmosphérique
-  const renderAtmosphericSection = () => (
-    <div className="space-y-6">
-      <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-          <Shield className="w-5 h-5" />
-          Limites Réglementaires - {regulations.name}
-        </h3>
-        
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {Object.entries(regulations.atmospheric_testing.limits).map(([gas, limits]) => (
-            <div key={gas} className="bg-slate-900/50 rounded-lg p-4">
-              <h4 className="font-semibold text-white mb-2">
-                {gas === 'oxygen' ? '🫁 O₂' : 
-                 gas === 'lel' ? '🔥 LEL' : 
-                 gas === 'h2s' ? '☠️ H₂S' : 
-                 '💨 CO'}
-              </h4>
-              <div className="space-y-1 text-sm">
-                {gas === 'oxygen' ? (
-                  <>
-                    <div className="text-green-300">✅ {(limits as AtmosphericLimits['oxygen']).min}-{(limits as AtmosphericLimits['oxygen']).max}%</div>
-                    <div className="text-red-300">🚨 ≤{(limits as AtmosphericLimits['oxygen']).critical_low}% ou ≥{(limits as AtmosphericLimits['oxygen']).critical_high}%</div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-green-300">✅ ≤{(limits as AtmosphericLimits['lel']).max} ppm</div>
-                    <div className="text-red-300">🚨 ≥{(limits as AtmosphericLimits['lel']).critical} ppm</div>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {retestActive && (
-        <div className="bg-red-900/50 border-2 border-red-500 rounded-xl p-6 animate-pulse">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-8 h-8 text-red-400" />
-              <div>
-                <h3 className="text-red-200 font-bold text-lg">⏰ RETEST OBLIGATOIRE</h3>
-                <p className="text-red-300">Valeurs critiques détectées - Nouveau test requis</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-red-400">{formatTime(retestTimer)}</div>
-              <div className="text-red-300 text-sm">Temps restant</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-          <Activity className="w-5 h-5" />
-          Nouvelle Mesure Atmosphérique
-        </h3>
-        
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          <div>
-            <label className="block text-slate-400 text-sm font-medium mb-2">O₂ (%) *</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="30"
-              placeholder="20.9"
-              value={manualReading.oxygen}
-              onChange={(e) => setManualReading(prev => ({ ...prev, oxygen: e.target.value }))}
-              className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-slate-400 text-sm font-medium mb-2">LEL (%) *</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="100"
-              placeholder="0"
-              value={manualReading.lel}
-              onChange={(e) => setManualReading(prev => ({ ...prev, lel: e.target.value }))}
-              className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-slate-400 text-sm font-medium mb-2">H₂S (ppm) *</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="1000"
-              placeholder="0"
-              value={manualReading.h2s}
-              onChange={(e) => setManualReading(prev => ({ ...prev, h2s: e.target.value }))}
-              className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-slate-400 text-sm font-medium mb-2">CO (ppm) *</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="1000"
-              placeholder="0"
-              value={manualReading.co}
-              onChange={(e) => setManualReading(prev => ({ ...prev, co: e.target.value }))}
-              className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
-              required
-            />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-          <div>
-            <label className="block text-slate-400 text-sm font-medium mb-2">Température (°C)</label>
-            <input
-              type="number"
-              step="0.1"
-              placeholder="20"
-              value={manualReading.temperature}
-              onChange={(e) => setManualReading(prev => ({ ...prev, temperature: e.target.value }))}
-              className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
-            />
-          </div>
-          <div>
-            <label className="block text-slate-400 text-sm font-medium mb-2">Humidité (%)</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="100"
-              placeholder="50"
-              value={manualReading.humidity}
-              onChange={(e) => setManualReading(prev => ({ ...prev, humidity: e.target.value }))}
-              className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full"
-            />
-          </div>
-          <div className="flex items-end">
-            <button
-              onClick={addManualReading}
-              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg transition-all w-full flex items-center justify-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              {texts.addManualReading}
-            </button>
-          </div>
-        </div>
-        
-        <div>
-          <label className="block text-slate-400 text-sm font-medium mb-2">Notes (optionnel)</label>
-          <textarea
-            placeholder="Observations, conditions particulières, appareil utilisé..."
-            value={manualReading.notes}
-            onChange={(e) => setManualReading(prev => ({ ...prev, notes: e.target.value }))}
-            className="bg-slate-700 text-white border border-slate-600 rounded-lg p-3 w-full placeholder-slate-400"
-            rows={2}
-          />
-        </div>
-      </div>
-
-      <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-          <FileText className="w-5 h-5" />
-          Historique des Mesures ({atmosphericReadings.length})
-        </h3>
-        
-        {atmosphericReadings.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">
-            Aucune mesure enregistrée. Effectuez votre première mesure atmosphérique.
-          </div>
-        ) : (
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {atmosphericReadings.slice().reverse().map((reading) => (
-              <div
-                key={reading.id}
-                className={`p-4 rounded-lg border-l-4 ${
-                  reading.status === 'danger' ? 'bg-red-900/20 border-red-500' :
-                  reading.status === 'warning' ? 'bg-yellow-900/20 border-yellow-500' :
-                  'bg-green-900/20 border-green-500'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${
-                      reading.status === 'danger' ? 'bg-red-500 animate-pulse' :
-                      reading.status === 'warning' ? 'bg-yellow-500' :
-                      'bg-green-500'
-                    }`}></div>
-                    <span className={`font-semibold ${
-                      reading.status === 'danger' ? 'text-red-300' :
-                      reading.status === 'warning' ? 'text-yellow-300' :
-                      'text-green-300'
-                    }`}>
-                      {reading.status === 'danger' ? '🚨 DANGER' :
-                       reading.status === 'warning' ? '⚠️ ATTENTION' :
-                       '✅ SÉCURITAIRE'}
-                    </span>
-                  </div>
-                  <div className="text-slate-400 text-sm">
-                    {new Date(reading.timestamp).toLocaleString()} - {reading.taken_by}
-                  </div>
+  const renderAtmosphericSection = () => {
+    const currentRegulations = PROVINCIAL_REGULATIONS[selectedProvince];
+    
+    return (
+      <div className="space-y-6">
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <Shield className="w-5 h-5" />
+            Limites Réglementaires - {currentRegulations.name}
+            <span className="text-sm bg-blue-600 text-white px-2 py-1 rounded-full">
+              Tests aux {currentRegulations.atmospheric_testing.frequency_minutes} min
+            </span>
+          </h3>
+          
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {Object.entries(currentRegulations.atmospheric_testing.limits).map(([gas, limits]) => (
+              <div key={gas} className="bg-gray-900/50 rounded-lg p-4 border border-gray-600">
+                <h4 className="font-semibold text-white mb-2">
+                  {gas === 'oxygen' ? '🫁 O₂' : 
+                   gas === 'lel' ? '🔥 LEL' : 
+                   gas === 'h2s' ? '☠️ H₂S' : 
+                   '💨 CO'}
+                </h4>
+                <div className="space-y-1 text-sm">
+                  {gas === 'oxygen' ? (
+                    <>
+                      <div className="text-green-300">✅ {(limits as AtmosphericLimits['oxygen']).min}-{(limits as AtmosphericLimits['oxygen']).max}%</div>
+                      <div className="text-red-300">🚨 ≤{(limits as AtmosphericLimits['oxygen']).critical_low}% ou ≥{(limits as AtmosphericLimits['oxygen']).critical_high}%</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-green-300">✅ ≤{(limits as AtmosphericLimits['lel']).max} {gas === 'lel' ? '%' : 'ppm'}</div>
+                      <div className="text-red-300">🚨 ≥{(limits as AtmosphericLimits['lel']).critical} {gas === 'lel' ? '%' : 'ppm'}</div>
+                    </>
+                  )}
                 </div>
-                
-                <div className="grid grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-slate-400">O₂:</span>
-                    <span className={`ml-2 font-medium ${
-                      validateAtmosphericValue('oxygen', reading.oxygen) === 'danger' ? 'text-red-300' :
-                      validateAtmosphericValue('oxygen', reading.oxygen) === 'warning' ? 'text-yellow-300' :
-                      'text-green-300'
-                    }`}>
-                      {reading.oxygen}%
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">LEL:</span>
-                    <span className={`ml-2 font-medium ${
-                      validateAtmosphericValue('lel', reading.lel) === 'danger' ? 'text-red-300' :
-                      validateAtmosphericValue('lel', reading.lel) === 'warning' ? 'text-yellow-300' :
-                      'text-green-300'
-                    }`}>
-                      {reading.lel}%
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">H₂S:</span>
-                    <span className={`ml-2 font-medium ${
-                      validateAtmosphericValue('h2s', reading.h2s) === 'danger' ? 'text-red-300' :
-                      validateAtmosphericValue('h2s', reading.h2s) === 'warning' ? 'text-yellow-300' :
-                      'text-green-300'
-                    }`}>
-                      {reading.h2s} ppm
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">CO:</span>
-                    <span className={`ml-2 font-medium ${
-                      validateAtmosphericValue('co', reading.co) === 'danger' ? 'text-red-300' :
-                      validateAtmosphericValue('co', reading.co) === 'warning' ? 'text-yellow-300' :
-                      'text-green-300'
-                    }`}>
-                      {reading.co} ppm
-                    </span>
-                  </div>
-                </div>
-                
-                {(reading.temperature || reading.humidity || reading.notes) && (
-                  <div className="mt-2 pt-2 border-t border-slate-600 text-sm text-slate-300">
-                    {reading.temperature && <span>🌡️ {reading.temperature}°C </span>}
-                    {reading.humidity && <span>💧 {reading.humidity}% </span>}
-                    {reading.notes && <div className="mt-1">📝 {reading.notes}</div>}
-                  </div>
-                )}
               </div>
             ))}
           </div>
+        </div>
+
+        {retestActive && (
+          <div className="bg-red-900/50 border-2 border-red-500 rounded-xl p-6 animate-pulse">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-8 h-8 text-red-400" />
+                <div>
+                  <h3 className="text-red-200 font-bold text-lg">⏰ RETEST OBLIGATOIRE</h3>
+                  <p className="text-red-300">Valeurs critiques détectées - Nouveau test requis</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-red-400">{formatTime(retestTimer)}</div>
+                <div className="text-red-300 text-sm">Temps restant</div>
+              </div>
+            </div>
+          </div>
         )}
+
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <Activity className="w-5 h-5" />
+            Nouvelle Mesure Atmosphérique
+          </h3>
+          
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label className="block text-gray-400 text-sm font-medium mb-2">O₂ (%) *</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="30"
+                placeholder="20.9"
+                value={manualReading.oxygen}
+                onChange={(e) => setManualReading(prev => ({ ...prev, oxygen: e.target.value }))}
+                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 text-sm font-medium mb-2">LEL (%) *</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                placeholder="0"
+                value={manualReading.lel}
+                onChange={(e) => setManualReading(prev => ({ ...prev, lel: e.target.value }))}
+                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 text-sm font-medium mb-2">H₂S (ppm) *</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="1000"
+                placeholder="0"
+                value={manualReading.h2s}
+                onChange={(e) => setManualReading(prev => ({ ...prev, h2s: e.target.value }))}
+                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 text-sm font-medium mb-2">CO (ppm) *</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="1000"
+                placeholder="0"
+                value={manualReading.co}
+                onChange={(e) => setManualReading(prev => ({ ...prev, co: e.target.value }))}
+                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-gray-400 text-sm font-medium mb-2">Température (°C)</label>
+              <input
+                type="number"
+                step="0.1"
+                placeholder="20"
+                value={manualReading.temperature}
+                onChange={(e) => setManualReading(prev => ({ ...prev, temperature: e.target.value }))}
+                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 text-sm font-medium mb-2">Humidité (%)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                placeholder="50"
+                value={manualReading.humidity}
+                onChange={(e) => setManualReading(prev => ({ ...prev, humidity: e.target.value }))}
+                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-end">
+              <button
+                onClick={addManualReading}
+                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg transition-all w-full flex items-center justify-center gap-2 font-semibold"
+              >
+                <Plus className="w-4 h-4" />
+                {texts.addManualReading}
+              </button>
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-gray-400 text-sm font-medium mb-2">Notes (optionnel)</label>
+            <textarea
+              placeholder="Observations, conditions particulières, appareil utilisé..."
+              value={manualReading.notes}
+              onChange={(e) => setManualReading(prev => ({ ...prev, notes: e.target.value }))}
+              className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
+              rows={2}
+            />
+          </div>
+        </div>
+
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <FileText className="w-5 h-5" />
+            Historique des Mesures ({atmosphericReadings.length})
+          </h3>
+          
+          {atmosphericReadings.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <Activity className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+              <p className="text-lg mb-2">Aucune mesure enregistrée</p>
+              <p className="text-sm">Effectuez votre première mesure atmosphérique ci-dessus.</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {atmosphericReadings.slice().reverse().map((reading) => (
+                <div
+                  key={reading.id}
+                  className={`p-4 rounded-lg border-l-4 ${
+                    reading.status === 'danger' ? 'bg-red-900/20 border-red-500' :
+                    reading.status === 'warning' ? 'bg-yellow-900/20 border-yellow-500' :
+                    'bg-green-900/20 border-green-500'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${
+                        reading.status === 'danger' ? 'bg-red-500 animate-pulse' :
+                        reading.status === 'warning' ? 'bg-yellow-500' :
+                        'bg-green-500'
+                      }`}></div>
+                      <span className={`font-semibold ${
+                        reading.status === 'danger' ? 'text-red-300' :
+                        reading.status === 'warning' ? 'text-yellow-300' :
+                        'text-green-300'
+                      }`}>
+                        {reading.status === 'danger' ? '🚨 DANGER' :
+                         reading.status === 'warning' ? '⚠️ ATTENTION' :
+                         '✅ SÉCURITAIRE'}
+                      </span>
+                    </div>
+                    <div className="text-gray-400 text-sm">
+                      {new Date(reading.timestamp).toLocaleString('fr-CA')} - {reading.taken_by}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-400">O₂:</span>
+                      <span className={`ml-2 font-medium ${
+                        validateAtmosphericValue('oxygen', reading.oxygen) === 'danger' ? 'text-red-300' :
+                        validateAtmosphericValue('oxygen', reading.oxygen) === 'warning' ? 'text-yellow-300' :
+                        'text-green-300'
+                      }`}>
+                        {reading.oxygen}%
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">LEL:</span>
+                      <span className={`ml-2 font-medium ${
+                        validateAtmosphericValue('lel', reading.lel) === 'danger' ? 'text-red-300' :
+                        validateAtmosphericValue('lel', reading.lel) === 'warning' ? 'text-yellow-300' :
+                        'text-green-300'
+                      }`}>
+                        {reading.lel}%
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">H₂S:</span>
+                      <span className={`ml-2 font-medium ${
+                        validateAtmosphericValue('h2s', reading.h2s) === 'danger' ? 'text-red-300' :
+                        validateAtmosphericValue('h2s', reading.h2s) === 'warning' ? 'text-yellow-300' :
+                        'text-green-300'
+                      }`}>
+                        {reading.h2s} ppm
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">CO:</span>
+                      <span className={`ml-2 font-medium ${
+                        validateAtmosphericValue('co', reading.co) === 'danger' ? 'text-red-300' :
+                        validateAtmosphericValue('co', reading.co) === 'warning' ? 'text-yellow-300' :
+                        'text-green-300'
+                      }`}>
+                        {reading.co} ppm
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {(reading.temperature || reading.humidity || reading.notes) && (
+                    <div className="mt-2 pt-2 border-t border-gray-600 text-sm text-gray-300">
+                      {reading.temperature && <span>🌡️ {reading.temperature}°C </span>}
+                      {reading.humidity && <span>💧 {reading.humidity}% </span>}
+                      {reading.notes && <div className="mt-1">📝 {reading.notes}</div>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Rendu section contacts d'urgence
-  const renderEmergencySection = () => (
-    <div className="space-y-6">
-      <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-          <Phone className="w-5 h-5" />
-          {texts.emergencyContacts} - {regulations.name}
-        </h3>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {regulations.emergency_contacts.map((contact, index) => (
-            <div key={index} className={`p-4 rounded-lg border-l-4 ${
-              contact.name === '911' ? 'border-red-500 bg-red-900/20' : 'border-blue-500 bg-blue-900/20'
-            }`}>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-semibold text-white">{contact.name}</h4>
-                {contact.available_24h && (
-                  <span className="text-xs bg-green-600 text-white px-2 py-1 rounded-full">24h/7j</span>
-                )}
+  const renderEmergencySection = () => {
+    const currentRegulations = PROVINCIAL_REGULATIONS[selectedProvince];
+    
+    return (
+      <div className="space-y-6">
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+            <Phone className="w-5 h-5" />
+            {texts.emergencyContacts} - {currentRegulations.name}
+          </h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {currentRegulations.emergency_contacts.map((contact, index) => (
+              <div key={index} className={`p-4 rounded-lg border-l-4 ${
+                contact.name === '911' ? 'border-red-500 bg-red-900/20' : 'border-blue-500 bg-blue-900/20'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold text-white">{contact.name}</h4>
+                  {contact.available_24h && (
+                    <span className="text-xs bg-green-600 text-white px-2 py-1 rounded-full">24h/7j</span>
+                  )}
+                </div>
+                <p className="text-gray-300 text-sm mb-2">{contact.role}</p>
+                <a href={`tel:${contact.phone}`} className="text-blue-400 hover:text-blue-300 font-mono text-lg transition-colors">
+                  {contact.phone}
+                </a>
               </div>
-              <p className="text-slate-300 text-sm mb-2">{contact.role}</p>
-              <a href={`tel:${contact.phone}`} className="text-blue-400 hover:text-blue-300 font-mono text-lg">
-                {contact.phone}
-              </a>
-            </div>
-          ))}
-        </div>
-        
-        <div className="mt-6 p-4 bg-red-900/30 border border-red-500/50 rounded-lg">
-          <h4 className="text-red-200 font-semibold mb-2 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5" />
-            Procédure d'Évacuation d'Urgence
-          </h4>
-          <ol className="text-red-200 text-sm space-y-1 ml-4">
-            <li>1. <strong>ARRÊT IMMÉDIAT</strong> de tous les travaux</li>
-            <li>2. <strong>ÉVACUATION</strong> immédiate de tous les entrants</li>
-            <li>3. <strong>APPEL</strong> au 911 et contacts d'urgence</li>
-            <li>4. <strong>INTERDICTION</strong> de re-entrée jusqu'à autorisation</li>
-            <li>5. <strong>RAPPORT</strong> d'incident obligatoire</li>
-          </ol>
+            ))}
+          </div>
+          
+          <div className="mt-6 p-4 bg-red-900/30 border border-red-500/50 rounded-lg">
+            <h4 className="text-red-200 font-semibold mb-2 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Procédure d'Évacuation d'Urgence
+            </h4>
+            <ol className="text-red-200 text-sm space-y-1 ml-4">
+              <li>1. <strong>ARRÊT IMMÉDIAT</strong> de tous les travaux</li>
+              <li>2. <strong>ÉVACUATION</strong> immédiate de tous les entrants</li>
+              <li>3. <strong>APPEL</strong> au 911 et contacts d'urgence</li>
+              <li>4. <strong>INTERDICTION</strong> de re-entrée jusqu'à autorisation</li>
+              <li>5. <strong>RAPPORT</strong> d'incident obligatoire</li>
+            </ol>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-slate-900 min-h-screen">
+    <div className="max-w-7xl mx-auto p-6 bg-gray-900 min-h-screen">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold text-white">{texts.title}</h1>
-            <p className="text-slate-400">{texts.subtitle}</p>
+            <p className="text-gray-400">{texts.subtitle}</p>
+            <div className="text-sm text-blue-300 mt-2">
+              <span className="font-mono bg-gray-800 px-2 py-1 rounded border">
+                {permitData.permit_number}
+              </span>
+            </div>
           </div>
           <div className={`px-4 py-2 rounded-lg font-semibold ${
             isPermitValid() 
@@ -1144,27 +1179,33 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         {activeTab === 'site' && renderSiteSection()}
         {activeTab === 'atmospheric' && renderAtmosphericSection()}
         {activeTab === 'personnel' && (
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
               <Users className="w-5 h-5" />
               {texts.personnelManagement}
             </h3>
-            <p className="text-slate-400 text-center py-8">
-              Section Personnel en cours de développement. 
-              Fonctionnalités: signatures électroniques, horodatage entrée/sortie, validation formations.
-            </p>
+            <div className="text-center py-12">
+              <Users className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+              <p className="text-gray-400 text-lg mb-2">Section Personnel en cours de développement</p>
+              <p className="text-gray-500 text-sm">
+                Fonctionnalités: signatures électroniques, horodatage entrée/sortie, validation formations.
+              </p>
+            </div>
           </div>
         )}
         {activeTab === 'photos' && (
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
               <Camera className="w-5 h-5" />
               {texts.photoDocumentation}
             </h3>
-            <p className="text-slate-400 text-center py-8">
-              Section Photos en cours de développement.
-              Fonctionnalités: capture mobile, géolocalisation GPS, métadonnées, carousel.
-            </p>
+            <div className="text-center py-12">
+              <Camera className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+              <p className="text-gray-400 text-lg mb-2">Section Photos en cours de développement</p>
+              <p className="text-gray-500 text-sm">
+                Fonctionnalités: capture mobile, géolocalisation GPS, métadonnées, carousel.
+              </p>
+            </div>
           </div>
         )}
         {activeTab === 'emergency' && renderEmergencySection()}
