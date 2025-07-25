@@ -830,10 +830,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   );
 };
 
-export default ConfinedSpacePermit; ÉTAT PRINCIPAL ===================
-  const [permitData, setPermitData] = useState({
-    // En-tête légal
-    permit_number: initialData?.permit_number || `CS-${province}-${Date.now().toString().slice(-6)}`,
+export default ConfinedSpacePermit;
     issue_date: initialData?.issue_date || new Date().toISOString().split('T')[0],
     issue_time: initialData?.issue_time || new Date().toTimeString().slice(0, 5),
     expiry_date: initialData?.expiry_date || '',
