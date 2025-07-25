@@ -397,10 +397,10 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     const coStatus = validateAtmosphericValue('co', co);
 
     const statuses = [oxygenStatus, lelStatus, h2sStatus, coStatus];
-    const overallStatus = statuses.includes('danger') ? 'danger' :
+    const overallStatus: 'safe' | 'warning' | 'danger' = statuses.includes('danger') ? 'danger' :
       statuses.includes('warning') ? 'warning' : 'safe';
 
-    const newReading = {
+    const newReading: AtmosphericReading = {
       id: `reading_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date().toISOString(),
       oxygen,
