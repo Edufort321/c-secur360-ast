@@ -10,6 +10,163 @@ import {
   ChevronLeft, ChevronRight, X, Calendar, Zap
 } from 'lucide-react';
 
+// =================== STYLES CSS INTÉGRÉS ===================
+const styles = {
+  container: {
+    maxWidth: '1280px',
+    margin: '0 auto',
+    padding: '24px',
+    backgroundColor: '#111827',
+    minHeight: '100vh',
+    color: 'white',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif'
+  },
+  card: {
+    backgroundColor: '#1f2937',
+    borderRadius: '16px',
+    padding: '24px',
+    border: '1px solid #374151',
+    marginBottom: '24px',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
+  },
+  input: {
+    backgroundColor: '#374151',
+    color: 'white',
+    border: '1px solid #4b5563',
+    borderRadius: '8px',
+    padding: '12px',
+    width: '100%',
+    fontSize: '14px',
+    outline: 'none'
+  },
+  inputFocus: {
+    borderColor: '#3b82f6',
+    boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.2)'
+  },
+  button: {
+    padding: '12px 24px',
+    borderRadius: '8px',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    transition: 'all 0.2s ease',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '14px'
+  },
+  buttonPrimary: {
+    background: 'linear-gradient(to right, #3b82f6, #2563eb)',
+    color: 'white'
+  },
+  buttonSuccess: {
+    background: 'linear-gradient(to right, #059669, #047857)',
+    color: 'white'
+  },
+  buttonDanger: {
+    background: 'linear-gradient(to right, #dc2626, #b91c1c)',
+    color: 'white'
+  },
+  tab: {
+    padding: '12px 16px',
+    borderRadius: '8px 8px 0 0',
+    fontWeight: '500',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    transition: 'all 0.2s ease',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '14px',
+    marginRight: '8px'
+  },
+  tabActive: {
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    borderBottom: '2px solid #60a5fa'
+  },
+  tabInactive: {
+    backgroundColor: '#374151',
+    color: '#d1d5db'
+  },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '16px'
+  },
+  grid4: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: '16px'
+  },
+  readingCard: {
+    padding: '16px',
+    borderRadius: '8px',
+    borderLeft: '4px solid'
+  },
+  readingSafe: {
+    backgroundColor: 'rgba(5, 150, 105, 0.1)',
+    borderLeftColor: '#10b981'
+  },
+  readingWarning: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderLeftColor: '#f59e0b'
+  },
+  readingDanger: {
+    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+    borderLeftColor: '#ef4444'
+  },
+  statusIndicator: {
+    width: '12px',
+    height: '12px',
+    borderRadius: '50%',
+    marginRight: '8px'
+  },
+  statusSafe: {
+    backgroundColor: '#10b981'
+  },
+  statusWarning: {
+    backgroundColor: '#f59e0b'
+  },
+  statusDanger: {
+    backgroundColor: '#ef4444',
+    animation: 'pulse 2s infinite'
+  },
+  emergencyCard: {
+    backgroundColor: 'rgba(220, 38, 38, 0.2)',
+    border: '2px solid #ef4444',
+    borderRadius: '12px',
+    padding: '24px',
+    animation: 'pulse 2s infinite'
+  },
+  label: {
+    display: 'block',
+    color: '#9ca3af',
+    fontSize: '14px',
+    fontWeight: '500',
+    marginBottom: '8px'
+  },
+  title: {
+    fontSize: '32px',
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: '8px'
+  },
+  subtitle: {
+    color: '#9ca3af',
+    marginBottom: '24px'
+  },
+  cardTitle: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px'
+  }
+};
+
 // =================== TYPES ===================
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 
@@ -608,22 +765,21 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
 
   // Rendu des onglets
   const renderTabs = () => (
-    <div className="flex flex-wrap gap-2 mb-8 border-b border-gray-700">
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '32px', borderBottom: '1px solid #374151' }}>
       {[
-        { id: 'site', label: '🏢 Site', icon: <Home className="w-4 h-4" /> },
-        { id: 'atmospheric', label: '🌬️ Atmosphère', icon: <Wind className="w-4 h-4" /> },
-        { id: 'personnel', label: '👥 Personnel', icon: <Users className="w-4 h-4" /> },
-        { id: 'photos', label: '📸 Photos', icon: <Camera className="w-4 h-4" /> },
-        { id: 'emergency', label: '🚨 Urgence', icon: <Phone className="w-4 h-4" /> }
+        { id: 'site', label: '🏢 Site', icon: <Home style={{ width: '16px', height: '16px' }} /> },
+        { id: 'atmospheric', label: '🌬️ Atmosphère', icon: <Wind style={{ width: '16px', height: '16px' }} /> },
+        { id: 'personnel', label: '👥 Personnel', icon: <Users style={{ width: '16px', height: '16px' }} /> },
+        { id: 'photos', label: '📸 Photos', icon: <Camera style={{ width: '16px', height: '16px' }} /> },
+        { id: 'emergency', label: '🚨 Urgence', icon: <Phone style={{ width: '16px', height: '16px' }} /> }
       ].map(tab => (
         <button
           key={tab.id}
           onClick={() => setActiveTab(tab.id)}
-          className={`flex items-center gap-2 px-4 py-3 rounded-t-lg font-medium transition-all ${
-            activeTab === tab.id
-              ? 'bg-blue-600 text-white border-b-2 border-blue-400'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
-          }`}
+          style={{
+            ...styles.tab,
+            ...(activeTab === tab.id ? styles.tabActive : styles.tabInactive)
+          }}
         >
           {tab.icon}
           {tab.label}
@@ -634,42 +790,47 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
 
   // Rendu section site
   const renderSiteSection = () => (
-    <div className="space-y-6">
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={styles.card}>
+        <div style={styles.grid2}>
           <div>
-            <h2 className="text-2xl font-bold text-white mb-2">{texts.title}</h2>
-            <p className="text-gray-400 mb-4">{texts.subtitle}</p>
-            <div className="text-sm text-blue-300">
-              <div className="flex items-center gap-2 mb-1">
-                <Shield className="w-4 h-4" />
+            <h2 style={styles.title}>{texts.title}</h2>
+            <p style={styles.subtitle}>{texts.subtitle}</p>
+            <div style={{ fontSize: '14px', color: '#93c5fd' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <Shield style={{ width: '16px', height: '16px' }} />
                 📍 Province: {PROVINCIAL_REGULATIONS[selectedProvince].name}
               </div>
-              <div className="flex items-center gap-2 mb-1">
-                <FileText className="w-4 h-4" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <FileText style={{ width: '16px', height: '16px' }} />
                 Réglementation: {PROVINCIAL_REGULATIONS[selectedProvince].code}
               </div>
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Phone style={{ width: '16px', height: '16px' }} />
                 Autorité: {PROVINCIAL_REGULATIONS[selectedProvince].authority} - {PROVINCIAL_REGULATIONS[selectedProvince].authority_phone}
               </div>
             </div>
           </div>
           
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={styles.grid2}>
               <div>
-                <label className="block text-gray-400 text-sm font-medium mb-2">N° Permis</label>
-                <div className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 font-mono text-lg font-bold">
+                <label style={styles.label}>N° Permis</label>
+                <div style={{
+                  ...styles.input,
+                  fontFamily: 'monospace',
+                  fontSize: '18px',
+                  fontWeight: 'bold'
+                }}>
                   {permitData.permit_number}
                 </div>
               </div>
               <div>
-                <label className="block text-gray-400 text-sm font-medium mb-2">Province</label>
+                <label style={styles.label}>Province</label>
                 <select
                   value={selectedProvince}
                   onChange={(e) => setSelectedProvince(e.target.value as ProvinceCode)}
-                  className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                  style={styles.input}
                 >
                   {Object.entries(PROVINCIAL_REGULATIONS).map(([code, reg]) => (
                     <option key={code} value={code}>
@@ -677,51 +838,51 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                     </option>
                   ))}
                 </select>
-                <div className="text-xs text-gray-500 mt-1">
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
                   Autorité: {PROVINCIAL_REGULATIONS[selectedProvince].authority}
                 </div>
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div style={styles.grid2}>
               <div>
-                <label className="block text-gray-400 text-sm font-medium mb-2">Date d'émission</label>
+                <label style={styles.label}>Date d'émission</label>
                 <input
                   type="date"
                   value={permitData.issue_date}
                   onChange={(e) => setPermitData(prev => ({ ...prev, issue_date: e.target.value }))}
-                  className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                  style={styles.input}
                 />
               </div>
               <div>
-                <label className="block text-gray-400 text-sm font-medium mb-2">Heure d'émission</label>
+                <label style={styles.label}>Heure d'émission</label>
                 <input
                   type="time"
                   value={permitData.issue_time}
                   onChange={(e) => setPermitData(prev => ({ ...prev, issue_time: e.target.value }))}
-                  className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                  style={styles.input}
                 />
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div style={styles.grid2}>
               <div>
-                <label className="block text-gray-400 text-sm font-medium mb-2">Date d'expiration</label>
+                <label style={styles.label}>Date d'expiration</label>
                 <input
                   type="date"
                   value={permitData.expiry_date}
                   onChange={(e) => setPermitData(prev => ({ ...prev, expiry_date: e.target.value }))}
-                  className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                  style={styles.input}
                   required
                 />
               </div>
               <div>
-                <label className="block text-gray-400 text-sm font-medium mb-2">Heure d'expiration</label>
+                <label style={styles.label}>Heure d'expiration</label>
                 <input
                   type="time"
                   value={permitData.expiry_time}
                   onChange={(e) => setPermitData(prev => ({ ...prev, expiry_time: e.target.value }))}
-                  className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                  style={styles.input}
                   required
                 />
               </div>
@@ -730,69 +891,67 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         </div>
       </div>
 
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-          <MapPin className="w-5 h-5" />
+      <div style={styles.card}>
+        <h3 style={styles.cardTitle}>
+          <MapPin style={{ width: '20px', height: '20px' }} />
           {texts.siteIdentification}
         </h3>
         
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={styles.grid2}>
             <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">Nom du site *</label>
+              <label style={styles.label}>Nom du site *</label>
               <input
                 type="text"
                 placeholder="Ex: Usine Pétrochimique Nord"
                 value={permitData.site_name}
                 onChange={(e) => setPermitData(prev => ({ ...prev, site_name: e.target.value }))}
-                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
+                style={styles.input}
                 required
               />
             </div>
             <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">Adresse complète</label>
+              <label style={styles.label}>Adresse complète</label>
               <input
                 type="text"
                 placeholder="Ex: 123 Rue Industrielle, Ville, Province, Code postal"
                 value={permitData.site_address}
                 onChange={(e) => setPermitData(prev => ({ ...prev, site_address: e.target.value }))}
-                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
+                style={styles.input}
               />
             </div>
           </div>
           
           <div>
-            <label className="block text-gray-400 text-sm font-medium mb-2">Localisation précise de l'espace clos *</label>
+            <label style={styles.label}>Localisation précise de l'espace clos *</label>
             <input
               type="text"
               placeholder="Ex: Réservoir T-101, Niveau sous-sol, Section B"
               value={permitData.space_location}
               onChange={(e) => setPermitData(prev => ({ ...prev, space_location: e.target.value }))}
-              className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
+              style={styles.input}
               required
             />
           </div>
           
           <div>
-            <label className="block text-gray-400 text-sm font-medium mb-2">Description de l'espace clos *</label>
+            <label style={styles.label}>Description de l'espace clos *</label>
             <textarea
               placeholder="Ex: Réservoir cylindrique de 5m de diamètre et 8m de hauteur, utilisé pour stockage de produits chimiques"
               value={permitData.space_description}
               onChange={(e) => setPermitData(prev => ({ ...prev, space_description: e.target.value }))}
-              className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
-              rows={3}
+              style={{ ...styles.input, height: '80px', resize: 'vertical' }}
               required
             />
           </div>
           
           <div>
-            <label className="block text-gray-400 text-sm font-medium mb-2">Description des travaux à effectuer *</label>
+            <label style={styles.label}>Description des travaux à effectuer *</label>
             <textarea
               placeholder="Ex: Inspection visuelle, nettoyage des parois, réparation de soudures, maintenance préventive"
               value={permitData.work_description}
               onChange={(e) => setPermitData(prev => ({ ...prev, work_description: e.target.value }))}
-              className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
-              rows={3}
+              style={{ ...styles.input, height: '80px', resize: 'vertical' }}
               required
             />
           </div>
@@ -806,35 +965,46 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     const currentRegulations = PROVINCIAL_REGULATIONS[selectedProvince];
     
     return (
-      <div className="space-y-6">
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-            <Shield className="w-5 h-5" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={styles.card}>
+          <h3 style={styles.cardTitle}>
+            <Shield style={{ width: '20px', height: '20px' }} />
             Limites Réglementaires - {currentRegulations.name}
-            <span className="text-sm bg-blue-600 text-white px-2 py-1 rounded-full">
+            <span style={{
+              fontSize: '14px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              padding: '4px 8px',
+              borderRadius: '12px'
+            }}>
               Tests aux {currentRegulations.atmospheric_testing.frequency_minutes} min
             </span>
           </h3>
           
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div style={styles.grid4}>
             {Object.entries(currentRegulations.atmospheric_testing.limits).map(([gas, limits]) => (
-              <div key={gas} className="bg-gray-900/50 rounded-lg p-4 border border-gray-600">
-                <h4 className="font-semibold text-white mb-2">
+              <div key={gas} style={{
+                backgroundColor: 'rgba(17, 24, 39, 0.5)',
+                borderRadius: '8px',
+                padding: '16px',
+                border: '1px solid #4b5563'
+              }}>
+                <h4 style={{ fontWeight: '600', color: 'white', marginBottom: '8px' }}>
                   {gas === 'oxygen' ? '🫁 O₂' : 
                    gas === 'lel' ? '🔥 LEL' : 
                    gas === 'h2s' ? '☠️ H₂S' : 
                    '💨 CO'}
                 </h4>
-                <div className="space-y-1 text-sm">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '14px' }}>
                   {gas === 'oxygen' ? (
                     <>
-                      <div className="text-green-300">✅ {(limits as AtmosphericLimits['oxygen']).min}-{(limits as AtmosphericLimits['oxygen']).max}%</div>
-                      <div className="text-red-300">🚨 ≤{(limits as AtmosphericLimits['oxygen']).critical_low}% ou ≥{(limits as AtmosphericLimits['oxygen']).critical_high}%</div>
+                      <div style={{ color: '#86efac' }}>✅ {(limits as AtmosphericLimits['oxygen']).min}-{(limits as AtmosphericLimits['oxygen']).max}%</div>
+                      <div style={{ color: '#fca5a5' }}>🚨 ≤{(limits as AtmosphericLimits['oxygen']).critical_low}% ou ≥{(limits as AtmosphericLimits['oxygen']).critical_high}%</div>
                     </>
                   ) : (
                     <>
-                      <div className="text-green-300">✅ ≤{(limits as AtmosphericLimits['lel']).max} {gas === 'lel' ? '%' : 'ppm'}</div>
-                      <div className="text-red-300">🚨 ≥{(limits as AtmosphericLimits['lel']).critical} {gas === 'lel' ? '%' : 'ppm'}</div>
+                      <div style={{ color: '#86efac' }}>✅ ≤{(limits as AtmosphericLimits['lel']).max} {gas === 'lel' ? '%' : 'ppm'}</div>
+                      <div style={{ color: '#fca5a5' }}>🚨 ≥{(limits as AtmosphericLimits['lel']).critical} {gas === 'lel' ? '%' : 'ppm'}</div>
                     </>
                   )}
                 </div>
@@ -844,32 +1014,32 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         </div>
 
         {retestActive && (
-          <div className="bg-red-900/50 border-2 border-red-500 rounded-xl p-6 animate-pulse">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="w-8 h-8 text-red-400" />
+          <div style={styles.emergencyCard}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <AlertTriangle style={{ width: '32px', height: '32px', color: '#f87171' }} />
                 <div>
-                  <h3 className="text-red-200 font-bold text-lg">⏰ RETEST OBLIGATOIRE</h3>
-                  <p className="text-red-300">Valeurs critiques détectées - Nouveau test requis</p>
+                  <h3 style={{ color: '#fecaca', fontWeight: 'bold', fontSize: '18px' }}>⏰ RETEST OBLIGATOIRE</h3>
+                  <p style={{ color: '#fca5a5' }}>Valeurs critiques détectées - Nouveau test requis</p>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-red-400">{formatTime(retestTimer)}</div>
-                <div className="text-red-300 text-sm">Temps restant</div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#f87171' }}>{formatTime(retestTimer)}</div>
+                <div style={{ color: '#fca5a5', fontSize: '14px' }}>Temps restant</div>
               </div>
             </div>
           </div>
         )}
 
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-            <Activity className="w-5 h-5" />
+        <div style={styles.card}>
+          <h3 style={styles.cardTitle}>
+            <Activity style={{ width: '20px', height: '20px' }} />
             Nouvelle Mesure Atmosphérique
           </h3>
           
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div style={styles.grid4}>
             <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">O₂ (%) *</label>
+              <label style={styles.label}>O₂ (%) *</label>
               <input
                 type="number"
                 step="0.1"
@@ -878,12 +1048,12 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 placeholder="20.9"
                 value={manualReading.oxygen}
                 onChange={(e) => setManualReading(prev => ({ ...prev, oxygen: e.target.value }))}
-                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                style={styles.input}
                 required
               />
             </div>
             <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">LEL (%) *</label>
+              <label style={styles.label}>LEL (%) *</label>
               <input
                 type="number"
                 step="0.1"
@@ -892,12 +1062,12 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 placeholder="0"
                 value={manualReading.lel}
                 onChange={(e) => setManualReading(prev => ({ ...prev, lel: e.target.value }))}
-                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                style={styles.input}
                 required
               />
             </div>
             <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">H₂S (ppm) *</label>
+              <label style={styles.label}>H₂S (ppm) *</label>
               <input
                 type="number"
                 step="0.1"
@@ -906,12 +1076,12 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 placeholder="0"
                 value={manualReading.h2s}
                 onChange={(e) => setManualReading(prev => ({ ...prev, h2s: e.target.value }))}
-                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                style={styles.input}
                 required
               />
             </div>
             <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">CO (ppm) *</label>
+              <label style={styles.label}>CO (ppm) *</label>
               <input
                 type="number"
                 step="0.1"
@@ -920,26 +1090,26 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 placeholder="0"
                 value={manualReading.co}
                 onChange={(e) => setManualReading(prev => ({ ...prev, co: e.target.value }))}
-                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                style={styles.input}
                 required
               />
             </div>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' }}>
             <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">Température (°C)</label>
+              <label style={styles.label}>Température (°C)</label>
               <input
                 type="number"
                 step="0.1"
                 placeholder="20"
                 value={manualReading.temperature}
                 onChange={(e) => setManualReading(prev => ({ ...prev, temperature: e.target.value }))}
-                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                style={styles.input}
               />
             </div>
             <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">Humidité (%)</label>
+              <label style={styles.label}>Humidité (%)</label>
               <input
                 type="number"
                 step="0.1"
@@ -948,129 +1118,154 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 placeholder="50"
                 value={manualReading.humidity}
                 onChange={(e) => setManualReading(prev => ({ ...prev, humidity: e.target.value }))}
-                className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500"
+                style={styles.input}
               />
             </div>
-            <div className="flex items-end">
+            <div style={{ display: 'flex', alignItems: 'end' }}>
               <button
                 onClick={addManualReading}
-                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg transition-all w-full flex items-center justify-center gap-2 font-semibold"
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSuccess,
+                  width: '100%',
+                  justifyContent: 'center'
+                }}
               >
-                <Plus className="w-4 h-4" />
+                <Plus style={{ width: '16px', height: '16px' }} />
                 {texts.addManualReading}
               </button>
             </div>
           </div>
           
-          <div>
-            <label className="block text-gray-400 text-sm font-medium mb-2">Notes (optionnel)</label>
+          <div style={{ marginTop: '16px' }}>
+            <label style={styles.label}>Notes (optionnel)</label>
             <textarea
               placeholder="Observations, conditions particulières, appareil utilisé..."
               value={manualReading.notes}
               onChange={(e) => setManualReading(prev => ({ ...prev, notes: e.target.value }))}
-              className="bg-gray-700 text-white border border-gray-600 rounded-lg p-3 w-full placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
-              rows={2}
+              style={{ ...styles.input, height: '60px', resize: 'vertical' }}
             />
           </div>
         </div>
 
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-            <FileText className="w-5 h-5" />
+        <div style={styles.card}>
+          <h3 style={styles.cardTitle}>
+            <FileText style={{ width: '20px', height: '20px' }} />
             Historique des Mesures ({atmosphericReadings.length})
           </h3>
           
           {atmosphericReadings.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-              <Activity className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-              <p className="text-lg mb-2">Aucune mesure enregistrée</p>
-              <p className="text-sm">Effectuez votre première mesure atmosphérique ci-dessus.</p>
+            <div style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>
+              <Activity style={{ width: '64px', height: '64px', margin: '0 auto 16px', color: '#4b5563' }} />
+              <p style={{ fontSize: '18px', marginBottom: '8px' }}>Aucune mesure enregistrée</p>
+              <p style={{ fontSize: '14px' }}>Effectuez votre première mesure atmosphérique ci-dessus.</p>
             </div>
           ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {atmosphericReadings.slice().reverse().map((reading) => (
-                <div
-                  key={reading.id}
-                  className={`p-4 rounded-lg border-l-4 ${
-                    reading.status === 'danger' ? 'bg-red-900/20 border-red-500' :
-                    reading.status === 'warning' ? 'bg-yellow-900/20 border-yellow-500' :
-                    'bg-green-900/20 border-green-500'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${
-                        reading.status === 'danger' ? 'bg-red-500 animate-pulse' :
-                        reading.status === 'warning' ? 'bg-yellow-500' :
-                        'bg-green-500'
-                      }`}></div>
-                      <span className={`font-semibold ${
-                        reading.status === 'danger' ? 'text-red-300' :
-                        reading.status === 'warning' ? 'text-yellow-300' :
-                        'text-green-300'
-                      }`}>
-                        {reading.status === 'danger' ? '🚨 DANGER' :
-                         reading.status === 'warning' ? '⚠️ ATTENTION' :
-                         '✅ SÉCURITAIRE'}
-                      </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }}>
+              {atmosphericReadings.slice().reverse().map((reading) => {
+                const readingStyle = reading.status === 'danger' ? styles.readingDanger :
+                                   reading.status === 'warning' ? styles.readingWarning :
+                                   styles.readingSafe;
+                
+                return (
+                  <div
+                    key={reading.id}
+                    style={{
+                      ...styles.readingCard,
+                      ...readingStyle
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          ...styles.statusIndicator,
+                          ...(reading.status === 'danger' ? styles.statusDanger :
+                             reading.status === 'warning' ? styles.statusWarning :
+                             styles.statusSafe)
+                        }}></div>
+                        <span style={{
+                          fontWeight: '600',
+                          color: reading.status === 'danger' ? '#fca5a5' :
+                                reading.status === 'warning' ? '#fde047' :
+                                '#86efac'
+                        }}>
+                          {reading.status === 'danger' ? '🚨 DANGER' :
+                           reading.status === 'warning' ? '⚠️ ATTENTION' :
+                           '✅ SÉCURITAIRE'}
+                        </span>
+                      </div>
+                      <div style={{ color: '#9ca3af', fontSize: '14px' }}>
+                        {new Date(reading.timestamp).toLocaleString('fr-CA')} - {reading.taken_by}
+                      </div>
                     </div>
-                    <div className="text-gray-400 text-sm">
-                      {new Date(reading.timestamp).toLocaleString('fr-CA')} - {reading.taken_by}
+                    
+                    <div style={styles.grid4}>
+                      <div>
+                        <span style={{ color: '#9ca3af' }}>O₂:</span>
+                        <span style={{
+                          marginLeft: '8px',
+                          fontWeight: '500',
+                          color: validateAtmosphericValue('oxygen', reading.oxygen) === 'danger' ? '#fca5a5' :
+                                validateAtmosphericValue('oxygen', reading.oxygen) === 'warning' ? '#fde047' :
+                                '#86efac'
+                        }}>
+                          {reading.oxygen}%
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ color: '#9ca3af' }}>LEL:</span>
+                        <span style={{
+                          marginLeft: '8px',
+                          fontWeight: '500',
+                          color: validateAtmosphericValue('lel', reading.lel) === 'danger' ? '#fca5a5' :
+                                validateAtmosphericValue('lel', reading.lel) === 'warning' ? '#fde047' :
+                                '#86efac'
+                        }}>
+                          {reading.lel}%
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ color: '#9ca3af' }}>H₂S:</span>
+                        <span style={{
+                          marginLeft: '8px',
+                          fontWeight: '500',
+                          color: validateAtmosphericValue('h2s', reading.h2s) === 'danger' ? '#fca5a5' :
+                                validateAtmosphericValue('h2s', reading.h2s) === 'warning' ? '#fde047' :
+                                '#86efac'
+                        }}>
+                          {reading.h2s} ppm
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ color: '#9ca3af' }}>CO:</span>
+                        <span style={{
+                          marginLeft: '8px',
+                          fontWeight: '500',
+                          color: validateAtmosphericValue('co', reading.co) === 'danger' ? '#fca5a5' :
+                                validateAtmosphericValue('co', reading.co) === 'warning' ? '#fde047' :
+                                '#86efac'
+                        }}>
+                          {reading.co} ppm
+                        </span>
+                      </div>
                     </div>
+                    
+                    {(reading.temperature || reading.humidity || reading.notes) && (
+                      <div style={{
+                        marginTop: '8px',
+                        paddingTop: '8px',
+                        borderTop: '1px solid #4b5563',
+                        fontSize: '14px',
+                        color: '#d1d5db'
+                      }}>
+                        {reading.temperature && <span>🌡️ {reading.temperature}°C </span>}
+                        {reading.humidity && <span>💧 {reading.humidity}% </span>}
+                        {reading.notes && <div style={{ marginTop: '4px' }}>📝 {reading.notes}</div>}
+                      </div>
+                    )}
                   </div>
-                  
-                  <div className="grid grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-400">O₂:</span>
-                      <span className={`ml-2 font-medium ${
-                        validateAtmosphericValue('oxygen', reading.oxygen) === 'danger' ? 'text-red-300' :
-                        validateAtmosphericValue('oxygen', reading.oxygen) === 'warning' ? 'text-yellow-300' :
-                        'text-green-300'
-                      }`}>
-                        {reading.oxygen}%
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400">LEL:</span>
-                      <span className={`ml-2 font-medium ${
-                        validateAtmosphericValue('lel', reading.lel) === 'danger' ? 'text-red-300' :
-                        validateAtmosphericValue('lel', reading.lel) === 'warning' ? 'text-yellow-300' :
-                        'text-green-300'
-                      }`}>
-                        {reading.lel}%
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400">H₂S:</span>
-                      <span className={`ml-2 font-medium ${
-                        validateAtmosphericValue('h2s', reading.h2s) === 'danger' ? 'text-red-300' :
-                        validateAtmosphericValue('h2s', reading.h2s) === 'warning' ? 'text-yellow-300' :
-                        'text-green-300'
-                      }`}>
-                        {reading.h2s} ppm
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400">CO:</span>
-                      <span className={`ml-2 font-medium ${
-                        validateAtmosphericValue('co', reading.co) === 'danger' ? 'text-red-300' :
-                        validateAtmosphericValue('co', reading.co) === 'warning' ? 'text-yellow-300' :
-                        'text-green-300'
-                      }`}>
-                        {reading.co} ppm
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {(reading.temperature || reading.humidity || reading.notes) && (
-                    <div className="mt-2 pt-2 border-t border-gray-600 text-sm text-gray-300">
-                      {reading.temperature && <span>🌡️ {reading.temperature}°C </span>}
-                      {reading.humidity && <span>💧 {reading.humidity}% </span>}
-                      {reading.notes && <div className="mt-1">📝 {reading.notes}</div>}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -1083,43 +1278,68 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     const currentRegulations = PROVINCIAL_REGULATIONS[selectedProvince];
     
     return (
-      <div className="space-y-6">
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-            <Phone className="w-5 h-5" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={styles.card}>
+          <h3 style={styles.cardTitle}>
+            <Phone style={{ width: '20px', height: '20px' }} />
             {texts.emergencyContacts} - {currentRegulations.name}
           </h3>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div style={styles.grid2}>
             {currentRegulations.emergency_contacts.map((contact, index) => (
-              <div key={index} className={`p-4 rounded-lg border-l-4 ${
-                contact.name === '911' ? 'border-red-500 bg-red-900/20' : 'border-blue-500 bg-blue-900/20'
-              }`}>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold text-white">{contact.name}</h4>
+              <div key={index} style={{
+                ...styles.readingCard,
+                ...(contact.name === '911' ? styles.readingDanger : styles.readingSafe)
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <h4 style={{ fontWeight: '600', color: 'white' }}>{contact.name}</h4>
                   {contact.available_24h && (
-                    <span className="text-xs bg-green-600 text-white px-2 py-1 rounded-full">24h/7j</span>
+                    <span style={{
+                      fontSize: '12px',
+                      backgroundColor: '#059669',
+                      color: 'white',
+                      padding: '2px 8px',
+                      borderRadius: '12px'
+                    }}>24h/7j</span>
                   )}
                 </div>
-                <p className="text-gray-300 text-sm mb-2">{contact.role}</p>
-                <a href={`tel:${contact.phone}`} className="text-blue-400 hover:text-blue-300 font-mono text-lg transition-colors">
+                <p style={{ color: '#d1d5db', fontSize: '14px', marginBottom: '8px' }}>{contact.role}</p>
+                <a href={`tel:${contact.phone}`} style={{
+                  color: '#60a5fa',
+                  fontFamily: 'monospace',
+                  fontSize: '18px',
+                  textDecoration: 'none'
+                }}>
                   {contact.phone}
                 </a>
               </div>
             ))}
           </div>
           
-          <div className="mt-6 p-4 bg-red-900/30 border border-red-500/50 rounded-lg">
-            <h4 className="text-red-200 font-semibold mb-2 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5" />
+          <div style={{
+            marginTop: '24px',
+            padding: '16px',
+            backgroundColor: 'rgba(220, 38, 38, 0.3)',
+            border: '1px solid rgba(239, 68, 68, 0.5)',
+            borderRadius: '8px'
+          }}>
+            <h4 style={{
+              color: '#fecaca',
+              fontWeight: '600',
+              marginBottom: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <AlertTriangle style={{ width: '20px', height: '20px' }} />
               Procédure d'Évacuation d'Urgence
             </h4>
-            <ol className="text-red-200 text-sm space-y-1 ml-4">
-              <li>1. <strong>ARRÊT IMMÉDIAT</strong> de tous les travaux</li>
-              <li>2. <strong>ÉVACUATION</strong> immédiate de tous les entrants</li>
-              <li>3. <strong>APPEL</strong> au 911 et contacts d'urgence</li>
-              <li>4. <strong>INTERDICTION</strong> de re-entrée jusqu'à autorisation</li>
-              <li>5. <strong>RAPPORT</strong> d'incident obligatoire</li>
+            <ol style={{ color: '#fecaca', fontSize: '14px', marginLeft: '16px' }}>
+              <li style={{ marginBottom: '4px' }}>1. <strong>ARRÊT IMMÉDIAT</strong> de tous les travaux</li>
+              <li style={{ marginBottom: '4px' }}>2. <strong>ÉVACUATION</strong> immédiate de tous les entrants</li>
+              <li style={{ marginBottom: '4px' }}>3. <strong>APPEL</strong> au 911 et contacts d'urgence</li>
+              <li style={{ marginBottom: '4px' }}>4. <strong>INTERDICTION</strong> de re-entrée jusqu'à autorisation</li>
+              <li style={{ marginBottom: '4px' }}>5. <strong>RAPPORT</strong> d'incident obligatoire</li>
             </ol>
           </div>
         </div>
@@ -1128,45 +1348,62 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-gray-900 min-h-screen">
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
+    <div style={styles.container}>
+      <div style={{ marginBottom: '32px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div>
-            <h1 className="text-3xl font-bold text-white">{texts.title}</h1>
-            <p className="text-gray-400">{texts.subtitle}</p>
-            <div className="text-sm text-blue-300 mt-2">
-              <span className="font-mono bg-gray-800 px-2 py-1 rounded border">
+            <h1 style={styles.title}>{texts.title}</h1>
+            <p style={styles.subtitle}>{texts.subtitle}</p>
+            <div style={{ fontSize: '14px', color: '#93c5fd', marginTop: '8px' }}>
+              <span style={{
+                fontFamily: 'monospace',
+                backgroundColor: '#1f2937',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                border: '1px solid #4b5563'
+              }}>
                 {permitData.permit_number}
               </span>
             </div>
           </div>
-          <div className={`px-4 py-2 rounded-lg font-semibold ${
-            isPermitValid() 
-              ? 'bg-green-600 text-white' 
-              : 'bg-yellow-600 text-white'
-          }`}>
+          <div style={{
+            padding: '16px',
+            borderRadius: '8px',
+            fontWeight: '600',
+            backgroundColor: isPermitValid() ? '#059669' : '#d97706',
+            color: 'white'
+          }}>
             {isPermitValid() ? '✅ Permis Valide' : '⚠️ Permis Incomplet'}
           </div>
         </div>
         
-        <div className="flex gap-4 mb-6">
-          <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all">
-            <AlertTriangle className="w-5 h-5" />
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+          <button style={{
+            ...styles.button,
+            ...styles.buttonDanger
+          }}>
+            <AlertTriangle style={{ width: '20px', height: '20px' }} />
             {texts.emergencyEvacuation}
           </button>
           <button
             onClick={() => onSave?.({})}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all"
+            style={{
+              ...styles.button,
+              ...styles.buttonPrimary
+            }}
           >
-            <Save className="w-5 h-5" />
+            <Save style={{ width: '20px', height: '20px' }} />
             {texts.savePermit}
           </button>
           {isPermitValid() && (
             <button
               onClick={() => onSubmit?.({})}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all"
+              style={{
+                ...styles.button,
+                ...styles.buttonSuccess
+              }}
             >
-              <CheckCircle className="w-5 h-5" />
+              <CheckCircle style={{ width: '20px', height: '20px' }} />
               {texts.submitPermit}
             </button>
           )}
@@ -1175,34 +1412,34 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
 
       {renderTabs()}
 
-      <div className="space-y-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
         {activeTab === 'site' && renderSiteSection()}
         {activeTab === 'atmospheric' && renderAtmosphericSection()}
         {activeTab === 'personnel' && (
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-              <Users className="w-5 h-5" />
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>
+              <Users style={{ width: '20px', height: '20px' }} />
               {texts.personnelManagement}
             </h3>
-            <div className="text-center py-12">
-              <Users className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-              <p className="text-gray-400 text-lg mb-2">Section Personnel en cours de développement</p>
-              <p className="text-gray-500 text-sm">
+            <div style={{ textAlign: 'center', padding: '48px' }}>
+              <Users style={{ width: '64px', height: '64px', margin: '0 auto 16px', color: '#4b5563' }} />
+              <p style={{ color: '#9ca3af', fontSize: '18px', marginBottom: '8px' }}>Section Personnel en cours de développement</p>
+              <p style={{ color: '#6b7280', fontSize: '14px' }}>
                 Fonctionnalités: signatures électroniques, horodatage entrée/sortie, validation formations.
               </p>
             </div>
           </div>
         )}
         {activeTab === 'photos' && (
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-              <Camera className="w-5 h-5" />
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>
+              <Camera style={{ width: '20px', height: '20px' }} />
               {texts.photoDocumentation}
             </h3>
-            <div className="text-center py-12">
-              <Camera className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-              <p className="text-gray-400 text-lg mb-2">Section Photos en cours de développement</p>
-              <p className="text-gray-500 text-sm">
+            <div style={{ textAlign: 'center', padding: '48px' }}>
+              <Camera style={{ width: '64px', height: '64px', margin: '0 auto 16px', color: '#4b5563' }} />
+              <p style={{ color: '#9ca3af', fontSize: '18px', marginBottom: '8px' }}>Section Photos en cours de développement</p>
+              <p style={{ color: '#6b7280', fontSize: '14px' }}>
                 Fonctionnalités: capture mobile, géolocalisation GPS, métadonnées, carousel.
               </p>
             </div>
@@ -1210,6 +1447,29 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         )}
         {activeTab === 'emergency' && renderEmergencySection()}
       </div>
+
+      {/* Styles CSS pour les animations */}
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        
+        input:focus, select:focus, textarea:focus {
+          border-color: #3b82f6 !important;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+        }
+        
+        button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .tab-button:hover {
+          background-color: #4b5563;
+          color: white;
+        }
+      `}</style>
     </div>
   );
 };
