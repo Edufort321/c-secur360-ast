@@ -2680,6 +2680,52 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       {/* Navigation par onglets */}
       {renderTabs()}
 
+  return (
+    <div className="max-w-7xl mx-auto p-6 bg-slate-900 min-h-screen">
+      {/* En-tête avec statut global */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white">{texts.title}</h1>
+            <p className="text-slate-400">{texts.subtitle}</p>
+          </div>
+          <div className={`px-4 py-2 rounded-lg font-semibold ${
+            isPermitValid() 
+              ? 'bg-green-600 text-white' 
+              : 'bg-yellow-600 text-white'
+          }`}>
+            {isPermitValid() ? '✅ Permis Valide' : '⚠️ Permis Incomplet'}
+          </div>
+        </div>
+        
+        {/* Boutons d'urgence */}
+        <div className="flex gap-4 mb-6">
+          <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all">
+            <AlertTriangle className="w-5 h-5" />
+            {texts.emergencyEvacuation}
+          </button>
+          <button
+            onClick={() => onSave?.({})}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all"
+          >
+            <Save className="w-5 h-5" />
+            {texts.savePermit}
+          </button>
+          {isPermitValid() && (
+            <button
+              onClick={() => onSubmit?.({})}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all"
+            >
+              <CheckCircle className="w-5 h-5" />
+              {texts.submitPermit}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Navigation par onglets */}
+      {renderTabs()}
+
       {/* Contenu selon l'onglet actif */}
       <div className="space-y-8">
         {activeTab === 'site' && renderSiteSection()}
@@ -2709,5 +2755,3 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     </div>
   );
 };
-
-export default ConfinedSpacePermit;
