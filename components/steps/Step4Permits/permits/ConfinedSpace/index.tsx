@@ -954,13 +954,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     });
 
     if (overallStatus === 'danger') {
-      playAlarmSound('critical');
       alert('🚨 DANGER CRITIQUE: Les valeurs atmosphériques sont dangereuses! Évacuation immédiate requise!');
     } else if (overallStatus === 'warning') {
-      playAlarmSound('warning');
       alert('⚠️ ATTENTION: Certaines valeurs sont hors limites acceptables. Surveillance renforcée requise.');
-    } else {
-      playAlarmSound('regulatory');
     }
   };
 
