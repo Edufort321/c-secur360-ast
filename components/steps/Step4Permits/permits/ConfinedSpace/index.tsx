@@ -80,7 +80,7 @@ const styles = {
     fontSize: isMobile ? '12px' : '14px',
     marginRight: isMobile ? '4px' : '8px',
     minWidth: isMobile ? '50px' : 'auto',
-    textAlign: 'center',
+    textAlign: 'center' as const,
     touchAction: 'manipulation'
   },
   tabActive: {
@@ -171,7 +171,7 @@ const styles = {
     gap: isMobile ? '8px' : '12px'
   },
   mobileHeader: {
-    position: 'sticky',
+    position: 'sticky' as const,
     top: 0,
     backgroundColor: '#111827',
     zIndex: 10,
@@ -810,7 +810,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               ...styles.tab,
               ...(activeTab === tab.id ? styles.tabActive : styles.tabInactive),
               flexShrink: 0,
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap' as const
             }}
             title={isMobile ? tab.fullLabel : undefined}
           >
