@@ -1026,8 +1026,12 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   );
 
   // Rendu section site
-  const renderSiteSection = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+  const renderSiteSection = () => {
+    // Vérification que capturedPhotos est accessible
+    console.log('capturedPhotos length:', capturedPhotos.length);
+    
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={styles.card}>
         <div style={styles.grid2}>
           <div>
@@ -1458,8 +1462,8 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Rendu section atmosphérique
   const renderAtmosphericSection = () => {
