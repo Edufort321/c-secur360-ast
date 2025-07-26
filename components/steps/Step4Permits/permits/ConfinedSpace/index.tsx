@@ -1967,7 +1967,189 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       {renderTabs()}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-        {activeTab === 'site' && renderSiteSection()}
+        {activeTab === 'site' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={styles.card}>
+              <div style={styles.grid2}>
+                <div>
+                  <h2 style={styles.title}>{texts.title}</h2>
+                  <p style={styles.subtitle}>{texts.subtitle}</p>
+                  <div style={{ fontSize: '14px', color: '#93c5fd' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <Shield style={{ width: '16px', height: '16px' }} />
+                      📍 Province: {PROVINCIAL_REGULATIONS[selectedProvince].name}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <FileText style={{ width: '16px', height: '16px' }} />
+                      Réglementation: {PROVINCIAL_REGULATIONS[selectedProvince].code}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Phone style={{ width: '16px', height: '16px' }} />
+                      Autorité: {PROVINCIAL_REGULATIONS[selectedProvince].authority} - {PROVINCIAL_REGULATIONS[selectedProvince].authority_phone}
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={styles.grid2}>
+                    <div>
+                      <label style={styles.label}>N° Permis</label>
+                      <div style={{
+                        ...styles.input,
+                        fontFamily: 'monospace',
+                        fontSize: '18px',
+                        fontWeight: 'bold'
+                      }}>
+                        {permitData.permit_number}
+                      </div>
+                    </div>
+                    <div>
+                      <label style={styles.label}>Province</label>
+                      <select
+                        value={selectedProvince}
+                        onChange={(e) => setSelectedProvince(e.target.value as ProvinceCode)}
+                        style={styles.input}
+                      >
+                        {Object.entries(PROVINCIAL_REGULATIONS).map(([code, reg]) => (
+                          <option key={code} value={code}>
+                            {reg.name} ({code})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div style={styles.grid2}>
+                    <div>
+                      <label style={styles.label}>Date d'émission</label>
+                      <input
+                        type="date"
+                        value={permitData.issue_date}
+                        onChange={(e) => setPermitData(prev => ({ ...prev, issue_date: e.target.value }))}
+                        style={styles.input}
+                      />
+                    </div>
+                    <div>
+                      <label style={styles.label}>Heure d'émission</label>
+                      <input
+                        type="time"
+                        value={permitData.issue_time}
+                        onChange={(e) => setPermitData(prev => ({ ...prev, issue_time: e.target.value }))}
+                        style={styles.input}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div style={styles.grid2}>
+                    <div>
+                      <label style={styles.label}>Date d'expiration</label>
+                      <input
+                        type="date"
+                        value={permitData.expiry_date}
+                        onChange={(e) => setPermitData(prev => ({ ...prev, expiry_date: e.target.value }))}
+                        style={styles.input}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label style={styles.label}>Heure d'expiration</label>
+                      <input
+                        type="time"
+                        value={permitData.expiry_time}
+                        onChange={(e) => setPermitData(prev => ({ ...prev, expiry_time: e.target.value }))}
+                        style={styles.input}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>
+                <MapPin style={{ width: '20px', height: '20px' }} />
+                {texts.siteIdentification}
+              </h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={styles.grid2}>
+                  <div>
+                    <label style={styles.label}>Nom du site *</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Usine Pétrochimique Nord"
+                      value={permitData.site_name}
+                      onChange={(e) => setPermitData(prev => ({ ...prev, site_name: e.target.value }))}
+                      style={styles.input}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={styles.label}>Adresse complète</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 123 Rue Industrielle, Ville, Province"
+                      value={permitData.site_address}
+                      onChange={(e) => setPermitData(prev => ({ ...prev, site_address: e.target.value }))}
+                      style={styles.input}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label style={styles.label}>Localisation précise de l'espace clos *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Réservoir T-101, Niveau sous-sol, Section B"
+                    value={permitData.space_location}
+                    onChange={(e) => setPermitData(prev => ({ ...prev, space_location: e.target.value }))}
+                    style={styles.input}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label style={styles.label}>Description de l'espace clos *</label>
+                  <textarea
+                    placeholder="Ex: Réservoir cylindrique de 5m de diamètre et 8m de hauteur"
+                    value={permitData.space_description}
+                    onChange={(e) => setPermitData(prev => ({ ...prev, space_description: e.target.value }))}
+                    style={{ ...styles.input, height: '80px', resize: 'vertical' }}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label style={styles.label}>Description des travaux à effectuer *</label>
+                  <textarea
+                    placeholder="Ex: Inspection visuelle, nettoyage des parois, réparation de soudures"
+                    value={permitData.work_description}
+                    onChange={(e) => setPermitData(prev => ({ ...prev, work_description: e.target.value }))}
+                    style={{ ...styles.input, height: '80px', resize: 'vertical' }}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section Photos directement intégrée */}
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>
+                <Camera style={{ width: '20px', height: '20px' }} />
+                📸 Documentation Photos ({capturedPhotos.length})
+              </h3>
+              
+              <div style={{ textAlign: 'center', padding: '48px' }}>
+                <Camera style={{ width: '64px', height: '64px', margin: '0 auto 16px', color: '#4b5563' }} />
+                <p style={{ color: '#9ca3af', fontSize: '18px', marginBottom: '8px' }}>Section Photos en développement</p>
+                <p style={{ color: '#6b7280', fontSize: '14px' }}>
+                  Fonctionnalités : capture caméra, upload, géolocalisation GPS, métadonnées, carousel.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         {activeTab === 'atmospheric' && renderAtmosphericSection()}
         {activeTab === 'personnel' && (
           <div style={styles.card}>
