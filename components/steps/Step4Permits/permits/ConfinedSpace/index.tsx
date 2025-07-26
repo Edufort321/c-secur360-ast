@@ -10,12 +10,14 @@ import {
   ChevronLeft, ChevronRight, X, Calendar, Zap
 } from 'lucide-react';
 
-// =================== STYLES CSS INTÉGRÉS ===================
+// =================== STYLES CSS INTÉGRÉS OPTIMISÉS MOBILE ===================
+const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
 const styles = {
   container: {
     maxWidth: '1280px',
     margin: '0 auto',
-    padding: '24px',
+    padding: isMobile ? '8px' : '24px',
     backgroundColor: '#111827',
     minHeight: '100vh',
     color: 'white',
@@ -23,10 +25,10 @@ const styles = {
   },
   card: {
     backgroundColor: '#1f2937',
-    borderRadius: '16px',
-    padding: '24px',
+    borderRadius: isMobile ? '12px' : '16px',
+    padding: isMobile ? '16px' : '24px',
     border: '1px solid #374151',
-    marginBottom: '24px',
+    marginBottom: isMobile ? '16px' : '24px',
     boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
   },
   input: {
@@ -34,26 +36,24 @@ const styles = {
     color: 'white',
     border: '1px solid #4b5563',
     borderRadius: '8px',
-    padding: '12px',
+    padding: isMobile ? '10px' : '12px',
     width: '100%',
-    fontSize: '14px',
+    fontSize: isMobile ? '16px' : '14px', // 16px pour éviter le zoom sur iOS
     outline: 'none'
   },
-  inputFocus: {
-    borderColor: '#3b82f6',
-    boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.2)'
-  },
   button: {
-    padding: '12px 24px',
+    padding: isMobile ? '10px 16px' : '12px 24px',
     borderRadius: '8px',
     fontWeight: '600',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: isMobile ? '6px' : '8px',
     transition: 'all 0.2s ease',
     border: 'none',
     cursor: 'pointer',
-    fontSize: '14px'
+    fontSize: isMobile ? '13px' : '14px',
+    touchAction: 'manipulation', // Améliore les interactions tactiles
+    minHeight: '44px' // Taille minimum pour les boutons tactiles
   },
   buttonPrimary: {
     background: 'linear-gradient(to right, #3b82f6, #2563eb)',
@@ -68,17 +68,20 @@ const styles = {
     color: 'white'
   },
   tab: {
-    padding: '12px 16px',
+    padding: isMobile ? '8px 12px' : '12px 16px',
     borderRadius: '8px 8px 0 0',
     fontWeight: '500',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: isMobile ? '4px' : '8px',
     transition: 'all 0.2s ease',
     border: 'none',
     cursor: 'pointer',
-    fontSize: '14px',
-    marginRight: '8px'
+    fontSize: isMobile ? '12px' : '14px',
+    marginRight: isMobile ? '4px' : '8px',
+    minWidth: isMobile ? '50px' : 'auto',
+    textAlign: 'center',
+    touchAction: 'manipulation'
   },
   tabActive: {
     backgroundColor: '#3b82f6',
@@ -91,16 +94,16 @@ const styles = {
   },
   grid2: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '16px'
+    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+    gap: isMobile ? '12px' : '16px'
   },
   grid4: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '16px'
+    gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+    gap: isMobile ? '12px' : '16px'
   },
   readingCard: {
-    padding: '16px',
+    padding: isMobile ? '12px' : '16px',
     borderRadius: '8px',
     borderLeft: '4px solid'
   },
@@ -136,36 +139,66 @@ const styles = {
     backgroundColor: 'rgba(220, 38, 38, 0.2)',
     border: '2px solid #ef4444',
     borderRadius: '12px',
-    padding: '24px',
+    padding: isMobile ? '16px' : '24px',
     animation: 'pulse 2s infinite'
   },
   label: {
     display: 'block',
     color: '#9ca3af',
-    fontSize: '14px',
+    fontSize: isMobile ? '13px' : '14px',
     fontWeight: '500',
-    marginBottom: '8px'
+    marginBottom: '6px'
   },
   title: {
-    fontSize: '32px',
+    fontSize: isMobile ? '24px' : '32px',
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: '8px'
+    marginBottom: '8px',
+    lineHeight: 1.2
   },
   subtitle: {
     color: '#9ca3af',
-    marginBottom: '24px'
+    marginBottom: isMobile ? '16px' : '24px',
+    fontSize: isMobile ? '14px' : '16px'
   },
   cardTitle: {
-    fontSize: '18px',
+    fontSize: isMobile ? '16px' : '18px',
     fontWeight: '600',
     color: 'white',
-    marginBottom: '16px',
+    marginBottom: isMobile ? '12px' : '16px',
     display: 'flex',
     alignItems: 'center',
-    gap: '12px'
+    gap: isMobile ? '8px' : '12px'
+  },
+  // Optimisations spécifiques mobile
+  mobileHeader: {
+    position: 'sticky',
+    top: 0,
+    backgroundColor: '#111827',
+    zIndex: 10,
+    paddingBottom: '8px',
+    borderBottom: '1px solid #374151'
+  },
+  mobileTabsContainer: {
+    overflowX: 'auto',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
+    paddingBottom: '8px'
+  },
+  mobileButtonGrid: {
+    display: 'grid',
+    gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)',
+    gap: isMobile ? '8px' : '16px',
+    marginBottom: '16px'
   }
 };
+
+// Cache le scrollbar sur webkit
+const mobileTabsStyle = `
+  .mobile-tabs::-webkit-scrollbar {
+    display: none;
+  }
+`;
 
 // =================== TYPES ===================
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
@@ -524,10 +557,10 @@ const getTexts = (language: 'fr' | 'en') => ({
     photoDocumentation: "Documentation Photos",
     emergencyContacts: "Contacts d'Urgence",
     rescuePlan: "Plan de Sauvetage",
-    savePermit: "💾 Sauvegarder Permis",
-    submitPermit: "✅ Soumettre pour Approbation",
+    savePermit: "💾 Sauvegarder",
+    submitPermit: "✅ Soumettre",
     cancel: "❌ Annuler",
-    emergencyEvacuation: "🚨 ÉVACUATION D'URGENCE",
+    emergencyEvacuation: "🚨 ÉVACUATION",
     addEntrant: "➕ Ajouter Entrant",
     addAttendant: "👁️ Ajouter Surveillant",
     addSupervisor: "👨‍💼 Ajouter Superviseur",
@@ -551,10 +584,10 @@ const getTexts = (language: 'fr' | 'en') => ({
     photoDocumentation: "Photo Documentation",
     emergencyContacts: "Emergency Contacts",
     rescuePlan: "Rescue Plan",
-    savePermit: "💾 Save Permit",
-    submitPermit: "✅ Submit for Approval",
+    savePermit: "💾 Save",
+    submitPermit: "✅ Submit",
     cancel: "❌ Cancel",
-    emergencyEvacuation: "🚨 EMERGENCY EVACUATION",
+    emergencyEvacuation: "🚨 EVACUATION",
     addEntrant: "➕ Add Entrant",
     addAttendant: "👁️ Add Attendant", 
     addSupervisor: "👨‍💼 Add Supervisor",
@@ -763,53 +796,71 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
            permitData.site_name && permitData.space_description && permitData.work_description;
   };
 
-  // Rendu des onglets
+  // Rendu des onglets optimisé mobile
   const renderTabs = () => (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '32px', borderBottom: '1px solid #374151' }}>
-      {[
-        { id: 'site', label: '🏢 Site', icon: <Home style={{ width: '16px', height: '16px' }} /> },
-        { id: 'atmospheric', label: '🌬️ Atmosphère', icon: <Wind style={{ width: '16px', height: '16px' }} /> },
-        { id: 'personnel', label: '👥 Personnel', icon: <Users style={{ width: '16px', height: '16px' }} /> },
-        { id: 'photos', label: '📸 Photos', icon: <Camera style={{ width: '16px', height: '16px' }} /> },
-        { id: 'emergency', label: '🚨 Urgence', icon: <Phone style={{ width: '16px', height: '16px' }} /> }
-      ].map(tab => (
-        <button
-          key={tab.id}
-          onClick={() => setActiveTab(tab.id)}
-          style={{
-            ...styles.tab,
-            ...(activeTab === tab.id ? styles.tabActive : styles.tabInactive)
-          }}
-        >
-          {tab.icon}
-          {tab.label}
-        </button>
-      ))}
+    <div style={styles.mobileTabsContainer} className="mobile-tabs">
+      <div style={{ 
+        display: 'flex', 
+        gap: isMobile ? '4px' : '8px', 
+        marginBottom: '16px', 
+        borderBottom: '1px solid #374151',
+        paddingBottom: '8px',
+        minWidth: isMobile ? '400px' : 'auto' // Force la largeur minimum pour le scroll horizontal
+      }}>
+        {[
+          { id: 'site', label: isMobile ? '🏢' : '🏢 Site', fullLabel: 'Site', icon: <Home style={{ width: '16px', height: '16px' }} /> },
+          { id: 'atmospheric', label: isMobile ? '🌬️' : '🌬️ Atmosphère', fullLabel: 'Atmosphère', icon: <Wind style={{ width: '16px', height: '16px' }} /> },
+          { id: 'personnel', label: isMobile ? '👥' : '👥 Personnel', fullLabel: 'Personnel', icon: <Users style={{ width: '16px', height: '16px' }} /> },
+          { id: 'photos', label: isMobile ? '📸' : '📸 Photos', fullLabel: 'Photos', icon: <Camera style={{ width: '16px', height: '16px' }} /> },
+          { id: 'emergency', label: isMobile ? '🚨' : '🚨 Urgence', fullLabel: 'Urgence', icon: <Phone style={{ width: '16px', height: '16px' }} /> }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              ...styles.tab,
+              ...(activeTab === tab.id ? styles.tabActive : styles.tabInactive),
+              flexShrink: 0, // Empêche la compression des onglets
+              whiteSpace: 'nowrap' // Empêche le retour à la ligne
+            }}
+            title={isMobile ? tab.fullLabel : undefined} // Tooltip sur mobile
+          >
+            {isMobile ? tab.label : (
+              <>
+                {tab.icon}
+                {tab.label}
+              </>
+            )}
+          </button>
+        ))}
+      </div>
     </div>
   );
 
-  // Rendu section site
+  // Rendu section site optimisé mobile
   const renderSiteSection = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '24px' }}>
       <div style={styles.card}>
         <div style={styles.grid2}>
           <div>
             <h2 style={styles.title}>{texts.title}</h2>
             <p style={styles.subtitle}>{texts.subtitle}</p>
-            <div style={{ fontSize: '14px', color: '#93c5fd' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <Shield style={{ width: '16px', height: '16px' }} />
-                📍 Province: {PROVINCIAL_REGULATIONS[selectedProvince].name}
+            {!isMobile && (
+              <div style={{ fontSize: '14px', color: '#93c5fd' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <Shield style={{ width: '16px', height: '16px' }} />
+                  📍 Province: {PROVINCIAL_REGULATIONS[selectedProvince].name}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <FileText style={{ width: '16px', height: '16px' }} />
+                  Réglementation: {PROVINCIAL_REGULATIONS[selectedProvince].code}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Phone style={{ width: '16px', height: '16px' }} />
+                  Autorité: {PROVINCIAL_REGULATIONS[selectedProvince].authority} - {PROVINCIAL_REGULATIONS[selectedProvince].authority_phone}
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <FileText style={{ width: '16px', height: '16px' }} />
-                Réglementation: {PROVINCIAL_REGULATIONS[selectedProvince].code}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Phone style={{ width: '16px', height: '16px' }} />
-                Autorité: {PROVINCIAL_REGULATIONS[selectedProvince].authority} - {PROVINCIAL_REGULATIONS[selectedProvince].authority_phone}
-              </div>
-            </div>
+            )}
           </div>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -819,7 +870,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 <div style={{
                   ...styles.input,
                   fontFamily: 'monospace',
-                  fontSize: '18px',
+                  fontSize: isMobile ? '16px' : '18px',
                   fontWeight: 'bold'
                 }}>
                   {permitData.permit_number}
@@ -914,7 +965,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               <label style={styles.label}>Adresse complète</label>
               <input
                 type="text"
-                placeholder="Ex: 123 Rue Industrielle, Ville, Province, Code postal"
+                placeholder="Ex: 123 Rue Industrielle, Ville, Province"
                 value={permitData.site_address}
                 onChange={(e) => setPermitData(prev => ({ ...prev, site_address: e.target.value }))}
                 style={styles.input}
@@ -937,10 +988,10 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           <div>
             <label style={styles.label}>Description de l'espace clos *</label>
             <textarea
-              placeholder="Ex: Réservoir cylindrique de 5m de diamètre et 8m de hauteur, utilisé pour stockage de produits chimiques"
+              placeholder="Ex: Réservoir cylindrique de 5m de diamètre et 8m de hauteur"
               value={permitData.space_description}
               onChange={(e) => setPermitData(prev => ({ ...prev, space_description: e.target.value }))}
-              style={{ ...styles.input, height: '80px', resize: 'vertical' }}
+              style={{ ...styles.input, height: isMobile ? '60px' : '80px', resize: 'vertical' }}
               required
             />
           </div>
@@ -948,10 +999,10 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           <div>
             <label style={styles.label}>Description des travaux à effectuer *</label>
             <textarea
-              placeholder="Ex: Inspection visuelle, nettoyage des parois, réparation de soudures, maintenance préventive"
+              placeholder="Ex: Inspection visuelle, nettoyage des parois, réparation"
               value={permitData.work_description}
               onChange={(e) => setPermitData(prev => ({ ...prev, work_description: e.target.value }))}
-              style={{ ...styles.input, height: '80px', resize: 'vertical' }}
+              style={{ ...styles.input, height: isMobile ? '60px' : '80px', resize: 'vertical' }}
               required
             />
           </div>
@@ -960,24 +1011,24 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     </div>
   );
 
-  // Rendu section atmosphérique
+  // Rendu section atmosphérique optimisé mobile
   const renderAtmosphericSection = () => {
     const currentRegulations = PROVINCIAL_REGULATIONS[selectedProvince];
     
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '24px' }}>
         <div style={styles.card}>
           <h3 style={styles.cardTitle}>
             <Shield style={{ width: '20px', height: '20px' }} />
-            Limites Réglementaires - {currentRegulations.name}
+            Limites - {currentRegulations.name}
             <span style={{
-              fontSize: '14px',
+              fontSize: isMobile ? '12px' : '14px',
               backgroundColor: '#3b82f6',
               color: 'white',
               padding: '4px 8px',
               borderRadius: '12px'
             }}>
-              Tests aux {currentRegulations.atmospheric_testing.frequency_minutes} min
+              {currentRegulations.atmospheric_testing.frequency_minutes} min
             </span>
           </h3>
           
@@ -986,16 +1037,16 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               <div key={gas} style={{
                 backgroundColor: 'rgba(17, 24, 39, 0.5)',
                 borderRadius: '8px',
-                padding: '16px',
+                padding: isMobile ? '12px' : '16px',
                 border: '1px solid #4b5563'
               }}>
-                <h4 style={{ fontWeight: '600', color: 'white', marginBottom: '8px' }}>
+                <h4 style={{ fontWeight: '600', color: 'white', marginBottom: '8px', fontSize: isMobile ? '14px' : '16px' }}>
                   {gas === 'oxygen' ? '🫁 O₂' : 
                    gas === 'lel' ? '🔥 LEL' : 
                    gas === 'h2s' ? '☠️ H₂S' : 
                    '💨 CO'}
                 </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: isMobile ? '12px' : '14px' }}>
                   {gas === 'oxygen' ? (
                     <>
                       <div style={{ color: '#86efac' }}>✅ {(limits as AtmosphericLimits['oxygen']).min}-{(limits as AtmosphericLimits['oxygen']).max}%</div>
@@ -1015,16 +1066,22 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
 
         {retestActive && (
           <div style={styles.emergencyCard}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? '12px' : '0'
+            }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <AlertTriangle style={{ width: '32px', height: '32px', color: '#f87171' }} />
                 <div>
-                  <h3 style={{ color: '#fecaca', fontWeight: 'bold', fontSize: '18px' }}>⏰ RETEST OBLIGATOIRE</h3>
-                  <p style={{ color: '#fca5a5' }}>Valeurs critiques détectées - Nouveau test requis</p>
+                  <h3 style={{ color: '#fecaca', fontWeight: 'bold', fontSize: isMobile ? '16px' : '18px' }}>⏰ RETEST OBLIGATOIRE</h3>
+                  <p style={{ color: '#fca5a5', fontSize: isMobile ? '12px' : '14px' }}>Valeurs critiques détectées - Nouveau test requis</p>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#f87171' }}>{formatTime(retestTimer)}</div>
+              <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
+                <div style={{ fontSize: isMobile ? '24px' : '32px', fontWeight: 'bold', color: '#f87171' }}>{formatTime(retestTimer)}</div>
                 <div style={{ color: '#fca5a5', fontSize: '14px' }}>Temps restant</div>
               </div>
             </div>
@@ -1034,7 +1091,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         <div style={styles.card}>
           <h3 style={styles.cardTitle}>
             <Activity style={{ width: '20px', height: '20px' }} />
-            Nouvelle Mesure Atmosphérique
+            Nouvelle Mesure
           </h3>
           
           <div style={styles.grid4}>
@@ -1096,7 +1153,12 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             </div>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', 
+            gap: '16px', 
+            marginTop: '16px' 
+          }}>
             <div>
               <label style={styles.label}>Température (°C)</label>
               <input
@@ -1132,7 +1194,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 }}
               >
                 <Plus style={{ width: '16px', height: '16px' }} />
-                {texts.addManualReading}
+                {isMobile ? 'Ajouter' : texts.addManualReading}
               </button>
             </div>
           </div>
@@ -1140,7 +1202,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           <div style={{ marginTop: '16px' }}>
             <label style={styles.label}>Notes (optionnel)</label>
             <textarea
-              placeholder="Observations, conditions particulières, appareil utilisé..."
+              placeholder="Observations, conditions particulières..."
               value={manualReading.notes}
               onChange={(e) => setManualReading(prev => ({ ...prev, notes: e.target.value }))}
               style={{ ...styles.input, height: '60px', resize: 'vertical' }}
@@ -1151,17 +1213,23 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         <div style={styles.card}>
           <h3 style={styles.cardTitle}>
             <FileText style={{ width: '20px', height: '20px' }} />
-            Historique des Mesures ({atmosphericReadings.length})
+            Historique ({atmosphericReadings.length})
           </h3>
           
           {atmosphericReadings.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>
-              <Activity style={{ width: '64px', height: '64px', margin: '0 auto 16px', color: '#4b5563' }} />
-              <p style={{ fontSize: '18px', marginBottom: '8px' }}>Aucune mesure enregistrée</p>
+            <div style={{ textAlign: 'center', padding: isMobile ? '24px' : '32px', color: '#9ca3af' }}>
+              <Activity style={{ width: isMobile ? '48px' : '64px', height: isMobile ? '48px' : '64px', margin: '0 auto 16px', color: '#4b5563' }} />
+              <p style={{ fontSize: isMobile ? '16px' : '18px', marginBottom: '8px' }}>Aucune mesure enregistrée</p>
               <p style={{ fontSize: '14px' }}>Effectuez votre première mesure atmosphérique ci-dessus.</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '12px', 
+              maxHeight: isMobile ? '300px' : '400px', 
+              overflowY: 'auto' 
+            }}>
               {atmosphericReadings.slice().reverse().map((reading) => {
                 const readingStyle = reading.status === 'danger' ? styles.readingDanger :
                                    reading.status === 'warning' ? styles.readingWarning :
@@ -1175,7 +1243,14 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                       ...readingStyle
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between', 
+                      marginBottom: '8px',
+                      flexDirection: isMobile ? 'column' : 'row',
+                      gap: isMobile ? '8px' : '0'
+                    }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{
                           ...styles.statusIndicator,
@@ -1187,14 +1262,15 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                           fontWeight: '600',
                           color: reading.status === 'danger' ? '#fca5a5' :
                                 reading.status === 'warning' ? '#fde047' :
-                                '#86efac'
+                                '#86efac',
+                          fontSize: isMobile ? '14px' : '16px'
                         }}>
                           {reading.status === 'danger' ? '🚨 DANGER' :
                            reading.status === 'warning' ? '⚠️ ATTENTION' :
                            '✅ SÉCURITAIRE'}
                         </span>
                       </div>
-                      <div style={{ color: '#9ca3af', fontSize: '14px' }}>
+                      <div style={{ color: '#9ca3af', fontSize: isMobile ? '12px' : '14px', textAlign: isMobile ? 'center' : 'right' }}>
                         {new Date(reading.timestamp).toLocaleString('fr-CA')} - {reading.taken_by}
                       </div>
                     </div>
@@ -1273,12 +1349,12 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     );
   };
 
-  // Rendu section contacts d'urgence
+  // Rendu section contacts d'urgence optimisé mobile
   const renderEmergencySection = () => {
     const currentRegulations = PROVINCIAL_REGULATIONS[selectedProvince];
     
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '24px' }}>
         <div style={styles.card}>
           <h3 style={styles.cardTitle}>
             <Phone style={{ width: '20px', height: '20px' }} />
@@ -1291,8 +1367,15 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 ...styles.readingCard,
                 ...(contact.name === '911' ? styles.readingDanger : styles.readingSafe)
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <h4 style={{ fontWeight: '600', color: 'white' }}>{contact.name}</h4>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between', 
+                  marginBottom: '8px',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  gap: isMobile ? '8px' : '0'
+                }}>
+                  <h4 style={{ fontWeight: '600', color: 'white', fontSize: isMobile ? '16px' : '18px' }}>{contact.name}</h4>
                   {contact.available_24h && (
                     <span style={{
                       fontSize: '12px',
@@ -1303,12 +1386,14 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                     }}>24h/7j</span>
                   )}
                 </div>
-                <p style={{ color: '#d1d5db', fontSize: '14px', marginBottom: '8px' }}>{contact.role}</p>
+                <p style={{ color: '#d1d5db', fontSize: '14px', marginBottom: '8px', textAlign: isMobile ? 'center' : 'left' }}>{contact.role}</p>
                 <a href={`tel:${contact.phone}`} style={{
                   color: '#60a5fa',
                   fontFamily: 'monospace',
-                  fontSize: '18px',
-                  textDecoration: 'none'
+                  fontSize: isMobile ? '16px' : '18px',
+                  textDecoration: 'none',
+                  display: 'block',
+                  textAlign: isMobile ? 'center' : 'left'
                 }}>
                   {contact.phone}
                 </a>
@@ -1318,7 +1403,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           
           <div style={{
             marginTop: '24px',
-            padding: '16px',
+            padding: isMobile ? '12px' : '16px',
             backgroundColor: 'rgba(220, 38, 38, 0.3)',
             border: '1px solid rgba(239, 68, 68, 0.5)',
             borderRadius: '8px'
@@ -1329,12 +1414,13 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               marginBottom: '8px',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              fontSize: isMobile ? '14px' : '16px'
             }}>
               <AlertTriangle style={{ width: '20px', height: '20px' }} />
               Procédure d'Évacuation d'Urgence
             </h4>
-            <ol style={{ color: '#fecaca', fontSize: '14px', marginLeft: '16px' }}>
+            <ol style={{ color: '#fecaca', fontSize: isMobile ? '12px' : '14px', marginLeft: '16px' }}>
               <li style={{ marginBottom: '4px' }}>1. <strong>ARRÊT IMMÉDIAT</strong> de tous les travaux</li>
               <li style={{ marginBottom: '4px' }}>2. <strong>ÉVACUATION</strong> immédiate de tous les entrants</li>
               <li style={{ marginBottom: '4px' }}>3. <strong>APPEL</strong> au 911 et contacts d'urgence</li>
@@ -1349,8 +1435,16 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
 
   return (
     <div style={styles.container}>
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+      {/* En-tête mobile sticky */}
+      <div style={isMobile ? styles.mobileHeader : { marginBottom: '32px' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: isMobile ? 'flex-start' : 'center', 
+          justifyContent: 'space-between', 
+          marginBottom: '16px',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? '12px' : '0'
+        }}>
           <div>
             <h1 style={styles.title}>{texts.title}</h1>
             <p style={styles.subtitle}>{texts.subtitle}</p>
@@ -1360,36 +1454,42 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 backgroundColor: '#1f2937',
                 padding: '4px 8px',
                 borderRadius: '4px',
-                border: '1px solid #4b5563'
+                border: '1px solid #4b5563',
+                fontSize: isMobile ? '12px' : '14px'
               }}>
                 {permitData.permit_number}
               </span>
             </div>
           </div>
           <div style={{
-            padding: '16px',
+            padding: isMobile ? '12px' : '16px',
             borderRadius: '8px',
             fontWeight: '600',
             backgroundColor: isPermitValid() ? '#059669' : '#d97706',
-            color: 'white'
+            color: 'white',
+            fontSize: isMobile ? '12px' : '14px',
+            textAlign: 'center'
           }}>
             {isPermitValid() ? '✅ Permis Valide' : '⚠️ Permis Incomplet'}
           </div>
         </div>
         
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+        {/* Boutons d'action optimisés mobile */}
+        <div style={styles.mobileButtonGrid}>
           <button style={{
             ...styles.button,
-            ...styles.buttonDanger
+            ...styles.buttonDanger,
+            justifyContent: 'center'
           }}>
             <AlertTriangle style={{ width: '20px', height: '20px' }} />
-            {texts.emergencyEvacuation}
+            {isMobile ? '🚨 ÉVACUATION' : texts.emergencyEvacuation}
           </button>
           <button
             onClick={() => onSave?.({})}
             style={{
               ...styles.button,
-              ...styles.buttonPrimary
+              ...styles.buttonPrimary,
+              justifyContent: 'center'
             }}
           >
             <Save style={{ width: '20px', height: '20px' }} />
@@ -1400,7 +1500,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               onClick={() => onSubmit?.({})}
               style={{
                 ...styles.button,
-                ...styles.buttonSuccess
+                ...styles.buttonSuccess,
+                justifyContent: 'center',
+                gridColumn: isMobile ? 'span 2' : 'auto'
               }}
             >
               <CheckCircle style={{ width: '20px', height: '20px' }} />
@@ -1412,7 +1514,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
 
       {renderTabs()}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '32px' }}>
         {activeTab === 'site' && renderSiteSection()}
         {activeTab === 'atmospheric' && renderAtmosphericSection()}
         {activeTab === 'personnel' && (
@@ -1421,9 +1523,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               <Users style={{ width: '20px', height: '20px' }} />
               {texts.personnelManagement}
             </h3>
-            <div style={{ textAlign: 'center', padding: '48px' }}>
-              <Users style={{ width: '64px', height: '64px', margin: '0 auto 16px', color: '#4b5563' }} />
-              <p style={{ color: '#9ca3af', fontSize: '18px', marginBottom: '8px' }}>Section Personnel en cours de développement</p>
+            <div style={{ textAlign: 'center', padding: isMobile ? '32px 16px' : '48px' }}>
+              <Users style={{ width: isMobile ? '48px' : '64px', height: isMobile ? '48px' : '64px', margin: '0 auto 16px', color: '#4b5563' }} />
+              <p style={{ color: '#9ca3af', fontSize: isMobile ? '16px' : '18px', marginBottom: '8px' }}>Section Personnel en cours de développement</p>
               <p style={{ color: '#6b7280', fontSize: '14px' }}>
                 Fonctionnalités: signatures électroniques, horodatage entrée/sortie, validation formations.
               </p>
@@ -1436,9 +1538,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               <Camera style={{ width: '20px', height: '20px' }} />
               {texts.photoDocumentation}
             </h3>
-            <div style={{ textAlign: 'center', padding: '48px' }}>
-              <Camera style={{ width: '64px', height: '64px', margin: '0 auto 16px', color: '#4b5563' }} />
-              <p style={{ color: '#9ca3af', fontSize: '18px', marginBottom: '8px' }}>Section Photos en cours de développement</p>
+            <div style={{ textAlign: 'center', padding: isMobile ? '32px 16px' : '48px' }}>
+              <Camera style={{ width: isMobile ? '48px' : '64px', height: isMobile ? '48px' : '64px', margin: '0 auto 16px', color: '#4b5563' }} />
+              <p style={{ color: '#9ca3af', fontSize: isMobile ? '16px' : '18px', marginBottom: '8px' }}>Section Photos en cours de développement</p>
               <p style={{ color: '#6b7280', fontSize: '14px' }}>
                 Fonctionnalités: capture mobile, géolocalisation GPS, métadonnées, carousel.
               </p>
@@ -1448,7 +1550,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         {activeTab === 'emergency' && renderEmergencySection()}
       </div>
 
-      {/* Styles CSS pour les animations */}
+      {/* Styles CSS pour les animations et optimisations mobile */}
       <style jsx>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }
@@ -1465,9 +1567,48 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
         
+        button:active {
+          transform: translateY(0);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
         .tab-button:hover {
           background-color: #4b5563;
           color: white;
+        }
+        
+        /* Optimisations tactiles */
+        button, input, select, textarea {
+          -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Scrollbar mobile pour les onglets */
+        .mobile-tabs::-webkit-scrollbar {
+          display: none;
+        }
+        
+        /* Amélioration de la lisibilité sur mobile */
+        @media (max-width: 767px) {
+          body {
+            -webkit-text-size-adjust: 100%;
+            -moz-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+          }
+          
+          /* Empêche le zoom lors du focus sur les inputs sur iOS */
+          input[type="text"], input[type="number"], input[type="email"], 
+          input[type="tel"], input[type="url"], input[type="password"], 
+          textarea, select {
+            font-size: 16px !important;
+          }
+        }
+        
+        /* Optimisation pour les écrans très petits */
+        @media (max-width: 320px) {
+          .mobile-tabs {
+            padding-left: 4px;
+            padding-right: 4px;
+          }
         }
       `}</style>
     </div>
