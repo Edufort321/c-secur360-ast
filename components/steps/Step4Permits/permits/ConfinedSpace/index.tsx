@@ -1027,13 +1027,10 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
 
   // Rendu section site
   const renderSiteSection = () => {
-    // Vérification que capturedPhotos est accessible
-    console.log('capturedPhotos length:', capturedPhotos.length);
-    
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <div style={styles.card}>
-        <div style={styles.grid2}>
+          <div style={styles.grid2}>
           <div>
             <h2 style={styles.title}>{texts.title}</h2>
             <p style={styles.subtitle}>{texts.subtitle}</p>
