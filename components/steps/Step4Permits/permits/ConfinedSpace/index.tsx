@@ -10,8 +10,10 @@ import {
   ChevronLeft, ChevronRight, X, Calendar, Zap
 } from 'lucide-react';
 
-// =================== STYLES CSS INTÉGRÉS OPTIMISÉS MOBILE ===================
+// =================== DÉTECTION MOBILE ET STYLES ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+const styles = {
   container: {
     maxWidth: '1280px',
     margin: '0 auto',
@@ -36,7 +38,7 @@ const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     borderRadius: '8px',
     padding: isMobile ? '10px' : '12px',
     width: '100%',
-    fontSize: isMobile ? '16px' : '14px', // 16px pour éviter le zoom sur iOS
+    fontSize: isMobile ? '16px' : '14px',
     outline: 'none'
   },
   button: {
@@ -50,8 +52,8 @@ const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     border: 'none',
     cursor: 'pointer',
     fontSize: isMobile ? '13px' : '14px',
-    touchAction: 'manipulation', // Améliore les interactions tactiles
-    minHeight: '44px' // Taille minimum pour les boutons tactiles
+    touchAction: 'manipulation',
+    minHeight: '44px'
   },
   buttonPrimary: {
     background: 'linear-gradient(to right, #3b82f6, #2563eb)',
@@ -168,7 +170,6 @@ const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     alignItems: 'center',
     gap: isMobile ? '8px' : '12px'
   },
-  // Optimisations spécifiques mobile
   mobileHeader: {
     position: 'sticky',
     top: 0,
@@ -185,7 +186,7 @@ const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   }
 };
 
-const styles = {
+// =================== TYPES ===================
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 
 interface ConfinedSpacePermitProps {
@@ -623,8 +624,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   const [photos, setPhotos] = useState<PhotoRecord[]>(initialData?.photos || []);
   
   // États contrôles et timers
-  const [permitTimer, setPermitTimer] = useState(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [retestTimer, setRetestTimer] = useState(0);
   const [retestActive, setRetestActive] = useState(false);
   const [lastDangerReading, setLastDangerReading] = useState<AtmosphericReading | null>(null);
@@ -784,9 +783,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   // Rendu des onglets optimisé mobile
   const renderTabs = () => (
     <div style={{
-      overflowX: 'auto' as const,
-      scrollbarWidth: 'none' as const,
-      msOverflowStyle: 'none' as const,
+      overflowX: 'auto',
+      scrollbarWidth: 'none',
+      msOverflowStyle: 'none',
       paddingBottom: '8px'
     }} className="mobile-tabs">
       <div style={{ 
@@ -795,7 +794,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         marginBottom: '16px', 
         borderBottom: '1px solid #374151',
         paddingBottom: '8px',
-        minWidth: isMobile ? '400px' : 'auto' // Force la largeur minimum pour le scroll horizontal
+        minWidth: isMobile ? '400px' : 'auto'
       }}>
         {[
           { id: 'site', label: isMobile ? '🏢' : '🏢 Site', fullLabel: 'Site', icon: <Home style={{ width: '16px', height: '16px' }} /> },
@@ -810,10 +809,10 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             style={{
               ...styles.tab,
               ...(activeTab === tab.id ? styles.tabActive : styles.tabInactive),
-              flexShrink: 0, // Empêche la compression des onglets
-              whiteSpace: 'nowrap' // Empêche le retour à la ligne
+              flexShrink: 0,
+              whiteSpace: 'nowrap'
             }}
-            title={isMobile ? tab.fullLabel : undefined} // Tooltip sur mobile
+            title={isMobile ? tab.fullLabel : undefined}
           >
             {isMobile ? tab.label : (
               <>
