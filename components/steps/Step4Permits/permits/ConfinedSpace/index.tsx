@@ -15,46 +15,55 @@ const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
 const styles = {
   container: {
-    maxWidth: '1280px',
+    maxWidth: '100%',
     margin: '0 auto',
-    padding: isMobile ? '8px' : '24px',
+    padding: isMobile ? '4px' : '24px',
     backgroundColor: '#111827',
     minHeight: '100vh',
     color: 'white',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif'
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
+    overflowX: 'hidden'
   },
   card: {
     backgroundColor: '#1f2937',
-    borderRadius: isMobile ? '12px' : '16px',
-    padding: isMobile ? '16px' : '24px',
+    borderRadius: isMobile ? '8px' : '16px',
+    padding: isMobile ? '12px' : '24px',
     border: '1px solid #374151',
-    marginBottom: isMobile ? '16px' : '24px',
-    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
+    marginBottom: isMobile ? '12px' : '24px',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+    width: '100%',
+    boxSizing: 'border-box'
   },
   input: {
     backgroundColor: '#374151',
     color: 'white',
     border: '1px solid #4b5563',
-    borderRadius: '8px',
-    padding: isMobile ? '12px' : '14px',
+    borderRadius: isMobile ? '6px' : '8px',
+    padding: isMobile ? '10px 12px' : '14px',
     width: '100%',
-    fontSize: isMobile ? '16px' : '14px',
+    fontSize: '16px',
     outline: 'none',
-    transition: 'all 0.2s ease'
+    transition: 'all 0.2s ease',
+    boxSizing: 'border-box',
+    WebkitAppearance: 'none',
+    MozAppearance: 'textfield'
   },
   button: {
-    padding: isMobile ? '12px 16px' : '14px 24px',
-    borderRadius: '8px',
+    padding: isMobile ? '8px 12px' : '14px 24px',
+    borderRadius: isMobile ? '6px' : '8px',
     fontWeight: '600',
     display: 'flex',
     alignItems: 'center',
-    gap: isMobile ? '6px' : '8px',
+    gap: isMobile ? '4px' : '8px',
     transition: 'all 0.2s ease',
     border: 'none',
     cursor: 'pointer',
-    fontSize: isMobile ? '14px' : '15px',
+    fontSize: '16px',
     touchAction: 'manipulation',
-    minHeight: '44px'
+    minHeight: '44px',
+    boxSizing: 'border-box',
+    width: '100%',
+    justifyContent: 'center'
   },
   buttonPrimary: {
     background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
@@ -108,12 +117,14 @@ const styles = {
   grid2: {
     display: 'grid',
     gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-    gap: isMobile ? '12px' : '20px'
+    gap: isMobile ? '8px' : '20px',
+    width: '100%'
   },
   grid4: {
     display: 'grid',
-    gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-    gap: isMobile ? '12px' : '16px'
+    gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+    gap: isMobile ? '8px' : '16px',
+    width: '100%'
   },
   readingCard: {
     padding: isMobile ? '14px' : '18px',
@@ -167,45 +178,48 @@ const styles = {
   label: {
     display: 'block',
     color: '#9ca3af',
-    fontSize: isMobile ? '14px' : '15px',
-    fontWeight: '600',
-    marginBottom: '8px'
+    fontSize: isMobile ? '13px' : '15px',
+    fontWeight: '500',
+    marginBottom: isMobile ? '4px' : '8px'
   },
   title: {
-    fontSize: isMobile ? '26px' : '32px',
+    fontSize: isMobile ? '20px' : '32px',
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: '8px',
+    marginBottom: isMobile ? '4px' : '8px',
     lineHeight: 1.2
   },
   subtitle: {
     color: '#9ca3af',
-    marginBottom: isMobile ? '16px' : '24px',
-    fontSize: isMobile ? '14px' : '16px'
+    marginBottom: isMobile ? '8px' : '24px',
+    fontSize: isMobile ? '12px' : '16px'
   },
   cardTitle: {
-    fontSize: isMobile ? '18px' : '20px',
+    fontSize: isMobile ? '16px' : '20px',
     fontWeight: '700',
     color: 'white',
-    marginBottom: isMobile ? '16px' : '20px',
+    marginBottom: isMobile ? '12px' : '20px',
     display: 'flex',
     alignItems: 'center',
-    gap: isMobile ? '10px' : '12px'
+    gap: isMobile ? '6px' : '12px'
   },
   mobileHeader: {
     position: 'sticky' as const,
     top: 0,
     backgroundColor: '#111827',
     zIndex: 100,
-    paddingBottom: '12px',
-    borderBottom: '2px solid #374151',
-    marginBottom: '16px'
+    paddingBottom: isMobile ? '8px' : '12px',
+    borderBottom: '1px solid #374151',
+    marginBottom: isMobile ? '8px' : '16px',
+    width: '100%',
+    boxSizing: 'border-box'
   },
   mobileButtonGrid: {
     display: 'grid',
     gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)',
-    gap: isMobile ? '10px' : '16px',
-    marginTop: '16px'
+    gap: isMobile ? '6px' : '16px',
+    marginTop: isMobile ? '8px' : '16px',
+    width: '100%'
   }
 };
 
@@ -1260,17 +1274,20 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     }}>
       <div style={{ 
         display: 'flex', 
-        gap: isMobile ? '6px' : '12px', 
-        marginBottom: '20px', 
-        borderBottom: '2px solid #374151',
-        paddingBottom: '12px',
-        minWidth: isMobile ? '420px' : 'auto'
+        gap: isMobile ? '4px' : '12px', 
+        marginBottom: isMobile ? '12px' : '20px', 
+        borderBottom: '1px solid #374151',
+        paddingBottom: isMobile ? '8px' : '12px',
+        minWidth: isMobile ? '100%' : 'auto',
+        overflowX: isMobile ? 'auto' : 'visible',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
       }}>
         {[
-          { id: 'site', label: isMobile ? '🏢' : '🏢 Site', fullLabel: 'Site', icon: <Home style={{ width: '18px', height: '18px' }} /> },
-          { id: 'atmospheric', label: isMobile ? '🌬️' : '🌬️ Atmosphère', fullLabel: 'Atmosphère', icon: <Wind style={{ width: '18px', height: '18px' }} /> },
-          { id: 'personnel', label: isMobile ? '👥' : '👥 Personnel', fullLabel: 'Personnel', icon: <Users style={{ width: '18px', height: '18px' }} /> },
-          { id: 'emergency', label: isMobile ? '🚨' : '🚨 Urgence', fullLabel: 'Urgence', icon: <Phone style={{ width: '18px', height: '18px' }} /> }
+          { id: 'site', label: isMobile ? '🏢' : '🏢 Site', fullLabel: 'Site', icon: <Home style={{ width: '16px', height: '16px' }} /> },
+          { id: 'atmospheric', label: isMobile ? '🌬️' : '🌬️ Atmosphère', fullLabel: 'Atmosphère', icon: <Wind style={{ width: '16px', height: '16px' }} /> },
+          { id: 'personnel', label: isMobile ? '👥' : '👥 Personnel', fullLabel: 'Personnel', icon: <Users style={{ width: '16px', height: '16px' }} /> },
+          { id: 'emergency', label: isMobile ? '🚨' : '🚨 Urgence', fullLabel: 'Urgence', icon: <Phone style={{ width: '16px', height: '16px' }} /> }
         ].map(tab => (
           <button
             key={tab.id}
@@ -1278,7 +1295,10 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             style={{
               ...styles.tab,
               ...(activeTab === tab.id ? styles.tabActive : styles.tabInactive),
-              flexShrink: 0
+              flexShrink: 0,
+              padding: isMobile ? '6px 10px' : '12px 20px',
+              fontSize: isMobile ? '12px' : '14px',
+              minWidth: isMobile ? '50px' : 'auto'
             }}
             title={isMobile ? tab.fullLabel : undefined}
           >
@@ -2175,64 +2195,80 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           display: 'flex', 
           alignItems: isMobile ? 'flex-start' : 'center', 
           justifyContent: 'space-between', 
-          marginBottom: '20px',
+          marginBottom: isMobile ? '12px' : '20px',
           flexDirection: isMobile ? 'column' : 'row',
-          gap: isMobile ? '16px' : '0'
+          gap: isMobile ? '8px' : '0'
         }}>
-          <div>
+          <div style={{ width: '100%' }}>
             <h1 style={styles.title}>{texts.title}</h1>
             <p style={styles.subtitle}>{texts.subtitle}</p>
-            <div style={{ fontSize: '14px', color: '#93c5fd', marginTop: '12px' }}>
+            <div style={{ fontSize: '12px', color: '#93c5fd', marginTop: isMobile ? '4px' : '12px' }}>
               <span style={{
                 fontFamily: 'JetBrains Mono, monospace',
-                backgroundColor: 'linear-gradient(135deg, #1f2937, #374151)',
-                padding: '6px 12px',
-                borderRadius: '8px',
+                backgroundColor: '#1f2937',
+                padding: isMobile ? '4px 8px' : '6px 12px',
+                borderRadius: '4px',
                 border: '1px solid #4b5563',
-                fontSize: isMobile ? '13px' : '15px',
+                fontSize: isMobile ? '11px' : '15px',
                 color: '#e2e8f0'
               }}>
                 {permitData.permit_number}
               </span>
             </div>
           </div>
+          {!isMobile && (
+            <div style={{
+              padding: '20px',
+              borderRadius: '12px',
+              fontWeight: '700',
+              backgroundColor: isPermitValid() ? '#059669' : '#d97706',
+              color: 'white',
+              fontSize: '16px',
+              textAlign: 'center',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              minWidth: '140px'
+            }}>
+              {isPermitValid() ? '✅ Permis Valide' : '⚠️ Permis Incomplet'}
+            </div>
+          )}
+        </div>
+        
+        {isMobile && (
           <div style={{
-            padding: isMobile ? '16px' : '20px',
-            borderRadius: '12px',
-            fontWeight: '700',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontWeight: '600',
             backgroundColor: isPermitValid() ? '#059669' : '#d97706',
             color: 'white',
-            fontSize: isMobile ? '14px' : '16px',
+            fontSize: '14px',
             textAlign: 'center',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
+            marginBottom: '8px',
+            width: '100%',
+            boxSizing: 'border-box'
           }}>
             {isPermitValid() ? '✅ Permis Valide' : '⚠️ Permis Incomplet'}
           </div>
-        </div>
+        )}
         
         {/* Boutons d'action optimisés mobile */}
         <div style={styles.mobileButtonGrid}>
           <button style={{
             ...styles.button,
-            ...styles.buttonDanger,
-            justifyContent: 'center',
-            fontSize: isMobile ? '15px' : '16px'
+            ...styles.buttonDanger
           }}>
-            <AlertTriangle style={{ width: '20px', height: '20px' }} />
-            {isMobile ? '🚨 ÉVACUATION' : texts.emergencyEvacuation}
+            <AlertTriangle style={{ width: '16px', height: '16px' }} />
+            {isMobile ? 'ÉVACUATION' : texts.emergencyEvacuation}
           </button>
           <button
             onClick={() => onSave?.({})}
             style={{
               ...styles.button,
-              ...styles.buttonPrimary,
-              justifyContent: 'center',
-              fontSize: isMobile ? '15px' : '16px'
+              ...styles.buttonPrimary
             }}
           >
-            <Save style={{ width: '20px', height: '20px' }} />
-            {isMobile ? '💾 Sauvegarder' : texts.savePermit}
+            <Save style={{ width: '16px', height: '16px' }} />
+            Sauvegarder
           </button>
           {isPermitValid() && (
             <button
@@ -2240,13 +2276,11 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               style={{
                 ...styles.button,
                 ...styles.buttonSuccess,
-                justifyContent: 'center',
-                gridColumn: isMobile ? 'span 2' : 'auto',
-                fontSize: isMobile ? '15px' : '16px'
+                gridColumn: isMobile ? 'span 2' : 'auto'
               }}
             >
-              <CheckCircle style={{ width: '20px', height: '20px' }} />
-              {texts.submitPermit}
+              <CheckCircle style={{ width: '16px', height: '16px' }} />
+              {isMobile ? 'Soumettre' : texts.submitPermit}
             </button>
           )}
         </div>
@@ -2254,7 +2288,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
 
       {renderTabs()}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '32px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '32px', width: '100%' }}>
         {activeTab === 'site' && renderSiteSection()}
         {activeTab === 'atmospheric' && renderAtmosphericSection()}
         {activeTab === 'personnel' && (
@@ -2355,6 +2389,10 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             -ms-text-size-adjust: 100%;
           }
           
+          * {
+            box-sizing: border-box;
+          }
+          
           /* Empêche le zoom lors du focus sur les inputs sur iOS */
           input[type="text"], input[type="number"], input[type="email"], 
           input[type="tel"], input[type="url"], input[type="password"], 
@@ -2362,6 +2400,18 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           textarea, select {
             font-size: 16px !important;
             transform: none !important;
+            -webkit-appearance: none !important;
+            appearance: none !important;
+          }
+          
+          .container {
+            padding: 4px !important;
+            overflow-x: hidden !important;
+          }
+          
+          .card {
+            margin-bottom: 8px !important;
+            padding: 12px !important;
           }
           
           /* Navigation par onglets mobile */
