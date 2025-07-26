@@ -1711,9 +1711,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               onClick={() => onSubmit?.({})}
               style={{
                 ...styles.button,
-                ...styles.buttonSuccess,
-                fontSize: window.innerWidth < 768 ? '12px' : '14px',
-                padding: window.innerWidth < 768 ? '8px 12px' : '12px 24px'
+                ...styles.buttonSuccess
               }}
             >
               <CheckCircle style={{ width: '20px', height: '20px' }} />
