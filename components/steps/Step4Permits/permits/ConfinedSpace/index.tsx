@@ -985,274 +985,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
            permitData.site_name && permitData.space_description && permitData.work_description;
   };
 
-  // Rendu du carousel photos RÉEL - maintenant défini à l'intérieur du composant
-  const renderPhotoCarousel = () => {
-    return (
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Camera style={{ width: '20px', height: '20px' }} />
-          📸 Documentation Photos ({capturedPhotos.length})
-        </h3>
-        
-        {/* Contrôles de capture */}
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button
-              onClick={startCamera}
-              disabled={isCapturing}
-              style={{
-                ...styles.button,
-                ...styles.buttonPrimary,
-                fontSize: '14px'
-              }}
-            >
-              <Camera style={{ width: '16px', height: '16px' }} />
-              {isCapturing ? 'Caméra Active' : '📷 Prendre Photo'}
-            </button>
-            
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                ...styles.button,
-                ...styles.buttonSuccess,
-                fontSize: '14px'
-              }}
-            >
-              <Upload style={{ width: '16px', height: '16px' }} />
-              📁 Choisir Fichier
-            </button>
-            
-            {isCapturing && (
-              <button
-                onClick={stopCamera}
-                style={{
-                  ...styles.button,
-                  ...styles.buttonDanger,
-                  fontSize: '14px'
-                }}
-              >
-                <X style={{ width: '16px', height: '16px' }} />
-                Annuler
-              </button>
-            )}
-          </div>
-          
-          {/* Input fichier caché */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileUpload}
-            style={{ display: 'none' }}
-          />
-        </div>
-
-        {/* Interface caméra */}
-        {isCapturing && (
-          <div style={{
-            backgroundColor: '#000',
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '16px'
-          }}>
-            <video
-              ref={videoRef}
-              style={{
-                width: '100%',
-                height: '300px',
-                objectFit: 'cover',
-                borderRadius: '8px'
-              }}
-              playsInline
-            />
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>
-              {(['before', 'during', 'after', 'equipment', 'hazard', 'documentation'] as const).map(category => (
-                <button
-                  key={category}
-                  onClick={() => capturePhoto(category)}
-                  style={{
-                    ...styles.button,
-                    ...styles.buttonSuccess,
-                    fontSize: '12px',
-                    padding: '8px 12px'
-                  }}
-                >
-                  {category === 'before' ? '📋' :
-                   category === 'during' ? '⚠️' :
-                   category === 'after' ? '✅' :
-                   category === 'equipment' ? '🔧' :
-                   category === 'hazard' ? '⚠️' : '📄'} {category}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Canvas caché pour capture */}
-        <canvas ref={canvasRef} style={{ display: 'none' }} />
-        
-        {capturedPhotos.length === 0 ? (
-          <div style={styles.carouselPlaceholder}>
-            <Camera style={{ width: '48px', height: '48px', marginBottom: '16px' }} />
-            <p style={{ marginBottom: '8px', fontSize: '16px' }}>Aucune photo documentée</p>
-            <p style={{ fontSize: '14px' }}>Capturez des photos pour documenter l'intervention</p>
-          </div>
-        ) : (
-          <>
-            <div style={styles.carousel}>
-              <div style={styles.carouselContainer}>
-                {capturedPhotos.map((photo, index) => (
-                  <div
-                    key={photo.id}
-                    style={{
-                      ...styles.carouselSlide,
-                      ...(index === selectedPhoto ? styles.carouselSlideActive : {})
-                    }}
-                  >
-                    <img
-                      src={photo.url}
-                      alt={photo.caption}
-                      style={styles.carouselImage}
-                    />
-                  </div>
-                ))}
-                
-                {/* Navigation gauche/droite */}
-                {capturedPhotos.length > 1 && (
-                  <>
-                    <button
-                      style={{ ...styles.carouselNav, ...styles.carouselNavLeft }}
-                      onClick={() => setSelectedPhoto(prev => prev === 0 ? capturedPhotos.length - 1 : prev - 1)}
-                    >
-                      <ChevronLeft style={{ width: '20px', height: '20px' }} />
-                    </button>
-                    <button
-                      style={{ ...styles.carouselNav, ...styles.carouselNavRight }}
-                      onClick={() => setSelectedPhoto(prev => prev === capturedPhotos.length - 1 ? 0 : prev + 1)}
-                    >
-                      <ChevronRight style={{ width: '20px', height: '20px' }} />
-                    </button>
-                  </>
-                )}
-                
-                {/* Points de navigation */}
-                {capturedPhotos.length > 1 && (
-                  <div style={styles.carouselControls}>
-                    {capturedPhotos.map((_, index) => (
-                      <button
-                        key={index}
-                        style={{
-                          ...styles.carouselDot,
-                          ...(index === selectedPhoto ? styles.carouselDotActive : {})
-                        }}
-                        onClick={() => setSelectedPhoto(index)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-              
-              {/* Informations de la photo courante avec édition */}
-              {capturedPhotos[selectedPhoto] && (
-                <div style={styles.photoInfo}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                    <div style={{ flex: 1 }}>
-                      <input
-                        type="text"
-                        value={capturedPhotos[selectedPhoto]?.caption || ''}
-                        onChange={(e) => updatePhotoCaption(capturedPhotos[selectedPhoto].id, e.target.value)}
-                        style={{
-                          ...styles.input,
-                          fontSize: '14px',
-                          marginBottom: '8px',
-                          backgroundColor: '#4b5563'
-                        }}
-                        placeholder="Description de la photo..."
-                      />
-                      <div style={{ fontSize: '12px', color: '#9ca3af', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        <span>📅 {new Date(capturedPhotos[selectedPhoto]?.timestamp).toLocaleString('fr-CA')}</span>
-                        <span>👤 {capturedPhotos[selectedPhoto]?.taken_by}</span>
-                        <span>📍 {capturedPhotos[selectedPhoto]?.gps_location?.address}</span>
-                        <span>💾 {Math.round((capturedPhotos[selectedPhoto]?.file_size || 0) / 1024)} KB</span>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', marginLeft: '16px' }}>
-                      <select
-                        value={capturedPhotos[selectedPhoto]?.category || 'documentation'}
-                        onChange={(e) => updatePhotoCategory(capturedPhotos[selectedPhoto].id, e.target.value as PhotoRecord['category'])}
-                        style={{
-                          ...styles.input,
-                          fontSize: '12px',
-                          padding: '4px 8px',
-                          minWidth: '100px'
-                        }}
-                      >
-                        <option value="before">📋 Avant</option>
-                        <option value="during">⚠️ Pendant</option>
-                        <option value="after">✅ Après</option>
-                        <option value="equipment">🔧 Équipement</option>
-                        <option value="hazard">⚠️ Danger</option>
-                        <option value="documentation">📄 Documentation</option>
-                      </select>
-                      <button
-                        onClick={() => deletePhoto(capturedPhotos[selectedPhoto].id)}
-                        style={{
-                          ...styles.button,
-                          ...styles.buttonDanger,
-                          padding: '4px 8px',
-                          fontSize: '12px'
-                        }}
-                      >
-                        <Trash2 style={{ width: '12px', height: '12px' }} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {/* Miniatures */}
-            <div style={styles.photoGrid}>
-              {capturedPhotos.map((photo, index) => (
-                <div
-                  key={photo.id}
-                  style={{
-                    ...styles.photoThumbnail,
-                    ...(index === selectedPhoto ? styles.photoThumbnailActive : {}),
-                    position: 'relative'
-                  }}
-                  onClick={() => setSelectedPhoto(index)}
-                >
-                  <img
-                    src={photo.url}
-                    alt={photo.caption}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    top: '4px',
-                    right: '4px',
-                    fontSize: '12px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                    color: 'white',
-                    padding: '2px 4px',
-                    borderRadius: '4px'
-                  }}>
-                    {photo.category === 'before' ? '📋' :
-                     photo.category === 'during' ? '⚠️' :
-                     photo.category === 'after' ? '✅' :
-                     photo.category === 'equipment' ? '🔧' :
-                     photo.category === 'hazard' ? '⚠️' : '📄'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    );
-  };
-
   // Rendu des onglets
   const renderTabs = () => (
     <div style={{ 
@@ -1450,8 +1182,269 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             />
           </div>
           
-          {/* Section Photos intégrée */}
-          {renderPhotoCarousel()}
+          {/* Section Photos intégrée directement */}
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>
+              <Camera style={{ width: '20px', height: '20px' }} />
+              📸 Documentation Photos ({capturedPhotos.length})
+            </h3>
+            
+            {/* Contrôles de capture */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={startCamera}
+                  disabled={isCapturing}
+                  style={{
+                    ...styles.button,
+                    ...styles.buttonPrimary,
+                    fontSize: '14px'
+                  }}
+                >
+                  <Camera style={{ width: '16px', height: '16px' }} />
+                  {isCapturing ? 'Caméra Active' : '📷 Prendre Photo'}
+                </button>
+                
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    ...styles.button,
+                    ...styles.buttonSuccess,
+                    fontSize: '14px'
+                  }}
+                >
+                  <Upload style={{ width: '16px', height: '16px' }} />
+                  📁 Choisir Fichier
+                </button>
+                
+                {isCapturing && (
+                  <button
+                    onClick={stopCamera}
+                    style={{
+                      ...styles.button,
+                      ...styles.buttonDanger,
+                      fontSize: '14px'
+                    }}
+                  >
+                    <X style={{ width: '16px', height: '16px' }} />
+                    Annuler
+                  </button>
+                )}
+              </div>
+              
+              {/* Input fichier caché */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                style={{ display: 'none' }}
+              />
+            </div>
+
+            {/* Interface caméra */}
+            {isCapturing && (
+              <div style={{
+                backgroundColor: '#000',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '16px'
+              }}>
+                <video
+                  ref={videoRef}
+                  style={{
+                    width: '100%',
+                    height: '300px',
+                    objectFit: 'cover',
+                    borderRadius: '8px'
+                  }}
+                  playsInline
+                />
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>
+                  {(['before', 'during', 'after', 'equipment', 'hazard', 'documentation'] as const).map(category => (
+                    <button
+                      key={category}
+                      onClick={() => capturePhoto(category)}
+                      style={{
+                        ...styles.button,
+                        ...styles.buttonSuccess,
+                        fontSize: '12px',
+                        padding: '8px 12px'
+                      }}
+                    >
+                      {category === 'before' ? '📋' :
+                       category === 'during' ? '⚠️' :
+                       category === 'after' ? '✅' :
+                       category === 'equipment' ? '🔧' :
+                       category === 'hazard' ? '⚠️' : '📄'} {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Canvas caché pour capture */}
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            
+            {capturedPhotos.length === 0 ? (
+              <div style={styles.carouselPlaceholder}>
+                <Camera style={{ width: '48px', height: '48px', marginBottom: '16px' }} />
+                <p style={{ marginBottom: '8px', fontSize: '16px' }}>Aucune photo documentée</p>
+                <p style={{ fontSize: '14px' }}>Capturez des photos pour documenter l'intervention</p>
+              </div>
+            ) : (
+              <>
+                <div style={styles.carousel}>
+                  <div style={styles.carouselContainer}>
+                    {capturedPhotos.map((photo, index) => (
+                      <div
+                        key={photo.id}
+                        style={{
+                          ...styles.carouselSlide,
+                          ...(index === selectedPhoto ? styles.carouselSlideActive : {})
+                        }}
+                      >
+                        <img
+                          src={photo.url}
+                          alt={photo.caption}
+                          style={styles.carouselImage}
+                        />
+                      </div>
+                    ))}
+                    
+                    {/* Navigation gauche/droite */}
+                    {capturedPhotos.length > 1 && (
+                      <>
+                        <button
+                          style={{ ...styles.carouselNav, ...styles.carouselNavLeft }}
+                          onClick={() => setSelectedPhoto(prev => prev === 0 ? capturedPhotos.length - 1 : prev - 1)}
+                        >
+                          <ChevronLeft style={{ width: '20px', height: '20px' }} />
+                        </button>
+                        <button
+                          style={{ ...styles.carouselNav, ...styles.carouselNavRight }}
+                          onClick={() => setSelectedPhoto(prev => prev === capturedPhotos.length - 1 ? 0 : prev + 1)}
+                        >
+                          <ChevronRight style={{ width: '20px', height: '20px' }} />
+                        </button>
+                      </>
+                    )}
+                    
+                    {/* Points de navigation */}
+                    {capturedPhotos.length > 1 && (
+                      <div style={styles.carouselControls}>
+                        {capturedPhotos.map((_, index) => (
+                          <button
+                            key={index}
+                            style={{
+                              ...styles.carouselDot,
+                              ...(index === selectedPhoto ? styles.carouselDotActive : {})
+                            }}
+                            onClick={() => setSelectedPhoto(index)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Informations de la photo courante avec édition */}
+                  {capturedPhotos[selectedPhoto] && (
+                    <div style={styles.photoInfo}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                        <div style={{ flex: 1 }}>
+                          <input
+                            type="text"
+                            value={capturedPhotos[selectedPhoto]?.caption || ''}
+                            onChange={(e) => updatePhotoCaption(capturedPhotos[selectedPhoto].id, e.target.value)}
+                            style={{
+                              ...styles.input,
+                              fontSize: '14px',
+                              marginBottom: '8px',
+                              backgroundColor: '#4b5563'
+                            }}
+                            placeholder="Description de la photo..."
+                          />
+                          <div style={{ fontSize: '12px', color: '#9ca3af', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            <span>📅 {new Date(capturedPhotos[selectedPhoto]?.timestamp).toLocaleString('fr-CA')}</span>
+                            <span>👤 {capturedPhotos[selectedPhoto]?.taken_by}</span>
+                            <span>📍 {capturedPhotos[selectedPhoto]?.gps_location?.address}</span>
+                            <span>💾 {Math.round((capturedPhotos[selectedPhoto]?.file_size || 0) / 1024)} KB</span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', marginLeft: '16px' }}>
+                          <select
+                            value={capturedPhotos[selectedPhoto]?.category || 'documentation'}
+                            onChange={(e) => updatePhotoCategory(capturedPhotos[selectedPhoto].id, e.target.value as PhotoRecord['category'])}
+                            style={{
+                              ...styles.input,
+                              fontSize: '12px',
+                              padding: '4px 8px',
+                              minWidth: '100px'
+                            }}
+                          >
+                            <option value="before">📋 Avant</option>
+                            <option value="during">⚠️ Pendant</option>
+                            <option value="after">✅ Après</option>
+                            <option value="equipment">🔧 Équipement</option>
+                            <option value="hazard">⚠️ Danger</option>
+                            <option value="documentation">📄 Documentation</option>
+                          </select>
+                          <button
+                            onClick={() => deletePhoto(capturedPhotos[selectedPhoto].id)}
+                            style={{
+                              ...styles.button,
+                              ...styles.buttonDanger,
+                              padding: '4px 8px',
+                              fontSize: '12px'
+                            }}
+                          >
+                            <Trash2 style={{ width: '12px', height: '12px' }} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Miniatures */}
+                <div style={styles.photoGrid}>
+                  {capturedPhotos.map((photo, index) => (
+                    <div
+                      key={photo.id}
+                      style={{
+                        ...styles.photoThumbnail,
+                        ...(index === selectedPhoto ? styles.photoThumbnailActive : {}),
+                        position: 'relative'
+                      }}
+                      onClick={() => setSelectedPhoto(index)}
+                    >
+                      <img
+                        src={photo.url}
+                        alt={photo.caption}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        fontSize: '12px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        color: 'white',
+                        padding: '2px 4px',
+                        borderRadius: '4px'
+                      }}>
+                        {photo.category === 'before' ? '📋' :
+                         photo.category === 'during' ? '⚠️' :
+                         photo.category === 'after' ? '✅' :
+                         photo.category === 'equipment' ? '🔧' :
+                         photo.category === 'hazard' ? '⚠️' : '📄'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           
           <div>
             <label style={styles.label}>Description des travaux à effectuer *</label>
@@ -1990,7 +1983,21 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             </div>
           </div>
         )}
-        {activeTab === 'photos' && renderPhotoCarousel()}
+        {activeTab === 'photos' && (
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>
+              <Camera style={{ width: '20px', height: '20px' }} />
+              {texts.photoDocumentation}
+            </h3>
+            <div style={{ textAlign: 'center', padding: '48px' }}>
+              <Camera style={{ width: '64px', height: '64px', margin: '0 auto 16px', color: '#4b5563' }} />
+              <p style={{ color: '#9ca3af', fontSize: '18px', marginBottom: '8px' }}>Photos intégrées dans la section Site</p>
+              <p style={{ color: '#6b7280', fontSize: '14px' }}>
+                Utilisez la section Site pour capturer et gérer vos photos de documentation.
+              </p>
+            </div>
+          </div>
+        )}
         {activeTab === 'emergency' && renderEmergencySection()}
       </div>
 
