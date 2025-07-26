@@ -1031,7 +1031,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <div style={styles.card}>
           <div style={styles.grid2}>
-          <div>
+            <div>
             <h2 style={styles.title}>{texts.title}</h2>
             <p style={styles.subtitle}>{texts.subtitle}</p>
             <div style={{ fontSize: '14px', color: '#93c5fd' }}>
