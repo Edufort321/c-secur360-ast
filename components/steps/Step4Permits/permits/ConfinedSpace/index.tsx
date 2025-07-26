@@ -15,11 +15,115 @@ const styles = {
   container: {
     maxWidth: '1280px',
     margin: '0 auto',
-    padding: '24px',
+    padding: window.innerWidth < 768 ? '12px' : '24px',
     backgroundColor: '#111827',
     minHeight: '100vh',
     color: 'white',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif'
+  },
+  // Styles pour carousel photos
+  carousel: {
+    position: 'relative',
+    backgroundColor: '#1f2937',
+    borderRadius: '12px',
+    overflow: 'hidden',
+    marginTop: '16px'
+  },
+  carouselContainer: {
+    position: 'relative',
+    width: '100%',
+    height: window.innerWidth < 768 ? '200px' : '300px',
+    overflow: 'hidden'
+  },
+  carouselSlide: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    opacity: 0,
+    transition: 'opacity 0.3s ease-in-out'
+  },
+  carouselSlideActive: {
+    opacity: 1
+  },
+  carouselImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover'
+  },
+  carouselPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#374151',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'column',
+    color: '#9ca3af'
+  },
+  carouselControls: {
+    position: 'absolute',
+    bottom: '16px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    display: 'flex',
+    gap: '8px'
+  },
+  carouselDot: {
+    width: '12px',
+    height: '12px',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease'
+  },
+  carouselDotActive: {
+    backgroundColor: '#3b82f6',
+    transform: 'scale(1.2)'
+  },
+  carouselNav: {
+    position: 'absolute',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    border: 'none',
+    color: 'white',
+    padding: '12px',
+    borderRadius: '50%',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease'
+  },
+  carouselNavLeft: {
+    left: '16px'
+  },
+  carouselNavRight: {
+    right: '16px'
+  },
+  photoGrid: {
+    display: 'grid',
+    gridTemplateColumns: window.innerWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+    gap: '12px',
+    marginTop: '16px'
+  },
+  photoThumbnail: {
+    aspectRatio: '1',
+    borderRadius: '8px',
+    overflow: 'hidden',
+    border: '2px solid transparent',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease'
+  },
+  photoThumbnailActive: {
+    borderColor: '#3b82f6'
+  },
+  photoInfo: {
+    backgroundColor: '#374151',
+    padding: '12px',
+    fontSize: '14px'
   },
   card: {
     backgroundColor: '#1f2937',
@@ -91,12 +195,12 @@ const styles = {
   },
   grid2: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr',
     gap: '16px'
   },
   grid4: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
+    gridTemplateColumns: window.innerWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
     gap: '16px'
   },
   readingCard: {
@@ -147,7 +251,7 @@ const styles = {
     marginBottom: '8px'
   },
   title: {
-    fontSize: '32px',
+    fontSize: window.innerWidth < 768 ? '24px' : '32px',
     fontWeight: 'bold',
     color: 'white',
     marginBottom: '8px'
@@ -611,6 +715,65 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   const [retestActive, setRetestActive] = useState(false);
   const [lastDangerReading, setLastDangerReading] = useState<AtmosphericReading | null>(null);
   
+  // Timer réglementaire (30 minutes pour QC)
+  const [regulatoryTimer, setRegulatoryTimer] = useState(0);
+  const [regulatoryTimerActive, setRegulatoryTimerActive] = useState(false);
+  
+  // Audio pour alarmes
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  
+  // Initialiser le contexte audio
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.AudioContext) {
+      setAudioContext(new AudioContext());
+    }
+  }, []);
+
+  // Fonction pour jouer une alarme sonore
+  const playAlarmSound = (type: 'warning' | 'critical' | 'regulatory') => {
+    if (!audioContext) return;
+
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Différentes fréquences selon le type d'alarme
+    const frequencies = {
+      warning: [800, 1000], // Bip-bip modéré
+      critical: [1200, 800, 1200], // Triple bip urgent
+      regulatory: [600, 800] // Bip doux pour rappel réglementaire
+    };
+    
+    const beeps = frequencies[type];
+    let currentTime = audioContext.currentTime;
+    
+    beeps.forEach((freq, index) => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      
+      // Volume et durée selon le type
+      const volume = type === 'critical' ? 0.3 : type === 'warning' ? 0.2 : 0.15;
+      const duration = type === 'critical' ? 0.2 : 0.15;
+      
+      gain.gain.setValueAtTime(0, currentTime);
+      gain.gain.linearRampToValueAtTime(volume, currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.01, currentTime + duration);
+      
+      osc.start(currentTime);
+      osc.stop(currentTime + duration);
+      
+      currentTime += duration + 0.1; // Pause entre les bips
+    });
+  };
+  
   // États saisie manuelle
   const [manualReading, setManualReading] = useState({ 
     oxygen: '', 
@@ -621,6 +784,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     humidity: '',
     notes: ''
   });
+
+  const [selectedPhoto, setSelectedPhoto] = useState(0);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   // Navigation
   const [activeTab, setActiveTab] = useState('site');
@@ -651,18 +817,30 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     return 'safe';
   };
 
-  // Timer de retest automatique (15 minutes)
+  // Timer de retest automatique (15 minutes) avec alarmes
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
     
     if (retestActive && retestTimer > 0) {
       interval = setInterval(() => {
         setRetestTimer(prev => {
-          if (prev <= 1) {
+          // Alarmes aux moments critiques
+          if (prev === 300) { // 5 minutes restantes
+            playAlarmSound('warning');
+            alert('⚠️ ATTENTION: Plus que 5 minutes avant retest obligatoire!');
+          } else if (prev === 60) { // 1 minute restante
+            playAlarmSound('critical');
+            alert('🚨 URGENT: Plus que 1 minute avant retest obligatoire!');
+          } else if (prev <= 1) {
+            playAlarmSound('critical');
             setRetestActive(false);
             alert('🚨 RETEST OBLIGATOIRE: 15 minutes écoulées. Effectuez immédiatement de nouveaux tests atmosphériques!');
             return 0;
+          } else if (prev <= 30 && prev % 10 === 0) {
+            // Bips réguliers dans les 30 dernières secondes
+            playAlarmSound('warning');
           }
+          
           return prev - 1;
         });
       }, 1000);
@@ -671,17 +849,57 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [retestActive, retestTimer]);
+  }, [retestActive, retestTimer, audioContext]);
 
-  // Déclenchement automatique du timer de retest
+  // Timer réglementaire automatique (30 minutes pour tests périodiques)
+  useEffect(() => {
+    let interval: NodeJS.Timeout | undefined;
+    
+    if (regulatoryTimerActive && regulatoryTimer > 0) {
+      interval = setInterval(() => {
+        setRegulatoryTimer(prev => {
+          // Alarmes de rappel réglementaire
+          if (prev === 300) { // 5 minutes avant échéance
+            playAlarmSound('regulatory');
+            alert(`⏰ RAPPEL: Test atmosphérique réglementaire requis dans 5 minutes (${PROVINCIAL_REGULATIONS[selectedProvince].atmospheric_testing.frequency_minutes} min écoulées)`);
+          } else if (prev === 60) { // 1 minute avant échéance
+            playAlarmSound('warning');
+            alert('⚠️ ATTENTION: Test atmosphérique réglementaire requis dans 1 minute!');
+          } else if (prev <= 1) {
+            playAlarmSound('critical');
+            setRegulatoryTimerActive(false);
+            alert(`🚨 TEST RÉGLEMENTAIRE REQUIS: ${PROVINCIAL_REGULATIONS[selectedProvince].atmospheric_testing.frequency_minutes} minutes écoulées. Effectuez un nouveau test atmosphérique!`);
+            return 0;
+          }
+          
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [regulatoryTimerActive, regulatoryTimer, selectedProvince, audioContext]);
+
+  // Déclenchement automatique des timers
   useEffect(() => {
     const latestReading = atmosphericReadings[atmosphericReadings.length - 1];
     if (latestReading && latestReading.status === 'danger') {
       setLastDangerReading(latestReading);
       setRetestTimer(15 * 60); // 15 minutes en secondes
       setRetestActive(true);
+      playAlarmSound('critical');
+      alert('🚨 DANGER CRITIQUE DÉTECTÉ! Timer de retest de 15 minutes activé. Surveillance audio active.');
     }
-  }, [atmosphericReadings]);
+    
+    // Démarrer le timer réglementaire après chaque mesure
+    if (latestReading) {
+      const frequencyMinutes = PROVINCIAL_REGULATIONS[selectedProvince].atmospheric_testing.frequency_minutes;
+      setRegulatoryTimer(frequencyMinutes * 60); // Convertir en secondes
+      setRegulatoryTimerActive(true);
+    }
+  }, [atmosphericReadings, selectedProvince, audioContext]);
 
   // Ajout de lecture manuelle avec validation
   const addManualReading = () => {
@@ -736,9 +954,13 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     });
 
     if (overallStatus === 'danger') {
+      playAlarmSound('critical');
       alert('🚨 DANGER CRITIQUE: Les valeurs atmosphériques sont dangereuses! Évacuation immédiate requise!');
     } else if (overallStatus === 'warning') {
+      playAlarmSound('warning');
       alert('⚠️ ATTENTION: Certaines valeurs sont hors limites acceptables. Surveillance renforcée requise.');
+    } else {
+      playAlarmSound('regulatory');
     }
   };
 
@@ -763,26 +985,211 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
            permitData.site_name && permitData.space_description && permitData.work_description;
   };
 
+  // Rendu du carousel photos
+  const renderPhotoCarousel = () => (
+    <div style={styles.card}>
+      <h3 style={styles.cardTitle}>
+        <Camera style={{ width: '20px', height: '20px' }} />
+        📸 Documentation Photos ({demoPhotos.length})
+      </h3>
+      
+      {demoPhotos.length === 0 ? (
+        <div style={styles.carouselPlaceholder}>
+          <Camera style={{ width: '48px', height: '48px', marginBottom: '16px' }} />
+          <p style={{ marginBottom: '8px', fontSize: '16px' }}>Aucune photo documentée</p>
+          <p style={{ fontSize: '14px' }}>Ajoutez des photos pour documenter l'intervention</p>
+          <button style={{
+            ...styles.button,
+            ...styles.buttonPrimary,
+            marginTop: '16px'
+          }}>
+            <Plus style={{ width: '16px', height: '16px' }} />
+            Prendre une photo
+          </button>
+        </div>
+      ) : (
+        <>
+          <div style={styles.carousel}>
+            <div style={styles.carouselContainer}>
+              {demoPhotos.map((photo, index) => (
+                <div
+                  key={photo.id}
+                  style={{
+                    ...styles.carouselSlide,
+                    ...(index === selectedPhoto ? styles.carouselSlideActive : {})
+                  }}
+                >
+                  <img
+                    src={photo.url}
+                    alt={photo.caption}
+                    style={styles.carouselImage}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.nextElementSibling.style.display = 'flex';
+                    }}
+                  />
+                  <div style={{ ...styles.carouselPlaceholder, display: 'none' }}>
+                    <Camera style={{ width: '48px', height: '48px' }} />
+                    <p>Image non disponible</p>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Navigation gauche/droite */}
+              {demoPhotos.length > 1 && (
+                <>
+                  <button
+                    style={{ ...styles.carouselNav, ...styles.carouselNavLeft }}
+                    onClick={() => setSelectedPhoto(prev => prev === 0 ? demoPhotos.length - 1 : prev - 1)}
+                  >
+                    <ChevronLeft style={{ width: '20px', height: '20px' }} />
+                  </button>
+                  <button
+                    style={{ ...styles.carouselNav, ...styles.carouselNavRight }}
+                    onClick={() => setSelectedPhoto(prev => prev === demoPhotos.length - 1 ? 0 : prev + 1)}
+                  >
+                    <ChevronRight style={{ width: '20px', height: '20px' }} />
+                  </button>
+                </>
+              )}
+              
+              {/* Points de navigation */}
+              {demoPhotos.length > 1 && (
+                <div style={styles.carouselControls}>
+                  {demoPhotos.map((_, index) => (
+                    <button
+                      key={index}
+                      style={{
+                        ...styles.carouselDot,
+                        ...(index === selectedPhoto ? styles.carouselDotActive : {})
+                      }}
+                      onClick={() => setSelectedPhoto(index)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {/* Informations de la photo courante */}
+            <div style={styles.photoInfo}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ color: 'white', marginBottom: '4px', fontSize: '16px' }}>
+                    {demoPhotos[selectedPhoto]?.caption}
+                  </h4>
+                  <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                    📅 {new Date(demoPhotos[selectedPhoto]?.timestamp).toLocaleString('fr-CA')} • 
+                    👤 {demoPhotos[selectedPhoto]?.taken_by} • 
+                    📍 {demoPhotos[selectedPhoto]?.gps_location?.address}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: '12px',
+                  padding: '4px 8px',
+                  borderRadius: '12px',
+                  backgroundColor: demoPhotos[selectedPhoto]?.category === 'before' ? '#059669' :
+                                  demoPhotos[selectedPhoto]?.category === 'during' ? '#d97706' :
+                                  demoPhotos[selectedPhoto]?.category === 'after' ? '#0891b2' :
+                                  demoPhotos[selectedPhoto]?.category === 'equipment' ? '#7c3aed' :
+                                  '#dc2626',
+                  color: 'white'
+                }}>
+                  {demoPhotos[selectedPhoto]?.category === 'before' ? '📋 Avant' :
+                   demoPhotos[selectedPhoto]?.category === 'during' ? '⚠️ Pendant' :
+                   demoPhotos[selectedPhoto]?.category === 'after' ? '✅ Après' :
+                   demoPhotos[selectedPhoto]?.category === 'equipment' ? '🔧 Équipement' :
+                   '⚠️ Danger'}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Miniatures */}
+          <div style={styles.photoGrid}>
+            {demoPhotos.map((photo, index) => (
+              <div
+                key={photo.id}
+                style={{
+                  ...styles.photoThumbnail,
+                  ...(index === selectedPhoto ? styles.photoThumbnailActive : {})
+                }}
+                onClick={() => setSelectedPhoto(index)}
+              >
+                <img
+                  src={photo.url}
+                  alt={photo.caption}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling.style.display = 'flex';
+                  }}
+                />
+                <div style={{ 
+                  ...styles.carouselPlaceholder, 
+                  display: 'none',
+                  height: '100%',
+                  fontSize: '12px'
+                }}>
+                  <Camera style={{ width: '24px', height: '24px' }} />
+                  Error
+                </div>
+              </div>
+            ))}
+            
+            {/* Bouton ajouter photo */}
+            <div style={{
+              ...styles.photoThumbnail,
+              backgroundColor: '#374151',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column',
+              border: '2px dashed #6b7280'
+            }}>
+              <Plus style={{ width: '24px', height: '24px', color: '#9ca3af', marginBottom: '4px' }} />
+              <span style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center' }}>Ajouter</span>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
   // Rendu des onglets
   const renderTabs = () => (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '32px', borderBottom: '1px solid #374151' }}>
+    <div style={{ 
+      display: 'flex', 
+      flexWrap: 'wrap', 
+      gap: window.innerWidth < 768 ? '4px' : '8px', 
+      marginBottom: '32px', 
+      borderBottom: '1px solid #374151',
+      overflowX: 'auto',
+      paddingBottom: '8px'
+    }}>
       {[
-        { id: 'site', label: '🏢 Site', icon: <Home style={{ width: '16px', height: '16px' }} /> },
-        { id: 'atmospheric', label: '🌬️ Atmosphère', icon: <Wind style={{ width: '16px', height: '16px' }} /> },
-        { id: 'personnel', label: '👥 Personnel', icon: <Users style={{ width: '16px', height: '16px' }} /> },
-        { id: 'photos', label: '📸 Photos', icon: <Camera style={{ width: '16px', height: '16px' }} /> },
-        { id: 'emergency', label: '🚨 Urgence', icon: <Phone style={{ width: '16px', height: '16px' }} /> }
+        { id: 'site', label: window.innerWidth < 768 ? '🏢' : '🏢 Site', icon: <Home style={{ width: '16px', height: '16px' }} /> },
+        { id: 'atmospheric', label: window.innerWidth < 768 ? '🌬️' : '🌬️ Atmosphère', icon: <Wind style={{ width: '16px', height: '16px' }} /> },
+        { id: 'personnel', label: window.innerWidth < 768 ? '👥' : '👥 Personnel', icon: <Users style={{ width: '16px', height: '16px' }} /> },
+        { id: 'photos', label: window.innerWidth < 768 ? '📸' : '📸 Photos', icon: <Camera style={{ width: '16px', height: '16px' }} /> },
+        { id: 'emergency', label: window.innerWidth < 768 ? '🚨' : '🚨 Urgence', icon: <Phone style={{ width: '16px', height: '16px' }} /> }
       ].map(tab => (
         <button
           key={tab.id}
           onClick={() => setActiveTab(tab.id)}
           style={{
             ...styles.tab,
-            ...(activeTab === tab.id ? styles.tabActive : styles.tabInactive)
+            ...(activeTab === tab.id ? styles.tabActive : styles.tabInactive),
+            fontSize: window.innerWidth < 768 ? '12px' : '14px',
+            padding: window.innerWidth < 768 ? '8px 12px' : '12px 16px',
+            minWidth: window.innerWidth < 768 ? '50px' : 'auto'
           }}
         >
-          {tab.icon}
-          {tab.label}
+          {window.innerWidth < 768 ? tab.label : (
+            <>
+              {tab.icon}
+              {tab.label}
+            </>
+          )}
         </button>
       ))}
     </div>
@@ -945,6 +1352,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             />
           </div>
           
+          {/* Section Photos intégrée */}
+          {renderPhotoCarousel()}
+          
           <div>
             <label style={styles.label}>Description des travaux à effectuer *</label>
             <textarea
@@ -1021,11 +1431,45 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 <div>
                   <h3 style={{ color: '#fecaca', fontWeight: 'bold', fontSize: '18px' }}>⏰ RETEST OBLIGATOIRE</h3>
                   <p style={{ color: '#fca5a5' }}>Valeurs critiques détectées - Nouveau test requis</p>
+                  <div style={{ fontSize: '12px', color: '#fca5a5', marginTop: '4px' }}>
+                    🔊 Alarmes sonores actives • Alertes à 5 min, 1 min et expiration
+                  </div>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#f87171' }}>{formatTime(retestTimer)}</div>
                 <div style={{ color: '#fca5a5', fontSize: '14px' }}>Temps restant</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {regulatoryTimerActive && !retestActive && (
+          <div style={{
+            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+            border: '2px solid #3b82f6',
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '24px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Clock style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
+                <div>
+                  <h4 style={{ color: '#bfdbfe', fontWeight: '600', fontSize: '16px' }}>
+                    ⏰ Prochain Test Réglementaire - {PROVINCIAL_REGULATIONS[selectedProvince].name}
+                  </h4>
+                  <p style={{ color: '#93c5fd', fontSize: '14px' }}>
+                    Tests requis aux {PROVINCIAL_REGULATIONS[selectedProvince].atmospheric_testing.frequency_minutes} minutes
+                  </p>
+                  <div style={{ fontSize: '12px', color: '#93c5fd', marginTop: '4px' }}>
+                    🔊 Rappels sonores à 5 min et 1 min
+                  </div>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#60a5fa' }}>{formatTime(regulatoryTimer)}</div>
+                <div style={{ color: '#93c5fd', fontSize: '12px' }}>Temps restant</div>
               </div>
             </div>
           </div>
@@ -1096,7 +1540,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             </div>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' }}>
             <div>
               <label style={styles.label}>Température (°C)</label>
               <input
@@ -1350,7 +1794,14 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   return (
     <div style={styles.container}>
       <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: window.innerWidth < 768 ? 'flex-start' : 'center', 
+          justifyContent: 'space-between', 
+          marginBottom: '16px',
+          flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+          gap: window.innerWidth < 768 ? '16px' : '0'
+        }}>
           <div>
             <h1 style={styles.title}>{texts.title}</h1>
             <p style={styles.subtitle}>{texts.subtitle}</p>
@@ -1377,10 +1828,17 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           </div>
         </div>
         
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+        <div style={{ 
+          display: 'flex', 
+          gap: window.innerWidth < 768 ? '8px' : '16px', 
+          marginBottom: '24px',
+          flexWrap: 'wrap'
+        }}>
           <button style={{
             ...styles.button,
-            ...styles.buttonDanger
+            ...styles.buttonDanger,
+            fontSize: window.innerWidth < 768 ? '12px' : '14px',
+            padding: window.innerWidth < 768 ? '8px 12px' : '12px 24px'
           }}>
             <AlertTriangle style={{ width: '20px', height: '20px' }} />
             {texts.emergencyEvacuation}
@@ -1389,7 +1847,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             onClick={() => onSave?.({})}
             style={{
               ...styles.button,
-              ...styles.buttonPrimary
+              ...styles.buttonPrimary,
+              fontSize: window.innerWidth < 768 ? '12px' : '14px',
+              padding: window.innerWidth < 768 ? '8px 12px' : '12px 24px'
             }}
           >
             <Save style={{ width: '20px', height: '20px' }} />
@@ -1400,7 +1860,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               onClick={() => onSubmit?.({})}
               style={{
                 ...styles.button,
-                ...styles.buttonSuccess
+                ...styles.buttonSuccess,
+                fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                padding: window.innerWidth < 768 ? '8px 12px' : '12px 24px'
               }}
             >
               <CheckCircle style={{ width: '20px', height: '20px' }} />
@@ -1430,21 +1892,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             </div>
           </div>
         )}
-        {activeTab === 'photos' && (
-          <div style={styles.card}>
-            <h3 style={styles.cardTitle}>
-              <Camera style={{ width: '20px', height: '20px' }} />
-              {texts.photoDocumentation}
-            </h3>
-            <div style={{ textAlign: 'center', padding: '48px' }}>
-              <Camera style={{ width: '64px', height: '64px', margin: '0 auto 16px', color: '#4b5563' }} />
-              <p style={{ color: '#9ca3af', fontSize: '18px', marginBottom: '8px' }}>Section Photos en cours de développement</p>
-              <p style={{ color: '#6b7280', fontSize: '14px' }}>
-                Fonctionnalités: capture mobile, géolocalisation GPS, métadonnées, carousel.
-              </p>
-            </div>
-          </div>
-        )}
+        {activeTab === 'photos' && renderPhotoCarousel()}
         {activeTab === 'emergency' && renderEmergencySection()}
       </div>
 
