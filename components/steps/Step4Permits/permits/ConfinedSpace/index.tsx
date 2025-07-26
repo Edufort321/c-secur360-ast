@@ -12,8 +12,6 @@ import {
 
 // =================== STYLES CSS INTÉGRÉS OPTIMISÉS MOBILE ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
-const styles = {
   container: {
     maxWidth: '1280px',
     margin: '0 auto',
@@ -179,12 +177,6 @@ const styles = {
     paddingBottom: '8px',
     borderBottom: '1px solid #374151'
   },
-  mobileTabsContainer: {
-    overflowX: 'auto',
-    scrollbarWidth: 'none',
-    msOverflowStyle: 'none',
-    paddingBottom: '8px'
-  },
   mobileButtonGrid: {
     display: 'grid',
     gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)',
@@ -193,14 +185,7 @@ const styles = {
   }
 };
 
-// Cache le scrollbar sur webkit
-const mobileTabsStyle = `
-  .mobile-tabs::-webkit-scrollbar {
-    display: none;
-  }
-`;
-
-// =================== TYPES ===================
+const styles = {
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 
 interface ConfinedSpacePermitProps {
@@ -798,7 +783,12 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
 
   // Rendu des onglets optimisé mobile
   const renderTabs = () => (
-    <div style={styles.mobileTabsContainer} className="mobile-tabs">
+    <div style={{
+      overflowX: 'auto' as const,
+      scrollbarWidth: 'none' as const,
+      msOverflowStyle: 'none' as const,
+      paddingBottom: '8px'
+    }} className="mobile-tabs">
       <div style={{ 
         display: 'flex', 
         gap: isMobile ? '4px' : '8px', 
