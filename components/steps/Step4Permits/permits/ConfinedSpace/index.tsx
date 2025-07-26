@@ -22,7 +22,7 @@ const styles = {
     minHeight: '100vh',
     color: 'white',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
-    overflowX: 'hidden'
+    overflowX: 'hidden' as const
   },
   card: {
     backgroundColor: '#1f2937',
@@ -32,7 +32,7 @@ const styles = {
     marginBottom: isMobile ? '12px' : '24px',
     boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
     width: '100%',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box' as const
   },
   input: {
     backgroundColor: '#374151',
@@ -44,9 +44,9 @@ const styles = {
     fontSize: '16px',
     outline: 'none',
     transition: 'all 0.2s ease',
-    boxSizing: 'border-box',
-    WebkitAppearance: 'none',
-    MozAppearance: 'textfield'
+    boxSizing: 'border-box' as const,
+    WebkitAppearance: 'none' as const,
+    MozAppearance: 'textfield' as const
   },
   button: {
     padding: isMobile ? '8px 12px' : '14px 24px',
@@ -59,11 +59,11 @@ const styles = {
     border: 'none',
     cursor: 'pointer',
     fontSize: '16px',
-    touchAction: 'manipulation',
+    touchAction: 'manipulation' as const,
     minHeight: '44px',
-    boxSizing: 'border-box',
+    boxSizing: 'border-box' as const,
     width: '100%',
-    justifyContent: 'center'
+    justifyContent: 'center' as const
   },
   buttonPrimary: {
     background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
@@ -212,7 +212,7 @@ const styles = {
     borderBottom: '1px solid #374151',
     marginBottom: isMobile ? '8px' : '16px',
     width: '100%',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box' as const
   },
   mobileButtonGrid: {
     display: 'grid',
