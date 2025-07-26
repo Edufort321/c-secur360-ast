@@ -190,8 +190,12 @@ const styles = {
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 
 interface ConfinedSpacePermitProps {
+  formData?: any;
+  onDataChange?: (section: string, data: any) => void;
   province?: ProvinceCode;
   language?: 'fr' | 'en';
+  tenant?: string;
+  errors?: any;
   onSave?: (data: any) => void;
   onSubmit?: (data: any) => void;
   onCancel?: () => void;
@@ -591,8 +595,12 @@ const getTexts = (language: 'fr' | 'en') => ({
 
 // =================== COMPOSANT PRINCIPAL ===================
 const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
+  formData,
+  onDataChange,
   province = 'QC',
   language = 'fr',
+  tenant,
+  errors,
   onSave,
   onSubmit,
   onCancel,
@@ -604,24 +612,24 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   // États principaux
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province);
   const [permitData, setPermitData] = useState({
-    permit_number: initialData?.permit_number || `CS-${selectedProvince}-${Date.now().toString().slice(-6)}`,
-    issue_date: new Date().toISOString().split('T')[0],
-    issue_time: new Date().toTimeString().slice(0, 5),
-    expiry_date: initialData?.expiry_date || '',
-    expiry_time: initialData?.expiry_time || '',
-    site_name: initialData?.site_name || '',
-    site_address: initialData?.site_address || '',
-    space_location: initialData?.space_location || '',
-    space_description: initialData?.space_description || '',
-    work_description: initialData?.work_description || '',
-    rescue_plan: initialData?.rescue_plan || '',
-    special_conditions: initialData?.special_conditions || '',
+    permit_number: formData?.permitData?.permit_number || initialData?.permit_number || `CS-${selectedProvince}-${Date.now().toString().slice(-6)}`,
+    issue_date: formData?.permitData?.issue_date || new Date().toISOString().split('T')[0],
+    issue_time: formData?.permitData?.issue_time || new Date().toTimeString().slice(0, 5),
+    expiry_date: formData?.permitData?.expiry_date || initialData?.expiry_date || '',
+    expiry_time: formData?.permitData?.expiry_time || initialData?.expiry_time || '',
+    site_name: formData?.permitData?.site_name || initialData?.site_name || '',
+    site_address: formData?.permitData?.site_address || initialData?.site_address || '',
+    space_location: formData?.permitData?.space_location || initialData?.space_location || '',
+    space_description: formData?.permitData?.space_description || initialData?.space_description || '',
+    work_description: formData?.permitData?.work_description || initialData?.work_description || '',
+    rescue_plan: formData?.permitData?.rescue_plan || initialData?.rescue_plan || '',
+    special_conditions: formData?.permitData?.special_conditions || initialData?.special_conditions || '',
     final_authorization: false
   });
   
-  const [personnel, setPersonnel] = useState<PersonnelEntry[]>(initialData?.personnel || []);
-  const [atmosphericReadings, setAtmosphericReadings] = useState<AtmosphericReading[]>(initialData?.atmospheric_readings || []);
-  const [photos, setPhotos] = useState<PhotoRecord[]>(initialData?.photos || []);
+  const [personnel, setPersonnel] = useState<PersonnelEntry[]>(formData?.personnel || initialData?.personnel || []);
+  const [atmosphericReadings, setAtmosphericReadings] = useState<AtmosphericReading[]>(formData?.atmospheric_readings || initialData?.atmospheric_readings || []);
+  const [photos, setPhotos] = useState<PhotoRecord[]>(formData?.photos || initialData?.photos || []);
   
   // États contrôles et timers
   const [retestTimer, setRetestTimer] = useState(0);
@@ -642,12 +650,33 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   // Navigation
   const [activeTab, setActiveTab] = useState('site');
 
+  // États pour les photos
+  const [capturedPhotos, setCapturedPhotos] = useState<PhotoRecord[]>(formData?.capturedPhotos || initialData?.photos || []);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  
+  // Références pour les photos
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Fonction pour mettre à jour les données du parent
+  const updateParentData = (section: string, data: any) => {
+    if (onDataChange) {
+      onDataChange(section, data);
+    }
+  };
+
+  // Fonction pour mettre à jour permitData et synchroniser avec le parent
+  const updatePermitData = (updates: any) => {
+    const newPermitData = { ...permitData, ...updates };
+    setPermitData(newPermitData);
+    updateParentData('permitData', newPermitData);
+  };
+
   // Mise à jour du numéro de permis lors du changement de province
   useEffect(() => {
-    setPermitData(prev => ({
-      ...prev,
-      permit_number: `CS-${selectedProvince}-${Date.now().toString().slice(-6)}`
-    }));
+    const newPermitNumber = `CS-${selectedProvince}-${Date.now().toString().slice(-6)}`;
+    updatePermitData({ permit_number: newPermitNumber });
   }, [selectedProvince]);
 
   // Validation des limites atmosphériques
@@ -740,7 +769,11 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       notes: manualReading.notes || undefined
     };
 
-    setAtmosphericReadings(prev => [...prev, newReading]);
+    setAtmosphericReadings(prev => {
+      const newReadings = [...prev, newReading];
+      updateParentData('atmospheric_readings', newReadings);
+      return newReadings;
+    });
 
     setManualReading({ 
       oxygen: '', 
@@ -764,6 +797,360 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // =================== GESTION PHOTOS ===================
+  const handlePhotoCapture = async (category: 'before' | 'during' | 'after' | 'equipment' | 'hazard' | 'documentation') => {
+    try {
+      if (fileInputRef.current) {
+        fileInputRef.current.accept = 'image/*';
+        fileInputRef.current.capture = 'environment';
+        fileInputRef.current.multiple = true;
+        fileInputRef.current.onchange = (e) => {
+          const files = Array.from((e.target as HTMLInputElement).files || []);
+          if (files.length > 0) {
+            files.forEach(file => processPhoto(file, category));
+          }
+        };
+        fileInputRef.current.click();
+      }
+    } catch (error) {
+      console.error('Erreur capture photo:', error);
+    }
+  };
+
+  const processPhoto = async (file: File, category: 'before' | 'during' | 'after' | 'equipment' | 'hazard' | 'documentation') => {
+    try {
+      const photoUrl = URL.createObjectURL(file);
+      const newPhoto: PhotoRecord = {
+        id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        url: photoUrl,
+        caption: `${getCategoryLabel(category)} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
+        category,
+        timestamp: new Date().toISOString(),
+        taken_by: 'Opérateur',
+        gps_location: await getCurrentLocation(),
+        file_size: file.size,
+        file_name: file.name
+      };
+      
+      setCapturedPhotos(prev => {
+        const newPhotos = [...prev, newPhoto];
+        updateParentData('capturedPhotos', newPhotos);
+        return newPhotos;
+      });
+    } catch (error) {
+      console.error('Erreur traitement photo:', error);
+    }
+  };
+
+  const getCurrentLocation = async (): Promise<{ lat: number; lng: number; accuracy?: number; address?: string } | undefined> => {
+    try {
+      if ('geolocation' in navigator) {
+        return new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                address: 'Localisation GPS'
+              });
+            },
+            () => resolve(undefined)
+          );
+        });
+      }
+    } catch (error) {
+      console.error('Erreur géolocalisation:', error);
+    }
+    return undefined;
+  };
+
+  const getCategoryLabel = (category: string): string => {
+    const labels = {
+      before: language === 'fr' ? 'Avant intervention' : 'Before work',
+      during: language === 'fr' ? 'Pendant intervention' : 'During work', 
+      after: language === 'fr' ? 'Après intervention' : 'After work',
+      equipment: language === 'fr' ? 'Équipement' : 'Equipment',
+      hazard: language === 'fr' ? 'Danger identifié' : 'Identified hazard',
+      documentation: language === 'fr' ? 'Documentation' : 'Documentation'
+    };
+    return labels[category as keyof typeof labels] || category;
+  };
+
+  const getCategoryColor = (category: string): string => {
+    const colors = {
+      before: '#059669',
+      during: '#d97706', 
+      after: '#0891b2',
+      equipment: '#7c3aed',
+      hazard: '#dc2626',
+      documentation: '#6366f1'
+    };
+    return colors[category as keyof typeof colors] || '#6b7280';
+  };
+
+  const deletePhoto = (photoId: string) => {
+    setCapturedPhotos(prev => {
+      const newPhotos = prev.filter(photo => photo.id !== photoId);
+      updateParentData('capturedPhotos', newPhotos);
+      return newPhotos;
+    });
+  };
+
+  // =================== CARROUSEL PHOTOS ===================
+  const PhotoCarousel = ({ photos, onAddPhoto }: {
+    photos: PhotoRecord[];
+    onAddPhoto: () => void;
+  }) => {
+    const totalSlides = photos.length + 1;
+
+    const nextSlide = () => setCurrentPhotoIndex((currentPhotoIndex + 1) % totalSlides);
+    const prevSlide = () => setCurrentPhotoIndex(currentPhotoIndex === 0 ? totalSlides - 1 : currentPhotoIndex - 1);
+    const goToSlide = (index: number) => setCurrentPhotoIndex(index);
+
+    return (
+      <div style={{
+        position: 'relative',
+        marginTop: '16px',
+        background: 'rgba(15, 23, 42, 0.8)',
+        border: '1px solid rgba(100, 116, 139, 0.3)',
+        borderRadius: '16px',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          height: isMobile ? '250px' : '300px',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            display: 'flex',
+            transition: 'transform 0.3s ease',
+            height: '100%',
+            transform: `translateX(-${currentPhotoIndex * 100}%)`
+          }}>
+            {photos.map((photo: PhotoRecord, index: number) => (
+              <div key={photo.id} style={{
+                minWidth: '100%',
+                height: '100%',
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <img 
+                  src={photo.url} 
+                  alt={photo.caption}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain',
+                    borderRadius: '8px'
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  bottom: '0',
+                  left: '0',
+                  right: '0',
+                  background: 'linear-gradient(transparent, rgba(0, 0, 0, 0.8))',
+                  color: 'white',
+                  padding: '20px 16px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-end'
+                }}>
+                  <div style={{ flex: 1, marginRight: '12px' }}>
+                    <h4 style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: '600' }}>
+                      {getCategoryLabel(photo.category)}
+                    </h4>
+                    <p style={{ margin: '0', fontSize: '12px', opacity: 0.8 }}>
+                      {new Date(photo.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                    </p>
+                    {photo.gps_location && (
+                      <p style={{ margin: '4px 0 0', fontSize: '11px', opacity: 0.7 }}>
+                        📍 {photo.gps_location.address}
+                      </p>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <span style={{
+                      fontSize: '12px',
+                      padding: '4px 8px',
+                      borderRadius: '12px',
+                      backgroundColor: getCategoryColor(photo.category),
+                      color: 'white'
+                    }}>
+                      {getCategoryLabel(photo.category)}
+                    </span>
+                    <button 
+                      onClick={() => deletePhoto(photo.id)}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.8)',
+                        border: '1px solid #ef4444',
+                        color: 'white',
+                        padding: '6px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: '28px',
+                        minHeight: '28px'
+                      }}
+                      title={language === 'fr' ? "Supprimer cette photo" : "Delete this photo"}
+                    >
+                      <Trash2 style={{ width: '14px', height: '14px' }} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div style={{
+              minWidth: '100%',
+              height: '100%',
+              background: 'rgba(59, 130, 246, 0.1)',
+              border: '2px dashed rgba(59, 130, 246, 0.3)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '16px'
+            }}
+            onClick={onAddPhoto}
+            onMouseEnter={(e) => {
+              (e.target as HTMLDivElement).style.background = 'rgba(59, 130, 246, 0.2)';
+              (e.target as HTMLDivElement).style.borderColor = 'rgba(59, 130, 246, 0.5)';
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLDivElement).style.background = 'rgba(59, 130, 246, 0.1)';
+              (e.target as HTMLDivElement).style.borderColor = 'rgba(59, 130, 246, 0.3)';
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                background: 'rgba(59, 130, 246, 0.2)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.3s ease',
+                color: '#60a5fa'
+              }}>
+                <Camera style={{ width: '24px', height: '24px' }} />
+              </div>
+              <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#60a5fa' }}>
+                {language === 'fr' ? 'Ajouter une photo' : 'Add photo'}
+              </h4>
+              <p style={{ margin: 0, fontSize: '14px', opacity: 0.8, textAlign: 'center', color: '#94a3b8' }}>
+                {language === 'fr' ? 'Documentez cette étape avec une photo' : 'Document this step with a photo'}
+              </p>
+            </div>
+          </div>
+          
+          {totalSlides > 1 && (
+            <>
+              <button 
+                onClick={prevSlide}
+                disabled={totalSlides <= 1}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '16px',
+                  transform: 'translateY(-50%)',
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  border: 'none',
+                  color: 'white',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.3s ease',
+                  zIndex: 10
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLButtonElement).style.background = 'rgba(0, 0, 0, 0.9)';
+                  (e.target as HTMLButtonElement).style.transform = 'translateY(-50%) scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLButtonElement).style.background = 'rgba(0, 0, 0, 0.7)';
+                  (e.target as HTMLButtonElement).style.transform = 'translateY(-50%) scale(1)';
+                }}
+              >
+                <ChevronLeft style={{ width: '20px', height: '20px' }} />
+              </button>
+              <button 
+                onClick={nextSlide}
+                disabled={totalSlides <= 1}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  right: '16px',
+                  transform: 'translateY(-50%)',
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  border: 'none',
+                  color: 'white',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.3s ease',
+                  zIndex: 10
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLButtonElement).style.background = 'rgba(0, 0, 0, 0.9)';
+                  (e.target as HTMLButtonElement).style.transform = 'translateY(-50%) scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLButtonElement).style.background = 'rgba(0, 0, 0, 0.7)';
+                  (e.target as HTMLButtonElement).style.transform = 'translateY(-50%) scale(1)';
+                }}
+              >
+                <ChevronRight style={{ width: '20px', height: '20px' }} />
+              </button>
+            </>
+          )}
+          
+          {totalSlides > 1 && (
+            <div style={{
+              position: 'absolute',
+              bottom: '16px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              gap: '8px',
+              zIndex: 10
+            }}>
+              {Array.from({ length: totalSlides }).map((_, index) => (
+                <div 
+                  key={index}
+                  onClick={() => goToSlide(index)}
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: index === currentPhotoIndex ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.4)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    transform: index === currentPhotoIndex ? 'scale(1.2)' : 'scale(1)'
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   // Validation globale du permis
@@ -889,7 +1276,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 <input
                   type="date"
                   value={permitData.issue_date}
-                  onChange={(e) => setPermitData(prev => ({ ...prev, issue_date: e.target.value }))}
+                  onChange={(e) => updatePermitData({ issue_date: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -898,7 +1285,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 <input
                   type="time"
                   value={permitData.issue_time}
-                  onChange={(e) => setPermitData(prev => ({ ...prev, issue_time: e.target.value }))}
+                  onChange={(e) => updatePermitData({ issue_time: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -910,7 +1297,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 <input
                   type="date"
                   value={permitData.expiry_date}
-                  onChange={(e) => setPermitData(prev => ({ ...prev, expiry_date: e.target.value }))}
+                  onChange={(e) => updatePermitData({ expiry_date: e.target.value })}
                   style={styles.input}
                   required
                 />
@@ -920,7 +1307,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 <input
                   type="time"
                   value={permitData.expiry_time}
-                  onChange={(e) => setPermitData(prev => ({ ...prev, expiry_time: e.target.value }))}
+                  onChange={(e) => updatePermitData({ expiry_time: e.target.value })}
                   style={styles.input}
                   required
                 />
@@ -944,7 +1331,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 type="text"
                 placeholder="Ex: Usine Pétrochimique Nord"
                 value={permitData.site_name}
-                onChange={(e) => setPermitData(prev => ({ ...prev, site_name: e.target.value }))}
+                onChange={(e) => updatePermitData({ site_name: e.target.value })}
                 style={styles.input}
                 required
               />
@@ -955,7 +1342,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 type="text"
                 placeholder="Ex: 123 Rue Industrielle, Ville, Province"
                 value={permitData.site_address}
-                onChange={(e) => setPermitData(prev => ({ ...prev, site_address: e.target.value }))}
+                onChange={(e) => updatePermitData({ site_address: e.target.value })}
                 style={styles.input}
               />
             </div>
@@ -967,7 +1354,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               type="text"
               placeholder="Ex: Réservoir T-101, Niveau sous-sol, Section B"
               value={permitData.space_location}
-              onChange={(e) => setPermitData(prev => ({ ...prev, space_location: e.target.value }))}
+              onChange={(e) => updatePermitData({ space_location: e.target.value })}
               style={styles.input}
               required
             />
@@ -978,7 +1365,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             <textarea
               placeholder="Ex: Réservoir cylindrique de 5m de diamètre et 8m de hauteur"
               value={permitData.space_description}
-              onChange={(e) => setPermitData(prev => ({ ...prev, space_description: e.target.value }))}
+              onChange={(e) => updatePermitData({ space_description: e.target.value })}
               style={{ ...styles.input, height: isMobile ? '60px' : '80px', resize: 'vertical' }}
               required
             />
@@ -1001,95 +1388,121 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               gap: '8px'
             }}>
               <Camera style={{ width: '20px', height: '20px' }} />
-              📸 Documentation Photos (0)
+              📸 Documentation Photos ({capturedPhotos.length})
             </h4>
             
-            {/* Placeholder pour le carousel photos */}
-            <div style={{
-              backgroundColor: '#1f2937',
-              borderRadius: '8px',
-              padding: isMobile ? '32px 16px' : '48px 24px',
-              textAlign: 'center',
-              border: '2px dashed #6b7280'
-            }}>
-              <Camera style={{ 
-                width: isMobile ? '48px' : '64px', 
-                height: isMobile ? '48px' : '64px', 
-                margin: '0 auto 16px', 
-                color: '#6b7280' 
-              }} />
-              <p style={{ 
-                color: '#9ca3af', 
-                fontSize: isMobile ? '16px' : '18px', 
-                marginBottom: '8px' 
-              }}>
-                Aucune photo documentée
-              </p>
-              <p style={{ 
-                color: '#6b7280', 
-                fontSize: '14px',
-                marginBottom: '16px'
-              }}>
-                Ajoutez des photos pour documenter l'espace clos avant, pendant et après l'intervention
-              </p>
-              
-              {/* Boutons d'action photos */}
+            {capturedPhotos.length > 0 ? (
+              <PhotoCarousel 
+                photos={capturedPhotos}
+                onAddPhoto={() => handlePhotoCapture('before')}
+              />
+            ) : (
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                gap: '12px',
-                marginTop: '16px'
+                backgroundColor: '#1f2937',
+                borderRadius: '8px',
+                padding: isMobile ? '32px 16px' : '48px 24px',
+                textAlign: 'center',
+                border: '2px dashed #6b7280'
               }}>
-                <button style={{
-                  ...styles.button,
-                  ...styles.buttonPrimary,
-                  justifyContent: 'center'
+                <Camera style={{ 
+                  width: isMobile ? '48px' : '64px', 
+                  height: isMobile ? '48px' : '64px', 
+                  margin: '0 auto 16px', 
+                  color: '#6b7280' 
+                }} />
+                <p style={{ 
+                  color: '#9ca3af', 
+                  fontSize: isMobile ? '16px' : '18px', 
+                  marginBottom: '8px' 
                 }}>
-                  <Camera style={{ width: '16px', height: '16px' }} />
-                  📸 Prendre Photo
-                </button>
-                <button style={{
-                  ...styles.button,
-                  backgroundColor: '#4b5563',
-                  color: 'white',
-                  justifyContent: 'center'
+                  Aucune photo documentée
+                </p>
+                <p style={{ 
+                  color: '#6b7280', 
+                  fontSize: '14px',
+                  marginBottom: '16px'
                 }}>
-                  <Upload style={{ width: '16px', height: '16px' }} />
-                  📁 Choisir Fichier
-                </button>
+                  Ajoutez des photos pour documenter l'espace clos avant, pendant et après l'intervention
+                </p>
+                
+                {/* Boutons d'action photos */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  gap: '12px',
+                  marginTop: '16px'
+                }}>
+                  <button 
+                    onClick={() => handlePhotoCapture('before')}
+                    style={{
+                      ...styles.button,
+                      ...styles.buttonPrimary,
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Camera style={{ width: '16px', height: '16px' }} />
+                    📸 Prendre Photo
+                  </button>
+                  <button 
+                    onClick={() => handlePhotoCapture('before')}
+                    style={{
+                      ...styles.button,
+                      backgroundColor: '#4b5563',
+                      color: 'white',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Upload style={{ width: '16px', height: '16px' }} />
+                    📁 Choisir Fichier
+                  </button>
+                </div>
+                
+                {/* Catégories de photos */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+                  gap: '8px',
+                  marginTop: '16px'
+                }}>
+                  {[
+                    { label: '📋 Avant', color: '#059669', category: 'before' },
+                    { label: '⚠️ Pendant', color: '#d97706', category: 'during' },
+                    { label: '✅ Après', color: '#0891b2', category: 'after' },
+                    { label: '🔧 Équipement', color: '#7c3aed', category: 'equipment' }
+                  ].map((categoryItem, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handlePhotoCapture(categoryItem.category as any)}
+                      style={{
+                        backgroundColor: 'rgba(75, 85, 99, 0.3)',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        textAlign: 'center',
+                        border: `1px solid ${categoryItem.color}30`,
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.target as HTMLButtonElement).style.backgroundColor = `${categoryItem.color}20`;
+                        (e.target as HTMLButtonElement).style.borderColor = `${categoryItem.color}50`;
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(75, 85, 99, 0.3)';
+                        (e.target as HTMLButtonElement).style.borderColor = `${categoryItem.color}30`;
+                      }}
+                    >
+                      <span style={{
+                        fontSize: '12px',
+                        color: categoryItem.color,
+                        fontWeight: '500'
+                      }}>
+                        {categoryItem.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
-              
-              {/* Catégories de photos */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-                gap: '8px',
-                marginTop: '16px'
-              }}>
-                {[
-                  { label: '📋 Avant', color: '#059669' },
-                  { label: '⚠️ Pendant', color: '#d97706' },
-                  { label: '✅ Après', color: '#0891b2' },
-                  { label: '🔧 Équipement', color: '#7c3aed' }
-                ].map((category, index) => (
-                  <div key={index} style={{
-                    backgroundColor: 'rgba(75, 85, 99, 0.3)',
-                    padding: '8px',
-                    borderRadius: '6px',
-                    textAlign: 'center',
-                    border: `1px solid ${category.color}30`
-                  }}>
-                    <span style={{
-                      fontSize: '12px',
-                      color: category.color,
-                      fontWeight: '500'
-                    }}>
-                      {category.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
           
           <div>
@@ -1097,7 +1510,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             <textarea
               placeholder="Ex: Inspection visuelle, nettoyage des parois, réparation"
               value={permitData.work_description}
-              onChange={(e) => setPermitData(prev => ({ ...prev, work_description: e.target.value }))}
+              onChange={(e) => updatePermitData({ work_description: e.target.value })}
               style={{ ...styles.input, height: isMobile ? '60px' : '80px', resize: 'vertical' }}
               required
             />
@@ -1531,6 +1944,16 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
 
   return (
     <div style={styles.container}>
+      {/* Input caché pour capture photo */}
+      <input 
+        ref={fileInputRef} 
+        type="file" 
+        accept="image/*" 
+        capture="environment" 
+        multiple
+        style={{ display: 'none' }} 
+      />
+      
       {/* En-tête mobile sticky */}
       <div style={isMobile ? styles.mobileHeader : { marginBottom: '32px' }}>
         <div style={{ 
