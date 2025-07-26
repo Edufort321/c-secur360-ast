@@ -800,7 +800,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           { id: 'site', label: isMobile ? '🏢' : '🏢 Site', fullLabel: 'Site', icon: <Home style={{ width: '16px', height: '16px' }} /> },
           { id: 'atmospheric', label: isMobile ? '🌬️' : '🌬️ Atmosphère', fullLabel: 'Atmosphère', icon: <Wind style={{ width: '16px', height: '16px' }} /> },
           { id: 'personnel', label: isMobile ? '👥' : '👥 Personnel', fullLabel: 'Personnel', icon: <Users style={{ width: '16px', height: '16px' }} /> },
-          { id: 'photos', label: isMobile ? '📸' : '📸 Photos', fullLabel: 'Photos', icon: <Camera style={{ width: '16px', height: '16px' }} /> },
           { id: 'emergency', label: isMobile ? '🚨' : '🚨 Urgence', fullLabel: 'Urgence', icon: <Phone style={{ width: '16px', height: '16px' }} /> }
         ].map(tab => (
           <button
@@ -983,6 +982,114 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               style={{ ...styles.input, height: isMobile ? '60px' : '80px', resize: 'vertical' }}
               required
             />
+          </div>
+          
+          {/* Section Photos intégrée */}
+          <div style={{
+            backgroundColor: '#374151',
+            borderRadius: '12px',
+            padding: isMobile ? '16px' : '20px',
+            border: '1px solid #4b5563'
+          }}>
+            <h4 style={{
+              fontSize: isMobile ? '16px' : '18px',
+              fontWeight: '600',
+              color: 'white',
+              marginBottom: isMobile ? '12px' : '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <Camera style={{ width: '20px', height: '20px' }} />
+              📸 Documentation Photos (0)
+            </h4>
+            
+            {/* Placeholder pour le carousel photos */}
+            <div style={{
+              backgroundColor: '#1f2937',
+              borderRadius: '8px',
+              padding: isMobile ? '32px 16px' : '48px 24px',
+              textAlign: 'center',
+              border: '2px dashed #6b7280'
+            }}>
+              <Camera style={{ 
+                width: isMobile ? '48px' : '64px', 
+                height: isMobile ? '48px' : '64px', 
+                margin: '0 auto 16px', 
+                color: '#6b7280' 
+              }} />
+              <p style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '16px' : '18px', 
+                marginBottom: '8px' 
+              }}>
+                Aucune photo documentée
+              </p>
+              <p style={{ 
+                color: '#6b7280', 
+                fontSize: '14px',
+                marginBottom: '16px'
+              }}>
+                Ajoutez des photos pour documenter l'espace clos avant, pendant et après l'intervention
+              </p>
+              
+              {/* Boutons d'action photos */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                gap: '12px',
+                marginTop: '16px'
+              }}>
+                <button style={{
+                  ...styles.button,
+                  ...styles.buttonPrimary,
+                  justifyContent: 'center'
+                }}>
+                  <Camera style={{ width: '16px', height: '16px' }} />
+                  📸 Prendre Photo
+                </button>
+                <button style={{
+                  ...styles.button,
+                  backgroundColor: '#4b5563',
+                  color: 'white',
+                  justifyContent: 'center'
+                }}>
+                  <Upload style={{ width: '16px', height: '16px' }} />
+                  📁 Choisir Fichier
+                </button>
+              </div>
+              
+              {/* Catégories de photos */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+                gap: '8px',
+                marginTop: '16px'
+              }}>
+                {[
+                  { label: '📋 Avant', color: '#059669' },
+                  { label: '⚠️ Pendant', color: '#d97706' },
+                  { label: '✅ Après', color: '#0891b2' },
+                  { label: '🔧 Équipement', color: '#7c3aed' }
+                ].map((category, index) => (
+                  <div key={index} style={{
+                    backgroundColor: 'rgba(75, 85, 99, 0.3)',
+                    padding: '8px',
+                    borderRadius: '6px',
+                    textAlign: 'center',
+                    border: `1px solid ${category.color}30`
+                  }}>
+                    <span style={{
+                      fontSize: '12px',
+                      color: category.color,
+                      fontWeight: '500'
+                    }}>
+                      {category.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           
           <div>
@@ -1517,21 +1624,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               <p style={{ color: '#9ca3af', fontSize: isMobile ? '16px' : '18px', marginBottom: '8px' }}>Section Personnel en cours de développement</p>
               <p style={{ color: '#6b7280', fontSize: '14px' }}>
                 Fonctionnalités: signatures électroniques, horodatage entrée/sortie, validation formations.
-              </p>
-            </div>
-          </div>
-        )}
-        {activeTab === 'photos' && (
-          <div style={styles.card}>
-            <h3 style={styles.cardTitle}>
-              <Camera style={{ width: '20px', height: '20px' }} />
-              {texts.photoDocumentation}
-            </h3>
-            <div style={{ textAlign: 'center', padding: isMobile ? '32px 16px' : '48px' }}>
-              <Camera style={{ width: isMobile ? '48px' : '64px', height: isMobile ? '48px' : '64px', margin: '0 auto 16px', color: '#4b5563' }} />
-              <p style={{ color: '#9ca3af', fontSize: isMobile ? '16px' : '18px', marginBottom: '8px' }}>Section Photos en cours de développement</p>
-              <p style={{ color: '#6b7280', fontSize: '14px' }}>
-                Fonctionnalités: capture mobile, géolocalisation GPS, métadonnées, carousel.
               </p>
             </div>
           </div>
