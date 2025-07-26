@@ -985,33 +985,122 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
            permitData.site_name && permitData.space_description && permitData.work_description;
   };
 
-  // Rendu du carousel photos
+  // Rendu du carousel photos RÉEL
   const renderPhotoCarousel = () => (
     <div style={styles.card}>
       <h3 style={styles.cardTitle}>
         <Camera style={{ width: '20px', height: '20px' }} />
-        📸 Documentation Photos ({demoPhotos.length})
+        📸 Documentation Photos ({capturedPhotos.length})
       </h3>
       
-      {demoPhotos.length === 0 ? (
+      {/* Contrôles de capture */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            onClick={startCamera}
+            disabled={isCapturing}
+            style={{
+              ...styles.button,
+              ...styles.buttonPrimary,
+              fontSize: '14px'
+            }}
+          >
+            <Camera style={{ width: '16px', height: '16px' }} />
+            {isCapturing ? 'Caméra Active' : '📷 Prendre Photo'}
+          </button>
+          
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              ...styles.button,
+              ...styles.buttonSuccess,
+              fontSize: '14px'
+            }}
+          >
+            <Upload style={{ width: '16px', height: '16px' }} />
+            📁 Choisir Fichier
+          </button>
+          
+          {isCapturing && (
+            <button
+              onClick={stopCamera}
+              style={{
+                ...styles.button,
+                ...styles.buttonDanger,
+                fontSize: '14px'
+              }}
+            >
+              <X style={{ width: '16px', height: '16px' }} />
+              Annuler
+            </button>
+          )}
+        </div>
+        
+        {/* Input fichier caché */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileUpload}
+          style={{ display: 'none' }}
+        />
+      </div>
+
+      {/* Interface caméra */}
+      {isCapturing && (
+        <div style={{
+          backgroundColor: '#000',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '16px'
+        }}>
+          <video
+            ref={videoRef}
+            style={{
+              width: '100%',
+              height: '300px',
+              objectFit: 'cover',
+              borderRadius: '8px'
+            }}
+            playsInline
+          />
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>
+            {(['before', 'during', 'after', 'equipment', 'hazard', 'documentation'] as const).map(category => (
+              <button
+                key={category}
+                onClick={() => capturePhoto(category)}
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSuccess,
+                  fontSize: '12px',
+                  padding: '8px 12px'
+                }}
+              >
+                {category === 'before' ? '📋' :
+                 category === 'during' ? '⚠️' :
+                 category === 'after' ? '✅' :
+                 category === 'equipment' ? '🔧' :
+                 category === 'hazard' ? '⚠️' : '📄'} {category}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Canvas caché pour capture */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      
+      {capturedPhotos.length === 0 ? (
         <div style={styles.carouselPlaceholder}>
           <Camera style={{ width: '48px', height: '48px', marginBottom: '16px' }} />
           <p style={{ marginBottom: '8px', fontSize: '16px' }}>Aucune photo documentée</p>
-          <p style={{ fontSize: '14px' }}>Ajoutez des photos pour documenter l'intervention</p>
-          <button style={{
-            ...styles.button,
-            ...styles.buttonPrimary,
-            marginTop: '16px'
-          }}>
-            <Plus style={{ width: '16px', height: '16px' }} />
-            Prendre une photo
-          </button>
+          <p style={{ fontSize: '14px' }}>Capturez des photos pour documenter l'intervention</p>
         </div>
       ) : (
         <>
           <div style={styles.carousel}>
             <div style={styles.carouselContainer}>
-              {demoPhotos.map((photo, index) => (
+              {capturedPhotos.map((photo, index) => (
                 <div
                   key={photo.id}
                   style={{
@@ -1023,30 +1112,22 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                     src={photo.url}
                     alt={photo.caption}
                     style={styles.carouselImage}
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      e.currentTarget.nextElementSibling.style.display = 'flex';
-                    }}
                   />
-                  <div style={{ ...styles.carouselPlaceholder, display: 'none' }}>
-                    <Camera style={{ width: '48px', height: '48px' }} />
-                    <p>Image non disponible</p>
-                  </div>
                 </div>
               ))}
               
               {/* Navigation gauche/droite */}
-              {demoPhotos.length > 1 && (
+              {capturedPhotos.length > 1 && (
                 <>
                   <button
                     style={{ ...styles.carouselNav, ...styles.carouselNavLeft }}
-                    onClick={() => setSelectedPhoto(prev => prev === 0 ? demoPhotos.length - 1 : prev - 1)}
+                    onClick={() => setSelectedPhoto(prev => prev === 0 ? capturedPhotos.length - 1 : prev - 1)}
                   >
                     <ChevronLeft style={{ width: '20px', height: '20px' }} />
                   </button>
                   <button
                     style={{ ...styles.carouselNav, ...styles.carouselNavRight }}
-                    onClick={() => setSelectedPhoto(prev => prev === demoPhotos.length - 1 ? 0 : prev + 1)}
+                    onClick={() => setSelectedPhoto(prev => prev === capturedPhotos.length - 1 ? 0 : prev + 1)}
                   >
                     <ChevronRight style={{ width: '20px', height: '20px' }} />
                   </button>
@@ -1054,9 +1135,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               )}
               
               {/* Points de navigation */}
-              {demoPhotos.length > 1 && (
+              {capturedPhotos.length > 1 && (
                 <div style={styles.carouselControls}>
-                  {demoPhotos.map((_, index) => (
+                  {capturedPhotos.map((_, index) => (
                     <button
                       key={index}
                       style={{
@@ -1070,43 +1151,68 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               )}
             </div>
             
-            {/* Informations de la photo courante */}
-            <div style={styles.photoInfo}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ color: 'white', marginBottom: '4px', fontSize: '16px' }}>
-                    {demoPhotos[selectedPhoto]?.caption}
-                  </h4>
-                  <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                    📅 {new Date(demoPhotos[selectedPhoto]?.timestamp).toLocaleString('fr-CA')} • 
-                    👤 {demoPhotos[selectedPhoto]?.taken_by} • 
-                    📍 {demoPhotos[selectedPhoto]?.gps_location?.address}
+            {/* Informations de la photo courante avec édition */}
+            {capturedPhotos[selectedPhoto] && (
+              <div style={styles.photoInfo}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                  <div style={{ flex: 1 }}>
+                    <input
+                      type="text"
+                      value={capturedPhotos[selectedPhoto]?.caption || ''}
+                      onChange={(e) => updatePhotoCaption(capturedPhotos[selectedPhoto].id, e.target.value)}
+                      style={{
+                        ...styles.input,
+                        fontSize: '14px',
+                        marginBottom: '8px',
+                        backgroundColor: '#4b5563'
+                      }}
+                      placeholder="Description de la photo..."
+                    />
+                    <div style={{ fontSize: '12px', color: '#9ca3af', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      <span>📅 {new Date(capturedPhotos[selectedPhoto]?.timestamp).toLocaleString('fr-CA')}</span>
+                      <span>👤 {capturedPhotos[selectedPhoto]?.taken_by}</span>
+                      <span>📍 {capturedPhotos[selectedPhoto]?.gps_location?.address}</span>
+                      <span>💾 {Math.round((capturedPhotos[selectedPhoto]?.file_size || 0) / 1024)} KB</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginLeft: '16px' }}>
+                    <select
+                      value={capturedPhotos[selectedPhoto]?.category || 'documentation'}
+                      onChange={(e) => updatePhotoCategory(capturedPhotos[selectedPhoto].id, e.target.value as PhotoRecord['category'])}
+                      style={{
+                        ...styles.input,
+                        fontSize: '12px',
+                        padding: '4px 8px',
+                        minWidth: '100px'
+                      }}
+                    >
+                      <option value="before">📋 Avant</option>
+                      <option value="during">⚠️ Pendant</option>
+                      <option value="after">✅ Après</option>
+                      <option value="equipment">🔧 Équipement</option>
+                      <option value="hazard">⚠️ Danger</option>
+                      <option value="documentation">📄 Documentation</option>
+                    </select>
+                    <button
+                      onClick={() => deletePhoto(capturedPhotos[selectedPhoto].id)}
+                      style={{
+                        ...styles.button,
+                        ...styles.buttonDanger,
+                        padding: '4px 8px',
+                        fontSize: '12px'
+                      }}
+                    >
+                      <Trash2 style={{ width: '12px', height: '12px' }} />
+                    </button>
                   </div>
                 </div>
-                <span style={{
-                  fontSize: '12px',
-                  padding: '4px 8px',
-                  borderRadius: '12px',
-                  backgroundColor: demoPhotos[selectedPhoto]?.category === 'before' ? '#059669' :
-                                  demoPhotos[selectedPhoto]?.category === 'during' ? '#d97706' :
-                                  demoPhotos[selectedPhoto]?.category === 'after' ? '#0891b2' :
-                                  demoPhotos[selectedPhoto]?.category === 'equipment' ? '#7c3aed' :
-                                  '#dc2626',
-                  color: 'white'
-                }}>
-                  {demoPhotos[selectedPhoto]?.category === 'before' ? '📋 Avant' :
-                   demoPhotos[selectedPhoto]?.category === 'during' ? '⚠️ Pendant' :
-                   demoPhotos[selectedPhoto]?.category === 'after' ? '✅ Après' :
-                   demoPhotos[selectedPhoto]?.category === 'equipment' ? '🔧 Équipement' :
-                   '⚠️ Danger'}
-                </span>
               </div>
-            </div>
+            )}
           </div>
           
           {/* Miniatures */}
           <div style={styles.photoGrid}>
-            {demoPhotos.map((photo, index) => (
+            {capturedPhotos.map((photo, index) => (
               <div
                 key={photo.id}
                 style={{
@@ -1119,36 +1225,25 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                   src={photo.url}
                   alt={photo.caption}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.nextElementSibling.style.display = 'flex';
-                  }}
                 />
-                <div style={{ 
-                  ...styles.carouselPlaceholder, 
-                  display: 'none',
-                  height: '100%',
-                  fontSize: '12px'
+                <div style={{
+                  position: 'absolute',
+                  top: '4px',
+                  right: '4px',
+                  fontSize: '12px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  color: 'white',
+                  padding: '2px 4px',
+                  borderRadius: '4px'
                 }}>
-                  <Camera style={{ width: '24px', height: '24px' }} />
-                  Error
+                  {photo.category === 'before' ? '📋' :
+                   photo.category === 'during' ? '⚠️' :
+                   photo.category === 'after' ? '✅' :
+                   photo.category === 'equipment' ? '🔧' :
+                   photo.category === 'hazard' ? '⚠️' : '📄'}
                 </div>
               </div>
             ))}
-            
-            {/* Bouton ajouter photo */}
-            <div style={{
-              ...styles.photoThumbnail,
-              backgroundColor: '#374151',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexDirection: 'column',
-              border: '2px dashed #6b7280'
-            }}>
-              <Plus style={{ width: '24px', height: '24px', color: '#9ca3af', marginBottom: '4px' }} />
-              <span style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center' }}>Ajouter</span>
-            </div>
           </div>
         </>
       )}
