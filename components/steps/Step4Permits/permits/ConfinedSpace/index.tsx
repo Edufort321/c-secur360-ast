@@ -715,65 +715,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   const [retestActive, setRetestActive] = useState(false);
   const [lastDangerReading, setLastDangerReading] = useState<AtmosphericReading | null>(null);
   
-  // Timer réglementaire (30 minutes pour QC)
-  const [regulatoryTimer, setRegulatoryTimer] = useState(0);
-  const [regulatoryTimerActive, setRegulatoryTimerActive] = useState(false);
-  
-  // Audio pour alarmes
-  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
-  
-  // Initialiser le contexte audio
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.AudioContext) {
-      setAudioContext(new AudioContext());
-    }
-  }, []);
-
-  // Fonction pour jouer une alarme sonore
-  const playAlarmSound = (type: 'warning' | 'critical' | 'regulatory') => {
-    if (!audioContext) return;
-
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    // Différentes fréquences selon le type d'alarme
-    const frequencies = {
-      warning: [800, 1000], // Bip-bip modéré
-      critical: [1200, 800, 1200], // Triple bip urgent
-      regulatory: [600, 800] // Bip doux pour rappel réglementaire
-    };
-    
-    const beeps = frequencies[type];
-    let currentTime = audioContext.currentTime;
-    
-    beeps.forEach((freq, index) => {
-      const osc = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      
-      osc.connect(gain);
-      gain.connect(audioContext.destination);
-      
-      osc.frequency.value = freq;
-      osc.type = 'sine';
-      
-      // Volume et durée selon le type
-      const volume = type === 'critical' ? 0.3 : type === 'warning' ? 0.2 : 0.15;
-      const duration = type === 'critical' ? 0.2 : 0.15;
-      
-      gain.gain.setValueAtTime(0, currentTime);
-      gain.gain.linearRampToValueAtTime(volume, currentTime + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.01, currentTime + duration);
-      
-      osc.start(currentTime);
-      osc.stop(currentTime + duration);
-      
-      currentTime += duration + 0.1; // Pause entre les bips
-    });
-  };
-  
   // États saisie manuelle
   const [manualReading, setManualReading] = useState({ 
     oxygen: '', 
@@ -817,30 +758,18 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     return 'safe';
   };
 
-  // Timer de retest automatique (15 minutes) avec alarmes
+  // Timer de retest automatique (15 minutes)
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
     
     if (retestActive && retestTimer > 0) {
       interval = setInterval(() => {
         setRetestTimer(prev => {
-          // Alarmes aux moments critiques
-          if (prev === 300) { // 5 minutes restantes
-            playAlarmSound('warning');
-            alert('⚠️ ATTENTION: Plus que 5 minutes avant retest obligatoire!');
-          } else if (prev === 60) { // 1 minute restante
-            playAlarmSound('critical');
-            alert('🚨 URGENT: Plus que 1 minute avant retest obligatoire!');
-          } else if (prev <= 1) {
-            playAlarmSound('critical');
+          if (prev <= 1) {
             setRetestActive(false);
             alert('🚨 RETEST OBLIGATOIRE: 15 minutes écoulées. Effectuez immédiatement de nouveaux tests atmosphériques!');
             return 0;
-          } else if (prev <= 30 && prev % 10 === 0) {
-            // Bips réguliers dans les 30 dernières secondes
-            playAlarmSound('warning');
           }
-          
           return prev - 1;
         });
       }, 1000);
@@ -849,57 +778,17 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [retestActive, retestTimer, audioContext]);
+  }, [retestActive, retestTimer]);
 
-  // Timer réglementaire automatique (30 minutes pour tests périodiques)
-  useEffect(() => {
-    let interval: NodeJS.Timeout | undefined;
-    
-    if (regulatoryTimerActive && regulatoryTimer > 0) {
-      interval = setInterval(() => {
-        setRegulatoryTimer(prev => {
-          // Alarmes de rappel réglementaire
-          if (prev === 300) { // 5 minutes avant échéance
-            playAlarmSound('regulatory');
-            alert(`⏰ RAPPEL: Test atmosphérique réglementaire requis dans 5 minutes (${PROVINCIAL_REGULATIONS[selectedProvince].atmospheric_testing.frequency_minutes} min écoulées)`);
-          } else if (prev === 60) { // 1 minute avant échéance
-            playAlarmSound('warning');
-            alert('⚠️ ATTENTION: Test atmosphérique réglementaire requis dans 1 minute!');
-          } else if (prev <= 1) {
-            playAlarmSound('critical');
-            setRegulatoryTimerActive(false);
-            alert(`🚨 TEST RÉGLEMENTAIRE REQUIS: ${PROVINCIAL_REGULATIONS[selectedProvince].atmospheric_testing.frequency_minutes} minutes écoulées. Effectuez un nouveau test atmosphérique!`);
-            return 0;
-          }
-          
-          return prev - 1;
-        });
-      }, 1000);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [regulatoryTimerActive, regulatoryTimer, selectedProvince, audioContext]);
-
-  // Déclenchement automatique des timers
+  // Déclenchement automatique du timer de retest
   useEffect(() => {
     const latestReading = atmosphericReadings[atmosphericReadings.length - 1];
     if (latestReading && latestReading.status === 'danger') {
       setLastDangerReading(latestReading);
       setRetestTimer(15 * 60); // 15 minutes en secondes
       setRetestActive(true);
-      playAlarmSound('critical');
-      alert('🚨 DANGER CRITIQUE DÉTECTÉ! Timer de retest de 15 minutes activé. Surveillance audio active.');
     }
-    
-    // Démarrer le timer réglementaire après chaque mesure
-    if (latestReading) {
-      const frequencyMinutes = PROVINCIAL_REGULATIONS[selectedProvince].atmospheric_testing.frequency_minutes;
-      setRegulatoryTimer(frequencyMinutes * 60); // Convertir en secondes
-      setRegulatoryTimerActive(true);
-    }
-  }, [atmosphericReadings, selectedProvince, audioContext]);
+  }, [atmosphericReadings]);
 
   // Ajout de lecture manuelle avec validation
   const addManualReading = () => {
@@ -1427,45 +1316,11 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 <div>
                   <h3 style={{ color: '#fecaca', fontWeight: 'bold', fontSize: '18px' }}>⏰ RETEST OBLIGATOIRE</h3>
                   <p style={{ color: '#fca5a5' }}>Valeurs critiques détectées - Nouveau test requis</p>
-                  <div style={{ fontSize: '12px', color: '#fca5a5', marginTop: '4px' }}>
-                    🔊 Alarmes sonores actives • Alertes à 5 min, 1 min et expiration
-                  </div>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#f87171' }}>{formatTime(retestTimer)}</div>
                 <div style={{ color: '#fca5a5', fontSize: '14px' }}>Temps restant</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {regulatoryTimerActive && !retestActive && (
-          <div style={{
-            backgroundColor: 'rgba(59, 130, 246, 0.2)',
-            border: '2px solid #3b82f6',
-            borderRadius: '12px',
-            padding: '16px',
-            marginBottom: '24px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Clock style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
-                <div>
-                  <h4 style={{ color: '#bfdbfe', fontWeight: '600', fontSize: '16px' }}>
-                    ⏰ Prochain Test Réglementaire - {PROVINCIAL_REGULATIONS[selectedProvince].name}
-                  </h4>
-                  <p style={{ color: '#93c5fd', fontSize: '14px' }}>
-                    Tests requis aux {PROVINCIAL_REGULATIONS[selectedProvince].atmospheric_testing.frequency_minutes} minutes
-                  </p>
-                  <div style={{ fontSize: '12px', color: '#93c5fd', marginTop: '4px' }}>
-                    🔊 Rappels sonores à 5 min et 1 min
-                  </div>
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#60a5fa' }}>{formatTime(regulatoryTimer)}</div>
-                <div style={{ color: '#93c5fd', fontSize: '12px' }}>Temps restant</div>
               </div>
             </div>
           </div>
