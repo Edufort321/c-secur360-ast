@@ -190,8 +190,12 @@ const styles = {
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 
 interface ConfinedSpacePermitProps {
+  formData?: any;
+  onDataChange?: (section: string, data: any) => void;
   province?: ProvinceCode;
   language?: 'fr' | 'en';
+  tenant?: string;
+  errors?: any;
   onSave?: (data: any) => void;
   onSubmit?: (data: any) => void;
   onCancel?: () => void;
@@ -591,8 +595,12 @@ const getTexts = (language: 'fr' | 'en') => ({
 
 // =================== COMPOSANT PRINCIPAL ===================
 const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
+  formData,
+  onDataChange,
   province = 'QC',
   language = 'fr',
+  tenant,
+  errors,
   onSave,
   onSubmit,
   onCancel,
@@ -604,24 +612,24 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   // États principaux
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province);
   const [permitData, setPermitData] = useState({
-    permit_number: initialData?.permit_number || `CS-${selectedProvince}-${Date.now().toString().slice(-6)}`,
-    issue_date: new Date().toISOString().split('T')[0],
-    issue_time: new Date().toTimeString().slice(0, 5),
-    expiry_date: initialData?.expiry_date || '',
-    expiry_time: initialData?.expiry_time || '',
-    site_name: initialData?.site_name || '',
-    site_address: initialData?.site_address || '',
-    space_location: initialData?.space_location || '',
-    space_description: initialData?.space_description || '',
-    work_description: initialData?.work_description || '',
-    rescue_plan: initialData?.rescue_plan || '',
-    special_conditions: initialData?.special_conditions || '',
+    permit_number: formData?.permitData?.permit_number || initialData?.permit_number || `CS-${selectedProvince}-${Date.now().toString().slice(-6)}`,
+    issue_date: formData?.permitData?.issue_date || new Date().toISOString().split('T')[0],
+    issue_time: formData?.permitData?.issue_time || new Date().toTimeString().slice(0, 5),
+    expiry_date: formData?.permitData?.expiry_date || initialData?.expiry_date || '',
+    expiry_time: formData?.permitData?.expiry_time || initialData?.expiry_time || '',
+    site_name: formData?.permitData?.site_name || initialData?.site_name || '',
+    site_address: formData?.permitData?.site_address || initialData?.site_address || '',
+    space_location: formData?.permitData?.space_location || initialData?.space_location || '',
+    space_description: formData?.permitData?.space_description || initialData?.space_description || '',
+    work_description: formData?.permitData?.work_description || initialData?.work_description || '',
+    rescue_plan: formData?.permitData?.rescue_plan || initialData?.rescue_plan || '',
+    special_conditions: formData?.permitData?.special_conditions || initialData?.special_conditions || '',
     final_authorization: false
   });
   
-  const [personnel, setPersonnel] = useState<PersonnelEntry[]>(initialData?.personnel || []);
-  const [atmosphericReadings, setAtmosphericReadings] = useState<AtmosphericReading[]>(initialData?.atmospheric_readings || []);
-  const [photos, setPhotos] = useState<PhotoRecord[]>(initialData?.photos || []);
+  const [personnel, setPersonnel] = useState<PersonnelEntry[]>(formData?.personnel || initialData?.personnel || []);
+  const [atmosphericReadings, setAtmosphericReadings] = useState<AtmosphericReading[]>(formData?.atmospheric_readings || initialData?.atmospheric_readings || []);
+  const [photos, setPhotos] = useState<PhotoRecord[]>(formData?.photos || initialData?.photos || []);
   
   // États contrôles et timers
   const [retestTimer, setRetestTimer] = useState(0);
@@ -643,7 +651,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   const [activeTab, setActiveTab] = useState('site');
 
   // États pour les photos
-  const [capturedPhotos, setCapturedPhotos] = useState<PhotoRecord[]>(initialData?.photos || []);
+  const [capturedPhotos, setCapturedPhotos] = useState<PhotoRecord[]>(formData?.capturedPhotos || initialData?.photos || []);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   
   // Références pour les photos
@@ -651,12 +659,24 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Fonction pour mettre à jour les données du parent
+  const updateParentData = (section: string, data: any) => {
+    if (onDataChange) {
+      onDataChange(section, data);
+    }
+  };
+
+  // Fonction pour mettre à jour permitData et synchroniser avec le parent
+  const updatePermitData = (updates: any) => {
+    const newPermitData = { ...permitData, ...updates };
+    setPermitData(newPermitData);
+    updateParentData('permitData', newPermitData);
+  };
+
   // Mise à jour du numéro de permis lors du changement de province
   useEffect(() => {
-    setPermitData(prev => ({
-      ...prev,
-      permit_number: `CS-${selectedProvince}-${Date.now().toString().slice(-6)}`
-    }));
+    const newPermitNumber = `CS-${selectedProvince}-${Date.now().toString().slice(-6)}`;
+    updatePermitData({ permit_number: newPermitNumber });
   }, [selectedProvince]);
 
   // Validation des limites atmosphériques
@@ -749,7 +769,11 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       notes: manualReading.notes || undefined
     };
 
-    setAtmosphericReadings(prev => [...prev, newReading]);
+    setAtmosphericReadings(prev => {
+      const newReadings = [...prev, newReading];
+      updateParentData('atmospheric_readings', newReadings);
+      return newReadings;
+    });
 
     setManualReading({ 
       oxygen: '', 
@@ -810,7 +834,11 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         file_name: file.name
       };
       
-      setCapturedPhotos(prev => [...prev, newPhoto]);
+      setCapturedPhotos(prev => {
+        const newPhotos = [...prev, newPhoto];
+        updateParentData('capturedPhotos', newPhotos);
+        return newPhotos;
+      });
     } catch (error) {
       console.error('Erreur traitement photo:', error);
     }
@@ -864,7 +892,11 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   };
 
   const deletePhoto = (photoId: string) => {
-    setCapturedPhotos(prev => prev.filter(photo => photo.id !== photoId));
+    setCapturedPhotos(prev => {
+      const newPhotos = prev.filter(photo => photo.id !== photoId);
+      updateParentData('capturedPhotos', newPhotos);
+      return newPhotos;
+    });
   };
 
   // =================== CARROUSEL PHOTOS ===================
@@ -1244,7 +1276,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 <input
                   type="date"
                   value={permitData.issue_date}
-                  onChange={(e) => setPermitData(prev => ({ ...prev, issue_date: e.target.value }))}
+                  onChange={(e) => updatePermitData({ issue_date: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -1253,7 +1285,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 <input
                   type="time"
                   value={permitData.issue_time}
-                  onChange={(e) => setPermitData(prev => ({ ...prev, issue_time: e.target.value }))}
+                  onChange={(e) => updatePermitData({ issue_time: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -1265,7 +1297,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 <input
                   type="date"
                   value={permitData.expiry_date}
-                  onChange={(e) => setPermitData(prev => ({ ...prev, expiry_date: e.target.value }))}
+                  onChange={(e) => updatePermitData({ expiry_date: e.target.value })}
                   style={styles.input}
                   required
                 />
@@ -1275,7 +1307,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 <input
                   type="time"
                   value={permitData.expiry_time}
-                  onChange={(e) => setPermitData(prev => ({ ...prev, expiry_time: e.target.value }))}
+                  onChange={(e) => updatePermitData({ expiry_time: e.target.value })}
                   style={styles.input}
                   required
                 />
@@ -1299,7 +1331,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 type="text"
                 placeholder="Ex: Usine Pétrochimique Nord"
                 value={permitData.site_name}
-                onChange={(e) => setPermitData(prev => ({ ...prev, site_name: e.target.value }))}
+                onChange={(e) => updatePermitData({ site_name: e.target.value })}
                 style={styles.input}
                 required
               />
@@ -1310,7 +1342,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 type="text"
                 placeholder="Ex: 123 Rue Industrielle, Ville, Province"
                 value={permitData.site_address}
-                onChange={(e) => setPermitData(prev => ({ ...prev, site_address: e.target.value }))}
+                onChange={(e) => updatePermitData({ site_address: e.target.value })}
                 style={styles.input}
               />
             </div>
@@ -1322,7 +1354,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               type="text"
               placeholder="Ex: Réservoir T-101, Niveau sous-sol, Section B"
               value={permitData.space_location}
-              onChange={(e) => setPermitData(prev => ({ ...prev, space_location: e.target.value }))}
+              onChange={(e) => updatePermitData({ space_location: e.target.value })}
               style={styles.input}
               required
             />
@@ -1333,7 +1365,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             <textarea
               placeholder="Ex: Réservoir cylindrique de 5m de diamètre et 8m de hauteur"
               value={permitData.space_description}
-              onChange={(e) => setPermitData(prev => ({ ...prev, space_description: e.target.value }))}
+              onChange={(e) => updatePermitData({ space_description: e.target.value })}
               style={{ ...styles.input, height: isMobile ? '60px' : '80px', resize: 'vertical' }}
               required
             />
@@ -1478,7 +1510,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             <textarea
               placeholder="Ex: Inspection visuelle, nettoyage des parois, réparation"
               value={permitData.work_description}
-              onChange={(e) => setPermitData(prev => ({ ...prev, work_description: e.target.value }))}
+              onChange={(e) => updatePermitData({ work_description: e.target.value })}
               style={{ ...styles.input, height: isMobile ? '60px' : '80px', resize: 'vertical' }}
               required
             />
