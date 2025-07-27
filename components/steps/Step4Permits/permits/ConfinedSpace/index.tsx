@@ -7,7 +7,7 @@ import {
   RotateCcw, Save, Upload, Download, PenTool, Shield, Eye, 
   Thermometer, Activity, Volume2, FileText, Phone, Plus, Trash2,
   User, UserCheck, Timer, LogIn, LogOut, Edit3, Copy, 
-  ChevronLeft, ChevronRight, X, Calendar, Zap
+  ChevronLeft, ChevronRight, X, Calendar, Zap, Wrench
 } from 'lucide-react';
 
 // =================== DÉTECTION MOBILE ET STYLES ===================
@@ -639,7 +639,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     rescue_response_time: formData?.permitData?.rescue_response_time || initialData?.rescue_response_time || '',
     rescue_equipment: formData?.permitData?.rescue_equipment || initialData?.rescue_equipment || {},
     rescue_training: formData?.permitData?.rescue_training || initialData?.rescue_training || {},
-    rescue_procedures: formData?.permitData?.rescue_procedures || initialData?.rescue_procedures || '',
+    rescue_steps: formData?.permitData?.rescue_steps || initialData?.rescue_steps || [],
     last_drill_date: formData?.permitData?.last_drill_date || initialData?.last_drill_date || '',
     drill_results: formData?.permitData?.drill_results || initialData?.drill_results || '',
     drill_notes: formData?.permitData?.drill_notes || initialData?.drill_notes || '',
@@ -1659,11 +1659,11 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           
           {/* Section Plan de Sauvetage - Nouvelle section ajoutée */}
           <div style={{
-            backgroundColor: '#dc2626',
+            backgroundColor: '#1e40af',
             borderRadius: '16px',
             padding: isMobile ? '20px' : '24px',
-            border: '2px solid #ef4444',
-            boxShadow: '0 8px 32px rgba(220, 38, 38, 0.2)'
+            border: '2px solid #3b82f6',
+            boxShadow: '0 8px 32px rgba(59, 130, 246, 0.2)'
           }}>
             <h4 style={{
               fontSize: isMobile ? '18px' : '20px',
@@ -1674,7 +1674,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               alignItems: 'center',
               gap: '12px'
             }}>
-              <Shield style={{ width: '24px', height: '24px', color: '#fecaca' }} />
+              <Shield style={{ width: '24px', height: '24px', color: '#93c5fd' }} />
               🚨 Plan de Sauvetage Obligatoire (Art. 309 RSST)
             </h4>
             
@@ -1683,10 +1683,10 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               borderRadius: '12px',
               padding: isMobile ? '16px' : '20px',
               marginBottom: '20px',
-              border: '1px solid rgba(254, 202, 202, 0.3)'
+              border: '1px solid rgba(147, 197, 253, 0.3)'
             }}>
               <p style={{ 
-                color: '#fecaca', 
+                color: '#93c5fd', 
                 fontSize: '15px',
                 lineHeight: 1.6,
                 margin: '0 0 12px 0',
@@ -1695,7 +1695,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 ⚠️ <strong>OBLIGATION LÉGALE</strong> : Un plan de sauvetage personnalisé avec personnel et équipements requis doit être disponible sur place pour intervention rapide (réglementation 25 juillet 2023).
               </p>
               <p style={{ 
-                color: '#fca5a5', 
+                color: '#bfdbfe', 
                 fontSize: '14px',
                 margin: 0,
                 fontStyle: 'italic'
@@ -1767,7 +1767,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               <h5 style={{
                 fontSize: isMobile ? '16px' : '18px',
                 fontWeight: '700',
-                color: '#fecaca',
+                color: '#93c5fd',
                 marginBottom: '16px',
                 display: 'flex',
                 alignItems: 'center',
@@ -1795,7 +1795,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                     padding: '12px',
                     backgroundColor: 'rgba(0, 0, 0, 0.2)',
                     borderRadius: '8px',
-                    border: '1px solid rgba(254, 202, 202, 0.2)'
+                    border: '1px solid rgba(147, 197, 253, 0.2)'
                   }}>
                     <input
                       type="checkbox"
@@ -1816,7 +1816,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                     <label 
                       htmlFor={equipment.id}
                       style={{
-                        color: equipment.required ? '#fecaca' : '#d1d5db',
+                        color: equipment.required ? '#93c5fd' : '#d1d5db',
                         fontSize: '14px',
                         fontWeight: equipment.required ? '600' : '500',
                         cursor: 'pointer',
@@ -1824,29 +1824,137 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                       }}
                     >
                       {equipment.label}
-                      {equipment.required && <span style={{ color: '#f87171' }}> *</span>}
+                      {equipment.required && <span style={{ color: '#60a5fa' }}> *</span>}
                     </label>
                   </div>
                 ))}
               </div>
             </div>
             
-            {/* Procédures de sauvetage */}
+            {/* Procédures de sauvetage avec système d'étapes dynamiques */}
             <div style={{ marginTop: '20px' }}>
-              <label style={{ ...styles.label, color: '#fecaca' }}>Procédures détaillées de sauvetage *</label>
-              <textarea
-                placeholder="Décrire les étapes spécifiques : 1) Évaluation de la situation, 2) Sécurisation de l'espace, 3) Méthode d'extraction, 4) Premiers soins, 5) Transport..."
-                value={permitData.rescue_procedures || ''}
-                onChange={(e) => updatePermitData({ rescue_procedures: e.target.value })}
-                style={{ 
-                  ...styles.input, 
-                  height: isMobile ? '100px' : '120px', 
-                  resize: 'vertical',
-                  backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                  border: '1px solid #fca5a5'
-                }}
-                required
-              />
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '16px'
+              }}>
+                <label style={{ ...styles.label, color: '#93c5fd', margin: 0 }}>
+                  Procédures détaillées de sauvetage *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentSteps = permitData.rescue_steps || [];
+                    const newStep = {
+                      id: Date.now(),
+                      step: currentSteps.length + 1,
+                      description: ''
+                    };
+                    updatePermitData({ 
+                      rescue_steps: [...currentSteps, newStep]
+                    });
+                  }}
+                  style={{
+                    ...styles.button,
+                    ...styles.buttonPrimary,
+                    width: 'auto',
+                    padding: '8px 12px',
+                    fontSize: '14px',
+                    minHeight: 'auto'
+                  }}
+                >
+                  <Plus style={{ width: '16px', height: '16px' }} />
+                  Ajouter étape
+                </button>
+              </div>
+              
+              {/* Affichage des étapes */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {(permitData.rescue_steps || []).length === 0 ? (
+                  <div style={{
+                    padding: '20px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                    borderRadius: '8px',
+                    border: '2px dashed #60a5fa',
+                    textAlign: 'center'
+                  }}>
+                    <p style={{ color: '#93c5fd', margin: 0, fontSize: '14px' }}>
+                      Aucune étape définie. Cliquez sur "Ajouter étape" pour commencer.
+                    </p>
+                  </div>
+                ) : (
+                  (permitData.rescue_steps || []).map((step: any, index: number) => (
+                    <div key={step.id} style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '12px',
+                      padding: '16px',
+                      backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(147, 197, 253, 0.3)'
+                    }}>
+                      <div style={{
+                        minWidth: '32px',
+                        height: '32px',
+                        backgroundColor: '#3b82f6',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: '700',
+                        fontSize: '14px'
+                      }}>
+                        {step.step}
+                      </div>
+                      <textarea
+                        placeholder={`Étape ${step.step}: Décrire l'action à effectuer...`}
+                        value={step.description}
+                        onChange={(e) => {
+                          const updatedSteps = (permitData.rescue_steps || []).map((s: any) =>
+                            s.id === step.id ? { ...s, description: e.target.value } : s
+                          );
+                          updatePermitData({ rescue_steps: updatedSteps });
+                        }}
+                        style={{
+                          ...styles.input,
+                          height: '60px',
+                          resize: 'vertical',
+                          backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                          border: '1px solid #60a5fa',
+                          flex: 1
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedSteps = (permitData.rescue_steps || [])
+                            .filter((s: any) => s.id !== step.id)
+                            .map((s: any, idx: number) => ({ ...s, step: idx + 1 }));
+                          updatePermitData({ rescue_steps: updatedSteps });
+                        }}
+                        style={{
+                          backgroundColor: 'rgba(220, 38, 38, 0.8)',
+                          border: '1px solid #ef4444',
+                          borderRadius: '6px',
+                          padding: '8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: '36px',
+                          minHeight: '36px',
+                          color: 'white'
+                        }}
+                        title="Supprimer cette étape"
+                      >
+                        <Trash2 style={{ width: '16px', height: '16px' }} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
             
             {/* Formation équipe de sauvetage */}
@@ -1854,7 +1962,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               <h5 style={{
                 fontSize: isMobile ? '16px' : '18px',
                 fontWeight: '700',
-                color: '#fecaca',
+                color: '#93c5fd',
                 marginBottom: '16px',
                 display: 'flex',
                 alignItems: 'center',
@@ -1880,7 +1988,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                     padding: '12px',
                     backgroundColor: 'rgba(0, 0, 0, 0.2)',
                     borderRadius: '8px',
-                    border: '1px solid rgba(254, 202, 202, 0.2)'
+                    border: '1px solid rgba(147, 197, 253, 0.2)'
                   }}>
                     <input
                       type="checkbox"
@@ -1901,7 +2009,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                     <label 
                       htmlFor={training.id}
                       style={{
-                        color: training.required ? '#fecaca' : '#d1d5db',
+                        color: training.required ? '#93c5fd' : '#d1d5db',
                         fontSize: '14px',
                         fontWeight: training.required ? '600' : '500',
                         cursor: 'pointer',
@@ -1909,7 +2017,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                       }}
                     >
                       {training.label}
-                      {training.required && <span style={{ color: '#f87171' }}> *</span>}
+                      {training.required && <span style={{ color: '#60a5fa' }}> *</span>}
                     </label>
                   </div>
                 ))}
@@ -1927,7 +2035,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               <h5 style={{
                 fontSize: isMobile ? '16px' : '18px',
                 fontWeight: '700',
-                color: '#fecaca',
+                color: '#93c5fd',
                 marginBottom: '12px',
                 display: 'flex',
                 alignItems: 'center',
@@ -1939,20 +2047,20 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               
               <div style={styles.grid2}>
                 <div>
-                  <label style={{ ...styles.label, color: '#fecaca' }}>Date dernier exercice</label>
+                  <label style={{ ...styles.label, color: '#93c5fd' }}>Date dernier exercice</label>
                   <input
                     type="date"
                     value={permitData.last_drill_date || ''}
                     onChange={(e) => updatePermitData({ last_drill_date: e.target.value })}
-                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #60a5fa' }}
                   />
                 </div>
                 <div>
-                  <label style={{ ...styles.label, color: '#fecaca' }}>Résultats test</label>
+                  <label style={{ ...styles.label, color: '#93c5fd' }}>Résultats test</label>
                   <select
                     value={permitData.drill_results || ''}
                     onChange={(e) => updatePermitData({ drill_results: e.target.value })}
-                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #60a5fa' }}
                   >
                     <option value="">Sélectionner</option>
                     <option value="successful">✅ Réussi - Plan efficace</option>
@@ -1964,7 +2072,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               </div>
               
               <div style={{ marginTop: '16px' }}>
-                <label style={{ ...styles.label, color: '#fecaca' }}>Notes sur l'efficacité du plan</label>
+                <label style={{ ...styles.label, color: '#93c5fd' }}>Notes sur l'efficacité du plan</label>
                 <textarea
                   placeholder="Observations des exercices, améliorations identifiées, temps de réponse mesuré..."
                   value={permitData.drill_notes || ''}
@@ -1974,7 +2082,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                     height: '80px', 
                     resize: 'vertical',
                     backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                    border: '1px solid #fca5a5'
+                    border: '1px solid #60a5fa'
                   }}
                 />
               </div>
