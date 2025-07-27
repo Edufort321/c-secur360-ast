@@ -2591,70 +2591,190 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                   (permitData.rescue_steps || []).map((step: any, index: number) => (
                     <div key={step.id} style={{
                       display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '12px',
-                      padding: '16px',
+                      flexDirection: isMobile ? 'column' : 'row',
+                      alignItems: isMobile ? 'stretch' : 'flex-start',
+                      gap: isMobile ? '12px' : '12px',
+                      padding: isMobile ? '16px' : '16px',
                       backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(107, 114, 128, 0.3)'
+                      borderRadius: '12px',
+                      border: '1px solid rgba(107, 114, 128, 0.3)',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
                     }}>
+                      {/* En-tête avec numéro et bouton supprimer */}
                       <div style={{
-                        minWidth: '32px',
-                        height: '32px',
-                        backgroundColor: '#3b82f6',
-                        borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontWeight: '700',
-                        fontSize: '14px'
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        ...(isMobile ? { width: '100%' } : { flexDirection: 'column' })
                       }}>
-                        {step.step}
-                      </div>
-                      <textarea
-                        placeholder={`Étape ${step.step}: Décrire l'action à effectuer...`}
-                        value={step.description}
-                        onChange={(e) => {
-                          const updatedSteps = (permitData.rescue_steps || []).map((s: any) =>
-                            s.id === step.id ? { ...s, description: e.target.value } : s
-                          );
-                          updatePermitData({ rescue_steps: updatedSteps });
-                        }}
-                        style={{
-                          ...styles.input,
-                          height: '60px',
-                          resize: 'vertical',
-                          backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                          border: '1px solid #6b7280',
-                          flex: 1
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updatedSteps = (permitData.rescue_steps || [])
-                            .filter((s: any) => s.id !== step.id)
-                            .map((s: any, idx: number) => ({ ...s, step: idx + 1 }));
-                          updatePermitData({ rescue_steps: updatedSteps });
-                        }}
-                        style={{
-                          backgroundColor: 'rgba(220, 38, 38, 0.8)',
-                          border: '1px solid #ef4444',
-                          borderRadius: '6px',
-                          padding: '8px',
-                          cursor: 'pointer',
+                        <div style={{
+                          minWidth: isMobile ? '40px' : '32px',
+                          height: isMobile ? '40px' : '32px',
+                          backgroundColor: '#3b82f6',
+                          borderRadius: '50%',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          minWidth: '36px',
-                          minHeight: '36px',
-                          color: 'white'
-                        }}
-                        title="Supprimer cette étape"
-                      >
-                        <Trash2 style={{ width: '16px', height: '16px' }} />
-                      </button>
+                          color: 'white',
+                          fontWeight: '700',
+                          fontSize: isMobile ? '16px' : '14px',
+                          boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+                          ...(isMobile ? {} : { marginBottom: '8px' })
+                        }}>
+                          {step.step}
+                        </div>
+                        
+                        {isMobile && (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}>
+                            <span style={{
+                              color: '#9ca3af',
+                              fontSize: '14px',
+                              fontWeight: '600'
+                            }}>
+                              Étape {step.step}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updatedSteps = (permitData.rescue_steps || [])
+                                  .filter((s: any) => s.id !== step.id)
+                                  .map((s: any, idx: number) => ({ ...s, step: idx + 1 }));
+                                updatePermitData({ rescue_steps: updatedSteps });
+                              }}
+                              style={{
+                                backgroundColor: 'rgba(220, 38, 38, 0.8)',
+                                border: '1px solid #ef4444',
+                                borderRadius: '8px',
+                                padding: '10px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: '40px',
+                                minHeight: '40px',
+                                color: 'white',
+                                transition: 'all 0.2s ease'
+                              }}
+                              title="Supprimer cette étape"
+                              onMouseEnter={(e) => {
+                                (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(220, 38, 38, 1)';
+                                (e.target as HTMLButtonElement).style.transform = 'scale(1.05)';
+                              }}
+                              onMouseLeave={(e) => {
+                                (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(220, 38, 38, 0.8)';
+                                (e.target as HTMLButtonElement).style.transform = 'scale(1)';
+                              }}
+                            >
+                              <Trash2 style={{ width: '18px', height: '18px' }} />
+                            </button>
+                          </div>
+                        )}
+                        
+                        {!isMobile && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updatedSteps = (permitData.rescue_steps || [])
+                                .filter((s: any) => s.id !== step.id)
+                                .map((s: any, idx: number) => ({ ...s, step: idx + 1 }));
+                              updatePermitData({ rescue_steps: updatedSteps });
+                            }}
+                            style={{
+                              backgroundColor: 'rgba(220, 38, 38, 0.8)',
+                              border: '1px solid #ef4444',
+                              borderRadius: '6px',
+                              padding: '8px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '32px',
+                              minHeight: '32px',
+                              color: 'white'
+                            }}
+                            title="Supprimer cette étape"
+                          >
+                            <Trash2 style={{ width: '16px', height: '16px' }} />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Zone de texte optimisée */}
+                      <div style={{ 
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px'
+                      }}>
+                        {isMobile && (
+                          <label style={{
+                            color: '#9ca3af',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>
+                            Description de l'action
+                          </label>
+                        )}
+                        <textarea
+                          placeholder={isMobile 
+                            ? `Décrire l'action à effectuer pour l'étape ${step.step}...` 
+                            : `Étape ${step.step}: Décrire l'action à effectuer...`
+                          }
+                          value={step.description}
+                          onChange={(e) => {
+                            const updatedSteps = (permitData.rescue_steps || []).map((s: any) =>
+                              s.id === step.id ? { ...s, description: e.target.value } : s
+                            );
+                            updatePermitData({ rescue_steps: updatedSteps });
+                          }}
+                          style={{
+                            ...styles.input,
+                            height: isMobile ? '80px' : '60px',
+                            resize: 'vertical',
+                            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                            border: '1px solid #6b7280',
+                            fontSize: isMobile ? '16px' : '14px',
+                            lineHeight: '1.5',
+                            padding: isMobile ? '12px' : '10px',
+                            borderRadius: '8px',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onFocus={(e) => {
+                            (e.target as HTMLTextAreaElement).style.borderColor = '#3b82f6';
+                            (e.target as HTMLTextAreaElement).style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                          }}
+                          onBlur={(e) => {
+                            (e.target as HTMLTextAreaElement).style.borderColor = '#6b7280';
+                            (e.target as HTMLTextAreaElement).style.boxShadow = 'none';
+                          }}
+                        />
+                        {/* Compteur de caractères pour mobile */}
+                        {isMobile && (
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontSize: '12px',
+                            color: '#6b7280'
+                          }}>
+                            <span>
+                              {step.description ? `${step.description.length} caractères` : 'Aucun texte'}
+                            </span>
+                            {step.description && step.description.length < 20 && (
+                              <span style={{ color: '#f59e0b' }}>
+                                ⚠️ Description courte
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
