@@ -631,7 +631,19 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     work_description: formData?.permitData?.work_description || initialData?.work_description || '',
     rescue_plan: formData?.permitData?.rescue_plan || initialData?.rescue_plan || '',
     special_conditions: formData?.permitData?.special_conditions || initialData?.special_conditions || '',
-    final_authorization: false
+    final_authorization: false,
+    // Nouvelles propriétés pour le plan de sauvetage
+    rescue_plan_type: formData?.permitData?.rescue_plan_type || initialData?.rescue_plan_type || '',
+    rescue_plan_responsible: formData?.permitData?.rescue_plan_responsible || initialData?.rescue_plan_responsible || '',
+    rescue_team_phone: formData?.permitData?.rescue_team_phone || initialData?.rescue_team_phone || '',
+    rescue_response_time: formData?.permitData?.rescue_response_time || initialData?.rescue_response_time || '',
+    rescue_equipment: formData?.permitData?.rescue_equipment || initialData?.rescue_equipment || {},
+    rescue_training: formData?.permitData?.rescue_training || initialData?.rescue_training || {},
+    rescue_procedures: formData?.permitData?.rescue_procedures || initialData?.rescue_procedures || '',
+    last_drill_date: formData?.permitData?.last_drill_date || initialData?.last_drill_date || '',
+    drill_results: formData?.permitData?.drill_results || initialData?.drill_results || '',
+    drill_notes: formData?.permitData?.drill_notes || initialData?.drill_notes || '',
+    rescue_plan_validated: formData?.permitData?.rescue_plan_validated || initialData?.rescue_plan_validated || false
   });
   
   const [atmosphericReadings, setAtmosphericReadings] = useState<AtmosphericReading[]>(formData?.atmospheric_readings || initialData?.atmospheric_readings || []);
@@ -1259,8 +1271,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       new Date().getTime() - new Date(atmosphericReadings[atmosphericReadings.length - 1].timestamp).getTime() < 30 * 60 * 1000;
     const lastReadingSafe = atmosphericReadings.length > 0 && 
       atmosphericReadings[atmosphericReadings.length - 1].status === 'safe';
+    const hasRescuePlan = permitData.rescue_plan_validated && permitData.rescue_plan_type && permitData.rescue_plan_responsible;
 
-    return hasRecentReading && lastReadingSafe && 
+    return hasRecentReading && lastReadingSafe && hasRescuePlan &&
            permitData.site_name && permitData.space_description && permitData.work_description;
   };
 
