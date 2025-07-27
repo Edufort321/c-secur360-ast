@@ -600,6 +600,58 @@ const getTexts = (language: 'fr' | 'en') => ({
   }
 })[language];
 
+// =================== ÉQUIPEMENTS PRÉDÉFINIS ===================
+const PREDEFINED_EQUIPMENT = [
+  // Détection et Mesure
+  { id: 'gas_detector_4', name: '📊 Détecteur multi-gaz (O₂, LEL, H₂S, CO)', required: true, category: 'detection' },
+  { id: 'gas_detector_single_o2', name: '🫁 Détecteur oxygène (O₂)', required: false, category: 'detection' },
+  { id: 'gas_detector_single_lel', name: '🔥 Détecteur limite inférieure d\'explosivité (LEL)', required: false, category: 'detection' },
+  { id: 'gas_detector_h2s', name: '☠️ Détecteur sulfure d\'hydrogène (H₂S)', required: false, category: 'detection' },
+  { id: 'gas_detector_co', name: '💨 Détecteur monoxyde de carbone (CO)', required: false, category: 'detection' },
+  { id: 'noise_meter', name: '🔊 Sonomètre / Détecteur de bruit', required: false, category: 'detection' },
+  { id: 'thermometer', name: '🌡️ Thermomètre infrarouge', required: false, category: 'detection' },
+  
+  // Protection Individuelle
+  { id: 'harness_class_e', name: '🦺 Harnais de sécurité classe E', required: true, category: 'protection' },
+  { id: 'helmet', name: '⛑️ Casque de sécurité', required: true, category: 'protection' },
+  { id: 'safety_boots', name: '👢 Bottes de sécurité antidérapantes', required: true, category: 'protection' },
+  { id: 'gloves_chemical', name: '🧤 Gants résistants aux produits chimiques', required: false, category: 'protection' },
+  { id: 'coverall', name: '👕 Combinaison de protection', required: false, category: 'protection' },
+  { id: 'eye_protection', name: '🥽 Protection oculaire étanche', required: false, category: 'protection' },
+  
+  // Sauvetage et Urgence
+  { id: 'lifeline_mechanical', name: '⛓️ Ligne de vie et dispositif de récupération mécanique', required: true, category: 'rescue' },
+  { id: 'scba', name: '🫁 Appareil respiratoire autonome (ARA)', required: true, category: 'rescue' },
+  { id: 'scsr', name: '😷 Appareil de protection respiratoire d\'évacuation', required: false, category: 'rescue' },
+  { id: 'first_aid_kit', name: '🏥 Trousse de premiers soins RCR', required: true, category: 'rescue' },
+  { id: 'defibrillator', name: '⚡ Défibrillateur externe automatisé (DEA)', required: false, category: 'rescue' },
+  { id: 'stretcher', name: '🛏️ Civière de sauvetage', required: false, category: 'rescue' },
+  { id: 'tripod', name: '📐 Trépied de sauvetage avec palan', required: false, category: 'rescue' },
+  
+  // Ventilation et Air
+  { id: 'ventilation_forced', name: '💨 Système de ventilation mécanique forcée', required: true, category: 'ventilation' },
+  { id: 'blower_exhaust', name: '🌪️ Ventilateur extracteur portable', required: false, category: 'ventilation' },
+  { id: 'blower_supply', name: '🌀 Ventilateur de soufflage d\'air frais', required: false, category: 'ventilation' },
+  { id: 'air_hose', name: '🔗 Boyau d\'air comprimé', required: false, category: 'ventilation' },
+  { id: 'air_purifier', name: '🌬️ Purificateur d\'air portable', required: false, category: 'ventilation' },
+  
+  // Communication
+  { id: 'radio_bidirectional', name: '📻 Équipement communication bidirectionnelle', required: true, category: 'communication' },
+  { id: 'intercom', name: '🎤 Système d\'interphone filaire', required: false, category: 'communication' },
+  { id: 'emergency_whistle', name: '🔔 Sifflet d\'urgence', required: false, category: 'communication' },
+  { id: 'alarm_system', name: '🚨 Système d\'alarme de défaillance', required: false, category: 'communication' },
+  
+  // Éclairage et Outils
+  { id: 'lighting_intrinsic', name: '💡 Éclairage intrinsèquement sécuritaire', required: true, category: 'tools' },
+  { id: 'flashlight_explosion_proof', name: '🔦 Lampe de poche antidéflagrante', required: false, category: 'tools' },
+  { id: 'tools_non_sparking', name: '🔧 Outils antinéincelles (bronze/laiton)', required: false, category: 'tools' },
+  { id: 'grounding_equipment', name: '⚡ Équipement de mise à la terre', required: false, category: 'tools' },
+  { id: 'lockout_tagout', name: '🔒 Équipement cadenassage (LOTO)', required: false, category: 'tools' },
+  { id: 'barricade_tape', name: '🚧 Ruban de signalisation et barrières', required: false, category: 'tools' },
+  { id: 'eye_wash_portable', name: '👁️ Station de rinçage oculaire portable', required: false, category: 'tools' },
+  { id: 'emergency_shower', name: '🚿 Douche de sécurité portable', required: false, category: 'tools' }
+];
+
 // =================== COMPOSANT PRINCIPAL ===================
 const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   formData,
@@ -930,9 +982,29 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       after: '#0891b2',
       equipment: '#7c3aed',
       hazard: '#dc2626',
-      documentation: '#6366f1'
+      documentation: '#6366f1',
+      // Nouvelles catégories d'équipements
+      detection: '#f59e0b',
+      protection: '#10b981',
+      rescue: '#ef4444',
+      ventilation: '#06b6d4',
+      communication: '#8b5cf6',
+      tools: '#6b7280'
     };
     return colors[category as keyof typeof colors] || '#6b7280';
+  };
+
+  const getCategoryLabel = (category: string): string => {
+    const labels = {
+      detection: 'Détection',
+      protection: 'Protection',
+      rescue: 'Sauvetage',
+      ventilation: 'Ventilation',
+      communication: 'Communication',
+      tools: 'Outils',
+      custom: 'Personnalisé'
+    };
+    return labels[category as keyof typeof labels] || category;
   };
 
   const deletePhoto = (photoId: string) => {
@@ -4223,34 +4295,111 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               <h3 style={styles.cardTitle}>
                 <Shield style={{ width: '20px', height: '20px' }} />
                 🛠️ Contrôle Équipements Obligatoires
-                <button
-                  onClick={() => {
-                    const newEquipment = {
-                      id: `equipment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                      name: '',
-                      required: true,
-                      checked_in: false,
-                      checked_out: false,
-                      condition: 'good', // 'good', 'fair', 'poor'
-                      serial_number: '',
-                      last_inspection: ''
-                    };
-                    const currentEquipments = permitData.equipment_checklist || [];
-                    updatePermitData({ equipment_checklist: [...currentEquipments, newEquipment] });
-                  }}
-                  style={{
-                    ...styles.button,
-                    ...styles.buttonPrimary,
-                    width: 'auto',
-                    padding: isMobile ? '8px 12px' : '10px 16px',
-                    fontSize: '14px',
-                    minHeight: 'auto',
-                    marginLeft: 'auto'
-                  }}
-                >
-                  <Plus style={{ width: '16px', height: '16px' }} />
-                  Ajouter Équipement
-                </button>
+                <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        const selectedEquipment = PREDEFINED_EQUIPMENT.find(eq => eq.id === e.target.value);
+                        if (selectedEquipment) {
+                          const newEquipment = {
+                            id: `equipment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                            name: selectedEquipment.name,
+                            required: selectedEquipment.required,
+                            checked_in: false,
+                            checked_out: false,
+                            condition: 'good',
+                            serial_number: '',
+                            last_inspection: '',
+                            category: selectedEquipment.category
+                          };
+                          const currentEquipments = permitData.equipment_checklist || [];
+                          updatePermitData({ equipment_checklist: [...currentEquipments, newEquipment] });
+                        }
+                        e.target.value = ''; // Reset selection
+                      }
+                    }}
+                    style={{
+                      ...styles.input,
+                      width: 'auto',
+                      minWidth: isMobile ? '200px' : '250px',
+                      fontSize: '14px',
+                      padding: isMobile ? '8px 10px' : '10px 12px'
+                    }}
+                  >
+                    <option value="">+ Ajouter équipement prédéfini</option>
+                    <optgroup label="🔍 Détection et Mesure">
+                      {PREDEFINED_EQUIPMENT.filter(eq => eq.category === 'detection').map(equipment => (
+                        <option key={equipment.id} value={equipment.id}>
+                          {equipment.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="🦺 Protection Individuelle">
+                      {PREDEFINED_EQUIPMENT.filter(eq => eq.category === 'protection').map(equipment => (
+                        <option key={equipment.id} value={equipment.id}>
+                          {equipment.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="🚨 Sauvetage et Urgence">
+                      {PREDEFINED_EQUIPMENT.filter(eq => eq.category === 'rescue').map(equipment => (
+                        <option key={equipment.id} value={equipment.id}>
+                          {equipment.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="💨 Ventilation et Air">
+                      {PREDEFINED_EQUIPMENT.filter(eq => eq.category === 'ventilation').map(equipment => (
+                        <option key={equipment.id} value={equipment.id}>
+                          {equipment.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="📻 Communication">
+                      {PREDEFINED_EQUIPMENT.filter(eq => eq.category === 'communication').map(equipment => (
+                        <option key={equipment.id} value={equipment.id}>
+                          {equipment.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="💡 Éclairage et Outils">
+                      {PREDEFINED_EQUIPMENT.filter(eq => eq.category === 'tools').map(equipment => (
+                        <option key={equipment.id} value={equipment.id}>
+                          {equipment.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                  <button
+                    onClick={() => {
+                      const newEquipment = {
+                        id: `equipment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        name: '',
+                        required: false,
+                        checked_in: false,
+                        checked_out: false,
+                        condition: 'good',
+                        serial_number: '',
+                        last_inspection: '',
+                        category: 'custom'
+                      };
+                      const currentEquipments = permitData.equipment_checklist || [];
+                      updatePermitData({ equipment_checklist: [...currentEquipments, newEquipment] });
+                    }}
+                    style={{
+                      ...styles.button,
+                      ...styles.buttonPrimary,
+                      width: 'auto',
+                      padding: isMobile ? '8px 12px' : '10px 16px',
+                      fontSize: '14px',
+                      minHeight: 'auto'
+                    }}
+                  >
+                    <Plus style={{ width: '16px', height: '16px' }} />
+                    {isMobile ? 'Custom' : 'Personnalisé'}
+                  </button>
+                </div>
               </h3>
               
               <div style={{ 
@@ -4452,51 +4601,81 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                         backgroundColor: 'rgba(0, 0, 0, 0.2)',
                         borderRadius: '8px',
                         padding: '16px',
-                        border: '1px solid rgba(107, 114, 128, 0.3)'
+                        border: `1px solid ${equipment.category === 'custom' ? '#6b7280' : getCategoryColor(equipment.category)}`
                       }}>
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
                           gap: '12px',
-                          marginBottom: '12px'
+                          marginBottom: '12px',
+                          flexWrap: isMobile ? 'wrap' : 'nowrap'
                         }}>
-                          <input
-                            type="text"
-                            placeholder="Nom de l'équipement"
-                            value={equipment.name}
-                            onChange={(e) => {
-                              const updatedEquipments = (permitData.equipment_checklist || []).map((eq: any) =>
-                                eq.id === equipment.id ? { ...eq, name: e.target.value } : eq
-                              );
-                              updatePermitData({ equipment_checklist: updatedEquipments });
-                            }}
-                            style={{ ...styles.input, flex: 1 }}
-                          />
-                          <button
-                            onClick={() => {
-                              const updatedEquipments = (permitData.equipment_checklist || []).filter((eq: any) => eq.id !== equipment.id);
-                              updatePermitData({ equipment_checklist: updatedEquipments });
-                            }}
-                            style={{
-                              backgroundColor: 'rgba(220, 38, 38, 0.8)',
-                              border: '1px solid #ef4444',
-                              borderRadius: '6px',
-                              padding: '8px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minWidth: '32px',
-                              minHeight: '32px',
-                              color: 'white'
-                            }}
-                            title="Supprimer cet équipement"
-                          >
-                            <Trash2 style={{ width: '16px', height: '16px' }} />
-                          </button>
+                          <div style={{ flex: 1, minWidth: isMobile ? '100%' : '200px' }}>
+                            <input
+                              type="text"
+                              placeholder="Nom de l'équipement"
+                              value={equipment.name}
+                              onChange={(e) => {
+                                const updatedEquipments = (permitData.equipment_checklist || []).map((eq: any) =>
+                                  eq.id === equipment.id ? { ...eq, name: e.target.value } : eq
+                                );
+                                updatePermitData({ equipment_checklist: updatedEquipments });
+                              }}
+                              style={{ ...styles.input, margin: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {equipment.category !== 'custom' && (
+                              <span style={{
+                                padding: '4px 8px',
+                                borderRadius: '12px',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                backgroundColor: getCategoryColor(equipment.category),
+                                color: 'white',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {getCategoryLabel(equipment.category)}
+                              </span>
+                            )}
+                            {equipment.required && (
+                              <span style={{
+                                padding: '4px 8px',
+                                borderRadius: '12px',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                backgroundColor: '#dc2626',
+                                color: 'white'
+                              }}>
+                                OBLIGATOIRE
+                              </span>
+                            )}
+                            <button
+                              onClick={() => {
+                                const updatedEquipments = (permitData.equipment_checklist || []).filter((eq: any) => eq.id !== equipment.id);
+                                updatePermitData({ equipment_checklist: updatedEquipments });
+                              }}
+                              style={{
+                                backgroundColor: 'rgba(220, 38, 38, 0.8)',
+                                border: '1px solid #ef4444',
+                                borderRadius: '6px',
+                                padding: '8px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: '32px',
+                                minHeight: '32px',
+                                color: 'white'
+                              }}
+                              title="Supprimer cet équipement"
+                            >
+                              <Trash2 style={{ width: '16px', height: '16px' }} />
+                            </button>
+                          </div>
                         </div>
                         
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <button
                               onClick={() => {
@@ -4539,6 +4718,46 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                               {equipment.checked_out ? '✅ Sorti' : '⬆️ Sortie'}
                             </button>
                           </div>
+                          
+                          <input
+                            type="text"
+                            placeholder="N° série / ID"
+                            value={equipment.serial_number || ''}
+                            onChange={(e) => {
+                              const updatedEquipments = (permitData.equipment_checklist || []).map((eq: any) =>
+                                eq.id === equipment.id ? { ...eq, serial_number: e.target.value } : eq
+                              );
+                              updatePermitData({ equipment_checklist: updatedEquipments });
+                            }}
+                            style={{ 
+                              ...styles.input, 
+                              fontSize: '12px', 
+                              padding: '6px 8px',
+                              minWidth: '120px',
+                              margin: 0
+                            }}
+                          />
+                          
+                          <select
+                            value={equipment.condition || 'good'}
+                            onChange={(e) => {
+                              const updatedEquipments = (permitData.equipment_checklist || []).map((eq: any) =>
+                                eq.id === equipment.id ? { ...eq, condition: e.target.value } : eq
+                              );
+                              updatePermitData({ equipment_checklist: updatedEquipments });
+                            }}
+                            style={{ 
+                              ...styles.input, 
+                              fontSize: '12px', 
+                              padding: '6px 8px',
+                              minWidth: '120px',
+                              margin: 0
+                            }}
+                          >
+                            <option value="good">🟢 Bon état</option>
+                            <option value="fair">🟡 État acceptable</option>
+                            <option value="poor">🔴 À remplacer</option>
+                          </select>
                         </div>
                       </div>
                     ))}
