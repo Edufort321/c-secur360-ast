@@ -640,6 +640,14 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     rescue_equipment: formData?.permitData?.rescue_equipment || initialData?.rescue_equipment || {},
     rescue_training: formData?.permitData?.rescue_training || initialData?.rescue_training || {},
     rescue_steps: formData?.permitData?.rescue_steps || initialData?.rescue_steps || [],
+    // Nouvelles propriétés pour la ventilation
+    ventilation_required: formData?.permitData?.ventilation_required || initialData?.ventilation_required || false,
+    ventilation_type: formData?.permitData?.ventilation_type || initialData?.ventilation_type || '',
+    ventilation_flow_rate: formData?.permitData?.ventilation_flow_rate || initialData?.ventilation_flow_rate || '',
+    ventilation_equipment: formData?.permitData?.ventilation_equipment || initialData?.ventilation_equipment || {},
+    alarm_system_type: formData?.permitData?.alarm_system_type || initialData?.alarm_system_type || '',
+    ventilation_monitoring: formData?.permitData?.ventilation_monitoring || initialData?.ventilation_monitoring || '',
+    air_quality_continuous: formData?.permitData?.air_quality_continuous || initialData?.air_quality_continuous || false,
     last_drill_date: formData?.permitData?.last_drill_date || initialData?.last_drill_date || '',
     drill_results: formData?.permitData?.drill_results || initialData?.drill_results || '',
     drill_notes: formData?.permitData?.drill_notes || initialData?.drill_notes || '',
@@ -1027,6 +1035,389 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                       </p>
                     )}
                   </div>
+          
+          {/* Section Ventilation à Air Forcé - Nouvelle section basée sur recherches */}
+          <div style={{
+            backgroundColor: '#374151',
+            borderRadius: '16px',
+            padding: isMobile ? '20px' : '24px',
+            border: '2px solid #4b5563',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+          }}>
+            <h4 style={{
+              fontSize: isMobile ? '18px' : '20px',
+              fontWeight: '700',
+              color: 'white',
+              marginBottom: isMobile ? '16px' : '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <Wind style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
+              💨 Ventilation à Air Forcé (Art. 302 RSST)
+            </h4>
+            
+            <div style={{ 
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              borderRadius: '12px',
+              padding: isMobile ? '16px' : '20px',
+              marginBottom: '20px',
+              border: '1px solid rgba(107, 114, 128, 0.3)'
+            }}>
+              <p style={{ 
+                color: '#d1d5db', 
+                fontSize: '15px',
+                lineHeight: 1.6,
+                margin: '0 0 12px 0',
+                fontWeight: '600'
+              }}>
+                ⚠️ <strong>OBLIGATION RÉGLEMENTAIRE</strong> : L'espace clos doit être ventilé par des moyens mécaniques pour maintenir une atmosphère conforme (O₂: 19,5-23%, LEL ≤10%, contaminants ≤VEMP).
+              </p>
+              <p style={{ 
+                color: '#9ca3af', 
+                fontSize: '14px',
+                margin: 0,
+                fontStyle: 'italic'
+              }}>
+                🔧 <strong>Système d'alarme obligatoire</strong> : Un système d'avertissement doit informer immédiatement en cas de défaillance des appareils de ventilation.
+              </p>
+            </div>
+            
+            {/* Exigence de ventilation */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '16px',
+                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                borderRadius: '12px',
+                border: '1px solid rgba(107, 114, 128, 0.3)'
+              }}>
+                <input
+                  type="checkbox"
+                  id="ventilation_required"
+                  checked={permitData.ventilation_required || false}
+                  onChange={(e) => updatePermitData({ ventilation_required: e.target.checked })}
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    accentColor: '#3b82f6'
+                  }}
+                />
+                <label 
+                  htmlFor="ventilation_required"
+                  style={{
+                    color: '#d1d5db',
+                    fontSize: isMobile ? '15px' : '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    flex: 1
+                  }}
+                >
+                  🌪️ <strong>VENTILATION MÉCANIQUE REQUISE</strong> : La ventilation naturelle est insuffisante pour cet espace clos *
+                </label>
+              </div>
+            </div>
+            
+            {permitData.ventilation_required && (
+              <>
+                {/* Type de ventilation et débit */}
+                <div style={styles.grid2}>
+                  <div>
+                    <label style={{ ...styles.label, color: '#9ca3af' }}>Type de ventilation mécanique *</label>
+                    <select
+                      value={permitData.ventilation_type || ''}
+                      onChange={(e) => updatePermitData({ ventilation_type: e.target.value })}
+                      style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                      required
+                    >
+                      <option value="">Sélectionner le type</option>
+                      <option value="forced_air_supply">💨 Soufflage d'air forcé</option>
+                      <option value="extraction_ventilation">🌪️ Ventilation par extraction</option>
+                      <option value="combined_system">🔄 Système combiné (soufflage + extraction)</option>
+                      <option value="local_extraction">🎯 Aspiration locale à la source</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ ...styles.label, color: '#9ca3af' }}>Débit d'air requis *</label>
+                    <select
+                      value={permitData.ventilation_flow_rate || ''}
+                      onChange={(e) => updatePermitData({ ventilation_flow_rate: e.target.value })}
+                      style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                      required
+                    >
+                      <option value="">Sélectionner le débit</option>
+                      <option value="low_flow">📊 Faible (≤500 CFM)</option>
+                      <option value="medium_flow">📈 Moyen (500-1500 CFM)</option>
+                      <option value="high_flow">📊 Élevé (1500-3000 CFM)</option>
+                      <option value="very_high_flow">🚀 Très élevé (≥3000 CFM)</option>
+                      <option value="calculated">🧮 Calculé selon volume</option>
+                    </select>
+                  </div>
+                </div>
+                
+                {/* Équipements de ventilation */}
+                <div style={{ marginTop: '20px' }}>
+                  <h5 style={{
+                    fontSize: isMobile ? '16px' : '18px',
+                    fontWeight: '700',
+                    color: '#d1d5db',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <Zap style={{ width: '20px', height: '20px' }} />
+                    Équipements de Ventilation Requis
+                  </h5>
+                  
+                  <div style={styles.grid2}>
+                    {[
+                      { id: 'ventilation_fan', label: '🌪️ Ventilateur mécanique certifié', required: true },
+                      { id: 'air_ducting', label: '🔄 Conduits d\'air appropriés', required: true },
+                      { id: 'flow_meter', label: '📊 Capteur de débit d\'air', required: true },
+                      { id: 'backup_ventilation', label: '🔋 Système de ventilation de secours', required: false },
+                      { id: 'air_filtration', label: '🫧 Système de filtration d\'air', required: false },
+                      { id: 'explosion_proof', label: '💥 Équipement antidéflagrant', required: false }
+                    ].map((equipment, index) => (
+                      <div key={equipment.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(107, 114, 128, 0.2)'
+                      }}>
+                        <input
+                          type="checkbox"
+                          id={equipment.id}
+                          checked={permitData.ventilation_equipment?.[equipment.id] || false}
+                          onChange={(e) => updatePermitData({ 
+                            ventilation_equipment: { 
+                              ...permitData.ventilation_equipment, 
+                              [equipment.id]: e.target.checked 
+                            }
+                          })}
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            accentColor: '#10b981'
+                          }}
+                        />
+                        <label 
+                          htmlFor={equipment.id}
+                          style={{
+                            color: equipment.required ? '#d1d5db' : '#9ca3af',
+                            fontSize: '14px',
+                            fontWeight: equipment.required ? '600' : '500',
+                            cursor: 'pointer',
+                            flex: 1
+                          }}
+                        >
+                          {equipment.label}
+                          {equipment.required && <span style={{ color: '#f87171' }}> *</span>}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Système d'alarme de défaillance */}
+                <div style={{ marginTop: '20px' }}>
+                  <h5 style={{
+                    fontSize: isMobile ? '16px' : '18px',
+                    fontWeight: '700',
+                    color: '#d1d5db',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <Volume2 style={{ width: '20px', height: '20px' }} />
+                    🚨 Système d'Alarme de Défaillance
+                  </h5>
+                  
+                  <div style={styles.grid2}>
+                    <div>
+                      <label style={{ ...styles.label, color: '#9ca3af' }}>Type d'alarme *</label>
+                      <select
+                        value={permitData.alarm_system_type || ''}
+                        onChange={(e) => updatePermitData({ alarm_system_type: e.target.value })}
+                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                        required
+                      >
+                        <option value="">Sélectionner le type</option>
+                        <option value="visual_audible">🔊 Alarme sonore et visuelle</option>
+                        <option value="flow_sensor">📊 Capteur de débit avec alarme</option>
+                        <option value="pressure_switch">⚡ Contacteur manométrique</option>
+                        <option value="constant_monitoring">👁️ Surveillance constante par surveillant</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ ...styles.label, color: '#9ca3af' }}>Surveillance ventilation *</label>
+                      <select
+                        value={permitData.ventilation_monitoring || ''}
+                        onChange={(e) => updatePermitData({ ventilation_monitoring: e.target.value })}
+                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                        required
+                      >
+                        <option value="">Sélectionner</option>
+                        <option value="continuous">🔄 Continue pendant tout le travail</option>
+                        <option value="periodic">⏰ Périodique selon évaluation</option>
+                        <option value="automatic">🤖 Automatique avec capteurs</option>
+                        <option value="manual_visual">👁️ Visuelle manuelle constante</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Surveillance qualité de l'air */}
+                <div style={{ 
+                  marginTop: '20px',
+                  padding: '16px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                  borderRadius: '12px',
+                  border: '2px dashed #6b7280'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginBottom: '16px'
+                  }}>
+                    <input
+                      type="checkbox"
+                      id="air_quality_continuous"
+                      checked={permitData.air_quality_continuous || false}
+                      onChange={(e) => updatePermitData({ air_quality_continuous: e.target.checked })}
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        accentColor: '#10b981'
+                      }}
+                      required
+                    />
+                    <label 
+                      htmlFor="air_quality_continuous"
+                      style={{
+                        color: '#d1d5db',
+                        fontSize: isMobile ? '15px' : '16px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        flex: 1
+                      }}
+                    >
+                      📊 <strong>SURVEILLANCE CONTINUE</strong> : Monitoring en temps réel de l'oxygène, LEL et contaminants *
+                    </label>
+                  </div>
+                  
+                  <div style={{ 
+                    padding: '12px',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                  }}>
+                    <p style={{ 
+                      color: '#86efac', 
+                      fontSize: '14px',
+                      margin: 0,
+                      lineHeight: 1.5
+                    }}>
+                      ✅ <strong>Conformité Article 302 RSST</strong> : La ventilation mécanique assure le maintien d'une atmosphère sécuritaire avec O₂ entre 19,5-23%, LEL ≤10% LIE, et contaminants ≤ limites d'exposition.
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Points d'entrée et de sortie d'air */}
+                <div style={{ marginTop: '20px' }}>
+                  <h5 style={{
+                    fontSize: isMobile ? '16px' : '18px',
+                    fontWeight: '700',
+                    color: '#d1d5db',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <MapPin style={{ width: '20px', height: '20px' }} />
+                    🎯 Configuration Ventilation
+                  </h5>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ ...styles.label, color: '#9ca3af' }}>Emplacement entrée d'air</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Partie haute de l'espace, côté opposé à l'extraction..."
+                        value={permitData.air_inlet_location || ''}
+                        onChange={(e) => updatePermitData({ air_inlet_location: e.target.value })}
+                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ ...styles.label, color: '#9ca3af' }}>Emplacement sortie d'air</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Partie basse pour évacuation des gaz lourds..."
+                        value={permitData.air_outlet_location || ''}
+                        onChange={(e) => updatePermitData({ air_outlet_location: e.target.value })}
+                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ ...styles.label, color: '#9ca3af' }}>Évacuation air vicié</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Rejeté à distance sécuritaire des travailleurs extérieurs..."
+                        value={permitData.air_exhaust_location || ''}
+                        onChange={(e) => updatePermitData({ air_exhaust_location: e.target.value })}
+                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+            
+            {/* Validation système de ventilation */}
+            <div style={{ 
+              marginTop: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '16px',
+              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+              borderRadius: '12px',
+              border: '1px solid #10b981'
+            }}>
+              <input
+                type="checkbox"
+                id="ventilation_system_validated"
+                checked={permitData.ventilation_system_validated || false}
+                onChange={(e) => updatePermitData({ ventilation_system_validated: e.target.checked })}
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  accentColor: '#10b981'
+                }}
+                required={permitData.ventilation_required}
+              />
+              <label 
+                htmlFor="ventilation_system_validated"
+                style={{
+                  color: '#86efac',
+                  fontSize: isMobile ? '15px' : '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  flex: 1
+                }}
+              >
+                ✅ <strong>VALIDATION VENTILATION</strong> : Je certifie que le système de ventilation mécanique est opérationnel avec alarme de défaillance fonctionnelle. {permitData.ventilation_required && '*'}
+              </label>
+            </div>
+          </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                     <span style={{
                       fontSize: isMobile ? '11px' : '12px',
@@ -1134,6 +1525,389 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                   {language === 'fr' ? 'Documentez cette étape avec une photo' : 'Document this step with a photo'}
                 </p>
               </div>
+            </div>
+          </div>
+          
+          {/* Section Ventilation à Air Forcé - Nouvelle section basée sur recherches */}
+          <div style={{
+            backgroundColor: '#374151',
+            borderRadius: '16px',
+            padding: isMobile ? '20px' : '24px',
+            border: '2px solid #4b5563',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+          }}>
+            <h4 style={{
+              fontSize: isMobile ? '18px' : '20px',
+              fontWeight: '700',
+              color: 'white',
+              marginBottom: isMobile ? '16px' : '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <Wind style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
+              💨 Ventilation à Air Forcé (Art. 302 RSST)
+            </h4>
+            
+            <div style={{ 
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              borderRadius: '12px',
+              padding: isMobile ? '16px' : '20px',
+              marginBottom: '20px',
+              border: '1px solid rgba(107, 114, 128, 0.3)'
+            }}>
+              <p style={{ 
+                color: '#d1d5db', 
+                fontSize: '15px',
+                lineHeight: 1.6,
+                margin: '0 0 12px 0',
+                fontWeight: '600'
+              }}>
+                ⚠️ <strong>OBLIGATION RÉGLEMENTAIRE</strong> : L'espace clos doit être ventilé par des moyens mécaniques pour maintenir une atmosphère conforme (O₂: 19,5-23%, LEL ≤10%, contaminants ≤VEMP).
+              </p>
+              <p style={{ 
+                color: '#9ca3af', 
+                fontSize: '14px',
+                margin: 0,
+                fontStyle: 'italic'
+              }}>
+                🔧 <strong>Système d'alarme obligatoire</strong> : Un système d'avertissement doit informer immédiatement en cas de défaillance des appareils de ventilation.
+              </p>
+            </div>
+            
+            {/* Exigence de ventilation */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '16px',
+                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                borderRadius: '12px',
+                border: '1px solid rgba(107, 114, 128, 0.3)'
+              }}>
+                <input
+                  type="checkbox"
+                  id="ventilation_required"
+                  checked={permitData.ventilation_required || false}
+                  onChange={(e) => updatePermitData({ ventilation_required: e.target.checked })}
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    accentColor: '#3b82f6'
+                  }}
+                />
+                <label 
+                  htmlFor="ventilation_required"
+                  style={{
+                    color: '#d1d5db',
+                    fontSize: isMobile ? '15px' : '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    flex: 1
+                  }}
+                >
+                  🌪️ <strong>VENTILATION MÉCANIQUE REQUISE</strong> : La ventilation naturelle est insuffisante pour cet espace clos *
+                </label>
+              </div>
+            </div>
+            
+            {permitData.ventilation_required && (
+              <>
+                {/* Type de ventilation et débit */}
+                <div style={styles.grid2}>
+                  <div>
+                    <label style={{ ...styles.label, color: '#9ca3af' }}>Type de ventilation mécanique *</label>
+                    <select
+                      value={permitData.ventilation_type || ''}
+                      onChange={(e) => updatePermitData({ ventilation_type: e.target.value })}
+                      style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                      required
+                    >
+                      <option value="">Sélectionner le type</option>
+                      <option value="forced_air_supply">💨 Soufflage d'air forcé</option>
+                      <option value="extraction_ventilation">🌪️ Ventilation par extraction</option>
+                      <option value="combined_system">🔄 Système combiné (soufflage + extraction)</option>
+                      <option value="local_extraction">🎯 Aspiration locale à la source</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ ...styles.label, color: '#9ca3af' }}>Débit d'air requis *</label>
+                    <select
+                      value={permitData.ventilation_flow_rate || ''}
+                      onChange={(e) => updatePermitData({ ventilation_flow_rate: e.target.value })}
+                      style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                      required
+                    >
+                      <option value="">Sélectionner le débit</option>
+                      <option value="low_flow">📊 Faible (≤500 CFM)</option>
+                      <option value="medium_flow">📈 Moyen (500-1500 CFM)</option>
+                      <option value="high_flow">📊 Élevé (1500-3000 CFM)</option>
+                      <option value="very_high_flow">🚀 Très élevé (≥3000 CFM)</option>
+                      <option value="calculated">🧮 Calculé selon volume</option>
+                    </select>
+                  </div>
+                </div>
+                
+                {/* Équipements de ventilation */}
+                <div style={{ marginTop: '20px' }}>
+                  <h5 style={{
+                    fontSize: isMobile ? '16px' : '18px',
+                    fontWeight: '700',
+                    color: '#d1d5db',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <Zap style={{ width: '20px', height: '20px' }} />
+                    Équipements de Ventilation Requis
+                  </h5>
+                  
+                  <div style={styles.grid2}>
+                    {[
+                      { id: 'ventilation_fan', label: '🌪️ Ventilateur mécanique certifié', required: true },
+                      { id: 'air_ducting', label: '🔄 Conduits d\'air appropriés', required: true },
+                      { id: 'flow_meter', label: '📊 Capteur de débit d\'air', required: true },
+                      { id: 'backup_ventilation', label: '🔋 Système de ventilation de secours', required: false },
+                      { id: 'air_filtration', label: '🫧 Système de filtration d\'air', required: false },
+                      { id: 'explosion_proof', label: '💥 Équipement antidéflagrant', required: false }
+                    ].map((equipment, index) => (
+                      <div key={equipment.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(107, 114, 128, 0.2)'
+                      }}>
+                        <input
+                          type="checkbox"
+                          id={equipment.id}
+                          checked={permitData.ventilation_equipment?.[equipment.id] || false}
+                          onChange={(e) => updatePermitData({ 
+                            ventilation_equipment: { 
+                              ...permitData.ventilation_equipment, 
+                              [equipment.id]: e.target.checked 
+                            }
+                          })}
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            accentColor: '#10b981'
+                          }}
+                        />
+                        <label 
+                          htmlFor={equipment.id}
+                          style={{
+                            color: equipment.required ? '#d1d5db' : '#9ca3af',
+                            fontSize: '14px',
+                            fontWeight: equipment.required ? '600' : '500',
+                            cursor: 'pointer',
+                            flex: 1
+                          }}
+                        >
+                          {equipment.label}
+                          {equipment.required && <span style={{ color: '#f87171' }}> *</span>}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Système d'alarme de défaillance */}
+                <div style={{ marginTop: '20px' }}>
+                  <h5 style={{
+                    fontSize: isMobile ? '16px' : '18px',
+                    fontWeight: '700',
+                    color: '#d1d5db',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <Volume2 style={{ width: '20px', height: '20px' }} />
+                    🚨 Système d'Alarme de Défaillance
+                  </h5>
+                  
+                  <div style={styles.grid2}>
+                    <div>
+                      <label style={{ ...styles.label, color: '#9ca3af' }}>Type d'alarme *</label>
+                      <select
+                        value={permitData.alarm_system_type || ''}
+                        onChange={(e) => updatePermitData({ alarm_system_type: e.target.value })}
+                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                        required
+                      >
+                        <option value="">Sélectionner le type</option>
+                        <option value="visual_audible">🔊 Alarme sonore et visuelle</option>
+                        <option value="flow_sensor">📊 Capteur de débit avec alarme</option>
+                        <option value="pressure_switch">⚡ Contacteur manométrique</option>
+                        <option value="constant_monitoring">👁️ Surveillance constante par surveillant</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ ...styles.label, color: '#9ca3af' }}>Surveillance ventilation *</label>
+                      <select
+                        value={permitData.ventilation_monitoring || ''}
+                        onChange={(e) => updatePermitData({ ventilation_monitoring: e.target.value })}
+                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                        required
+                      >
+                        <option value="">Sélectionner</option>
+                        <option value="continuous">🔄 Continue pendant tout le travail</option>
+                        <option value="periodic">⏰ Périodique selon évaluation</option>
+                        <option value="automatic">🤖 Automatique avec capteurs</option>
+                        <option value="manual_visual">👁️ Visuelle manuelle constante</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Surveillance qualité de l'air */}
+                <div style={{ 
+                  marginTop: '20px',
+                  padding: '16px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                  borderRadius: '12px',
+                  border: '2px dashed #6b7280'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginBottom: '16px'
+                  }}>
+                    <input
+                      type="checkbox"
+                      id="air_quality_continuous"
+                      checked={permitData.air_quality_continuous || false}
+                      onChange={(e) => updatePermitData({ air_quality_continuous: e.target.checked })}
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        accentColor: '#10b981'
+                      }}
+                      required
+                    />
+                    <label 
+                      htmlFor="air_quality_continuous"
+                      style={{
+                        color: '#d1d5db',
+                        fontSize: isMobile ? '15px' : '16px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        flex: 1
+                      }}
+                    >
+                      📊 <strong>SURVEILLANCE CONTINUE</strong> : Monitoring en temps réel de l'oxygène, LEL et contaminants *
+                    </label>
+                  </div>
+                  
+                  <div style={{ 
+                    padding: '12px',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                  }}>
+                    <p style={{ 
+                      color: '#86efac', 
+                      fontSize: '14px',
+                      margin: 0,
+                      lineHeight: 1.5
+                    }}>
+                      ✅ <strong>Conformité Article 302 RSST</strong> : La ventilation mécanique assure le maintien d'une atmosphère sécuritaire avec O₂ entre 19,5-23%, LEL ≤10% LIE, et contaminants ≤ limites d'exposition.
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Points d'entrée et de sortie d'air */}
+                <div style={{ marginTop: '20px' }}>
+                  <h5 style={{
+                    fontSize: isMobile ? '16px' : '18px',
+                    fontWeight: '700',
+                    color: '#d1d5db',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <MapPin style={{ width: '20px', height: '20px' }} />
+                    🎯 Configuration Ventilation
+                  </h5>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ ...styles.label, color: '#9ca3af' }}>Emplacement entrée d'air</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Partie haute de l'espace, côté opposé à l'extraction..."
+                        value={permitData.air_inlet_location || ''}
+                        onChange={(e) => updatePermitData({ air_inlet_location: e.target.value })}
+                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ ...styles.label, color: '#9ca3af' }}>Emplacement sortie d'air</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Partie basse pour évacuation des gaz lourds..."
+                        value={permitData.air_outlet_location || ''}
+                        onChange={(e) => updatePermitData({ air_outlet_location: e.target.value })}
+                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ ...styles.label, color: '#9ca3af' }}>Évacuation air vicié</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Rejeté à distance sécuritaire des travailleurs extérieurs..."
+                        value={permitData.air_exhaust_location || ''}
+                        onChange={(e) => updatePermitData({ air_exhaust_location: e.target.value })}
+                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+            
+            {/* Validation système de ventilation */}
+            <div style={{ 
+              marginTop: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '16px',
+              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+              borderRadius: '12px',
+              border: '1px solid #10b981'
+            }}>
+              <input
+                type="checkbox"
+                id="ventilation_system_validated"
+                checked={permitData.ventilation_system_validated || false}
+                onChange={(e) => updatePermitData({ ventilation_system_validated: e.target.checked })}
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  accentColor: '#10b981'
+                }}
+                required={permitData.ventilation_required}
+              />
+              <label 
+                htmlFor="ventilation_system_validated"
+                style={{
+                  color: '#86efac',
+                  fontSize: isMobile ? '15px' : '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  flex: 1
+                }}
+              >
+                ✅ <strong>VALIDATION VENTILATION</strong> : Je certifie que le système de ventilation mécanique est opérationnel avec alarme de défaillance fonctionnelle. {permitData.ventilation_required && '*'}
+              </label>
             </div>
           </div>
           
@@ -1272,8 +2046,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     const lastReadingSafe = atmosphericReadings.length > 0 && 
       atmosphericReadings[atmosphericReadings.length - 1].status === 'safe';
     const hasRescuePlan = permitData.rescue_plan_validated && permitData.rescue_plan_type && permitData.rescue_plan_responsible;
+    const hasVentilationSystem = !permitData.ventilation_required || (permitData.ventilation_required && permitData.ventilation_system_validated);
 
-    return hasRecentReading && lastReadingSafe && hasRescuePlan &&
+    return hasRecentReading && lastReadingSafe && hasRescuePlan && hasVentilationSystem &&
            permitData.site_name && permitData.space_description && permitData.work_description;
   };
 
@@ -1655,6 +2430,168 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               style={{ ...styles.input, height: isMobile ? '80px' : '100px', resize: 'vertical' }}
               required
             />
+          </div>
+          
+          {/* Section Ventilation à Air Forcé - Nouvelle section basée sur recherches */}
+          <div style={{
+            backgroundColor: '#374151',
+            borderRadius: '16px',
+            padding: isMobile ? '20px' : '24px',
+            border: '2px solid #4b5563',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+            marginTop: '20px'
+          }}>
+            <h4 style={{
+              fontSize: isMobile ? '18px' : '20px',
+              fontWeight: '700',
+              color: 'white',
+              marginBottom: isMobile ? '16px' : '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <Wind style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
+              💨 Ventilation à Air Forcé (Art. 302 RSST)
+            </h4>
+            
+            <div style={{ 
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              borderRadius: '12px',
+              padding: isMobile ? '16px' : '20px',
+              marginBottom: '20px',
+              border: '1px solid rgba(107, 114, 128, 0.3)'
+            }}>
+              <p style={{ 
+                color: '#d1d5db', 
+                fontSize: '15px',
+                lineHeight: 1.6,
+                margin: '0 0 12px 0',
+                fontWeight: '600'
+              }}>
+                ⚠️ <strong>OBLIGATION RÉGLEMENTAIRE</strong> : L'espace clos doit être ventilé par des moyens mécaniques pour maintenir une atmosphère conforme (O₂: 19,5-23%, LEL ≤10%, contaminants ≤VEMP).
+              </p>
+              <p style={{ 
+                color: '#9ca3af', 
+                fontSize: '14px',
+                margin: 0,
+                fontStyle: 'italic'
+              }}>
+                🔧 <strong>Système d'alarme obligatoire</strong> : Un système d'avertissement doit informer immédiatement en cas de défaillance des appareils de ventilation.
+              </p>
+            </div>
+            
+            {/* Exigence de ventilation */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '16px',
+                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                borderRadius: '12px',
+                border: '1px solid rgba(107, 114, 128, 0.3)'
+              }}>
+                <input
+                  type="checkbox"
+                  id="ventilation_required"
+                  checked={permitData.ventilation_required || false}
+                  onChange={(e) => updatePermitData({ ventilation_required: e.target.checked })}
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    accentColor: '#3b82f6'
+                  }}
+                />
+                <label 
+                  htmlFor="ventilation_required"
+                  style={{
+                    color: '#d1d5db',
+                    fontSize: isMobile ? '15px' : '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    flex: 1
+                  }}
+                >
+                  🌪️ <strong>VENTILATION MÉCANIQUE REQUISE</strong> : La ventilation naturelle est insuffisante pour cet espace clos
+                </label>
+              </div>
+            </div>
+            
+            {permitData.ventilation_required && (
+              <>
+                {/* Type de ventilation et débit */}
+                <div style={styles.grid2}>
+                  <div>
+                    <label style={{ ...styles.label, color: '#9ca3af' }}>Type de ventilation mécanique *</label>
+                    <select
+                      value={permitData.ventilation_type || ''}
+                      onChange={(e) => updatePermitData({ ventilation_type: e.target.value })}
+                      style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                      required
+                    >
+                      <option value="">Sélectionner le type</option>
+                      <option value="forced_air_supply">💨 Soufflage d'air forcé</option>
+                      <option value="extraction_ventilation">🌪️ Ventilation par extraction</option>
+                      <option value="combined_system">🔄 Système combiné (soufflage + extraction)</option>
+                      <option value="local_extraction">🎯 Aspiration locale à la source</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ ...styles.label, color: '#9ca3af' }}>Débit d'air requis *</label>
+                    <select
+                      value={permitData.ventilation_flow_rate || ''}
+                      onChange={(e) => updatePermitData({ ventilation_flow_rate: e.target.value })}
+                      style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                      required
+                    >
+                      <option value="">Sélectionner le débit</option>
+                      <option value="low_flow">📊 Faible (≤500 CFM)</option>
+                      <option value="medium_flow">📈 Moyen (500-1500 CFM)</option>
+                      <option value="high_flow">📊 Élevé (1500-3000 CFM)</option>
+                      <option value="very_high_flow">🚀 Très élevé (≥3000 CFM)</option>
+                      <option value="calculated">🧮 Calculé selon volume</option>
+                    </select>
+                  </div>
+                </div>
+                
+                {/* Validation système de ventilation */}
+                <div style={{ 
+                  marginTop: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '16px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                  borderRadius: '12px',
+                  border: '1px solid #10b981'
+                }}>
+                  <input
+                    type="checkbox"
+                    id="ventilation_system_validated"
+                    checked={permitData.ventilation_system_validated || false}
+                    onChange={(e) => updatePermitData({ ventilation_system_validated: e.target.checked })}
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      accentColor: '#10b981'
+                    }}
+                    required={permitData.ventilation_required}
+                  />
+                  <label 
+                    htmlFor="ventilation_system_validated"
+                    style={{
+                      color: '#86efac',
+                      fontSize: isMobile ? '15px' : '16px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      flex: 1
+                    }}
+                  >
+                    ✅ <strong>VALIDATION VENTILATION</strong> : Je certifie que le système de ventilation mécanique est opérationnel avec alarme de défaillance fonctionnelle. {permitData.ventilation_required && '*'}
+                  </label>
+                </div>
+              </>
+            )}
           </div>
           
           {/* Section Plan de Sauvetage - Nouvelle section ajoutée */}
