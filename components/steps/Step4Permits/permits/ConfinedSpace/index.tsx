@@ -1643,6 +1643,367 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               required
             />
           </div>
+          
+          {/* Section Plan de Sauvetage - Nouvelle section ajoutée */}
+          <div style={{
+            backgroundColor: '#dc2626',
+            borderRadius: '16px',
+            padding: isMobile ? '20px' : '24px',
+            border: '2px solid #ef4444',
+            boxShadow: '0 8px 32px rgba(220, 38, 38, 0.2)'
+          }}>
+            <h4 style={{
+              fontSize: isMobile ? '18px' : '20px',
+              fontWeight: '700',
+              color: 'white',
+              marginBottom: isMobile ? '16px' : '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <Shield style={{ width: '24px', height: '24px', color: '#fecaca' }} />
+              🚨 Plan de Sauvetage Obligatoire (Art. 309 RSST)
+            </h4>
+            
+            <div style={{ 
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              borderRadius: '12px',
+              padding: isMobile ? '16px' : '20px',
+              marginBottom: '20px',
+              border: '1px solid rgba(254, 202, 202, 0.3)'
+            }}>
+              <p style={{ 
+                color: '#fecaca', 
+                fontSize: '15px',
+                lineHeight: 1.6,
+                margin: '0 0 12px 0',
+                fontWeight: '600'
+              }}>
+                ⚠️ <strong>OBLIGATION LÉGALE</strong> : Un plan de sauvetage personnalisé avec personnel et équipements requis doit être disponible sur place pour intervention rapide (réglementation 25 juillet 2023).
+              </p>
+              <p style={{ 
+                color: '#fca5a5', 
+                fontSize: '14px',
+                margin: 0,
+                fontStyle: 'italic'
+              }}>
+                📊 <strong>Statistique critique</strong> : Plus de 60% des victimes d'accidents fatals en espace clos sont des personnes ayant tenté un sauvetage sans formation adéquate.
+              </p>
+            </div>
+            
+            <div style={styles.grid2}>
+              <div>
+                <label style={{ ...styles.label, color: '#fecaca' }}>Type de plan de sauvetage *</label>
+                <select
+                  value={permitData.rescue_plan_type || ''}
+                  onChange={(e) => updatePermitData({ rescue_plan_type: e.target.value })}
+                  style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                  required
+                >
+                  <option value="">Sélectionner le type de sauvetage</option>
+                  <option value="internal_team">Équipe de sauvetage interne</option>
+                  <option value="external_specialist">Firme spécialisée externe</option>
+                  <option value="fire_department">Service incendie municipal</option>
+                  <option value="contractor">Contracteur externe</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ ...styles.label, color: '#fecaca' }}>Responsable du plan *</label>
+                <input
+                  type="text"
+                  placeholder="Nom et titre du responsable"
+                  value={permitData.rescue_plan_responsible || ''}
+                  onChange={(e) => updatePermitData({ rescue_plan_responsible: e.target.value })}
+                  style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                  required
+                />
+              </div>
+            </div>
+            
+            <div style={styles.grid2}>
+              <div>
+                <label style={{ ...styles.label, color: '#fecaca' }}>Téléphone d'urgence équipe *</label>
+                <input
+                  type="tel"
+                  placeholder="Ex: 1-800-XXX-XXXX"
+                  value={permitData.rescue_team_phone || ''}
+                  onChange={(e) => updatePermitData({ rescue_team_phone: e.target.value })}
+                  style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                  required
+                />
+              </div>
+              <div>
+                <label style={{ ...styles.label, color: '#fecaca' }}>Temps de réponse maximum</label>
+                <select
+                  value={permitData.rescue_response_time || ''}
+                  onChange={(e) => updatePermitData({ rescue_response_time: e.target.value })}
+                  style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                >
+                  <option value="">Sélectionner</option>
+                  <option value="immediate">Immédiat (sur place)</option>
+                  <option value="2_minutes">2 minutes</option>
+                  <option value="5_minutes">5 minutes</option>
+                  <option value="10_minutes">10 minutes</option>
+                  <option value="15_minutes">15 minutes</option>
+                </select>
+              </div>
+            </div>
+            
+            {/* Équipements de sauvetage obligatoires */}
+            <div style={{ marginTop: '20px' }}>
+              <h5 style={{
+                fontSize: isMobile ? '16px' : '18px',
+                fontWeight: '700',
+                color: '#fecaca',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Wrench style={{ width: '20px', height: '20px' }} />
+                Équipements de Sauvetage Requis
+              </h5>
+              
+              <div style={styles.grid2}>
+                {[
+                  { id: 'harness_class_e', label: '🦺 Harnais classe E et ligne de vie', required: true },
+                  { id: 'mechanical_recovery', label: '⛓️ Dispositif de récupération mécanique', required: true },
+                  { id: 'scba_equipment', label: '🫁 Appareil respiratoire autonome (ARA)', required: true },
+                  { id: 'first_aid_kit', label: '🏥 Trousse premiers soins et RCR', required: true },
+                  { id: 'atmospheric_monitor', label: '📊 Détecteur multi-gaz portable', required: true },
+                  { id: 'communication_device', label: '📻 Équipement communication bidirectionnel', required: true },
+                  { id: 'ventilation_equipment', label: '💨 Équipement de ventilation d\'urgence', required: false },
+                  { id: 'lighting_equipment', label: '💡 Éclairage d\'urgence étanche', required: false }
+                ].map((equipment, index) => (
+                  <div key={equipment.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(254, 202, 202, 0.2)'
+                  }}>
+                    <input
+                      type="checkbox"
+                      id={equipment.id}
+                      checked={permitData.rescue_equipment?.[equipment.id] || false}
+                      onChange={(e) => updatePermitData({ 
+                        rescue_equipment: { 
+                          ...permitData.rescue_equipment, 
+                          [equipment.id]: e.target.checked 
+                        }
+                      })}
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        accentColor: '#10b981'
+                      }}
+                    />
+                    <label 
+                      htmlFor={equipment.id}
+                      style={{
+                        color: equipment.required ? '#fecaca' : '#d1d5db',
+                        fontSize: '14px',
+                        fontWeight: equipment.required ? '600' : '500',
+                        cursor: 'pointer',
+                        flex: 1
+                      }}
+                    >
+                      {equipment.label}
+                      {equipment.required && <span style={{ color: '#f87171' }}> *</span>}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Procédures de sauvetage */}
+            <div style={{ marginTop: '20px' }}>
+              <label style={{ ...styles.label, color: '#fecaca' }}>Procédures détaillées de sauvetage *</label>
+              <textarea
+                placeholder="Décrire les étapes spécifiques : 1) Évaluation de la situation, 2) Sécurisation de l'espace, 3) Méthode d'extraction, 4) Premiers soins, 5) Transport..."
+                value={permitData.rescue_procedures || ''}
+                onChange={(e) => updatePermitData({ rescue_procedures: e.target.value })}
+                style={{ 
+                  ...styles.input, 
+                  height: isMobile ? '100px' : '120px', 
+                  resize: 'vertical',
+                  backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                  border: '1px solid #fca5a5'
+                }}
+                required
+              />
+            </div>
+            
+            {/* Formation équipe de sauvetage */}
+            <div style={{ marginTop: '20px' }}>
+              <h5 style={{
+                fontSize: isMobile ? '16px' : '18px',
+                fontWeight: '700',
+                color: '#fecaca',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Users style={{ width: '20px', height: '20px' }} />
+                Formation Équipe de Sauvetage
+              </h5>
+              
+              <div style={styles.grid2}>
+                {[
+                  { id: 'confined_space_rescue', label: '🚨 Sauvetage en espace clos', required: true },
+                  { id: 'first_aid_cpr', label: '🏥 Premiers soins et RCR', required: true },
+                  { id: 'respiratory_protection', label: '🫁 Protection respiratoire', required: true },
+                  { id: 'vertical_rescue', label: '🧗 Sauvetage vertical', required: false },
+                  { id: 'hazmat_awareness', label: '☢️ Sensibilisation matières dangereuses', required: false },
+                  { id: 'fire_safety', label: '🔥 Sécurité incendie', required: false }
+                ].map((training, index) => (
+                  <div key={training.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(254, 202, 202, 0.2)'
+                  }}>
+                    <input
+                      type="checkbox"
+                      id={training.id}
+                      checked={permitData.rescue_training?.[training.id] || false}
+                      onChange={(e) => updatePermitData({ 
+                        rescue_training: { 
+                          ...permitData.rescue_training, 
+                          [training.id]: e.target.checked 
+                        }
+                      })}
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        accentColor: '#10b981'
+                      }}
+                    />
+                    <label 
+                      htmlFor={training.id}
+                      style={{
+                        color: training.required ? '#fecaca' : '#d1d5db',
+                        fontSize: '14px',
+                        fontWeight: training.required ? '600' : '500',
+                        cursor: 'pointer',
+                        flex: 1
+                      }}
+                    >
+                      {training.label}
+                      {training.required && <span style={{ color: '#f87171' }}> *</span>}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Test du plan de sauvetage */}
+            <div style={{ 
+              marginTop: '20px',
+              padding: '16px',
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              borderRadius: '12px',
+              border: '2px dashed #fca5a5'
+            }}>
+              <h5 style={{
+                fontSize: isMobile ? '16px' : '18px',
+                fontWeight: '700',
+                color: '#fecaca',
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Clock style={{ width: '20px', height: '20px' }} />
+                📋 Test et Validation du Plan
+              </h5>
+              
+              <div style={styles.grid2}>
+                <div>
+                  <label style={{ ...styles.label, color: '#fecaca' }}>Date dernier exercice</label>
+                  <input
+                    type="date"
+                    value={permitData.last_drill_date || ''}
+                    onChange={(e) => updatePermitData({ last_drill_date: e.target.value })}
+                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ ...styles.label, color: '#fecaca' }}>Résultats test</label>
+                  <select
+                    value={permitData.drill_results || ''}
+                    onChange={(e) => updatePermitData({ drill_results: e.target.value })}
+                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                  >
+                    <option value="">Sélectionner</option>
+                    <option value="successful">✅ Réussi - Plan efficace</option>
+                    <option value="needs_improvement">⚠️ À améliorer</option>
+                    <option value="failed">❌ Échec - Révision requise</option>
+                    <option value="not_tested">🔄 Pas encore testé</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div style={{ marginTop: '16px' }}>
+                <label style={{ ...styles.label, color: '#fecaca' }}>Notes sur l'efficacité du plan</label>
+                <textarea
+                  placeholder="Observations des exercices, améliorations identifiées, temps de réponse mesuré..."
+                  value={permitData.drill_notes || ''}
+                  onChange={(e) => updatePermitData({ drill_notes: e.target.value })}
+                  style={{ 
+                    ...styles.input, 
+                    height: '80px', 
+                    resize: 'vertical',
+                    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                    border: '1px solid #fca5a5'
+                  }}
+                />
+              </div>
+            </div>
+            
+            {/* Validation finale */}
+            <div style={{ 
+              marginTop: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '16px',
+              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+              borderRadius: '12px',
+              border: '1px solid #10b981'
+            }}>
+              <input
+                type="checkbox"
+                id="rescue_plan_validated"
+                checked={permitData.rescue_plan_validated || false}
+                onChange={(e) => updatePermitData({ rescue_plan_validated: e.target.checked })}
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  accentColor: '#10b981'
+                }}
+                required
+              />
+              <label 
+                htmlFor="rescue_plan_validated"
+                style={{
+                  color: '#86efac',
+                  fontSize: isMobile ? '15px' : '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  flex: 1
+                }}
+              >
+                ✅ <strong>CONFIRMATION</strong> : Je certifie que le plan de sauvetage est en place, l'équipe est formée et les équipements sont disponibles sur site pour intervention immédiate. *
+              </label>
+            </div>
+          </div>
         </div>
       </div>
     </div>
