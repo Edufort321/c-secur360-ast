@@ -655,7 +655,21 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     last_drill_date: formData?.permitData?.last_drill_date || initialData?.last_drill_date || '',
     drill_results: formData?.permitData?.drill_results || initialData?.drill_results || '',
     drill_notes: formData?.permitData?.drill_notes || initialData?.drill_notes || '',
-    rescue_plan_validated: formData?.permitData?.rescue_plan_validated || initialData?.rescue_plan_validated || false
+    rescue_plan_validated: formData?.permitData?.rescue_plan_validated || initialData?.rescue_plan_validated || false,
+    // Nouvelles propriétés pour la section personnel
+    supervisor_name: formData?.permitData?.supervisor_name || initialData?.supervisor_name || '',
+    supervisor_company: formData?.permitData?.supervisor_company || initialData?.supervisor_company || '',
+    supervisor_signature_date: formData?.permitData?.supervisor_signature_date || initialData?.supervisor_signature_date || new Date().toISOString().split('T')[0],
+    supervisor_signature_time: formData?.permitData?.supervisor_signature_time || initialData?.supervisor_signature_time || new Date().toTimeString().slice(0, 5),
+    supervisor_signature: formData?.permitData?.supervisor_signature || initialData?.supervisor_signature || '',
+    supervisor_signature_timestamp: formData?.permitData?.supervisor_signature_timestamp || initialData?.supervisor_signature_timestamp || '',
+    supervisor_signature_time_precise: formData?.permitData?.supervisor_signature_time_precise || initialData?.supervisor_signature_time_precise || '',
+    supervisor_certified: formData?.permitData?.supervisor_certified || initialData?.supervisor_certified || false,
+    // Arrays pour les équipes
+    attendants: formData?.permitData?.attendants || initialData?.attendants || [],
+    entrants: formData?.permitData?.entrants || initialData?.entrants || [],
+    equipment_checklist: formData?.permitData?.equipment_checklist || initialData?.equipment_checklist || [],
+    mandatory_equipment: formData?.permitData?.mandatory_equipment || initialData?.mandatory_equipment || {}
   });
   
   const [atmosphericReadings, setAtmosphericReadings] = useState<AtmosphericReading[]>(formData?.atmospheric_readings || initialData?.atmospheric_readings || []);
@@ -1285,9 +1299,13 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       atmosphericReadings[atmosphericReadings.length - 1].status === 'safe';
     const hasRescuePlan = permitData.rescue_plan_validated && permitData.rescue_plan_type && permitData.rescue_plan_responsible;
     const hasVentilationSystem = !permitData.ventilation_required || (permitData.ventilation_required && permitData.ventilation_system_validated);
+    const hasSupervisorSignature = permitData.supervisor_signature && permitData.supervisor_certified;
+    const hasAttendantSignatures = (permitData.attendants || []).length > 0 && 
+      (permitData.attendants || []).every((att: any) => att.signature && att.certified);
 
     return hasRecentReading && lastReadingSafe && hasRescuePlan && hasVentilationSystem &&
-           permitData.site_name && permitData.space_description && permitData.work_description;
+           permitData.site_name && permitData.space_description && permitData.work_description &&
+           hasSupervisorSignature && hasAttendantSignatures;
   };
 
   // Rendu section atmosphérique optimisé mobile
