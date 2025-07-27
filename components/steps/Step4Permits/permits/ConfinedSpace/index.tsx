@@ -648,6 +648,10 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     alarm_system_type: formData?.permitData?.alarm_system_type || initialData?.alarm_system_type || '',
     ventilation_monitoring: formData?.permitData?.ventilation_monitoring || initialData?.ventilation_monitoring || '',
     air_quality_continuous: formData?.permitData?.air_quality_continuous || initialData?.air_quality_continuous || false,
+    air_inlet_location: formData?.permitData?.air_inlet_location || initialData?.air_inlet_location || '',
+    air_outlet_location: formData?.permitData?.air_outlet_location || initialData?.air_outlet_location || '',
+    air_exhaust_location: formData?.permitData?.air_exhaust_location || initialData?.air_exhaust_location || '',
+    ventilation_system_validated: formData?.permitData?.ventilation_system_validated || initialData?.ventilation_system_validated || false,
     last_drill_date: formData?.permitData?.last_drill_date || initialData?.last_drill_date || '',
     drill_results: formData?.permitData?.drill_results || initialData?.drill_results || '',
     drill_notes: formData?.permitData?.drill_notes || initialData?.drill_notes || '',
@@ -885,6 +889,804 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             },
             () => resolve(undefined)
           );
+
+  // Rendu section atmosphérique optimisé mobile
+  const renderAtmosphericSection = () => {
+    const currentRegulations = PROVINCIAL_REGULATIONS[selectedProvince];
+    
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
+        <div style={styles.card}>
+          <h3 style={styles.cardTitle}>
+            <Shield style={{ width: '20px', height: '20px' }} />
+            Limites - {currentRegulations.name}
+            <span style={{
+              fontSize: isMobile ? '12px' : '14px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              padding: '6px 12px',
+              borderRadius: '16px',
+              fontWeight: '700'
+            }}>
+              ⏱️ {currentRegulations.atmospheric_testing.frequency_minutes} min
+            </span>
+          </h3>
+          
+          <div style={styles.grid4}>
+            {Object.entries(currentRegulations.atmospheric_testing.limits).map(([gas, limits]) => (
+              <div key={gas} style={{
+                backgroundColor: 'rgba(17, 24, 39, 0.6)',
+                borderRadius: '12px',
+                padding: isMobile ? '16px' : '20px',
+                border: '1px solid #4b5563',
+                transition: 'all 0.2s ease'
+              }}>
+                <h4 style={{ 
+                  fontWeight: '700', 
+                  color: 'white', 
+                  marginBottom: '12px', 
+                  fontSize: isMobile ? '15px' : '17px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  {gas === 'oxygen' ? '🫁 O₂' : 
+                   gas === 'lel' ? '🔥 LEL' : 
+                   gas === 'h2s' ? '☠️ H₂S' : 
+                   '💨 CO'}
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: isMobile ? '13px' : '14px' }}>
+                  {gas === 'oxygen' ? (
+                    <>
+                      <div style={{ color: '#86efac', fontWeight: '600' }}>
+                        ✅ {(limits as AtmosphericLimits['oxygen']).min}-{(limits as AtmosphericLimits['oxygen']).max}%
+                      </div>
+                      <div style={{ color: '#fca5a5', fontWeight: '600' }}>
+                        🚨 ≤{(limits as AtmosphericLimits['oxygen']).critical_low}% ou ≥{(limits as AtmosphericLimits['oxygen']).critical_high}%
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ color: '#86efac', fontWeight: '600' }}>
+                        ✅ ≤{(limits as AtmosphericLimits['lel']).max} {gas === 'lel' ? '%' : 'ppm'}
+                      </div>
+                      <div style={{ color: '#fca5a5', fontWeight: '600' }}>
+                        🚨 ≥{(limits as AtmosphericLimits['lel']).critical} {gas === 'lel' ? '%' : 'ppm'}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {retestActive && (
+          <div style={styles.emergencyCard}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? '16px' : '0'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <AlertTriangle style={{ width: '36px', height: '36px', color: '#f87171' }} />
+                <div>
+                  <h3 style={{ color: '#fecaca', fontWeight: 'bold', fontSize: isMobile ? '18px' : '20px' }}>
+                    ⏰ RETEST OBLIGATOIRE
+                  </h3>
+                  <p style={{ color: '#fca5a5', fontSize: isMobile ? '14px' : '16px' }}>
+                    Valeurs critiques détectées - Nouveau test requis
+                  </p>
+                </div>
+              </div>
+              <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
+                <div style={{ 
+                  fontSize: isMobile ? '28px' : '36px', 
+                  fontWeight: 'bold', 
+                  color: '#f87171',
+                  fontFamily: 'JetBrains Mono, monospace'
+                }}>
+                  {formatTime(retestTimer)}
+                </div>
+                <div style={{ color: '#fca5a5', fontSize: '16px' }}>Temps restant</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={styles.card}>
+          <h3 style={styles.cardTitle}>
+            <Activity style={{ width: '20px', height: '20px' }} />
+            Nouvelle Mesure Atmosphérique
+          </h3>
+          
+          <div style={styles.grid4}>
+            <div>
+              <label style={styles.label}>O₂ (%) *</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="30"
+                placeholder="20.9"
+                value={manualReading.oxygen}
+                onChange={(e) => setManualReading(prev => ({ ...prev, oxygen: e.target.value }))}
+                style={styles.input}
+                required
+              />
+            </div>
+            <div>
+              <label style={styles.label}>LEL (%) *</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                placeholder="0"
+                value={manualReading.lel}
+                onChange={(e) => setManualReading(prev => ({ ...prev, lel: e.target.value }))}
+                style={styles.input}
+                required
+              />
+            </div>
+            <div>
+              <label style={styles.label}>H₂S (ppm) *</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="1000"
+                placeholder="0"
+                value={manualReading.h2s}
+                onChange={(e) => setManualReading(prev => ({ ...prev, h2s: e.target.value }))}
+                style={styles.input}
+                required
+              />
+            </div>
+            <div>
+              <label style={styles.label}>CO (ppm) *</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="1000"
+                placeholder="0"
+                value={manualReading.co}
+                onChange={(e) => setManualReading(prev => ({ ...prev, co: e.target.value }))}
+                style={styles.input}
+                required
+              />
+            </div>
+          </div>
+          
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', 
+            gap: '20px', 
+            marginTop: '20px' 
+          }}>
+            <div>
+              <label style={styles.label}>Température (°C)</label>
+              <input
+                type="number"
+                step="0.1"
+                placeholder="20"
+                value={manualReading.temperature}
+                onChange={(e) => setManualReading(prev => ({ ...prev, temperature: e.target.value }))}
+                style={styles.input}
+              />
+            </div>
+            <div>
+              <label style={styles.label}>Humidité (%)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                placeholder="50"
+                value={manualReading.humidity}
+                onChange={(e) => setManualReading(prev => ({ ...prev, humidity: e.target.value }))}
+                style={styles.input}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'end' }}>
+              <button
+                onClick={addManualReading}
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSuccess,
+                  width: '100%',
+                  justifyContent: 'center',
+                  fontSize: isMobile ? '15px' : '16px'
+                }}
+              >
+                <Plus style={{ width: '18px', height: '18px' }} />
+                {isMobile ? 'Ajouter' : texts.addManualReading}
+              </button>
+            </div>
+          </div>
+          
+          <div style={{ marginTop: '20px' }}>
+            <label style={styles.label}>Notes (optionnel)</label>
+            <textarea
+              placeholder="Observations, conditions particulières..."
+              value={manualReading.notes}
+              onChange={(e) => setManualReading(prev => ({ ...prev, notes: e.target.value }))}
+              style={{ ...styles.input, height: '80px', resize: 'vertical' }}
+            />
+          </div>
+        </div>
+
+        <div style={styles.card}>
+          <h3 style={styles.cardTitle}>
+            <FileText style={{ width: '20px', height: '20px' }} />
+            Historique des Mesures ({atmosphericReadings.length})
+          </h3>
+          
+          {atmosphericReadings.length === 0 ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: isMobile ? '32px 20px' : '48px 32px', 
+              color: '#9ca3af',
+              backgroundColor: 'rgba(17, 24, 39, 0.5)',
+              borderRadius: '12px',
+              border: '1px solid #374151'
+            }}>
+              <Activity style={{ 
+                width: isMobile ? '56px' : '72px', 
+                height: isMobile ? '56px' : '72px', 
+                margin: '0 auto 20px', 
+                color: '#4b5563'
+              }} />
+              <p style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: '12px', fontWeight: '600' }}>
+                Aucune mesure enregistrée
+              </p>
+              <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
+                Effectuez votre première mesure atmosphérique ci-dessus pour commencer la surveillance.
+              </p>
+            </div>
+          ) : (
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '16px', 
+              maxHeight: isMobile ? '400px' : '500px', 
+              overflowY: 'auto',
+              paddingRight: '8px'
+            }}>
+              {atmosphericReadings.slice().reverse().map((reading) => {
+                const readingStyle = reading.status === 'danger' ? styles.readingDanger :
+                                   reading.status === 'warning' ? styles.readingWarning :
+                                   styles.readingSafe;
+                
+                return (
+                  <div
+                    key={reading.id}
+                    style={{
+                      ...styles.readingCard,
+                      ...readingStyle
+                    }}
+                  >
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between', 
+                      marginBottom: '12px',
+                      flexDirection: isMobile ? 'column' : 'row',
+                      gap: isMobile ? '12px' : '0'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          ...styles.statusIndicator,
+                          ...(reading.status === 'danger' ? styles.statusDanger :
+                             reading.status === 'warning' ? styles.statusWarning :
+                             styles.statusSafe)
+                        }}></div>
+                        <span style={{
+                          fontWeight: '700',
+                          color: reading.status === 'danger' ? '#fca5a5' :
+                                reading.status === 'warning' ? '#fde047' :
+                                '#86efac',
+                          fontSize: isMobile ? '15px' : '17px'
+                        }}>
+                          {reading.status === 'danger' ? '🚨 DANGER' :
+                           reading.status === 'warning' ? '⚠️ ATTENTION' :
+                           '✅ SÉCURITAIRE'}
+                        </span>
+                      </div>
+                      <div style={{ 
+                        color: '#9ca3af', 
+                        fontSize: isMobile ? '13px' : '14px', 
+                        textAlign: isMobile ? 'center' : 'right'
+                      }}>
+                        📅 {new Date(reading.timestamp).toLocaleString('fr-CA')}
+                        <br />
+                        👤 {reading.taken_by}
+                      </div>
+                    </div>
+                    
+                    <div style={styles.grid4}>
+                      <div>
+                        <span style={{ color: '#9ca3af', fontSize: '13px' }}>O₂:</span>
+                        <span style={{
+                          marginLeft: '8px',
+                          fontWeight: '600',
+                          fontSize: '15px',
+                          color: validateAtmosphericValue('oxygen', reading.oxygen) === 'danger' ? '#fca5a5' :
+                                validateAtmosphericValue('oxygen', reading.oxygen) === 'warning' ? '#fde047' :
+                                '#86efac'
+                        }}>
+                          {reading.oxygen}%
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ color: '#9ca3af', fontSize: '13px' }}>LEL:</span>
+                        <span style={{
+                          marginLeft: '8px',
+                          fontWeight: '600',
+                          fontSize: '15px',
+                          color: validateAtmosphericValue('lel', reading.lel) === 'danger' ? '#fca5a5' :
+                                validateAtmosphericValue('lel', reading.lel) === 'warning' ? '#fde047' :
+                                '#86efac'
+                        }}>
+                          {reading.lel}%
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ color: '#9ca3af', fontSize: '13px' }}>H₂S:</span>
+                        <span style={{
+                          marginLeft: '8px',
+                          fontWeight: '600',
+                          fontSize: '15px',
+                          color: validateAtmosphericValue('h2s', reading.h2s) === 'danger' ? '#fca5a5' :
+                                validateAtmosphericValue('h2s', reading.h2s) === 'warning' ? '#fde047' :
+                                '#86efac'
+                        }}>
+                          {reading.h2s} ppm
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ color: '#9ca3af', fontSize: '13px' }}>CO:</span>
+                        <span style={{
+                          marginLeft: '8px',
+                          fontWeight: '600',
+                          fontSize: '15px',
+                          color: validateAtmosphericValue('co', reading.co) === 'danger' ? '#fca5a5' :
+                                validateAtmosphericValue('co', reading.co) === 'warning' ? '#fde047' :
+                                '#86efac'
+                        }}>
+                          {reading.co} ppm
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {(reading.temperature || reading.humidity || reading.notes) && (
+                      <div style={{
+                        marginTop: '12px',
+                        paddingTop: '12px',
+ '1px solid #4b5563',
+                        fontSize: '14px',
+                        color: '#d1d5db'
+                      }}>
+                        {reading.temperature && <span>🌡️ {reading.temperature}°C </span>}
+                        {reading.humidity && <span>💧 {reading.humidity}% </span>}
+                        {reading.notes && <div style={{ marginTop: '6px' }}>📝 {reading.notes}</div>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Rendu section contacts d'urgence optimisé mobile
+  const renderEmergencySection = () => {
+    const currentRegulations = PROVINCIAL_REGULATIONS[selectedProvince];
+    
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
+        <div style={styles.card}>
+          <h3 style={styles.cardTitle}>
+            <Phone style={{ width: '20px', height: '20px' }} />
+            {texts.emergencyContacts} - {currentRegulations.name}
+          </h3>
+          
+          <div style={styles.grid2}>
+            {currentRegulations.emergency_contacts.map((contact, index) => (
+              <div key={index} style={{
+                ...styles.readingCard,
+                ...(contact.name === '911' ? styles.readingDanger : styles.readingSafe),
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onClick={() => window.open(`tel:${contact.phone}`, '_self')}
+              onMouseEnter={(e) => {
+                (e.target as HTMLDivElement).style.transform = 'translateY(-2px)';
+                (e.target as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                (e.target as HTMLDivElement).style.transform = 'translateY(0)';
+                (e.target as HTMLDivElement).style.boxShadow = 'none';
+              }}
+              >
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between', 
+                  marginBottom: '12px',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  gap: isMobile ? '12px' : '0'
+                }}>
+                  <h4 style={{ 
+                    fontWeight: '700', 
+                    color: 'white', 
+                    fontSize: isMobile ? '17px' : '19px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    {contact.name === '911' ? '🚨' : '📞'} {contact.name}
+                  </h4>
+                  {contact.available_24h && (
+                    <span style={{
+                      fontSize: '12px',
+                      backgroundColor: '#059669',
+                      color: 'white',
+                      padding: '4px 12px',
+                      borderRadius: '16px',
+                      fontWeight: '600'
+                    }}>24h/7j</span>
+                  )}
+                </div>
+                <p style={{ 
+                  color: '#d1d5db', 
+                  fontSize: '15px', 
+                  marginBottom: '12px', 
+                  textAlign: isMobile ? 'center' : 'left'
+                }}>
+                  {contact.role}
+                </p>
+                <div style={{
+                  color: '#60a5fa',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: isMobile ? '17px' : '19px',
+                  textDecoration: 'none',
+                  display: 'block',
+                  textAlign: isMobile ? 'center' : 'left',
+                  fontWeight: '700',
+                  backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(96, 165, 250, 0.3)'
+                }}>
+                  {contact.phone}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div style={{
+            marginTop: '32px',
+            padding: isMobile ? '20px' : '24px',
+            backgroundColor: 'rgba(220, 38, 38, 0.15)',
+            border: '2px solid rgba(239, 68, 68, 0.4)',
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(220, 38, 38, 0.2)'
+          }}>
+            <h4 style={{
+              color: '#fecaca',
+              fontWeight: '700',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              fontSize: isMobile ? '16px' : '18px'
+            }}>
+              <AlertTriangle style={{ width: '24px', height: '24px' }} />
+              🚨 Procédure d'Évacuation d'Urgence
+            </h4>
+            <ol style={{ 
+              color: '#fecaca', 
+              fontSize: isMobile ? '14px' : '15px', 
+              marginLeft: '20px',
+              lineHeight: 1.6
+            }}>
+              <li style={{ marginBottom: '8px' }}>
+                <strong>1. ARRÊT IMMÉDIAT</strong> de tous les travaux
+              </li>
+              <li style={{ marginBottom: '8px' }}>
+                <strong>2. ÉVACUATION</strong> immédiate de tous les entrants
+              </li>
+              <li style={{ marginBottom: '8px' }}>
+                <strong>3. APPEL</strong> au 911 et contacts d'urgence
+              </li>
+              <li style={{ marginBottom: '8px' }}>
+                <strong>4. INTERDICTION</strong> de re-entrée jusqu'à autorisation
+              </li>
+              <li>
+                <strong>5. RAPPORT</strong> d'incident obligatoire
+              </li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div style={styles.container}>
+      {/* Input caché pour capture photo */}
+      <input 
+        ref={fileInputRef} 
+        type="file" 
+        accept="image/*" 
+        capture="environment" 
+        multiple
+        style={{ display: 'none' }} 
+      />
+      
+      {/* En-tête mobile sticky */}
+      <div style={isMobile ? styles.mobileHeader : { marginBottom: '40px' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: isMobile ? 'flex-start' : 'center', 
+          justifyContent: 'space-between', 
+          marginBottom: isMobile ? '12px' : '20px',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? '8px' : '0'
+        }}>
+          <div style={{ width: '100%' }}>
+            <h1 style={styles.title}>{texts.title}</h1>
+            <p style={styles.subtitle}>{texts.subtitle}</p>
+            <div style={{ fontSize: '12px', color: '#93c5fd', marginTop: isMobile ? '4px' : '12px' }}>
+              <span style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                backgroundColor: '#1f2937',
+                padding: isMobile ? '4px 8px' : '6px 12px',
+                borderRadius: '4px',
+                border: '1px solid #4b5563',
+                fontSize: isMobile ? '11px' : '15px',
+                color: '#e2e8f0'
+              }}>
+                {permitData.permit_number}
+              </span>
+            </div>
+          </div>
+          {!isMobile && (
+            <div style={{
+              padding: '20px',
+              borderRadius: '12px',
+              fontWeight: '700',
+              backgroundColor: isPermitValid() ? '#059669' : '#d97706',
+              color: 'white',
+              fontSize: '16px',
+              textAlign: 'center',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              minWidth: '140px'
+            }}>
+              {isPermitValid() ? '✅ Permis Valide' : '⚠️ Permis Incomplet'}
+            </div>
+          )}
+        </div>
+        
+        {isMobile && (
+          <div style={{
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontWeight: '600',
+            backgroundColor: isPermitValid() ? '#059669' : '#d97706',
+            color: 'white',
+            fontSize: '14px',
+            textAlign: 'center',
+            marginBottom: '8px',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}>
+            {isPermitValid() ? '✅ Permis Valide' : '⚠️ Permis Incomplet'}
+          </div>
+        )}
+        
+        {/* Boutons d'action optimisés mobile */}
+        <div style={styles.mobileButtonGrid}>
+          <button style={{
+            ...styles.button,
+            ...styles.buttonDanger
+          }}>
+            <AlertTriangle style={{ width: '16px', height: '16px' }} />
+            {isMobile ? 'ÉVACUATION' : texts.emergencyEvacuation}
+          </button>
+          <button
+            onClick={() => onSave?.({})}
+            style={{
+              ...styles.button,
+              ...styles.buttonPrimary
+            }}
+          >
+            <Save style={{ width: '16px', height: '16px' }} />
+            Sauvegarder
+          </button>
+          {isPermitValid() && (
+            <button
+              onClick={() => onSubmit?.({})}
+              style={{
+                ...styles.button,
+                ...styles.buttonSuccess,
+                gridColumn: isMobile ? 'span 2' : 'auto'
+              }}
+            >
+              <CheckCircle style={{ width: '16px', height: '16px' }} />
+              {isMobile ? 'Soumettre' : texts.submitPermit}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {renderTabs()}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '32px', width: '100%' }}>
+        {activeTab === 'site' && renderSiteSection()}
+        {activeTab === 'atmospheric' && renderAtmosphericSection()}
+        {activeTab === 'personnel' && (
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>
+              <Users style={{ width: '20px', height: '20px' }} />
+              {texts.personnelManagement}
+            </h3>
+            <div style={{ 
+              textAlign: 'center', 
+              padding: isMobile ? '40px 20px' : '56px 32px',
+              backgroundColor: 'rgba(17, 24, 39, 0.5)',
+              borderRadius: '12px',
+              border: '1px solid #374151'
+            }}>
+              <Users style={{ 
+                width: isMobile ? '56px' : '72px', 
+                height: isMobile ? '56px' : '72px', 
+                margin: '0 auto 20px', 
+                color: '#4b5563'
+              }} />
+              <p style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '18px' : '20px', 
+                marginBottom: '12px',
+                fontWeight: '600'
+              }}>
+                Section Personnel en cours de développement
+              </p>
+              <p style={{ 
+                color: '#6b7280', 
+                fontSize: '15px',
+                lineHeight: 1.5,
+                maxWidth: '400px',
+                margin: '0 auto'
+              }}>
+                Fonctionnalités à venir : signatures électroniques, horodatage entrée/sortie, validation formations.
+              </p>
+            </div>
+          </div>
+        )}
+        {activeTab === 'emergency' && renderEmergencySection()}
+      </div>
+
+      {/* Styles CSS pour les animations et optimisations mobile */}
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        
+        input:focus, select:focus, textarea:focus {
+          border-color: #3b82f6 !important;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+          transform: translateY(-1px);
+        }
+        
+        button:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+        }
+        
+        button:active:not(:disabled) {
+          transform: translateY(0);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Optimisations tactiles */
+        button, input, select, textarea {
+          -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+          touch-action: manipulation;
+        }
+        
+        /* Scrollbar personnalisée */
+        ::-webkit-scrollbar {
+          width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+          background: rgba(55, 65, 81, 0.5);
+          border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+          background: rgba(107, 114, 128, 0.8);
+          border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+          background: rgba(156, 163, 175, 0.9);
+        }
+        
+        /* Amélioration de la lisibilité sur mobile */
+        @media (max-width: 767px) {
+          body {
+            -webkit-text-size-adjust: 100%;
+            -moz-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+          }
+          
+          * {
+            box-sizing: border-box;
+          }
+          
+          /* Empêche le zoom lors du focus sur les inputs sur iOS */
+          input[type="text"], input[type="number"], input[type="email"], 
+          input[type="tel"], input[type="url"], input[type="password"], 
+          input[type="date"], input[type="time"],
+          textarea, select {
+            font-size: 16px !important;
+            transform: none !important;
+            -webkit-appearance: none !important;
+            appearance: none !important;
+          }
+          
+          .container {
+            padding: 4px !important;
+            overflow-x: hidden !important;
+          }
+          
+          .card {
+            margin-bottom: 8px !important;
+            padding: 12px !important;
+          }
+          
+          /* Navigation par onglets mobile */
+          .mobile-tabs {
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
+          
+          .mobile-tabs::-webkit-scrollbar {
+            display: none;
+          }
+        }
+        
+        /* Optimisation pour les écrans très petits */
+        @media (max-width: 320px) {
+          .container {
+            padding: 4px !important;
+          }
+        }
+        
+        /* Animation pour les éléments interactifs */
+        @media (prefers-reduced-motion: no-preference) {
+          * {
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default ConfinedSpacePermit;
         });
       }
     } catch (error) {
@@ -1035,389 +1837,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                       </p>
                     )}
                   </div>
-          
-          {/* Section Ventilation à Air Forcé - Nouvelle section basée sur recherches */}
-          <div style={{
-            backgroundColor: '#374151',
-            borderRadius: '16px',
-            padding: isMobile ? '20px' : '24px',
-            border: '2px solid #4b5563',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
-          }}>
-            <h4 style={{
-              fontSize: isMobile ? '18px' : '20px',
-              fontWeight: '700',
-              color: 'white',
-              marginBottom: isMobile ? '16px' : '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <Wind style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
-              💨 Ventilation à Air Forcé (Art. 302 RSST)
-            </h4>
-            
-            <div style={{ 
-              backgroundColor: 'rgba(0, 0, 0, 0.3)',
-              borderRadius: '12px',
-              padding: isMobile ? '16px' : '20px',
-              marginBottom: '20px',
-              border: '1px solid rgba(107, 114, 128, 0.3)'
-            }}>
-              <p style={{ 
-                color: '#d1d5db', 
-                fontSize: '15px',
-                lineHeight: 1.6,
-                margin: '0 0 12px 0',
-                fontWeight: '600'
-              }}>
-                ⚠️ <strong>OBLIGATION RÉGLEMENTAIRE</strong> : L'espace clos doit être ventilé par des moyens mécaniques pour maintenir une atmosphère conforme (O₂: 19,5-23%, LEL ≤10%, contaminants ≤VEMP).
-              </p>
-              <p style={{ 
-                color: '#9ca3af', 
-                fontSize: '14px',
-                margin: 0,
-                fontStyle: 'italic'
-              }}>
-                🔧 <strong>Système d'alarme obligatoire</strong> : Un système d'avertissement doit informer immédiatement en cas de défaillance des appareils de ventilation.
-              </p>
-            </div>
-            
-            {/* Exigence de ventilation */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '16px',
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                borderRadius: '12px',
-                border: '1px solid rgba(107, 114, 128, 0.3)'
-              }}>
-                <input
-                  type="checkbox"
-                  id="ventilation_required"
-                  checked={permitData.ventilation_required || false}
-                  onChange={(e) => updatePermitData({ ventilation_required: e.target.checked })}
-                  style={{
-                    width: '24px',
-                    height: '24px',
-                    accentColor: '#3b82f6'
-                  }}
-                />
-                <label 
-                  htmlFor="ventilation_required"
-                  style={{
-                    color: '#d1d5db',
-                    fontSize: isMobile ? '15px' : '16px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    flex: 1
-                  }}
-                >
-                  🌪️ <strong>VENTILATION MÉCANIQUE REQUISE</strong> : La ventilation naturelle est insuffisante pour cet espace clos *
-                </label>
-              </div>
-            </div>
-            
-            {permitData.ventilation_required && (
-              <>
-                {/* Type de ventilation et débit */}
-                <div style={styles.grid2}>
-                  <div>
-                    <label style={{ ...styles.label, color: '#9ca3af' }}>Type de ventilation mécanique *</label>
-                    <select
-                      value={permitData.ventilation_type || ''}
-                      onChange={(e) => updatePermitData({ ventilation_type: e.target.value })}
-                      style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                      required
-                    >
-                      <option value="">Sélectionner le type</option>
-                      <option value="forced_air_supply">💨 Soufflage d'air forcé</option>
-                      <option value="extraction_ventilation">🌪️ Ventilation par extraction</option>
-                      <option value="combined_system">🔄 Système combiné (soufflage + extraction)</option>
-                      <option value="local_extraction">🎯 Aspiration locale à la source</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ ...styles.label, color: '#9ca3af' }}>Débit d'air requis *</label>
-                    <select
-                      value={permitData.ventilation_flow_rate || ''}
-                      onChange={(e) => updatePermitData({ ventilation_flow_rate: e.target.value })}
-                      style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                      required
-                    >
-                      <option value="">Sélectionner le débit</option>
-                      <option value="low_flow">📊 Faible (≤500 CFM)</option>
-                      <option value="medium_flow">📈 Moyen (500-1500 CFM)</option>
-                      <option value="high_flow">📊 Élevé (1500-3000 CFM)</option>
-                      <option value="very_high_flow">🚀 Très élevé (≥3000 CFM)</option>
-                      <option value="calculated">🧮 Calculé selon volume</option>
-                    </select>
-                  </div>
-                </div>
-                
-                {/* Équipements de ventilation */}
-                <div style={{ marginTop: '20px' }}>
-                  <h5 style={{
-                    fontSize: isMobile ? '16px' : '18px',
-                    fontWeight: '700',
-                    color: '#d1d5db',
-                    marginBottom: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <Zap style={{ width: '20px', height: '20px' }} />
-                    Équipements de Ventilation Requis
-                  </h5>
-                  
-                  <div style={styles.grid2}>
-                    {[
-                      { id: 'ventilation_fan', label: '🌪️ Ventilateur mécanique certifié', required: true },
-                      { id: 'air_ducting', label: '🔄 Conduits d\'air appropriés', required: true },
-                      { id: 'flow_meter', label: '📊 Capteur de débit d\'air', required: true },
-                      { id: 'backup_ventilation', label: '🔋 Système de ventilation de secours', required: false },
-                      { id: 'air_filtration', label: '🫧 Système de filtration d\'air', required: false },
-                      { id: 'explosion_proof', label: '💥 Équipement antidéflagrant', required: false }
-                    ].map((equipment, index) => (
-                      <div key={equipment.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px',
-                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                        borderRadius: '8px',
-                        border: '1px solid rgba(107, 114, 128, 0.2)'
-                      }}>
-                        <input
-                          type="checkbox"
-                          id={equipment.id}
-                          checked={permitData.ventilation_equipment?.[equipment.id] || false}
-                          onChange={(e) => updatePermitData({ 
-                            ventilation_equipment: { 
-                              ...permitData.ventilation_equipment, 
-                              [equipment.id]: e.target.checked 
-                            }
-                          })}
-                          style={{
-                            width: '20px',
-                            height: '20px',
-                            accentColor: '#10b981'
-                          }}
-                        />
-                        <label 
-                          htmlFor={equipment.id}
-                          style={{
-                            color: equipment.required ? '#d1d5db' : '#9ca3af',
-                            fontSize: '14px',
-                            fontWeight: equipment.required ? '600' : '500',
-                            cursor: 'pointer',
-                            flex: 1
-                          }}
-                        >
-                          {equipment.label}
-                          {equipment.required && <span style={{ color: '#f87171' }}> *</span>}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Système d'alarme de défaillance */}
-                <div style={{ marginTop: '20px' }}>
-                  <h5 style={{
-                    fontSize: isMobile ? '16px' : '18px',
-                    fontWeight: '700',
-                    color: '#d1d5db',
-                    marginBottom: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <Volume2 style={{ width: '20px', height: '20px' }} />
-                    🚨 Système d'Alarme de Défaillance
-                  </h5>
-                  
-                  <div style={styles.grid2}>
-                    <div>
-                      <label style={{ ...styles.label, color: '#9ca3af' }}>Type d'alarme *</label>
-                      <select
-                        value={permitData.alarm_system_type || ''}
-                        onChange={(e) => updatePermitData({ alarm_system_type: e.target.value })}
-                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                        required
-                      >
-                        <option value="">Sélectionner le type</option>
-                        <option value="visual_audible">🔊 Alarme sonore et visuelle</option>
-                        <option value="flow_sensor">📊 Capteur de débit avec alarme</option>
-                        <option value="pressure_switch">⚡ Contacteur manométrique</option>
-                        <option value="constant_monitoring">👁️ Surveillance constante par surveillant</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ ...styles.label, color: '#9ca3af' }}>Surveillance ventilation *</label>
-                      <select
-                        value={permitData.ventilation_monitoring || ''}
-                        onChange={(e) => updatePermitData({ ventilation_monitoring: e.target.value })}
-                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                        required
-                      >
-                        <option value="">Sélectionner</option>
-                        <option value="continuous">🔄 Continue pendant tout le travail</option>
-                        <option value="periodic">⏰ Périodique selon évaluation</option>
-                        <option value="automatic">🤖 Automatique avec capteurs</option>
-                        <option value="manual_visual">👁️ Visuelle manuelle constante</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Surveillance qualité de l'air */}
-                <div style={{ 
-                  marginTop: '20px',
-                  padding: '16px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  borderRadius: '12px',
-                  border: '2px dashed #6b7280'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginBottom: '16px'
-                  }}>
-                    <input
-                      type="checkbox"
-                      id="air_quality_continuous"
-                      checked={permitData.air_quality_continuous || false}
-                      onChange={(e) => updatePermitData({ air_quality_continuous: e.target.checked })}
-                      style={{
-                        width: '24px',
-                        height: '24px',
-                        accentColor: '#10b981'
-                      }}
-                      required
-                    />
-                    <label 
-                      htmlFor="air_quality_continuous"
-                      style={{
-                        color: '#d1d5db',
-                        fontSize: isMobile ? '15px' : '16px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        flex: 1
-                      }}
-                    >
-                      📊 <strong>SURVEILLANCE CONTINUE</strong> : Monitoring en temps réel de l'oxygène, LEL et contaminants *
-                    </label>
-                  </div>
-                  
-                  <div style={{ 
-                    padding: '12px',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(16, 185, 129, 0.3)'
-                  }}>
-                    <p style={{ 
-                      color: '#86efac', 
-                      fontSize: '14px',
-                      margin: 0,
-                      lineHeight: 1.5
-                    }}>
-                      ✅ <strong>Conformité Article 302 RSST</strong> : La ventilation mécanique assure le maintien d'une atmosphère sécuritaire avec O₂ entre 19,5-23%, LEL ≤10% LIE, et contaminants ≤ limites d'exposition.
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Points d'entrée et de sortie d'air */}
-                <div style={{ marginTop: '20px' }}>
-                  <h5 style={{
-                    fontSize: isMobile ? '16px' : '18px',
-                    fontWeight: '700',
-                    color: '#d1d5db',
-                    marginBottom: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <MapPin style={{ width: '20px', height: '20px' }} />
-                    🎯 Configuration Ventilation
-                  </h5>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div>
-                      <label style={{ ...styles.label, color: '#9ca3af' }}>Emplacement entrée d'air</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Partie haute de l'espace, côté opposé à l'extraction..."
-                        value={permitData.air_inlet_location || ''}
-                        onChange={(e) => updatePermitData({ air_inlet_location: e.target.value })}
-                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ ...styles.label, color: '#9ca3af' }}>Emplacement sortie d'air</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Partie basse pour évacuation des gaz lourds..."
-                        value={permitData.air_outlet_location || ''}
-                        onChange={(e) => updatePermitData({ air_outlet_location: e.target.value })}
-                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ ...styles.label, color: '#9ca3af' }}>Évacuation air vicié</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Rejeté à distance sécuritaire des travailleurs extérieurs..."
-                        value={permitData.air_exhaust_location || ''}
-                        onChange={(e) => updatePermitData({ air_exhaust_location: e.target.value })}
-                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-            
-            {/* Validation système de ventilation */}
-            <div style={{ 
-              marginTop: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '16px',
-              backgroundColor: 'rgba(16, 185, 129, 0.2)',
-              borderRadius: '12px',
-              border: '1px solid #10b981'
-            }}>
-              <input
-                type="checkbox"
-                id="ventilation_system_validated"
-                checked={permitData.ventilation_system_validated || false}
-                onChange={(e) => updatePermitData({ ventilation_system_validated: e.target.checked })}
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  accentColor: '#10b981'
-                }}
-                required={permitData.ventilation_required}
-              />
-              <label 
-                htmlFor="ventilation_system_validated"
-                style={{
-                  color: '#86efac',
-                  fontSize: isMobile ? '15px' : '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  flex: 1
-                }}
-              >
-                ✅ <strong>VALIDATION VENTILATION</strong> : Je certifie que le système de ventilation mécanique est opérationnel avec alarme de défaillance fonctionnelle. {permitData.ventilation_required && '*'}
-              </label>
-            </div>
-          </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                     <span style={{
                       fontSize: isMobile ? '11px' : '12px',
@@ -1525,389 +1944,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                   {language === 'fr' ? 'Documentez cette étape avec une photo' : 'Document this step with a photo'}
                 </p>
               </div>
-            </div>
-          </div>
-          
-          {/* Section Ventilation à Air Forcé - Nouvelle section basée sur recherches */}
-          <div style={{
-            backgroundColor: '#374151',
-            borderRadius: '16px',
-            padding: isMobile ? '20px' : '24px',
-            border: '2px solid #4b5563',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
-          }}>
-            <h4 style={{
-              fontSize: isMobile ? '18px' : '20px',
-              fontWeight: '700',
-              color: 'white',
-              marginBottom: isMobile ? '16px' : '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <Wind style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
-              💨 Ventilation à Air Forcé (Art. 302 RSST)
-            </h4>
-            
-            <div style={{ 
-              backgroundColor: 'rgba(0, 0, 0, 0.3)',
-              borderRadius: '12px',
-              padding: isMobile ? '16px' : '20px',
-              marginBottom: '20px',
-              border: '1px solid rgba(107, 114, 128, 0.3)'
-            }}>
-              <p style={{ 
-                color: '#d1d5db', 
-                fontSize: '15px',
-                lineHeight: 1.6,
-                margin: '0 0 12px 0',
-                fontWeight: '600'
-              }}>
-                ⚠️ <strong>OBLIGATION RÉGLEMENTAIRE</strong> : L'espace clos doit être ventilé par des moyens mécaniques pour maintenir une atmosphère conforme (O₂: 19,5-23%, LEL ≤10%, contaminants ≤VEMP).
-              </p>
-              <p style={{ 
-                color: '#9ca3af', 
-                fontSize: '14px',
-                margin: 0,
-                fontStyle: 'italic'
-              }}>
-                🔧 <strong>Système d'alarme obligatoire</strong> : Un système d'avertissement doit informer immédiatement en cas de défaillance des appareils de ventilation.
-              </p>
-            </div>
-            
-            {/* Exigence de ventilation */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '16px',
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                borderRadius: '12px',
-                border: '1px solid rgba(107, 114, 128, 0.3)'
-              }}>
-                <input
-                  type="checkbox"
-                  id="ventilation_required"
-                  checked={permitData.ventilation_required || false}
-                  onChange={(e) => updatePermitData({ ventilation_required: e.target.checked })}
-                  style={{
-                    width: '24px',
-                    height: '24px',
-                    accentColor: '#3b82f6'
-                  }}
-                />
-                <label 
-                  htmlFor="ventilation_required"
-                  style={{
-                    color: '#d1d5db',
-                    fontSize: isMobile ? '15px' : '16px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    flex: 1
-                  }}
-                >
-                  🌪️ <strong>VENTILATION MÉCANIQUE REQUISE</strong> : La ventilation naturelle est insuffisante pour cet espace clos *
-                </label>
-              </div>
-            </div>
-            
-            {permitData.ventilation_required && (
-              <>
-                {/* Type de ventilation et débit */}
-                <div style={styles.grid2}>
-                  <div>
-                    <label style={{ ...styles.label, color: '#9ca3af' }}>Type de ventilation mécanique *</label>
-                    <select
-                      value={permitData.ventilation_type || ''}
-                      onChange={(e) => updatePermitData({ ventilation_type: e.target.value })}
-                      style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                      required
-                    >
-                      <option value="">Sélectionner le type</option>
-                      <option value="forced_air_supply">💨 Soufflage d'air forcé</option>
-                      <option value="extraction_ventilation">🌪️ Ventilation par extraction</option>
-                      <option value="combined_system">🔄 Système combiné (soufflage + extraction)</option>
-                      <option value="local_extraction">🎯 Aspiration locale à la source</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ ...styles.label, color: '#9ca3af' }}>Débit d'air requis *</label>
-                    <select
-                      value={permitData.ventilation_flow_rate || ''}
-                      onChange={(e) => updatePermitData({ ventilation_flow_rate: e.target.value })}
-                      style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                      required
-                    >
-                      <option value="">Sélectionner le débit</option>
-                      <option value="low_flow">📊 Faible (≤500 CFM)</option>
-                      <option value="medium_flow">📈 Moyen (500-1500 CFM)</option>
-                      <option value="high_flow">📊 Élevé (1500-3000 CFM)</option>
-                      <option value="very_high_flow">🚀 Très élevé (≥3000 CFM)</option>
-                      <option value="calculated">🧮 Calculé selon volume</option>
-                    </select>
-                  </div>
-                </div>
-                
-                {/* Équipements de ventilation */}
-                <div style={{ marginTop: '20px' }}>
-                  <h5 style={{
-                    fontSize: isMobile ? '16px' : '18px',
-                    fontWeight: '700',
-                    color: '#d1d5db',
-                    marginBottom: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <Zap style={{ width: '20px', height: '20px' }} />
-                    Équipements de Ventilation Requis
-                  </h5>
-                  
-                  <div style={styles.grid2}>
-                    {[
-                      { id: 'ventilation_fan', label: '🌪️ Ventilateur mécanique certifié', required: true },
-                      { id: 'air_ducting', label: '🔄 Conduits d\'air appropriés', required: true },
-                      { id: 'flow_meter', label: '📊 Capteur de débit d\'air', required: true },
-                      { id: 'backup_ventilation', label: '🔋 Système de ventilation de secours', required: false },
-                      { id: 'air_filtration', label: '🫧 Système de filtration d\'air', required: false },
-                      { id: 'explosion_proof', label: '💥 Équipement antidéflagrant', required: false }
-                    ].map((equipment, index) => (
-                      <div key={equipment.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px',
-                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                        borderRadius: '8px',
-                        border: '1px solid rgba(107, 114, 128, 0.2)'
-                      }}>
-                        <input
-                          type="checkbox"
-                          id={equipment.id}
-                          checked={permitData.ventilation_equipment?.[equipment.id] || false}
-                          onChange={(e) => updatePermitData({ 
-                            ventilation_equipment: { 
-                              ...permitData.ventilation_equipment, 
-                              [equipment.id]: e.target.checked 
-                            }
-                          })}
-                          style={{
-                            width: '20px',
-                            height: '20px',
-                            accentColor: '#10b981'
-                          }}
-                        />
-                        <label 
-                          htmlFor={equipment.id}
-                          style={{
-                            color: equipment.required ? '#d1d5db' : '#9ca3af',
-                            fontSize: '14px',
-                            fontWeight: equipment.required ? '600' : '500',
-                            cursor: 'pointer',
-                            flex: 1
-                          }}
-                        >
-                          {equipment.label}
-                          {equipment.required && <span style={{ color: '#f87171' }}> *</span>}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Système d'alarme de défaillance */}
-                <div style={{ marginTop: '20px' }}>
-                  <h5 style={{
-                    fontSize: isMobile ? '16px' : '18px',
-                    fontWeight: '700',
-                    color: '#d1d5db',
-                    marginBottom: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <Volume2 style={{ width: '20px', height: '20px' }} />
-                    🚨 Système d'Alarme de Défaillance
-                  </h5>
-                  
-                  <div style={styles.grid2}>
-                    <div>
-                      <label style={{ ...styles.label, color: '#9ca3af' }}>Type d'alarme *</label>
-                      <select
-                        value={permitData.alarm_system_type || ''}
-                        onChange={(e) => updatePermitData({ alarm_system_type: e.target.value })}
-                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                        required
-                      >
-                        <option value="">Sélectionner le type</option>
-                        <option value="visual_audible">🔊 Alarme sonore et visuelle</option>
-                        <option value="flow_sensor">📊 Capteur de débit avec alarme</option>
-                        <option value="pressure_switch">⚡ Contacteur manométrique</option>
-                        <option value="constant_monitoring">👁️ Surveillance constante par surveillant</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ ...styles.label, color: '#9ca3af' }}>Surveillance ventilation *</label>
-                      <select
-                        value={permitData.ventilation_monitoring || ''}
-                        onChange={(e) => updatePermitData({ ventilation_monitoring: e.target.value })}
-                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                        required
-                      >
-                        <option value="">Sélectionner</option>
-                        <option value="continuous">🔄 Continue pendant tout le travail</option>
-                        <option value="periodic">⏰ Périodique selon évaluation</option>
-                        <option value="automatic">🤖 Automatique avec capteurs</option>
-                        <option value="manual_visual">👁️ Visuelle manuelle constante</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Surveillance qualité de l'air */}
-                <div style={{ 
-                  marginTop: '20px',
-                  padding: '16px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  borderRadius: '12px',
-                  border: '2px dashed #6b7280'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginBottom: '16px'
-                  }}>
-                    <input
-                      type="checkbox"
-                      id="air_quality_continuous"
-                      checked={permitData.air_quality_continuous || false}
-                      onChange={(e) => updatePermitData({ air_quality_continuous: e.target.checked })}
-                      style={{
-                        width: '24px',
-                        height: '24px',
-                        accentColor: '#10b981'
-                      }}
-                      required
-                    />
-                    <label 
-                      htmlFor="air_quality_continuous"
-                      style={{
-                        color: '#d1d5db',
-                        fontSize: isMobile ? '15px' : '16px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        flex: 1
-                      }}
-                    >
-                      📊 <strong>SURVEILLANCE CONTINUE</strong> : Monitoring en temps réel de l'oxygène, LEL et contaminants *
-                    </label>
-                  </div>
-                  
-                  <div style={{ 
-                    padding: '12px',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(16, 185, 129, 0.3)'
-                  }}>
-                    <p style={{ 
-                      color: '#86efac', 
-                      fontSize: '14px',
-                      margin: 0,
-                      lineHeight: 1.5
-                    }}>
-                      ✅ <strong>Conformité Article 302 RSST</strong> : La ventilation mécanique assure le maintien d'une atmosphère sécuritaire avec O₂ entre 19,5-23%, LEL ≤10% LIE, et contaminants ≤ limites d'exposition.
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Points d'entrée et de sortie d'air */}
-                <div style={{ marginTop: '20px' }}>
-                  <h5 style={{
-                    fontSize: isMobile ? '16px' : '18px',
-                    fontWeight: '700',
-                    color: '#d1d5db',
-                    marginBottom: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <MapPin style={{ width: '20px', height: '20px' }} />
-                    🎯 Configuration Ventilation
-                  </h5>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div>
-                      <label style={{ ...styles.label, color: '#9ca3af' }}>Emplacement entrée d'air</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Partie haute de l'espace, côté opposé à l'extraction..."
-                        value={permitData.air_inlet_location || ''}
-                        onChange={(e) => updatePermitData({ air_inlet_location: e.target.value })}
-                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ ...styles.label, color: '#9ca3af' }}>Emplacement sortie d'air</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Partie basse pour évacuation des gaz lourds..."
-                        value={permitData.air_outlet_location || ''}
-                        onChange={(e) => updatePermitData({ air_outlet_location: e.target.value })}
-                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ ...styles.label, color: '#9ca3af' }}>Évacuation air vicié</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Rejeté à distance sécuritaire des travailleurs extérieurs..."
-                        value={permitData.air_exhaust_location || ''}
-                        onChange={(e) => updatePermitData({ air_exhaust_location: e.target.value })}
-                        style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-            
-            {/* Validation système de ventilation */}
-            <div style={{ 
-              marginTop: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '16px',
-              backgroundColor: 'rgba(16, 185, 129, 0.2)',
-              borderRadius: '12px',
-              border: '1px solid #10b981'
-            }}>
-              <input
-                type="checkbox"
-                id="ventilation_system_validated"
-                checked={permitData.ventilation_system_validated || false}
-                onChange={(e) => updatePermitData({ ventilation_system_validated: e.target.checked })}
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  accentColor: '#10b981'
-                }}
-                required={permitData.ventilation_required}
-              />
-              <label 
-                htmlFor="ventilation_system_validated"
-                style={{
-                  color: '#86efac',
-                  fontSize: isMobile ? '15px' : '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  flex: 1
-                }}
-              >
-                ✅ <strong>VALIDATION VENTILATION</strong> : Je certifie que le système de ventilation mécanique est opérationnel avec alarme de défaillance fonctionnelle. {permitData.ventilation_required && '*'}
-              </label>
             </div>
           </div>
           
@@ -2432,7 +2468,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             />
           </div>
           
-          {/* Section Ventilation à Air Forcé - Nouvelle section basée sur recherches */}
+          {/* Section Ventilation à Air Forcé */}
           <div style={{
             backgroundColor: '#374151',
             borderRadius: '16px',
@@ -2594,7 +2630,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             )}
           </div>
           
-          {/* Section Plan de Sauvetage - Nouvelle section ajoutée */}
+          {/* Section Plan de Sauvetage */}
           <div style={{
             backgroundColor: '#374151',
             borderRadius: '16px',
@@ -3066,801 +3102,3 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       </div>
     </div>
   );
-
-  // Rendu section atmosphérique optimisé mobile
-  const renderAtmosphericSection = () => {
-    const currentRegulations = PROVINCIAL_REGULATIONS[selectedProvince];
-    
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
-        <div style={styles.card}>
-          <h3 style={styles.cardTitle}>
-            <Shield style={{ width: '20px', height: '20px' }} />
-            Limites - {currentRegulations.name}
-            <span style={{
-              fontSize: isMobile ? '12px' : '14px',
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              padding: '6px 12px',
-              borderRadius: '16px',
-              fontWeight: '700'
-            }}>
-              ⏱️ {currentRegulations.atmospheric_testing.frequency_minutes} min
-            </span>
-          </h3>
-          
-          <div style={styles.grid4}>
-            {Object.entries(currentRegulations.atmospheric_testing.limits).map(([gas, limits]) => (
-              <div key={gas} style={{
-                backgroundColor: 'rgba(17, 24, 39, 0.6)',
-                borderRadius: '12px',
-                padding: isMobile ? '16px' : '20px',
-                border: '1px solid #4b5563',
-                transition: 'all 0.2s ease'
-              }}>
-                <h4 style={{ 
-                  fontWeight: '700', 
-                  color: 'white', 
-                  marginBottom: '12px', 
-                  fontSize: isMobile ? '15px' : '17px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  {gas === 'oxygen' ? '🫁 O₂' : 
-                   gas === 'lel' ? '🔥 LEL' : 
-                   gas === 'h2s' ? '☠️ H₂S' : 
-                   '💨 CO'}
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: isMobile ? '13px' : '14px' }}>
-                  {gas === 'oxygen' ? (
-                    <>
-                      <div style={{ color: '#86efac', fontWeight: '600' }}>
-                        ✅ {(limits as AtmosphericLimits['oxygen']).min}-{(limits as AtmosphericLimits['oxygen']).max}%
-                      </div>
-                      <div style={{ color: '#fca5a5', fontWeight: '600' }}>
-                        🚨 ≤{(limits as AtmosphericLimits['oxygen']).critical_low}% ou ≥{(limits as AtmosphericLimits['oxygen']).critical_high}%
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ color: '#86efac', fontWeight: '600' }}>
-                        ✅ ≤{(limits as AtmosphericLimits['lel']).max} {gas === 'lel' ? '%' : 'ppm'}
-                      </div>
-                      <div style={{ color: '#fca5a5', fontWeight: '600' }}>
-                        🚨 ≥{(limits as AtmosphericLimits['lel']).critical} {gas === 'lel' ? '%' : 'ppm'}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {retestActive && (
-          <div style={styles.emergencyCard}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              flexDirection: isMobile ? 'column' : 'row',
-              gap: isMobile ? '16px' : '0'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <AlertTriangle style={{ width: '36px', height: '36px', color: '#f87171' }} />
-                <div>
-                  <h3 style={{ color: '#fecaca', fontWeight: 'bold', fontSize: isMobile ? '18px' : '20px' }}>
-                    ⏰ RETEST OBLIGATOIRE
-                  </h3>
-                  <p style={{ color: '#fca5a5', fontSize: isMobile ? '14px' : '16px' }}>
-                    Valeurs critiques détectées - Nouveau test requis
-                  </p>
-                </div>
-              </div>
-              <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
-                <div style={{ 
-                  fontSize: isMobile ? '28px' : '36px', 
-                  fontWeight: 'bold', 
-                  color: '#f87171',
-                  fontFamily: 'JetBrains Mono, monospace'
-                }}>
-                  {formatTime(retestTimer)}
-                </div>
-                <div style={{ color: '#fca5a5', fontSize: '16px' }}>Temps restant</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div style={styles.card}>
-          <h3 style={styles.cardTitle}>
-            <Activity style={{ width: '20px', height: '20px' }} />
-            Nouvelle Mesure Atmosphérique
-          </h3>
-          
-          <div style={styles.grid4}>
-            <div>
-              <label style={styles.label}>O₂ (%) *</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="30"
-                placeholder="20.9"
-                value={manualReading.oxygen}
-                onChange={(e) => setManualReading(prev => ({ ...prev, oxygen: e.target.value }))}
-                style={styles.input}
-                required
-              />
-            </div>
-            <div>
-              <label style={styles.label}>LEL (%) *</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="100"
-                placeholder="0"
-                value={manualReading.lel}
-                onChange={(e) => setManualReading(prev => ({ ...prev, lel: e.target.value }))}
-                style={styles.input}
-                required
-              />
-            </div>
-            <div>
-              <label style={styles.label}>H₂S (ppm) *</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="1000"
-                placeholder="0"
-                value={manualReading.h2s}
-                onChange={(e) => setManualReading(prev => ({ ...prev, h2s: e.target.value }))}
-                style={styles.input}
-                required
-              />
-            </div>
-            <div>
-              <label style={styles.label}>CO (ppm) *</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="1000"
-                placeholder="0"
-                value={manualReading.co}
-                onChange={(e) => setManualReading(prev => ({ ...prev, co: e.target.value }))}
-                style={styles.input}
-                required
-              />
-            </div>
-          </div>
-          
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', 
-            gap: '20px', 
-            marginTop: '20px' 
-          }}>
-            <div>
-              <label style={styles.label}>Température (°C)</label>
-              <input
-                type="number"
-                step="0.1"
-                placeholder="20"
-                value={manualReading.temperature}
-                onChange={(e) => setManualReading(prev => ({ ...prev, temperature: e.target.value }))}
-                style={styles.input}
-              />
-            </div>
-            <div>
-              <label style={styles.label}>Humidité (%)</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="100"
-                placeholder="50"
-                value={manualReading.humidity}
-                onChange={(e) => setManualReading(prev => ({ ...prev, humidity: e.target.value }))}
-                style={styles.input}
-              />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'end' }}>
-              <button
-                onClick={addManualReading}
-                style={{
-                  ...styles.button,
-                  ...styles.buttonSuccess,
-                  width: '100%',
-                  justifyContent: 'center',
-                  fontSize: isMobile ? '15px' : '16px'
-                }}
-              >
-                <Plus style={{ width: '18px', height: '18px' }} />
-                {isMobile ? 'Ajouter' : texts.addManualReading}
-              </button>
-            </div>
-          </div>
-          
-          <div style={{ marginTop: '20px' }}>
-            <label style={styles.label}>Notes (optionnel)</label>
-            <textarea
-              placeholder="Observations, conditions particulières..."
-              value={manualReading.notes}
-              onChange={(e) => setManualReading(prev => ({ ...prev, notes: e.target.value }))}
-              style={{ ...styles.input, height: '80px', resize: 'vertical' }}
-            />
-          </div>
-        </div>
-
-        <div style={styles.card}>
-          <h3 style={styles.cardTitle}>
-            <FileText style={{ width: '20px', height: '20px' }} />
-            Historique des Mesures ({atmosphericReadings.length})
-          </h3>
-          
-          {atmosphericReadings.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: isMobile ? '32px 20px' : '48px 32px', 
-              color: '#9ca3af',
-              backgroundColor: 'rgba(17, 24, 39, 0.5)',
-              borderRadius: '12px',
-              border: '1px solid #374151'
-            }}>
-              <Activity style={{ 
-                width: isMobile ? '56px' : '72px', 
-                height: isMobile ? '56px' : '72px', 
-                margin: '0 auto 20px', 
-                color: '#4b5563'
-              }} />
-              <p style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: '12px', fontWeight: '600' }}>
-                Aucune mesure enregistrée
-              </p>
-              <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
-                Effectuez votre première mesure atmosphérique ci-dessus pour commencer la surveillance.
-              </p>
-            </div>
-          ) : (
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: '16px', 
-              maxHeight: isMobile ? '400px' : '500px', 
-              overflowY: 'auto',
-              paddingRight: '8px'
-            }}>
-              {atmosphericReadings.slice().reverse().map((reading) => {
-                const readingStyle = reading.status === 'danger' ? styles.readingDanger :
-                                   reading.status === 'warning' ? styles.readingWarning :
-                                   styles.readingSafe;
-                
-                return (
-                  <div
-                    key={reading.id}
-                    style={{
-                      ...styles.readingCard,
-                      ...readingStyle
-                    }}
-                  >
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between', 
-                      marginBottom: '12px',
-                      flexDirection: isMobile ? 'column' : 'row',
-                      gap: isMobile ? '12px' : '0'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                          ...styles.statusIndicator,
-                          ...(reading.status === 'danger' ? styles.statusDanger :
-                             reading.status === 'warning' ? styles.statusWarning :
-                             styles.statusSafe)
-                        }}></div>
-                        <span style={{
-                          fontWeight: '700',
-                          color: reading.status === 'danger' ? '#fca5a5' :
-                                reading.status === 'warning' ? '#fde047' :
-                                '#86efac',
-                          fontSize: isMobile ? '15px' : '17px'
-                        }}>
-                          {reading.status === 'danger' ? '🚨 DANGER' :
-                           reading.status === 'warning' ? '⚠️ ATTENTION' :
-                           '✅ SÉCURITAIRE'}
-                        </span>
-                      </div>
-                      <div style={{ 
-                        color: '#9ca3af', 
-                        fontSize: isMobile ? '13px' : '14px', 
-                        textAlign: isMobile ? 'center' : 'right'
-                      }}>
-                        📅 {new Date(reading.timestamp).toLocaleString('fr-CA')}
-                        <br />
-                        👤 {reading.taken_by}
-                      </div>
-                    </div>
-                    
-                    <div style={styles.grid4}>
-                      <div>
-                        <span style={{ color: '#9ca3af', fontSize: '13px' }}>O₂:</span>
-                        <span style={{
-                          marginLeft: '8px',
-                          fontWeight: '600',
-                          fontSize: '15px',
-                          color: validateAtmosphericValue('oxygen', reading.oxygen) === 'danger' ? '#fca5a5' :
-                                validateAtmosphericValue('oxygen', reading.oxygen) === 'warning' ? '#fde047' :
-                                '#86efac'
-                        }}>
-                          {reading.oxygen}%
-                        </span>
-                      </div>
-                      <div>
-                        <span style={{ color: '#9ca3af', fontSize: '13px' }}>LEL:</span>
-                        <span style={{
-                          marginLeft: '8px',
-                          fontWeight: '600',
-                          fontSize: '15px',
-                          color: validateAtmosphericValue('lel', reading.lel) === 'danger' ? '#fca5a5' :
-                                validateAtmosphericValue('lel', reading.lel) === 'warning' ? '#fde047' :
-                                '#86efac'
-                        }}>
-                          {reading.lel}%
-                        </span>
-                      </div>
-                      <div>
-                        <span style={{ color: '#9ca3af', fontSize: '13px' }}>H₂S:</span>
-                        <span style={{
-                          marginLeft: '8px',
-                          fontWeight: '600',
-                          fontSize: '15px',
-                          color: validateAtmosphericValue('h2s', reading.h2s) === 'danger' ? '#fca5a5' :
-                                validateAtmosphericValue('h2s', reading.h2s) === 'warning' ? '#fde047' :
-                                '#86efac'
-                        }}>
-                          {reading.h2s} ppm
-                        </span>
-                      </div>
-                      <div>
-                        <span style={{ color: '#9ca3af', fontSize: '13px' }}>CO:</span>
-                        <span style={{
-                          marginLeft: '8px',
-                          fontWeight: '600',
-                          fontSize: '15px',
-                          color: validateAtmosphericValue('co', reading.co) === 'danger' ? '#fca5a5' :
-                                validateAtmosphericValue('co', reading.co) === 'warning' ? '#fde047' :
-                                '#86efac'
-                        }}>
-                          {reading.co} ppm
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {(reading.temperature || reading.humidity || reading.notes) && (
-                      <div style={{
-                        marginTop: '12px',
-                        paddingTop: '12px',
-                        borderTop: '1px solid #4b5563',
-                        fontSize: '14px',
-                        color: '#d1d5db'
-                      }}>
-                        {reading.temperature && <span>🌡️ {reading.temperature}°C </span>}
-                        {reading.humidity && <span>💧 {reading.humidity}% </span>}
-                        {reading.notes && <div style={{ marginTop: '6px' }}>📝 {reading.notes}</div>}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // Rendu section contacts d'urgence optimisé mobile
-  const renderEmergencySection = () => {
-    const currentRegulations = PROVINCIAL_REGULATIONS[selectedProvince];
-    
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
-        <div style={styles.card}>
-          <h3 style={styles.cardTitle}>
-            <Phone style={{ width: '20px', height: '20px' }} />
-            {texts.emergencyContacts} - {currentRegulations.name}
-          </h3>
-          
-          <div style={styles.grid2}>
-            {currentRegulations.emergency_contacts.map((contact, index) => (
-              <div key={index} style={{
-                ...styles.readingCard,
-                ...(contact.name === '911' ? styles.readingDanger : styles.readingSafe),
-                cursor: 'pointer',
-                transition: 'all 0.3s ease'
-              }}
-              onClick={() => window.open(`tel:${contact.phone}`, '_self')}
-              onMouseEnter={(e) => {
-                (e.target as HTMLDivElement).style.transform = 'translateY(-2px)';
-                (e.target as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                (e.target as HTMLDivElement).style.transform = 'translateY(0)';
-                (e.target as HTMLDivElement).style.boxShadow = 'none';
-              }}
-              >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between', 
-                  marginBottom: '12px',
-                  flexDirection: isMobile ? 'column' : 'row',
-                  gap: isMobile ? '12px' : '0'
-                }}>
-                  <h4 style={{ 
-                    fontWeight: '700', 
-                    color: 'white', 
-                    fontSize: isMobile ? '17px' : '19px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    {contact.name === '911' ? '🚨' : '📞'} {contact.name}
-                  </h4>
-                  {contact.available_24h && (
-                    <span style={{
-                      fontSize: '12px',
-                      backgroundColor: '#059669',
-                      color: 'white',
-                      padding: '4px 12px',
-                      borderRadius: '16px',
-                      fontWeight: '600'
-                    }}>24h/7j</span>
-                  )}
-                </div>
-                <p style={{ 
-                  color: '#d1d5db', 
-                  fontSize: '15px', 
-                  marginBottom: '12px', 
-                  textAlign: isMobile ? 'center' : 'left'
-                }}>
-                  {contact.role}
-                </p>
-                <div style={{
-                  color: '#60a5fa',
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: isMobile ? '17px' : '19px',
-                  textDecoration: 'none',
-                  display: 'block',
-                  textAlign: isMobile ? 'center' : 'left',
-                  fontWeight: '700',
-                  backgroundColor: 'rgba(96, 165, 250, 0.1)',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(96, 165, 250, 0.3)'
-                }}>
-                  {contact.phone}
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div style={{
-            marginTop: '32px',
-            padding: isMobile ? '20px' : '24px',
-            backgroundColor: 'rgba(220, 38, 38, 0.15)',
-            border: '2px solid rgba(239, 68, 68, 0.4)',
-            borderRadius: '16px',
-            boxShadow: '0 8px 32px rgba(220, 38, 38, 0.2)'
-          }}>
-            <h4 style={{
-              color: '#fecaca',
-              fontWeight: '700',
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              fontSize: isMobile ? '16px' : '18px'
-            }}>
-              <AlertTriangle style={{ width: '24px', height: '24px' }} />
-              🚨 Procédure d'Évacuation d'Urgence
-            </h4>
-            <ol style={{ 
-              color: '#fecaca', 
-              fontSize: isMobile ? '14px' : '15px', 
-              marginLeft: '20px',
-              lineHeight: 1.6
-            }}>
-              <li style={{ marginBottom: '8px' }}>
-                <strong>1. ARRÊT IMMÉDIAT</strong> de tous les travaux
-              </li>
-              <li style={{ marginBottom: '8px' }}>
-                <strong>2. ÉVACUATION</strong> immédiate de tous les entrants
-              </li>
-              <li style={{ marginBottom: '8px' }}>
-                <strong>3. APPEL</strong> au 911 et contacts d'urgence
-              </li>
-              <li style={{ marginBottom: '8px' }}>
-                <strong>4. INTERDICTION</strong> de re-entrée jusqu'à autorisation
-              </li>
-              <li>
-                <strong>5. RAPPORT</strong> d'incident obligatoire
-              </li>
-            </ol>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div style={styles.container}>
-      {/* Input caché pour capture photo */}
-      <input 
-        ref={fileInputRef} 
-        type="file" 
-        accept="image/*" 
-        capture="environment" 
-        multiple
-        style={{ display: 'none' }} 
-      />
-      
-      {/* En-tête mobile sticky */}
-      <div style={isMobile ? styles.mobileHeader : { marginBottom: '40px' }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: isMobile ? 'flex-start' : 'center', 
-          justifyContent: 'space-between', 
-          marginBottom: isMobile ? '12px' : '20px',
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: isMobile ? '8px' : '0'
-        }}>
-          <div style={{ width: '100%' }}>
-            <h1 style={styles.title}>{texts.title}</h1>
-            <p style={styles.subtitle}>{texts.subtitle}</p>
-            <div style={{ fontSize: '12px', color: '#93c5fd', marginTop: isMobile ? '4px' : '12px' }}>
-              <span style={{
-                fontFamily: 'JetBrains Mono, monospace',
-                backgroundColor: '#1f2937',
-                padding: isMobile ? '4px 8px' : '6px 12px',
-                borderRadius: '4px',
-                border: '1px solid #4b5563',
-                fontSize: isMobile ? '11px' : '15px',
-                color: '#e2e8f0'
-              }}>
-                {permitData.permit_number}
-              </span>
-            </div>
-          </div>
-          {!isMobile && (
-            <div style={{
-              padding: '20px',
-              borderRadius: '12px',
-              fontWeight: '700',
-              backgroundColor: isPermitValid() ? '#059669' : '#d97706',
-              color: 'white',
-              fontSize: '16px',
-              textAlign: 'center',
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              minWidth: '140px'
-            }}>
-              {isPermitValid() ? '✅ Permis Valide' : '⚠️ Permis Incomplet'}
-            </div>
-          )}
-        </div>
-        
-        {isMobile && (
-          <div style={{
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontWeight: '600',
-            backgroundColor: isPermitValid() ? '#059669' : '#d97706',
-            color: 'white',
-            fontSize: '14px',
-            textAlign: 'center',
-            marginBottom: '8px',
-            width: '100%',
-            boxSizing: 'border-box'
-          }}>
-            {isPermitValid() ? '✅ Permis Valide' : '⚠️ Permis Incomplet'}
-          </div>
-        )}
-        
-        {/* Boutons d'action optimisés mobile */}
-        <div style={styles.mobileButtonGrid}>
-          <button style={{
-            ...styles.button,
-            ...styles.buttonDanger
-          }}>
-            <AlertTriangle style={{ width: '16px', height: '16px' }} />
-            {isMobile ? 'ÉVACUATION' : texts.emergencyEvacuation}
-          </button>
-          <button
-            onClick={() => onSave?.({})}
-            style={{
-              ...styles.button,
-              ...styles.buttonPrimary
-            }}
-          >
-            <Save style={{ width: '16px', height: '16px' }} />
-            Sauvegarder
-          </button>
-          {isPermitValid() && (
-            <button
-              onClick={() => onSubmit?.({})}
-              style={{
-                ...styles.button,
-                ...styles.buttonSuccess,
-                gridColumn: isMobile ? 'span 2' : 'auto'
-              }}
-            >
-              <CheckCircle style={{ width: '16px', height: '16px' }} />
-              {isMobile ? 'Soumettre' : texts.submitPermit}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {renderTabs()}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '32px', width: '100%' }}>
-        {activeTab === 'site' && renderSiteSection()}
-        {activeTab === 'atmospheric' && renderAtmosphericSection()}
-        {activeTab === 'personnel' && (
-          <div style={styles.card}>
-            <h3 style={styles.cardTitle}>
-              <Users style={{ width: '20px', height: '20px' }} />
-              {texts.personnelManagement}
-            </h3>
-            <div style={{ 
-              textAlign: 'center', 
-              padding: isMobile ? '40px 20px' : '56px 32px',
-              backgroundColor: 'rgba(17, 24, 39, 0.5)',
-              borderRadius: '12px',
-              border: '1px solid #374151'
-            }}>
-              <Users style={{ 
-                width: isMobile ? '56px' : '72px', 
-                height: isMobile ? '56px' : '72px', 
-                margin: '0 auto 20px', 
-                color: '#4b5563'
-              }} />
-              <p style={{ 
-                color: '#9ca3af', 
-                fontSize: isMobile ? '18px' : '20px', 
-                marginBottom: '12px',
-                fontWeight: '600'
-              }}>
-                Section Personnel en cours de développement
-              </p>
-              <p style={{ 
-                color: '#6b7280', 
-                fontSize: '15px',
-                lineHeight: 1.5,
-                maxWidth: '400px',
-                margin: '0 auto'
-              }}>
-                Fonctionnalités à venir : signatures électroniques, horodatage entrée/sortie, validation formations.
-              </p>
-            </div>
-          </div>
-        )}
-        {activeTab === 'emergency' && renderEmergencySection()}
-      </div>
-
-      {/* Styles CSS pour les animations et optimisations mobile */}
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        
-        input:focus, select:focus, textarea:focus {
-          border-color: #3b82f6 !important;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
-          transform: translateY(-1px);
-        }
-        
-        button:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-        }
-        
-        button:active:not(:disabled) {
-          transform: translateY(0);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-        
-        /* Optimisations tactiles */
-        button, input, select, textarea {
-          -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
-          touch-action: manipulation;
-        }
-        
-        /* Scrollbar personnalisée */
-        ::-webkit-scrollbar {
-          width: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-          background: rgba(55, 65, 81, 0.5);
-          border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-          background: rgba(107, 114, 128, 0.8);
-          border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-          background: rgba(156, 163, 175, 0.9);
-        }
-        
-        /* Amélioration de la lisibilité sur mobile */
-        @media (max-width: 767px) {
-          body {
-            -webkit-text-size-adjust: 100%;
-            -moz-text-size-adjust: 100%;
-            -ms-text-size-adjust: 100%;
-          }
-          
-          * {
-            box-sizing: border-box;
-          }
-          
-          /* Empêche le zoom lors du focus sur les inputs sur iOS */
-          input[type="text"], input[type="number"], input[type="email"], 
-          input[type="tel"], input[type="url"], input[type="password"], 
-          input[type="date"], input[type="time"],
-          textarea, select {
-            font-size: 16px !important;
-            transform: none !important;
-            -webkit-appearance: none !important;
-            appearance: none !important;
-          }
-          
-          .container {
-            padding: 4px !important;
-            overflow-x: hidden !important;
-          }
-          
-          .card {
-            margin-bottom: 8px !important;
-            padding: 12px !important;
-          }
-          
-          /* Navigation par onglets mobile */
-          .mobile-tabs {
-            overflow-x: auto;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-          }
-          
-          .mobile-tabs::-webkit-scrollbar {
-            display: none;
-          }
-        }
-        
-        /* Optimisation pour les écrans très petits */
-        @media (max-width: 320px) {
-          .container {
-            padding: 4px !important;
-          }
-        }
-        
-        /* Animation pour les éléments interactifs */
-        @media (prefers-reduced-motion: no-preference) {
-          * {
-            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-          }
-        }
-      `}</style>
-    </div>
-  );
-};
-
-export default ConfinedSpacePermit;
