@@ -1659,11 +1659,11 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           
           {/* Section Plan de Sauvetage - Nouvelle section ajoutée */}
           <div style={{
-            backgroundColor: '#1e40af',
+            backgroundColor: '#374151',
             borderRadius: '16px',
             padding: isMobile ? '20px' : '24px',
-            border: '2px solid #3b82f6',
-            boxShadow: '0 8px 32px rgba(59, 130, 246, 0.2)'
+            border: '2px solid #4b5563',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
           }}>
             <h4 style={{
               fontSize: isMobile ? '18px' : '20px',
@@ -1674,7 +1674,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               alignItems: 'center',
               gap: '12px'
             }}>
-              <Shield style={{ width: '24px', height: '24px', color: '#93c5fd' }} />
+              <Shield style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
               🚨 Plan de Sauvetage Obligatoire (Art. 309 RSST)
             </h4>
             
@@ -1683,10 +1683,10 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               borderRadius: '12px',
               padding: isMobile ? '16px' : '20px',
               marginBottom: '20px',
-              border: '1px solid rgba(147, 197, 253, 0.3)'
+              border: '1px solid rgba(107, 114, 128, 0.3)'
             }}>
               <p style={{ 
-                color: '#93c5fd', 
+                color: '#d1d5db', 
                 fontSize: '15px',
                 lineHeight: 1.6,
                 margin: '0 0 12px 0',
@@ -1695,7 +1695,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 ⚠️ <strong>OBLIGATION LÉGALE</strong> : Un plan de sauvetage personnalisé avec personnel et équipements requis doit être disponible sur place pour intervention rapide (réglementation 25 juillet 2023).
               </p>
               <p style={{ 
-                color: '#bfdbfe', 
+                color: '#9ca3af', 
                 fontSize: '14px',
                 margin: 0,
                 fontStyle: 'italic'
@@ -1767,7 +1767,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               <h5 style={{
                 fontSize: isMobile ? '16px' : '18px',
                 fontWeight: '700',
-                color: '#93c5fd',
+                color: '#d1d5db',
                 marginBottom: '16px',
                 display: 'flex',
                 alignItems: 'center',
@@ -1795,7 +1795,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                     padding: '12px',
                     backgroundColor: 'rgba(0, 0, 0, 0.2)',
                     borderRadius: '8px',
-                    border: '1px solid rgba(147, 197, 253, 0.2)'
+                    border: '1px solid rgba(107, 114, 128, 0.2)'
                   }}>
                     <input
                       type="checkbox"
@@ -1816,7 +1816,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                     <label 
                       htmlFor={equipment.id}
                       style={{
-                        color: equipment.required ? '#93c5fd' : '#d1d5db',
+                        color: equipment.required ? '#d1d5db' : '#9ca3af',
                         fontSize: '14px',
                         fontWeight: equipment.required ? '600' : '500',
                         cursor: 'pointer',
@@ -1824,7 +1824,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                       }}
                     >
                       {equipment.label}
-                      {equipment.required && <span style={{ color: '#60a5fa' }}> *</span>}
+                      {equipment.required && <span style={{ color: '#f87171' }}> *</span>}
                     </label>
                   </div>
                 ))}
@@ -1839,7 +1839,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                 justifyContent: 'space-between',
                 marginBottom: '16px'
               }}>
-                <label style={{ ...styles.label, color: '#93c5fd', margin: 0 }}>
+                <label style={{ ...styles.label, color: '#9ca3af', margin: 0 }}>
                   Procédures détaillées de sauvetage *
                 </label>
                 <button
@@ -1876,10 +1876,10 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                     padding: '20px',
                     backgroundColor: 'rgba(0, 0, 0, 0.2)',
                     borderRadius: '8px',
-                    border: '2px dashed #60a5fa',
+                    border: '2px dashed #6b7280',
                     textAlign: 'center'
                   }}>
-                    <p style={{ color: '#93c5fd', margin: 0, fontSize: '14px' }}>
+                    <p style={{ color: '#9ca3af', margin: 0, fontSize: '14px' }}>
                       Aucune étape définie. Cliquez sur "Ajouter étape" pour commencer.
                     </p>
                   </div>
@@ -1892,7 +1892,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                       padding: '16px',
                       backgroundColor: 'rgba(0, 0, 0, 0.2)',
                       borderRadius: '8px',
-                      border: '1px solid rgba(147, 197, 253, 0.3)'
+                      border: '1px solid rgba(107, 114, 128, 0.3)'
                     }}>
                       <div style={{
                         minWidth: '32px',
@@ -1922,7 +1922,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                           height: '60px',
                           resize: 'vertical',
                           backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                          border: '1px solid #60a5fa',
+                          border: '1px solid #6b7280',
                           flex: 1
                         }}
                       />
@@ -1962,7 +1962,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               <h5 style={{
                 fontSize: isMobile ? '16px' : '18px',
                 fontWeight: '700',
-                color: '#93c5fd',
+                color: '#d1d5db',
                 marginBottom: '16px',
                 display: 'flex',
                 alignItems: 'center',
@@ -1988,7 +1988,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                     padding: '12px',
                     backgroundColor: 'rgba(0, 0, 0, 0.2)',
                     borderRadius: '8px',
-                    border: '1px solid rgba(147, 197, 253, 0.2)'
+                    border: '1px solid rgba(107, 114, 128, 0.2)'
                   }}>
                     <input
                       type="checkbox"
@@ -2035,7 +2035,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               <h5 style={{
                 fontSize: isMobile ? '16px' : '18px',
                 fontWeight: '700',
-                color: '#93c5fd',
+                color: '#d1d5db',
                 marginBottom: '12px',
                 display: 'flex',
                 alignItems: 'center',
@@ -2047,20 +2047,20 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               
               <div style={styles.grid2}>
                 <div>
-                  <label style={{ ...styles.label, color: '#93c5fd' }}>Date dernier exercice</label>
+                  <label style={{ ...styles.label, color: '#9ca3af' }}>Date dernier exercice</label>
                   <input
                     type="date"
                     value={permitData.last_drill_date || ''}
                     onChange={(e) => updatePermitData({ last_drill_date: e.target.value })}
-                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #60a5fa' }}
+                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
                   />
                 </div>
                 <div>
-                  <label style={{ ...styles.label, color: '#93c5fd' }}>Résultats test</label>
+                  <label style={{ ...styles.label, color: '#9ca3af' }}>Résultats test</label>
                   <select
                     value={permitData.drill_results || ''}
                     onChange={(e) => updatePermitData({ drill_results: e.target.value })}
-                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #60a5fa' }}
+                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
                   >
                     <option value="">Sélectionner</option>
                     <option value="successful">✅ Réussi - Plan efficace</option>
@@ -2072,7 +2072,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               </div>
               
               <div style={{ marginTop: '16px' }}>
-                <label style={{ ...styles.label, color: '#93c5fd' }}>Notes sur l'efficacité du plan</label>
+                <label style={{ ...styles.label, color: '#9ca3af' }}>Notes sur l'efficacité du plan</label>
                 <textarea
                   placeholder="Observations des exercices, améliorations identifiées, temps de réponse mesuré..."
                   value={permitData.drill_notes || ''}
@@ -2082,7 +2082,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
                     height: '80px', 
                     resize: 'vertical',
                     backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                    border: '1px solid #60a5fa'
+                    border: '1px solid #6b7280'
                   }}
                 />
               </div>
