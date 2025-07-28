@@ -9,8 +9,8 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-// ✅ CORRECTION : Pas d'import pour éviter les erreurs de build
-// Le composant sera défini plus bas de manière conditionnelle
+// ✅ CORRECTION : Utilisation du registre de permis pour éviter les imports statiques
+import { PERMIT_REGISTRY, loadPermitComponent as loadModule } from './permits/registry';
 
 // =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -166,149 +166,14 @@ interface PermitModule {
 }
 
 // =================== CONFIGURATION DES MODULES DE PERMIS ===================
-// Définition conditionnelle du composant ConfinedSpace
-let ConfinedSpaceComponent: React.ComponentType<any> | null = null;
-
-// Tentative de chargement dynamique du composant
-if (typeof window !== 'undefined') {
-  try {
-    // Import dynamique côté client seulement
-    import('./permits/ConfinedSpace/index')
-      .then(module => {
-        ConfinedSpaceComponent = module.default;
-      })
-      .catch(() => {
-        console.log('ConfinedSpace module not available');
-      });
-  } catch (error) {
-    console.log('ConfinedSpace import error:', error);
-  }
-}
-
-const PERMIT_MODULES: PermitModule[] = [
-  {
-    id: 'confined-space',
-    name: 'Permis d\'Espace Clos',
-    description: 'Permis d\'entrée en espace clos avec tests atmosphériques et surveillance continue',
-    icon: Home,
-    iconEmoji: '🏠',
-    color: '#dc2626',
-    riskLevel: 'critical',
-    estimatedTime: 45,
-    status: 'available',
-    completionRate: 0,
-    regulations: ['RSST Art. 302-317', 'CSA Z1006', 'CNESST'],
-    features: [
-      'Tests atmosphériques 4-gaz',
-      'Surveillance Bluetooth temps réel',
-      'Timer réglementaire automatique',
-      'Signatures électroniques horodatées',
-      'Photos géolocalisées',
-      'Plan de sauvetage intégré'
-    ],
-    component: undefined // Sera défini dynamiquement côté client
-  },
-  {
-    id: 'electrical-work',
-    name: 'Permis Travaux Électriques',
-    description: 'Permis pour travaux électriques avec consignation LOTO et vérification VAT',
-    icon: Zap,
-    iconEmoji: '⚡',
-    color: '#dc2626',
-    riskLevel: 'critical',
-    estimatedTime: 35,
-    status: 'available',
-    completionRate: 0,
-    regulations: ['CSA Z462', 'RSST Art. 185', 'NFPA 70E'],
-    features: [
-      'Consignation LOTO complète',
-      'Vérification absence tension (VAT)',
-      'Calcul énergie incidente arc',
-      'EPI arc-flash requis',
-      'Distances sécurité automatiques'
-    ]
-  },
-  {
-    id: 'excavation',
-    name: 'Permis d\'Excavation',
-    description: 'Permis pour travaux d\'excavation avec analyse sol et protection talus',
-    icon: Construction,
-    iconEmoji: '🏗️',
-    color: '#d97706',
-    riskLevel: 'high',
-    estimatedTime: 40,
-    status: 'available',
-    completionRate: 0,
-    regulations: ['RSST Art. 3.20', 'CSA Z271', 'Info-Excavation'],
-    features: [
-      'Localisation services publics',
-      'Analyse stabilité du sol',
-      'Calcul protection talus',
-      'Plan évacuation d\'urgence',
-      'Surveillance continue'
-    ]
-  },
-  {
-    id: 'height-work',
-    name: 'Permis Travail en Hauteur',
-    description: 'Permis pour travaux en hauteur avec protection antichute et plan sauvetage',
-    icon: Building,
-    iconEmoji: '🏢',
-    color: '#7c3aed',
-    riskLevel: 'critical',
-    estimatedTime: 50,
-    status: 'available',
-    completionRate: 0,
-    regulations: ['RSST Art. 347', 'CSA Z259', 'CNESST Hauteur'],
-    features: [
-      'Protection antichute complète',
-      'Points ancrage certifiés',
-      'Plan sauvetage en hauteur',
-      'Vérification météo',
-      'Équipe sauvetage sur site'
-    ]
-  },
-  {
-    id: 'hot-work',
-    name: 'Permis Travail à Chaud',
-    description: 'Permis pour soudage/coupage avec surveillance incendie et timer post-travaux',
-    icon: Flame,
-    iconEmoji: '🔥',
-    color: '#ea580c',
-    riskLevel: 'critical',
-    estimatedTime: 30,
-    status: 'available',
-    completionRate: 0,
-    regulations: ['NFPA 51B', 'RSST Art. 323', 'Code prévention incendie'],
-    features: [
-      'Surveillance incendie 60min post-travaux',
-      'Timer automatique réglementaire',
-      'Extincteurs spécialisés requis',
-      'Zone dégagement combustibles',
-      'Garde-feu qualifié'
-    ]
-  },
-  {
-    id: 'lifting',
-    name: 'Permis Opérations Levage',
-    description: 'Permis pour opérations de levage avec calcul charges et inspection équipements',
-    icon: Wrench,
-    iconEmoji: '🏗️',
-    color: '#059669',
-    riskLevel: 'high',
-    estimatedTime: 55,
-    status: 'available',
-    completionRate: 0,
-    regulations: ['ASME B30', 'CSA B335', 'RSST Art. 260-290'],
-    features: [
-      'Calcul charge de travail sécuritaire',
-      'Inspection pré-utilisation',
-      'Plan de levage détaillé',
-      'Signaleur certifié requis',
-      'Périmètre sécurité automatique'
-    ]
-  }
-];
+// Configuration des modules basée sur le registre
+const PERMIT_MODULES: PermitModule[] = PERMIT_REGISTRY.map(config => ({
+  ...config,
+  icon: Home, // Icon générique pour tous les modules
+  status: 'available' as const,
+  completionRate: 0,
+  component: config.available ? (() => {}) : undefined // Placeholder pour les modules disponibles
+}));
 
 // =================== TRADUCTIONS ===================
 const getTexts = (language: 'fr' | 'en') => {
@@ -381,18 +246,20 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   const [loadedComponents, setLoadedComponents] = useState<{[key: string]: React.ComponentType<any>}>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // Chargement dynamique du composant au moment de la sélection
+  // Chargement dynamique sécurisé via le registre
   const loadPermitComponent = async (permitId: string) => {
-    if (permitId === 'confined-space' && !loadedComponents['confined-space']) {
+    if (!loadedComponents[permitId]) {
       setIsLoading(true);
       try {
-        const module = await import('./permits/ConfinedSpace/index');
-        setLoadedComponents(prev => ({
-          ...prev,
-          'confined-space': module.default
-        }));
+        const component = await loadModule(permitId);
+        if (component) {
+          setLoadedComponents(prev => ({
+            ...prev,
+            [permitId]: component
+          }));
+        }
       } catch (error) {
-        console.log('Impossible de charger le module ConfinedSpace:', error);
+        console.log(`Impossible de charger le module ${permitId}:`, error);
       } finally {
         setIsLoading(false);
       }
@@ -412,9 +279,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     return PERMIT_MODULES;
   });
 
-  const handlePermitSelect = async (permitId: string) => {
+  const handlePermitSelect = (permitId: string) => {
     setSelectedPermit(permitId);
-    await loadPermitComponent(permitId);
+    loadPermitComponent(permitId);
     console.log(`Chargement du permis: ${permitId}`);
   };
 
@@ -448,82 +315,11 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     const permit = permits.find(p => p.id === selectedPermit);
     const LoadedComponent = loadedComponents[selectedPermit];
     
-    // Afficher le loading pendant le chargement
-    if (isLoading) {
-      return (
-        <div style={styles.container}>
-          <div style={{ ...styles.card, textAlign: 'center', padding: isMobile ? '40px 20px' : '60px 40px' }}>
-            <div style={{
-              width: '60px',
-              height: '60px',
-              border: '4px solid rgba(59, 130, 246, 0.3)',
-              borderTop: '4px solid #3b82f6',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 20px'
-            }}></div>
-            <h3 style={{ color: 'white', fontSize: '18px', marginBottom: '8px' }}>
-              Chargement du module...
-            </h3>
-            <p style={{ color: '#9ca3af', fontSize: '14px' }}>
-              Préparation de {permit?.name}
-            </p>
-          </div>
-        </div>
-      );
-    }
+    // Pour le moment, on va directement au fallback car le chargement dynamique est désactivé
+    // if (LoadedComponent) { ... } - Code commenté temporairement
     
-    if (LoadedComponent) {
-      // Rendu du composant spécifique du permis
-      const PermitComponent = LoadedComponent as React.ComponentType<{
-        province: ProvinceCode;
-        language: 'fr' | 'en';
-        onSave: (data: any) => void;
-        onSubmit: (data: any) => void;
-        onCancel: () => void;
-        initialData?: any;
-      }>;
-      
-      return (
-        <div style={{ ...styles.container }}>
-          {/* Header de retour avec style cohérent */}
-          <div style={{ ...styles.card, marginBottom: '20px' }}>
-            <button
-              onClick={handleBackToSelection}
-              style={{
-                ...styles.button,
-                ...styles.buttonSecondary,
-                width: 'auto',
-                padding: isMobile ? '12px 16px' : '16px 20px',
-                fontSize: isMobile ? '14px' : '16px'
-              }}
-            >
-              <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
-              {texts.backToSelection}
-            </button>
-          </div>
-
-          {/* ✅ CORRECTION : Composant de permis sans wrapper qui écrase les styles */}
-          <PermitComponent
-            province={selectedProvince}
-            language={language}
-            onSave={(data: any) => {
-              console.log('Permis sauvegardé:', data);
-              updatePermitStatus(permit.id, 'in-progress', 50);
-            }}
-            onSubmit={(data: any) => {
-              console.log('Permis soumis:', data);
-              updatePermitStatus(permit.id, 'completed', 100);
-              handleBackToSelection();
-            }}
-            onCancel={handleBackToSelection}
-            initialData={formData[`permit_${permit.id}`] || {}}
-          />
-        </div>
-      );
-    } else {
-      // Fallback pour les permis sans composant
-      return (
+    // Fallback pour les permis sans composant (ou chargement dynamique désactivé)
+    return (
         <div style={styles.container}>
           {/* Header de retour avec style cohérent */}
           <div style={{ ...styles.card, marginBottom: '20px' }}>
