@@ -9,8 +9,113 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-// Import conditionnel du permis Espace Clos
-import ConfinedSpacePermit from './permits/ConfinedSpace';
+// ✅ CORRECTION : Import conditionnel du permis Espace Clos avec le bon chemin
+import ConfinedSpacePermit from './permits/ConfinedSpace/index';
+
+// =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
+const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+const styles = {
+  container: {
+    maxWidth: '100%',
+    margin: '0 auto',
+    padding: isMobile ? '4px' : '24px',
+    backgroundColor: '#111827',
+    minHeight: '100vh',
+    color: 'white',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
+    overflowX: 'hidden' as const
+  },
+  card: {
+    backgroundColor: '#1f2937',
+    borderRadius: isMobile ? '8px' : '16px',
+    padding: isMobile ? '12px' : '24px',
+    border: '1px solid #374151',
+    marginBottom: isMobile ? '12px' : '24px',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+    width: '100%',
+    boxSizing: 'border-box' as const
+  },
+  button: {
+    padding: isMobile ? '8px 12px' : '14px 24px',
+    borderRadius: isMobile ? '6px' : '8px',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    gap: isMobile ? '4px' : '8px',
+    transition: 'all 0.2s ease',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '16px',
+    touchAction: 'manipulation' as const,
+    minHeight: '44px',
+    boxSizing: 'border-box' as const,
+    width: '100%',
+    justifyContent: 'center' as const
+  },
+  buttonPrimary: {
+    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+  },
+  buttonSuccess: {
+    background: 'linear-gradient(135deg, #059669, #047857)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+  },
+  buttonDanger: {
+    background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+  },
+  buttonSecondary: {
+    backgroundColor: '#4b5563',
+    color: 'white',
+    border: '1px solid #6b7280'
+  },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+    gap: isMobile ? '8px' : '20px',
+    width: '100%'
+  },
+  grid3: {
+    display: 'grid',
+    gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+    gap: isMobile ? '8px' : '16px',
+    width: '100%'
+  },
+  grid4: {
+    display: 'grid',
+    gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+    gap: isMobile ? '8px' : '16px',
+    width: '100%'
+  },
+  headerCard: {
+    background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.9))',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    borderRadius: isMobile ? '12px' : '20px',
+    padding: isMobile ? '20px' : '32px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+    position: 'relative' as const,
+    overflow: 'hidden' as const
+  },
+  permitCard: {
+    backgroundColor: 'rgba(31, 41, 55, 0.6)',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    borderRadius: isMobile ? '12px' : '20px',
+    padding: isMobile ? '20px' : '24px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+    transition: 'all 0.3s ease',
+    cursor: 'pointer',
+    position: 'relative' as const,
+    overflow: 'hidden' as const
+  }
+};
 
 // =================== TYPES ===================
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
@@ -312,14 +417,20 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
       }>;
       
       return (
-        <div className="space-y-6">
+        <div style={{ ...styles.container }}>
           {/* Header de retour avec style cohérent */}
-          <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-4">
+          <div style={{ ...styles.card, marginBottom: '20px' }}>
             <button
               onClick={handleBackToSelection}
-              className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
+              style={{
+                ...styles.button,
+                ...styles.buttonSecondary,
+                width: 'auto',
+                padding: isMobile ? '12px 16px' : '16px 20px',
+                fontSize: isMobile ? '14px' : '16px'
+              }}
             >
-              <ArrowRight className="w-4 h-4 rotate-180" />
+              <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
               {texts.backToSelection}
             </button>
           </div>
@@ -345,62 +456,147 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     } else {
       // Fallback pour les permis sans composant
       return (
-        <div className="space-y-6">
+        <div style={styles.container}>
           {/* Header de retour avec style cohérent */}
-          <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-4">
+          <div style={{ ...styles.card, marginBottom: '20px' }}>
             <button
               onClick={handleBackToSelection}
-              className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
+              style={{
+                ...styles.button,
+                ...styles.buttonSecondary,
+                width: 'auto',
+                padding: isMobile ? '12px 16px' : '16px 20px',
+                fontSize: isMobile ? '14px' : '16px'
+              }}
             >
-              <ArrowRight className="w-4 h-4 rotate-180" />
+              <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
               {texts.backToSelection}
             </button>
           </div>
           
           {/* En-tête du permis */}
-          <div className="bg-gradient-to-r from-slate-800/50 via-slate-700/50 to-slate-800/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6">
-            <div className="flex items-center gap-4">
-              <div 
-                className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
-                style={{ 
+          <div style={styles.headerCard}>
+            <div style={{ 
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: `linear-gradient(135deg, ${permit?.color}10, ${permit?.color}05)`,
+              zIndex: 0
+            }}></div>
+            
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '16px' : '20px' }}>
+                <div style={{
+                  width: isMobile ? '60px' : '80px',
+                  height: isMobile ? '60px' : '80px',
+                  borderRadius: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: isMobile ? '28px' : '36px',
                   background: `${permit?.color}20`,
-                  border: `1px solid ${permit?.color}30`
-                }}
-              >
-                {permit?.iconEmoji}
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  {permit?.name}
-                </h2>
-                <p className="text-slate-300">
-                  {permit?.description}
-                </p>
+                  border: `2px solid ${permit?.color}40`,
+                  boxShadow: `0 8px 32px ${permit?.color}30`
+                }}>
+                  {permit?.iconEmoji}
+                </div>
+                <div>
+                  <h2 style={{
+                    fontSize: isMobile ? '20px' : '28px',
+                    fontWeight: '700',
+                    color: 'white',
+                    marginBottom: '8px',
+                    lineHeight: 1.2
+                  }}>
+                    {permit?.name}
+                  </h2>
+                  <p style={{
+                    color: '#d1d5db',
+                    fontSize: isMobile ? '14px' : '16px',
+                    lineHeight: 1.5,
+                    maxWidth: '600px'
+                  }}>
+                    {permit?.description}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Contenu en développement */}
-          <div className="bg-slate-800/30 border border-slate-600/30 rounded-2xl p-8 text-center">
-            <div className="w-24 h-24 bg-yellow-600/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <Construction className="w-12 h-12 text-yellow-400" />
+          <div style={{ ...styles.card, textAlign: 'center', padding: isMobile ? '32px 20px' : '48px 32px' }}>
+            <div style={{
+              width: isMobile ? '80px' : '120px',
+              height: isMobile ? '80px' : '120px',
+              background: 'rgba(245, 158, 11, 0.2)',
+              borderRadius: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 24px',
+              border: '2px solid rgba(245, 158, 11, 0.3)'
+            }}>
+              <Construction style={{ 
+                width: isMobile ? '40px' : '60px', 
+                height: isMobile ? '40px' : '60px', 
+                color: '#fbbf24' 
+              }} />
             </div>
             
-            <h3 className="text-2xl font-bold text-white mb-4">
+            <h3 style={{
+              fontSize: isMobile ? '20px' : '28px',
+              fontWeight: '700',
+              color: 'white',
+              marginBottom: '16px'
+            }}>
               Module en Développement
             </h3>
             
-            <p className="text-slate-300 mb-6 max-w-md mx-auto">
-              Le module <strong>{permit?.name}</strong> est actuellement en développement pour la province <strong>{PROVINCES_DATA[selectedProvince].name}</strong>. 
+            <p style={{
+              color: '#d1d5db',
+              fontSize: isMobile ? '14px' : '16px',
+              lineHeight: 1.6,
+              marginBottom: '32px',
+              maxWidth: '600px',
+              margin: '0 auto 32px'
+            }}>
+              Le module <strong style={{ color: '#60a5fa' }}>{permit?.name}</strong> est actuellement en développement pour la province <strong style={{ color: '#34d399' }}>{PROVINCES_DATA[selectedProvince].name}</strong>. 
               Il intégrera toutes les fonctionnalités avancées prévues selon les réglementations de {PROVINCES_DATA[selectedProvince].authority}.
             </p>
 
-            <div className="bg-slate-900/50 rounded-xl p-6 max-w-md mx-auto mb-6">
-              <h4 className="text-lg font-semibold text-white mb-4">Fonctionnalités Prévues :</h4>
-              <div className="space-y-2 text-left">
+            <div style={{
+              background: 'rgba(17, 24, 39, 0.6)',
+              borderRadius: '16px',
+              padding: isMobile ? '20px' : '32px',
+              maxWidth: '500px',
+              margin: '0 auto 32px',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <h4 style={{
+                fontSize: isMobile ? '16px' : '20px',
+                fontWeight: '600',
+                color: 'white',
+                marginBottom: '20px'
+              }}>
+                🚀 Fonctionnalités Prévues :
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
                 {permit?.features.map((feature, index) => (
-                  <div key={index} className="flex items-center gap-2 text-sm text-slate-300">
-                    <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                  <div key={index} style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '12px',
+                    fontSize: isMobile ? '13px' : '14px',
+                    color: '#d1d5db'
+                  }}>
+                    <CheckCircle style={{ 
+                      width: '16px', 
+                      height: '16px', 
+                      color: '#10b981', 
+                      flexShrink: 0 
+                    }} />
                     {feature}
                   </div>
                 ))}
@@ -409,7 +605,13 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
 
             <button
               onClick={handleBackToSelection}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              style={{
+                ...styles.button,
+                ...styles.buttonPrimary,
+                width: 'auto',
+                padding: isMobile ? '12px 24px' : '16px 32px',
+                fontSize: isMobile ? '14px' : '16px'
+              }}
             >
               Retourner à la Sélection
             </button>
@@ -421,200 +623,470 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
 
   // Vue principale - Sélection des permis
   return (
-    <div className="space-y-6">
+    <div style={styles.container}>
       
-      {/* Header avec style cohérent Step 1-3 */}
-      <div className="bg-gradient-to-r from-slate-800/50 via-slate-700/50 to-slate-800/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-red-600/5 to-orange-600/5"></div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-red-600/20 rounded-xl flex items-center justify-center">
-              <Shield className="w-6 h-6 text-red-400" />
+      {/* Header avec style cohérent des autres étapes */}
+      <div style={styles.headerCard}>
+        {/* Gradient overlay */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.05), rgba(245, 158, 11, 0.05))',
+          zIndex: 0
+        }}></div>
+        
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: isMobile ? '16px' : '20px', 
+            marginBottom: isMobile ? '20px' : '24px' 
+          }}>
+            <div style={{
+              width: isMobile ? '48px' : '60px',
+              height: isMobile ? '48px' : '60px',
+              background: 'rgba(220, 38, 38, 0.2)',
+              borderRadius: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '2px solid rgba(220, 38, 38, 0.3)'
+            }}>
+              <Shield style={{ 
+                width: isMobile ? '24px' : '30px', 
+                height: isMobile ? '24px' : '30px', 
+                color: '#f87171' 
+              }} />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white mb-1">
+              <h2 style={{
+                fontSize: isMobile ? '20px' : '28px',
+                fontWeight: '700',
+                color: 'white',
+                marginBottom: '4px',
+                lineHeight: 1.2
+              }}>
                 📄 {texts.title}
               </h2>
-              <p className="text-slate-300">
+              <p style={{
+                color: '#d1d5db',
+                fontSize: isMobile ? '14px' : '16px',
+                lineHeight: 1.5
+              }}>
                 {texts.subtitle}
               </p>
             </div>
           </div>
           
           {/* Statistiques globales */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
-              <div className="text-2xl font-bold text-white">{permits.length}</div>
-              <div className="text-slate-300 text-sm">Modules Disponibles</div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+            gap: isMobile ? '12px' : '20px',
+            marginTop: '24px'
+          }}>
+            <div style={{
+              background: 'rgba(17, 24, 39, 0.6)',
+              borderRadius: '12px',
+              padding: isMobile ? '16px' : '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: isMobile ? '20px' : '28px', 
+                fontWeight: '700', 
+                color: 'white',
+                marginBottom: '4px'
+              }}>
+                {permits.length}
+              </div>
+              <div style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '12px' : '14px'
+              }}>
+                Modules Disponibles
+              </div>
             </div>
-            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
-              <div className="text-2xl font-bold text-green-400">
+            <div style={{
+              background: 'rgba(17, 24, 39, 0.6)',
+              borderRadius: '12px',
+              padding: isMobile ? '16px' : '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: isMobile ? '20px' : '28px', 
+                fontWeight: '700', 
+                color: '#10b981',
+                marginBottom: '4px'
+              }}>
                 {permits.filter(p => p.status === 'completed').length}
               </div>
-              <div className="text-slate-300 text-sm">Complétés</div>
+              <div style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '12px' : '14px'
+              }}>
+                Complétés
+              </div>
             </div>
-            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
-              <div className="text-2xl font-bold text-yellow-400">
+            <div style={{
+              background: 'rgba(17, 24, 39, 0.6)',
+              borderRadius: '12px',
+              padding: isMobile ? '16px' : '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: isMobile ? '20px' : '28px', 
+                fontWeight: '700', 
+                color: '#fbbf24',
+                marginBottom: '4px'
+              }}>
                 {permits.filter(p => p.status === 'in-progress').length}
               </div>
-              <div className="text-slate-300 text-sm">En Cours</div>
+              <div style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '12px' : '14px'
+              }}>
+                En Cours
+              </div>
             </div>
-            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
-              <div className="text-2xl font-bold text-blue-400">{selectedProvince}</div>
-              <div className="text-slate-300 text-sm">Province</div>
+            <div style={{
+              background: 'rgba(17, 24, 39, 0.6)',
+              borderRadius: '12px',
+              padding: isMobile ? '16px' : '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: isMobile ? '20px' : '28px', 
+                fontWeight: '700', 
+                color: '#60a5fa',
+                marginBottom: '4px'
+              }}>
+                {selectedProvince}
+              </div>
+              <div style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '12px' : '14px'
+              }}>
+                Province
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Section sélection province avec style cohérent */}
-      <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6">
-        <div className="flex items-center gap-4 mb-4">
-          <MapPin className="w-5 h-5 text-blue-400" />
-          <h3 className="text-xl font-semibold text-white">Sélection de la Province</h3>
+      <div style={styles.card}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '12px', 
+          marginBottom: '20px' 
+        }}>
+          <MapPin style={{ width: '20px', height: '20px', color: '#60a5fa' }} />
+          <h3 style={{
+            fontSize: isMobile ? '16px' : '20px',
+            fontWeight: '600',
+            color: 'white',
+            margin: 0
+          }}>
+            🍁 Sélection de la Province
+          </h3>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
+          gap: '12px',
+          marginBottom: '20px'
+        }}>
           {Object.entries(PROVINCES_DATA).map(([code, data]) => (
             <button
               key={code}
               onClick={() => setSelectedProvince(code as ProvinceCode)}
-              className={`
-                p-3 rounded-lg border-2 transition-all text-sm hover:scale-[1.02]
-                ${selectedProvince === code 
-                  ? 'border-blue-500 bg-blue-500/20 text-white shadow-lg shadow-blue-500/25' 
-                  : 'border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white hover:bg-slate-700/50'
+              style={{
+                padding: isMobile ? '12px 8px' : '16px 12px',
+                borderRadius: '12px',
+                border: selectedProvince === code 
+                  ? '2px solid #3b82f6' 
+                  : '2px solid #374151',
+                backgroundColor: selectedProvince === code 
+                  ? 'rgba(59, 130, 246, 0.2)' 
+                  : 'rgba(17, 24, 39, 0.6)',
+                color: selectedProvince === code ? 'white' : '#d1d5db',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                fontSize: isMobile ? '12px' : '14px',
+                fontWeight: '600',
+                textAlign: 'center'
+              }}
+              onMouseEnter={(e) => {
+                if (selectedProvince !== code) {
+                  e.currentTarget.style.borderColor = '#6b7280';
+                  e.currentTarget.style.backgroundColor = 'rgba(55, 65, 81, 0.6)';
+                  e.currentTarget.style.color = 'white';
                 }
-              `}
+              }}
+              onMouseLeave={(e) => {
+                if (selectedProvince !== code) {
+                  e.currentTarget.style.borderColor = '#374151';
+                  e.currentTarget.style.backgroundColor = 'rgba(17, 24, 39, 0.6)';
+                  e.currentTarget.style.color = '#d1d5db';
+                }
+              }}
             >
-              <div className="font-medium">{data.name}</div>
-              <div className="text-xs opacity-75">{data.authority}</div>
+              <div style={{ fontWeight: '700', marginBottom: '2px' }}>{data.name}</div>
+              <div style={{ fontSize: isMobile ? '10px' : '12px', opacity: 0.8 }}>{data.authority}</div>
             </button>
           ))}
         </div>
         
-        <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-          <div className="text-sm text-blue-200">
-            <strong>Province sélectionnée :</strong> {PROVINCES_DATA[selectedProvince].name} ({selectedProvince})<br/>
-            <strong>Autorité compétente :</strong> {PROVINCES_DATA[selectedProvince].authority}<br/>
-            <span className="text-xs opacity-75">
+        <div style={{
+          padding: '16px',
+          background: 'rgba(59, 130, 246, 0.1)',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          borderRadius: '12px'
+        }}>
+          <div style={{
+            color: '#93c5fd',
+            fontSize: isMobile ? '13px' : '14px',
+            lineHeight: 1.6
+          }}>
+            <strong>Province sélectionnée :</strong> {PROVINCES_DATA[selectedProvince].name} ({selectedProvince})
+            <br />
+            <strong>Autorité compétente :</strong> {PROVINCES_DATA[selectedProvince].authority}
+            <br />
+            <span style={{ fontSize: isMobile ? '12px' : '13px', opacity: 0.8 }}>
               Les permis seront adaptés automatiquement aux réglementations de cette province
             </span>
           </div>
         </div>
       </div>
 
-      {/* Grille des modules de permis avec style Step 1-3 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      {/* Grille des modules de permis avec style cohérent */}
+      <div style={styles.grid3}>
         {permits.map(permit => (
           <div 
             key={permit.id}
-            className="bg-slate-800/30 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6 transition-all duration-300 hover:transform hover:scale-[1.02] hover:border-slate-500/50 hover:shadow-xl hover:shadow-slate-900/25 cursor-pointer group"
+            style={{
+              ...styles.permitCard,
+              transform: 'scale(1)',
+              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
+            }}
             onClick={() => handlePermitSelect(permit.id)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.02)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.3)';
+            }}
           >
-            {/* Header du module */}
-            <div className="flex items-start gap-4 mb-4">
-              <div 
-                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 group-hover:scale-110"
-                style={{ 
+            {/* Gradient overlay */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: `linear-gradient(135deg, ${permit.color}10, ${permit.color}05)`,
+              borderRadius: isMobile ? '12px' : '20px',
+              zIndex: 0
+            }}></div>
+            
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              {/* Header du module */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'flex-start', 
+                gap: '16px', 
+                marginBottom: '16px' 
+              }}>
+                <div style={{
+                  width: isMobile ? '48px' : '60px',
+                  height: isMobile ? '48px' : '60px',
+                  borderRadius: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: isMobile ? '20px' : '28px',
                   background: `${permit.color}20`,
-                  border: `1px solid ${permit.color}30`
-                }}
-              >
-                {permit.iconEmoji}
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <h4 className="text-lg font-semibold text-white mb-1 group-hover:text-blue-200 transition-colors">
-                  {permit.name}
-                </h4>
-                <p className="text-slate-300 text-sm line-clamp-2">
-                  {permit.description}
-                </p>
-              </div>
+                  border: `2px solid ${permit.color}30`,
+                  transition: 'all 0.3s ease'
+                }}>
+                  {permit.iconEmoji}
+                </div>
+                
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h4 style={{
+                    fontSize: isMobile ? '16px' : '18px',
+                    fontWeight: '700',
+                    color: 'white',
+                    marginBottom: '8px',
+                    lineHeight: 1.3
+                  }}>
+                    {permit.name}
+                  </h4>
+                  <p style={{
+                    color: '#d1d5db',
+                    fontSize: isMobile ? '13px' : '14px',
+                    lineHeight: 1.4,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden'
+                  }}>
+                    {permit.description}
+                  </p>
+                </div>
 
-              {/* Statut */}
-              <div className="flex flex-col items-end gap-2">
-                <div className={`
-                  px-3 py-1 rounded-full text-xs font-medium transition-all
-                  ${permit.status === 'completed' ? 'bg-green-900/30 text-green-300 border border-green-500/30' :
-                    permit.status === 'in-progress' ? 'bg-yellow-900/30 text-yellow-300 border border-yellow-500/30' :
-                    'bg-slate-900/30 text-slate-300 border border-slate-500/30'
-                  }
-                `}>
+                {/* Statut */}
+                <div style={{
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  border: '1px solid',
+                  ...(permit.status === 'completed' 
+                    ? { 
+                        background: 'rgba(16, 185, 129, 0.2)', 
+                        color: '#6ee7b7', 
+                        borderColor: 'rgba(16, 185, 129, 0.3)' 
+                      }
+                    : permit.status === 'in-progress' 
+                    ? { 
+                        background: 'rgba(245, 158, 11, 0.2)', 
+                        color: '#fcd34d', 
+                        borderColor: 'rgba(245, 158, 11, 0.3)' 
+                      }
+                    : { 
+                        background: 'rgba(107, 114, 128, 0.2)', 
+                        color: '#d1d5db', 
+                        borderColor: 'rgba(107, 114, 128, 0.3)' 
+                      })
+                }}>
                   {permit.status === 'completed' ? texts.completed :
                    permit.status === 'in-progress' ? texts.inProgress :
                    'Disponible'}
                 </div>
               </div>
-            </div>
 
-            {/* Métadonnées avec style cohérent */}
-            <div className="space-y-3 mb-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-400">{texts.riskLevel}:</span>
-                <span 
-                  className="px-2 py-1 rounded text-xs font-medium border"
-                  style={{ 
+              {/* Métadonnées avec style cohérent */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#9ca3af', fontSize: '13px' }}>{texts.riskLevel}:</span>
+                  <span style={{
+                    padding: '4px 8px',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontWeight: '600',
                     background: `${permit.color}20`,
                     color: permit.color,
-                    borderColor: `${permit.color}30`
-                  }}
-                >
-                  {texts.riskLevels[permit.riskLevel]}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-400">{texts.estimatedTime}:</span>
-                <span className="text-sm text-blue-400">
-                  {permit.estimatedTime} {texts.minutes}
-                </span>
-              </div>
-            </div>
-
-            {/* Réglementations */}
-            <div className="mb-4">
-              <div className="text-sm text-slate-400 mb-2">{texts.regulations}:</div>
-              <div className="flex flex-wrap gap-1">
-                {permit.regulations.slice(0, 2).map((reg, index) => (
-                  <span 
-                    key={index}
-                    className="px-2 py-1 bg-blue-900/30 text-blue-300 rounded text-xs border border-blue-500/30"
-                  >
-                    {reg}
+                    border: `1px solid ${permit.color}30`
+                  }}>
+                    {texts.riskLevels[permit.riskLevel]}
                   </span>
-                ))}
-                {permit.regulations.length > 2 && (
-                  <span className="px-2 py-1 bg-slate-700 text-slate-300 rounded text-xs border border-slate-500/30">
-                    +{permit.regulations.length - 2}
-                  </span>
-                )}
-              </div>
-            </div>
+                </div>
 
-            {/* Action avec style cohérent */}
-            <button
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all group-hover:shadow-lg shadow-blue-500/25 font-medium"
-            >
-              <FileText className="w-4 h-4" />
-              {permit.status === 'in-progress' ? texts.continuePermit : texts.startPermit}
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#9ca3af', fontSize: '13px' }}>{texts.estimatedTime}:</span>
+                  <span style={{ color: '#60a5fa', fontSize: '13px', fontWeight: '600' }}>
+                    {permit.estimatedTime} {texts.minutes}
+                  </span>
+                </div>
+              </div>
+
+              {/* Réglementations */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '8px' }}>
+                  {texts.regulations}:
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {permit.regulations.slice(0, 2).map((reg, index) => (
+                    <span 
+                      key={index}
+                      style={{
+                        padding: '4px 8px',
+                        background: 'rgba(59, 130, 246, 0.2)',
+                        color: '#93c5fd',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '500',
+                        border: '1px solid rgba(59, 130, 246, 0.3)'
+                      }}
+                    >
+                      {reg}
+                    </span>
+                  ))}
+                  {permit.regulations.length > 2 && (
+                    <span style={{
+                      padding: '4px 8px',
+                      background: 'rgba(107, 114, 128, 0.2)',
+                      color: '#d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: '500',
+                      border: '1px solid rgba(107, 114, 128, 0.3)'
+                    }}>
+                      +{permit.regulations.length - 2}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Action avec style cohérent */}
+              <button
+                style={{
+                  ...styles.button,
+                  ...styles.buttonPrimary,
+                  fontSize: isMobile ? '14px' : '15px',
+                  fontWeight: '600'
+                }}
+              >
+                <FileText style={{ width: '16px', height: '16px' }} />
+                {permit.status === 'in-progress' ? texts.continuePermit : texts.startPermit}
+                <ArrowRight style={{ width: '16px', height: '16px' }} />
+              </button>
+            </div>
           </div>
         ))}
       </div>
 
       {/* Footer informatif avec style cohérent */}
-      <div className="bg-slate-800/30 border border-slate-600/30 rounded-2xl p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <AlertTriangle className="w-5 h-5 text-yellow-400" />
-          <h3 className="text-lg font-semibold text-white">Information Importante</h3>
+      <div style={styles.card}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '12px', 
+          marginBottom: '16px' 
+        }}>
+          <AlertTriangle style={{ width: '20px', height: '20px', color: '#fbbf24' }} />
+          <h3 style={{
+            fontSize: isMobile ? '16px' : '18px',
+            fontWeight: '600',
+            color: 'white',
+            margin: 0
+          }}>
+            ℹ️ Information Importante
+          </h3>
         </div>
-        <p className="text-slate-300 text-sm leading-relaxed">
+        <p style={{
+          color: '#d1d5db',
+          fontSize: isMobile ? '13px' : '14px',
+          lineHeight: 1.6,
+          margin: 0
+        }}>
           Tous les permis sont conçus pour respecter les réglementations provinciales en vigueur. 
-          Province sélectionnée : <strong className="text-blue-400">{PROVINCES_DATA[selectedProvince].name} ({selectedProvince})</strong> - {PROVINCES_DATA[selectedProvince].authority}.
-          <br />
+          Province sélectionnée : <strong style={{ color: '#60a5fa' }}>{PROVINCES_DATA[selectedProvince].name} ({selectedProvince})</strong> - {PROVINCES_DATA[selectedProvince].authority}.
+          <br /><br />
           Chaque module intègre les fonctionnalités avancées requises : signatures électroniques, 
           horodatage sécurisé, photos géolocalisées, et archivage automatique dans Supabase.
         </p>
