@@ -571,13 +571,55 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
       );
     }
     
-    // Si c'est le permis ConfinedSpace, afficher un message spécial pour indiquer qu'il existe
-    if (selectedPermit === 'confined-space') {
-      // Pour le moment, afficher un message indiquant que le module existe mais n'est pas encore intégré
-      console.log('Module ConfinedSpace détecté - prêt pour intégration');
+    // Si c'est le permis ConfinedSpace ET que le composant est chargé, l'utiliser
+    if (selectedPermit === 'confined-space' && confinedSpaceComponent) {
+      const ConfinedSpaceComponent = confinedSpaceComponent;
+      
+      return (
+        <div style={styles.container}>
+          {/* Header de retour */}
+          <div style={{ ...styles.card, marginBottom: '20px' }}>
+            <button
+              onClick={handleBackToSelection}
+              style={{
+                ...styles.button,
+                ...styles.buttonSecondary,
+                width: 'auto',
+                padding: isMobile ? '12px 16px' : '16px 20px',
+                fontSize: isMobile ? '14px' : '16px'
+              }}
+            >
+              <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
+              {texts.backToSelection}
+            </button>
+          </div>
+
+          {/* Composant ConfinedSpace chargé dynamiquement */}
+          <ConfinedSpaceComponent
+            province={selectedProvince}
+            language={language}
+            onSave={(data: any) => {
+              console.log('Permis sauvegardé:', data);
+              updatePermitStatus(permit!.id, 'in-progress', 50);
+            }}
+            onSubmit={(data: any) => {
+              console.log('Permis soumis:', data);
+              updatePermitStatus(permit!.id, 'completed', 100);
+              handleBackToSelection();
+            }}
+            onCancel={handleBackToSelection}
+            initialData={formData[`permit_${permit!.id}`] || {}}
+          />
+        </div>
+      );
     }
     
-    // Fallback pour tous les modules (y compris ConfinedSpace temporairement)
+    // Si c'est ConfinedSpace mais composant pas encore chargé, afficher un message spécial
+    if (selectedPermit === 'confined-space') {
+      console.log('Module ConfinedSpace détecté mais composant non chargé - affichage du fallback');
+    }
+    
+    // Fallback pour les autres modules ou si ConfinedSpace n'est pas chargé
     return (
       <div style={styles.container}>
         {/* Header de retour */}
