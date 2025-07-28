@@ -307,7 +307,6 @@ const getTexts = (language: 'fr' | 'en') => {
       inProgress: "In Progress",
       moduleInDevelopment: "Module in Development",
       plannedFeatures: "🚀 Planned Features:",
-      backToSelection: "Back to Selection",
       modulesAvailable: "Available Modules",
       completedCount: "Completed",
       inProgressCount: "In Progress",
