@@ -482,20 +482,32 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     });
   }, [language]);
 
-  // Fonction de chargement - Étape 1: Ajouter seulement l'état
+  // Fonction de chargement - Étape 2: Ajouter l'import dynamique
   const handlePermitSelect = async (permitId: string) => {
     setSelectedPermit(permitId);
     setIsLoading(true);
     
-    // Simulation de chargement pour tous les modules (pour le moment)
+    // Tentative d'import pour ConfinedSpace (sans l'utiliser encore)
+    if (permitId === 'confined-space') {
+      try {
+        console.log('🔄 Tentative de chargement ConfinedSpace...');
+        const ConfinedSpaceModule = await import('./permits/ConfinedSpace/index');
+        console.log('✅ Module ConfinedSpace importé avec succès:', !!ConfinedSpaceModule.default);
+        
+        // Stocker le composant (sans l'utiliser dans le rendu encore)
+        setConfinedSpaceComponent(ConfinedSpaceModule.default);
+        
+      } catch (error) {
+        console.log('⚠️ Erreur chargement ConfinedSpace:', error);
+        setConfinedSpaceComponent(null);
+      }
+    }
+    
+    // Simulation de chargement pour UX
     await new Promise(resolve => setTimeout(resolve, 800));
     setIsLoading(false);
     
-    if (permitId === 'confined-space') {
-      console.log('Module ConfinedSpace sélectionné - Étape 1: État ajouté');
-    }
-    
-    console.log(`Permis sélectionné: ${permitId}`);
+    console.log(`Permis sélectionné: ${permitId} - Étape 2: Import testé`);
   };
 
   const handleBackToSelection = () => {
