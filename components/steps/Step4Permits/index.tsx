@@ -343,7 +343,6 @@ const getTexts = (language: 'fr' | 'en') => {
     inProgress: "En Cours",
     moduleInDevelopment: "Module en Développement",
     plannedFeatures: "🚀 Fonctionnalités Prévues :",
-    backToSelection: "Retourner à la Sélection",
     modulesAvailable: "Modules Disponibles",
     completedCount: "Complétés",
     inProgressCount: "En Cours",
