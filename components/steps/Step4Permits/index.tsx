@@ -9,8 +9,6 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-// ✅ CORRECTION : Pas d'import de registre inexistant
-
 // =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -37,7 +35,7 @@ const styles = {
   },
   button: {
     padding: isMobile ? '8px 12px' : '14px 24px',
-    borderRadius: isMobile ? '6px' : '8px',
+    borderRadius: ieMobile ? '6px' : '8px',
     fontWeight: '600',
     display: 'flex',
     alignItems: 'center',
@@ -186,7 +184,7 @@ const PERMIT_MODULES: PermitModule[] = [
       'Photos géolocalisées',
       'Plan de sauvetage intégré'
     ],
-    component: undefined // Pas de composant pour éviter les erreurs de build
+    component: undefined
   },
   {
     id: 'electrical-work',
@@ -412,18 +410,13 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     });
   };
 
-  // Si un permis est sélectionné, charger son composant
+  // Si un permis est sélectionné, afficher le fallback
   if (selectedPermit) {
     const permit = permits.find(p => p.id === selectedPermit);
-    const LoadedComponent = loadedComponents[selectedPermit];
     
-    // Pour le moment, on va directement au fallback car le chargement dynamique est désactivé
-    // if (LoadedComponent) { ... } - Code commenté temporairement
-    
-    // Fallback pour les permis sans composant (ou chargement dynamique désactivé)
     return (
       <div style={styles.container}>
-        {/* Header de retour avec style cohérent */}
+        {/* Header de retour */}
         <div style={{ ...styles.card, marginBottom: '20px' }}>
           <button
             onClick={handleBackToSelection}
@@ -585,170 +578,6 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
       </div>
     );
   }
-        <div style={styles.container}>
-          {/* Header de retour avec style cohérent */}
-          <div style={{ ...styles.card, marginBottom: '20px' }}>
-            <button
-              onClick={handleBackToSelection}
-              style={{
-                ...styles.button,
-                ...styles.buttonSecondary,
-                width: 'auto',
-                padding: isMobile ? '12px 16px' : '16px 20px',
-                fontSize: isMobile ? '14px' : '16px'
-              }}
-            >
-              <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
-              {texts.backToSelection}
-            </button>
-          </div>
-          
-          {/* En-tête du permis */}
-          <div style={styles.headerCard}>
-            <div style={{ 
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: `linear-gradient(135deg, ${permit?.color}10, ${permit?.color}05)`,
-              zIndex: 0
-            }}></div>
-            
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '16px' : '20px' }}>
-                <div style={{
-                  width: isMobile ? '60px' : '80px',
-                  height: isMobile ? '60px' : '80px',
-                  borderRadius: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: isMobile ? '28px' : '36px',
-                  background: `${permit?.color}20`,
-                  border: `2px solid ${permit?.color}40`,
-                  boxShadow: `0 8px 32px ${permit?.color}30`
-                }}>
-                  {permit?.iconEmoji}
-                </div>
-                <div>
-                  <h2 style={{
-                    fontSize: isMobile ? '20px' : '28px',
-                    fontWeight: '700',
-                    color: 'white',
-                    marginBottom: '8px',
-                    lineHeight: 1.2
-                  }}>
-                    {permit?.name}
-                  </h2>
-                  <p style={{
-                    color: '#d1d5db',
-                    fontSize: isMobile ? '14px' : '16px',
-                    lineHeight: 1.5,
-                    maxWidth: '600px'
-                  }}>
-                    {permit?.description}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Contenu en développement */}
-          <div style={{ ...styles.card, textAlign: 'center', padding: isMobile ? '32px 20px' : '48px 32px' }}>
-            <div style={{
-              width: isMobile ? '80px' : '120px',
-              height: isMobile ? '80px' : '120px',
-              background: 'rgba(245, 158, 11, 0.2)',
-              borderRadius: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 24px',
-              border: '2px solid rgba(245, 158, 11, 0.3)'
-            }}>
-              <Construction style={{ 
-                width: isMobile ? '40px' : '60px', 
-                height: isMobile ? '40px' : '60px', 
-                color: '#fbbf24' 
-              }} />
-            </div>
-            
-            <h3 style={{
-              fontSize: isMobile ? '20px' : '28px',
-              fontWeight: '700',
-              color: 'white',
-              marginBottom: '16px'
-            }}>
-              Module en Développement
-            </h3>
-            
-            <p style={{
-              color: '#d1d5db',
-              fontSize: isMobile ? '14px' : '16px',
-              lineHeight: 1.6,
-              marginBottom: '32px',
-              maxWidth: '600px',
-              margin: '0 auto 32px'
-            }}>
-              Le module <strong style={{ color: '#60a5fa' }}>{permit?.name}</strong> est actuellement en développement pour la province <strong style={{ color: '#34d399' }}>{PROVINCES_DATA[selectedProvince].name}</strong>. 
-              Il intégrera toutes les fonctionnalités avancées prévues selon les réglementations de {PROVINCES_DATA[selectedProvince].authority}.
-            </p>
-
-            <div style={{
-              background: 'rgba(17, 24, 39, 0.6)',
-              borderRadius: '16px',
-              padding: isMobile ? '20px' : '32px',
-              maxWidth: '500px',
-              margin: '0 auto 32px',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
-            }}>
-              <h4 style={{
-                fontSize: isMobile ? '16px' : '20px',
-                fontWeight: '600',
-                color: 'white',
-                marginBottom: '20px'
-              }}>
-                🚀 Fonctionnalités Prévues :
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
-                {permit?.features.map((feature, index) => (
-                  <div key={index} style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '12px',
-                    fontSize: isMobile ? '13px' : '14px',
-                    color: '#d1d5db'
-                  }}>
-                    <CheckCircle style={{ 
-                      width: '16px', 
-                      height: '16px', 
-                      color: '#10b981', 
-                      flexShrink: 0 
-                    }} />
-                    {feature}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={handleBackToSelection}
-              style={{
-                ...styles.button,
-                ...styles.buttonPrimary,
-                width: 'auto',
-                padding: isMobile ? '12px 24px' : '16px 32px',
-                fontSize: isMobile ? '14px' : '16px'
-              }}
-            >
-              Retourner à la Sélection
-            </button>
-          </div>
-        </div>
-      );
-    }
-  }
 
   // Vue principale - Sélection des permis
   return (
@@ -909,7 +738,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
         </div>
       </div>
 
-      {/* Section sélection province avec style cohérent */}
+      {/* Section sélection province */}
       <div style={styles.card}>
         <div style={{ 
           display: 'flex', 
@@ -954,20 +783,6 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                 fontWeight: '600',
                 textAlign: 'center'
               }}
-              onMouseEnter={(e) => {
-                if (selectedProvince !== code) {
-                  e.currentTarget.style.borderColor = '#6b7280';
-                  e.currentTarget.style.backgroundColor = 'rgba(55, 65, 81, 0.6)';
-                  e.currentTarget.style.color = 'white';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (selectedProvince !== code) {
-                  e.currentTarget.style.borderColor = '#374151';
-                  e.currentTarget.style.backgroundColor = 'rgba(17, 24, 39, 0.6)';
-                  e.currentTarget.style.color = '#d1d5db';
-                }
-              }}
             >
               <div style={{ fontWeight: '700', marginBottom: '2px' }}>{data.name}</div>
               <div style={{ fontSize: isMobile ? '10px' : '12px', opacity: 0.8 }}>{data.authority}</div>
@@ -997,7 +812,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
         </div>
       </div>
 
-      {/* Grille des modules de permis avec style cohérent */}
+      {/* Grille des modules de permis */}
       <div style={styles.grid3}>
         {permits.map(permit => (
           <div 
@@ -1008,16 +823,6 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
             }}
             onClick={() => handlePermitSelect(permit.id)}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.02)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-              e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.4)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.3)';
-            }}
           >
             {/* Gradient overlay */}
             <div style={{
@@ -1108,7 +913,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                 </div>
               </div>
 
-              {/* Métadonnées avec style cohérent */}
+              {/* Métadonnées */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ color: '#9ca3af', fontSize: '13px' }}>{texts.riskLevel}:</span>
@@ -1171,7 +976,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                 </div>
               </div>
 
-              {/* Action avec style cohérent */}
+              {/* Action */}
               <button
                 style={{
                   ...styles.button,
@@ -1189,7 +994,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
         ))}
       </div>
 
-      {/* Footer informatif avec style cohérent */}
+      {/* Footer informatif */}
       <div style={styles.card}>
         <div style={{ 
           display: 'flex', 
@@ -1220,14 +1025,6 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
           horodatage sécurisé, photos géolocalisées, et archivage automatique dans Supabase.
         </p>
       </div>
-
-      {/* CSS pour l'animation du spinner */}
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };
