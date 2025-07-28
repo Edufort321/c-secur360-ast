@@ -575,6 +575,13 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     if (selectedPermit === 'confined-space' && confinedSpaceComponent) {
       const ConfinedSpaceComponent = confinedSpaceComponent;
       
+      // Vérification de sécurité des props
+      console.log('Props pour ConfinedSpace:', {
+        province: selectedProvince,
+        language: language,
+        initialData: formData[`permit_${permit!.id}`] || {}
+      });
+      
       return (
         <div style={styles.container}>
           {/* Header de retour */}
@@ -596,8 +603,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
 
           {/* Composant ConfinedSpace chargé dynamiquement */}
           <ConfinedSpaceComponent
-            province={selectedProvince}
-            language={language}
+            province={selectedProvince || 'QC'}
+            language={language || 'fr'}
             onSave={(data: any) => {
               console.log('Permis sauvegardé:', data);
               updatePermitStatus(permit!.id, 'in-progress', 50);
