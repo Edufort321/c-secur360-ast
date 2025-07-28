@@ -422,6 +422,169 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     
     // Fallback pour les permis sans composant (ou chargement dynamique désactivé)
     return (
+      <div style={styles.container}>
+        {/* Header de retour avec style cohérent */}
+        <div style={{ ...styles.card, marginBottom: '20px' }}>
+          <button
+            onClick={handleBackToSelection}
+            style={{
+              ...styles.button,
+              ...styles.buttonSecondary,
+              width: 'auto',
+              padding: isMobile ? '12px 16px' : '16px 20px',
+              fontSize: isMobile ? '14px' : '16px'
+            }}
+          >
+            <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
+            {texts.backToSelection}
+          </button>
+        </div>
+        
+        {/* En-tête du permis */}
+        <div style={styles.headerCard}>
+          <div style={{ 
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `linear-gradient(135deg, ${permit?.color}10, ${permit?.color}05)`,
+            zIndex: 0
+          }}></div>
+          
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '16px' : '20px' }}>
+              <div style={{
+                width: isMobile ? '60px' : '80px',
+                height: isMobile ? '60px' : '80px',
+                borderRadius: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: isMobile ? '28px' : '36px',
+                background: `${permit?.color}20`,
+                border: `2px solid ${permit?.color}40`,
+                boxShadow: `0 8px 32px ${permit?.color}30`
+              }}>
+                {permit?.iconEmoji}
+              </div>
+              <div>
+                <h2 style={{
+                  fontSize: isMobile ? '20px' : '28px',
+                  fontWeight: '700',
+                  color: 'white',
+                  marginBottom: '8px',
+                  lineHeight: 1.2
+                }}>
+                  {permit?.name}
+                </h2>
+                <p style={{
+                  color: '#d1d5db',
+                  fontSize: isMobile ? '14px' : '16px',
+                  lineHeight: 1.5,
+                  maxWidth: '600px'
+                }}>
+                  {permit?.description}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Contenu en développement */}
+        <div style={{ ...styles.card, textAlign: 'center', padding: isMobile ? '32px 20px' : '48px 32px' }}>
+          <div style={{
+            width: isMobile ? '80px' : '120px',
+            height: isMobile ? '80px' : '120px',
+            background: 'rgba(245, 158, 11, 0.2)',
+            borderRadius: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 24px',
+            border: '2px solid rgba(245, 158, 11, 0.3)'
+          }}>
+            <Construction style={{ 
+              width: isMobile ? '40px' : '60px', 
+              height: isMobile ? '40px' : '60px', 
+              color: '#fbbf24' 
+            }} />
+          </div>
+          
+          <h3 style={{
+            fontSize: isMobile ? '20px' : '28px',
+            fontWeight: '700',
+            color: 'white',
+            marginBottom: '16px'
+          }}>
+            Module en Développement
+          </h3>
+          
+          <p style={{
+            color: '#d1d5db',
+            fontSize: isMobile ? '14px' : '16px',
+            lineHeight: 1.6,
+            marginBottom: '32px',
+            maxWidth: '600px',
+            margin: '0 auto 32px'
+          }}>
+            Le module <strong style={{ color: '#60a5fa' }}>{permit?.name}</strong> est actuellement en développement pour la province <strong style={{ color: '#34d399' }}>{PROVINCES_DATA[selectedProvince].name}</strong>. 
+            Il intégrera toutes les fonctionnalités avancées prévues selon les réglementations de {PROVINCES_DATA[selectedProvince].authority}.
+          </p>
+
+          <div style={{
+            background: 'rgba(17, 24, 39, 0.6)',
+            borderRadius: '16px',
+            padding: isMobile ? '20px' : '32px',
+            maxWidth: '500px',
+            margin: '0 auto 32px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <h4 style={{
+              fontSize: isMobile ? '16px' : '20px',
+              fontWeight: '600',
+              color: 'white',
+              marginBottom: '20px'
+            }}>
+              🚀 Fonctionnalités Prévues :
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
+              {permit?.features.map((feature, index) => (
+                <div key={index} style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px',
+                  fontSize: isMobile ? '13px' : '14px',
+                  color: '#d1d5db'
+                }}>
+                  <CheckCircle style={{ 
+                    width: '16px', 
+                    height: '16px', 
+                    color: '#10b981', 
+                    flexShrink: 0 
+                  }} />
+                  {feature}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleBackToSelection}
+            style={{
+              ...styles.button,
+              ...styles.buttonPrimary,
+              width: 'auto',
+              padding: isMobile ? '12px 24px' : '16px 32px',
+              fontSize: isMobile ? '14px' : '16px'
+            }}
+          >
+            Retourner à la Sélection
+          </button>
+        </div>
+      </div>
+    );
+  }
         <div style={styles.container}>
           {/* Header de retour avec style cohérent */}
           <div style={{ ...styles.card, marginBottom: '20px' }}>
