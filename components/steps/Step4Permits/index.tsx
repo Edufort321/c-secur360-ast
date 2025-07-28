@@ -9,17 +9,8 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-// ✅ CORRECTION : Import dynamique Next.js compatible
-import dynamic from 'next/dynamic';
-
-// Import dynamique avec fallback pour éviter les erreurs de build
-const ConfinedSpacePermit = dynamic(
-  () => import('./permits/ConfinedSpace/index').catch(() => ({ default: null })),
-  { 
-    ssr: false,
-    loading: () => <div>Chargement du module...</div>
-  }
-);
+// ✅ CORRECTION : Pas d'import pour éviter les erreurs de build
+// Le composant sera défini plus bas de manière conditionnelle
 
 // =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -175,6 +166,25 @@ interface PermitModule {
 }
 
 // =================== CONFIGURATION DES MODULES DE PERMIS ===================
+// Définition conditionnelle du composant ConfinedSpace
+let ConfinedSpaceComponent: React.ComponentType<any> | null = null;
+
+// Tentative de chargement dynamique du composant
+if (typeof window !== 'undefined') {
+  try {
+    // Import dynamique côté client seulement
+    import('./permits/ConfinedSpace/index')
+      .then(module => {
+        ConfinedSpaceComponent = module.default;
+      })
+      .catch(() => {
+        console.log('ConfinedSpace module not available');
+      });
+  } catch (error) {
+    console.log('ConfinedSpace import error:', error);
+  }
+}
+
 const PERMIT_MODULES: PermitModule[] = [
   {
     id: 'confined-space',
@@ -196,7 +206,7 @@ const PERMIT_MODULES: PermitModule[] = [
       'Photos géolocalisées',
       'Plan de sauvetage intégré'
     ],
-    component: ConfinedSpacePermit
+    component: undefined // Sera défini dynamiquement côté client
   },
   {
     id: 'electrical-work',
@@ -367,6 +377,28 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   const [selectedPermit, setSelectedPermit] = useState<string | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province as ProvinceCode || 'QC');
 
+  // États pour le chargement dynamique
+  const [loadedComponents, setLoadedComponents] = useState<{[key: string]: React.ComponentType<any>}>({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Chargement dynamique du composant au moment de la sélection
+  const loadPermitComponent = async (permitId: string) => {
+    if (permitId === 'confined-space' && !loadedComponents['confined-space']) {
+      setIsLoading(true);
+      try {
+        const module = await import('./permits/ConfinedSpace/index');
+        setLoadedComponents(prev => ({
+          ...prev,
+          'confined-space': module.default
+        }));
+      } catch (error) {
+        console.log('Impossible de charger le module ConfinedSpace:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
   // Mettre à jour les statuts des permis selon les données sauvegardées
   const [permits, setPermits] = useState<PermitModule[]>(() => {
     if (formData.permits?.completed) {
@@ -380,8 +412,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     return PERMIT_MODULES;
   });
 
-  const handlePermitSelect = (permitId: string) => {
+  const handlePermitSelect = async (permitId: string) => {
     setSelectedPermit(permitId);
+    await loadPermitComponent(permitId);
     console.log(`Chargement du permis: ${permitId}`);
   };
 
@@ -413,10 +446,36 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   // Si un permis est sélectionné, charger son composant
   if (selectedPermit) {
     const permit = permits.find(p => p.id === selectedPermit);
+    const LoadedComponent = loadedComponents[selectedPermit];
     
-    if (permit?.component) {
+    // Afficher le loading pendant le chargement
+    if (isLoading) {
+      return (
+        <div style={styles.container}>
+          <div style={{ ...styles.card, textAlign: 'center', padding: isMobile ? '40px 20px' : '60px 40px' }}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              border: '4px solid rgba(59, 130, 246, 0.3)',
+              borderTop: '4px solid #3b82f6',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 20px'
+            }}></div>
+            <h3 style={{ color: 'white', fontSize: '18px', marginBottom: '8px' }}>
+              Chargement du module...
+            </h3>
+            <p style={{ color: '#9ca3af', fontSize: '14px' }}>
+              Préparation de {permit?.name}
+            </p>
+          </div>
+        </div>
+      );
+    }
+    
+    if (LoadedComponent) {
       // Rendu du composant spécifique du permis
-      const PermitComponent = permit.component as React.ComponentType<{
+      const PermitComponent = LoadedComponent as React.ComponentType<{
         province: ProvinceCode;
         language: 'fr' | 'en';
         onSave: (data: any) => void;
@@ -1100,6 +1159,14 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
           horodatage sécurisé, photos géolocalisées, et archivage automatique dans Supabase.
         </p>
       </div>
+
+      {/* CSS pour l'animation du spinner */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
