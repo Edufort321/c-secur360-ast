@@ -141,6 +141,23 @@ interface RegulationData {
   };
 }
 
+interface AtmosphericReading {
+  id: string;
+  timestamp: string;
+  level: 'top' | 'middle' | 'bottom';
+  oxygen: number;
+  lel: number;
+  h2s: number;
+  co: number;
+  temperature?: number;
+  humidity?: number;
+  status: 'safe' | 'warning' | 'danger';
+  device_id?: string;
+  taken_by: string;
+  notes?: string;
+  retest_required?: boolean;
+}
+
 interface PersonnelEntry {
   id: string;
   name: string;
