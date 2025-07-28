@@ -9,8 +9,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-// ✅ CORRECTION : Utilisation du registre de permis pour éviter les imports statiques
-import { PERMIT_REGISTRY, loadPermitComponent as loadModule } from './permits/registry';
+// ✅ CORRECTION : Pas d'import de registre inexistant
 
 // =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -166,14 +165,130 @@ interface PermitModule {
 }
 
 // =================== CONFIGURATION DES MODULES DE PERMIS ===================
-// Configuration des modules basée sur le registre
-const PERMIT_MODULES: PermitModule[] = PERMIT_REGISTRY.map(config => ({
-  ...config,
-  icon: Home, // Icon générique pour tous les modules
-  status: 'available' as const,
-  completionRate: 0,
-  component: config.available ? (() => {}) : undefined // Placeholder pour les modules disponibles
-}));
+const PERMIT_MODULES: PermitModule[] = [
+  {
+    id: 'confined-space',
+    name: 'Permis d\'Espace Clos',
+    description: 'Permis d\'entrée en espace clos avec tests atmosphériques et surveillance continue',
+    icon: Home,
+    iconEmoji: '🏠',
+    color: '#dc2626',
+    riskLevel: 'critical',
+    estimatedTime: 45,
+    status: 'available',
+    completionRate: 0,
+    regulations: ['RSST Art. 302-317', 'CSA Z1006', 'CNESST'],
+    features: [
+      'Tests atmosphériques 4-gaz',
+      'Surveillance Bluetooth temps réel',
+      'Timer réglementaire automatique',
+      'Signatures électroniques horodatées',
+      'Photos géolocalisées',
+      'Plan de sauvetage intégré'
+    ],
+    component: undefined // Pas de composant pour éviter les erreurs de build
+  },
+  {
+    id: 'electrical-work',
+    name: 'Permis Travaux Électriques',
+    description: 'Permis pour travaux électriques avec consignation LOTO et vérification VAT',
+    icon: Zap,
+    iconEmoji: '⚡',
+    color: '#dc2626',
+    riskLevel: 'critical',
+    estimatedTime: 35,
+    status: 'available',
+    completionRate: 0,
+    regulations: ['CSA Z462', 'RSST Art. 185', 'NFPA 70E'],
+    features: [
+      'Consignation LOTO complète',
+      'Vérification absence tension (VAT)',
+      'Calcul énergie incidente arc',
+      'EPI arc-flash requis',
+      'Distances sécurité automatiques'
+    ]
+  },
+  {
+    id: 'excavation',
+    name: 'Permis d\'Excavation',
+    description: 'Permis pour travaux d\'excavation avec analyse sol et protection talus',
+    icon: Construction,
+    iconEmoji: '🏗️',
+    color: '#d97706',
+    riskLevel: 'high',
+    estimatedTime: 40,
+    status: 'available',
+    completionRate: 0,
+    regulations: ['RSST Art. 3.20', 'CSA Z271', 'Info-Excavation'],
+    features: [
+      'Localisation services publics',
+      'Analyse stabilité du sol',
+      'Calcul protection talus',
+      'Plan évacuation d\'urgence',
+      'Surveillance continue'
+    ]
+  },
+  {
+    id: 'height-work',
+    name: 'Permis Travail en Hauteur',
+    description: 'Permis pour travaux en hauteur avec protection antichute et plan sauvetage',
+    icon: Building,
+    iconEmoji: '🏢',
+    color: '#7c3aed',
+    riskLevel: 'critical',
+    estimatedTime: 50,
+    status: 'available',
+    completionRate: 0,
+    regulations: ['RSST Art. 347', 'CSA Z259', 'CNESST Hauteur'],
+    features: [
+      'Protection antichute complète',
+      'Points ancrage certifiés',
+      'Plan sauvetage en hauteur',
+      'Vérification météo',
+      'Équipe sauvetage sur site'
+    ]
+  },
+  {
+    id: 'hot-work',
+    name: 'Permis Travail à Chaud',
+    description: 'Permis pour soudage/coupage avec surveillance incendie et timer post-travaux',
+    icon: Flame,
+    iconEmoji: '🔥',
+    color: '#ea580c',
+    riskLevel: 'critical',
+    estimatedTime: 30,
+    status: 'available',
+    completionRate: 0,
+    regulations: ['NFPA 51B', 'RSST Art. 323', 'Code prévention incendie'],
+    features: [
+      'Surveillance incendie 60min post-travaux',
+      'Timer automatique réglementaire',
+      'Extincteurs spécialisés requis',
+      'Zone dégagement combustibles',
+      'Garde-feu qualifié'
+    ]
+  },
+  {
+    id: 'lifting',
+    name: 'Permis Opérations Levage',
+    description: 'Permis pour opérations de levage avec calcul charges et inspection équipements',
+    icon: Wrench,
+    iconEmoji: '🏗️',
+    color: '#059669',
+    riskLevel: 'high',
+    estimatedTime: 55,
+    status: 'available',
+    completionRate: 0,
+    regulations: ['ASME B30', 'CSA B335', 'RSST Art. 260-290'],
+    features: [
+      'Calcul charge de travail sécuritaire',
+      'Inspection pré-utilisation',
+      'Plan de levage détaillé',
+      'Signaleur certifié requis',
+      'Périmètre sécurité automatique'
+    ]
+  }
+];
 
 // =================== TRADUCTIONS ===================
 const getTexts = (language: 'fr' | 'en') => {
@@ -246,24 +361,11 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   const [loadedComponents, setLoadedComponents] = useState<{[key: string]: React.ComponentType<any>}>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // Chargement dynamique sécurisé via le registre
+  // Chargement dynamique désactivé - tous les permis utilisent le fallback
   const loadPermitComponent = async (permitId: string) => {
-    if (!loadedComponents[permitId]) {
-      setIsLoading(true);
-      try {
-        const component = await loadModule(permitId);
-        if (component) {
-          setLoadedComponents(prev => ({
-            ...prev,
-            [permitId]: component
-          }));
-        }
-      } catch (error) {
-        console.log(`Impossible de charger le module ${permitId}:`, error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
+    console.log(`Permis ${permitId} sélectionné - utilisation du fallback "en développement"`);
+    // Pas de chargement dynamique pour éviter les erreurs de build
+    // Le composant ConfinedSpace sera intégré plus tard
   };
 
   // Mettre à jour les statuts des permis selon les données sauvegardées
