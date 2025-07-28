@@ -382,32 +382,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   const texts = getTexts(language);
   const [selectedPermit, setSelectedPermit] = useState<string | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province as ProvinceCode || 'QC');
-
-  // États pour le chargement dynamique
-  const [loadedComponents, setLoadedComponents] = useState<{[key: string]: React.ComponentType<any>}>({});
   const [isLoading, setIsLoading] = useState(false);
-
-  // Chargement dynamique conditionnel pour le module ConfinedSpace
-  const loadPermitComponent = async (permitId: string) => {
-    if (permitId === 'confined-space' && !loadedComponents['confined-space']) {
-      setIsLoading(true);
-      try {
-        // Import dynamique sécurisé du module ConfinedSpace existant
-        const module = await import('./permits/ConfinedSpace/index');
-        setLoadedComponents(prev => ({
-          ...prev,
-          'confined-space': module.default
-        }));
-        console.log('✅ Module ConfinedSpace chargé avec succès');
-      } catch (error) {
-        console.log('⚠️ Module ConfinedSpace non disponible, utilisation du fallback:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      console.log(`Permis ${permitId} sélectionné - utilisation du fallback "en développement"`);
-    }
-  };
 
   // Mettre à jour les statuts des permis selon les données sauvegardées
   const [permits, setPermits] = useState<PermitModule[]>(() => {
@@ -422,10 +397,16 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     return PERMIT_MODULES;
   });
 
+  // Fonction de chargement simulé (tous les modules sont en développement pour le moment)
   const handlePermitSelect = async (permitId: string) => {
     setSelectedPermit(permitId);
-    await loadPermitComponent(permitId);
-    console.log(`Chargement du permis: ${permitId}`);
+    setIsLoading(true);
+    
+    // Simulation de chargement pour UX
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setIsLoading(false);
+    
+    console.log(`Permis sélectionné: ${permitId} - affichage du fallback "en développement"`);
   };
 
   const handleBackToSelection = () => {
@@ -453,10 +434,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     });
   };
 
-  // Si un permis est sélectionné, afficher le composant ou le fallback
+  // Si un permis est sélectionné, afficher le fallback (module en développement)
   if (selectedPermit) {
     const permit = permits.find(p => p.id === selectedPermit);
-    const LoadedComponent = loadedComponents[selectedPermit];
     
     // Afficher le spinner pendant le chargement
     if (isLoading) {
@@ -473,10 +453,10 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               margin: '0 auto 20px'
             }}></div>
             <h3 style={{ color: 'white', fontSize: '18px', marginBottom: '8px' }}>
-              Chargement du module...
+              {language === 'en' ? 'Loading module...' : 'Chargement du module...'}
             </h3>
             <p style={{ color: '#9ca3af', fontSize: '14px' }}>
-              Préparation de {permit?.name}
+              {language === 'en' ? `Preparing ${permit?.name}` : `Préparation de ${permit?.name}`}
             </p>
             <style jsx>{`
               @keyframes spin {
@@ -489,58 +469,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
       );
     }
     
-    // Si le composant est chargé, l'afficher
-    if (LoadedComponent) {
-      const PermitComponent = LoadedComponent as React.ComponentType<{
-        province: ProvinceCode;
-        language: 'fr' | 'en';
-        onSave: (data: any) => void;
-        onSubmit: (data: any) => void;
-        onCancel: () => void;
-        initialData?: any;
-      }>;
-      
-      return (
-        <div style={styles.container}>
-          {/* Header de retour */}
-          <div style={{ ...styles.card, marginBottom: '20px' }}>
-            <button
-              onClick={handleBackToSelection}
-              style={{
-                ...styles.button,
-                ...styles.buttonSecondary,
-                width: 'auto',
-                padding: isMobile ? '12px 16px' : '16px 20px',
-                fontSize: isMobile ? '14px' : '16px'
-              }}
-            >
-              <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
-              {texts.backToSelection}
-            </button>
-          </div>
-
-          {/* Composant de permis chargé dynamiquement */}
-          <PermitComponent
-            province={selectedProvince}
-            language={language}
-            onSave={(data: any) => {
-              console.log('Permis sauvegardé:', data);
-              updatePermitStatus(permit!.id, 'in-progress', 50);
-            }}
-            onSubmit={(data: any) => {
-              console.log('Permis soumis:', data);
-              updatePermitStatus(permit!.id, 'completed', 100);
-              handleBackToSelection();
-            }}
-            onCancel={handleBackToSelection}
-            initialData={formData[`permit_${permit!.id}`] || {}}
-          />
-        </div>
-      );
-    }
-    
-    // Fallback pour les modules non disponibles
-    
+    // Fallback pour tous les modules (en développement)
     return (
       <div style={styles.container}>
         {/* Header de retour */}
@@ -882,7 +811,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             color: 'white',
             margin: 0
           }}>
-            🍁 Sélection de la Province
+            {texts.provinceSelection}
           </h3>
         </div>
         
@@ -1138,7 +1067,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             color: 'white',
             margin: 0
           }}>
-            ℹ️ Information Importante
+            {texts.importantInfo}
           </h3>
         </div>
         <p style={{
@@ -1147,11 +1076,14 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
           lineHeight: 1.6,
           margin: 0
         }}>
-          Tous les permis sont conçus pour respecter les réglementations provinciales en vigueur. 
-          Province sélectionnée : <strong style={{ color: '#60a5fa' }}>{PROVINCES_DATA[selectedProvince].name} ({selectedProvince})</strong> - {PROVINCES_DATA[selectedProvince].authority}.
+          {texts.complianceText}
+          <br />
+          {language === 'en' 
+            ? `Selected province: **${PROVINCES_DATA[selectedProvince].name} (${selectedProvince})** - ${PROVINCES_DATA[selectedProvince].authority}.`
+            : `Province sélectionnée : **${PROVINCES_DATA[selectedProvince].name} (${selectedProvince})** - ${PROVINCES_DATA[selectedProvince].authority}.`
+          }
           <br /><br />
-          Chaque module intègre les fonctionnalités avancées requises : signatures électroniques, 
-          horodatage sécurisé, photos géolocalisées, et archivage automatique dans Supabase.
+          {texts.featuresText}
         </p>
       </div>
     </div>
