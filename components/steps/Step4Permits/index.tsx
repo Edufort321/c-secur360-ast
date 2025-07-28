@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { 
-  Shield, Search, CheckCircle, AlertTriangle, FileText, Settings, Users, Clock, 
-  Eye, Zap, Wind, Flame, Construction, Building, Activity, BarChart3, Star, 
-  Plus, Wrench, Home, Target, ChevronDown, ChevronRight, Camera, MapPin
+  Shield, Search, CheckCircle, AlertTriangle, FileText, Settings, 
+  Users, Clock, Eye, Zap, Wind, Flame, Construction, Building, 
+  Activity, BarChart3, Star, Plus, Wrench, Home, Target, ChevronDown, ChevronRight,
+  Camera, MapPin, Bluetooth, Battery, Signal, Play, Pause, Mic, Upload, Download, Gauge,
+  ArrowRight
 } from 'lucide-react';
 
-// =================== DÉTECTION MOBILE ET STYLES ===================
+// =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
 const styles = {
@@ -53,858 +55,1145 @@ const styles = {
     color: 'white',
     boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
   },
+  buttonSuccess: {
+    background: 'linear-gradient(135deg, #059669, #047857)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+  },
+  buttonDanger: {
+    background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+  },
   buttonSecondary: {
     backgroundColor: '#4b5563',
     color: 'white',
     border: '1px solid #6b7280'
   },
-  moduleCard: {
-    backgroundColor: '#1f2937',
-    borderRadius: '16px',
-    padding: isMobile ? '20px' : '24px',
-    border: '2px solid #374151',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    position: 'relative' as const,
-    overflow: 'hidden',
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column' as const
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+    gap: isMobile ? '8px' : '20px',
+    width: '100%'
   },
-  moduleCardHover: {
-    transform: 'translateY(-4px)',
-    borderColor: '#3b82f6',
-    boxShadow: '0 12px 40px rgba(59, 130, 246, 0.2)'
+  grid3: {
+    display: 'grid',
+    gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+    gap: isMobile ? '8px' : '16px',
+    width: '100%'
+  },
+  grid4: {
+    display: 'grid',
+    gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+    gap: isMobile ? '8px' : '16px',
+    width: '100%'
+  },
+  headerCard: {
+    background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.9))',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    borderRadius: isMobile ? '12px' : '20px',
+    padding: isMobile ? '20px' : '32px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+    position: 'relative' as const,
+    overflow: 'hidden' as const
+  },
+  permitCard: {
+    backgroundColor: 'rgba(31, 41, 55, 0.6)',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    borderRadius: isMobile ? '12px' : '20px',
+    padding: isMobile ? '20px' : '24px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+    transition: 'all 0.3s ease',
+    cursor: 'pointer',
+    position: 'relative' as const,
+    overflow: 'hidden' as const
   }
 };
 
-// =================== TYPES ET INTERFACES ===================
+// =================== TYPES ===================
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
-type PermitStatus = 'available' | 'in-progress' | 'completed';
+
+// =================== DONNÉES PROVINCIALES ===================
+const PROVINCES_DATA = {
+  QC: { name: 'Québec', authority: 'CNESST', color: '#1e40af' },
+  ON: { name: 'Ontario', authority: 'MOL', color: '#dc2626' },
+  BC: { name: 'Colombie-Britannique', authority: 'WorkSafeBC', color: '#059669' },
+  AB: { name: 'Alberta', authority: 'Alberta OHS', color: '#7c2d12' },
+  SK: { name: 'Saskatchewan', authority: 'Saskatchewan OHS', color: '#a21caf' },
+  MB: { name: 'Manitoba', authority: 'Manitoba Workplace Safety', color: '#ea580c' },
+  NB: { name: 'Nouveau-Brunswick', authority: 'WorkSafeNB', color: '#0891b2' },
+  NS: { name: 'Nouvelle-Écosse', authority: 'Workers\' Compensation Board', color: '#be123c' },
+  PE: { name: 'Île-du-Prince-Édouard', authority: 'PEI Workers Compensation Board', color: '#9333ea' },
+  NL: { name: 'Terre-Neuve-et-Labrador', authority: 'WorkplaceNL', color: '#0d9488' }
+};
+
+// =================== INTERFACES ===================
+interface Step4PermitsProps {
+  formData: any;
+  onDataChange: (section: string, data: any) => void;
+  language: 'fr' | 'en';
+  tenant: string;
+  errors?: any;
+  province?: string;
+  userRole?: string;
+  touchOptimized?: boolean;
+  compactMode?: boolean;
+  onPermitChange?: (permits: any) => void;
+  initialPermits?: any[];
+}
 
 interface PermitModule {
   id: string;
+  name: string;
+  description: string;
   icon: React.ComponentType<any>;
-  status: PermitStatus;
-  estimatedTime: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  category: 'safety' | 'electrical' | 'mechanical' | 'environmental';
+  iconEmoji: string;
+  color: string;
+  riskLevel: 'critical' | 'high' | 'medium' | 'low';
+  estimatedTime: number;
+  status: 'available' | 'in-progress' | 'completed' | 'locked';
+  completionRate: number;
+  regulations: string[];
   features: string[];
-  regulations: {
-    fr: string;
-    en: string;
-  };
-  lastUpdated?: string;
-  completionRate?: number;
+  component?: React.ComponentType<any>;
 }
 
-interface Step4PermitsProps {
-  selectedProvince: ProvinceCode;
-  language: 'fr' | 'en';
-  onDataChange: (data: any) => void;
-  formData: any;
-}
-
-interface ConfinedSpaceComponent {
-  default: React.ComponentType<any>;
-}
-
-// =================== COMPOSANT PRINCIPAL ===================
-const Step4Permits: React.FC<Step4PermitsProps> = ({
-  selectedProvince,
-  language,
-  onDataChange,
-  formData
-}) => {
-  // =================== ÉTATS LOCAUX ===================
-  const [selectedPermit, setSelectedPermit] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | PermitStatus>('all');
-  const [confinedSpaceComponent, setConfinedSpaceComponent] = useState<ConfinedSpaceComponent | null>(null);
-  const [permitModules, setPermitModules] = useState<PermitModule[]>([]);
-
-  // =================== TRADUCTIONS ===================
-  const getTexts = (language: 'fr' | 'en') => ({
-    fr: {
-      title: "Modules de Permis de Travail",
-      subtitle: "Sélectionnez et complétez les permis requis selon la réglementation provinciale",
-      search: "Rechercher un permis...",
-      filters: {
-        all: "Tous",
-        available: "Disponibles", 
-        inProgress: "En cours",
-        completed: "Complétés"
-      },
-      status: {
-        available: "Disponible",
-        inProgress: "En cours",
-        completed: "Complété"
-      },
-      difficulty: {
-        beginner: "Débutant",
-        intermediate: "Intermédiaire", 
-        advanced: "Avancé"
-      },
-      category: {
-        safety: "Sécurité",
-        electrical: "Électrique",
-        mechanical: "Mécanique",
-        environmental: "Environnemental"
-      },
-      actions: {
-        start: "Commencer",
-        continue: "Continuer",
-        review: "Réviser",
-        backToSelection: "← Retour à la sélection"
-      },
-      stats: {
-        totalModules: "Modules totaux",
-        completed: "Complétés",
-        inProgress: "En cours",
-        estimatedTime: "Temps estimé"
-      },
-      loading: "Chargement du module...",
-      development: "Module en Développement",
-      developmentDesc: "Ce module est actuellement en cours de développement et sera disponible prochainement."
-    },
-    en: {
-      title: "Work Permit Modules",
-      subtitle: "Select and complete required permits according to provincial regulations",
-      search: "Search for a permit...",
-      filters: {
-        all: "All",
-        available: "Available",
-        inProgress: "In Progress", 
-        completed: "Completed"
-      },
-      status: {
-        available: "Available",
-        inProgress: "In Progress",
-        completed: "Completed"
-      },
-      difficulty: {
-        beginner: "Beginner",
-        intermediate: "Intermediate",
-        advanced: "Advanced"
-      },
-      category: {
-        safety: "Safety",
-        electrical: "Electrical", 
-        mechanical: "Mechanical",
-        environmental: "Environmental"
-      },
-      actions: {
-        start: "Start",
-        continue: "Continue",
-        review: "Review",
-        backToSelection: "← Back to Selection"
-      },
-      stats: {
-        totalModules: "Total Modules",
-        completed: "Completed",
-        inProgress: "In Progress", 
-        estimatedTime: "Estimated Time"
-      },
-      loading: "Loading module...",
-      development: "Module in Development",
-      developmentDesc: "This module is currently under development and will be available soon."
-    }
-  })[language];
-
-  const texts = getTexts(language);
-
-  // =================== GÉNÉRATION DES MODULES ===================
-  const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => [
+// =================== CONFIGURATION DES MODULES DE PERMIS ===================
+const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
+  const baseModules = [
     {
       id: 'confined-space',
-      icon: Shield,
-      status: 'available',
-      estimatedTime: language === 'fr' ? '45-60 min' : '45-60 min',
-      difficulty: 'advanced',
-      category: 'safety',
-      features: language === 'fr' ? [
-        'Tests atmosphériques obligatoires',
-        'Plan de sauvetage détaillé', 
-        'Surveillance continue requise',
-        'Documentation complète'
+      name: language === 'en' ? 'Confined Space Entry Permit' : 'Permis d\'Espace Clos',
+      description: language === 'en' 
+        ? 'Confined space entry permit with atmospheric testing and continuous monitoring'
+        : 'Permis d\'entrée en espace clos avec tests atmosphériques et surveillance continue',
+      icon: Home,
+      iconEmoji: '🏠',
+      color: '#dc2626',
+      riskLevel: 'critical' as const,
+      estimatedTime: 45,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en' 
+        ? ['OHSA Confined Space', 'CSA Z1006', 'Provincial Regs']
+        : ['RSST Art. 302-317', 'CSA Z1006', 'CNESST'],
+      features: language === 'en' ? [
+        '4-gas atmospheric testing',
+        'Real-time Bluetooth monitoring',
+        'Automatic regulatory timer',
+        'Timestamped electronic signatures',
+        'Geolocated photos',
+        'Integrated rescue plan'
       ] : [
-        'Mandatory atmospheric testing',
-        'Detailed rescue plan',
-        'Continuous monitoring required', 
-        'Complete documentation'
+        'Tests atmosphériques 4-gaz',
+        'Surveillance Bluetooth temps réel',
+        'Timer réglementaire automatique',
+        'Signatures électroniques horodatées',
+        'Photos géolocalisées',
+        'Plan de sauvetage intégré'
       ],
-      regulations: {
-        fr: selectedProvince === 'QC' ? 'RSST Art. 302-317' : 
-            selectedProvince === 'ON' ? 'O.Reg 632/05' :
-            selectedProvince === 'BC' ? 'WCA Part 3 Div 8' :
-            selectedProvince === 'AB' ? 'OHS Code Part 5' : 'Provincial OHS',
-        en: selectedProvince === 'QC' ? 'RSST Art. 302-317' :
-            selectedProvince === 'ON' ? 'O.Reg 632/05' :
-            selectedProvince === 'BC' ? 'WCA Part 3 Div 8' :
-            selectedProvince === 'AB' ? 'OHS Code Part 5' : 'Provincial OHS'
-      },
-      completionRate: formData?.permitModules?.['confined-space']?.status === 'completed' ? 100 :
-                     formData?.permitModules?.['confined-space']?.status === 'in-progress' ? 50 : 0
+      component: undefined
     },
     {
-      id: 'electrical',
+      id: 'electrical-work',
+      name: language === 'en' ? 'Electrical Work Permit' : 'Permis Travaux Électriques',
+      description: language === 'en'
+        ? 'Electrical work permit with LOTO lockout and VAT verification'
+        : 'Permis pour travaux électriques avec consignation LOTO et vérification VAT',
       icon: Zap,
-      status: 'available',
-      estimatedTime: language === 'fr' ? '30-45 min' : '30-45 min',
-      difficulty: 'intermediate',
-      category: 'electrical',
-      features: language === 'fr' ? [
-        'Verrouillage/Étiquetage (LOTO)',
-        'Isolation électrique vérifiée',
-        'Équipement de protection',
-        'Procédures d\'urgence'
+      iconEmoji: '⚡',
+      color: '#dc2626',
+      riskLevel: 'critical' as const,
+      estimatedTime: 35,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['CSA Z462', 'NFPA 70E', 'Provincial Electrical Code']
+        : ['CSA Z462', 'RSST Art. 185', 'NFPA 70E'],
+      features: language === 'en' ? [
+        'Complete LOTO lockout',
+        'Voltage absence testing (VAT)',
+        'Arc flash incident energy calculation',
+        'Required arc-flash PPE',
+        'Automatic safety distances'
       ] : [
-        'Lockout/Tagout (LOTO)',
-        'Verified electrical isolation',
-        'Protective equipment',
-        'Emergency procedures'
-      ],
-      regulations: {
-        fr: language === 'fr' ? 'Code électrique canadien' : 'Canadian Electrical Code',
-        en: 'Canadian Electrical Code'
-      },
-      completionRate: 0
+        'Consignation LOTO complète',
+        'Vérification absence tension (VAT)',
+        'Calcul énergie incidente arc',
+        'EPI arc-flash requis',
+        'Distances sécurité automatiques'
+      ]
     },
     {
       id: 'excavation',
+      name: language === 'en' ? 'Excavation Permit' : 'Permis d\'Excavation',
+      description: language === 'en'
+        ? 'Excavation work permit with soil analysis and slope protection'
+        : 'Permis pour travaux d\'excavation avec analyse sol et protection talus',
       icon: Construction,
-      status: 'available', 
-      estimatedTime: language === 'fr' ? '35-50 min' : '35-50 min',
-      difficulty: 'advanced',
-      category: 'safety',
-      features: language === 'fr' ? [
-        'Analyse du sol requise',
-        'Système de protection',
-        'Détection de services publics',
-        'Plan d\'évacuation d\'urgence'
+      iconEmoji: '🏗️',
+      color: '#d97706',
+      riskLevel: 'high' as const,
+      estimatedTime: 40,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['OHSA Excavation', 'CSA Z271', 'Call Before You Dig']
+        : ['RSST Art. 3.20', 'CSA Z271', 'Info-Excavation'],
+      features: language === 'en' ? [
+        'Public utilities location',
+        'Soil stability analysis',
+        'Slope protection calculation',
+        'Emergency evacuation plan',
+        'Continuous monitoring'
       ] : [
-        'Required soil analysis',
-        'Protection system',
-        'Utility detection', 
-        'Emergency evacuation plan'
-      ],
-      regulations: {
-        fr: language === 'fr' ? 'Réglementation provinciale' : 'Provincial regulation',
-        en: 'Provincial regulation'
-      },
-      completionRate: 0
+        'Localisation services publics',
+        'Analyse stabilité du sol',
+        'Calcul protection talus',
+        'Plan évacuation d\'urgence',
+        'Surveillance continue'
+      ]
     },
     {
-      id: 'height',
+      id: 'height-work',
+      name: language === 'en' ? 'Work at Height Permit' : 'Permis Travail en Hauteur',
+      description: language === 'en'
+        ? 'Work at height permit with fall protection and rescue plan'
+        : 'Permis pour travaux en hauteur avec protection antichute et plan sauvetage',
       icon: Building,
-      status: 'available',
-      estimatedTime: language === 'fr' ? '25-40 min' : '25-40 min', 
-      difficulty: 'intermediate',
-      category: 'safety',
-      features: language === 'fr' ? [
-        'Équipement antichute obligatoire',
-        'Points d\'ancrage certifiés',
-        'Plan de sauvetage en hauteur',
-        'Conditions météorologiques'
-      ] : [
-        'Mandatory fall protection equipment',
+      iconEmoji: '🏢',
+      color: '#7c3aed',
+      riskLevel: 'critical' as const,
+      estimatedTime: 50,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['OHSA Fall Protection', 'CSA Z259', 'Height Safety Regs']
+        : ['RSST Art. 347', 'CSA Z259', 'CNESST Hauteur'],
+      features: language === 'en' ? [
+        'Complete fall protection',
         'Certified anchor points',
         'Height rescue plan',
-        'Weather conditions'
-      ],
-      regulations: {
-        fr: language === 'fr' ? 'Norme CSA Z259' : 'CSA Z259 Standard',
-        en: 'CSA Z259 Standard'
-      },
-      completionRate: 0
+        'Weather verification',
+        'On-site rescue team'
+      ] : [
+        'Protection antichute complète',
+        'Points ancrage certifiés',
+        'Plan sauvetage en hauteur',
+        'Vérification météo',
+        'Équipe sauvetage sur site'
+      ]
     },
     {
       id: 'hot-work',
+      name: language === 'en' ? 'Hot Work Permit' : 'Permis Travail à Chaud',
+      description: language === 'en'
+        ? 'Hot work permit for welding/cutting with fire watch and post-work timer'
+        : 'Permis pour soudage/coupage avec surveillance incendie et timer post-travaux',
       icon: Flame,
-      status: 'available',
-      estimatedTime: language === 'fr' ? '20-35 min' : '20-35 min',
-      difficulty: 'beginner',
-      category: 'safety', 
-      features: language === 'fr' ? [
-        'Surveillance d\'incendie obligatoire',
-        'Équipement d\'extinction',
-        'Zone de sécurité établie',
-        'Ventilation adéquate'
+      iconEmoji: '🔥',
+      color: '#ea580c',
+      riskLevel: 'critical' as const,
+      estimatedTime: 30,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['NFPA 51B', 'Fire Prevention Code', 'Provincial Fire Regs']
+        : ['NFPA 51B', 'RSST Art. 323', 'Code prévention incendie'],
+      features: language === 'en' ? [
+        '60min post-work fire watch',
+        'Automatic regulatory timer',
+        'Specialized fire extinguishers required',
+        'Combustible clearance zone',
+        'Qualified fire guard'
       ] : [
-        'Mandatory fire watch',
-        'Fire extinguishing equipment',
-        'Established safety zone',
-        'Adequate ventilation'
-      ],
-      regulations: {
-        fr: language === 'fr' ? 'NFPA 51B' : 'NFPA 51B',
-        en: 'NFPA 51B'
-      },
-      completionRate: 0
+        'Surveillance incendie 60min post-travaux',
+        'Timer automatique réglementaire',
+        'Extincteurs spécialisés requis',
+        'Zone dégagement combustibles',
+        'Garde-feu qualifié'
+      ]
     },
     {
       id: 'lifting',
+      name: language === 'en' ? 'Lifting Operations Permit' : 'Permis Opérations Levage',
+      description: language === 'en'
+        ? 'Lifting operations permit with load calculations and equipment inspection'
+        : 'Permis pour opérations de levage avec calcul charges et inspection équipements',
       icon: Wrench,
-      status: 'available',
-      estimatedTime: language === 'fr' ? '30-45 min' : '30-45 min',
-      difficulty: 'intermediate',
-      category: 'mechanical',
-      features: language === 'fr' ? [
-        'Calcul de charge certifié',
-        'Inspection d\'équipement',
-        'Plan de levage détaillé', 
-        'Personnel qualifié requis'
-      ] : [
-        'Certified load calculation',
-        'Equipment inspection',
+      iconEmoji: '🏗️',
+      color: '#059669',
+      riskLevel: 'high' as const,
+      estimatedTime: 55,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['ASME B30', 'CSA B335', 'Provincial Lifting Regs']
+        : ['ASME B30', 'CSA B335', 'RSST Art. 260-290'],
+      features: language === 'en' ? [
+        'Safe working load calculation',
+        'Pre-use inspection',
         'Detailed lifting plan',
-        'Qualified personnel required'
-      ],
-      regulations: {
-        fr: language === 'fr' ? 'CSA B167' : 'CSA B167',
-        en: 'CSA B167'
-      },
-      completionRate: 0
+        'Certified signaler required',
+        'Automatic safety perimeter'
+      ] : [
+        'Calcul charge de travail sécuritaire',
+        'Inspection pré-utilisation',
+        'Plan de levage détaillé',
+        'Signaleur certifié requis',
+        'Périmètre sécurité automatique'
+      ]
     }
   ];
 
-  // =================== EFFETS ===================
-  useEffect(() => {
-    setPermitModules(getPermitModules(language));
-  }, [language, selectedProvince, formData]);
+  return baseModules;
+};
 
-  // =================== FONCTIONS ===================
+// =================== TRADUCTIONS ===================
+const getTexts = (language: 'fr' | 'en') => {
+  if (language === 'en') {
+    return {
+      title: "Work Permits & Legal Authorizations",
+      subtitle: "Select and configure work permits with full regulatory compliance",
+      selectPermit: "Select Permit Type",
+      backToSelection: "← Back to Selection",
+      estimatedTime: "Estimated Time",
+      minutes: "min",
+      riskLevel: "Risk Level",
+      regulations: "Regulations",
+      features: "Key Features",
+      startPermit: "Start Permit",
+      continuePermit: "Continue",
+      completed: "Completed",
+      inProgress: "In Progress",
+      moduleInDevelopment: "Module in Development",
+      plannedFeatures: "🚀 Planned Features:",
+      modulesAvailable: "Available Modules",
+      completedCount: "Completed",
+      inProgressCount: "In Progress",
+      province: "Province",
+      provinceSelection: "🍁 Province Selection",
+      selectedProvince: "Selected province:",
+      competentAuthority: "Competent authority:",
+      autoAdaptation: "Permits will be automatically adapted to this province's regulations",
+      importantInfo: "ℹ️ Important Information",
+      complianceText: "All permits are designed to comply with current provincial regulations.",
+      featuresText: "Each module integrates required advanced features: electronic signatures, secure timestamping, geolocated photos, and automatic archiving in Supabase.",
+      riskLevels: {
+        critical: "🔴 Critical",
+        high: "🟠 High",
+        medium: "🟡 Medium",
+        low: "🟢 Low"
+      }
+    };
+  }
+  
+  return {
+    title: "Permis de Travail & Autorisations Légales",
+    subtitle: "Sélectionnez et configurez vos permis de travail avec conformité réglementaire complète",
+    selectPermit: "Sélectionner le Type de Permis",
+    backToSelection: "← Retour à la Sélection",
+    estimatedTime: "Temps Estimé",
+    minutes: "min",
+    riskLevel: "Niveau de Risque",
+    regulations: "Réglementations",
+    features: "Fonctionnalités Clés",
+    startPermit: "Démarrer Permis",
+    continuePermit: "Continuer",
+    completed: "Complété",
+    inProgress: "En Cours",
+    moduleInDevelopment: "Module en Développement",
+    plannedFeatures: "🚀 Fonctionnalités Prévues :",
+    modulesAvailable: "Modules Disponibles",
+    completedCount: "Complétés",
+    inProgressCount: "En Cours",
+    province: "Province",
+    provinceSelection: "🍁 Sélection de la Province",
+    selectedProvince: "Province sélectionnée :",
+    competentAuthority: "Autorité compétente :",
+    autoAdaptation: "Les permis seront adaptés automatiquement aux réglementations de cette province",
+    importantInfo: "ℹ️ Information Importante",
+    complianceText: "Tous les permis sont conçus pour respecter les réglementations provinciales en vigueur.",
+    featuresText: "Chaque module intègre les fonctionnalités avancées requises : signatures électroniques, horodatage sécurisé, photos géolocalisées, et archivage automatique dans Supabase.",
+    riskLevels: {
+      critical: "🔴 Critique",
+      high: "🟠 Élevé",
+      medium: "🟡 Moyen",
+      low: "🟢 Faible"
+    }
+  };
+};
+
+// =================== COMPOSANT PRINCIPAL ===================
+const Step4Permits: React.FC<Step4PermitsProps> = ({
+  formData,
+  onDataChange,
+  language = 'fr',
+  tenant,
+  errors,
+  province = 'QC',
+  userRole,
+  touchOptimized = false,
+  compactMode = false,
+  onPermitChange,
+  initialPermits
+}) => {
+  const texts = getTexts(language);
+  const [selectedPermit, setSelectedPermit] = useState<string | null>(null);
+  const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province as ProvinceCode || 'QC');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // État pour stocker le composant ConfinedSpace une fois chargé
+  const [confinedSpaceComponent, setConfinedSpaceComponent] = useState<React.ComponentType<any> | null>(null);
+
+  // Générer les modules avec traductions selon la langue actuelle
+  const PERMIT_MODULES = getPermitModules(language);
+
+  // Mettre à jour les statuts des permis selon les données sauvegardées
+  const [permits, setPermits] = useState<PermitModule[]>(() => {
+    const modules = getPermitModules(language);
+    if (formData.permits?.completed) {
+      return modules.map(permit => ({
+        ...permit,
+        status: formData.permits.completed.includes(permit.id) ? 'completed' : 
+                formData.permits.inProgress?.includes(permit.id) ? 'in-progress' : 'available',
+        completionRate: formData.permits.completion?.[permit.id] || 0
+      }));
+    }
+    return modules;
+  });
+
+  // Mettre à jour les permits quand la langue change
+  React.useEffect(() => {
+    const updatedModules = getPermitModules(language);
+    setPermits(prevPermits => {
+      return updatedModules.map(module => {
+        const existingPermit = prevPermits.find(p => p.id === module.id);
+        return {
+          ...module,
+          status: existingPermit?.status || 'available',
+          completionRate: existingPermit?.completionRate || 0
+        };
+      });
+    });
+  }, [language]);
+
+  // Fonction de chargement - Étape 2 bis: Chemin d'import corrigé
   const handlePermitSelect = async (permitId: string) => {
-    setIsLoading(true);
     setSelectedPermit(permitId);
+    setIsLoading(true);
     
-    console.log(`Permis sélectionné: ${permitId}`);
-    
-    // Simulation de chargement pour UX
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Traitement spécial pour ConfinedSpace
+    // Import avec le bon chemin pour ConfinedSpace
     if (permitId === 'confined-space') {
       try {
-        console.log('Tentative de chargement ConfinedSpace...');
+        console.log('🔄 Tentative de chargement ConfinedSpace...');
+        // Chemin corrigé : ./ConfinedSpace/index au lieu de ./permits/ConfinedSpace/index
         const ConfinedSpaceModule = await import('./ConfinedSpace/index');
-        console.log('Module ConfinedSpace importé avec succès:', !!ConfinedSpaceModule.default);
-        setConfinedSpaceComponent(ConfinedSpaceModule);
+        console.log('✅ Module ConfinedSpace importé avec succès:', !!ConfinedSpaceModule.default);
+        
+        // Stocker le composant (sans l'utiliser dans le rendu encore)
+        setConfinedSpaceComponent(ConfinedSpaceModule.default);
+        
       } catch (error) {
-        console.log('Impossible de charger ConfinedSpace, utilisation du fallback:', error);
+        console.log('⚠️ Erreur chargement ConfinedSpace:', error);
         setConfinedSpaceComponent(null);
       }
     }
     
+    // Simulation de chargement pour UX
+    await new Promise(resolve => setTimeout(resolve, 800));
     setIsLoading(false);
+    
+    console.log(`Permis sélectionné: ${permitId} - Étape 2 bis: Chemin corrigé`);
   };
 
   const handleBackToSelection = () => {
     setSelectedPermit(null);
-    setConfinedSpaceComponent(null);
   };
 
-  const handleSavePermit = (data: any) => {
-    console.log('Sauvegarde du permis:', data);
-    
-    // Mettre à jour le statut du permis
-    const updatedData = {
-      ...formData,
-      permitModules: {
-        ...formData.permitModules,
-        [selectedPermit!]: {
-          ...data,
-          status: 'in-progress',
-          progress: 50,
-          lastUpdated: new Date().toISOString()
-        }
-      }
-    };
-    
-    onDataChange(updatedData);
-  };
+  const updatePermitStatus = (permitId: string, status: PermitModule['status'], completionRate: number = 0) => {
+    const updatedPermits = permits.map(permit => 
+      permit.id === permitId 
+        ? { ...permit, status, completionRate }
+        : permit
+    );
+    setPermits(updatedPermits);
 
-  const handleSubmitPermit = (data: any) => {
-    console.log('Soumission du permis:', data);
-    
-    // Marquer le permis comme complété
-    const updatedData = {
-      ...formData,
-      permitModules: {
-        ...formData.permitModules,
-        [selectedPermit!]: {
-          ...data,
-          status: 'completed',
-          progress: 100,
-          completedAt: new Date().toISOString()
-        }
-      }
-    };
-    
-    onDataChange(updatedData);
-    handleBackToSelection();
-  };
+    // Sauvegarder dans formData
+    const completedPermits = updatedPermits.filter(p => p.status === 'completed').map(p => p.id);
+    const inProgressPermits = updatedPermits.filter(p => p.status === 'in-progress').map(p => p.id);
+    const completion = Object.fromEntries(updatedPermits.map(p => [p.id, p.completionRate]));
 
-  // =================== FILTRAGE DES MODULES ===================
-  const filteredModules = permitModules.filter(module => {
-    const matchesSearch = module.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         texts.category[module.category].toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || module.status === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
-
-  // =================== STATISTIQUES ===================
-  const stats = {
-    total: permitModules.length,
-    completed: permitModules.filter(m => m.status === 'completed').length,
-    inProgress: permitModules.filter(m => m.status === 'in-progress').length,
-    available: permitModules.filter(m => m.status === 'available').length
-  };
-
-  // =================== RENDU CONDITIONNEL ===================
-  // Affichage du module ConfinedSpace
-  if (selectedPermit === 'confined-space' && confinedSpaceComponent) {
-    const ConfinedSpaceModule = confinedSpaceComponent.default;
-    
-    console.log('Props passées au module ConfinedSpace:', {
-      province: selectedProvince || 'QC',
-      language: language || 'fr'
+    onDataChange('permits', {
+      completed: completedPermits,
+      inProgress: inProgressPermits,
+      completion,
+      total: permits.length
     });
+  };
+
+  // Si un permis est sélectionné, afficher le composant approprié
+  if (selectedPermit) {
+    const permit = permits.find(p => p.id === selectedPermit);
     
+    // Afficher le spinner pendant le chargement
+    if (isLoading) {
+      return (
+        <div style={styles.container}>
+          <div style={{ ...styles.card, textAlign: 'center', padding: isMobile ? '40px 20px' : '60px 40px' }}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              border: '4px solid rgba(59, 130, 246, 0.3)',
+              borderTop: '4px solid #3b82f6',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 20px'
+            }}></div>
+            <h3 style={{ color: 'white', fontSize: '18px', marginBottom: '8px' }}>
+              {language === 'en' ? 'Loading module...' : 'Chargement du module...'}
+            </h3>
+            <p style={{ color: '#9ca3af', fontSize: '14px' }}>
+              {language === 'en' ? `Preparing ${permit?.name}` : `Préparation de ${permit?.name}`}
+            </p>
+            <style jsx>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        </div>
+      );
+    }
+    
+    // Si c'est le permis ConfinedSpace, afficher un message spécial pour indiquer qu'il existe
+    if (selectedPermit === 'confined-space') {
+      // Pour le moment, afficher un message indiquant que le module existe mais n'est pas encore intégré
+      console.log('Module ConfinedSpace détecté - prêt pour intégration');
+    }
+    
+    // Fallback pour tous les modules (y compris ConfinedSpace temporairement)
     return (
       <div style={styles.container}>
         {/* Header de retour */}
-        <div style={{
-          ...styles.card,
-          marginBottom: '16px',
-          padding: '16px 24px'
-        }}>
+        <div style={{ ...styles.card, marginBottom: '20px' }}>
           <button
             onClick={handleBackToSelection}
             style={{
               ...styles.button,
               ...styles.buttonSecondary,
               width: 'auto',
-              padding: '12px 20px'
+              padding: isMobile ? '12px 16px' : '16px 20px',
+              fontSize: isMobile ? '14px' : '16px'
             }}
           >
-            <ChevronRight style={{ width: '18px', height: '18px', transform: 'rotate(180deg)' }} />
-            {texts.actions.backToSelection}
+            <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
+            {texts.backToSelection}
           </button>
         </div>
         
-        {/* Module ConfinedSpace */}
-        <ConfinedSpaceModule
-          province={selectedProvince || 'QC'}
-          language={language || 'fr'}
-          onSave={handleSavePermit}
-          onSubmit={handleSubmitPermit}
-          onCancel={handleBackToSelection}
-          initialData={formData?.permitModules?.['confined-space'] || {}}
-        />
-      </div>
-    );
-  }
-  
-  // Affichage du fallback pour les autres modules ou ConfinedSpace non chargé
-  if (selectedPermit) {
-    const module = permitModules.find(m => m.id === selectedPermit);
-    
-    return (
-      <div style={styles.container}>
-        {/* Header avec loading ou fallback */}
-        <div style={{
-          ...styles.card,
-          textAlign: 'center' as const,
-          padding: isMobile ? '32px 20px' : '48px 32px'
-        }}>
-          {isLoading ? (
-            <>
+        {/* En-tête du permis */}
+        <div style={styles.headerCard}>
+          <div style={{ 
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `linear-gradient(135deg, ${permit?.color}10, ${permit?.color}05)`,
+            zIndex: 0
+          }}></div>
+          
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '16px' : '20px' }}>
               <div style={{
-                width: '64px',
-                height: '64px',
-                border: '4px solid #374151',
-                borderTop: '4px solid #3b82f6',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
-                margin: '0 auto 24px'
-              }} />
-              <h2 style={{ color: 'white', marginBottom: '16px' }}>
-                {texts.loading}
-              </h2>
-            </>
-          ) : (
-            <>
-              <div style={{
-                width: '80px',
-                height: '80px',
-                backgroundColor: '#374151',
-                borderRadius: '50%',
+                width: isMobile ? '60px' : '80px',
+                height: isMobile ? '60px' : '80px',
+                borderRadius: '20px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                margin: '0 auto 24px'
+                fontSize: isMobile ? '28px' : '36px',
+                background: `${permit?.color}20`,
+                border: `2px solid ${permit?.color}40`,
+                boxShadow: `0 8px 32px ${permit?.color}30`
               }}>
-                {module && <module.icon style={{ width: '40px', height: '40px', color: '#9ca3af' }} />}
+                {permit?.iconEmoji}
               </div>
-              <h2 style={{ color: 'white', marginBottom: '16px' }}>
-                {texts.development}
-              </h2>
-              <p style={{ color: '#9ca3af', marginBottom: '32px', maxWidth: '500px', margin: '0 auto 32px' }}>
-                {texts.developmentDesc}
-              </p>
-              <button
-                onClick={handleBackToSelection}
-                style={{
-                  ...styles.button,
-                  ...styles.buttonPrimary,
-                  width: 'auto',
-                  padding: '12px 24px'
-                }}
-              >
-                <ChevronRight style={{ width: '18px', height: '18px', transform: 'rotate(180deg)' }} />
-                {texts.actions.backToSelection}
-              </button>
-            </>
-          )}
+              <div>
+                <h2 style={{
+                  fontSize: isMobile ? '20px' : '28px',
+                  fontWeight: '700',
+                  color: 'white',
+                  marginBottom: '8px',
+                  lineHeight: 1.2
+                }}>
+                  {permit?.name}
+                </h2>
+                <p style={{
+                  color: '#d1d5db',
+                  fontSize: isMobile ? '14px' : '16px',
+                  lineHeight: 1.5,
+                  maxWidth: '600px'
+                }}>
+                  {permit?.description}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        
-        <style jsx>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+
+        {/* Contenu en développement */}
+        <div style={{ ...styles.card, textAlign: 'center', padding: isMobile ? '32px 20px' : '48px 32px' }}>
+          <div style={{
+            width: isMobile ? '80px' : '120px',
+            height: isMobile ? '80px' : '120px',
+            background: 'rgba(245, 158, 11, 0.2)',
+            borderRadius: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 24px',
+            border: '2px solid rgba(245, 158, 11, 0.3)'
+          }}>
+            <Construction style={{ 
+              width: isMobile ? '40px' : '60px', 
+              height: isMobile ? '40px' : '60px', 
+              color: '#fbbf24' 
+            }} />
+          </div>
+          
+          <h3 style={{
+            fontSize: isMobile ? '20px' : '28px',
+            fontWeight: '700',
+            color: 'white',
+            marginBottom: '16px'
+          }}>
+            {texts.moduleInDevelopment}
+          </h3>
+          
+          <p style={{
+            color: '#d1d5db',
+            fontSize: isMobile ? '14px' : '16px',
+            lineHeight: 1.6,
+            marginBottom: '32px',
+            maxWidth: '600px',
+            margin: '0 auto 32px'
+          }}>
+            {language === 'en' 
+              ? `The module ${permit?.name} is currently in development for the province ${PROVINCES_DATA[selectedProvince].name}. It will integrate all planned advanced features according to ${PROVINCES_DATA[selectedProvince].authority} regulations.`
+              : `Le module ${permit?.name} est actuellement en développement pour la province ${PROVINCES_DATA[selectedProvince].name}. Il intégrera toutes les fonctionnalités avancées prévues selon les réglementations de ${PROVINCES_DATA[selectedProvince].authority}.`
+            }
+          </p>
+
+          <div style={{
+            background: 'rgba(17, 24, 39, 0.6)',
+            borderRadius: '16px',
+            padding: isMobile ? '20px' : '32px',
+            maxWidth: '500px',
+            margin: '0 auto 32px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <h4 style={{
+              fontSize: isMobile ? '16px' : '20px',
+              fontWeight: '600',
+              color: 'white',
+              marginBottom: '20px'
+            }}>
+              {texts.plannedFeatures}
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
+              {permit?.features.map((feature, index) => (
+                <div key={index} style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px',
+                  fontSize: isMobile ? '13px' : '14px',
+                  color: '#d1d5db'
+                }}>
+                  <CheckCircle style={{ 
+                    width: '16px', 
+                    height: '16px', 
+                    color: '#10b981', 
+                    flexShrink: 0 
+                  }} />
+                  {feature}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleBackToSelection}
+            style={{
+              ...styles.button,
+              ...styles.buttonPrimary,
+              width: 'auto',
+              padding: isMobile ? '12px 24px' : '16px 32px',
+              fontSize: isMobile ? '14px' : '16px'
+            }}
+          >
+            {texts.backToSelection}
+          </button>
+        </div>
       </div>
     );
   }
 
-  // =================== RENDU PRINCIPAL (SÉLECTION) ===================
+  // Vue principale - Sélection des permis
   return (
     <div style={styles.container}>
-      {/* En-tête */}
-      <div style={{
-        ...styles.card,
-        background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
-        border: '2px solid #3b82f6',
-        marginBottom: '32px'
-      }}>
+      
+      {/* Header avec style cohérent des autres étapes */}
+      <div style={styles.headerCard}>
+        {/* Gradient overlay */}
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: '20px'
-        }}>
-          <div>
-            <h1 style={{
-              fontSize: isMobile ? '24px' : '32px',
-              fontWeight: '900',
-              color: 'white',
-              marginBottom: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px'
-            }}>
-              <Shield style={{ width: '40px', height: '40px', color: '#3b82f6' }} />
-              {texts.title}
-            </h1>
-            <p style={{
-              color: '#9ca3af',
-              fontSize: isMobile ? '14px' : '16px',
-              margin: 0
-            }}>
-              {texts.subtitle}
-            </p>
-          </div>
-          
-          {/* Statistiques */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '16px',
-            minWidth: isMobile ? '100%' : '300px'
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.05), rgba(245, 158, 11, 0.05))',
+          zIndex: 0
+        }}></div>
+        
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: isMobile ? '16px' : '20px', 
+            marginBottom: isMobile ? '20px' : '24px' 
           }}>
             <div style={{
-              textAlign: 'center' as const,
-              padding: '12px',
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
-              borderRadius: '12px',
-              border: '1px solid rgba(59, 130, 246, 0.3)'
+              width: isMobile ? '48px' : '60px',
+              height: isMobile ? '48px' : '60px',
+              background: 'rgba(220, 38, 38, 0.2)',
+              borderRadius: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '2px solid rgba(220, 38, 38, 0.3)'
             }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#3b82f6' }}>
-                {stats.total}
+              <Shield style={{ 
+                width: isMobile ? '24px' : '30px', 
+                height: isMobile ? '24px' : '30px', 
+                color: '#f87171' 
+              }} />
+            </div>
+            <div>
+              <h2 style={{
+                fontSize: isMobile ? '20px' : '28px',
+                fontWeight: '700',
+                color: 'white',
+                marginBottom: '4px',
+                lineHeight: 1.2
+              }}>
+                📄 {texts.title}
+              </h2>
+              <p style={{
+                color: '#d1d5db',
+                fontSize: isMobile ? '14px' : '16px',
+                lineHeight: 1.5
+              }}>
+                {texts.subtitle}
+              </p>
+            </div>
+          </div>
+          
+          {/* Statistiques globales */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+            gap: isMobile ? '12px' : '20px',
+            marginTop: '24px'
+          }}>
+            <div style={{
+              background: 'rgba(17, 24, 39, 0.6)',
+              borderRadius: '12px',
+              padding: isMobile ? '16px' : '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: isMobile ? '20px' : '28px', 
+                fontWeight: '700', 
+                color: 'white',
+                marginBottom: '4px'
+              }}>
+                {permits.length}
               </div>
-              <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                {texts.stats.totalModules}
+              <div style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '12px' : '14px'
+              }}>
+                {texts.modulesAvailable}
               </div>
             </div>
             <div style={{
-              textAlign: 'center' as const,
-              padding: '12px',
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              background: 'rgba(17, 24, 39, 0.6)',
               borderRadius: '12px',
-              border: '1px solid rgba(16, 185, 129, 0.3)'
+              padding: isMobile ? '16px' : '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              textAlign: 'center'
             }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
-                {stats.completed}
+              <div style={{ 
+                fontSize: isMobile ? '20px' : '28px', 
+                fontWeight: '700', 
+                color: '#10b981',
+                marginBottom: '4px'
+              }}>
+                {permits.filter(p => p.status === 'completed').length}
               </div>
-              <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                {texts.stats.completed}
+              <div style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '12px' : '14px'
+              }}>
+                {texts.completedCount}
+              </div>
+            </div>
+            <div style={{
+              background: 'rgba(17, 24, 39, 0.6)',
+              borderRadius: '12px',
+              padding: isMobile ? '16px' : '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: isMobile ? '20px' : '28px', 
+                fontWeight: '700', 
+                color: '#fbbf24',
+                marginBottom: '4px'
+              }}>
+                {permits.filter(p => p.status === 'in-progress').length}
+              </div>
+              <div style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '12px' : '14px'
+              }}>
+                {texts.inProgressCount}
+              </div>
+            </div>
+            <div style={{
+              background: 'rgba(17, 24, 39, 0.6)',
+              borderRadius: '12px',
+              padding: isMobile ? '16px' : '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: isMobile ? '20px' : '28px', 
+                fontWeight: '700', 
+                color: '#60a5fa',
+                marginBottom: '4px'
+              }}>
+                {selectedProvince}
+              </div>
+              <div style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '12px' : '14px'
+              }}>
+                {texts.province}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filtres et recherche */}
-      <div style={{
-        ...styles.card,
-        marginBottom: '24px'
-      }}>
+      {/* Section sélection province */}
+      <div style={styles.card}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '12px', 
+          marginBottom: '20px' 
+        }}>
+          <MapPin style={{ width: '20px', height: '20px', color: '#60a5fa' }} />
+          <h3 style={{
+            fontSize: isMobile ? '16px' : '20px',
+            fontWeight: '600',
+            color: 'white',
+            margin: 0
+          }}>
+            {texts.provinceSelection}
+          </h3>
+        </div>
+        
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1fr auto',
-          gap: '16px',
-          alignItems: 'center'
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
+          gap: '12px',
+          marginBottom: '20px'
         }}>
-          {/* Barre de recherche */}
-          <div style={{ position: 'relative' }}>
-            <Search style={{
-              position: 'absolute',
-              left: '16px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: '20px',
-              height: '20px',
-              color: '#9ca3af'
-            }} />
-            <input
-              type="text"
-              placeholder={texts.search}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+          {Object.entries(PROVINCES_DATA).map(([code, data]) => (
+            <button
+              key={code}
+              onClick={() => setSelectedProvince(code as ProvinceCode)}
               style={{
-                backgroundColor: '#374151',
-                color: 'white',
-                border: '1px solid #4b5563',
+                padding: isMobile ? '12px 8px' : '16px 12px',
                 borderRadius: '12px',
-                padding: '14px 16px 14px 48px',
-                width: '100%',
-                fontSize: '16px',
-                outline: 'none',
-                boxSizing: 'border-box' as const
-              }}
-            />
-          </div>
-          
-          {/* Filtres */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {(['all', 'available', 'in-progress', 'completed'] as const).map(status => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: filterStatus === status ? '#3b82f6' : '#4b5563',
-                  color: 'white',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  whiteSpace: 'nowrap' as const
-                }}
-              >
-                {texts.filters[status]}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Grille des modules */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(350px, 1fr))',
-        gap: '24px'
-      }}>
-        {filteredModules.map(module => {
-          const Icon = module.icon;
-          const statusColor = module.status === 'completed' ? '#10b981' :
-                             module.status === 'in-progress' ? '#f59e0b' : '#6b7280';
-          
-          return (
-            <div
-              key={module.id}
-              onClick={() => handlePermitSelect(module.id)}
-              style={{
-                ...styles.moduleCard,
-                ':hover': styles.moduleCardHover
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.borderColor = '#3b82f6';
-                e.currentTarget.style.boxShadow = '0 12px 40px rgba(59, 130, 246, 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.borderColor = '#374151';
-                e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.3)';
+                border: selectedProvince === code 
+                  ? '2px solid #3b82f6' 
+                  : '2px solid #374151',
+                backgroundColor: selectedProvince === code 
+                  ? 'rgba(59, 130, 246, 0.2)' 
+                  : 'rgba(17, 24, 39, 0.6)',
+                color: selectedProvince === code ? 'white' : '#d1d5db',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                fontSize: isMobile ? '12px' : '14px',
+                fontWeight: '600',
+                textAlign: 'center'
               }}
             >
-              {/* En-tête du module */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '16px'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}>
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    backgroundColor: '#374151',
-                    borderRadius: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <Icon style={{ width: '24px', height: '24px', color: '#3b82f6' }} />
-                  </div>
-                  <div>
-                    <h3 style={{
-                      fontSize: '18px',
-                      fontWeight: '700',
-                      color: 'white',
-                      margin: 0,
-                      textTransform: 'capitalize'
-                    }}>
-                      {module.id.replace('-', ' ')}
-                    </h3>
-                    <div style={{
-                      fontSize: '12px',
-                      color: '#9ca3af',
-                      marginTop: '4px'
-                    }}>
-                      {texts.category[module.category]} • {texts.difficulty[module.difficulty]}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Indicateur de statut */}
-                <div style={{
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '50%',
-                  backgroundColor: statusColor,
-                  boxShadow: `0 0 8px ${statusColor}40`
-                }} />
-              </div>
-
-              {/* Fonctionnalités */}
-              <div style={{ flex: 1, marginBottom: '16px' }}>
-                <h4 style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#d1d5db',
-                  marginBottom: '8px'
-                }}>
-                  Fonctionnalités principales:
-                </h4>
-                <ul style={{
-                  listStyle: 'none',
-                  padding: 0,
-                  margin: 0
-                }}>
-                  {module.features.slice(0, 3).map((feature, index) => (
-                    <li key={index} style={{
-                      fontSize: '13px',
-                      color: '#9ca3af',
-                      marginBottom: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <CheckCircle style={{ width: '14px', height: '14px', color: '#10b981' }} />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Pied de module */}
-              <div style={{
-                borderTop: '1px solid #374151',
-                paddingTop: '16px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <div>
-                  <div style={{
-                    fontSize: '12px',
-                    color: '#9ca3af',
-                    marginBottom: '4px'
-                  }}>
-                    {texts.stats.estimatedTime}
-                  </div>
-                  <div style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: 'white'
-                  }}>
-                    {module.estimatedTime}
-                  </div>
-                </div>
-                
-                <div style={{
-                  fontSize: '12px',
-                  color: '#9ca3af',
-                  textAlign: 'right' as const
-                }}>
-                  <div>{module.regulations[language]}</div>
-                  <div style={{
-                    marginTop: '4px',
-                    color: statusColor,
-                    fontWeight: '600'
-                  }}>
-                    {texts.status[module.status]}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+              <div style={{ fontWeight: '700', marginBottom: '2px' }}>{data.name}</div>
+              <div style={{ fontSize: isMobile ? '10px' : '12px', opacity: 0.8 }}>{data.authority}</div>
+            </button>
+          ))}
+        </div>
+        
+        <div style={{
+          padding: '16px',
+          background: 'rgba(59, 130, 246, 0.1)',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          borderRadius: '12px'
+        }}>
+          <div style={{
+            color: '#93c5fd',
+            fontSize: isMobile ? '13px' : '14px',
+            lineHeight: 1.6
+          }}>
+            <strong>{texts.selectedProvince}</strong> {PROVINCES_DATA[selectedProvince].name} ({selectedProvince})
+            <br />
+            <strong>{texts.competentAuthority}</strong> {PROVINCES_DATA[selectedProvince].authority}
+            <br />
+            <span style={{ fontSize: isMobile ? '12px' : '13px', opacity: 0.8 }}>
+              {texts.autoAdaptation}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Message si aucun résultat */}
-      {filteredModules.length === 0 && (
-        <div style={{
-          ...styles.card,
-          textAlign: 'center' as const,
-          padding: '48px 32px'
+      {/* Grille des modules de permis */}
+      <div style={styles.grid3}>
+        {permits.map(permit => (
+          <div 
+            key={permit.id}
+            style={{
+              ...styles.permitCard,
+              transform: 'scale(1)',
+              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
+            }}
+            onClick={() => handlePermitSelect(permit.id)}
+          >
+            {/* Gradient overlay */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: `linear-gradient(135deg, ${permit.color}10, ${permit.color}05)`,
+              borderRadius: isMobile ? '12px' : '20px',
+              zIndex: 0
+            }}></div>
+            
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              {/* Header du module */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'flex-start', 
+                gap: '16px', 
+                marginBottom: '16px' 
+              }}>
+                <div style={{
+                  width: isMobile ? '48px' : '60px',
+                  height: isMobile ? '48px' : '60px',
+                  borderRadius: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: isMobile ? '20px' : '28px',
+                  background: `${permit.color}20`,
+                  border: `2px solid ${permit.color}30`,
+                  transition: 'all 0.3s ease'
+                }}>
+                  {permit.iconEmoji}
+                </div>
+                
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h4 style={{
+                    fontSize: isMobile ? '16px' : '18px',
+                    fontWeight: '700',
+                    color: 'white',
+                    marginBottom: '8px',
+                    lineHeight: 1.3
+                  }}>
+                    {permit.name}
+                  </h4>
+                  <p style={{
+                    color: '#d1d5db',
+                    fontSize: isMobile ? '13px' : '14px',
+                    lineHeight: 1.4,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden'
+                  }}>
+                    {permit.description}
+                  </p>
+                </div>
+
+                {/* Statut */}
+                <div style={{
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  border: '1px solid',
+                  ...(permit.status === 'completed' 
+                    ? { 
+                        background: 'rgba(16, 185, 129, 0.2)', 
+                        color: '#6ee7b7', 
+                        borderColor: 'rgba(16, 185, 129, 0.3)' 
+                      }
+                    : permit.status === 'in-progress' 
+                    ? { 
+                        background: 'rgba(245, 158, 11, 0.2)', 
+                        color: '#fcd34d', 
+                        borderColor: 'rgba(245, 158, 11, 0.3)' 
+                      }
+                    : { 
+                        background: 'rgba(107, 114, 128, 0.2)', 
+                        color: '#d1d5db', 
+                        borderColor: 'rgba(107, 114, 128, 0.3)' 
+                      })
+                }}>
+                  {permit.status === 'completed' ? texts.completed :
+                   permit.status === 'in-progress' ? texts.inProgress :
+                   'Disponible'}
+                </div>
+              </div>
+
+              {/* Métadonnées */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#9ca3af', fontSize: '13px' }}>{texts.riskLevel}:</span>
+                  <span style={{
+                    padding: '4px 8px',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    background: `${permit.color}20`,
+                    color: permit.color,
+                    border: `1px solid ${permit.color}30`
+                  }}>
+                    {texts.riskLevels[permit.riskLevel]}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#9ca3af', fontSize: '13px' }}>{texts.estimatedTime}:</span>
+                  <span style={{ color: '#60a5fa', fontSize: '13px', fontWeight: '600' }}>
+                    {permit.estimatedTime} {texts.minutes}
+                  </span>
+                </div>
+              </div>
+
+              {/* Réglementations */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '8px' }}>
+                  {texts.regulations}:
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {permit.regulations.slice(0, 2).map((reg, index) => (
+                    <span 
+                      key={index}
+                      style={{
+                        padding: '4px 8px',
+                        background: 'rgba(59, 130, 246, 0.2)',
+                        color: '#93c5fd',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '500',
+                        border: '1px solid rgba(59, 130, 246, 0.3)'
+                      }}
+                    >
+                      {reg}
+                    </span>
+                  ))}
+                  {permit.regulations.length > 2 && (
+                    <span style={{
+                      padding: '4px 8px',
+                      background: 'rgba(107, 114, 128, 0.2)',
+                      color: '#d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: '500',
+                      border: '1px solid rgba(107, 114, 128, 0.3)'
+                    }}>
+                      +{permit.regulations.length - 2}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Action */}
+              <button
+                style={{
+                  ...styles.button,
+                  ...styles.buttonPrimary,
+                  fontSize: isMobile ? '14px' : '15px',
+                  fontWeight: '600'
+                }}
+              >
+                <FileText style={{ width: '16px', height: '16px' }} />
+                {permit.status === 'in-progress' ? texts.continuePermit : texts.startPermit}
+                <ArrowRight style={{ width: '16px', height: '16px' }} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer informatif */}
+      <div style={styles.card}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '12px', 
+          marginBottom: '16px' 
         }}>
-          <AlertTriangle style={{
-            width: '48px',
-            height: '48px',
-            color: '#f59e0b',
-            margin: '0 auto 16px'
-          }} />
-          <h3 style={{ color: 'white', marginBottom: '8px' }}>
-            Aucun module trouvé
+          <AlertTriangle style={{ width: '20px', height: '20px', color: '#fbbf24' }} />
+          <h3 style={{
+            fontSize: isMobile ? '16px' : '18px',
+            fontWeight: '600',
+            color: 'white',
+            margin: 0
+          }}>
+            {texts.importantInfo}
           </h3>
-          <p style={{ color: '#9ca3af', margin: 0 }}>
-            Essayez de modifier vos critères de recherche ou de filtrage.
-          </p>
         </div>
-      )}
+        <p style={{
+          color: '#d1d5db',
+          fontSize: isMobile ? '13px' : '14px',
+          lineHeight: 1.6,
+          margin: 0
+        }}>
+          {texts.complianceText}
+          <br />
+          {language === 'en' 
+            ? `Selected province: **${PROVINCES_DATA[selectedProvince].name} (${selectedProvince})** - ${PROVINCES_DATA[selectedProvince].authority}.`
+            : `Province sélectionnée : **${PROVINCES_DATA[selectedProvince].name} (${selectedProvince})** - ${PROVINCES_DATA[selectedProvince].authority}.`
+          }
+          <br /><br />
+          {texts.featuresText}
+        </p>
+      </div>
     </div>
   );
 };
