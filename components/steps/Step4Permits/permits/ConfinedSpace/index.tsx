@@ -948,23 +948,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     });
   };
 
-  // Validation globale du permis
-  const isPermitValid = () => {
-    const hasRecentReading = atmosphericReadings.length > 0 && 
-      new Date().getTime() - new Date(atmosphericReadings[atmosphericReadings.length - 1].timestamp).getTime() < 30 * 60 * 1000;
-    const lastReadingSafe = atmosphericReadings.length > 0 && 
-      atmosphericReadings[atmosphericReadings.length - 1].status === 'safe';
-    const hasRescuePlan = permitData.rescue_plan_validated && permitData.rescue_plan_type && permitData.rescue_plan_responsible;
-    const hasVentilationSystem = !permitData.ventilation_required || (permitData.ventilation_required && permitData.ventilation_system_validated);
-    const hasSupervisorSignature = permitData.supervisor_signature && permitData.supervisor_certified;
-    const hasAttendantSignatures = (permitData.attendants || []).length > 0 && 
-      (permitData.attendants || []).every((att: any) => att.signature && att.certified);
-
-    return hasRecentReading && lastReadingSafe && hasRescuePlan && hasVentilationSystem &&
-           permitData.site_name && permitData.space_description && permitData.work_description &&
-           hasSupervisorSignature && hasAttendantSignatures;
-  };
-
   // =================== CARROUSEL PHOTOS OPTIMISÉ MOBILE ===================
   const PhotoCarousel = ({ photos, onAddPhoto }: {
     photos: PhotoRecord[];
@@ -1308,55 +1291,22 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     );
   };
 
-  // Rendu des onglets optimisé mobile
-  const renderTabs = () => (
-    <div style={{
-      overflowX: 'auto',
-      scrollbarWidth: 'none',
-      msOverflowStyle: 'none',
-      paddingBottom: '8px'
-    }}>
-      <div style={{ 
-        display: 'flex', 
-        gap: isMobile ? '4px' : '12px', 
-        marginBottom: isMobile ? '12px' : '20px', 
-        borderBottom: '1px solid #374151',
-        paddingBottom: isMobile ? '8px' : '12px',
-        minWidth: isMobile ? '100%' : 'auto',
-        overflowX: isMobile ? 'auto' : 'visible',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none'
-      }}>
-        {[
-          { id: 'site', label: isMobile ? '🏢' : '🏢 Site', fullLabel: 'Site', icon: <Home style={{ width: '16px', height: '16px' }} /> },
-          { id: 'atmospheric', label: isMobile ? '🌬️' : '🌬️ Atmosphère', fullLabel: 'Atmosphère', icon: <Wind style={{ width: '16px', height: '16px' }} /> },
-          { id: 'personnel', label: isMobile ? '👥' : '👥 Personnel', fullLabel: 'Personnel', icon: <Users style={{ width: '16px', height: '16px' }} /> },
-          { id: 'emergency', label: isMobile ? '🚨' : '🚨 Urgence', fullLabel: 'Urgence', icon: <Phone style={{ width: '16px', height: '16px' }} /> }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              ...styles.tab,
-              ...(activeTab === tab.id ? styles.tabActive : styles.tabInactive),
-              flexShrink: 0,
-              padding: isMobile ? '6px 10px' : '12px 20px',
-              fontSize: isMobile ? '12px' : '14px',
-              minWidth: isMobile ? '50px' : 'auto'
-            }}
-            title={isMobile ? tab.fullLabel : undefined}
-          >
-            {isMobile ? tab.label : (
-              <>
-                {tab.icon}
-                {tab.label.split(' ')[1]}
-              </>
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+  // Validation globale du permis
+  const isPermitValid = () => {
+    const hasRecentReading = atmosphericReadings.length > 0 && 
+      new Date().getTime() - new Date(atmosphericReadings[atmosphericReadings.length - 1].timestamp).getTime() < 30 * 60 * 1000;
+    const lastReadingSafe = atmosphericReadings.length > 0 && 
+      atmosphericReadings[atmosphericReadings.length - 1].status === 'safe';
+    const hasRescuePlan = permitData.rescue_plan_validated && permitData.rescue_plan_type && permitData.rescue_plan_responsible;
+    const hasVentilationSystem = !permitData.ventilation_required || (permitData.ventilation_required && permitData.ventilation_system_validated);
+    const hasSupervisorSignature = permitData.supervisor_signature && permitData.supervisor_certified;
+    const hasAttendantSignatures = (permitData.attendants || []).length > 0 && 
+      (permitData.attendants || []).every((att: any) => att.signature && att.certified);
+
+    return hasRecentReading && lastReadingSafe && hasRescuePlan && hasVentilationSystem &&
+           permitData.site_name && permitData.space_description && permitData.work_description &&
+           hasSupervisorSignature && hasAttendantSignatures;
+  };
 
   // Rendu section atmosphérique optimisé mobile
   const renderAtmosphericSection = () => {
@@ -1752,6 +1702,190 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       </div>
     );
   };
+
+  // Rendu section contacts d'urgence optimisé mobile
+  const renderEmergencySection = () => {
+    const currentRegulations = PROVINCIAL_REGULATIONS[selectedProvince];
+    
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
+        <div style={styles.card}>
+          <h3 style={styles.cardTitle}>
+            <Phone style={{ width: '20px', height: '20px' }} />
+            {texts.emergencyContacts} - {currentRegulations.name}
+          </h3>
+          
+          <div style={styles.grid2}>
+            {currentRegulations.emergency_contacts.map((contact, index) => (
+              <div key={index} style={{
+                ...styles.readingCard,
+                ...(contact.name === '911' ? styles.readingDanger : styles.readingSafe),
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onClick={() => window.open(`tel:${contact.phone}`, '_self')}
+              onMouseEnter={(e) => {
+                (e.target as HTMLDivElement).style.transform = 'translateY(-2px)';
+                (e.target as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                (e.target as HTMLDivElement).style.transform = 'translateY(0)';
+                (e.target as HTMLDivElement).style.boxShadow = 'none';
+              }}
+              >
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between', 
+                  marginBottom: '12px',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  gap: isMobile ? '12px' : '0'
+                }}>
+                  <h4 style={{ 
+                    fontWeight: '700', 
+                    color: 'white', 
+                    fontSize: isMobile ? '17px' : '19px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    {contact.name === '911' ? '🚨' : '📞'} {contact.name}
+                  </h4>
+                  {contact.available_24h && (
+                    <span style={{
+                      fontSize: '12px',
+                      backgroundColor: '#059669',
+                      color: 'white',
+                      padding: '4px 12px',
+                      borderRadius: '16px',
+                      fontWeight: '600'
+                    }}>24h/7j</span>
+                  )}
+                </div>
+                <p style={{ 
+                  color: '#d1d5db', 
+                  fontSize: '15px', 
+                  marginBottom: '12px', 
+                  textAlign: isMobile ? 'center' : 'left'
+                }}>
+                  {contact.role}
+                </p>
+                <div style={{
+                  color: '#60a5fa',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: isMobile ? '17px' : '19px',
+                  textDecoration: 'none',
+                  display: 'block',
+                  textAlign: isMobile ? 'center' : 'left',
+                  fontWeight: '700',
+                  backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(96, 165, 250, 0.3)'
+                }}>
+                  {contact.phone}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div style={{
+            marginTop: '32px',
+            padding: isMobile ? '20px' : '24px',
+            backgroundColor: 'rgba(220, 38, 38, 0.15)',
+            border: '2px solid rgba(239, 68, 68, 0.4)',
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(220, 38, 38, 0.2)'
+          }}>
+            <h4 style={{
+              color: '#fecaca',
+              fontWeight: '700',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              fontSize: isMobile ? '16px' : '18px'
+            }}>
+              <AlertTriangle style={{ width: '24px', height: '24px' }} />
+              🚨 Procédure d'Évacuation d'Urgence
+            </h4>
+            <ol style={{ 
+              color: '#fecaca', 
+              fontSize: isMobile ? '14px' : '15px', 
+              marginLeft: '20px',
+              lineHeight: 1.6
+            }}>
+              <li style={{ marginBottom: '8px' }}>
+                <strong>1. ARRÊT IMMÉDIAT</strong> de tous les travaux
+              </li>
+              <li style={{ marginBottom: '8px' }}>
+                <strong>2. ÉVACUATION</strong> immédiate de tous les entrants
+              </li>
+              <li style={{ marginBottom: '8px' }}>
+                <strong>3. APPEL</strong> au 911 et contacts d'urgence
+              </li>
+              <li style={{ marginBottom: '8px' }}>
+                <strong>4. INTERDICTION</strong> de re-entrée jusqu'à autorisation
+              </li>
+              <li>
+                <strong>5. RAPPORT</strong> d'incident obligatoire
+              </li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Rendu des onglets optimisé mobile
+  const renderTabs = () => (
+    <div style={{
+      overflowX: 'auto',
+      scrollbarWidth: 'none',
+      msOverflowStyle: 'none',
+      paddingBottom: '8px'
+    }}>
+      <div style={{ 
+        display: 'flex', 
+        gap: isMobile ? '4px' : '12px', 
+        marginBottom: isMobile ? '12px' : '20px', 
+        borderBottom: '1px solid #374151',
+        paddingBottom: isMobile ? '8px' : '12px',
+        minWidth: isMobile ? '100%' : 'auto',
+        overflowX: isMobile ? 'auto' : 'visible',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
+      }}>
+        {[
+          { id: 'site', label: isMobile ? '🏢' : '🏢 Site', fullLabel: 'Site', icon: <Home style={{ width: '16px', height: '16px' }} /> },
+          { id: 'atmospheric', label: isMobile ? '🌬️' : '🌬️ Atmosphère', fullLabel: 'Atmosphère', icon: <Wind style={{ width: '16px', height: '16px' }} /> },
+          { id: 'personnel', label: isMobile ? '👥' : '👥 Personnel', fullLabel: 'Personnel', icon: <Users style={{ width: '16px', height: '16px' }} /> },
+          { id: 'emergency', label: isMobile ? '🚨' : '🚨 Urgence', fullLabel: 'Urgence', icon: <Phone style={{ width: '16px', height: '16px' }} /> }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              ...styles.tab,
+              ...(activeTab === tab.id ? styles.tabActive : styles.tabInactive),
+              flexShrink: 0,
+              padding: isMobile ? '6px 10px' : '12px 20px',
+              fontSize: isMobile ? '12px' : '14px',
+              minWidth: isMobile ? '50px' : 'auto'
+            }}
+            title={isMobile ? tab.fullLabel : undefined}
+          >
+            {isMobile ? tab.label : (
+              <>
+                {tab.icon}
+                {tab.label.split(' ')[1]}
+              </>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   // Rendu section site optimisé mobile
   const renderSiteSection = () => (
@@ -2350,6 +2484,452 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
               </div>
             </div>
             
+            {/* Équipements de sauvetage obligatoires */}
+            <div style={{ marginTop: '20px' }}>
+              <h5 style={{
+                fontSize: isMobile ? '16px' : '18px',
+                fontWeight: '700',
+                color: '#d1d5db',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Wrench style={{ width: '20px', height: '20px' }} />
+                Équipements de Sauvetage Requis
+              </h5>
+              
+              <div style={styles.grid2}>
+                {[
+                  { id: 'harness_class_e', label: '🦺 Harnais classe E et ligne de vie', required: true },
+                  { id: 'mechanical_recovery', label: '⛓️ Dispositif de récupération mécanique', required: true },
+                  { id: 'scba_equipment', label: '🫁 Appareil respiratoire autonome (ARA)', required: true },
+                  { id: 'first_aid_kit', label: '🏥 Trousse premiers soins et RCR', required: true },
+                  { id: 'atmospheric_monitor', label: '📊 Détecteur multi-gaz portable', required: true },
+                  { id: 'communication_device', label: '📻 Équipement communication bidirectionnel', required: true },
+                  { id: 'ventilation_equipment', label: '💨 Équipement de ventilation d\'urgence', required: false },
+                  { id: 'lighting_equipment', label: '💡 Éclairage d\'urgence étanche', required: false }
+                ].map((equipment, index) => (
+                  <div key={equipment.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(107, 114, 128, 0.2)'
+                  }}>
+                    <input
+                      type="checkbox"
+                      id={equipment.id}
+                      checked={permitData.rescue_equipment?.[equipment.id] || false}
+                      onChange={(e) => updatePermitData({ 
+                        rescue_equipment: { 
+                          ...permitData.rescue_equipment, 
+                          [equipment.id]: e.target.checked 
+                        }
+                      })}
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        accentColor: '#10b981'
+                      }}
+                    />
+                    <label 
+                      htmlFor={equipment.id}
+                      style={{
+                        color: equipment.required ? '#d1d5db' : '#9ca3af',
+                        fontSize: '14px',
+                        fontWeight: equipment.required ? '600' : '500',
+                        cursor: 'pointer',
+                        flex: 1
+                      }}
+                    >
+                      {equipment.label}
+                      {equipment.required && <span style={{ color: '#f87171' }}> *</span>}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Procédures de sauvetage avec système d'étapes dynamiques */}
+            <div style={{ marginTop: '20px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '16px'
+              }}>
+                <label style={{ ...styles.label, color: '#9ca3af', margin: 0 }}>
+                  Procédures détaillées de sauvetage *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentSteps = permitData.rescue_steps || [];
+                    const newStep = {
+                      id: Date.now(),
+                      step: currentSteps.length + 1,
+                      description: ''
+                    };
+                    updatePermitData({ 
+                      rescue_steps: [...currentSteps, newStep]
+                    });
+                  }}
+                  style={{
+                    ...styles.button,
+                    ...styles.buttonPrimary,
+                    width: 'auto',
+                    padding: '8px 12px',
+                    fontSize: '14px',
+                    minHeight: 'auto'
+                  }}
+                >
+                  <Plus style={{ width: '16px', height: '16px' }} />
+                  Ajouter étape
+                </button>
+              </div>
+              
+              {/* Affichage des étapes */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {(permitData.rescue_steps || []).length === 0 ? (
+                  <div style={{
+                    padding: '20px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                    borderRadius: '8px',
+                    border: '2px dashed #6b7280',
+                    textAlign: 'center'
+                  }}>
+                    <p style={{ color: '#9ca3af', margin: 0, fontSize: '14px' }}>
+                      Aucune étape définie. Cliquez sur "Ajouter étape" pour commencer.
+                    </p>
+                  </div>
+                ) : (
+                  (permitData.rescue_steps || []).map((step: any, index: number) => (
+                    <div key={step.id} style={{
+                      display: 'flex',
+                      flexDirection: isMobile ? 'column' : 'row',
+                      alignItems: isMobile ? 'stretch' : 'flex-start',
+                      gap: isMobile ? '12px' : '12px',
+                      padding: isMobile ? '16px' : '16px',
+                      backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(107, 114, 128, 0.3)',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                    }}>
+                      {/* En-tête avec numéro et bouton supprimer */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        ...(isMobile ? { width: '100%' } : { flexDirection: 'column' })
+                      }}>
+                        <div style={{
+                          minWidth: isMobile ? '40px' : '32px',
+                          height: isMobile ? '40px' : '32px',
+                          backgroundColor: '#3b82f6',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: '700',
+                          fontSize: isMobile ? '16px' : '14px',
+                          boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+                          ...(isMobile ? {} : { marginBottom: '8px' })
+                        }}>
+                          {step.step}
+                        </div>
+                        
+                        {isMobile && (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}>
+                            <span style={{
+                              color: '#9ca3af',
+                              fontSize: '14px',
+                              fontWeight: '600'
+                            }}>
+                              Étape {step.step}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updatedSteps = (permitData.rescue_steps || [])
+                                  .filter((s: any) => s.id !== step.id)
+                                  .map((s: any, idx: number) => ({ ...s, step: idx + 1 }));
+                                updatePermitData({ rescue_steps: updatedSteps });
+                              }}
+                              style={{
+                                backgroundColor: 'rgba(220, 38, 38, 0.8)',
+                                border: '1px solid #ef4444',
+                                borderRadius: '8px',
+                                padding: '10px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: '40px',
+                                minHeight: '40px',
+                                color: 'white',
+                                transition: 'all 0.2s ease'
+                              }}
+                              title="Supprimer cette étape"
+                              onMouseEnter={(e) => {
+                                (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(220, 38, 38, 1)';
+                                (e.target as HTMLButtonElement).style.transform = 'scale(1.05)';
+                              }}
+                              onMouseLeave={(e) => {
+                                (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(220, 38, 38, 0.8)';
+                                (e.target as HTMLButtonElement).style.transform = 'scale(1)';
+                              }}
+                            >
+                              <Trash2 style={{ width: '18px', height: '18px' }} />
+                            </button>
+                          </div>
+                        )}
+                        
+                        {!isMobile && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updatedSteps = (permitData.rescue_steps || [])
+                                .filter((s: any) => s.id !== step.id)
+                                .map((s: any, idx: number) => ({ ...s, step: idx + 1 }));
+                              updatePermitData({ rescue_steps: updatedSteps });
+                            }}
+                            style={{
+                              backgroundColor: 'rgba(220, 38, 38, 0.8)',
+                              border: '1px solid #ef4444',
+                              borderRadius: '6px',
+                              padding: '8px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '32px',
+                              minHeight: '32px',
+                              color: 'white'
+                            }}
+                            title="Supprimer cette étape"
+                          >
+                            <Trash2 style={{ width: '16px', height: '16px' }} />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Zone de texte optimisée */}
+                      <div style={{ 
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px'
+                      }}>
+                        {isMobile && (
+                          <label style={{
+                            color: '#9ca3af',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>
+                            Description de l'action
+                          </label>
+                        )}
+                        <textarea
+                          placeholder={isMobile 
+                            ? `Décrire l'action à effectuer pour l'étape ${step.step}...` 
+                            : `Étape ${step.step}: Décrire l'action à effectuer...`
+                          }
+                          value={step.description}
+                          onChange={(e) => {
+                            const updatedSteps = (permitData.rescue_steps || []).map((s: any) =>
+                              s.id === step.id ? { ...s, description: e.target.value } : s
+                            );
+                            updatePermitData({ rescue_steps: updatedSteps });
+                          }}
+                          style={{
+                            ...styles.input,
+                            height: isMobile ? '80px' : '60px',
+                            resize: 'vertical',
+                            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                            border: '1px solid #6b7280',
+                            fontSize: isMobile ? '16px' : '14px',
+                            lineHeight: '1.5',
+                            padding: isMobile ? '12px' : '10px',
+                            borderRadius: '8px',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onFocus={(e) => {
+                            (e.target as HTMLTextAreaElement).style.borderColor = '#3b82f6';
+                            (e.target as HTMLTextAreaElement).style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                          }}
+                          onBlur={(e) => {
+                            (e.target as HTMLTextAreaElement).style.borderColor = '#6b7280';
+                            (e.target as HTMLTextAreaElement).style.boxShadow = 'none';
+                          }}
+                        />
+                        {/* Compteur de caractères pour mobile */}
+                        {isMobile && (
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontSize: '12px',
+                            color: '#6b7280'
+                          }}>
+                            <span>
+                              {step.description ? `${step.description.length} caractères` : 'Aucun texte'}
+                            </span>
+                            {step.description && step.description.length < 20 && (
+                              <span style={{ color: '#f59e0b' }}>
+                                ⚠️ Description courte
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            
+            {/* Formation équipe de sauvetage */}
+            <div style={{ marginTop: '20px' }}>
+              <h5 style={{
+                fontSize: isMobile ? '16px' : '18px',
+                fontWeight: '700',
+                color: '#d1d5db',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Users style={{ width: '20px', height: '20px' }} />
+                Formation Équipe de Sauvetage
+              </h5>
+              
+              <div style={styles.grid2}>
+                {[
+                  { id: 'confined_space_rescue', label: '🚨 Sauvetage en espace clos', required: true },
+                  { id: 'first_aid_cpr', label: '🏥 Premiers soins et RCR', required: true },
+                  { id: 'respiratory_protection', label: '🫁 Protection respiratoire', required: true },
+                  { id: 'vertical_rescue', label: '🧗 Sauvetage vertical', required: false },
+                  { id: 'hazmat_awareness', label: '☢️ Sensibilisation matières dangereuses', required: false },
+                  { id: 'fire_safety', label: '🔥 Sécurité incendie', required: false }
+                ].map((training, index) => (
+                  <div key={training.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(107, 114, 128, 0.2)'
+                  }}>
+                    <input
+                      type="checkbox"
+                      id={training.id}
+                      checked={permitData.rescue_training?.[training.id] || false}
+                      onChange={(e) => updatePermitData({ 
+                        rescue_training: { 
+                          ...permitData.rescue_training, 
+                          [training.id]: e.target.checked 
+                        }
+                      })}
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        accentColor: '#10b981'
+                      }}
+                    />
+                    <label 
+                      htmlFor={training.id}
+                      style={{
+                        color: training.required ? '#93c5fd' : '#d1d5db',
+                        fontSize: '14px',
+                        fontWeight: training.required ? '600' : '500',
+                        cursor: 'pointer',
+                        flex: 1
+                      }}
+                    >
+                      {training.label}
+                      {training.required && <span style={{ color: '#60a5fa' }}> *</span>}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Test du plan de sauvetage */}
+            <div style={{ 
+              marginTop: '20px',
+              padding: '16px',
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              borderRadius: '12px',
+              border: '2px dashed #fca5a5'
+            }}>
+              <h5 style={{
+                fontSize: isMobile ? '16px' : '18px',
+                fontWeight: '700',
+                color: '#d1d5db',
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Clock style={{ width: '20px', height: '20px' }} />
+                📋 Test et Validation du Plan
+              </h5>
+              
+              <div style={styles.grid2}>
+                <div>
+                  <label style={{ ...styles.label, color: '#9ca3af' }}>Date dernier exercice</label>
+                  <input
+                    type="date"
+                    value={permitData.last_drill_date || ''}
+                    onChange={(e) => updatePermitData({ last_drill_date: e.target.value })}
+                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ ...styles.label, color: '#9ca3af' }}>Résultats test</label>
+                  <select
+                    value={permitData.drill_results || ''}
+                    onChange={(e) => updatePermitData({ drill_results: e.target.value })}
+                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+                  >
+                    <option value="">Sélectionner</option>
+                    <option value="successful">✅ Réussi - Plan efficace</option>
+                    <option value="needs_improvement">⚠️ À améliorer</option>
+                    <option value="failed">❌ Échec - Révision requise</option>
+                    <option value="not_tested">🔄 Pas encore testé</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div style={{ marginTop: '16px' }}>
+                <label style={{ ...styles.label, color: '#9ca3af' }}>Notes sur l'efficacité du plan</label>
+                <textarea
+                  placeholder="Observations des exercices, améliorations identifiées, temps de réponse mesuré..."
+                  value={permitData.drill_notes || ''}
+                  onChange={(e) => updatePermitData({ drill_notes: e.target.value })}
+                  style={{ 
+                    ...styles.input, 
+                    height: '80px', 
+                    resize: 'vertical',
+                    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                    border: '1px solid #6b7280'
+                  }}
+                />
+              </div>
+            </div>
+            
             {/* Validation finale */}
             <div style={{ 
               marginTop: '20px',
@@ -2392,1607 +2972,9 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
     </div>
   );
 
-  // Rendu section contacts d'urgence optimisé mobile
-  const renderEmergencySection = () => {
-    const currentRegulations = PROVINCIAL_REGULATIONS[selectedProvince];
-    
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
-        <div style={styles.card}>
-          <h3 style={styles.cardTitle}>
-            <Phone style={{ width: '20px', height: '20px' }} />
-            {texts.emergencyContacts} - {currentRegulations.name}
-          </h3>
-          
-          <div style={styles.grid2}>
-            {currentRegulations.emergency_contacts.map((contact, index) => (
-              <div key={index} style={{
-                ...styles.readingCard,
-                ...(contact.name === '911' ? styles.readingDanger : styles.readingSafe),
-                cursor: 'pointer',
-                transition: 'all 0.3s ease'
-              }}
-              onClick={() => window.open(`tel:${contact.phone}`, '_self')}
-              onMouseEnter={(e) => {
-                (e.target as HTMLDivElement).style.transform = 'translateY(-2px)';
-                (e.target as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                (e.target as HTMLDivElement).style.transform = 'translateY(0)';
-                (e.target as HTMLDivElement).style.boxShadow = 'none';
-              }}
-              >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between', 
-                  marginBottom: '12px',
-                  flexDirection: isMobile ? 'column' : 'row',
-                  gap: isMobile ? '12px' : '0'
-                }}>
-                  <h4 style={{ 
-                    fontWeight: '700', 
-                    color: 'white', 
-                    fontSize: isMobile ? '17px' : '19px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    {contact.name === '911' ? '🚨' : '📞'} {contact.name}
-                  </h4>
-                  {contact.available_24h && (
-                    <span style={{
-                      fontSize: '12px',
-                      backgroundColor: '#059669',
-                      color: 'white',
-                      padding: '4px 12px',
-                      borderRadius: '16px',
-                      fontWeight: '600'
-                    }}>24h/7j</span>
-                  )}
-                </div>
-                <p style={{ 
-                  color: '#d1d5db', 
-                  fontSize: '15px', 
-                  marginBottom: '12px', 
-                  textAlign: isMobile ? 'center' : 'left'
-                }}>
-                  {contact.role}
-                </p>
-                <div style={{
-                  color: '#60a5fa',
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: isMobile ? '17px' : '19px',
-                  textDecoration: 'none',
-                  display: 'block',
-                  textAlign: isMobile ? 'center' : 'left',
-                  fontWeight: '700',
-                  backgroundColor: 'rgba(96, 165, 250, 0.1)',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(96, 165, 250, 0.3)'
-                }}>
-                  {contact.phone}
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div style={{
-            marginTop: '32px',
-            padding: isMobile ? '20px' : '24px',
-            backgroundColor: 'rgba(220, 38, 38, 0.15)',
-            border: '2px solid rgba(239, 68, 68, 0.4)',
-            borderRadius: '16px',
-            boxShadow: '0 8px 32px rgba(220, 38, 38, 0.2)'
-          }}>
-            <h4 style={{
-              color: '#fecaca',
-              fontWeight: '700',
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              fontSize: isMobile ? '16px' : '18px'
-            }}>
-              <AlertTriangle style={{ width: '24px', height: '24px' }} />
-              🚨 Procédure d'Évacuation d'Urgence
-            </h4>
-            <ol style={{ 
-              color: '#fecaca', 
-              fontSize: isMobile ? '14px' : '15px', 
-              marginLeft: '20px',
-              lineHeight: 1.6
-            }}>
-              <li style={{ marginBottom: '8px' }}>
-                <strong>1. ARRÊT IMMÉDIAT</strong> de tous les travaux
-              </li>
-              <li style={{ marginBottom: '8px' }}>
-                <strong>2. ÉVACUATION</strong> immédiate de tous les entrants
-              </li>
-              <li style={{ marginBottom: '8px' }}>
-                <strong>3. APPEL</strong> au 911 et contacts d'urgence
-              </li>
-              <li style={{ marginBottom: '8px' }}>
-                <strong>4. INTERDICTION</strong> de re-entrée jusqu'à autorisation
-              </li>
-              <li>
-                <strong>5. RAPPORT</strong> d'incident obligatoire
-              </li>
-            </ol>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Rendu section personnel optimisé mobile
-  const renderPersonnelSection = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
-      {/* Section Superviseur */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <UserCheck style={{ width: '20px', height: '20px' }} />
-          👨‍💼 Superviseur d'Entrée (Obligatoire)
-        </h3>
-        
-        <div style={{ 
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          borderRadius: '12px',
-          padding: isMobile ? '16px' : '20px',
-          marginBottom: '20px',
-          border: '1px solid rgba(107, 114, 128, 0.3)'
-        }}>
-          <p style={{ 
-            color: '#d1d5db', 
-            fontSize: '15px',
-            lineHeight: 1.6,
-            margin: '0 0 12px 0',
-            fontWeight: '600'
-          }}>
-            ⚠️ <strong>OBLIGATION RÉGLEMENTAIRE</strong> : Le superviseur d'entrée doit avoir les compétences et l'autorité pour contrôler l'accès à l'espace clos et ordonner l'évacuation (Art. 308 RSST).
-          </p>
-          <p style={{ 
-            color: '#9ca3af', 
-            fontSize: '14px',
-            margin: 0,
-            fontStyle: 'italic'
-          }}>
-            🎓 <strong>Formation requise</strong> : Personne qualifiée selon CSA Z1006 avec formation supervision espace clos, premiers soins niveau 2, RCR.
-          </p>
-        </div>
-        
-        <div style={styles.grid2}>
-          <div>
-            <label style={styles.label}>Nom complet du superviseur *</label>
-            <input
-              type="text"
-              placeholder="Ex: Jean Tremblay"
-              value={permitData.supervisor_name || ''}
-              onChange={(e) => updatePermitData({ supervisor_name: e.target.value })}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>Compagnie/Organisation *</label>
-            <input
-              type="text"
-              placeholder="Ex: Entreprises ABC Inc."
-              value={permitData.supervisor_company || ''}
-              onChange={(e) => updatePermitData({ supervisor_company: e.target.value })}
-              style={styles.input}
-              required
-            />
-          </div>
-        </div>
-        
-        <div style={styles.grid2}>
-          <div>
-            <label style={styles.label}>Date de signature *</label>
-            <input
-              type="date"
-              value={permitData.supervisor_signature_date || new Date().toISOString().split('T')[0]}
-              onChange={(e) => updatePermitData({ supervisor_signature_date: e.target.value })}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>Heure de signature *</label>
-            <input
-              type="time"
-              value={permitData.supervisor_signature_time || new Date().toTimeString().slice(0, 5)}
-              onChange={(e) => updatePermitData({ supervisor_signature_time: e.target.value })}
-              style={styles.input}
-              required
-            />
-          </div>
-        </div>
-        
-        {/* Signature électronique superviseur */}
-        <div style={{ marginTop: '20px' }}>
-          <label style={styles.label}>Certification et Signature Électronique *</label>
-          <div style={{
-            border: '2px solid #3b82f6',
-            borderRadius: '12px',
-            padding: isMobile ? '20px' : '24px',
-            backgroundColor: 'rgba(59, 130, 246, 0.05)',
-            transition: 'all 0.3s ease'
-          }}>
-            {!permitData.supervisor_signature ? (
-              <div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                  marginBottom: '20px',
-                  padding: '16px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(107, 114, 128, 0.3)'
-                }}>
-                  <input
-                    type="checkbox"
-                    id="supervisor_certification"
-                    checked={permitData.supervisor_certified || false}
-                    onChange={(e) => updatePermitData({ supervisor_certified: e.target.checked })}
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      marginTop: '2px',
-                      accentColor: '#3b82f6'
-                    }}
-                  />
-                  <label 
-                    htmlFor="supervisor_certification"
-                    style={{
-                      color: '#d1d5db',
-                      fontSize: isMobile ? '14px' : '15px',
-                      lineHeight: 1.6,
-                      cursor: 'pointer',
-                      flex: 1,
-                      fontWeight: '500'
-                    }}
-                  >
-                    <strong>Je certifie par la présente que :</strong>
-                    <br />• J'ai pris connaissance de tous les risques et dangers identifiés dans cet espace clos
-                    <br />• Je possède les qualifications, l'autorité et la formation requises pour superviser cette entrée
-                    <br />• Tous les contrôles de sécurité ont été vérifiés et sont conformes aux réglementations
-                    <br />• J'autorise l'entrée dans cet espace clos sous les conditions spécifiées dans ce permis
-                    <br />• Je m'engage à maintenir la supervision et à ordonner l'évacuation si nécessaire
-                  </label>
-                </div>
-                
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!permitData.supervisor_certified) {
-                      alert('⚠️ Vous devez d\'abord cocher la case de certification avant de signer.');
-                      return;
-                    }
-                    const name = prompt('Veuillez taper votre nom complet pour signer électroniquement:');
-                    if (name && name.trim()) {
-                      const now = new Date();
-                      updatePermitData({ 
-                        supervisor_signature: name.trim(),
-                        supervisor_signature_timestamp: now.toISOString(),
-                        supervisor_signature_time_precise: now.toLocaleString('fr-CA', {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                          timeZoneName: 'short'
-                        })
-                      });
-                    }
-                  }}
-                  disabled={!permitData.supervisor_certified}
-                  style={{
-                    ...styles.button,
-                    ...(permitData.supervisor_certified ? styles.buttonPrimary : styles.buttonSecondary),
-                    justifyContent: 'center',
-                    fontSize: isMobile ? '15px' : '16px',
-                    cursor: permitData.supervisor_certified ? 'pointer' : 'not-allowed',
-                    opacity: permitData.supervisor_certified ? 1 : 0.5
-                  }}
-                >
-                  <PenTool style={{ width: '18px', height: '18px' }} />
-                  {permitData.supervisor_certified ? 'Signer Électroniquement' : 'Certification Requise Avant Signature'}
-                </button>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  padding: '20px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                  borderRadius: '12px',
-                  border: '2px solid #10b981',
-                  marginBottom: '16px'
-                }}>
-                  <CheckCircle style={{ 
-                    width: '48px', 
-                    height: '48px', 
-                    color: '#10b981', 
-                    margin: '0 auto 12px'
-                  }} />
-                  <div style={{ 
-                    fontSize: isMobile ? '20px' : '28px', 
-                    fontFamily: 'cursive', 
-                    color: '#10b981', 
-                    marginBottom: '12px',
-                    fontWeight: '700'
-                  }}>
-                    {permitData.supervisor_signature}
-                  </div>
-                  <div style={{ 
-                    color: '#86efac', 
-                    fontSize: isMobile ? '14px' : '16px',
-                    fontWeight: '600',
-                    marginBottom: '8px'
-                  }}>
-                    ✅ SUPERVISEUR CERTIFIÉ ET AUTORISÉ
-                  </div>
-                  <div style={{ 
-                    color: '#6ee7b7', 
-                    fontSize: '14px',
-                    fontFamily: 'JetBrains Mono, monospace'
-                  }}>
-                    📅 Signé le {permitData.supervisor_signature_time_precise}
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    if (confirm('Êtes-vous sûr de vouloir annuler cette signature? Cette action est irréversible.')) {
-                      updatePermitData({ 
-                        supervisor_signature: '',
-                        supervisor_signature_timestamp: '',
-                        supervisor_signature_time_precise: '',
-                        supervisor_certified: false
-                      });
-                    }
-                  }}
-                  style={{
-                    ...styles.button,
-                    ...styles.buttonSecondary,
-                    width: 'auto',
-                    padding: '8px 16px',
-                    fontSize: '14px',
-                    minHeight: 'auto'
-                  }}
-                >
-                  <X style={{ width: '16px', height: '16px' }} />
-                  Annuler Signature
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Section Surveillants d'Espace Clos */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Eye style={{ width: '20px', height: '20px' }} />
-          👁️ Surveillants d'Espace Clos
-          <button
-            onClick={() => {
-              const newAttendant = {
-                id: `attendant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                name: '',
-                company: '',
-                signature_date: new Date().toISOString().split('T')[0],
-                signature_time: new Date().toTimeString().slice(0, 5),
-                signature: '',
-                signature_timestamp: '',
-                training_valid: false,
-                certification_expiry: '',
-                training_certificates: []
-              };
-              const currentAttendants = permitData.attendants || [];
-              updatePermitData({ attendants: [...currentAttendants, newAttendant] });
-            }}
-            style={{
-              ...styles.button,
-              ...styles.buttonPrimary,
-              width: 'auto',
-              padding: isMobile ? '8px 12px' : '10px 16px',
-              fontSize: '14px',
-              minHeight: 'auto',
-              marginLeft: 'auto'
-            }}
-          >
-            <Plus style={{ width: '16px', height: '16px' }} />
-            Ajouter Surveillant
-          </button>
-        </h3>
-        
-        <div style={{ 
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          borderRadius: '12px',
-          padding: isMobile ? '16px' : '20px',
-          marginBottom: '20px',
-          border: '1px solid rgba(107, 114, 128, 0.3)'
-        }}>
-          <p style={{ 
-            color: '#d1d5db', 
-            fontSize: '15px',
-            lineHeight: 1.6,
-            margin: '0 0 12px 0',
-            fontWeight: '600'
-          }}>
-            👁️ <strong>RÔLE CRITIQUE</strong> : Surveillance continue, communication bidirectionnelle, autorité d'évacuation immédiate, ne doit jamais quitter son poste.
-          </p>
-          <p style={{ 
-            color: '#9ca3af', 
-            fontSize: '14px',
-            margin: 0,
-            fontStyle: 'italic'
-          }}>
-            📋 <strong>Minimum requis</strong> : 1 surveillant obligatoire, certains provinces exigent 1 surveillant + 1 assistant (NB: 3 personnes minimum).
-          </p>
-        </div>
-        
-        {(permitData.attendants || []).length === 0 ? (
-          <div style={{
-            padding: isMobile ? '40px 20px' : '56px 32px',
-            textAlign: 'center',
-            backgroundColor: 'rgba(17, 24, 39, 0.5)',
-            borderRadius: '12px',
-            border: '2px dashed #6b7280'
-          }}>
-            <Eye style={{ 
-              width: isMobile ? '56px' : '72px', 
-              height: isMobile ? '56px' : '72px', 
-              margin: '0 auto 20px', 
-              color: '#6b7280'
-            }} />
-            <p style={{ 
-              color: '#9ca3af', 
-              fontSize: isMobile ? '18px' : '20px', 
-              marginBottom: '12px',
-              fontWeight: '600'
-            }}>
-              Aucun surveillant assigné
-            </p>
-            <p style={{ 
-              color: '#6b7280', 
-              fontSize: '15px',
-              lineHeight: 1.5,
-              maxWidth: '400px',
-              margin: '0 auto'
-            }}>
-              Au moins un surveillant certifié est obligatoire selon les réglementations canadiennes.
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {(permitData.attendants || []).map((attendant: any, index: number) => (
-              <div key={attendant.id} style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                borderRadius: '12px',
-                padding: isMobile ? '16px' : '20px',
-                border: '1px solid rgba(107, 114, 128, 0.3)'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '16px'
-                }}>
-                  <h4 style={{ 
-                    color: '#d1d5db', 
-                    fontSize: isMobile ? '16px' : '18px', 
-                    fontWeight: '700',
-                    margin: 0
-                  }}>
-                    👁️ Surveillant #{index + 1}
-                  </h4>
-                  <button
-                    onClick={() => {
-                      const updatedAttendants = (permitData.attendants || []).filter((a: any) => a.id !== attendant.id);
-                      updatePermitData({ attendants: updatedAttendants });
-                    }}
-                    style={{
-                      backgroundColor: 'rgba(220, 38, 38, 0.8)',
-                      border: '1px solid #ef4444',
-                      borderRadius: '6px',
-                      padding: '8px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: '32px',
-                      minHeight: '32px',
-                      color: 'white'
-                    }}
-                    title="Supprimer ce surveillant"
-                  >
-                    <Trash2 style={{ width: '16px', height: '16px' }} />
-                  </button>
-                </div>
-                
-                <div style={styles.grid2}>
-                  <div>
-                    <label style={styles.label}>Nom complet *</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: Marie Dubois"
-                      value={attendant.name}
-                      onChange={(e) => {
-                        const updatedAttendants = (permitData.attendants || []).map((a: any) =>
-                          a.id === attendant.id ? { ...a, name: e.target.value } : a
-                        );
-                        updatePermitData({ attendants: updatedAttendants });
-                      }}
-                      style={styles.input}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label style={styles.label}>Compagnie/Organisation *</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: Sécurité XYZ Ltée"
-                      value={attendant.company}
-                      onChange={(e) => {
-                        const updatedAttendants = (permitData.attendants || []).map((a: any) =>
-                          a.id === attendant.id ? { ...a, company: e.target.value } : a
-                        );
-                        updatePermitData({ attendants: updatedAttendants });
-                      }}
-                      style={styles.input}
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div style={styles.grid2}>
-                  <div>
-                    <label style={styles.label}>Date de signature *</label>
-                    <input
-                      type="date"
-                      value={attendant.signature_date}
-                      onChange={(e) => {
-                        const updatedAttendants = (permitData.attendants || []).map((a: any) =>
-                          a.id === attendant.id ? { ...a, signature_date: e.target.value } : a
-                        );
-                        updatePermitData({ attendants: updatedAttendants });
-                      }}
-                      style={styles.input}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label style={styles.label}>Heure de signature *</label>
-                    <input
-                      type="time"
-                      value={attendant.signature_time}
-                      onChange={(e) => {
-                        const updatedAttendants = (permitData.attendants || []).map((a: any) =>
-                          a.id === attendant.id ? { ...a, signature_time: e.target.value } : a
-                        );
-                        updatePermitData({ attendants: updatedAttendants });
-                      }}
-                      style={styles.input}
-                      required
-                    />
-                  </div>
-                </div>
-                
-                {/* Formation et certification */}
-                <div style={{ marginTop: '16px' }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px',
-                    backgroundColor: attendant.training_valid ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                    borderRadius: '8px',
-                    border: `1px solid ${attendant.training_valid ? '#10b981' : '#f59e0b'}`
-                  }}>
-                    <input
-                      type="checkbox"
-                      id={`training_${attendant.id}`}
-                      checked={attendant.training_valid || false}
-                      onChange={(e) => {
-                        const updatedAttendants = (permitData.attendants || []).map((a: any) =>
-                          a.id === attendant.id ? { ...a, training_valid: e.target.checked } : a
-                        );
-                        updatePermitData({ attendants: updatedAttendants });
-                      }}
-                      style={{
-                        width: '20px',
-                        height: '20px',
-                        accentColor: '#10b981'
-                      }}
-                    />
-                    <label 
-                      htmlFor={`training_${attendant.id}`}
-                      style={{
-                        color: attendant.training_valid ? '#86efac' : '#fde047',
-                        fontSize: '15px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        flex: 1
-                      }}
-                    >
-                      🎓 <strong>FORMATION À JOUR</strong> : Surveillant espace clos certifié (CSA Z1006), premiers soins, RCR *
-                    </label>
-                  </div>
-                  
-                  <div style={{ marginTop: '12px' }}>
-                    <label style={styles.label}>Expiration certification</label>
-                    <input
-                      type="date"
-                      value={attendant.certification_expiry || ''}
-                      onChange={(e) => {
-                        const updatedAttendants = (permitData.attendants || []).map((a: any) =>
-                          a.id === attendant.id ? { ...a, certification_expiry: e.target.value } : a
-                        );
-                        updatePermitData({ attendants: updatedAttendants });
-                      }}
-                      style={styles.input}
-                    />
-                  </div>
-                </div>
-                
-                {/* Signature électronique */}
-                <div style={{ marginTop: '16px' }}>
-                  <label style={styles.label}>Certification et Signature Électronique *</label>
-                  <div style={{
-                    border: '2px solid #059669',
-                    borderRadius: '8px',
-                    padding: '16px',
-                    backgroundColor: 'rgba(5, 150, 105, 0.05)'
-                  }}>
-                    {!attendant.signature ? (
-                      <div>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '12px',
-                          marginBottom: '16px',
-                          padding: '12px',
-                          backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                          borderRadius: '6px'
-                        }}>
-                          <input
-                            type="checkbox"
-                            id={`attendant_cert_${attendant.id}`}
-                            checked={attendant.certified || false}
-                            onChange={(e) => {
-                              const updatedAttendants = (permitData.attendants || []).map((a: any) =>
-                                a.id === attendant.id ? { ...a, certified: e.target.checked } : a
-                              );
-                              updatePermitData({ attendants: updatedAttendants });
-                            }}
-                            style={{
-                              width: '18px',
-                              height: '18px',
-                              marginTop: '2px',
-                              accentColor: '#059669'
-                            }}
-                          />
-                          <label 
-                            htmlFor={`attendant_cert_${attendant.id}`}
-                            style={{
-                              color: '#d1d5db',
-                              fontSize: '13px',
-                              lineHeight: 1.5,
-                              cursor: 'pointer',
-                              flex: 1
-                            }}
-                          >
-                            <strong>Je certifie :</strong> Posséder la formation surveillant espace clos, maintenir la surveillance continue, 
-                            utiliser la communication bidirectionnelle, et ordonner l'évacuation si nécessaire.
-                          </label>
-                        </div>
-                        
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (!attendant.certified) {
-                              alert('⚠️ Vous devez d\'abord cocher la case de certification.');
-                              return;
-                            }
-                            const signature = prompt('Veuillez taper votre nom complet pour signer:');
-                            if (signature && signature.trim()) {
-                              const now = new Date();
-                              const updatedAttendants = (permitData.attendants || []).map((a: any) =>
-                                a.id === attendant.id ? { 
-                                  ...a, 
-                                  signature: signature.trim(),
-                                  signature_timestamp: now.toISOString(),
-                                  signature_time_precise: now.toLocaleString('fr-CA', {
-                                    year: 'numeric',
-                                    month: '2-digit',
-                                    day: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    second: '2-digit',
-                                    timeZoneName: 'short'
-                                  })
-                                } : a
-                              );
-                              updatePermitData({ attendants: updatedAttendants });
-                            }
-                          }}
-                          disabled={!attendant.certified}
-                          style={{
-                            ...styles.button,
-                            ...(attendant.certified ? styles.buttonSuccess : styles.buttonSecondary),
-                            justifyContent: 'center',
-                            fontSize: '14px',
-                            opacity: attendant.certified ? 1 : 0.5,
-                            cursor: attendant.certified ? 'pointer' : 'not-allowed'
-                          }}
-                        >
-                          <PenTool style={{ width: '16px', height: '16px' }} />
-                          {attendant.certified ? 'Signer' : 'Certification Requise'}
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ textAlign: 'center' }}>
-                        <CheckCircle style={{ 
-                          width: '32px', 
-                          height: '32px', 
-                          color: '#10b981', 
-                          margin: '0 auto 8px'
-                        }} />
-                        <div style={{ 
-                          fontSize: '18px', 
-                          fontFamily: 'cursive', 
-                          color: '#10b981', 
-                          marginBottom: '4px',
-                          fontWeight: '600'
-                        }}>
-                          {attendant.signature}
-                        </div>
-                        <div style={{ 
-                          color: '#86efac', 
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          marginBottom: '4px'
-                        }}>
-                          ✅ SURVEILLANT CERTIFIÉ
-                        </div>
-                        <div style={{ 
-                          color: '#6ee7b7', 
-                          fontSize: '11px',
-                          fontFamily: 'JetBrains Mono, monospace'
-                        }}>
-                          {attendant.signature_time_precise}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Section Entrants */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <LogIn style={{ width: '20px', height: '20px' }} />
-          👷 Personnel Entrant
-          <button
-            onClick={() => {
-              const newEntrant = {
-                id: `entrant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                name: '',
-                company: '',
-                signature_date: new Date().toISOString().split('T')[0],
-                signature_time: new Date().toTimeString().slice(0, 5),
-                signature: '',
-                signature_timestamp: '',
-                entry_time: '',
-                exit_time: '',
-                status: 'outside', // 'inside' or 'outside'
-                training_valid: false,
-                certification_expiry: ''
-              };
-              const currentEntrants = permitData.entrants || [];
-              updatePermitData({ entrants: [...currentEntrants, newEntrant] });
-            }}
-            style={{
-              ...styles.button,
-              ...styles.buttonPrimary,
-              width: 'auto',
-              padding: isMobile ? '8px 12px' : '10px 16px',
-              fontSize: '14px',
-              minHeight: 'auto',
-              marginLeft: 'auto'
-            }}
-          >
-            <Plus style={{ width: '16px', height: '16px' }} />
-            Ajouter Entrant
-          </button>
-        </h3>
-        
-        <div style={{ 
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          borderRadius: '12px',
-          padding: isMobile ? '16px' : '20px',
-          marginBottom: '20px',
-          border: '1px solid rgba(107, 114, 128, 0.3)'
-        }}>
-          <p style={{ 
-            color: '#d1d5db', 
-            fontSize: '15px',
-            lineHeight: 1.6,
-            margin: '0 0 12px 0',
-            fontWeight: '600'
-          }}>
-            👷 <strong>RESTRICTIONS</strong> : Âge minimum 18 ans, formation obligatoire, harnais de sécurité classe E, communication bidirectionnelle.
-          </p>
-          <p style={{ 
-            color: '#9ca3af', 
-            fontSize: '14px',
-            margin: 0,
-            fontStyle: 'italic'
-          }}>
-            ⏱️ <strong>Suivi temporel</strong> : Horodatage automatique entrée/sortie, durée maximale selon province (généralement 8h).
-          </p>
-        </div>
-        
-        {(permitData.entrants || []).length === 0 ? (
-          <div style={{
-            padding: isMobile ? '40px 20px' : '56px 32px',
-            textAlign: 'center',
-            backgroundColor: 'rgba(17, 24, 39, 0.5)',
-            borderRadius: '12px',
-            border: '2px dashed #6b7280'
-          }}>
-            <LogIn style={{ 
-              width: isMobile ? '56px' : '72px', 
-              height: isMobile ? '56px' : '72px', 
-              margin: '0 auto 20px', 
-              color: '#6b7280'
-            }} />
-            <p style={{ 
-              color: '#9ca3af', 
-              fontSize: isMobile ? '18px' : '20px', 
-              marginBottom: '12px',
-              fontWeight: '600'
-            }}>
-              Aucun entrant enregistré
-            </p>
-            <p style={{ 
-              color: '#6b7280', 
-              fontSize: '15px',
-              lineHeight: 1.5,
-              maxWidth: '400px',
-              margin: '0 auto'
-            }}>
-              Ajoutez le personnel autorisé à entrer dans l'espace clos.
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {(permitData.entrants || []).map((entrant: any, index: number) => (
-              <div key={entrant.id} style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                borderRadius: '12px',
-                padding: isMobile ? '16px' : '20px',
-                border: `2px solid ${entrant.status === 'inside' ? '#ef4444' : '#10b981'}`,
-                boxShadow: entrant.status === 'inside' ? '0 0 20px rgba(239, 68, 68, 0.3)' : 'none'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '16px',
-                  flexDirection: isMobile ? 'column' : 'row',
-                  gap: isMobile ? '12px' : '0'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <h4 style={{ 
-                      color: '#d1d5db', 
-                      fontSize: isMobile ? '16px' : '18px', 
-                      fontWeight: '700',
-                      margin: 0
-                    }}>
-                      👷 Entrant #{index + 1}
-                    </h4>
-                    <span style={{
-                      padding: '4px 12px',
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      backgroundColor: entrant.status === 'inside' ? '#ef4444' : '#10b981',
-                      color: 'white',
-                      animation: entrant.status === 'inside' ? 'pulse 2s infinite' : 'none'
-                    }}>
-                      {entrant.status === 'inside' ? '🔴 À L\'INTÉRIEUR' : '🟢 À L\'EXTÉRIEUR'}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const updatedEntrants = (permitData.entrants || []).filter((e: any) => e.id !== entrant.id);
-                      updatePermitData({ entrants: updatedEntrants });
-                    }}
-                    style={{
-                      backgroundColor: 'rgba(220, 38, 38, 0.8)',
-                      border: '1px solid #ef4444',
-                      borderRadius: '6px',
-                      padding: '8px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: '32px',
-                      minHeight: '32px',
-                      color: 'white'
-                    }}
-                    title="Supprimer cet entrant"
-                  >
-                    <Trash2 style={{ width: '16px', height: '16px' }} />
-                  </button>
-                </div>
-                
-                <div style={styles.grid2}>
-                  <div>
-                    <label style={styles.label}>Nom complet *</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: Pierre Lavoie"
-                      value={entrant.name}
-                      onChange={(e) => {
-                        const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
-                          ent.id === entrant.id ? { ...ent, name: e.target.value } : ent
-                        );
-                        updatePermitData({ entrants: updatedEntrants });
-                      }}
-                      style={styles.input}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label style={styles.label}>Compagnie/Organisation *</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: Construction DEF Inc."
-                      value={entrant.company}
-                      onChange={(e) => {
-                        const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
-                          ent.id === entrant.id ? { ...ent, company: e.target.value } : ent
-                        );
-                        updatePermitData({ entrants: updatedEntrants });
-                      }}
-                      style={styles.input}
-                      required
-                    />
-                  </div>
-                </div>
-                
-                {/* Contrôles d'entrée/sortie */}
-                <div style={{
-                  marginTop: '16px',
-                  padding: '16px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(107, 114, 128, 0.3)'
-                }}>
-                  <h5 style={{
-                    color: '#d1d5db',
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    marginBottom: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <Timer style={{ width: '18px', height: '18px' }} />
-                    Contrôle Entrée/Sortie
-                  </h5>
-                  
-                  <div style={styles.grid2}>
-                    <button
-                      onClick={() => {
-                        const now = new Date();
-                        const timeString = now.toTimeString().slice(0, 5);
-                        const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
-                          ent.id === entrant.id ? { 
-                            ...ent, 
-                            entry_time: timeString,
-                            status: 'inside'
-                          } : ent
-                        );
-                        updatePermitData({ entrants: updatedEntrants });
-                      }}
-                      style={{
-                        ...styles.button,
-                        backgroundColor: entrant.status === 'inside' ? '#6b7280' : '#059669',
-                        color: 'white',
-                        padding: '12px',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        cursor: entrant.status === 'inside' ? 'not-allowed' : 'pointer'
-                      }}
-                      disabled={entrant.status === 'inside'}
-                    >
-                      <LogIn style={{ width: '16px', height: '16px' }} />
-                      {entrant.entry_time ? `Entré: ${entrant.entry_time}` : 'Marquer Entrée'}
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        const now = new Date();
-                        const timeString = now.toTimeString().slice(0, 5);
-                        const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
-                          ent.id === entrant.id ? { 
-                            ...ent, 
-                            exit_time: timeString,
-                            status: 'outside'
-                          } : ent
-                        );
-                        updatePermitData({ entrants: updatedEntrants });
-                      }}
-                      style={{
-                        ...styles.button,
-                        backgroundColor: entrant.status === 'outside' ? '#6b7280' : '#dc2626',
-                        color: 'white',
-                        padding: '12px',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        cursor: entrant.status === 'outside' ? 'not-allowed' : 'pointer'
-                      }}
-                      disabled={entrant.status === 'outside'}
-                    >
-                      <LogOut style={{ width: '16px', height: '16px' }} />
-                      {entrant.exit_time ? `Sorti: ${entrant.exit_time}` : 'Marquer Sortie'}
-                    </button>
-                  </div>
-                  
-                  {entrant.entry_time && entrant.exit_time && (
-                    <div style={{
-                      marginTop: '12px',
-                      padding: '8px 12px',
-                      backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                      borderRadius: '6px',
-                      border: '1px solid #3b82f6',
-                      textAlign: 'center'
-                    }}>
-                      <span style={{ color: '#93c5fd', fontSize: '14px', fontWeight: '600' }}>
-                        ⏱️ Durée totale: {(() => {
-                          const entry = new Date(`2000-01-01T${entrant.entry_time}:00`);
-                          const exit = new Date(`2000-01-01T${entrant.exit_time}:00`);
-                          const diffMs = exit.getTime() - entry.getTime();
-                          const diffMins = Math.floor(diffMs / (1000 * 60));
-                          const hours = Math.floor(diffMins / 60);
-                          const minutes = diffMins % 60;
-                          return `${hours}h ${minutes}min`;
-                        })()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Formation et certification entrant */}
-                <div style={{ marginTop: '16px' }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px',
-                    backgroundColor: entrant.training_valid ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                    borderRadius: '8px',
-                    border: `1px solid ${entrant.training_valid ? '#10b981' : '#f59e0b'}`
-                  }}>
-                    <input
-                      type="checkbox"
-                      id={`entrant_training_${entrant.id}`}
-                      checked={entrant.training_valid || false}
-                      onChange={(e) => {
-                        const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
-                          ent.id === entrant.id ? { ...ent, training_valid: e.target.checked } : ent
-                        );
-                        updatePermitData({ entrants: updatedEntrants });
-                      }}
-                      style={{
-                        width: '20px',
-                        height: '20px',
-                        accentColor: '#10b981'
-                      }}
-                    />
-                    <label 
-                      htmlFor={`entrant_training_${entrant.id}`}
-                      style={{
-                        color: entrant.training_valid ? '#86efac' : '#fde047',
-                        fontSize: '15px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        flex: 1
-                      }}
-                    >
-                      🎓 <strong>FORMATION À JOUR</strong> : Entrant espace clos certifié, EPI, communication d'urgence *
-                    </label>
-                  </div>
-                </div>
-                
-                {/* Signature électronique entrant */}
-                <div style={{ marginTop: '16px' }}>
-                  <label style={styles.label}>Certification et Signature Électronique *</label>
-                  <div style={{
-                    border: '2px solid #3b82f6',
-                    borderRadius: '8px',
-                    padding: '16px',
-                    backgroundColor: 'rgba(59, 130, 246, 0.05)'
-                  }}>
-                    {!entrant.signature ? (
-                      <div>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '12px',
-                          marginBottom: '16px',
-                          padding: '12px',
-                          backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                          borderRadius: '6px'
-                        }}>
-                          <input
-                            type="checkbox"
-                            id={`entrant_cert_${entrant.id}`}
-                            checked={entrant.certified || false}
-                            onChange={(e) => {
-                              const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
-                                ent.id === entrant.id ? { ...ent, certified: e.target.checked } : ent
-                              );
-                              updatePermitData({ entrants: updatedEntrants });
-                            }}
-                            style={{
-                              width: '18px',
-                              height: '18px',
-                              marginTop: '2px',
-                              accentColor: '#3b82f6'
-                            }}
-                          />
-                          <label 
-                            htmlFor={`entrant_cert_${entrant.id}`}
-                            style={{
-                              color: '#d1d5db',
-                              fontSize: '13px',
-                              lineHeight: 1.5,
-                              cursor: 'pointer',
-                              flex: 1
-                            }}
-                          >
-                            <strong>Je certifie :</strong> Avoir reçu la formation entrant espace clos, porter l'équipement de protection requis, 
-                            maintenir la communication avec le surveillant, et évacuer immédiatement si ordonné.
-                          </label>
-                        </div>
-                        
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (!entrant.certified) {
-                              alert('⚠️ Vous devez d\'abord cocher la case de certification.');
-                              return;
-                            }
-                            const signature = prompt('Veuillez taper votre nom complet pour signer:');
-                            if (signature && signature.trim()) {
-                              const now = new Date();
-                              const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
-                                ent.id === entrant.id ? { 
-                                  ...ent, 
-                                  signature: signature.trim(),
-                                  signature_timestamp: now.toISOString(),
-                                  signature_time_precise: now.toLocaleString('fr-CA', {
-                                    year: 'numeric',
-                                    month: '2-digit',
-                                    day: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    second: '2-digit',
-                                    timeZoneName: 'short'
-                                  })
-                                } : ent
-                              );
-                              updatePermitData({ entrants: updatedEntrants });
-                            }
-                          }}
-                          disabled={!entrant.certified}
-                          style={{
-                            ...styles.button,
-                            ...(entrant.certified ? styles.buttonPrimary : styles.buttonSecondary),
-                            justifyContent: 'center',
-                            fontSize: '14px',
-                            opacity: entrant.certified ? 1 : 0.5,
-                            cursor: entrant.certified ? 'pointer' : 'not-allowed'
-                          }}
-                        >
-                          <PenTool style={{ width: '16px', height: '16px' }} />
-                          {entrant.certified ? 'Signer' : 'Certification Requise'}
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ textAlign: 'center' }}>
-                        <CheckCircle style={{ 
-                          width: '32px', 
-                          height: '32px', 
-                          color: '#3b82f6', 
-                          margin: '0 auto 8px'
-                        }} />
-                        <div style={{ 
-                          fontSize: '18px', 
-                          fontFamily: 'cursive', 
-                          color: '#3b82f6', 
-                          marginBottom: '4px',
-                          fontWeight: '600'
-                        }}>
-                          {entrant.signature}
-                        </div>
-                        <div style={{ 
-                          color: '#93c5fd', 
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          marginBottom: '4px'
-                        }}>
-                          ✅ ENTRANT CERTIFIÉ
-                        </div>
-                        <div style={{ 
-                          color: '#bfdbfe', 
-                          fontSize: '11px',
-                          fontFamily: 'JetBrains Mono, monospace'
-                        }}>
-                          {entrant.signature_time_precise}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Section Équipements - Check-list */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Shield style={{ width: '20px', height: '20px' }} />
-          🛠️ Contrôle Équipements Obligatoires
-          <button
-            onClick={() => {
-              const newEquipment = {
-                id: `equipment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                name: '',
-                required: true,
-                checked_in: false,
-                checked_out: false,
-                condition: 'good', // 'good', 'fair', 'poor'
-                serial_number: '',
-                last_inspection: ''
-              };
-              const currentEquipments = permitData.equipment_checklist || [];
-              updatePermitData({ equipment_checklist: [...currentEquipments, newEquipment] });
-            }}
-            style={{
-              ...styles.button,
-              ...styles.buttonPrimary,
-              width: 'auto',
-              padding: isMobile ? '8px 12px' : '10px 16px',
-              fontSize: '14px',
-              minHeight: 'auto',
-              marginLeft: 'auto'
-            }}
-          >
-            <Plus style={{ width: '16px', height: '16px' }} />
-            Ajouter Équipement
-          </button>
-        </h3>
-        
-        <div style={{ 
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          borderRadius: '12px',
-          padding: isMobile ? '16px' : '20px',
-          marginBottom: '20px',
-          border: '1px solid rgba(107, 114, 128, 0.3)'
-        }}>
-          <p style={{ 
-            color: '#d1d5db', 
-            fontSize: '15px',
-            lineHeight: 1.6,
-            margin: '0 0 12px 0',
-            fontWeight: '600'
-          }}>
-            🛠️ <strong>ÉQUIPEMENTS OBLIGATOIRES</strong> : Détecteur 4 gaz, harnais classe E, ligne de vie, ARA, communication bidirectionnelle.
-          </p>
-          <p style={{ 
-            color: '#9ca3af', 
-            fontSize: '14px',
-            margin: 0,
-            fontStyle: 'italic'
-          }}>
-            ✅ <strong>Contrôle d'état</strong> : Inspection avant/après utilisation, certification à jour, traçabilité des équipements.
-          </p>
-        </div>
-        
-        {/* Équipements obligatoires prédéfinis */}
-        <div style={{ marginBottom: '20px' }}>
-          <h5 style={{
-            color: '#d1d5db',
-            fontSize: '16px',
-            fontWeight: '700',
-            marginBottom: '16px'
-          }}>
-            Équipements Réglementaires Obligatoires
-          </h5>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {[
-              { id: 'gas_detector', name: '📊 Détecteur multi-gaz (O₂, LEL, H₂S, CO)', required: true },
-              { id: 'harness', name: '🦺 Harnais de sécurité classe E', required: true },
-              { id: 'lifeline', name: '⛓️ Ligne de vie et dispositif de récupération', required: true },
-              { id: 'communication', name: '📻 Équipement communication bidirectionnelle', required: true },
-              { id: 'scba', name: '🫁 Appareil respiratoire autonome (ARA)', required: true },
-              { id: 'ventilation', name: '💨 Système de ventilation mécanique', required: true },
-              { id: 'lighting', name: '💡 Éclairage intrinsèquement sécuritaire', required: true },
-              { id: 'first_aid', name: '🏥 Trousse premiers soins et défibrillateur', required: true }
-            ].map((equipment) => {
-              const equipmentData = (permitData.mandatory_equipment || {})[equipment.id] || {
-                checked_in: false,
-                checked_out: false,
-                condition: 'good',
-                serial_number: '',
-                last_inspection: ''
-              };
-              
-              return (
-                <div key={equipment.id} style={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                  borderRadius: '8px',
-                  padding: '16px',
-                  border: `1px solid ${equipmentData.checked_in && equipmentData.checked_out ? '#10b981' : '#f59e0b'}`
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '12px',
-                    flexDirection: isMobile ? 'column' : 'row',
-                    gap: isMobile ? '8px' : '0'
-                  }}>
-                    <span style={{
-                      color: '#d1d5db',
-                      fontSize: '15px',
-                      fontWeight: '600'
-                    }}>
-                      {equipment.name}
-                      {equipment.required && <span style={{ color: '#f87171' }}> *</span>}
-                    </span>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        onClick={() => {
-                          const updatedEquipment = {
-                            ...equipmentData,
-                            checked_in: !equipmentData.checked_in
-                          };
-                          updatePermitData({ 
-                            mandatory_equipment: { 
-                              ...permitData.mandatory_equipment, 
-                              [equipment.id]: updatedEquipment 
-                            }
-                          });
-                        }}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          border: 'none',
-                          cursor: 'pointer',
-                          backgroundColor: equipmentData.checked_in ? '#059669' : '#6b7280',
-                          color: 'white'
-                        }}
-                      >
-                        {equipmentData.checked_in ? '✅ Entré' : '⬇️ Entrée'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          const updatedEquipment = {
-                            ...equipmentData,
-                            checked_out: !equipmentData.checked_out
-                          };
-                          updatePermitData({ 
-                            mandatory_equipment: { 
-                              ...permitData.mandatory_equipment, 
-                              [equipment.id]: updatedEquipment 
-                            }
-                          });
-                        }}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          border: 'none',
-                          cursor: 'pointer',
-                          backgroundColor: equipmentData.checked_out ? '#dc2626' : '#6b7280',
-                          color: 'white'
-                        }}
-                      >
-                        {equipmentData.checked_out ? '✅ Sorti' : '⬆️ Sortie'}
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div style={styles.grid2}>
-                    <input
-                      type="text"
-                      placeholder="N° série / Identification"
-                      value={equipmentData.serial_number}
-                      onChange={(e) => {
-                        const updatedEquipment = {
-                          ...equipmentData,
-                          serial_number: e.target.value
-                        };
-                        updatePermitData({ 
-                          mandatory_equipment: { 
-                            ...permitData.mandatory_equipment, 
-                            [equipment.id]: updatedEquipment 
-                          }
-                        });
-                      }}
-                      style={{ ...styles.input, fontSize: '14px' }}
-                    />
-                    <select
-                      value={equipmentData.condition}
-                      onChange={(e) => {
-                        const updatedEquipment = {
-                          ...equipmentData,
-                          condition: e.target.value
-                        };
-                        updatePermitData({ 
-                          mandatory_equipment: { 
-                            ...permitData.mandatory_equipment, 
-                            [equipment.id]: updatedEquipment 
-                          }
-                        });
-                      }}
-                      style={{ ...styles.input, fontSize: '14px' }}
-                    >
-                      <option value="good">🟢 Bon état</option>
-                      <option value="fair">🟡 État acceptable</option>
-                      <option value="poor">🔴 À remplacer</option>
-                    </select>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        
-        {/* Équipements additionnels */}
-        {(permitData.equipment_checklist || []).length > 0 && (
-          <div>
-            <h5 style={{
-              color: '#d1d5db',
-              fontSize: '16px',
-              fontWeight: '700',
-              marginBottom: '16px'
-            }}>
-              Équipements Additionnels
-            </h5>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {(permitData.equipment_checklist || []).map((equipment: any) => (
-                <div key={equipment.id} style={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                  borderRadius: '8px',
-                  padding: '16px',
-                  border: '1px solid rgba(107, 114, 128, 0.3)'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginBottom: '12px'
-                  }}>
-                    <input
-                      type="text"
-                      placeholder="Nom de l'équipement"
-                      value={equipment.name}
-                      onChange={(e) => {
-                        const updatedEquipments = (permitData.equipment_checklist || []).map((eq: any) =>
-                          eq.id === equipment.id ? { ...eq, name: e.target.value } : eq
-                        );
-                        updatePermitData({ equipment_checklist: updatedEquipments });
-                      }}
-                      style={{ ...styles.input, flex: 1 }}
-                    />
-                    <button
-                      onClick={() => {
-                        const updatedEquipments = (permitData.equipment_checklist || []).filter((eq: any) => eq.id !== equipment.id);
-                        updatePermitData({ equipment_checklist: updatedEquipments });
-                      }}
-                      style={{
-                        backgroundColor: 'rgba(220, 38, 38, 0.8)',
-                        border: '1px solid #ef4444',
-                        borderRadius: '6px',
-                        padding: '8px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '32px',
-                        minHeight: '32px',
-                        color: 'white'
-                      }}
-                      title="Supprimer cet équipement"
-                    >
-                      <Trash2 style={{ width: '16px', height: '16px' }} />
-                    </button>
-                  </div>
-                  
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        onClick={() => {
-                          const updatedEquipments = (permitData.equipment_checklist || []).map((eq: any) =>
-                            eq.id === equipment.id ? { ...eq, checked_in: !eq.checked_in } : eq
-                          );
-                          updatePermitData({ equipment_checklist: updatedEquipments });
-                        }}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          border: 'none',
-                          cursor: 'pointer',
-                          backgroundColor: equipment.checked_in ? '#059669' : '#6b7280',
-                          color: 'white'
-                        }}
-                      >
-                        {equipment.checked_in ? '✅ Entré' : '⬇️ Entrée'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          const updatedEquipments = (permitData.equipment_checklist || []).map((eq: any) =>
-                            eq.id === equipment.id ? { ...eq, checked_out: !eq.checked_out } : eq
-                          );
-                          updatePermitData({ equipment_checklist: updatedEquipments });
-                        }}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          border: 'none',
-                          cursor: 'pointer',
-                          backgroundColor: equipment.checked_out ? '#dc2626' : '#6b7280',
-                          color: 'white'
-                        }}
-                      >
-                        {equipment.checked_out ? '✅ Sorti' : '⬆️ Sortie'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  // =================== RENDU PRINCIPAL DU COMPOSANT ===================
   return (
     <div style={styles.container}>
+      {/* Input caché pour capture photo */}
       <input 
         ref={fileInputRef} 
         type="file" 
@@ -4002,6 +2984,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         style={{ display: 'none' }} 
       />
       
+      {/* En-tête mobile sticky */}
       <div style={isMobile ? styles.mobileHeader : { marginBottom: '40px' }}>
         <div style={{ 
           display: 'flex', 
@@ -4063,6 +3046,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           </div>
         )}
         
+        {/* Boutons d'action optimisés mobile */}
         <div style={styles.mobileButtonGrid}>
           <button style={{
             ...styles.button,
@@ -4102,10 +3086,1472 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '32px', width: '100%' }}>
         {activeTab === 'site' && renderSiteSection()}
         {activeTab === 'atmospheric' && renderAtmosphericSection()}
-        {activeTab === 'personnel' && renderPersonnelSection()}
+        {activeTab === 'personnel' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
+            {/* Section Superviseur */}
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>
+                <UserCheck style={{ width: '20px', height: '20px' }} />
+                👨‍💼 Superviseur d'Entrée (Obligatoire)
+              </h3>
+              
+              <div style={{ 
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '12px',
+                padding: isMobile ? '16px' : '20px',
+                marginBottom: '20px',
+                border: '1px solid rgba(107, 114, 128, 0.3)'
+              }}>
+                <p style={{ 
+                  color: '#d1d5db', 
+                  fontSize: '15px',
+                  lineHeight: 1.6,
+                  margin: '0 0 12px 0',
+                  fontWeight: '600'
+                }}>
+                  ⚠️ <strong>OBLIGATION RÉGLEMENTAIRE</strong> : Le superviseur d'entrée doit avoir les compétences et l'autorité pour contrôler l'accès à l'espace clos et ordonner l'évacuation (Art. 308 RSST).
+                </p>
+                <p style={{ 
+                  color: '#9ca3af', 
+                  fontSize: '14px',
+                  margin: 0,
+                  fontStyle: 'italic'
+                }}>
+                  🎓 <strong>Formation requise</strong> : Personne qualifiée selon CSA Z1006 avec formation supervision espace clos, premiers soins niveau 2, RCR.
+                </p>
+              </div>
+              
+              <div style={styles.grid2}>
+                <div>
+                  <label style={styles.label}>Nom complet du superviseur *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Jean Tremblay"
+                    value={permitData.supervisor_name || ''}
+                    onChange={(e) => updatePermitData({ supervisor_name: e.target.value })}
+                    style={styles.input}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>Compagnie/Organisation *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Entreprises ABC Inc."
+                    value={permitData.supervisor_company || ''}
+                    onChange={(e) => updatePermitData({ supervisor_company: e.target.value })}
+                    style={styles.input}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div style={styles.grid2}>
+                <div>
+                  <label style={styles.label}>Date de signature *</label>
+                  <input
+                    type="date"
+                    value={permitData.supervisor_signature_date || new Date().toISOString().split('T')[0]}
+                    onChange={(e) => updatePermitData({ supervisor_signature_date: e.target.value })}
+                    style={styles.input}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>Heure de signature *</label>
+                  <input
+                    type="time"
+                    value={permitData.supervisor_signature_time || new Date().toTimeString().slice(0, 5)}
+                    onChange={(e) => updatePermitData({ supervisor_signature_time: e.target.value })}
+                    style={styles.input}
+                    required
+                  />
+                </div>
+              </div>
+              
+              {/* Signature électronique superviseur */}
+              <div style={{ marginTop: '20px' }}>
+                <label style={styles.label}>Certification et Signature Électronique *</label>
+                <div style={{
+                  border: '2px solid #3b82f6',
+                  borderRadius: '12px',
+                  padding: isMobile ? '20px' : '24px',
+                  backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                  transition: 'all 0.3s ease'
+                }}>
+                  {!permitData.supervisor_signature ? (
+                    <div>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '12px',
+                        marginBottom: '20px',
+                        padding: '16px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(107, 114, 128, 0.3)'
+                      }}>
+                        <input
+                          type="checkbox"
+                          id="supervisor_certification"
+                          checked={permitData.supervisor_certified || false}
+                          onChange={(e) => updatePermitData({ supervisor_certified: e.target.checked })}
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            marginTop: '2px',
+                            accentColor: '#3b82f6'
+                          }}
+                        />
+                        <label 
+                          htmlFor="supervisor_certification"
+                          style={{
+                            color: '#d1d5db',
+                            fontSize: isMobile ? '14px' : '15px',
+                            lineHeight: 1.6,
+                            cursor: 'pointer',
+                            flex: 1,
+                            fontWeight: '500'
+                          }}
+                        >
+                          <strong>Je certifie par la présente que :</strong>
+                          <br />• J'ai pris connaissance de tous les risques et dangers identifiés dans cet espace clos
+                          <br />• Je possède les qualifications, l'autorité et la formation requises pour superviser cette entrée
+                          <br />• Tous les contrôles de sécurité ont été vérifiés et sont conformes aux réglementations
+                          <br />• J'autorise l'entrée dans cet espace clos sous les conditions spécifiées dans ce permis
+                          <br />• Je m'engage à maintenir la supervision et à ordonner l'évacuation si nécessaire
+                        </label>
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!permitData.supervisor_certified) {
+                            alert('⚠️ Vous devez d\'abord cocher la case de certification avant de signer.');
+                            return;
+                          }
+                          const name = prompt('Veuillez taper votre nom complet pour signer électroniquement:');
+                          if (name && name.trim()) {
+                            const now = new Date();
+                            updatePermitData({ 
+                              supervisor_signature: name.trim(),
+                              supervisor_signature_timestamp: now.toISOString(),
+                              supervisor_signature_time_precise: now.toLocaleString('fr-CA', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                timeZoneName: 'short'
+                              })
+                            });
+                          }
+                        }}
+                        disabled={!permitData.supervisor_certified}
+                        style={{
+                          ...styles.button,
+                          ...(permitData.supervisor_certified ? styles.buttonPrimary : styles.buttonSecondary),
+                          justifyContent: 'center',
+                          fontSize: isMobile ? '15px' : '16px',
+                          cursor: permitData.supervisor_certified ? 'pointer' : 'not-allowed',
+                          opacity: permitData.supervisor_certified ? 1 : 0.5
+                        }}
+                      >
+                        <PenTool style={{ width: '18px', height: '18px' }} />
+                        {permitData.supervisor_certified ? 'Signer Électroniquement' : 'Certification Requise Avant Signature'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{
+                        padding: '20px',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderRadius: '12px',
+                        border: '2px solid #10b981',
+                        marginBottom: '16px'
+                      }}>
+                        <CheckCircle style={{ 
+                          width: '48px', 
+                          height: '48px', 
+                          color: '#10b981', 
+                          margin: '0 auto 12px'
+                        }} />
+                        <div style={{ 
+                          fontSize: isMobile ? '20px' : '28px', 
+                          fontFamily: 'cursive', 
+                          color: '#10b981', 
+                          marginBottom: '12px',
+                          fontWeight: '700'
+                        }}>
+                          {permitData.supervisor_signature}
+                        </div>
+                        <div style={{ 
+                          color: '#86efac', 
+                          fontSize: isMobile ? '14px' : '16px',
+                          fontWeight: '600',
+                          marginBottom: '8px'
+                        }}>
+                          ✅ SUPERVISEUR CERTIFIÉ ET AUTORISÉ
+                        </div>
+                        <div style={{ 
+                          color: '#6ee7b7', 
+                          fontSize: '14px',
+                          fontFamily: 'JetBrains Mono, monospace'
+                        }}>
+                          📅 Signé le {permitData.supervisor_signature_time_precise}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (confirm('Êtes-vous sûr de vouloir annuler cette signature? Cette action est irréversible.')) {
+                            updatePermitData({ 
+                              supervisor_signature: '',
+                              supervisor_signature_timestamp: '',
+                              supervisor_signature_time_precise: '',
+                              supervisor_certified: false
+                            });
+                          }
+                        }}
+                        style={{
+                          ...styles.button,
+                          ...styles.buttonSecondary,
+                          width: 'auto',
+                          padding: '8px 16px',
+                          fontSize: '14px',
+                          minHeight: 'auto'
+                        }}
+                      >
+                        <X style={{ width: '16px', height: '16px' }} />
+                        Annuler Signature
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Section Surveillants d'Espace Clos */}
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>
+                <Eye style={{ width: '20px', height: '20px' }} />
+                👁️ Surveillants d'Espace Clos
+                <button
+                  onClick={() => {
+                    const newAttendant = {
+                      id: `attendant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                      name: '',
+                      company: '',
+                      signature_date: new Date().toISOString().split('T')[0],
+                      signature_time: new Date().toTimeString().slice(0, 5),
+                      signature: '',
+                      signature_timestamp: '',
+                      training_valid: false,
+                      certification_expiry: '',
+                      training_certificates: []
+                    };
+                    const currentAttendants = permitData.attendants || [];
+                    updatePermitData({ attendants: [...currentAttendants, newAttendant] });
+                  }}
+                  style={{
+                    ...styles.button,
+                    ...styles.buttonPrimary,
+                    width: 'auto',
+                    padding: isMobile ? '8px 12px' : '10px 16px',
+                    fontSize: '14px',
+                    minHeight: 'auto',
+                    marginLeft: 'auto'
+                  }}
+                >
+                  <Plus style={{ width: '16px', height: '16px' }} />
+                  Ajouter Surveillant
+                </button>
+              </h3>
+              
+              <div style={{ 
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '12px',
+                padding: isMobile ? '16px' : '20px',
+                marginBottom: '20px',
+                border: '1px solid rgba(107, 114, 128, 0.3)'
+              }}>
+                <p style={{ 
+                  color: '#d1d5db', 
+                  fontSize: '15px',
+                  lineHeight: 1.6,
+                  margin: '0 0 12px 0',
+                  fontWeight: '600'
+                }}>
+                  👁️ <strong>RÔLE CRITIQUE</strong> : Surveillance continue, communication bidirectionnelle, autorité d'évacuation immédiate, ne doit jamais quitter son poste.
+                </p>
+                <p style={{ 
+                  color: '#9ca3af', 
+                  fontSize: '14px',
+                  margin: 0,
+                  fontStyle: 'italic'
+                }}>
+                  📋 <strong>Minimum requis</strong> : 1 surveillant obligatoire, certains provinces exigent 1 surveillant + 1 assistant (NB: 3 personnes minimum).
+                </p>
+              </div>
+              
+              {(permitData.attendants || []).length === 0 ? (
+                <div style={{
+                  padding: isMobile ? '40px 20px' : '56px 32px',
+                  textAlign: 'center',
+                  backgroundColor: 'rgba(17, 24, 39, 0.5)',
+                  borderRadius: '12px',
+                  border: '2px dashed #6b7280'
+                }}>
+                  <Eye style={{ 
+                    width: isMobile ? '56px' : '72px', 
+                    height: isMobile ? '56px' : '72px', 
+                    margin: '0 auto 20px', 
+                    color: '#6b7280'
+                  }} />
+                  <p style={{ 
+                    color: '#9ca3af', 
+                    fontSize: isMobile ? '18px' : '20px', 
+                    marginBottom: '12px',
+                    fontWeight: '600'
+                  }}>
+                    Aucun surveillant assigné
+                  </p>
+                  <p style={{ 
+                    color: '#6b7280', 
+                    fontSize: '15px',
+                    lineHeight: 1.5,
+                    maxWidth: '400px',
+                    margin: '0 auto'
+                  }}>
+                    Au moins un surveillant certifié est obligatoire selon les réglementations canadiennes.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {(permitData.attendants || []).map((attendant: any, index: number) => (
+                    <div key={attendant.id} style={{
+                      backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                      borderRadius: '12px',
+                      padding: isMobile ? '16px' : '20px',
+                      border: '1px solid rgba(107, 114, 128, 0.3)'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '16px'
+                      }}>
+                        <h4 style={{ 
+                          color: '#d1d5db', 
+                          fontSize: isMobile ? '16px' : '18px', 
+                          fontWeight: '700',
+                          margin: 0
+                        }}>
+                          👁️ Surveillant #{index + 1}
+                        </h4>
+                        <button
+                          onClick={() => {
+                            const updatedAttendants = (permitData.attendants || []).filter((a: any) => a.id !== attendant.id);
+                            updatePermitData({ attendants: updatedAttendants });
+                          }}
+                          style={{
+                            backgroundColor: 'rgba(220, 38, 38, 0.8)',
+                            border: '1px solid #ef4444',
+                            borderRadius: '6px',
+                            padding: '8px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: '32px',
+                            minHeight: '32px',
+                            color: 'white'
+                          }}
+                          title="Supprimer ce surveillant"
+                        >
+                          <Trash2 style={{ width: '16px', height: '16px' }} />
+                        </button>
+                      </div>
+                      
+                      <div style={styles.grid2}>
+                        <div>
+                          <label style={styles.label}>Nom complet *</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Marie Dubois"
+                            value={attendant.name}
+                            onChange={(e) => {
+                              const updatedAttendants = (permitData.attendants || []).map((a: any) =>
+                                a.id === attendant.id ? { ...a, name: e.target.value } : a
+                              );
+                              updatePermitData({ attendants: updatedAttendants });
+                            }}
+                            style={styles.input}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label style={styles.label}>Compagnie/Organisation *</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Sécurité XYZ Ltée"
+                            value={attendant.company}
+                            onChange={(e) => {
+                              const updatedAttendants = (permitData.attendants || []).map((a: any) =>
+                                a.id === attendant.id ? { ...a, company: e.target.value } : a
+                              );
+                              updatePermitData({ attendants: updatedAttendants });
+                            }}
+                            style={styles.input}
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      <div style={styles.grid2}>
+                        <div>
+                          <label style={styles.label}>Date de signature *</label>
+                          <input
+                            type="date"
+                            value={attendant.signature_date}
+                            onChange={(e) => {
+                              const updatedAttendants = (permitData.attendants || []).map((a: any) =>
+                                a.id === attendant.id ? { ...a, signature_date: e.target.value } : a
+                              );
+                              updatePermitData({ attendants: updatedAttendants });
+                            }}
+                            style={styles.input}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label style={styles.label}>Heure de signature *</label>
+                          <input
+                            type="time"
+                            value={attendant.signature_time}
+                            onChange={(e) => {
+                              const updatedAttendants = (permitData.attendants || []).map((a: any) =>
+                                a.id === attendant.id ? { ...a, signature_time: e.target.value } : a
+                              );
+                              updatePermitData({ attendants: updatedAttendants });
+                            }}
+                            style={styles.input}
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Formation et certification */}
+                      <div style={{ marginTop: '16px' }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px',
+                          backgroundColor: attendant.training_valid ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                          borderRadius: '8px',
+                          border: `1px solid ${attendant.training_valid ? '#10b981' : '#f59e0b'}`
+                        }}>
+                          <input
+                            type="checkbox"
+                            id={`training_${attendant.id}`}
+                            checked={attendant.training_valid || false}
+                            onChange={(e) => {
+                              const updatedAttendants = (permitData.attendants || []).map((a: any) =>
+                                a.id === attendant.id ? { ...a, training_valid: e.target.checked } : a
+                              );
+                              updatePermitData({ attendants: updatedAttendants });
+                            }}
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              accentColor: '#10b981'
+                            }}
+                          />
+                          <label 
+                            htmlFor={`training_${attendant.id}`}
+                            style={{
+                              color: attendant.training_valid ? '#86efac' : '#fde047',
+                              fontSize: '15px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              flex: 1
+                            }}
+                          >
+                            🎓 <strong>FORMATION À JOUR</strong> : Surveillant espace clos certifié (CSA Z1006), premiers soins, RCR *
+                          </label>
+                        </div>
+                        
+                        <div style={{ marginTop: '12px' }}>
+                          <label style={styles.label}>Expiration certification</label>
+                          <input
+                            type="date"
+                            value={attendant.certification_expiry || ''}
+                            onChange={(e) => {
+                              const updatedAttendants = (permitData.attendants || []).map((a: any) =>
+                                a.id === attendant.id ? { ...a, certification_expiry: e.target.value } : a
+                              );
+                              updatePermitData({ attendants: updatedAttendants });
+                            }}
+                            style={styles.input}
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Signature électronique */}
+                      <div style={{ marginTop: '16px' }}>
+                        <label style={styles.label}>Certification et Signature Électronique *</label>
+                        <div style={{
+                          border: '2px solid #059669',
+                          borderRadius: '8px',
+                          padding: '16px',
+                          backgroundColor: 'rgba(5, 150, 105, 0.05)'
+                        }}>
+                          {!attendant.signature ? (
+                            <div>
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '12px',
+                                marginBottom: '16px',
+                                padding: '12px',
+                                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                                borderRadius: '6px'
+                              }}>
+                                <input
+                                  type="checkbox"
+                                  id={`attendant_cert_${attendant.id}`}
+                                  checked={attendant.certified || false}
+                                  onChange={(e) => {
+                                    const updatedAttendants = (permitData.attendants || []).map((a: any) =>
+                                      a.id === attendant.id ? { ...a, certified: e.target.checked } : a
+                                    );
+                                    updatePermitData({ attendants: updatedAttendants });
+                                  }}
+                                  style={{
+                                    width: '18px',
+                                    height: '18px',
+                                    marginTop: '2px',
+                                    accentColor: '#059669'
+                                  }}
+                                />
+                                <label 
+                                  htmlFor={`attendant_cert_${attendant.id}`}
+                                  style={{
+                                    color: '#d1d5db',
+                                    fontSize: '13px',
+                                    lineHeight: 1.5,
+                                    cursor: 'pointer',
+                                    flex: 1
+                                  }}
+                                >
+                                  <strong>Je certifie :</strong> Posséder la formation surveillant espace clos, maintenir la surveillance continue, 
+                                  utiliser la communication bidirectionnelle, et ordonner l'évacuation si nécessaire.
+                                </label>
+                              </div>
+                              
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (!attendant.certified) {
+                                    alert('⚠️ Vous devez d\'abord cocher la case de certification.');
+                                    return;
+                                  }
+                                  const signature = prompt('Veuillez taper votre nom complet pour signer:');
+                                  if (signature && signature.trim()) {
+                                    const now = new Date();
+                                    const updatedAttendants = (permitData.attendants || []).map((a: any) =>
+                                      a.id === attendant.id ? { 
+                                        ...a, 
+                                        signature: signature.trim(),
+                                        signature_timestamp: now.toISOString(),
+                                        signature_time_precise: now.toLocaleString('fr-CA', {
+                                          year: 'numeric',
+                                          month: '2-digit',
+                                          day: '2-digit',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                          second: '2-digit',
+                                          timeZoneName: 'short'
+                                        })
+                                      } : a
+                                    );
+                                    updatePermitData({ attendants: updatedAttendants });
+                                  }
+                                }}
+                                disabled={!attendant.certified}
+                                style={{
+                                  ...styles.button,
+                                  ...(attendant.certified ? styles.buttonSuccess : styles.buttonSecondary),
+                                  justifyContent: 'center',
+                                  fontSize: '14px',
+                                  opacity: attendant.certified ? 1 : 0.5,
+                                  cursor: attendant.certified ? 'pointer' : 'not-allowed'
+                                }}
+                              >
+                                <PenTool style={{ width: '16px', height: '16px' }} />
+                                {attendant.certified ? 'Signer' : 'Certification Requise'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ textAlign: 'center' }}>
+                              <CheckCircle style={{ 
+                                width: '32px', 
+                                height: '32px', 
+                                color: '#10b981', 
+                                margin: '0 auto 8px'
+                              }} />
+                              <div style={{ 
+                                fontSize: '18px', 
+                                fontFamily: 'cursive', 
+                                color: '#10b981', 
+                                marginBottom: '4px',
+                                fontWeight: '600'
+                              }}>
+                                {attendant.signature}
+                              </div>
+                              <div style={{ 
+                                color: '#86efac', 
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                marginBottom: '4px'
+                              }}>
+                                ✅ SURVEILLANT CERTIFIÉ
+                              </div>
+                              <div style={{ 
+                                color: '#6ee7b7', 
+                                fontSize: '11px',
+                                fontFamily: 'JetBrains Mono, monospace'
+                              }}>
+                                {attendant.signature_time_precise}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Section Entrants */}
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>
+                <LogIn style={{ width: '20px', height: '20px' }} />
+                👷 Personnel Entrant
+                <button
+                  onClick={() => {
+                    const newEntrant = {
+                      id: `entrant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                      name: '',
+                      company: '',
+                      signature_date: new Date().toISOString().split('T')[0],
+                      signature_time: new Date().toTimeString().slice(0, 5),
+                      signature: '',
+                      signature_timestamp: '',
+                      entry_time: '',
+                      exit_time: '',
+                      status: 'outside', // 'inside' or 'outside'
+                      training_valid: false,
+                      certification_expiry: ''
+                    };
+                    const currentEntrants = permitData.entrants || [];
+                    updatePermitData({ entrants: [...currentEntrants, newEntrant] });
+                  }}
+                  style={{
+                    ...styles.button,
+                    ...styles.buttonPrimary,
+                    width: 'auto',
+                    padding: isMobile ? '8px 12px' : '10px 16px',
+                    fontSize: '14px',
+                    minHeight: 'auto',
+                    marginLeft: 'auto'
+                  }}
+                >
+                  <Plus style={{ width: '16px', height: '16px' }} />
+                  Ajouter Entrant
+                </button>
+              </h3>
+              
+              <div style={{ 
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '12px',
+                padding: isMobile ? '16px' : '20px',
+                marginBottom: '20px',
+                border: '1px solid rgba(107, 114, 128, 0.3)'
+              }}>
+                <p style={{ 
+                  color: '#d1d5db', 
+                  fontSize: '15px',
+                  lineHeight: 1.6,
+                  margin: '0 0 12px 0',
+                  fontWeight: '600'
+                }}>
+                  👷 <strong>RESTRICTIONS</strong> : Âge minimum 18 ans, formation obligatoire, harnais de sécurité classe E, communication bidirectionnelle.
+                </p>
+                <p style={{ 
+                  color: '#9ca3af', 
+                  fontSize: '14px',
+                  margin: 0,
+                  fontStyle: 'italic'
+                }}>
+                  ⏱️ <strong>Suivi temporel</strong> : Horodatage automatique entrée/sortie, durée maximale selon province (généralement 8h).
+                </p>
+              </div>
+              
+              {(permitData.entrants || []).length === 0 ? (
+                <div style={{
+                  padding: isMobile ? '40px 20px' : '56px 32px',
+                  textAlign: 'center',
+                  backgroundColor: 'rgba(17, 24, 39, 0.5)',
+                  borderRadius: '12px',
+                  border: '2px dashed #6b7280'
+                }}>
+                  <LogIn style={{ 
+                    width: isMobile ? '56px' : '72px', 
+                    height: isMobile ? '56px' : '72px', 
+                    margin: '0 auto 20px', 
+                    color: '#6b7280'
+                  }} />
+                  <p style={{ 
+                    color: '#9ca3af', 
+                    fontSize: isMobile ? '18px' : '20px', 
+                    marginBottom: '12px',
+                    fontWeight: '600'
+                  }}>
+                    Aucun entrant enregistré
+                  </p>
+                  <p style={{ 
+                    color: '#6b7280', 
+                    fontSize: '15px',
+                    lineHeight: 1.5,
+                    maxWidth: '400px',
+                    margin: '0 auto'
+                  }}>
+                    Ajoutez le personnel autorisé à entrer dans l'espace clos.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {(permitData.entrants || []).map((entrant: any, index: number) => (
+                    <div key={entrant.id} style={{
+                      backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                      borderRadius: '12px',
+                      padding: isMobile ? '16px' : '20px',
+                      border: `2px solid ${entrant.status === 'inside' ? '#ef4444' : '#10b981'}`,
+                      boxShadow: entrant.status === 'inside' ? '0 0 20px rgba(239, 68, 68, 0.3)' : 'none'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '16px',
+                        flexDirection: isMobile ? 'column' : 'row',
+                        gap: isMobile ? '12px' : '0'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <h4 style={{ 
+                            color: '#d1d5db', 
+                            fontSize: isMobile ? '16px' : '18px', 
+                            fontWeight: '700',
+                            margin: 0
+                          }}>
+                            👷 Entrant #{index + 1}
+                          </h4>
+                          <span style={{
+                            padding: '4px 12px',
+                            borderRadius: '16px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            backgroundColor: entrant.status === 'inside' ? '#ef4444' : '#10b981',
+                            color: 'white',
+                            animation: entrant.status === 'inside' ? 'pulse 2s infinite' : 'none'
+                          }}>
+                            {entrant.status === 'inside' ? '🔴 À L\'INTÉRIEUR' : '🟢 À L\'EXTÉRIEUR'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const updatedEntrants = (permitData.entrants || []).filter((e: any) => e.id !== entrant.id);
+                            updatePermitData({ entrants: updatedEntrants });
+                          }}
+                          style={{
+                            backgroundColor: 'rgba(220, 38, 38, 0.8)',
+                            border: '1px solid #ef4444',
+                            borderRadius: '6px',
+                            padding: '8px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: '32px',
+                            minHeight: '32px',
+                            color: 'white'
+                          }}
+                          title="Supprimer cet entrant"
+                        >
+                          <Trash2 style={{ width: '16px', height: '16px' }} />
+                        </button>
+                      </div>
+                      
+                      <div style={styles.grid2}>
+                        <div>
+                          <label style={styles.label}>Nom complet *</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Pierre Lavoie"
+                            value={entrant.name}
+                            onChange={(e) => {
+                              const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
+                                ent.id === entrant.id ? { ...ent, name: e.target.value } : ent
+                              );
+                              updatePermitData({ entrants: updatedEntrants });
+                            }}
+                            style={styles.input}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label style={styles.label}>Compagnie/Organisation *</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Construction DEF Inc."
+                            value={entrant.company}
+                            onChange={(e) => {
+                              const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
+                                ent.id === entrant.id ? { ...ent, company: e.target.value } : ent
+                              );
+                              updatePermitData({ entrants: updatedEntrants });
+                            }}
+                            style={styles.input}
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Contrôles d'entrée/sortie */}
+                      <div style={{
+                        marginTop: '16px',
+                        padding: '16px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(107, 114, 128, 0.3)'
+                      }}>
+                        <h5 style={{
+                          color: '#d1d5db',
+                          fontSize: '16px',
+                          fontWeight: '700',
+                          marginBottom: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}>
+                          <Timer style={{ width: '18px', height: '18px' }} />
+                          Contrôle Entrée/Sortie
+                        </h5>
+                        
+                        <div style={styles.grid2}>
+                          <button
+                            onClick={() => {
+                              const now = new Date();
+                              const timeString = now.toTimeString().slice(0, 5);
+                              const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
+                                ent.id === entrant.id ? { 
+                                  ...ent, 
+                                  entry_time: timeString,
+                                  status: 'inside'
+                                } : ent
+                              );
+                              updatePermitData({ entrants: updatedEntrants });
+                            }}
+                            style={{
+                              ...styles.button,
+                              backgroundColor: entrant.status === 'inside' ? '#6b7280' : '#059669',
+                              color: 'white',
+                              padding: '12px',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              cursor: entrant.status === 'inside' ? 'not-allowed' : 'pointer'
+                            }}
+                            disabled={entrant.status === 'inside'}
+                          >
+                            <LogIn style={{ width: '16px', height: '16px' }} />
+                            {entrant.entry_time ? `Entré: ${entrant.entry_time}` : 'Marquer Entrée'}
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              const now = new Date();
+                              const timeString = now.toTimeString().slice(0, 5);
+                              const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
+                                ent.id === entrant.id ? { 
+                                  ...ent, 
+                                  exit_time: timeString,
+                                  status: 'outside'
+                                } : ent
+                              );
+                              updatePermitData({ entrants: updatedEntrants });
+                            }}
+                            style={{
+                              ...styles.button,
+                              backgroundColor: entrant.status === 'outside' ? '#6b7280' : '#dc2626',
+                              color: 'white',
+                              padding: '12px',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              cursor: entrant.status === 'outside' ? 'not-allowed' : 'pointer'
+                            }}
+                            disabled={entrant.status === 'outside'}
+                          >
+                            <LogOut style={{ width: '16px', height: '16px' }} />
+                            {entrant.exit_time ? `Sorti: ${entrant.exit_time}` : 'Marquer Sortie'}
+                          </button>
+                        </div>
+                        
+                        {entrant.entry_time && entrant.exit_time && (
+                          <div style={{
+                            marginTop: '12px',
+                            padding: '8px 12px',
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            borderRadius: '6px',
+                            border: '1px solid #3b82f6',
+                            textAlign: 'center'
+                          }}>
+                            <span style={{ color: '#93c5fd', fontSize: '14px', fontWeight: '600' }}>
+                              ⏱️ Durée totale: {(() => {
+                                const entry = new Date(`2000-01-01T${entrant.entry_time}:00`);
+                                const exit = new Date(`2000-01-01T${entrant.exit_time}:00`);
+                                const diffMs = exit.getTime() - entry.getTime();
+                                const diffMins = Math.floor(diffMs / (1000 * 60));
+                                const hours = Math.floor(diffMins / 60);
+                                const minutes = diffMins % 60;
+                                return `${hours}h ${minutes}min`;
+                              })()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Formation et certification entrant */}
+                      <div style={{ marginTop: '16px' }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px',
+                          backgroundColor: entrant.training_valid ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                          borderRadius: '8px',
+                          border: `1px solid ${entrant.training_valid ? '#10b981' : '#f59e0b'}`
+                        }}>
+                          <input
+                            type="checkbox"
+                            id={`entrant_training_${entrant.id}`}
+                            checked={entrant.training_valid || false}
+                            onChange={(e) => {
+                              const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
+                                ent.id === entrant.id ? { ...ent, training_valid: e.target.checked } : ent
+                              );
+                              updatePermitData({ entrants: updatedEntrants });
+                            }}
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              accentColor: '#10b981'
+                            }}
+                          />
+                          <label 
+                            htmlFor={`entrant_training_${entrant.id}`}
+                            style={{
+                              color: entrant.training_valid ? '#86efac' : '#fde047',
+                              fontSize: '15px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              flex: 1
+                            }}
+                          >
+                            🎓 <strong>FORMATION À JOUR</strong> : Entrant espace clos certifié, EPI, communication d'urgence *
+                          </label>
+                        </div>
+                      </div>
+                      
+                      {/* Signature électronique entrant */}
+                      <div style={{ marginTop: '16px' }}>
+                        <label style={styles.label}>Certification et Signature Électronique *</label>
+                        <div style={{
+                          border: '2px solid #3b82f6',
+                          borderRadius: '8px',
+                          padding: '16px',
+                          backgroundColor: 'rgba(59, 130, 246, 0.05)'
+                        }}>
+                          {!entrant.signature ? (
+                            <div>
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '12px',
+                                marginBottom: '16px',
+                                padding: '12px',
+                                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                                borderRadius: '6px'
+                              }}>
+                                <input
+                                  type="checkbox"
+                                  id={`entrant_cert_${entrant.id}`}
+                                  checked={entrant.certified || false}
+                                  onChange={(e) => {
+                                    const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
+                                      ent.id === entrant.id ? { ...ent, certified: e.target.checked } : ent
+                                    );
+                                    updatePermitData({ entrants: updatedEntrants });
+                                  }}
+                                  style={{
+                                    width: '18px',
+                                    height: '18px',
+                                    marginTop: '2px',
+                                    accentColor: '#3b82f6'
+                                  }}
+                                />
+                                <label 
+                                  htmlFor={`entrant_cert_${entrant.id}`}
+                                  style={{
+                                    color: '#d1d5db',
+                                    fontSize: '13px',
+                                    lineHeight: 1.5,
+                                    cursor: 'pointer',
+                                    flex: 1
+                                  }}
+                                >
+                                  <strong>Je certifie :</strong> Avoir reçu la formation entrant espace clos, porter l'équipement de protection requis, 
+                                  maintenir la communication avec le surveillant, et évacuer immédiatement si ordonné.
+                                </label>
+                              </div>
+                              
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (!entrant.certified) {
+                                    alert('⚠️ Vous devez d\'abord cocher la case de certification.');
+                                    return;
+                                  }
+                                  const signature = prompt('Veuillez taper votre nom complet pour signer:');
+                                  if (signature && signature.trim()) {
+                                    const now = new Date();
+                                    const updatedEntrants = (permitData.entrants || []).map((ent: any) =>
+                                      ent.id === entrant.id ? { 
+                                        ...ent, 
+                                        signature: signature.trim(),
+                                        signature_timestamp: now.toISOString(),
+                                        signature_time_precise: now.toLocaleString('fr-CA', {
+                                          year: 'numeric',
+                                          month: '2-digit',
+                                          day: '2-digit',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                          second: '2-digit',
+                                          timeZoneName: 'short'
+                                        })
+                                      } : ent
+                                    );
+                                    updatePermitData({ entrants: updatedEntrants });
+                                  }
+                                }}
+                                disabled={!entrant.certified}
+                                style={{
+                                  ...styles.button,
+                                  ...(entrant.certified ? styles.buttonPrimary : styles.buttonSecondary),
+                                  justifyContent: 'center',
+                                  fontSize: '14px',
+                                  opacity: entrant.certified ? 1 : 0.5,
+                                  cursor: entrant.certified ? 'pointer' : 'not-allowed'
+                                }}
+                              >
+                                <PenTool style={{ width: '16px', height: '16px' }} />
+                                {entrant.certified ? 'Signer' : 'Certification Requise'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ textAlign: 'center' }}>
+                              <CheckCircle style={{ 
+                                width: '32px', 
+                                height: '32px', 
+                                color: '#3b82f6', 
+                                margin: '0 auto 8px'
+                              }} />
+                              <div style={{ 
+                                fontSize: '18px', 
+                                fontFamily: 'cursive', 
+                                color: '#3b82f6', 
+                                marginBottom: '4px',
+                                fontWeight: '600'
+                              }}>
+                                {entrant.signature}
+                              </div>
+                              <div style={{ 
+                                color: '#93c5fd', 
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                marginBottom: '4px'
+                              }}>
+                                ✅ ENTRANT CERTIFIÉ
+                              </div>
+                              <div style={{ 
+                                color: '#bfdbfe', 
+                                fontSize: '11px',
+                                fontFamily: 'JetBrains Mono, monospace'
+                              }}>
+                                {entrant.signature_time_precise}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Section Équipements - Check-list */}
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>
+                <Shield style={{ width: '20px', height: '20px' }} />
+                🛠️ Contrôle Équipements Obligatoires
+                <button
+                  onClick={() => {
+                    const newEquipment = {
+                      id: `equipment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                      name: '',
+                      required: true,
+                      checked_in: false,
+                      checked_out: false,
+                      condition: 'good', // 'good', 'fair', 'poor'
+                      serial_number: '',
+                      last_inspection: ''
+                    };
+                    const currentEquipments = permitData.equipment_checklist || [];
+                    updatePermitData({ equipment_checklist: [...currentEquipments, newEquipment] });
+                  }}
+                  style={{
+                    ...styles.button,
+                    ...styles.buttonPrimary,
+                    width: 'auto',
+                    padding: isMobile ? '8px 12px' : '10px 16px',
+                    fontSize: '14px',
+                    minHeight: 'auto',
+                    marginLeft: 'auto'
+                  }}
+                >
+                  <Plus style={{ width: '16px', height: '16px' }} />
+                  Ajouter Équipement
+                </button>
+              </h3>
+              
+              <div style={{ 
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '12px',
+                padding: isMobile ? '16px' : '20px',
+                marginBottom: '20px',
+                border: '1px solid rgba(107, 114, 128, 0.3)'
+              }}>
+                <p style={{ 
+                  color: '#d1d5db', 
+                  fontSize: '15px',
+                  lineHeight: 1.6,
+                  margin: '0 0 12px 0',
+                  fontWeight: '600'
+                }}>
+                  🛠️ <strong>ÉQUIPEMENTS OBLIGATOIRES</strong> : Détecteur 4 gaz, harnais classe E, ligne de vie, ARA, communication bidirectionnelle.
+                </p>
+                <p style={{ 
+                  color: '#9ca3af', 
+                  fontSize: '14px',
+                  margin: 0,
+                  fontStyle: 'italic'
+                }}>
+                  ✅ <strong>Contrôle d'état</strong> : Inspection avant/après utilisation, certification à jour, traçabilité des équipements.
+                </p>
+              </div>
+              
+              {/* Équipements obligatoires prédéfinis */}
+              <div style={{ marginBottom: '20px' }}>
+                <h5 style={{
+                  color: '#d1d5db',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  marginBottom: '16px'
+                }}>
+                  Équipements Réglementaires Obligatoires
+                </h5>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {[
+                    { id: 'gas_detector', name: '📊 Détecteur multi-gaz (O₂, LEL, H₂S, CO)', required: true },
+                    { id: 'harness', name: '🦺 Harnais de sécurité classe E', required: true },
+                    { id: 'lifeline', name: '⛓️ Ligne de vie et dispositif de récupération', required: true },
+                    { id: 'communication', name: '📻 Équipement communication bidirectionnelle', required: true },
+                    { id: 'scba', name: '🫁 Appareil respiratoire autonome (ARA)', required: true },
+                    { id: 'ventilation', name: '💨 Système de ventilation mécanique', required: true },
+                    { id: 'lighting', name: '💡 Éclairage intrinsèquement sécuritaire', required: true },
+                    { id: 'first_aid', name: '🏥 Trousse premiers soins et défibrillateur', required: true }
+                  ].map((equipment) => {
+                    const equipmentData = (permitData.mandatory_equipment || {})[equipment.id] || {
+                      checked_in: false,
+                      checked_out: false,
+                      condition: 'good',
+                      serial_number: '',
+                      last_inspection: ''
+                    };
+                    
+                    return (
+                      <div key={equipment.id} style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                        borderRadius: '8px',
+                        padding: '16px',
+                        border: `1px solid ${equipmentData.checked_in && equipmentData.checked_out ? '#10b981' : '#f59e0b'}`
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginBottom: '12px',
+                          flexDirection: isMobile ? 'column' : 'row',
+                          gap: isMobile ? '8px' : '0'
+                        }}>
+                          <span style={{
+                            color: '#d1d5db',
+                            fontSize: '15px',
+                            fontWeight: '600'
+                          }}>
+                            {equipment.name}
+                            {equipment.required && <span style={{ color: '#f87171' }}> *</span>}
+                          </span>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              onClick={() => {
+                                const updatedEquipment = {
+                                  ...equipmentData,
+                                  checked_in: !equipmentData.checked_in
+                                };
+                                updatePermitData({ 
+                                  mandatory_equipment: { 
+                                    ...permitData.mandatory_equipment, 
+                                    [equipment.id]: updatedEquipment 
+                                  }
+                                });
+                              }}
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                border: 'none',
+                                cursor: 'pointer',
+                                backgroundColor: equipmentData.checked_in ? '#059669' : '#6b7280',
+                                color: 'white'
+                              }}
+                            >
+                              {equipmentData.checked_in ? '✅ Entré' : '⬇️ Entrée'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                const updatedEquipment = {
+                                  ...equipmentData,
+                                  checked_out: !equipmentData.checked_out
+                                };
+                                updatePermitData({ 
+                                  mandatory_equipment: { 
+                                    ...permitData.mandatory_equipment, 
+                                    [equipment.id]: updatedEquipment 
+                                  }
+                                });
+                              }}
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                border: 'none',
+                                cursor: 'pointer',
+                                backgroundColor: equipmentData.checked_out ? '#dc2626' : '#6b7280',
+                                color: 'white'
+                              }}
+                            >
+                              {equipmentData.checked_out ? '✅ Sorti' : '⬆️ Sortie'}
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div style={styles.grid2}>
+                          <input
+                            type="text"
+                            placeholder="N° série / Identification"
+                            value={equipmentData.serial_number}
+                            onChange={(e) => {
+                              const updatedEquipment = {
+                                ...equipmentData,
+                                serial_number: e.target.value
+                              };
+                              updatePermitData({ 
+                                mandatory_equipment: { 
+                                  ...permitData.mandatory_equipment, 
+                                  [equipment.id]: updatedEquipment 
+                                }
+                              });
+                            }}
+                            style={{ ...styles.input, fontSize: '14px' }}
+                          />
+                          <select
+                            value={equipmentData.condition}
+                            onChange={(e) => {
+                              const updatedEquipment = {
+                                ...equipmentData,
+                                condition: e.target.value
+                              };
+                              updatePermitData({ 
+                                mandatory_equipment: { 
+                                  ...permitData.mandatory_equipment, 
+                                  [equipment.id]: updatedEquipment 
+                                }
+                              });
+                            }}
+                            style={{ ...styles.input, fontSize: '14px' }}
+                          >
+                            <option value="good">🟢 Bon état</option>
+                            <option value="fair">🟡 État acceptable</option>
+                            <option value="poor">🔴 À remplacer</option>
+                          </select>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              {/* Équipements additionnels */}
+              {(permitData.equipment_checklist || []).length > 0 && (
+                <div>
+                  <h5 style={{
+                    color: '#d1d5db',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    marginBottom: '16px'
+                  }}>
+                    Équipements Additionnels
+                  </h5>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {(permitData.equipment_checklist || []).map((equipment: any) => (
+                      <div key={equipment.id} style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                        borderRadius: '8px',
+                        padding: '16px',
+                        border: '1px solid rgba(107, 114, 128, 0.3)'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          marginBottom: '12px'
+                        }}>
+                          <input
+                            type="text"
+                            placeholder="Nom de l'équipement"
+                            value={equipment.name}
+                            onChange={(e) => {
+                              const updatedEquipments = (permitData.equipment_checklist || []).map((eq: any) =>
+                                eq.id === equipment.id ? { ...eq, name: e.target.value } : eq
+                              );
+                              updatePermitData({ equipment_checklist: updatedEquipments });
+                            }}
+                            style={{ ...styles.input, flex: 1 }}
+                          />
+                          <button
+                            onClick={() => {
+                              const updatedEquipments = (permitData.equipment_checklist || []).filter((eq: any) => eq.id !== equipment.id);
+                              updatePermitData({ equipment_checklist: updatedEquipments });
+                            }}
+                            style={{
+                              backgroundColor: 'rgba(220, 38, 38, 0.8)',
+                              border: '1px solid #ef4444',
+                              borderRadius: '6px',
+                              padding: '8px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '32px',
+                              minHeight: '32px',
+                              color: 'white'
+                            }}
+                            title="Supprimer cet équipement"
+                          >
+                            <Trash2 style={{ width: '16px', height: '16px' }} />
+                          </button>
+                        </div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              onClick={() => {
+                                const updatedEquipments = (permitData.equipment_checklist || []).map((eq: any) =>
+                                  eq.id === equipment.id ? { ...eq, checked_in: !eq.checked_in } : eq
+                                );
+                                updatePermitData({ equipment_checklist: updatedEquipments });
+                              }}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                border: 'none',
+                                cursor: 'pointer',
+                                backgroundColor: equipment.checked_in ? '#059669' : '#6b7280',
+                                color: 'white'
+                              }}
+                            >
+                              {equipment.checked_in ? '✅ Entré' : '⬇️ Entrée'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                const updatedEquipments = (permitData.equipment_checklist || []).map((eq: any) =>
+                                  eq.id === equipment.id ? { ...eq, checked_out: !eq.checked_out } : eq
+                                );
+                                updatePermitData({ equipment_checklist: updatedEquipments });
+                              }}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                border: 'none',
+                                cursor: 'pointer',
+                                backgroundColor: equipment.checked_out ? '#dc2626' : '#6b7280',
+                                color: 'white'
+                              }}
+                            >
+                              {equipment.checked_out ? '✅ Sorti' : '⬆️ Sortie'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {activeTab === 'emergency' && renderEmergencySection()}
       </div>
 
+      {/* Styles CSS pour les animations et optimisations mobile */}
       <style jsx>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }
@@ -4128,11 +4574,13 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         
+        /* Optimisations tactiles */
         button, input, select, textarea {
           -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
           touch-action: manipulation;
         }
         
+        /* Scrollbar personnalisée */
         ::-webkit-scrollbar {
           width: 8px;
         }
@@ -4151,6 +4599,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           background: rgba(156, 163, 175, 0.9);
         }
         
+        /* Amélioration de la lisibilité sur mobile */
         @media (max-width: 767px) {
           body {
             -webkit-text-size-adjust: 100%;
@@ -4162,6 +4611,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             box-sizing: border-box;
           }
           
+          /* Empêche le zoom lors du focus sur les inputs sur iOS */
           input[type="text"], input[type="number"], input[type="email"], 
           input[type="tel"], input[type="url"], input[type="password"], 
           input[type="date"], input[type="time"],
@@ -4182,6 +4632,7 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             padding: 12px !important;
           }
           
+          /* Navigation par onglets mobile */
           .mobile-tabs {
             overflow-x: auto;
             scrollbar-width: none;
@@ -4193,12 +4644,14 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           }
         }
         
+        /* Optimisation pour les écrans très petits */
         @media (max-width: 320px) {
           .container {
             padding: 4px !important;
           }
         }
         
+        /* Animation pour les éléments interactifs */
         @media (prefers-reduced-motion: no-preference) {
           * {
             transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
@@ -4207,9 +4660,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
       `}</style>
     </div>
   );
-};
-
-export default ConfinedSpacePermit;
 };
 
 export default ConfinedSpacePermit;
