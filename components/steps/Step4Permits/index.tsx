@@ -446,6 +446,9 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   const [selectedPermit, setSelectedPermit] = useState<string | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province as ProvinceCode || 'QC');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // État pour stocker le composant ConfinedSpace une fois chargé
+  const [confinedSpaceComponent, setConfinedSpaceComponent] = useState<React.ComponentType<any> | null>(null);
 
   // Générer les modules avec traductions selon la langue actuelle
   const PERMIT_MODULES = getPermitModules(language);
@@ -479,27 +482,17 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     });
   }, [language]);
 
-  // Fonction de chargement dynamique réactivée pour ConfinedSpace
+  // Fonction de chargement - Étape 1: Ajouter seulement l'état
   const handlePermitSelect = async (permitId: string) => {
     setSelectedPermit(permitId);
+    setIsLoading(true);
     
-    // Si c'est le permis ConfinedSpace, essayer de le charger dynamiquement
+    // Simulation de chargement pour tous les modules (pour le moment)
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setIsLoading(false);
+    
     if (permitId === 'confined-space') {
-      setIsLoading(true);
-      try {
-        // Import dynamique du module ConfinedSpace qui existe
-        const ConfinedSpaceModule = await import('./permits/ConfinedSpace/index');
-        console.log('✅ Module ConfinedSpace chargé avec succès');
-        // Le composant sera utilisé dans le rendu ci-dessous
-      } catch (error) {
-        console.log('⚠️ Erreur lors du chargement du module ConfinedSpace:', error);
-      }
-      setIsLoading(false);
-    } else {
-      // Simulation de chargement pour les autres modules
-      setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setIsLoading(false);
+      console.log('Module ConfinedSpace sélectionné - Étape 1: État ajouté');
     }
     
     console.log(`Permis sélectionné: ${permitId}`);
