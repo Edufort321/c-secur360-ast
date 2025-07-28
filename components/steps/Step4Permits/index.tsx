@@ -395,16 +395,30 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     return PERMIT_MODULES;
   });
 
-  // Fonction de chargement simulé (tous les modules sont en développement pour le moment)
+  // Fonction de chargement dynamique réactivée pour ConfinedSpace
   const handlePermitSelect = async (permitId: string) => {
     setSelectedPermit(permitId);
-    setIsLoading(true);
     
-    // Simulation de chargement pour UX
-    await new Promise(resolve => setTimeout(resolve, 800));
-    setIsLoading(false);
+    // Si c'est le permis ConfinedSpace, essayer de le charger dynamiquement
+    if (permitId === 'confined-space') {
+      setIsLoading(true);
+      try {
+        // Import dynamique du module ConfinedSpace qui existe
+        const ConfinedSpaceModule = await import('./permits/ConfinedSpace/index');
+        console.log('✅ Module ConfinedSpace chargé avec succès');
+        // Le composant sera utilisé dans le rendu ci-dessous
+      } catch (error) {
+        console.log('⚠️ Erreur lors du chargement du module ConfinedSpace:', error);
+      }
+      setIsLoading(false);
+    } else {
+      // Simulation de chargement pour les autres modules
+      setIsLoading(true);
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setIsLoading(false);
+    }
     
-    console.log(`Permis sélectionné: ${permitId} - affichage du fallback "en développement"`);
+    console.log(`Permis sélectionné: ${permitId}`);
   };
 
   const handleBackToSelection = () => {
@@ -432,7 +446,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     });
   };
 
-  // Si un permis est sélectionné, afficher le fallback (module en développement)
+  // Si un permis est sélectionné, afficher le composant approprié
   if (selectedPermit) {
     const permit = permits.find(p => p.id === selectedPermit);
     
@@ -467,7 +481,58 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
       );
     }
     
-    // Fallback pour tous les modules (en développement)
+    // Si c'est le permis ConfinedSpace, essayer de charger le composant
+    if (selectedPermit === 'confined-space') {
+      try {
+        // Import dynamique synchrone (le module a déjà été chargé)
+        const ConfinedSpaceModule = require('./permits/ConfinedSpace/index');
+        const ConfinedSpaceComponent = ConfinedSpaceModule.default || ConfinedSpaceModule;
+        
+        if (ConfinedSpaceComponent) {
+          return (
+            <div style={styles.container}>
+              {/* Header de retour */}
+              <div style={{ ...styles.card, marginBottom: '20px' }}>
+                <button
+                  onClick={handleBackToSelection}
+                  style={{
+                    ...styles.button,
+                    ...styles.buttonSecondary,
+                    width: 'auto',
+                    padding: isMobile ? '12px 16px' : '16px 20px',
+                    fontSize: isMobile ? '14px' : '16px'
+                  }}
+                >
+                  <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
+                  {texts.backToSelection}
+                </button>
+              </div>
+
+              {/* Composant ConfinedSpace */}
+              <ConfinedSpaceComponent
+                province={selectedProvince}
+                language={language}
+                onSave={(data: any) => {
+                  console.log('Permis sauvegardé:', data);
+                  updatePermitStatus(permit!.id, 'in-progress', 50);
+                }}
+                onSubmit={(data: any) => {
+                  console.log('Permis soumis:', data);
+                  updatePermitStatus(permit!.id, 'completed', 100);
+                  handleBackToSelection();
+                }}
+                onCancel={handleBackToSelection}
+                initialData={formData[`permit_${permit!.id}`] || {}}
+              />
+            </div>
+          );
+        }
+      } catch (error) {
+        console.log('Module ConfinedSpace non trouvé, affichage du fallback:', error);
+      }
+    }
+    
+    // Fallback pour les autres modules ou si ConfinedSpace échoue
     return (
       <div style={styles.container}>
         {/* Header de retour */}
