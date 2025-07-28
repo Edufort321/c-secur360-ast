@@ -721,7 +721,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
   // Mise à jour des données de permis
   const updatePermitData = useCallback((updates: any) => {
-    setPermitData(prev => ({
+    setPermitData((prev: any) => ({
       ...prev,
       ...updates
     }));
