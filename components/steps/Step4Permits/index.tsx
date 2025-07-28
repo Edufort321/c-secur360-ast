@@ -9,21 +9,17 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-// ✅ CORRECTION : Import dynamique conditionnel pour éviter les erreurs de build
-let ConfinedSpacePermit: React.ComponentType<{
-  province: any;
-  language: 'fr' | 'en';
-  onSave: (data: any) => void;
-  onSubmit: (data: any) => void;
-  onCancel: () => void;
-  initialData?: any;
-}> | null = null;
+// ✅ CORRECTION : Import dynamique Next.js compatible
+import dynamic from 'next/dynamic';
 
-try {
-  ConfinedSpacePermit = require('./permits/ConfinedSpace/index').default;
-} catch (error) {
-  console.log('ConfinedSpace module not found, using fallback');
-}
+// Import dynamique avec fallback pour éviter les erreurs de build
+const ConfinedSpacePermit = dynamic(
+  () => import('./permits/ConfinedSpace/index').catch(() => ({ default: null })),
+  { 
+    ssr: false,
+    loading: () => <div>Chargement du module...</div>
+  }
+);
 
 // =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -200,7 +196,7 @@ const PERMIT_MODULES: PermitModule[] = [
       'Photos géolocalisées',
       'Plan de sauvetage intégré'
     ],
-    component: ConfinedSpacePermit || undefined
+    component: ConfinedSpacePermit
   },
   {
     id: 'electrical-work',
@@ -418,7 +414,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   if (selectedPermit) {
     const permit = permits.find(p => p.id === selectedPermit);
     
-    if (permit?.component && ConfinedSpacePermit) {
+    if (permit?.component) {
       // Rendu du composant spécifique du permis
       const PermitComponent = permit.component as React.ComponentType<{
         province: ProvinceCode;
