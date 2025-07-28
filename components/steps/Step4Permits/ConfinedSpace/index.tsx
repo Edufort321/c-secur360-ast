@@ -297,11 +297,12 @@ interface RegulationData {
 }
 
 interface ConfinedSpaceProps {
-  permitData: any;
-  updatePermitData: (updates: any) => void;
-  isMobile: boolean;
+  province: ProvinceCode;
   language: 'fr' | 'en';
-  styles: any;
+  onSave: (data: any) => void;
+  onSubmit: (data: any) => void;
+  onCancel: () => void;
+  initialData?: any;
 }
 
 // =================== DONNÉES RÉGLEMENTAIRES PROVINCIALES ===================
@@ -620,17 +621,19 @@ const PROVINCIAL_REGULATIONS: Record<ProvinceCode, RegulationData> = {
 
 // =================== COMPOSANT PRINCIPAL ===================
 const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
-  permitData,
-  updatePermitData,
-  isMobile,
-  language,
-  styles
+  province = 'QC',
+  language = 'fr',
+  onSave,
+  onSubmit,
+  onCancel,
+  initialData = {}
 }) => {
 
   // =================== ÉTATS LOCAUX ===================
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry'>('site');
-  const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>('QC');
-  const [atmosphericReadings, setAtmosphericReadings] = useState<AtmosphericReading[]>([]);
+  const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province);
+  const [atmosphericReadings, setAtmosphericReadings] = useState<AtmosphericReading[]>(initialData.atmosphericReadings || []);
+  const [permitData, setPermitData] = useState(initialData);
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -649,7 +652,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         previous: "Précédent",
         next: "Suivant",
         save: "Enregistrer",
-        export: "Exporter PDF"
+        export: "Exporter PDF",
+        cancel: "Annuler",
+        submit: "Soumettre le Permis"
       },
       status: {
         draft: "Brouillon",
@@ -678,7 +683,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         previous: "Previous",
         next: "Next",
         save: "Save",
-        export: "Export PDF"
+        export: "Export PDF",
+        cancel: "Cancel",
+        submit: "Submit Permit"
       },
       status: {
         draft: "Draft",
@@ -712,6 +719,14 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
   }, [selectedProvince]);
 
+  // Mise à jour des données de permis
+  const updatePermitData = useCallback((updates: any) => {
+    setPermitData(prev => ({
+      ...prev,
+      ...updates
+    }));
+  }, []);
+
   // Synchronisation données avec parent
   const updateParentData = useCallback((section: string, data: any) => {
     updatePermitData({ [section]: data });
@@ -744,15 +759,48 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     setSaveStatus('saving');
     
     try {
-      // Simulation sauvegarde - À remplacer par appel API réel
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const dataToSave = {
+        ...permitData,
+        atmosphericReadings,
+        currentSection,
+        selectedProvince
+      };
       
+      await onSave(dataToSave);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (error) {
       console.error('Erreur sauvegarde:', error);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 3000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Soumission finale du permis
+  const submitPermit = async () => {
+    const allSectionsValid = ['site', 'rescue', 'atmospheric', 'registry'].every(validateSection);
+    
+    if (!allSectionsValid) {
+      alert(language === 'fr' ? 'Veuillez compléter toutes les sections avant la soumission.' : 'Please complete all sections before submission.');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const finalData = {
+        ...permitData,
+        atmosphericReadings,
+        status: 'completed',
+        submitted_at: new Date().toISOString(),
+        selectedProvince
+      };
+      
+      await onSubmit(finalData);
+    } catch (error) {
+      console.error('Erreur soumission:', error);
     } finally {
       setIsLoading(false);
     }
@@ -937,49 +985,70 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                 </span>
               </div>
               
-              {/* Bouton sauvegarde */}
-              <button
-                onClick={savePermitData}
-                disabled={isLoading}
-                style={{
-                  ...styles.button,
-                  ...styles.buttonSuccess,
-                  padding: '12px 20px',
-                  fontSize: '14px',
-                  minWidth: '120px',
-                  opacity: isLoading ? 0.7 : 1,
-                  cursor: isLoading ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {saveStatus === 'saving' ? (
-                  <>
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      border: '2px solid transparent',
-                      borderTop: '2px solid white',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }} />
-                    {texts.status.saving}
-                  </>
-                ) : saveStatus === 'saved' ? (
-                  <>
-                    <CheckCircle style={{ width: '16px', height: '16px' }} />
-                    {texts.status.saved}
-                  </>
-                ) : saveStatus === 'error' ? (
-                  <>
-                    <XCircle style={{ width: '16px', height: '16px' }} />
-                    {texts.status.error}
-                  </>
-                ) : (
-                  <>
-                    <Save style={{ width: '16px', height: '16px' }} />
-                    {texts.navigation.save}
-                  </>
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '12px', flexDirection: isMobile ? 'column' : 'row' }}>
+                <button
+                  onClick={savePermitData}
+                  disabled={isLoading}
+                  style={{
+                    ...styles.button,
+                    ...styles.buttonSuccess,
+                    padding: '12px 20px',
+                    fontSize: '14px',
+                    minWidth: '120px',
+                    opacity: isLoading ? 0.7 : 1,
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    width: 'auto'
+                  }}
+                >
+                  {saveStatus === 'saving' ? (
+                    <>
+                      <div style={{
+                        width: '16px',
+                        height: '16px',
+                        border: '2px solid transparent',
+                        borderTop: '2px solid white',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }} />
+                      {texts.status.saving}
+                    </>
+                  ) : saveStatus === 'saved' ? (
+                    <>
+                      <CheckCircle style={{ width: '16px', height: '16px' }} />
+                      {texts.status.saved}
+                    </>
+                  ) : saveStatus === 'error' ? (
+                    <>
+                      <XCircle style={{ width: '16px', height: '16px' }} />
+                      {texts.status.error}
+                    </>
+                  ) : (
+                    <>
+                      <Save style={{ width: '16px', height: '16px' }} />
+                      {texts.navigation.save}
+                    </>
+                  )}
+                </button>
+
+                {getOverallStatus() === 'completed' && (
+                  <button
+                    onClick={submitPermit}
+                    disabled={isLoading}
+                    style={{
+                      ...styles.button,
+                      ...styles.buttonPrimary,
+                      padding: '12px 20px',
+                      fontSize: '14px',
+                      minWidth: '140px',
+                      width: 'auto'
+                    }}
+                  >
+                    <Upload style={{ width: '16px', height: '16px' }} />
+                    {texts.navigation.submit}
+                  </button>
                 )}
-              </button>
+              </div>
             </div>
           </div>
           
@@ -1000,7 +1069,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               }}>
                 <div>
                   <span style={{ color: '#9ca3af', fontSize: '13px', display: 'block' }}>
-                    Numéro de permis
+                    {language === 'fr' ? 'Numéro de permis' : 'Permit Number'}
                   </span>
                   <span style={{ color: 'white', fontWeight: '700', fontSize: '15px' }}>
                     {permitData.permit_number}
@@ -1008,24 +1077,32 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                 </div>
                 <div>
                   <span style={{ color: '#9ca3af', fontSize: '13px', display: 'block' }}>
-                    Province
+                    {language === 'fr' ? 'Province' : 'Province'}
                   </span>
                   <span style={{ color: 'white', fontWeight: '700', fontSize: '15px' }}>
-                    {PROVINCIAL_REGULATIONS[selectedProvince].name}
+                    {PROVINCIAL_REGULATIONS[selectedProvince].authority} ({selectedProvince})
                   </span>
                 </div>
                 <div>
                   <span style={{ color: '#9ca3af', fontSize: '13px', display: 'block' }}>
-                    Date d'émission
+                    {language === 'fr' ? "Date d'émission" : 'Issue Date'}
                   </span>
                   <span style={{ color: 'white', fontWeight: '700', fontSize: '15px' }}>
-                    {permitData.issue_date ? new Date(permitData.issue_date).toLocaleString('fr-CA') : '-'}
+                    {permitData.issue_date ? new Date(permitData.issue_date).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA') : '-'}
                   </span>
                 </div>
               </div>
             </div>
           )}
         </div>
+
+        {/* CSS pour l'animation */}
+        <style jsx>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
 
       {/* Navigation des sections */}
@@ -1136,7 +1213,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             ...styles.button,
             ...styles.buttonSecondary,
             opacity: currentSection === 'site' ? 0.5 : 1,
-            cursor: currentSection === 'site' ? 'not-allowed' : 'pointer'
+            cursor: currentSection === 'site' ? 'not-allowed' : 'pointer',
+            width: 'auto'
           }}
         >
           <ChevronRight style={{ width: '18px', height: '18px', transform: 'rotate(180deg)' }} />
@@ -1164,25 +1242,41 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           ))}
         </div>
         
-        <button
-          onClick={() => {
-            const sections = ['site', 'rescue', 'atmospheric', 'registry'] as const;
-            const currentIndex = sections.indexOf(currentSection);
-            if (currentIndex < sections.length - 1) {
-              navigateToSection(sections[currentIndex + 1]);
-            }
-          }}
-          disabled={currentSection === 'registry'}
-          style={{
-            ...styles.button,
-            ...styles.buttonPrimary,
-            opacity: currentSection === 'registry' ? 0.5 : 1,
-            cursor: currentSection === 'registry' ? 'not-allowed' : 'pointer'
-          }}
-        >
-          {texts.navigation.next}
-          <ChevronRight style={{ width: '18px', height: '18px' }} />
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={onCancel}
+            style={{
+              ...styles.button,
+              ...styles.buttonSecondary,
+              width: 'auto',
+              padding: '12px 16px'
+            }}
+          >
+            <XCircle style={{ width: '16px', height: '16px' }} />
+            {texts.navigation.cancel}
+          </button>
+          
+          <button
+            onClick={() => {
+              const sections = ['site', 'rescue', 'atmospheric', 'registry'] as const;
+              const currentIndex = sections.indexOf(currentSection);
+              if (currentIndex < sections.length - 1) {
+                navigateToSection(sections[currentIndex + 1]);
+              }
+            }}
+            disabled={currentSection === 'registry'}
+            style={{
+              ...styles.button,
+              ...styles.buttonPrimary,
+              opacity: currentSection === 'registry' ? 0.5 : 1,
+              cursor: currentSection === 'registry' ? 'not-allowed' : 'pointer',
+              width: 'auto'
+            }}
+          >
+            {texts.navigation.next}
+            <ChevronRight style={{ width: '18px', height: '18px' }} />
+          </button>
+        </div>
       </div>
     </div>
   );
