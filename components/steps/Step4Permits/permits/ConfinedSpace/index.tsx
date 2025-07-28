@@ -3993,7 +3993,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
   // =================== RENDU PRINCIPAL DU COMPOSANT ===================
   return (
     <div style={styles.container}>
-      {/* Input caché pour capture photo */}
       <input 
         ref={fileInputRef} 
         type="file" 
@@ -4003,7 +4002,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         style={{ display: 'none' }} 
       />
       
-      {/* En-tête mobile sticky */}
       <div style={isMobile ? styles.mobileHeader : { marginBottom: '40px' }}>
         <div style={{ 
           display: 'flex', 
@@ -4065,7 +4063,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           </div>
         )}
         
-        {/* Boutons d'action optimisés mobile */}
         <div style={styles.mobileButtonGrid}>
           <button style={{
             ...styles.button,
@@ -4109,7 +4106,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
         {activeTab === 'emergency' && renderEmergencySection()}
       </div>
 
-      {/* Styles CSS pour les animations et optimisations mobile */}
       <style jsx>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }
@@ -4132,13 +4128,11 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         
-        /* Optimisations tactiles */
         button, input, select, textarea {
           -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
           touch-action: manipulation;
         }
         
-        /* Scrollbar personnalisée */
         ::-webkit-scrollbar {
           width: 8px;
         }
@@ -4157,7 +4151,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           background: rgba(156, 163, 175, 0.9);
         }
         
-        /* Amélioration de la lisibilité sur mobile */
         @media (max-width: 767px) {
           body {
             -webkit-text-size-adjust: 100%;
@@ -4169,7 +4162,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             box-sizing: border-box;
           }
           
-          /* Empêche le zoom lors du focus sur les inputs sur iOS */
           input[type="text"], input[type="number"], input[type="email"], 
           input[type="tel"], input[type="url"], input[type="password"], 
           input[type="date"], input[type="time"],
@@ -4190,7 +4182,6 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
             padding: 12px !important;
           }
           
-          /* Navigation par onglets mobile */
           .mobile-tabs {
             overflow-x: auto;
             scrollbar-width: none;
@@ -4202,14 +4193,12 @@ const ConfinedSpacePermit: React.FC<ConfinedSpacePermitProps> = ({
           }
         }
         
-        /* Optimisation pour les écrans très petits */
         @media (max-width: 320px) {
           .container {
             padding: 4px !important;
           }
         }
         
-        /* Animation pour les éléments interactifs */
         @media (prefers-reduced-motion: no-preference) {
           * {
             transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
