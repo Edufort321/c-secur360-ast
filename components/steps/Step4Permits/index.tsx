@@ -163,130 +163,195 @@ interface PermitModule {
 }
 
 // =================== CONFIGURATION DES MODULES DE PERMIS ===================
-const PERMIT_MODULES: PermitModule[] = [
-  {
-    id: 'confined-space',
-    name: 'Permis d\'Espace Clos',
-    description: 'Permis d\'entrée en espace clos avec tests atmosphériques et surveillance continue',
-    icon: Home,
-    iconEmoji: '🏠',
-    color: '#dc2626',
-    riskLevel: 'critical',
-    estimatedTime: 45,
-    status: 'available',
-    completionRate: 0,
-    regulations: ['RSST Art. 302-317', 'CSA Z1006', 'CNESST'],
-    features: [
-      'Tests atmosphériques 4-gaz',
-      'Surveillance Bluetooth temps réel',
-      'Timer réglementaire automatique',
-      'Signatures électroniques horodatées',
-      'Photos géolocalisées',
-      'Plan de sauvetage intégré'
-    ],
-    component: undefined
-  },
-  {
-    id: 'electrical-work',
-    name: 'Permis Travaux Électriques',
-    description: 'Permis pour travaux électriques avec consignation LOTO et vérification VAT',
-    icon: Zap,
-    iconEmoji: '⚡',
-    color: '#dc2626',
-    riskLevel: 'critical',
-    estimatedTime: 35,
-    status: 'available',
-    completionRate: 0,
-    regulations: ['CSA Z462', 'RSST Art. 185', 'NFPA 70E'],
-    features: [
-      'Consignation LOTO complète',
-      'Vérification absence tension (VAT)',
-      'Calcul énergie incidente arc',
-      'EPI arc-flash requis',
-      'Distances sécurité automatiques'
-    ]
-  },
-  {
-    id: 'excavation',
-    name: 'Permis d\'Excavation',
-    description: 'Permis pour travaux d\'excavation avec analyse sol et protection talus',
-    icon: Construction,
-    iconEmoji: '🏗️',
-    color: '#d97706',
-    riskLevel: 'high',
-    estimatedTime: 40,
-    status: 'available',
-    completionRate: 0,
-    regulations: ['RSST Art. 3.20', 'CSA Z271', 'Info-Excavation'],
-    features: [
-      'Localisation services publics',
-      'Analyse stabilité du sol',
-      'Calcul protection talus',
-      'Plan évacuation d\'urgence',
-      'Surveillance continue'
-    ]
-  },
-  {
-    id: 'height-work',
-    name: 'Permis Travail en Hauteur',
-    description: 'Permis pour travaux en hauteur avec protection antichute et plan sauvetage',
-    icon: Building,
-    iconEmoji: '🏢',
-    color: '#7c3aed',
-    riskLevel: 'critical',
-    estimatedTime: 50,
-    status: 'available',
-    completionRate: 0,
-    regulations: ['RSST Art. 347', 'CSA Z259', 'CNESST Hauteur'],
-    features: [
-      'Protection antichute complète',
-      'Points ancrage certifiés',
-      'Plan sauvetage en hauteur',
-      'Vérification météo',
-      'Équipe sauvetage sur site'
-    ]
-  },
-  {
-    id: 'hot-work',
-    name: 'Permis Travail à Chaud',
-    description: 'Permis pour soudage/coupage avec surveillance incendie et timer post-travaux',
-    icon: Flame,
-    iconEmoji: '🔥',
-    color: '#ea580c',
-    riskLevel: 'critical',
-    estimatedTime: 30,
-    status: 'available',
-    completionRate: 0,
-    regulations: ['NFPA 51B', 'RSST Art. 323', 'Code prévention incendie'],
-    features: [
-      'Surveillance incendie 60min post-travaux',
-      'Timer automatique réglementaire',
-      'Extincteurs spécialisés requis',
-      'Zone dégagement combustibles',
-      'Garde-feu qualifié'
-    ]
-  },
-  {
-    id: 'lifting',
-    name: 'Permis Opérations Levage',
-    description: 'Permis pour opérations de levage avec calcul charges et inspection équipements',
-    icon: Wrench,
-    iconEmoji: '🏗️',
-    color: '#059669',
-    riskLevel: 'high',
-    estimatedTime: 55,
-    status: 'available',
-    completionRate: 0,
-    regulations: ['ASME B30', 'CSA B335', 'RSST Art. 260-290'],
-    features: [
-      'Calcul charge de travail sécuritaire',
-      'Inspection pré-utilisation',
-      'Plan de levage détaillé',
-      'Signaleur certifié requis',
-      'Périmètre sécurité automatique'
-    ]
-  }
-];
+const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
+  const baseModules = [
+    {
+      id: 'confined-space',
+      name: language === 'en' ? 'Confined Space Entry Permit' : 'Permis d\'Espace Clos',
+      description: language === 'en' 
+        ? 'Confined space entry permit with atmospheric testing and continuous monitoring'
+        : 'Permis d\'entrée en espace clos avec tests atmosphériques et surveillance continue',
+      icon: Home,
+      iconEmoji: '🏠',
+      color: '#dc2626',
+      riskLevel: 'critical' as const,
+      estimatedTime: 45,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en' 
+        ? ['OHSA Confined Space', 'CSA Z1006', 'Provincial Regs']
+        : ['RSST Art. 302-317', 'CSA Z1006', 'CNESST'],
+      features: language === 'en' ? [
+        '4-gas atmospheric testing',
+        'Real-time Bluetooth monitoring',
+        'Automatic regulatory timer',
+        'Timestamped electronic signatures',
+        'Geolocated photos',
+        'Integrated rescue plan'
+      ] : [
+        'Tests atmosphériques 4-gaz',
+        'Surveillance Bluetooth temps réel',
+        'Timer réglementaire automatique',
+        'Signatures électroniques horodatées',
+        'Photos géolocalisées',
+        'Plan de sauvetage intégré'
+      ],
+      component: undefined
+    },
+    {
+      id: 'electrical-work',
+      name: language === 'en' ? 'Electrical Work Permit' : 'Permis Travaux Électriques',
+      description: language === 'en'
+        ? 'Electrical work permit with LOTO lockout and VAT verification'
+        : 'Permis pour travaux électriques avec consignation LOTO et vérification VAT',
+      icon: Zap,
+      iconEmoji: '⚡',
+      color: '#dc2626',
+      riskLevel: 'critical' as const,
+      estimatedTime: 35,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['CSA Z462', 'NFPA 70E', 'Provincial Electrical Code']
+        : ['CSA Z462', 'RSST Art. 185', 'NFPA 70E'],
+      features: language === 'en' ? [
+        'Complete LOTO lockout',
+        'Voltage absence testing (VAT)',
+        'Arc flash incident energy calculation',
+        'Required arc-flash PPE',
+        'Automatic safety distances'
+      ] : [
+        'Consignation LOTO complète',
+        'Vérification absence tension (VAT)',
+        'Calcul énergie incidente arc',
+        'EPI arc-flash requis',
+        'Distances sécurité automatiques'
+      ]
+    },
+    {
+      id: 'excavation',
+      name: language === 'en' ? 'Excavation Permit' : 'Permis d\'Excavation',
+      description: language === 'en'
+        ? 'Excavation work permit with soil analysis and slope protection'
+        : 'Permis pour travaux d\'excavation avec analyse sol et protection talus',
+      icon: Construction,
+      iconEmoji: '🏗️',
+      color: '#d97706',
+      riskLevel: 'high' as const,
+      estimatedTime: 40,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['OHSA Excavation', 'CSA Z271', 'Call Before You Dig']
+        : ['RSST Art. 3.20', 'CSA Z271', 'Info-Excavation'],
+      features: language === 'en' ? [
+        'Public utilities location',
+        'Soil stability analysis',
+        'Slope protection calculation',
+        'Emergency evacuation plan',
+        'Continuous monitoring'
+      ] : [
+        'Localisation services publics',
+        'Analyse stabilité du sol',
+        'Calcul protection talus',
+        'Plan évacuation d\'urgence',
+        'Surveillance continue'
+      ]
+    },
+    {
+      id: 'height-work',
+      name: language === 'en' ? 'Work at Height Permit' : 'Permis Travail en Hauteur',
+      description: language === 'en'
+        ? 'Work at height permit with fall protection and rescue plan'
+        : 'Permis pour travaux en hauteur avec protection antichute et plan sauvetage',
+      icon: Building,
+      iconEmoji: '🏢',
+      color: '#7c3aed',
+      riskLevel: 'critical' as const,
+      estimatedTime: 50,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['OHSA Fall Protection', 'CSA Z259', 'Height Safety Regs']
+        : ['RSST Art. 347', 'CSA Z259', 'CNESST Hauteur'],
+      features: language === 'en' ? [
+        'Complete fall protection',
+        'Certified anchor points',
+        'Height rescue plan',
+        'Weather verification',
+        'On-site rescue team'
+      ] : [
+        'Protection antichute complète',
+        'Points ancrage certifiés',
+        'Plan sauvetage en hauteur',
+        'Vérification météo',
+        'Équipe sauvetage sur site'
+      ]
+    },
+    {
+      id: 'hot-work',
+      name: language === 'en' ? 'Hot Work Permit' : 'Permis Travail à Chaud',
+      description: language === 'en'
+        ? 'Hot work permit for welding/cutting with fire watch and post-work timer'
+        : 'Permis pour soudage/coupage avec surveillance incendie et timer post-travaux',
+      icon: Flame,
+      iconEmoji: '🔥',
+      color: '#ea580c',
+      riskLevel: 'critical' as const,
+      estimatedTime: 30,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['NFPA 51B', 'Fire Prevention Code', 'Provincial Fire Regs']
+        : ['NFPA 51B', 'RSST Art. 323', 'Code prévention incendie'],
+      features: language === 'en' ? [
+        '60min post-work fire watch',
+        'Automatic regulatory timer',
+        'Specialized fire extinguishers required',
+        'Combustible clearance zone',
+        'Qualified fire guard'
+      ] : [
+        'Surveillance incendie 60min post-travaux',
+        'Timer automatique réglementaire',
+        'Extincteurs spécialisés requis',
+        'Zone dégagement combustibles',
+        'Garde-feu qualifié'
+      ]
+    },
+    {
+      id: 'lifting',
+      name: language === 'en' ? 'Lifting Operations Permit' : 'Permis Opérations Levage',
+      description: language === 'en'
+        ? 'Lifting operations permit with load calculations and equipment inspection'
+        : 'Permis pour opérations de levage avec calcul charges et inspection équipements',
+      icon: Wrench,
+      iconEmoji: '🏗️',
+      color: '#059669',
+      riskLevel: 'high' as const,
+      estimatedTime: 55,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['ASME B30', 'CSA B335', 'Provincial Lifting Regs']
+        : ['ASME B30', 'CSA B335', 'RSST Art. 260-290'],
+      features: language === 'en' ? [
+        'Safe working load calculation',
+        'Pre-use inspection',
+        'Detailed lifting plan',
+        'Certified signaler required',
+        'Automatic safety perimeter'
+      ] : [
+        'Calcul charge de travail sécuritaire',
+        'Inspection pré-utilisation',
+        'Plan de levage détaillé',
+        'Signaleur certifié requis',
+        'Périmètre sécurité automatique'
+      ]
+    }
+  ];
+
+  return baseModules;
+};
 
 // =================== TRADUCTIONS ===================
 const getTexts = (language: 'fr' | 'en') => {
@@ -382,18 +447,37 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province as ProvinceCode || 'QC');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Générer les modules avec traductions selon la langue actuelle
+  const PERMIT_MODULES = getPermitModules(language);
+
   // Mettre à jour les statuts des permis selon les données sauvegardées
   const [permits, setPermits] = useState<PermitModule[]>(() => {
+    const modules = getPermitModules(language);
     if (formData.permits?.completed) {
-      return PERMIT_MODULES.map(permit => ({
+      return modules.map(permit => ({
         ...permit,
         status: formData.permits.completed.includes(permit.id) ? 'completed' : 
                 formData.permits.inProgress?.includes(permit.id) ? 'in-progress' : 'available',
         completionRate: formData.permits.completion?.[permit.id] || 0
       }));
     }
-    return PERMIT_MODULES;
+    return modules;
   });
+
+  // Mettre à jour les permits quand la langue change
+  React.useEffect(() => {
+    const updatedModules = getPermitModules(language);
+    setPermits(prevPermits => {
+      return updatedModules.map(module => {
+        const existingPermit = prevPermits.find(p => p.id === module.id);
+        return {
+          ...module,
+          status: existingPermit?.status || 'available',
+          completionRate: existingPermit?.completionRate || 0
+        };
+      });
+    });
+  }, [language]);
 
   // Fonction de chargement dynamique réactivée pour ConfinedSpace
   const handlePermitSelect = async (permitId: string) => {
@@ -481,58 +565,13 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
       );
     }
     
-    // Si c'est le permis ConfinedSpace, essayer de charger le composant
+    // Si c'est le permis ConfinedSpace, afficher un message spécial pour indiquer qu'il existe
     if (selectedPermit === 'confined-space') {
-      try {
-        // Import dynamique synchrone (le module a déjà été chargé)
-        const ConfinedSpaceModule = require('./permits/ConfinedSpace/index');
-        const ConfinedSpaceComponent = ConfinedSpaceModule.default || ConfinedSpaceModule;
-        
-        if (ConfinedSpaceComponent) {
-          return (
-            <div style={styles.container}>
-              {/* Header de retour */}
-              <div style={{ ...styles.card, marginBottom: '20px' }}>
-                <button
-                  onClick={handleBackToSelection}
-                  style={{
-                    ...styles.button,
-                    ...styles.buttonSecondary,
-                    width: 'auto',
-                    padding: isMobile ? '12px 16px' : '16px 20px',
-                    fontSize: isMobile ? '14px' : '16px'
-                  }}
-                >
-                  <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
-                  {texts.backToSelection}
-                </button>
-              </div>
-
-              {/* Composant ConfinedSpace */}
-              <ConfinedSpaceComponent
-                province={selectedProvince}
-                language={language}
-                onSave={(data: any) => {
-                  console.log('Permis sauvegardé:', data);
-                  updatePermitStatus(permit!.id, 'in-progress', 50);
-                }}
-                onSubmit={(data: any) => {
-                  console.log('Permis soumis:', data);
-                  updatePermitStatus(permit!.id, 'completed', 100);
-                  handleBackToSelection();
-                }}
-                onCancel={handleBackToSelection}
-                initialData={formData[`permit_${permit!.id}`] || {}}
-              />
-            </div>
-          );
-        }
-      } catch (error) {
-        console.log('Module ConfinedSpace non trouvé, affichage du fallback:', error);
-      }
+      // Pour le moment, afficher un message indiquant que le module existe mais n'est pas encore intégré
+      console.log('Module ConfinedSpace détecté - prêt pour intégration');
     }
     
-    // Fallback pour les autres modules ou si ConfinedSpace échoue
+    // Fallback pour tous les modules (y compris ConfinedSpace temporairement)
     return (
       <div style={styles.container}>
         {/* Header de retour */}
