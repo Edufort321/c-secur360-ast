@@ -35,7 +35,7 @@ const styles = {
   },
   button: {
     padding: isMobile ? '8px 12px' : '14px 24px',
-    borderRadius: ieMobile ? '6px' : '8px',
+    borderRadius: isMobile ? '6px' : '8px',
     fontWeight: '600',
     display: 'flex',
     alignItems: 'center',
