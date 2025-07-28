@@ -482,16 +482,17 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     });
   }, [language]);
 
-  // Fonction de chargement - Étape 2: Ajouter l'import dynamique
+  // Fonction de chargement - Étape 2 bis: Chemin d'import corrigé
   const handlePermitSelect = async (permitId: string) => {
     setSelectedPermit(permitId);
     setIsLoading(true);
     
-    // Tentative d'import pour ConfinedSpace (sans l'utiliser encore)
+    // Import avec le bon chemin pour ConfinedSpace
     if (permitId === 'confined-space') {
       try {
         console.log('🔄 Tentative de chargement ConfinedSpace...');
-        const ConfinedSpaceModule = await import('./permits/ConfinedSpace/index');
+        // Chemin corrigé : ./ConfinedSpace/index au lieu de ./permits/ConfinedSpace/index
+        const ConfinedSpaceModule = await import('./ConfinedSpace/index');
         console.log('✅ Module ConfinedSpace importé avec succès:', !!ConfinedSpaceModule.default);
         
         // Stocker le composant (sans l'utiliser dans le rendu encore)
@@ -507,7 +508,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     await new Promise(resolve => setTimeout(resolve, 800));
     setIsLoading(false);
     
-    console.log(`Permis sélectionné: ${permitId} - Étape 2: Import testé`);
+    console.log(`Permis sélectionné: ${permitId} - Étape 2 bis: Chemin corrigé`);
   };
 
   const handleBackToSelection = () => {
