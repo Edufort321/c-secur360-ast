@@ -10,13 +10,16 @@ import {
   Share2, Download, Send, Globe, QrCode
 } from 'lucide-react';
 
-// =================== INTERFACES TYPESCRIPT ===================
+// =================== INTERFACES TYPESCRIPT CORRIGÉES ===================
 interface SiteInformationProps {
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  permitData: any;
+  updatePermitData: (updates: any) => void;
+  selectedProvince: any;
+  PROVINCIAL_REGULATIONS: any;
+  isMobile: boolean;
   language: 'fr' | 'en';
-  tenant: string;
-  errors: any;
+  styles: any;
+  updateParentData: (section: string, data: any) => void;
 }
 
 interface ConfinedSpaceDetails {
@@ -368,25 +371,37 @@ const translations = {
     }
   }
 };
-// =================== COMPOSANT PRINCIPAL ===================
+// =================== COMPOSANT PRINCIPAL CORRIGÉ ===================
 const SiteInformation: React.FC<SiteInformationProps> = ({
-  formData,
-  onDataChange,
+  permitData,
+  updatePermitData,
+  selectedProvince,
+  PROVINCIAL_REGULATIONS,
+  isMobile,
   language,
-  tenant,
-  errors
+  styles,
+  updateParentData
 }) => {
   const t = translations[language];
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Mapping des props pour compatibilité
+  const formData = permitData;
+  const tenant = selectedProvince || 'QC';
+  const errors = {};
+  const onDataChange = (section: string, data: any) => {
+    updatePermitData({ [section]: data });
+    updateParentData(section, data);
+  };
   
   // =================== ÉTATS DU COMPOSANT ===================
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showPhotos, setShowPhotos] = useState(false);
   const [showPermitActions, setShowPermitActions] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [spacePhotos, setSpacePhotos] = useState<SpacePhoto[]>(formData.spacePhotos || []);
+  const [spacePhotos, setSpacePhotos] = useState<SpacePhoto[]>(permitData.spacePhotos || []);
   const [confinedSpaceDetails, setConfinedSpaceDetails] = useState<ConfinedSpaceDetails>(
-    formData.confinedSpaceDetails || {
+    permitData.confinedSpaceDetails || {
       spaceType: '',
       spaceCategory: '',
       spaceClassification: '',
@@ -433,9 +448,9 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     
     try {
       // Récupérer les données des autres onglets
-      const atmosphericTestingData = formData.atmosphericTesting || {};
-      const entryRegistryData = formData.entryRegistry || {};
-      const rescuePlanData = formData.rescuePlan || {};
+      const atmosphericTestingData = permitData.atmosphericTesting || {};
+      const entryRegistryData = permitData.entryRegistry || {};
+      const rescuePlanData = permitData.rescuePlan || {};
       
       const report: PermitReport = {
         siteInformation: confinedSpaceDetails,
@@ -443,9 +458,9 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         entryRegistry: entryRegistryData,
         rescuePlan: rescuePlanData,
         metadata: {
-          permitNumber: formData.projectNumber || `CS-${Date.now()}`,
+          permitNumber: permitData.projectNumber || `CS-${Date.now()}`,
           generatedAt: new Date().toISOString(),
-          generatedBy: formData.supervisor || 'Non spécifié',
+          generatedBy: permitData.supervisor || 'Non spécifié',
           tenant: tenant,
           language: language
         }
@@ -705,7 +720,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     setConfinedSpaceDetails(updatedDetails);
     onDataChange('confinedSpaceDetails', updatedDetails);
   };
-  // =================== RENDU DU COMPOSANT ===================
+ // =================== RENDU DU COMPOSANT ===================
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
       {/* =================== STYLES CSS INTÉGRÉS =================== */}
@@ -1038,7 +1053,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.projectNumber || ''}
+                value={permitData.projectNumber || ''}
                 onChange={(e) => handleInputChange('projectNumber', e.target.value)}
                 className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
                 placeholder="Ex: CS-2025-001"
@@ -1050,7 +1065,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                 {t.workLocation}
               </label>
               <textarea
-                value={formData.workLocation || ''}
+                value={permitData.workLocation || ''}
                 onChange={(e) => handleInputChange('workLocation', e.target.value)}
                 className="input-field w-full px-4 py-3 rounded-lg bg-white/50 h-20 resize-none"
                 placeholder="Adresse complète du site de travail"
@@ -1063,7 +1078,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.contractor || ''}
+                value={permitData.contractor || ''}
                 onChange={(e) => handleInputChange('contractor', e.target.value)}
                 className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
                 placeholder="Nom de l'entrepreneur"
@@ -1078,7 +1093,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.supervisor || ''}
+                value={permitData.supervisor || ''}
                 onChange={(e) => handleInputChange('supervisor', e.target.value)}
                 className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
                 placeholder="Nom du superviseur"
@@ -1093,7 +1108,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                 </label>
                 <input
                   type="date"
-                  value={formData.entryDate || new Date().toISOString().split('T')[0]}
+                  value={permitData.entryDate || new Date().toISOString().split('T')[0]}
                   onChange={(e) => handleInputChange('entryDate', e.target.value)}
                   className="input-field w-full px-3 py-3 rounded-lg bg-white/50 text-sm"
                 />
@@ -1106,7 +1121,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={formData.duration || ''}
+                  value={permitData.duration || ''}
                   onChange={(e) => handleInputChange('duration', e.target.value)}
                   className="input-field w-full px-3 py-3 rounded-lg bg-white/50 text-sm"
                   placeholder="Ex: 4 heures"
@@ -1122,7 +1137,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
               <input
                 type="number"
                 min="1"
-                value={formData.workerCount || ''}
+                value={permitData.workerCount || ''}
                 onChange={(e) => handleInputChange('workerCount', parseInt(e.target.value) || 0)}
                 className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
                 placeholder="Nombre de personnes"
@@ -1136,7 +1151,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
             {t.workDescription}
           </label>
           <textarea
-            value={formData.workDescription || ''}
+            value={permitData.workDescription || ''}
             onChange={(e) => handleInputChange('workDescription', e.target.value)}
             className="input-field w-full px-4 py-4 rounded-lg bg-white/50 h-32 resize-none"
             placeholder="Description détaillée des travaux à effectuer dans l'espace clos"
@@ -1233,7 +1248,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.spaceLocation || ''}
+                value={permitData.spaceLocation || ''}
                 onChange={(e) => handleInputChange('spaceLocation', e.target.value)}
                 className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
                 placeholder="Localisation précise de l'espace"
@@ -1247,7 +1262,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
             {t.spaceDescription}
           </label>
           <textarea
-            value={formData.spaceDescription || ''}
+            value={permitData.spaceDescription || ''}
             onChange={(e) => handleInputChange('spaceDescription', e.target.value)}
             className="input-field w-full px-4 py-3 rounded-lg bg-white/50 h-24 resize-none"
             placeholder="Description détaillée de l'espace clos, sa fonction, son état..."
