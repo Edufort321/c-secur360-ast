@@ -727,7 +727,6 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
   const [isGeneratingAST, setIsGeneratingAST] = useState(false);
   const [astNumber, setAstNumber] = useState(formData.astNumber || generateASTNumber());
   const [copied, setCopied] = useState(false);
-  const [lockoutPoints, setLockoutPoints] = useState<LockoutPoint[]>(formData.lockoutPoints || []);
   const [lockoutPhotos, setLockoutPhotos] = useState<LockoutPhoto[]>(formData.lockoutPhotos || []);
   const [confinedSpaceDetails, setConfinedSpaceDetails] = useState<ConfinedSpaceDetails>(
     formData.confinedSpaceDetails || {
@@ -801,49 +800,6 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
     }, 500);
   };
 
-  // Ajouter un point de verrouillage
-  const addLockoutPoint = () => {
-    const newPoint: LockoutPoint = {
-      id: `lockout_${Date.now()}`,
-      energyType: 'electrical',
-      equipmentName: '',
-      location: '',
-      lockType: '',
-      tagNumber: `TAG-${Math.floor(Math.random() * 1000000)}`,
-      isLocked: false,
-      verifiedBy: '',
-      verificationTime: '',
-      photos: [],
-      notes: '',
-      completedProcedures: []
-    };
-    
-    const updatedPoints = [...lockoutPoints, newPoint];
-    setLockoutPoints(updatedPoints);
-    onDataChange('lockoutPoints', updatedPoints);
-  };
-
-  // Supprimer un point de verrouillage
-  const deleteLockoutPoint = (pointId: string) => {
-    const updatedPoints = lockoutPoints.filter(point => point.id !== pointId);
-    setLockoutPoints(updatedPoints);
-    onDataChange('lockoutPoints', updatedPoints);
-    
-    // Supprimer aussi les photos associées
-    const updatedPhotos = lockoutPhotos.filter(photo => photo.lockoutPointId !== pointId);
-    setLockoutPhotos(updatedPhotos);
-    onDataChange('lockoutPhotos', updatedPhotos);
-  };
-
-  // Mettre à jour un point de verrouillage
-  const updateLockoutPoint = (pointId: string, updates: Partial<LockoutPoint>) => {
-    const updatedPoints = lockoutPoints.map(point =>
-      point.id === pointId ? { ...point, ...updates } : point
-    );
-    setLockoutPoints(updatedPoints);
-    onDataChange('lockoutPoints', updatedPoints);
-  };
-
   // Ajouter un point d'entrée à l'espace clos
   const addEntryPoint = () => {
     const newEntryPoint = {
@@ -865,7 +821,7 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
   };
 
   // Gestion des photos
-  const handlePhotoCapture = (category: string, lockoutPointId?: string) => {
+  const handlePhotoCapture = (category: string, pointId?: string) => {
     // Simulation de capture photo
     const newPhoto: LockoutPhoto = {
       id: `photo_${Date.now()}`,
@@ -873,7 +829,6 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
       caption: `Photo ${category} - ${new Date().toLocaleString()}`,
       category: category as any,
       timestamp: new Date().toISOString(),
-      lockoutPointId,
       location: 'GPS: 45.5017, -73.5673',
       measurements: category.includes('space') ? 'L:2.5m W:1.8m H:2.1m' : undefined
     };
@@ -881,12 +836,6 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
     const updatedPhotos = [...lockoutPhotos, newPhoto];
     setLockoutPhotos(updatedPhotos);
     onDataChange('lockoutPhotos', updatedPhotos);
-
-    if (lockoutPointId) {
-      updateLockoutPoint(lockoutPointId, {
-        photos: [...(lockoutPoints.find(p => p.id === lockoutPointId)?.photos || []), newPhoto.id]
-      });
-    }
   };
 
   // Gestion des modifications de données
