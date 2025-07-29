@@ -233,8 +233,6 @@ interface ConfinedSpaceDetails {
             </h1>
             <p className="text-gray-600">{t.siteInformationSubtitle}</p>
           </div>
-        </div>
-      </div>
 
       {/* =================== DIMENSIONS ET VOLUME =================== */}
       <div className="glass-card rounded-2xl p-6 animate-fade-in">
@@ -1061,6 +1059,8 @@ interface ConfinedSpaceDetails {
 };
 
 export default SiteInformation;
+        </div>
+      </div>
 
       {/* =================== INFORMATIONS DU PROJET =================== */}
       <div className="glass-card rounded-2xl p-6 animate-fade-in">
@@ -1295,6 +1295,174 @@ export default SiteInformation;
           />
         </div>
       </div>
+
+// =================== COMPOSANT PRINCIPAL ===================
+const SiteInformation: React.FC<SiteInformationProps> = ({
+  formData,
+  onDataChange,
+  language,
+  tenant,
+  errors
+}) => {
+  const t = translations[language];
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // =================== ÉTATS DU COMPOSANT ===================
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [showPhotos, setShowPhotos] = useState(false);
+  const [spacePhotos, setSpacePhotos] = useState<SpacePhoto[]>(formData.spacePhotos || []);
+  const [confinedSpaceDetails, setConfinedSpaceDetails] = useState<ConfinedSpaceDetails>(
+    formData.confinedSpaceDetails || {
+      // Identification
+      spaceType: '',
+      spaceCategory: '',
+      spaceClassification: '',
+      entryMethod: '',
+      accessType: '',
+      
+      // Dimensions
+      dimensions: { length: 0, width: 0, height: 0, diameter: 0, volume: 0 },
+      
+      // Points d'entrée
+      entryPoints: [],
+      
+      // Dangers
+      atmosphericHazards: [],
+      physicalHazards: [],
+      
+      // Conditions environnementales
+      environmentalConditions: {
+        ventilationRequired: false,
+        ventilationType: '',
+        lightingConditions: '',
+        temperatureRange: '',
+        moistureLevel: '',
+        noiseLevel: '',
+        weatherConditions: ''
+      },
+      
+      // Contenu
+      spaceContent: {
+        contents: '',
+        residues: '',
+        previousUse: '',
+        lastEntry: '',
+        cleaningStatus: ''
+      },
+      
+      // Mesures de sécurité
+      safetyMeasures: {
+        emergencyEgress: '',
+        communicationMethod: '',
+        monitoringEquipment: [],
+        ventilationEquipment: [],
+        emergencyEquipment: []
+      },
+      
+      // Documentation
+      photos: [],
+      inspectionReports: [],
+      testResults: []
+    }
+  );
+
+  // =================== FONCTIONS UTILITAIRES ===================
+  
+  // Calculer le volume selon la géométrie
+  const calculateVolume = () => {
+    const { length, width, height, diameter } = confinedSpaceDetails.dimensions;
+    let volume = 0;
+    
+    if ((confinedSpaceDetails.spaceType === 'tank' || confinedSpaceDetails.spaceType === 'vessel' || confinedSpaceDetails.spaceType === 'silo') && diameter && diameter > 0 && height > 0) {
+      // Volume cylindrique: π × r² × h
+      const radius = diameter / 2;
+      volume = Math.PI * radius * radius * height;
+    } else if (length > 0 && width > 0 && height > 0) {
+      // Volume rectangulaire: l × w × h
+      volume = length * width * height;
+    }
+    
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      dimensions: { ...prev.dimensions, volume: Math.round(volume * 100) / 100 }
+    }));
+  };
+
+  // Ajouter un point d'entrée
+  const addEntryPoint = () => {
+    const newEntryPoint = {
+      id: `entry_${Date.now()}`,
+      type: 'circular',
+      dimensions: '',
+      location: '',
+      condition: 'good',
+      accessibility: 'normal',
+      photos: []
+    };
+    
+    const updatedDetails = {
+      ...confinedSpaceDetails,
+      entryPoints: [...confinedSpaceDetails.entryPoints, newEntryPoint]
+    };
+    
+    setConfinedSpaceDetails(updatedDetails);
+    onDataChange('confinedSpaceDetails', updatedDetails);
+  };
+
+  // Gestion des photos
+  const handlePhotoCapture = (category: string) => {
+    const newPhoto: SpacePhoto = {
+      id: `photo_${Date.now()}`,
+      url: `https://via.placeholder.com/400x300?text=Photo+${Date.now()}`,
+      caption: `Photo ${category} - ${new Date().toLocaleString()}`,
+      category: category as any,
+      timestamp: new Date().toISOString(),
+      location: 'GPS: 45.5017, -73.5673',
+      measurements: category.includes('space') ? 'L:2.5m W:1.8m H:2.1m' : undefined
+    };
+
+    const updatedPhotos = [...spacePhotos, newPhoto];
+    setSpacePhotos(updatedPhotos);
+    onDataChange('spacePhotos', updatedPhotos);
+  };
+
+  // Gestion des modifications de données
+  const handleInputChange = (field: string, value: any) => {
+    onDataChange(field, value);
+  };
+
+  const handleConfinedSpaceChange = (field: string, value: any) => {
+    const updatedDetails = { ...confinedSpaceDetails, [field]: value };
+    setConfinedSpaceDetails(updatedDetails);
+    onDataChange('confinedSpaceDetails', updatedDetails);
+  };
+
+  const handleEnvironmentalChange = (field: string, value: any) => {
+    const updatedDetails = {
+      ...confinedSpaceDetails,
+      environmentalConditions: { ...confinedSpaceDetails.environmentalConditions, [field]: value }
+    };
+    setConfinedSpaceDetails(updatedDetails);
+    onDataChange('confinedSpaceDetails', updatedDetails);
+  };
+
+  const handleContentChange = (field: string, value: any) => {
+    const updatedDetails = {
+      ...confinedSpaceDetails,
+      spaceContent: { ...confinedSpaceDetails.spaceContent, [field]: value }
+    };
+    setConfinedSpaceDetails(updatedDetails);
+    onDataChange('confinedSpaceDetails', updatedDetails);
+  };
+
+  const handleSafetyChange = (field: string, value: any) => {
+    const updatedDetails = {
+      ...confinedSpaceDetails,
+      safetyMeasures: { ...confinedSpaceDetails.safetyMeasures, [field]: value }
+    };
+    setConfinedSpaceDetails(updatedDetails);
+    onDataChange('confinedSpaceDetails', updatedDetails);
+  };
   
   // Points d'entrée
   entryPoints: Array<{
@@ -1678,171 +1846,3 @@ const translations = {
     }
   }
 };
-
-// =================== COMPOSANT PRINCIPAL ===================
-const SiteInformation: React.FC<SiteInformationProps> = ({
-  formData,
-  onDataChange,
-  language,
-  tenant,
-  errors
-}) => {
-  const t = translations[language];
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // =================== ÉTATS DU COMPOSANT ===================
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [showPhotos, setShowPhotos] = useState(false);
-  const [spacePhotos, setSpacePhotos] = useState<SpacePhoto[]>(formData.spacePhotos || []);
-  const [confinedSpaceDetails, setConfinedSpaceDetails] = useState<ConfinedSpaceDetails>(
-    formData.confinedSpaceDetails || {
-      // Identification
-      spaceType: '',
-      spaceCategory: '',
-      spaceClassification: '',
-      entryMethod: '',
-      accessType: '',
-      
-      // Dimensions
-      dimensions: { length: 0, width: 0, height: 0, diameter: 0, volume: 0 },
-      
-      // Points d'entrée
-      entryPoints: [],
-      
-      // Dangers
-      atmosphericHazards: [],
-      physicalHazards: [],
-      
-      // Conditions environnementales
-      environmentalConditions: {
-        ventilationRequired: false,
-        ventilationType: '',
-        lightingConditions: '',
-        temperatureRange: '',
-        moistureLevel: '',
-        noiseLevel: '',
-        weatherConditions: ''
-      },
-      
-      // Contenu
-      spaceContent: {
-        contents: '',
-        residues: '',
-        previousUse: '',
-        lastEntry: '',
-        cleaningStatus: ''
-      },
-      
-      // Mesures de sécurité
-      safetyMeasures: {
-        emergencyEgress: '',
-        communicationMethod: '',
-        monitoringEquipment: [],
-        ventilationEquipment: [],
-        emergencyEquipment: []
-      },
-      
-      // Documentation
-      photos: [],
-      inspectionReports: [],
-      testResults: []
-    }
-  );
-
-  // =================== FONCTIONS UTILITAIRES ===================
-  
-  // Calculer le volume selon la géométrie
-  const calculateVolume = () => {
-    const { length, width, height, diameter } = confinedSpaceDetails.dimensions;
-    let volume = 0;
-    
-    if ((confinedSpaceDetails.spaceType === 'tank' || confinedSpaceDetails.spaceType === 'vessel' || confinedSpaceDetails.spaceType === 'silo') && diameter && diameter > 0 && height > 0) {
-      // Volume cylindrique: π × r² × h
-      const radius = diameter / 2;
-      volume = Math.PI * radius * radius * height;
-    } else if (length > 0 && width > 0 && height > 0) {
-      // Volume rectangulaire: l × w × h
-      volume = length * width * height;
-    }
-    
-    setConfinedSpaceDetails(prev => ({
-      ...prev,
-      dimensions: { ...prev.dimensions, volume: Math.round(volume * 100) / 100 }
-    }));
-  };
-
-  // Ajouter un point d'entrée
-  const addEntryPoint = () => {
-    const newEntryPoint = {
-      id: `entry_${Date.now()}`,
-      type: 'circular',
-      dimensions: '',
-      location: '',
-      condition: 'good',
-      accessibility: 'normal',
-      photos: []
-    };
-    
-    const updatedDetails = {
-      ...confinedSpaceDetails,
-      entryPoints: [...confinedSpaceDetails.entryPoints, newEntryPoint]
-    };
-    
-    setConfinedSpaceDetails(updatedDetails);
-    onDataChange('confinedSpaceDetails', updatedDetails);
-  };
-
-  // Gestion des photos
-  const handlePhotoCapture = (category: string) => {
-    const newPhoto: SpacePhoto = {
-      id: `photo_${Date.now()}`,
-      url: `https://via.placeholder.com/400x300?text=Photo+${Date.now()}`,
-      caption: `Photo ${category} - ${new Date().toLocaleString()}`,
-      category: category as any,
-      timestamp: new Date().toISOString(),
-      location: 'GPS: 45.5017, -73.5673',
-      measurements: category.includes('space') ? 'L:2.5m W:1.8m H:2.1m' : undefined
-    };
-
-    const updatedPhotos = [...spacePhotos, newPhoto];
-    setSpacePhotos(updatedPhotos);
-    onDataChange('spacePhotos', updatedPhotos);
-  };
-
-  // Gestion des modifications de données
-  const handleInputChange = (field: string, value: any) => {
-    onDataChange(field, value);
-  };
-
-  const handleConfinedSpaceChange = (field: string, value: any) => {
-    const updatedDetails = { ...confinedSpaceDetails, [field]: value };
-    setConfinedSpaceDetails(updatedDetails);
-    onDataChange('confinedSpaceDetails', updatedDetails);
-  };
-
-  const handleEnvironmentalChange = (field: string, value: any) => {
-    const updatedDetails = {
-      ...confinedSpaceDetails,
-      environmentalConditions: { ...confinedSpaceDetails.environmentalConditions, [field]: value }
-    };
-    setConfinedSpaceDetails(updatedDetails);
-    onDataChange('confinedSpaceDetails', updatedDetails);
-  };
-
-  const handleContentChange = (field: string, value: any) => {
-    const updatedDetails = {
-      ...confinedSpaceDetails,
-      spaceContent: { ...confinedSpaceDetails.spaceContent, [field]: value }
-    };
-    setConfinedSpaceDetails(updatedDetails);
-    onDataChange('confinedSpaceDetails', updatedDetails);
-  };
-
-  const handleSafetyChange = (field: string, value: any) => {
-    const updatedDetails = {
-      ...confinedSpaceDetails,
-      safetyMeasures: { ...confinedSpaceDetails.safetyMeasures, [field]: value }
-    };
-    setConfinedSpaceDetails(updatedDetails);
-    onDataChange('confinedSpaceDetails', updatedDetails);
-  };
