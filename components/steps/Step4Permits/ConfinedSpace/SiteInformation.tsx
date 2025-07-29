@@ -318,7 +318,11 @@ const getTranslations = (language: 'fr' | 'en') => ({
     previous: "Précédent",
     loading: "Chargement...",
     generating: "Génération...",
-    success: "Succès!"
+    success: "Succès!",
+    addPhoto: "Ajouter photo",
+    addPhotoDescription: "Documenter avec une photo",
+    noPhotos: "Aucune photo",
+    clickToPhoto: "Cliquez pour prendre une photo"
   },
   en: {
     title: "Site Information - Confined Space",
@@ -487,7 +491,11 @@ const getTranslations = (language: 'fr' | 'en') => ({
     previous: "Previous",
     loading: "Loading...",
     generating: "Generating...",
-    success: "Success!"
+    success: "Success!",
+    addPhoto: "Add photo",
+    addPhotoDescription: "Document with photo",
+    noPhotos: "No photos",
+    clickToPhoto: "Click to take a photo"
   }
 });
 
@@ -586,9 +594,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
 
   // Traductions
   const t = getTranslations(language);
-  // Traductions
-  const t = getTranslations(language);
-
   // =================== FONCTIONS UTILITAIRES ===================
   
   // Calcul du volume automatique basé sur le type d'espace
@@ -865,21 +870,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                     <div class="info-label">Superviseur</div>
                     <div class="info-value">${report.siteInformation.supervisor || 'Non spécifié'}</div>
                   </div>
-                  <div class="info-item">
-                    <div class="info-label">Date d'entrée prévue</div>
-                    <div class="info-value">${report.siteInformation.entryDate ? new Date(report.siteInformation.entryDate).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA') : 'Non spécifiée'}</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="info-label">Nombre de travailleurs</div>
-                    <div class="info-value">${report.siteInformation.workerCount || 'Non spécifié'}</div>
-                  </div>
                 </div>
-                ${report.siteInformation.workDescription ? `
-                  <div class="info-item">
-                    <div class="info-label">Description des travaux</div>
-                    <div class="info-value">${report.siteInformation.workDescription}</div>
-                  </div>
-                ` : ''}
               </div>
               
               <div class="section">
@@ -893,58 +884,8 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                     <div class="info-label">Classification CSA</div>
                     <div class="info-value">${report.siteInformation.csaClass || 'Non spécifiée'}</div>
                   </div>
-                  <div class="info-item">
-                    <div class="info-label">Méthode d'entrée</div>
-                    <div class="info-value">${report.siteInformation.entryMethod || 'Non spécifiée'}</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="info-label">Type d'accès</div>
-                    <div class="info-value">${report.siteInformation.accessType || 'Non spécifié'}</div>
-                  </div>
                 </div>
-                ${report.siteInformation.spaceLocation ? `
-                  <div class="info-item">
-                    <div class="info-label">Localisation</div>
-                    <div class="info-value">${report.siteInformation.spaceLocation}</div>
-                  </div>
-                ` : ''}
               </div>
-
-              ${report.siteInformation.dimensions && (report.siteInformation.dimensions.volume > 0) ? `
-                <div class="section">
-                  <h2>📏 DIMENSIONS ET VOLUME</h2>
-                  <div class="info-grid">
-                    ${report.siteInformation.dimensions.length > 0 ? `
-                      <div class="info-item">
-                        <div class="info-label">Longueur</div>
-                        <div class="info-value">${report.siteInformation.dimensions.length} m</div>
-                      </div>
-                    ` : ''}
-                    ${report.siteInformation.dimensions.width > 0 ? `
-                      <div class="info-item">
-                        <div class="info-label">Largeur</div>
-                        <div class="info-value">${report.siteInformation.dimensions.width} m</div>
-                      </div>
-                    ` : ''}
-                    ${report.siteInformation.dimensions.height > 0 ? `
-                      <div class="info-item">
-                        <div class="info-label">Hauteur</div>
-                        <div class="info-value">${report.siteInformation.dimensions.height} m</div>
-                      </div>
-                    ` : ''}
-                    ${report.siteInformation.dimensions.diameter > 0 ? `
-                      <div class="info-item">
-                        <div class="info-label">Diamètre</div>
-                        <div class="info-value">${report.siteInformation.dimensions.diameter} m</div>
-                      </div>
-                    ` : ''}
-                    <div class="info-item" style="grid-column: 1 / -1; background: #eff6ff; border-color: #3b82f6;">
-                      <div class="info-label" style="color: #1e40af;">Volume calculé</div>
-                      <div class="info-value" style="color: #1e40af; font-weight: bold; font-size: 18px;">${report.siteInformation.dimensions.volume} m³</div>
-                    </div>
-                  </div>
-                </div>
-              ` : ''}
 
               ${(report.siteInformation.atmosphericHazards && report.siteInformation.atmosphericHazards.length > 0) || (report.siteInformation.physicalHazards && report.siteInformation.physicalHazards.length > 0) ? `
                 <div class="section">
@@ -2450,10 +2391,7 @@ Système C-SECUR360`;
             />
           )}
         </div>
-      </div>
-    </>
-  );
-  {/* Section Évaluation des Dangers */}
+        {/* Section Évaluation des Dangers */}
         <div className="form-section hazard-section">
           <div className="section-header">
             <AlertTriangle className="section-icon hazard-icon" />
@@ -3158,7 +3096,8 @@ Système C-SECUR360`;
           </div>
         </div>
       </div>
-    </>;
-  };
+    </>
+  );
+};
 
-  export default SiteInformation;
+export default SiteInformation;
