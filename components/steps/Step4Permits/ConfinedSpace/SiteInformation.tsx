@@ -24,6 +24,16 @@ interface SiteInformationProps {
   updateParentData: (section: string, data: any) => void;
 }
 
+interface SpacePhoto {
+  id: string;
+  url: string;
+  category: string;
+  caption: string;
+  timestamp: string;
+  location: string;
+  measurements?: string;
+}
+
 interface ConfinedSpaceDetails {
   // Informations principales
   projectNumber: string;
@@ -95,16 +105,9 @@ interface ConfinedSpaceDetails {
     ventilationEquipment: string[];
     emergencyEquipment: string[];
   };
-}
 
-interface SpacePhoto {
-  id: string;
-  url: string;
-  category: string;
-  caption: string;
-  timestamp: string;
-  location: string;
-  measurements?: string;
+  // Photos de l'espace - AJOUTÉ POUR CORRIGER L'ERREUR
+  spacePhotos: SpacePhoto[];
 }
 
 interface PermitReport {
@@ -581,7 +584,10 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       monitoringEquipment: permitData.safetyMeasures?.monitoringEquipment || [],
       ventilationEquipment: permitData.safetyMeasures?.ventilationEquipment || [],
       emergencyEquipment: permitData.safetyMeasures?.emergencyEquipment || [],
-    }
+    },
+
+    // Photos de l'espace - AJOUTÉ POUR CORRIGER L'ERREUR
+    spacePhotos: permitData.spacePhotos || []
   });
 
   const [spacePhotos, setSpacePhotos] = useState<SpacePhoto[]>(permitData.spacePhotos || []);
@@ -721,7 +727,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
 
   // =================== FONCTIONS DE GÉNÉRATION DE RAPPORT ===================
 
-  // Génération du rapport complet avec métadonnées
+  // Génération du rapport complet avec métadonnées - CORRIGÉ
   const generateCompletePermitReport = async (): Promise<PermitReport> => {
     const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     
@@ -735,6 +741,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       },
       siteInformation: {
         ...confinedSpaceDetails,
+        // Assurer que spacePhotos est inclus dans l'objet siteInformation
         spacePhotos: spacePhotos
       },
       atmosphericTesting: permitData.atmosphericTesting || {},
