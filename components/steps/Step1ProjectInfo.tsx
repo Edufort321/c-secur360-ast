@@ -183,17 +183,24 @@ const translations = {
     entryCondition: "État/Condition",
     entryPhotos: "Photos du Point d'Entrée",
     
-    // Conditions environnementales
-    environmentalConditions: "🌡️ Conditions Environnementales",
-    ventilationRequired: "Ventilation Requise",
-    ventilationType: "Type de Ventilation",
-    emergencyEgress: "Issue de Secours",
-    communicationMethod: "Méthode de Communication",
-    lightingConditions: "Conditions d'Éclairage",
-    temperatureConditions: "Conditions de Température",
-    moistureLevel: "Niveau d'Humidité",
-    noiseLevel: "Niveau de Bruit",
-    structuralIntegrity: "Intégrité Structurale",
+    // Contenu et risques
+    contentAndHazards: "⚠️ Contenu et Dangers",
+    contents: "Contenu de l'Espace",
+    residues: "Résidus/Substances",
+    workSpace: "Espace de Travail Disponible",
+    atmosphericHazards: "Dangers Atmosphériques",
+    physicalHazards: "Dangers Physiques",
+    previousHistory: "Historique d'Entrées",
+    lastEntry: "Dernière Entrée",
+    
+    // Photos d'archives
+    spaceDocumentation: "📸 Documentation Photographique",
+    spaceExterior: "Extérieur de l'espace",
+    spaceInterior: "Intérieur de l'espace",
+    entryPointPhoto: "Point d'entrée",
+    hazardIdentification: "Identification des dangers",
+    equipmentStaging: "Mise en place équipements",
+    atmosphericTesting: "Tests atmosphériques",
     
     // Types d'espaces clos
     spaceTypes: {
@@ -379,17 +386,24 @@ const translations = {
     entryCondition: "State/Condition",
     entryPhotos: "Entry Point Photos",
     
-    // Environmental conditions
-    environmentalConditions: "🌡️ Environmental Conditions",
-    ventilationRequired: "Ventilation Required",
-    ventilationType: "Ventilation Type",
-    emergencyEgress: "Emergency Egress",
-    communicationMethod: "Communication Method",
-    lightingConditions: "Lighting Conditions",
-    temperatureConditions: "Temperature Conditions",
-    moistureLevel: "Moisture Level",
-    noiseLevel: "Noise Level",
-    structuralIntegrity: "Structural Integrity",
+    // Content and hazards
+    contentAndHazards: "⚠️ Content and Hazards",
+    contents: "Space Contents",
+    residues: "Residues/Substances",
+    workSpace: "Available Work Space",
+    atmosphericHazards: "Atmospheric Hazards",
+    physicalHazards: "Physical Hazards",
+    previousHistory: "Entry History",
+    lastEntry: "Last Entry",
+    
+    // Photo documentation
+    spaceDocumentation: "📸 Photographic Documentation",
+    spaceExterior: "Space exterior",
+    spaceInterior: "Space interior",
+    entryPointPhoto: "Entry point",
+    hazardIdentification: "Hazard identification",
+    equipmentStaging: "Equipment staging",
+    atmosphericTesting: "Atmospheric testing",
     
     // Content and hazards
     contentAndHazards: "⚠️ Content and Hazards",
