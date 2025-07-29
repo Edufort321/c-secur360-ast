@@ -614,7 +614,7 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
     const { length, width, height, diameter } = confinedSpaceDetails.dimensions;
     let volume = 0;
     
-    if (confinedSpaceDetails.spaceType === 'tank' && diameter > 0 && height > 0) {
+    if (confinedSpaceDetails.spaceType === 'tank' && diameter && diameter > 0 && height > 0) {
       // Volume cylindrique: π × r² × h
       const radius = diameter / 2;
       volume = Math.PI * radius * radius * height;
