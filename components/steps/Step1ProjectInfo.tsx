@@ -405,6 +405,18 @@ const translations = {
     equipmentStaging: "Equipment staging",
     atmosphericTesting: "Atmospheric testing",
     
+    // Environmental conditions
+    environmentalConditions: "🌡️ Environmental Conditions",
+    ventilationRequired: "Ventilation Required",
+    ventilationType: "Ventilation Type",
+    emergencyEgress: "Emergency Egress",
+    communicationMethod: "Communication Method",
+    lightingConditions: "Lighting Conditions",
+    temperatureConditions: "Temperature Conditions",
+    moistureLevel: "Moisture Level",
+    noiseLevel: "Noise Level",
+    structuralIntegrity: "Structural Integrity",
+    
     // Content and hazards
     contentAndHazards: "⚠️ Content and Hazards",
     contents: "Space Contents",
