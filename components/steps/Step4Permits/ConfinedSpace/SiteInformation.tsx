@@ -22,16 +22,13 @@ interface SiteInformationProps {
   updateParentData: (section: string, data: any) => void;
 }
 
-// Interface compatible pour RescuePlan et autres composants
+// Interface pour RescuePlan - mappage vers commonProps
 interface Step1ProjectInfoProps {
-  permitData: any;
-  updatePermitData: (updates: any) => void;
-  selectedProvince: any;
-  PROVINCIAL_REGULATIONS: any;
-  isMobile: boolean;
+  formData: any;
+  onDataChange: (section: string, data: any) => void;
   language: 'fr' | 'en';
-  styles: any;
-  updateParentData: (section: string, data: any) => void;
+  tenant: string;
+  errors: any;
 }
 
 interface ConfinedSpaceDetails {
@@ -732,7 +729,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     setConfinedSpaceDetails(updatedDetails);
     onDataChange('confinedSpaceDetails', updatedDetails);
   };
-      // =================== RENDU DU COMPOSANT ===================
+  // =================== RENDU DU COMPOSANT ===================
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
       {/* =================== STYLES CSS INTÉGRÉS =================== */}
@@ -1281,7 +1278,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
           />
         </div>
       </div>
-          {/* =================== DIMENSIONS ET VOLUME =================== */}
+      {/* =================== DIMENSIONS ET VOLUME =================== */}
       <div className="glass-card rounded-2xl p-6 animate-fade-in">
         <div className="glass-header -m-6 mb-6 p-6 rounded-t-2xl">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
