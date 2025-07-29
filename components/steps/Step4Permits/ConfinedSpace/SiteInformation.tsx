@@ -10,20 +10,8 @@ import {
   Share2, Download, Send, Globe, QrCode
 } from 'lucide-react';
 
-// =================== INTERFACES TYPESCRIPT CORRIGÉES ===================
+// =================== INTERFACES TYPESCRIPT ===================
 interface SiteInformationProps {
-  permitData: any;
-  updatePermitData: (updates: any) => void;
-  selectedProvince: any;
-  PROVINCIAL_REGULATIONS: any;
-  isMobile: boolean;
-  language: 'fr' | 'en';
-  styles: any;
-  updateParentData: (section: string, data: any) => void;
-}
-
-// Interface pour TOUS les composants utilisant commonProps
-interface Step1ProjectInfoProps {
   permitData: any;
   updatePermitData: (updates: any) => void;
   selectedProvince: any;
