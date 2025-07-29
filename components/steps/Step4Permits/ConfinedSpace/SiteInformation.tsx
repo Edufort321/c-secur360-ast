@@ -2398,7 +2398,7 @@ Système C-SECUR360`;
             />
           )}
         </div>
-        {/* Section Évaluation des Dangers */}
+       {/* Section Évaluation des Dangers */}
         <div className="form-section hazard-section">
           <div className="section-header">
             <AlertTriangle className="section-icon hazard-icon" />
@@ -3107,4 +3107,4 @@ Système C-SECUR360`;
   );
 };
 
-export default SiteInformation;
+export default SiteInformation; 
