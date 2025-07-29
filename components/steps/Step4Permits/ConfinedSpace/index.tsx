@@ -821,7 +821,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     if (completedSections === 4) return 'completed';
     return 'inProgress';
   };
-
   // =================== RENDU DES SECTIONS ===================
   const renderSectionContent = () => {
     const commonProps = {
@@ -845,7 +844,14 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       case 'rescue':
         return (
           <RescuePlan
-            {...commonProps}
+            formData={permitData}
+            onDataChange={(section: string, data: any) => {
+              updatePermitData({ [section]: data });
+              updateParentData(section, data);
+            }}
+            tenant={selectedProvince || 'QC'}
+            errors={{}}
+            language={language}
           />
         );
       case 'atmospheric':
