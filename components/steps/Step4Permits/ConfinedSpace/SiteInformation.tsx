@@ -6,7 +6,8 @@ import {
   Copy, Check, AlertTriangle, Camera, Upload, X, Settings, Wrench,
   Droplets, Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, Home,
   Ruler, Thermometer, Activity, Shield, Volume2, Gauge, Info, Search,
-  Heart, RotateCcw, Layers, Square, Circle, Triangle, Zap
+  Heart, RotateCcw, Layers, Square, Circle, Triangle, Zap, Mail, Printer,
+  Share2, Download, Send, Globe, QrCode
 } from 'lucide-react';
 
 // =================== INTERFACES TYPESCRIPT ===================
@@ -19,14 +20,11 @@ interface SiteInformationProps {
 }
 
 interface ConfinedSpaceDetails {
-  // Identification
   spaceType: string;
   spaceCategory: string;
   spaceClassification: string;
   entryMethod: string;
   accessType: string;
-  
-  // Dimensions
   dimensions: {
     length: number;
     width: number;
@@ -34,10 +32,683 @@ interface ConfinedSpaceDetails {
     diameter?: number;
     volume: number;
   };
+  entryPoints: Array<{
+    id: string;
+    type: string;
+    dimensions: string;
+    location: string;
+    condition: string;
+    accessibility: string;
+    photos: string[];
+  }>;
+  atmosphericHazards: string[];
+  physicalHazards: string[];
+  environmentalConditions: {
+    ventilationRequired: boolean;
+    ventilationType: string;
+    lightingConditions: string;
+    temperatureRange: string;
+    moistureLevel: string;
+    noiseLevel: string;
+    weatherConditions: string;
+  };
+  spaceContent: {
+    contents: string;
+    residues: string;
+    previousUse: string;
+    lastEntry: string;
+    cleaningStatus: string;
+  };
+  safetyMeasures: {
+    emergencyEgress: string;
+    communicationMethod: string;
+    monitoringEquipment: string[];
+    ventilationEquipment: string[];
+    emergencyEquipment: string[];
+  };
+  photos: string[];
+  inspectionReports: string[];
+  testResults: string[];
+}
 
+interface SpacePhoto {
+  id: string;
+  url: string;
+  caption: string;
+  category: 'space_exterior' | 'space_interior' | 'entry_point' | 'hazard_identification' | 'equipment_staging' | 'atmospheric_testing' | 'safety_equipment' | 'ventilation_system';
+  timestamp: string;
+  location?: string;
+  measurements?: string;
+}
+
+interface PermitReport {
+  siteInformation: ConfinedSpaceDetails;
+  atmosphericTesting: any;
+  entryRegistry: any;
+  rescuePlan: any;
+  metadata: {
+    permitNumber: string;
+    generatedAt: string;
+    generatedBy: string;
+    tenant: string;
+    language: 'fr' | 'en';
+  };
+}
+
+// =================== SYSTÈME DE TRADUCTIONS COMPLET ===================
+const translations = {
+  fr: {
+    siteInformationTitle: "📋 Informations du Site - Permis d'Espace Clos",
+    siteInformationSubtitle: "Documentation complète pour l'entrée sécuritaire en espace clos",
+    projectInfo: "🏢 Informations du Projet",
+    spaceIdentification: "🏠 Identification de l'Espace Clos",
+    spaceDimensions: "📏 Dimensions et Volume",
+    entryPoints: "🚪 Points d'Entrée et Accès",
+    hazardAssessment: "⚠️ Évaluation des Dangers",
+    environmentalConditions: "🌡️ Conditions Environnementales",
+    spaceContent: "📦 Contenu et Historique",
+    safetyMeasures: "🛡️ Mesures de Sécurité",
+    photoDocumentation: "📸 Documentation Photographique",
+    permitActions: "📤 Actions du Permis",
+    projectNumber: "Numéro de Projet",
+    workLocation: "Lieu des Travaux",
+    workDescription: "Description des Travaux",
+    contractor: "Entrepreneur",
+    supervisor: "Superviseur",
+    entryDate: "Date d'Entrée Prévue",
+    duration: "Durée Estimée",
+    workerCount: "Nombre de Travailleurs",
+    spaceType: "Type d'Espace Clos",
+    spaceClassification: "Classification CSA",
+    entryMethod: "Méthode d'Entrée",
+    accessType: "Type d'Accès",
+    spaceLocation: "Localisation de l'Espace",
+    spaceDescription: "Description de l'Espace",
+    length: "Longueur (m)",
+    width: "Largeur (m)",
+    height: "Hauteur (m)",
+    diameter: "Diamètre (m)",
+    volume: "Volume Calculé",
+    volumeUnit: "m³",
+    calculateVolume: "Calculer Volume",
+    addEntryPoint: "Ajouter Point d'Entrée",
+    entryPoint: "Point d'Entrée #",
+    entryType: "Type d'Ouverture",
+    entryDimensions: "Dimensions",
+    entryLocation: "Localisation",
+    entryCondition: "État/Condition",
+    entryAccessibility: "Accessibilité",
+    entryPhotos: "Photos du Point",
+    atmosphericHazards: "Dangers Atmosphériques",
+    physicalHazards: "Dangers Physiques",
+    selectHazards: "Sélectionner les dangers identifiés",
+    ventilationRequired: "Ventilation Requise",
+    ventilationType: "Type de Ventilation",
+    lightingConditions: "Conditions d'Éclairage",
+    temperatureRange: "Plage de Température",
+    moistureLevel: "Niveau d'Humidité",
+    noiseLevel: "Niveau de Bruit",
+    weatherConditions: "Conditions Météorologiques",
+    contents: "Contenu de l'Espace",
+    residues: "Résidus/Substances",
+    previousUse: "Usage Antérieur",
+    lastEntry: "Dernière Entrée",
+    cleaningStatus: "État de Nettoyage",
+    emergencyEgress: "Sortie d'Urgence",
+    communicationMethod: "Méthode de Communication",
+    monitoringEquipment: "Équipement de Surveillance",
+    ventilationEquipment: "Équipement de Ventilation",
+    emergencyEquipment: "Équipement d'Urgence",
+    spaceExterior: "Extérieur de l'espace",
+    spaceInterior: "Intérieur de l'espace",
+    entryPointPhoto: "Point d'entrée",
+    hazardIdentification: "Identification des dangers",
+    equipmentStaging: "Mise en place équipements",
+    atmosphericTesting: "Tests atmosphériques",
+    safetyEquipment: "Équipement de sécurité",
+    ventilationSystem: "Système de ventilation",
+    generateReport: "Générer Rapport Complet",
+    printPermit: "Imprimer Permis",
+    emailPermit: "Envoyer par Email",
+    shareLink: "Partager Lien",
+    downloadPDF: "Télécharger PDF",
+    sendSMS: "Envoyer par SMS",
+    generateQR: "Code QR",
+    yes: "Oui",
+    no: "Non",
+    select: "Sélectionner",
+    add: "Ajouter",
+    remove: "Supprimer",
+    save: "Sauvegarder",
+    spaceTypes: {
+      tank: "🛢️ Réservoir/Citerne",
+      vessel: "🏺 Récipient sous pression",
+      vault: "🏛️ Voûte/Caveau",
+      pit: "🕳️ Fosse/Puits",
+      sewer: "🚰 Égout/Conduite",
+      silo: "🌾 Silo",
+      tunnel: "🚇 Tunnel/Galerie",
+      basement: "🏠 Sous-sol/Cave",
+      boiler: "🔥 Chaudière",
+      duct: "📦 Conduit/Gaine",
+      manhole: "🔍 Regard/Puisard",
+      bin: "📦 Bac/Conteneur",
+      other: "🔧 Autre"
+    },
+    spaceClassifications: {
+      class1: "Classe 1 - Danger immédiat",
+      class2: "Classe 2 - Danger potentiel", 
+      class3: "Classe 3 - Aucun danger identifié"
+    },
+    atmosphericHazardTypes: {
+      oxygen_deficiency: "Déficience en oxygène (<19.5%)",
+      oxygen_enrichment: "Enrichissement en oxygène (>23%)",
+      flammable_gases: "Gaz inflammables",
+      toxic_gases: "Gaz toxiques",
+      hydrogen_sulfide: "Sulfure d'hydrogène (H2S)",
+      carbon_monoxide: "Monoxyde de carbone (CO)",
+      methane: "Méthane (CH4)",
+      carbon_dioxide: "Dioxyde de carbone (CO2)",
+      ammonia: "Ammoniac (NH3)",
+      chlorine: "Chlore (Cl2)",
+      welding_fumes: "Fumées de soudage",
+      solvent_vapors: "Vapeurs de solvants",
+      dust_particles: "Particules de poussière"
+    },
+    physicalHazardTypes: {
+      engulfment: "Ensevelissement",
+      crushing: "Écrasement",
+      electrical: "Électriques",
+      mechanical: "Mécaniques",
+      temperature: "Températures extrêmes",
+      noise: "Bruit excessif",
+      radiation: "Radiations",
+      falling_objects: "Chute d'objets",
+      slips_falls: "Glissades/Chutes",
+      confined_layout: "Configuration confinée",
+      poor_visibility: "Visibilité réduite",
+      structural_collapse: "Effondrement structural",
+      chemical_burns: "Brûlures chimiques",
+      biological: "Dangers biologiques"
+    }
+  },
+  en: {
+    siteInformationTitle: "📋 Site Information - Confined Space Permit",
+    siteInformationSubtitle: "Complete documentation for safe confined space entry",
+    projectInfo: "🏢 Project Information",
+    spaceIdentification: "🏠 Confined Space Identification",
+    spaceDimensions: "📏 Dimensions and Volume",
+    entryPoints: "🚪 Entry Points and Access",
+    hazardAssessment: "⚠️ Hazard Assessment",
+    environmentalConditions: "🌡️ Environmental Conditions",
+    spaceContent: "📦 Content and History",
+    safetyMeasures: "🛡️ Safety Measures",
+    photoDocumentation: "📸 Photo Documentation",
+    permitActions: "📤 Permit Actions",
+    projectNumber: "Project Number",
+    workLocation: "Work Location",
+    workDescription: "Work Description",
+    contractor: "Contractor",
+    supervisor: "Supervisor",
+    entryDate: "Planned Entry Date",
+    duration: "Estimated Duration",
+    workerCount: "Number of Workers",
+    spaceType: "Confined Space Type",
+    spaceClassification: "CSA Classification",
+    entryMethod: "Entry Method",
+    accessType: "Access Type",
+    spaceLocation: "Space Location",
+    spaceDescription: "Space Description",
+    length: "Length (m)",
+    width: "Width (m)",
+    height: "Height (m)",
+    diameter: "Diameter (m)",
+    volume: "Calculated Volume",
+    volumeUnit: "m³",
+    calculateVolume: "Calculate Volume",
+    addEntryPoint: "Add Entry Point",
+    entryPoint: "Entry Point #",
+    entryType: "Opening Type",
+    entryDimensions: "Dimensions",
+    entryLocation: "Location",
+    entryCondition: "State/Condition",
+    entryAccessibility: "Accessibility",
+    entryPhotos: "Point Photos",
+    atmosphericHazards: "Atmospheric Hazards",
+    physicalHazards: "Physical Hazards",
+    selectHazards: "Select identified hazards",
+    ventilationRequired: "Ventilation Required",
+    ventilationType: "Ventilation Type",
+    lightingConditions: "Lighting Conditions",
+    temperatureRange: "Temperature Range",
+    moistureLevel: "Moisture Level",
+    noiseLevel: "Noise Level",
+    weatherConditions: "Weather Conditions",
+    contents: "Space Contents",
+    residues: "Residues/Substances",
+    previousUse: "Previous Use",
+    lastEntry: "Last Entry",
+    cleaningStatus: "Cleaning Status",
+    emergencyEgress: "Emergency Egress",
+    communicationMethod: "Communication Method",
+    monitoringEquipment: "Monitoring Equipment",
+    ventilationEquipment: "Ventilation Equipment",
+    emergencyEquipment: "Emergency Equipment",
+    spaceExterior: "Space exterior",
+    spaceInterior: "Space interior",
+    entryPointPhoto: "Entry point",
+    hazardIdentification: "Hazard identification",
+    equipmentStaging: "Equipment staging",
+    atmosphericTesting: "Atmospheric testing",
+    safetyEquipment: "Safety equipment",
+    ventilationSystem: "Ventilation system",
+    generateReport: "Generate Complete Report",
+    printPermit: "Print Permit",
+    emailPermit: "Send by Email",
+    shareLink: "Share Link",
+    downloadPDF: "Download PDF",
+    sendSMS: "Send by SMS",
+    generateQR: "QR Code",
+    yes: "Yes",
+    no: "No",
+    select: "Select",
+    add: "Add",
+    remove: "Remove",
+    save: "Save",
+    spaceTypes: {
+      tank: "🛢️ Tank/Cistern",
+      vessel: "🏺 Pressure Vessel",
+      vault: "🏛️ Vault/Chamber",
+      pit: "🕳️ Pit/Well",
+      sewer: "🚰 Sewer/Pipe",
+      silo: "🌾 Silo",
+      tunnel: "🚇 Tunnel/Gallery",
+      basement: "🏠 Basement/Cellar",
+      boiler: "🔥 Boiler",
+      duct: "📦 Duct/Vent",
+      manhole: "🔍 Manhole/Sump",
+      bin: "📦 Bin/Container",
+      other: "🔧 Other"
+    },
+    spaceClassifications: {
+      class1: "Class 1 - Immediate danger",
+      class2: "Class 2 - Potential danger",
+      class3: "Class 3 - No identified danger"
+    },
+    atmosphericHazardTypes: {
+      oxygen_deficiency: "Oxygen deficiency (<19.5%)",
+      oxygen_enrichment: "Oxygen enrichment (>23%)",
+      flammable_gases: "Flammable gases",
+      toxic_gases: "Toxic gases",
+      hydrogen_sulfide: "Hydrogen sulfide (H2S)",
+      carbon_monoxide: "Carbon monoxide (CO)",
+      methane: "Methane (CH4)",
+      carbon_dioxide: "Carbon dioxide (CO2)",
+      ammonia: "Ammonia (NH3)",
+      chlorine: "Chlorine (Cl2)",
+      welding_fumes: "Welding fumes",
+      solvent_vapors: "Solvent vapors",
+      dust_particles: "Dust particles"
+    },
+    physicalHazardTypes: {
+      engulfment: "Engulfment",
+      crushing: "Crushing",
+      electrical: "Electrical",
+      mechanical: "Mechanical",
+      temperature: "Extreme temperatures",
+      noise: "Excessive noise",
+      radiation: "Radiation",
+      falling_objects: "Falling objects",
+      slips_falls: "Slips/Falls",
+      confined_layout: "Confined layout",
+      poor_visibility: "Poor visibility",
+      structural_collapse: "Structural collapse",
+      chemical_burns: "Chemical burns",
+      biological: "Biological hazards"
+    }
+  }
+};
+// =================== COMPOSANT PRINCIPAL ===================
+const SiteInformation: React.FC<SiteInformationProps> = ({
+  formData,
+  onDataChange,
+  language,
+  tenant,
+  errors
+}) => {
+  const t = translations[language];
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // =================== ÉTATS DU COMPOSANT ===================
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [showPhotos, setShowPhotos] = useState(false);
+  const [showPermitActions, setShowPermitActions] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [spacePhotos, setSpacePhotos] = useState<SpacePhoto[]>(formData.spacePhotos || []);
+  const [confinedSpaceDetails, setConfinedSpaceDetails] = useState<ConfinedSpaceDetails>(
+    formData.confinedSpaceDetails || {
+      spaceType: '',
+      spaceCategory: '',
+      spaceClassification: '',
+      entryMethod: '',
+      accessType: '',
+      dimensions: { length: 0, width: 0, height: 0, diameter: 0, volume: 0 },
+      entryPoints: [],
+      atmosphericHazards: [],
+      physicalHazards: [],
+      environmentalConditions: {
+        ventilationRequired: false,
+        ventilationType: '',
+        lightingConditions: '',
+        temperatureRange: '',
+        moistureLevel: '',
+        noiseLevel: '',
+        weatherConditions: ''
+      },
+      spaceContent: {
+        contents: '',
+        residues: '',
+        previousUse: '',
+        lastEntry: '',
+        cleaningStatus: ''
+      },
+      safetyMeasures: {
+        emergencyEgress: '',
+        communicationMethod: '',
+        monitoringEquipment: [],
+        ventilationEquipment: [],
+        emergencyEquipment: []
+      },
+      photos: [],
+      inspectionReports: [],
+      testResults: []
+    }
+  );
+
+  // =================== FONCTIONS DE GÉNÉRATION DU RAPPORT COMPLET ===================
+  
+  // Générer le rapport complet du permis d'espace clos
+  const generateCompletePermitReport = async (): Promise<PermitReport> => {
+    setIsGeneratingReport(true);
+    
+    try {
+      // Récupérer les données des autres onglets
+      const atmosphericTestingData = formData.atmosphericTesting || {};
+      const entryRegistryData = formData.entryRegistry || {};
+      const rescuePlanData = formData.rescuePlan || {};
+      
+      const report: PermitReport = {
+        siteInformation: confinedSpaceDetails,
+        atmosphericTesting: atmosphericTestingData,
+        entryRegistry: entryRegistryData,
+        rescuePlan: rescuePlanData,
+        metadata: {
+          permitNumber: formData.projectNumber || `CS-${Date.now()}`,
+          generatedAt: new Date().toISOString(),
+          generatedBy: formData.supervisor || 'Non spécifié',
+          tenant: tenant,
+          language: language
+        }
+      };
+      
+      return report;
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  // Imprimer le permis complet
+  const handlePrintPermit = async () => {
+    const report = await generateCompletePermitReport();
+    
+    // Créer une nouvelle fenêtre pour l'impression
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Permis d'Espace Clos - ${report.metadata.permitNumber}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+              .section { margin-bottom: 30px; page-break-inside: avoid; }
+              .section-title { background: #f0f0f0; padding: 10px; font-weight: bold; border-left: 4px solid #007bff; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+              .field { margin-bottom: 10px; }
+              .label { font-weight: bold; color: #333; }
+              .value { margin-top: 5px; padding: 5px; background: #f9f9f9; border-left: 3px solid #28a745; }
+              .hazard-list { display: flex; flex-wrap: wrap; gap: 10px; }
+              .hazard-item { background: #fff3cd; padding: 5px 10px; border-radius: 5px; border: 1px solid #ffeaa7; }
+              @media print { body { margin: 0; } .no-print { display: none; } }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>PERMIS D'ENTRÉE EN ESPACE CLOS</h1>
+              <p><strong>Numéro:</strong> ${report.metadata.permitNumber}</p>
+              <p><strong>Généré le:</strong> ${new Date(report.metadata.generatedAt).toLocaleString()}</p>
+              <p><strong>Superviseur:</strong> ${report.metadata.generatedBy}</p>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">INFORMATIONS DU SITE</div>
+              <div class="grid">
+                <div class="field"><div class="label">Type d'espace:</div><div class="value">${t.spaceTypes[report.siteInformation.spaceType as keyof typeof t.spaceTypes] || 'Non spécifié'}</div></div>
+                <div class="field"><div class="label">Classification:</div><div class="value">${t.spaceClassifications[report.siteInformation.spaceClassification as keyof typeof t.spaceClassifications] || 'Non spécifié'}</div></div>
+                <div class="field"><div class="label">Volume:</div><div class="value">${report.siteInformation.dimensions.volume} m³</div></div>
+                <div class="field"><div class="label">Points d'entrée:</div><div class="value">${report.siteInformation.entryPoints.length}</div></div>
+              </div>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">DANGERS IDENTIFIÉS</div>
+              <div class="field">
+                <div class="label">Dangers atmosphériques:</div>
+                <div class="hazard-list">
+                  ${report.siteInformation.atmosphericHazards.map(hazard => 
+                    `<span class="hazard-item">${t.atmosphericHazardTypes[hazard as keyof typeof t.atmosphericHazardTypes] || hazard}</span>`
+                  ).join('')}
+                </div>
+              </div>
+              <div class="field">
+                <div class="label">Dangers physiques:</div>
+                <div class="hazard-list">
+                  ${report.siteInformation.physicalHazards.map(hazard => 
+                    `<span class="hazard-item">${t.physicalHazardTypes[hazard as keyof typeof t.physicalHazardTypes] || hazard}</span>`
+                  ).join('')}
+                </div>
+              </div>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">MESURES DE SÉCURITÉ</div>
+              <div class="field"><div class="label">Plan de sortie d'urgence:</div><div class="value">${report.siteInformation.safetyMeasures.emergencyEgress || 'Non spécifié'}</div></div>
+              <div class="field"><div class="label">Communication:</div><div class="value">${report.siteInformation.safetyMeasures.communicationMethod || 'Non spécifié'}</div></div>
+              <div class="field">
+                <div class="label">Équipements de surveillance:</div>
+                <div class="value">${report.siteInformation.safetyMeasures.monitoringEquipment.join(', ') || 'Aucun spécifié'}</div>
+              </div>
+            </div>
+            
+            <script>window.print(); window.close();</script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
+
+  // Envoyer par email
+  const handleEmailPermit = async () => {
+    const report = await generateCompletePermitReport();
+    const subject = `Permis d'Espace Clos - ${report.metadata.permitNumber}`;
+    const body = `Permis d'espace clos généré le ${new Date(report.metadata.generatedAt).toLocaleString()}`;
+    
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  // Partager par SMS
+  const handleSendSMS = async () => {
+    const report = await generateCompletePermitReport();
+    const message = `Permis d'Espace Clos ${report.metadata.permitNumber} - Généré le ${new Date().toLocaleDateString()}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Permis d\'Espace Clos',
+          text: message,
+        });
+      } catch (error) {
+        // Fallback vers SMS
+        window.location.href = `sms:?body=${encodeURIComponent(message)}`;
+      }
+    } else {
+      window.location.href = `sms:?body=${encodeURIComponent(message)}`;
+    }
+  };
+
+  // Télécharger PDF
+  const handleDownloadPDF = async () => {
+    const report = await generateCompletePermitReport();
+    
+    // Créer un blob avec les données du rapport
+    const reportData = JSON.stringify(report, null, 2);
+    const blob = new Blob([reportData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `permis-espace-clos-${report.metadata.permitNumber}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Partager lien
+  const handleShareLink = async () => {
+    const report = await generateCompletePermitReport();
+    const shareUrl = `${window.location.origin}/permits/${report.metadata.permitNumber}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Permis d'Espace Clos - ${report.metadata.permitNumber}`,
+          url: shareUrl,
+        });
+      } catch (error) {
+        // Fallback vers clipboard
+        navigator.clipboard.writeText(shareUrl);
+        alert('Lien copié dans le presse-papiers');
+      }
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      alert('Lien copié dans le presse-papiers');
+    }
+  };
+
+  // =================== FONCTIONS UTILITAIRES ===================
+  
+  // Calculer le volume selon la géométrie
+  const calculateVolume = () => {
+    const { length, width, height, diameter } = confinedSpaceDetails.dimensions;
+    let volume = 0;
+    
+    if ((confinedSpaceDetails.spaceType === 'tank' || confinedSpaceDetails.spaceType === 'vessel' || confinedSpaceDetails.spaceType === 'silo') && diameter && diameter > 0 && height > 0) {
+      // Volume cylindrique: π × r² × h
+      const radius = diameter / 2;
+      volume = Math.PI * radius * radius * height;
+    } else if (length > 0 && width > 0 && height > 0) {
+      // Volume rectangulaire: l × w × h
+      volume = length * width * height;
+    }
+    
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      dimensions: { ...prev.dimensions, volume: Math.round(volume * 100) / 100 }
+    }));
+  };
+
+  // Ajouter un point d'entrée
+  const addEntryPoint = () => {
+    const newEntryPoint = {
+      id: `entry_${Date.now()}`,
+      type: 'circular',
+      dimensions: '',
+      location: '',
+      condition: 'good',
+      accessibility: 'normal',
+      photos: []
+    };
+    
+    const updatedDetails = {
+      ...confinedSpaceDetails,
+      entryPoints: [...confinedSpaceDetails.entryPoints, newEntryPoint]
+    };
+    
+    setConfinedSpaceDetails(updatedDetails);
+    onDataChange('confinedSpaceDetails', updatedDetails);
+  };
+
+  // Gestion des photos
+  const handlePhotoCapture = (category: string) => {
+    const newPhoto: SpacePhoto = {
+      id: `photo_${Date.now()}`,
+      url: `https://via.placeholder.com/400x300?text=Photo+${Date.now()}`,
+      caption: `Photo ${category} - ${new Date().toLocaleString()}`,
+      category: category as any,
+      timestamp: new Date().toISOString(),
+      location: 'GPS: 45.5017, -73.5673',
+      measurements: category.includes('space') ? 'L:2.5m W:1.8m H:2.1m' : undefined
+    };
+
+    const updatedPhotos = [...spacePhotos, newPhoto];
+    setSpacePhotos(updatedPhotos);
+    onDataChange('spacePhotos', updatedPhotos);
+  };
+
+  // =================== HANDLERS DE MODIFICATION DES DONNÉES ===================
+  
+  const handleInputChange = (field: string, value: any) => {
+    onDataChange(field, value);
+  };
+
+  const handleConfinedSpaceChange = (field: string, value: any) => {
+    const updatedDetails = { ...confinedSpaceDetails, [field]: value };
+    setConfinedSpaceDetails(updatedDetails);
+    onDataChange('confinedSpaceDetails', updatedDetails);
+  };
+
+  const handleEnvironmentalChange = (field: string, value: any) => {
+    const updatedDetails = {
+      ...confinedSpaceDetails,
+      environmentalConditions: { ...confinedSpaceDetails.environmentalConditions, [field]: value }
+    };
+    setConfinedSpaceDetails(updatedDetails);
+    onDataChange('confinedSpaceDetails', updatedDetails);
+  };
+
+  const handleContentChange = (field: string, value: any) => {
+    const updatedDetails = {
+      ...confinedSpaceDetails,
+      spaceContent: { ...confinedSpaceDetails.spaceContent, [field]: value }
+    };
+    setConfinedSpaceDetails(updatedDetails);
+    onDataChange('confinedSpaceDetails', updatedDetails);
+  };
+
+  const handleSafetyChange = (field: string, value: any) => {
+    const updatedDetails = {
+      ...confinedSpaceDetails,
+      safetyMeasures: { ...confinedSpaceDetails.safetyMeasures, [field]: value }
+    };
+    setConfinedSpaceDetails(updatedDetails);
+    onDataChange('confinedSpaceDetails', updatedDetails);
+  };
   // =================== RENDU DU COMPOSANT ===================
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
+      {/* =================== STYLES CSS INTÉGRÉS =================== */}
       <style jsx>{`
         .glass-card {
           background: rgba(255, 255, 255, 0.85);
@@ -72,6 +743,11 @@ interface ConfinedSpaceDetails {
         .safety-card {
           background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.05));
           border: 2px solid rgba(16, 185, 129, 0.2);
+        }
+        
+        .permit-actions-card {
+          background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(124, 58, 237, 0.05));
+          border: 2px solid rgba(99, 102, 241, 0.2);
         }
         
         .input-field {
@@ -121,6 +797,17 @@ interface ConfinedSpaceDetails {
           background: linear-gradient(135deg, #dc2626, #b91c1c);
           transform: translateY(-1px);
           box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
+        }
+        
+        .btn-success {
+          background: linear-gradient(135deg, #10b981, #059669);
+          transition: all 0.3s ease;
+        }
+        
+        .btn-success:hover {
+          background: linear-gradient(135deg, #059669, #047857);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
         }
         
         .grid-responsive {
@@ -179,6 +866,16 @@ interface ConfinedSpaceDetails {
           border: 1px solid rgba(99, 102, 241, 0.2);
         }
         
+        .action-button {
+          transition: all 0.3s ease;
+          cursor: pointer;
+        }
+        
+        .action-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
         @media (max-width: 768px) {
           .grid-responsive {
             grid-template-columns: 1fr;
@@ -222,6 +919,15 @@ interface ConfinedSpaceDetails {
           transform: scale(1.05);
           box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
         }
+        
+        .loading-spinner {
+          animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
       `}</style>
 
       {/* =================== EN-TÊTE PRINCIPAL =================== */}
@@ -233,7 +939,321 @@ interface ConfinedSpaceDetails {
             </h1>
             <p className="text-gray-600">{t.siteInformationSubtitle}</p>
           </div>
+        </div>
+      </div>
 
+      {/* =================== ACTIONS DU PERMIS =================== */}
+      <div className="permit-actions-card glass-card rounded-2xl p-6 animate-fade-in">
+        <div className="glass-header -m-6 mb-6 p-6 rounded-t-2xl bg-gradient-to-r from-indigo-50 to-purple-50">
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+            <Share2 className="w-7 h-7 text-indigo-600" />
+            {t.permitActions}
+          </h2>
+          <p className="text-sm text-gray-600 mt-2">Générer et partager le permis complet</p>
+        </div>
+
+        <div className="grid-4">
+          <button
+            onClick={handlePrintPermit}
+            disabled={isGeneratingReport}
+            className="action-button p-4 rounded-xl border-2 border-gray-200 bg-white/50 hover:border-blue-500 hover:bg-blue-50 transition-all duration-300 text-center disabled:opacity-50"
+          >
+            {isGeneratingReport ? (
+              <div className="loading-spinner w-8 h-8 mx-auto mb-2 text-gray-600">⟳</div>
+            ) : (
+              <Printer className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+            )}
+            <div className="text-sm font-medium text-gray-800">{t.printPermit}</div>
+          </button>
+
+          <button
+            onClick={handleEmailPermit}
+            disabled={isGeneratingReport}
+            className="action-button p-4 rounded-xl border-2 border-gray-200 bg-white/50 hover:border-green-500 hover:bg-green-50 transition-all duration-300 text-center disabled:opacity-50"
+          >
+            <Mail className="w-8 h-8 mx-auto mb-2 text-green-600" />
+            <div className="text-sm font-medium text-gray-800">{t.emailPermit}</div>
+          </button>
+
+          <button
+            onClick={handleShareLink}
+            disabled={isGeneratingReport}
+            className="action-button p-4 rounded-xl border-2 border-gray-200 bg-white/50 hover:border-purple-500 hover:bg-purple-50 transition-all duration-300 text-center disabled:opacity-50"
+          >
+            <Globe className="w-8 h-8 mx-auto mb-2 text-purple-600" />
+            <div className="text-sm font-medium text-gray-800">{t.shareLink}</div>
+          </button>
+
+          <button
+            onClick={handleDownloadPDF}
+            disabled={isGeneratingReport}
+            className="action-button p-4 rounded-xl border-2 border-gray-200 bg-white/50 hover:border-orange-500 hover:bg-orange-50 transition-all duration-300 text-center disabled:opacity-50"
+          >
+            <Download className="w-8 h-8 mx-auto mb-2 text-orange-600" />
+            <div className="text-sm font-medium text-gray-800">{t.downloadPDF}</div>
+          </button>
+
+          <button
+            onClick={handleSendSMS}
+            disabled={isGeneratingReport}
+            className="action-button p-4 rounded-xl border-2 border-gray-200 bg-white/50 hover:border-pink-500 hover:bg-pink-50 transition-all duration-300 text-center disabled:opacity-50"
+          >
+            <Send className="w-8 h-8 mx-auto mb-2 text-pink-600" />
+            <div className="text-sm font-medium text-gray-800">{t.sendSMS}</div>
+          </button>
+
+          <button
+            onClick={async () => {
+              const report = await generateCompletePermitReport();
+              const qrData = JSON.stringify({
+                permitNumber: report.metadata.permitNumber,
+                url: `${window.location.origin}/permits/${report.metadata.permitNumber}`
+              });
+              console.log('QR Data:', qrData);
+              alert('Code QR généré (voir console)');
+            }}
+            disabled={isGeneratingReport}
+            className="action-button p-4 rounded-xl border-2 border-gray-200 bg-white/50 hover:border-teal-500 hover:bg-teal-50 transition-all duration-300 text-center disabled:opacity-50"
+          >
+            <QrCode className="w-8 h-8 mx-auto mb-2 text-teal-600" />
+            <div className="text-sm font-medium text-gray-800">{t.generateQR}</div>
+          </button>
+        </div>
+      </div>
+
+      {/* =================== INFORMATIONS DU PROJET =================== */}
+      <div className="glass-card rounded-2xl p-6 animate-fade-in">
+        <div className="glass-header -m-6 mb-6 p-6 rounded-t-2xl">
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+            <Building className="w-7 h-7 text-blue-600" />
+            {t.projectInfo}
+          </h2>
+        </div>
+
+        <div className="grid-2">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                {t.projectNumber}
+              </label>
+              <input
+                type="text"
+                value={formData.projectNumber || ''}
+                onChange={(e) => handleInputChange('projectNumber', e.target.value)}
+                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
+                placeholder="Ex: CS-2025-001"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                {t.workLocation}
+              </label>
+              <textarea
+                value={formData.workLocation || ''}
+                onChange={(e) => handleInputChange('workLocation', e.target.value)}
+                className="input-field w-full px-4 py-3 rounded-lg bg-white/50 h-20 resize-none"
+                placeholder="Adresse complète du site de travail"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                {t.contractor}
+              </label>
+              <input
+                type="text"
+                value={formData.contractor || ''}
+                onChange={(e) => handleInputChange('contractor', e.target.value)}
+                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
+                placeholder="Nom de l'entrepreneur"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                {t.supervisor}
+              </label>
+              <input
+                type="text"
+                value={formData.supervisor || ''}
+                onChange={(e) => handleInputChange('supervisor', e.target.value)}
+                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
+                placeholder="Nom du superviseur"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-1" />
+                  {t.entryDate}
+                </label>
+                <input
+                  type="date"
+                  value={formData.entryDate || new Date().toISOString().split('T')[0]}
+                  onChange={(e) => handleInputChange('entryDate', e.target.value)}
+                  className="input-field w-full px-3 py-3 rounded-lg bg-white/50 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  {t.duration}
+                </label>
+                <input
+                  type="text"
+                  value={formData.duration || ''}
+                  onChange={(e) => handleInputChange('duration', e.target.value)}
+                  className="input-field w-full px-3 py-3 rounded-lg bg-white/50 text-sm"
+                  placeholder="Ex: 4 heures"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <Users className="w-4 h-4 inline mr-1" />
+                {t.workerCount}
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={formData.workerCount || ''}
+                onChange={(e) => handleInputChange('workerCount', parseInt(e.target.value) || 0)}
+                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
+                placeholder="Nombre de personnes"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            {t.workDescription}
+          </label>
+          <textarea
+            value={formData.workDescription || ''}
+            onChange={(e) => handleInputChange('workDescription', e.target.value)}
+            className="input-field w-full px-4 py-4 rounded-lg bg-white/50 h-32 resize-none"
+            placeholder="Description détaillée des travaux à effectuer dans l'espace clos"
+          />
+        </div>
+      </div>
+
+      {/* =================== IDENTIFICATION DE L'ESPACE CLOS =================== */}
+      <div className="confined-space-card glass-card rounded-2xl p-6 animate-fade-in">
+        <div className="glass-header -m-6 mb-6 p-6 rounded-t-2xl bg-gradient-to-r from-green-50 to-blue-50">
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+            <Home className="w-7 h-7 text-green-600" />
+            {t.spaceIdentification}
+          </h2>
+        </div>
+
+        <div className="grid-2 mb-8">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
+              {t.spaceType}
+            </label>
+            <div className="grid-responsive">
+              {Object.entries(t.spaceTypes).map(([key, value]) => (
+                <button
+                  key={key}
+                  onClick={() => handleConfinedSpaceChange('spaceType', key)}
+                  className={`p-3 rounded-lg border-2 text-left transition-all duration-300 ${
+                    confinedSpaceDetails.spaceType === key
+                      ? 'border-green-500 bg-green-50 shadow-lg scale-105'
+                      : 'border-gray-200 bg-white/50 hover:border-green-300'
+                  }`}
+                >
+                  <div className="text-sm font-medium">{value}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                {t.spaceClassification}
+              </label>
+              <select
+                value={confinedSpaceDetails.spaceClassification}
+                onChange={(e) => handleConfinedSpaceChange('spaceClassification', e.target.value)}
+                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
+              >
+                <option value="">{t.select}</option>
+                {Object.entries(t.spaceClassifications).map(([key, value]) => (
+                  <option key={key} value={key}>{value}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                {t.entryMethod}
+              </label>
+              <select
+                value={confinedSpaceDetails.entryMethod}
+                onChange={(e) => handleConfinedSpaceChange('entryMethod', e.target.value)}
+                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
+              >
+                <option value="">{t.select}</option>
+                <option value="top">Par le haut</option>
+                <option value="side">Par le côté</option>
+                <option value="bottom">Par le bas</option>
+                <option value="multiple">Entrées multiples</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                {t.accessType}
+              </label>
+              <select
+                value={confinedSpaceDetails.accessType}
+                onChange={(e) => handleConfinedSpaceChange('accessType', e.target.value)}
+                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
+              >
+                <option value="">{t.select}</option>
+                <option value="manhole">Trou d'homme</option>
+                <option value="hatch">Trappe</option>
+                <option value="door">Porte</option>
+                <option value="removable_cover">Couvercle amovible</option>
+                <option value="cut_opening">Ouverture découpée</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                {t.spaceLocation}
+              </label>
+              <input
+                type="text"
+                value={formData.spaceLocation || ''}
+                onChange={(e) => handleInputChange('spaceLocation', e.target.value)}
+                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
+                placeholder="Localisation précise de l'espace"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            {t.spaceDescription}
+          </label>
+          <textarea
+            value={formData.spaceDescription || ''}
+            onChange={(e) => handleInputChange('spaceDescription', e.target.value)}
+            className="input-field w-full px-4 py-3 rounded-lg bg-white/50 h-24 resize-none"
+            placeholder="Description détaillée de l'espace clos, sa fonction, son état..."
+          />
+        </div>
+      </div>
       {/* =================== DIMENSIONS ET VOLUME =================== */}
       <div className="glass-card rounded-2xl p-6 animate-fade-in">
         <div className="glass-header -m-6 mb-6 p-6 rounded-t-2xl">
@@ -499,7 +1519,6 @@ interface ConfinedSpaceDetails {
         </div>
 
         <div className="grid-2 gap-8">
-          {/* Dangers atmosphériques */}
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <Wind className="w-5 h-5 text-blue-600" />
@@ -528,7 +1547,6 @@ interface ConfinedSpaceDetails {
             </div>
           </div>
 
-          {/* Dangers physiques */}
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <Zap className="w-5 h-5 text-orange-600" />
@@ -941,7 +1959,6 @@ interface ConfinedSpaceDetails {
           })}
         </div>
 
-        {/* Affichage des photos récentes */}
         {spacePhotos.length > 0 && (
           <div className="mt-6 p-4 bg-white/50 rounded-xl">
             <h4 className="font-medium text-gray-800 mb-3">
@@ -1044,14 +2061,31 @@ interface ConfinedSpaceDetails {
         </div>
       )}
 
-      {/* =================== BOUTON DE SAUVEGARDE =================== */}
-      <div className="flex justify-center pt-8">
+      {/* =================== BOUTON DE SAUVEGARDE ET GÉNÉRATION =================== */}
+      <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-8">
         <button
           onClick={() => onDataChange('save', confinedSpaceDetails)}
-          className="btn-primary px-8 py-4 rounded-xl text-white font-bold text-lg flex items-center gap-3 shadow-lg"
+          className="btn-success px-8 py-4 rounded-xl text-white font-bold text-lg flex items-center gap-3 shadow-lg"
         >
           <Check className="w-6 h-6" />
           {t.save} - Informations du Site
+        </button>
+
+        <button
+          onClick={async () => {
+            const report = await generateCompletePermitReport();
+            console.log('Rapport complet généré:', report);
+            alert(`Rapport ${report.metadata.permitNumber} généré avec succès!`);
+          }}
+          disabled={isGeneratingReport}
+          className="btn-primary px-8 py-4 rounded-xl text-white font-bold text-lg flex items-center gap-3 shadow-lg disabled:opacity-50"
+        >
+          {isGeneratingReport ? (
+            <div className="loading-spinner w-6 h-6">⟳</div>
+          ) : (
+            <FileText className="w-6 h-6" />
+          )}
+          {t.generateReport}
         </button>
       </div>
     </div>
@@ -1059,790 +2093,3 @@ interface ConfinedSpaceDetails {
 };
 
 export default SiteInformation;
-        </div>
-      </div>
-
-      {/* =================== INFORMATIONS DU PROJET =================== */}
-      <div className="glass-card rounded-2xl p-6 animate-fade-in">
-        <div className="glass-header -m-6 mb-6 p-6 rounded-t-2xl">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-            <Building className="w-7 h-7 text-blue-600" />
-            {t.projectInfo}
-          </h2>
-        </div>
-
-        <div className="grid-2">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                {t.projectNumber}
-              </label>
-              <input
-                type="text"
-                value={formData.projectNumber || ''}
-                onChange={(e) => handleInputChange('projectNumber', e.target.value)}
-                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
-                placeholder="Ex: CS-2025-001"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                {t.workLocation}
-              </label>
-              <textarea
-                value={formData.workLocation || ''}
-                onChange={(e) => handleInputChange('workLocation', e.target.value)}
-                className="input-field w-full px-4 py-3 rounded-lg bg-white/50 h-20 resize-none"
-                placeholder="Adresse complète du site de travail"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                {t.contractor}
-              </label>
-              <input
-                type="text"
-                value={formData.contractor || ''}
-                onChange={(e) => handleInputChange('contractor', e.target.value)}
-                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
-                placeholder="Nom de l'entrepreneur"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                {t.supervisor}
-              </label>
-              <input
-                type="text"
-                value={formData.supervisor || ''}
-                onChange={(e) => handleInputChange('supervisor', e.target.value)}
-                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
-                placeholder="Nom du superviseur"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  {t.entryDate}
-                </label>
-                <input
-                  type="date"
-                  value={formData.entryDate || new Date().toISOString().split('T')[0]}
-                  onChange={(e) => handleInputChange('entryDate', e.target.value)}
-                  className="input-field w-full px-3 py-3 rounded-lg bg-white/50 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  <Clock className="w-4 h-4 inline mr-1" />
-                  {t.duration}
-                </label>
-                <input
-                  type="text"
-                  value={formData.duration || ''}
-                  onChange={(e) => handleInputChange('duration', e.target.value)}
-                  className="input-field w-full px-3 py-3 rounded-lg bg-white/50 text-sm"
-                  placeholder="Ex: 4 heures"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                <Users className="w-4 h-4 inline mr-1" />
-                {t.workerCount}
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={formData.workerCount || ''}
-                onChange={(e) => handleInputChange('workerCount', parseInt(e.target.value) || 0)}
-                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
-                placeholder="Nombre de personnes"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            {t.workDescription}
-          </label>
-          <textarea
-            value={formData.workDescription || ''}
-            onChange={(e) => handleInputChange('workDescription', e.target.value)}
-            className="input-field w-full px-4 py-4 rounded-lg bg-white/50 h-32 resize-none"
-            placeholder="Description détaillée des travaux à effectuer dans l'espace clos"
-          />
-        </div>
-      </div>
-
-      {/* =================== IDENTIFICATION DE L'ESPACE CLOS =================== */}
-      <div className="confined-space-card glass-card rounded-2xl p-6 animate-fade-in">
-        <div className="glass-header -m-6 mb-6 p-6 rounded-t-2xl bg-gradient-to-r from-green-50 to-blue-50">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-            <Home className="w-7 h-7 text-green-600" />
-            {t.spaceIdentification}
-          </h2>
-        </div>
-
-        <div className="grid-2 mb-8">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              {t.spaceType}
-            </label>
-            <div className="grid-responsive">
-              {Object.entries(t.spaceTypes).map(([key, value]) => (
-                <button
-                  key={key}
-                  onClick={() => handleConfinedSpaceChange('spaceType', key)}
-                  className={`p-3 rounded-lg border-2 text-left transition-all duration-300 ${
-                    confinedSpaceDetails.spaceType === key
-                      ? 'border-green-500 bg-green-50 shadow-lg scale-105'
-                      : 'border-gray-200 bg-white/50 hover:border-green-300'
-                  }`}
-                >
-                  <div className="text-sm font-medium">{value}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                {t.spaceClassification}
-              </label>
-              <select
-                value={confinedSpaceDetails.spaceClassification}
-                onChange={(e) => handleConfinedSpaceChange('spaceClassification', e.target.value)}
-                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
-              >
-                <option value="">{t.select}</option>
-                {Object.entries(t.spaceClassifications).map(([key, value]) => (
-                  <option key={key} value={key}>{value}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                {t.entryMethod}
-              </label>
-              <select
-                value={confinedSpaceDetails.entryMethod}
-                onChange={(e) => handleConfinedSpaceChange('entryMethod', e.target.value)}
-                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
-              >
-                <option value="">{t.select}</option>
-                <option value="top">Par le haut</option>
-                <option value="side">Par le côté</option>
-                <option value="bottom">Par le bas</option>
-                <option value="multiple">Entrées multiples</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                {t.accessType}
-              </label>
-              <select
-                value={confinedSpaceDetails.accessType}
-                onChange={(e) => handleConfinedSpaceChange('accessType', e.target.value)}
-                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
-              >
-                <option value="">{t.select}</option>
-                <option value="manhole">Trou d'homme</option>
-                <option value="hatch">Trappe</option>
-                <option value="door">Porte</option>
-                <option value="removable_cover">Couvercle amovible</option>
-                <option value="cut_opening">Ouverture découpée</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                {t.spaceLocation}
-              </label>
-              <input
-                type="text"
-                value={formData.spaceLocation || ''}
-                onChange={(e) => handleInputChange('spaceLocation', e.target.value)}
-                className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
-                placeholder="Localisation précise de l'espace"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-8">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            {t.spaceDescription}
-          </label>
-          <textarea
-            value={formData.spaceDescription || ''}
-            onChange={(e) => handleInputChange('spaceDescription', e.target.value)}
-            className="input-field w-full px-4 py-3 rounded-lg bg-white/50 h-24 resize-none"
-            placeholder="Description détaillée de l'espace clos, sa fonction, son état..."
-          />
-        </div>
-      </div>
-
-// =================== COMPOSANT PRINCIPAL ===================
-const SiteInformation: React.FC<SiteInformationProps> = ({
-  formData,
-  onDataChange,
-  language,
-  tenant,
-  errors
-}) => {
-  const t = translations[language];
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // =================== ÉTATS DU COMPOSANT ===================
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [showPhotos, setShowPhotos] = useState(false);
-  const [spacePhotos, setSpacePhotos] = useState<SpacePhoto[]>(formData.spacePhotos || []);
-  const [confinedSpaceDetails, setConfinedSpaceDetails] = useState<ConfinedSpaceDetails>(
-    formData.confinedSpaceDetails || {
-      // Identification
-      spaceType: '',
-      spaceCategory: '',
-      spaceClassification: '',
-      entryMethod: '',
-      accessType: '',
-      
-      // Dimensions
-      dimensions: { length: 0, width: 0, height: 0, diameter: 0, volume: 0 },
-      
-      // Points d'entrée
-      entryPoints: [],
-      
-      // Dangers
-      atmosphericHazards: [],
-      physicalHazards: [],
-      
-      // Conditions environnementales
-      environmentalConditions: {
-        ventilationRequired: false,
-        ventilationType: '',
-        lightingConditions: '',
-        temperatureRange: '',
-        moistureLevel: '',
-        noiseLevel: '',
-        weatherConditions: ''
-      },
-      
-      // Contenu
-      spaceContent: {
-        contents: '',
-        residues: '',
-        previousUse: '',
-        lastEntry: '',
-        cleaningStatus: ''
-      },
-      
-      // Mesures de sécurité
-      safetyMeasures: {
-        emergencyEgress: '',
-        communicationMethod: '',
-        monitoringEquipment: [],
-        ventilationEquipment: [],
-        emergencyEquipment: []
-      },
-      
-      // Documentation
-      photos: [],
-      inspectionReports: [],
-      testResults: []
-    }
-  );
-
-  // =================== FONCTIONS UTILITAIRES ===================
-  
-  // Calculer le volume selon la géométrie
-  const calculateVolume = () => {
-    const { length, width, height, diameter } = confinedSpaceDetails.dimensions;
-    let volume = 0;
-    
-    if ((confinedSpaceDetails.spaceType === 'tank' || confinedSpaceDetails.spaceType === 'vessel' || confinedSpaceDetails.spaceType === 'silo') && diameter && diameter > 0 && height > 0) {
-      // Volume cylindrique: π × r² × h
-      const radius = diameter / 2;
-      volume = Math.PI * radius * radius * height;
-    } else if (length > 0 && width > 0 && height > 0) {
-      // Volume rectangulaire: l × w × h
-      volume = length * width * height;
-    }
-    
-    setConfinedSpaceDetails(prev => ({
-      ...prev,
-      dimensions: { ...prev.dimensions, volume: Math.round(volume * 100) / 100 }
-    }));
-  };
-
-  // Ajouter un point d'entrée
-  const addEntryPoint = () => {
-    const newEntryPoint = {
-      id: `entry_${Date.now()}`,
-      type: 'circular',
-      dimensions: '',
-      location: '',
-      condition: 'good',
-      accessibility: 'normal',
-      photos: []
-    };
-    
-    const updatedDetails = {
-      ...confinedSpaceDetails,
-      entryPoints: [...confinedSpaceDetails.entryPoints, newEntryPoint]
-    };
-    
-    setConfinedSpaceDetails(updatedDetails);
-    onDataChange('confinedSpaceDetails', updatedDetails);
-  };
-
-  // Gestion des photos
-  const handlePhotoCapture = (category: string) => {
-    const newPhoto: SpacePhoto = {
-      id: `photo_${Date.now()}`,
-      url: `https://via.placeholder.com/400x300?text=Photo+${Date.now()}`,
-      caption: `Photo ${category} - ${new Date().toLocaleString()}`,
-      category: category as any,
-      timestamp: new Date().toISOString(),
-      location: 'GPS: 45.5017, -73.5673',
-      measurements: category.includes('space') ? 'L:2.5m W:1.8m H:2.1m' : undefined
-    };
-
-    const updatedPhotos = [...spacePhotos, newPhoto];
-    setSpacePhotos(updatedPhotos);
-    onDataChange('spacePhotos', updatedPhotos);
-  };
-
-  // Gestion des modifications de données
-  const handleInputChange = (field: string, value: any) => {
-    onDataChange(field, value);
-  };
-
-  const handleConfinedSpaceChange = (field: string, value: any) => {
-    const updatedDetails = { ...confinedSpaceDetails, [field]: value };
-    setConfinedSpaceDetails(updatedDetails);
-    onDataChange('confinedSpaceDetails', updatedDetails);
-  };
-
-  const handleEnvironmentalChange = (field: string, value: any) => {
-    const updatedDetails = {
-      ...confinedSpaceDetails,
-      environmentalConditions: { ...confinedSpaceDetails.environmentalConditions, [field]: value }
-    };
-    setConfinedSpaceDetails(updatedDetails);
-    onDataChange('confinedSpaceDetails', updatedDetails);
-  };
-
-  const handleContentChange = (field: string, value: any) => {
-    const updatedDetails = {
-      ...confinedSpaceDetails,
-      spaceContent: { ...confinedSpaceDetails.spaceContent, [field]: value }
-    };
-    setConfinedSpaceDetails(updatedDetails);
-    onDataChange('confinedSpaceDetails', updatedDetails);
-  };
-
-  const handleSafetyChange = (field: string, value: any) => {
-    const updatedDetails = {
-      ...confinedSpaceDetails,
-      safetyMeasures: { ...confinedSpaceDetails.safetyMeasures, [field]: value }
-    };
-    setConfinedSpaceDetails(updatedDetails);
-    onDataChange('confinedSpaceDetails', updatedDetails);
-  };
-  
-  // Points d'entrée
-  entryPoints: Array<{
-    id: string;
-    type: string;
-    dimensions: string;
-    location: string;
-    condition: string;
-    accessibility: string;
-    photos: string[];
-  }>;
-  
-  // Dangers
-  atmosphericHazards: string[];
-  physicalHazards: string[];
-  
-  // Conditions environnementales
-  environmentalConditions: {
-    ventilationRequired: boolean;
-    ventilationType: string;
-    lightingConditions: string;
-    temperatureRange: string;
-    moistureLevel: string;
-    noiseLevel: string;
-    weatherConditions: string;
-  };
-  
-  // Contenu et historique
-  spaceContent: {
-    contents: string;
-    residues: string;
-    previousUse: string;
-    lastEntry: string;
-    cleaningStatus: string;
-  };
-  
-  // Mesures de sécurité
-  safetyMeasures: {
-    emergencyEgress: string;
-    communicationMethod: string;
-    monitoringEquipment: string[];
-    ventilationEquipment: string[];
-    emergencyEquipment: string[];
-  };
-  
-  // Documentation
-  photos: string[];
-  inspectionReports: string[];
-  testResults: string[];
-}
-
-interface SpacePhoto {
-  id: string;
-  url: string;
-  caption: string;
-  category: 'space_exterior' | 'space_interior' | 'entry_point' | 'hazard_identification' | 'equipment_staging' | 'atmospheric_testing' | 'safety_equipment' | 'ventilation_system';
-  timestamp: string;
-  location?: string;
-  measurements?: string;
-}
-
-// =================== SYSTÈME DE TRADUCTIONS COMPLET ===================
-const translations = {
-  fr: {
-    // Titre principal
-    siteInformationTitle: "📋 Informations du Site - Permis d'Espace Clos",
-    siteInformationSubtitle: "Documentation complète pour l'entrée sécuritaire en espace clos",
-    
-    // Sections principales
-    projectInfo: "🏢 Informations du Projet",
-    spaceIdentification: "🏠 Identification de l'Espace Clos",
-    spaceDimensions: "📏 Dimensions et Volume",
-    entryPoints: "🚪 Points d'Entrée et Accès",
-    hazardAssessment: "⚠️ Évaluation des Dangers",
-    environmentalConditions: "🌡️ Conditions Environnementales",
-    spaceContent: "📦 Contenu et Historique",
-    safetyMeasures: "🛡️ Mesures de Sécurité",
-    photoDocumentation: "📸 Documentation Photographique",
-    
-    // Informations projet
-    projectNumber: "Numéro de Projet",
-    workLocation: "Lieu des Travaux",
-    workDescription: "Description des Travaux",
-    contractor: "Entrepreneur",
-    supervisor: "Superviseur",
-    entryDate: "Date d'Entrée Prévue",
-    duration: "Durée Estimée",
-    workerCount: "Nombre de Travailleurs",
-    
-    // Identification de l'espace
-    spaceType: "Type d'Espace Clos",
-    spaceCategory: "Catégorie",
-    spaceClassification: "Classification CSA",
-    entryMethod: "Méthode d'Entrée",
-    accessType: "Type d'Accès",
-    spaceLocation: "Localisation de l'Espace",
-    spaceDescription: "Description de l'Espace",
-    
-    // Dimensions
-    length: "Longueur (m)",
-    width: "Largeur (m)",
-    height: "Hauteur (m)",
-    diameter: "Diamètre (m)",
-    volume: "Volume Calculé",
-    volumeUnit: "m³",
-    calculateVolume: "Calculer Volume",
-    
-    // Points d'entrée
-    addEntryPoint: "Ajouter Point d'Entrée",
-    entryPoint: "Point d'Entrée #",
-    entryType: "Type d'Ouverture",
-    entryDimensions: "Dimensions",
-    entryLocation: "Localisation",
-    entryCondition: "État/Condition",
-    entryAccessibility: "Accessibilité",
-    entryPhotos: "Photos du Point",
-    
-    // Dangers
-    atmosphericHazards: "Dangers Atmosphériques",
-    physicalHazards: "Dangers Physiques",
-    selectHazards: "Sélectionner les dangers identifiés",
-    
-    // Conditions environnementales
-    ventilationRequired: "Ventilation Requise",
-    ventilationType: "Type de Ventilation",
-    lightingConditions: "Conditions d'Éclairage",
-    temperatureRange: "Plage de Température",
-    moistureLevel: "Niveau d'Humidité",
-    noiseLevel: "Niveau de Bruit",
-    weatherConditions: "Conditions Météorologiques",
-    
-    // Contenu
-    contents: "Contenu de l'Espace",
-    residues: "Résidus/Substances",
-    previousUse: "Usage Antérieur",
-    lastEntry: "Dernière Entrée",
-    cleaningStatus: "État de Nettoyage",
-    
-    // Mesures de sécurité
-    emergencyEgress: "Sortie d'Urgence",
-    communicationMethod: "Méthode de Communication",
-    monitoringEquipment: "Équipement de Surveillance",
-    ventilationEquipment: "Équipement de Ventilation",
-    emergencyEquipment: "Équipement d'Urgence",
-    
-    // Documentation photo
-    spaceExterior: "Extérieur de l'espace",
-    spaceInterior: "Intérieur de l'espace",
-    entryPointPhoto: "Point d'entrée",
-    hazardIdentification: "Identification des dangers",
-    equipmentStaging: "Mise en place équipements",
-    atmosphericTesting: "Tests atmosphériques",
-    safetyEquipment: "Équipement de sécurité",
-    ventilationSystem: "Système de ventilation",
-    
-    // Actions
-    yes: "Oui",
-    no: "Non",
-    select: "Sélectionner",
-    add: "Ajouter",
-    remove: "Supprimer",
-    save: "Sauvegarder",
-    
-    // Types d'espaces
-    spaceTypes: {
-      tank: "🛢️ Réservoir/Citerne",
-      vessel: "🏺 Récipient sous pression",
-      vault: "🏛️ Voûte/Caveau",
-      pit: "🕳️ Fosse/Puits",
-      sewer: "🚰 Égout/Conduite",
-      silo: "🌾 Silo",
-      tunnel: "🚇 Tunnel/Galerie",
-      basement: "🏠 Sous-sol/Cave",
-      boiler: "🔥 Chaudière",
-      duct: "📦 Conduit/Gaine",
-      manhole: "🔍 Regard/Puisard",
-      bin: "📦 Bac/Conteneur",
-      other: "🔧 Autre"
-    },
-    
-    // Classifications CSA
-    spaceClassifications: {
-      class1: "Classe 1 - Danger immédiat",
-      class2: "Classe 2 - Danger potentiel", 
-      class3: "Classe 3 - Aucun danger identifié"
-    },
-    
-    // Dangers atmosphériques
-    atmosphericHazardTypes: {
-      oxygen_deficiency: "Déficience en oxygène (<19.5%)",
-      oxygen_enrichment: "Enrichissement en oxygène (>23%)",
-      flammable_gases: "Gaz inflammables",
-      toxic_gases: "Gaz toxiques",
-      hydrogen_sulfide: "Sulfure d'hydrogène (H2S)",
-      carbon_monoxide: "Monoxyde de carbone (CO)",
-      methane: "Méthane (CH4)",
-      carbon_dioxide: "Dioxyde de carbone (CO2)",
-      ammonia: "Ammoniac (NH3)",
-      chlorine: "Chlore (Cl2)",
-      welding_fumes: "Fumées de soudage",
-      solvent_vapors: "Vapeurs de solvants",
-      dust_particles: "Particules de poussière"
-    },
-    
-    // Dangers physiques
-    physicalHazardTypes: {
-      engulfment: "Ensevelissement",
-      crushing: "Écrasement",
-      electrical: "Électriques",
-      mechanical: "Mécaniques",
-      temperature: "Températures extrêmes",
-      noise: "Bruit excessif",
-      radiation: "Radiations",
-      falling_objects: "Chute d'objets",
-      slips_falls: "Glissades/Chutes",
-      confined_layout: "Configuration confinée",
-      poor_visibility: "Visibilité réduite",
-      structural_collapse: "Effondrement structural",
-      chemical_burns: "Brûlures chimiques",
-      biological: "Dangers biologiques"
-    }
-  },
-  
-  en: {
-    // Main title
-    siteInformationTitle: "📋 Site Information - Confined Space Permit",
-    siteInformationSubtitle: "Complete documentation for safe confined space entry",
-    
-    // Main sections
-    projectInfo: "🏢 Project Information",
-    spaceIdentification: "🏠 Confined Space Identification",
-    spaceDimensions: "📏 Dimensions and Volume",
-    entryPoints: "🚪 Entry Points and Access",
-    hazardAssessment: "⚠️ Hazard Assessment",
-    environmentalConditions: "🌡️ Environmental Conditions",
-    spaceContent: "📦 Content and History",
-    safetyMeasures: "🛡️ Safety Measures",
-    photoDocumentation: "📸 Photo Documentation",
-    
-    // Project information
-    projectNumber: "Project Number",
-    workLocation: "Work Location",
-    workDescription: "Work Description",
-    contractor: "Contractor",
-    supervisor: "Supervisor",
-    entryDate: "Planned Entry Date",
-    duration: "Estimated Duration",
-    workerCount: "Number of Workers",
-    
-    // Space identification
-    spaceType: "Confined Space Type",
-    spaceCategory: "Category",
-    spaceClassification: "CSA Classification",
-    entryMethod: "Entry Method",
-    accessType: "Access Type",
-    spaceLocation: "Space Location",
-    spaceDescription: "Space Description",
-    
-    // Dimensions
-    length: "Length (m)",
-    width: "Width (m)",
-    height: "Height (m)",
-    diameter: "Diameter (m)",
-    volume: "Calculated Volume",
-    volumeUnit: "m³",
-    calculateVolume: "Calculate Volume",
-    
-    // Entry points
-    addEntryPoint: "Add Entry Point",
-    entryPoint: "Entry Point #",
-    entryType: "Opening Type",
-    entryDimensions: "Dimensions",
-    entryLocation: "Location",
-    entryCondition: "State/Condition",
-    entryAccessibility: "Accessibility",
-    entryPhotos: "Point Photos",
-    
-    // Hazards
-    atmosphericHazards: "Atmospheric Hazards",
-    physicalHazards: "Physical Hazards",
-    selectHazards: "Select identified hazards",
-    
-    // Environmental conditions
-    ventilationRequired: "Ventilation Required",
-    ventilationType: "Ventilation Type",
-    lightingConditions: "Lighting Conditions",
-    temperatureRange: "Temperature Range",
-    moistureLevel: "Moisture Level",
-    noiseLevel: "Noise Level",
-    weatherConditions: "Weather Conditions",
-    
-    // Content
-    contents: "Space Contents",
-    residues: "Residues/Substances",
-    previousUse: "Previous Use",
-    lastEntry: "Last Entry",
-    cleaningStatus: "Cleaning Status",
-    
-    // Safety measures
-    emergencyEgress: "Emergency Egress",
-    communicationMethod: "Communication Method",
-    monitoringEquipment: "Monitoring Equipment",
-    ventilationEquipment: "Ventilation Equipment",
-    emergencyEquipment: "Emergency Equipment",
-    
-    // Photo documentation
-    spaceExterior: "Space exterior",
-    spaceInterior: "Space interior",
-    entryPointPhoto: "Entry point",
-    hazardIdentification: "Hazard identification",
-    equipmentStaging: "Equipment staging",
-    atmosphericTesting: "Atmospheric testing",
-    safetyEquipment: "Safety equipment",
-    ventilationSystem: "Ventilation system",
-    
-    // Actions
-    yes: "Yes",
-    no: "No",
-    select: "Select",
-    add: "Add",
-    remove: "Remove",
-    save: "Save",
-    
-    // Space types
-    spaceTypes: {
-      tank: "🛢️ Tank/Cistern",
-      vessel: "🏺 Pressure Vessel",
-      vault: "🏛️ Vault/Chamber",
-      pit: "🕳️ Pit/Well",
-      sewer: "🚰 Sewer/Pipe",
-      silo: "🌾 Silo",
-      tunnel: "🚇 Tunnel/Gallery",
-      basement: "🏠 Basement/Cellar",
-      boiler: "🔥 Boiler",
-      duct: "📦 Duct/Vent",
-      manhole: "🔍 Manhole/Sump",
-      bin: "📦 Bin/Container",
-      other: "🔧 Other"
-    },
-    
-    // CSA Classifications
-    spaceClassifications: {
-      class1: "Class 1 - Immediate danger",
-      class2: "Class 2 - Potential danger",
-      class3: "Class 3 - No identified danger"
-    },
-    
-    // Atmospheric hazards
-    atmosphericHazardTypes: {
-      oxygen_deficiency: "Oxygen deficiency (<19.5%)",
-      oxygen_enrichment: "Oxygen enrichment (>23%)",
-      flammable_gases: "Flammable gases",
-      toxic_gases: "Toxic gases",
-      hydrogen_sulfide: "Hydrogen sulfide (H2S)",
-      carbon_monoxide: "Carbon monoxide (CO)",
-      methane: "Methane (CH4)",
-      carbon_dioxide: "Carbon dioxide (CO2)",
-      ammonia: "Ammonia (NH3)",
-      chlorine: "Chlorine (Cl2)",
-      welding_fumes: "Welding fumes",
-      solvent_vapors: "Solvent vapors",
-      dust_particles: "Dust particles"
-    },
-    
-    // Physical hazards
-    physicalHazardTypes: {
-      engulfment: "Engulfment",
-      crushing: "Crushing",
-      electrical: "Electrical",
-      mechanical: "Mechanical",
-      temperature: "Extreme temperatures",
-      noise: "Excessive noise",
-      radiation: "Radiation",
-      falling_objects: "Falling objects",
-      slips_falls: "Slips/Falls",
-      confined_layout: "Confined layout",
-      poor_visibility: "Poor visibility",
-      structural_collapse: "Structural collapse",
-      chemical_burns: "Chemical burns",
-      biological: "Biological hazards"
-    }
-  }
-};
