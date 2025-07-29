@@ -183,6 +183,18 @@ const translations = {
     entryCondition: "État/Condition",
     entryPhotos: "Photos du Point d'Entrée",
     
+    // Conditions environnementales
+    environmentalConditions: "🌡️ Conditions Environnementales",
+    ventilationRequired: "Ventilation Requise",
+    ventilationType: "Type de Ventilation",
+    emergencyEgress: "Issue de Secours",
+    communicationMethod: "Méthode de Communication",
+    lightingConditions: "Conditions d'Éclairage",
+    temperatureConditions: "Conditions de Température",
+    moistureLevel: "Niveau d'Humidité",
+    noiseLevel: "Niveau de Bruit",
+    structuralIntegrity: "Intégrité Structurale",
+    
     // Contenu et risques
     contentAndHazards: "⚠️ Contenu et Dangers",
     contents: "Contenu de l'Espace",
@@ -201,6 +213,16 @@ const translations = {
     hazardIdentification: "Identification des dangers",
     equipmentStaging: "Mise en place équipements",
     atmosphericTesting: "Tests atmosphériques",
+    
+    // Actions
+    yes: "Oui",
+    no: "Non",
+    select: "Sélectionner",
+    selectMultiple: "Sélectionner (multiple)",
+    
+    // Unités
+    meters: "mètres",
+    cubicMeters: "mètres cubes",
     
     // Types d'espaces clos
     spaceTypes: {
@@ -235,57 +257,21 @@ const translations = {
       solvent_vapors: "Vapeurs de solvants"
     },
     
-    // Actions
-    yes: "Oui",
-    no: "Non",
-    select: "Sélectionner",
-    selectMultiple: "Sélectionner (multiple)",
-    
-    // Unités
-    meters: "mètres",
-    cubicMeters: "mètres cubes",
-    
-    // Catégories
-    spaceCategories: {
-      class1: "Classe 1 - Dangers immédiats",
-      class2: "Classe 2 - Dangers potentiels", 
-      class3: "Classe 3 - Aucun danger identifié"
-    },
-    
-    // Méthodes d'entrée
-    entryMethods: {
-      top: "Par le haut",
-      side: "Par le côté",
-      bottom: "Par le bas",
-      multiple: "Entrées multiples"
-    },
-    
-    // Types d'accès
-    accessTypes: {
-      manhole: "Trou d'homme",
-      hatch: "Trappe",
-      door: "Porte",
-      removable_cover: "Couvercle amovible",
-      cut_opening: "Ouverture découpée"
-    },
-    
-    // Types d'ouvertures d'entrée
-    entryTypes: {
-      circular: "Circulaire",
-      rectangular: "Rectangulaire",
-      square: "Carré",
-      oval: "Ovale",
-      irregular: "Irrégulière"
-    },
-    
-    // Conditions d'entrée
-    entryConditions: {
-      good: "Bon état",
-      rust: "Rouille présente",
-      damage: "Endommagé",
-      stuck: "Coincé/Bloqué",
-      missing_parts: "Pièces manquantes"
-    },
+    // Dangers physiques
+    physicalHazardTypes: {
+      engulfment: "Ensevelissement",
+      crushing: "Écrasement",
+      electrical: "Électriques",
+      mechanical: "Mécaniques",
+      temperature: "Températures extrêmes",
+      noise: "Bruit excessif",
+      radiation: "Radiations",
+      falling_objects: "Chute d'objets",
+      slips_falls: "Glissades/Chutes",
+      confined_layout: "Configuration confinée",
+      poor_visibility: "Visibilité réduite",
+      structural_collapse: "Effondrement structural"
+    }
   },
   
   en: {
@@ -386,25 +372,6 @@ const translations = {
     entryCondition: "State/Condition",
     entryPhotos: "Entry Point Photos",
     
-    // Content and hazards
-    contentAndHazards: "⚠️ Content and Hazards",
-    contents: "Space Contents",
-    residues: "Residues/Substances",
-    workSpace: "Available Work Space",
-    atmosphericHazards: "Atmospheric Hazards",
-    physicalHazards: "Physical Hazards",
-    previousHistory: "Entry History",
-    lastEntry: "Last Entry",
-    
-    // Photo documentation
-    spaceDocumentation: "📸 Photographic Documentation",
-    spaceExterior: "Space exterior",
-    spaceInterior: "Space interior",
-    entryPointPhoto: "Entry point",
-    hazardIdentification: "Hazard identification",
-    equipmentStaging: "Equipment staging",
-    atmosphericTesting: "Atmospheric testing",
-    
     // Environmental conditions
     environmentalConditions: "🌡️ Environmental Conditions",
     ventilationRequired: "Ventilation Required",
@@ -494,7 +461,6 @@ const translations = {
       poor_visibility: "Poor visibility",
       structural_collapse: "Structural collapse"
     }
-  }
 };
 
 // =================== TYPES D'ÉNERGIE AVEC PROCÉDURES LOTO ===================
@@ -964,11 +930,6 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
           border: 2px solid rgba(34, 197, 94, 0.2);
         }
         
-        .lockout-card {
-          background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(245, 101, 101, 0.05));
-          border: 2px solid rgba(239, 68, 68, 0.2);
-        }
-        
         .energy-type-card {
           transition: all 0.3s ease;
           transform: scale(1);
@@ -993,17 +954,6 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
           filter: brightness(1);
           transform: scale(1.1);
           border: 3px solid #3b82f6;
-        }
-        
-        .procedure-step {
-          transition: all 0.3s ease;
-          opacity: 0.6;
-        }
-        
-        .procedure-step.completed {
-          opacity: 1;
-          background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(74, 222, 128, 0.1));
-          border-color: rgba(34, 197, 94, 0.3);
         }
         
         .input-field {
@@ -1194,31 +1144,6 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
             {astNumber}
           </div>
           <p className="text-gray-600 mt-3 text-sm">{t.astNumberGenerated}</p>
-        </div>
-      </div>
-
-      {/* =================== SECTION DESCRIPTION DES TRAVAUX =================== */}
-      <div className="glass-card rounded-2xl p-6 animate-fade-in">
-        <div className="glass-header -m-6 mb-6 p-6 rounded-t-2xl">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-            <FileText className="w-7 h-7 text-indigo-600" />
-            {t.workDescription}
-          </h2>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              {t.workDescriptionLabel}
-            </label>
-            <textarea
-              value={formData.workDescription || ''}
-              onChange={(e) => handleInputChange('workDescription', e.target.value)}
-              className="input-field w-full px-4 py-4 rounded-lg bg-white/50 h-40 resize-none"
-              placeholder={t.workDescriptionPlaceholder}
-            />
-            <p className="text-xs text-gray-500 mt-2">{t.workDescriptionHelp}</p>
-          </div>
         </div>
       </div>
 
@@ -1550,7 +1475,7 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
         <div className="mb-8">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-orange-600" />
-            Dangers et Conditions Environnementales
+            {t.contentAndHazards}
           </h3>
 
           <div className="grid-2 gap-6">
@@ -1676,291 +1601,6 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* =================== SECTION VERROUILLAGE / CADENASSAGE (LOTO) =================== */}
-      <div className="lockout-card glass-card rounded-2xl p-6 animate-fade-in">
-        <div className="glass-header -m-6 mb-6 p-6 rounded-t-2xl bg-gradient-to-r from-red-50 to-orange-50">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-            <Lock className="w-7 h-7 text-red-600" />
-            {t.lockoutSection}
-          </h2>
-          <p className="text-sm text-gray-600 mt-2">
-            Documentation des procédures de verrouillage/étiquetage des énergies dangereuses selon les normes RSST. Photographiez chaque étape pour assurer une traçabilité complète.
-          </p>
-        </div>
-
-        {/* Photos générales de verrouillage */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Camera className="w-5 h-5 text-red-600" />
-            Photos Générales de Verrouillage
-          </h3>
-
-          <div className="grid-responsive">
-            {[
-              { key: 'before_lockout', label: 'Avant verrouillage', icon: Eye },
-              { key: 'during_lockout', label: 'Pendant verrouillage', icon: Settings },
-              { key: 'lockout_device', label: 'Dispositif', icon: Lock },
-              { key: 'client_form', label: 'Fiche client', icon: FileText },
-              { key: 'verification', label: 'Vérification finale', icon: Check }
-            ].map(({ key, label, icon: IconComponent }) => {
-              const categoryPhotos = lockoutPhotos.filter(photo => photo.category === key && !photo.lockoutPointId);
-              return (
-                <button
-                  key={key}
-                  onClick={() => handlePhotoCapture(key)}
-                  className="p-4 rounded-xl border-2 border-dashed border-red-300 hover:border-red-500 hover:bg-red-50 transition-all duration-300 text-center"
-                >
-                  <IconComponent className="w-8 h-8 mx-auto mb-2 text-red-600" />
-                  <div className="text-sm font-medium text-gray-800">{label}</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {categoryPhotos.length} photo{categoryPhotos.length !== 1 ? 's' : ''}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Points de verrouillage */}
-        <div className="space-y-6">
-          {lockoutPoints.length === 0 ? (
-            <div className="text-center py-12 bg-white/50 rounded-xl border-2 border-dashed border-gray-300">
-              <Lock className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-800 mb-2">Aucun Point de Verrouillage</h3>
-              <p className="text-gray-600 mb-4">
-                Cliquez sur "Ajouter Point de Verrouillage" pour documenter les procédures LOTO
-              </p>
-            </div>
-          ) : (
-            lockoutPoints.map((point, index) => {
-              const energyConfig = energyTypes[language][point.energyType];
-              const procedures = energyConfig?.procedures || [];
-              
-              return (
-                <div key={point.id} className={`p-6 rounded-xl border-2 ${energyConfig?.borderColor} ${energyConfig?.bgColor}`}>
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                      {energyConfig?.icon && <energyConfig.icon className={`w-5 h-5 ${energyConfig.color}`} />}
-                      🔒 Point de Verrouillage #{index + 1}
-                    </h3>
-                    <button
-                      onClick={() => deleteLockoutPoint(point.id)}
-                      className="btn-danger px-3 py-2 rounded-lg text-white text-sm flex items-center gap-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Supprimer
-                    </button>
-                  </div>
-
-                  <div className="grid-2 gap-6">
-                    {/* Informations du point */}
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Type d'Énergie
-                        </label>
-                        <select
-                          value={point.energyType}
-                          onChange={(e) => updateLockoutPoint(point.id, { energyType: e.target.value as any })}
-                          className="input-field w-full px-4 py-3 rounded-lg bg-white/70"
-                        >
-                          {Object.entries(energyTypes[language]).map(([key, config]) => (
-                            <option key={key} value={key}>{config.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Nom de l'Équipement
-                        </label>
-                        <input
-                          type="text"
-                          value={point.equipmentName}
-                          onChange={(e) => updateLockoutPoint(point.id, { equipmentName: e.target.value })}
-                          className="input-field w-full px-4 py-3 rounded-lg bg-white/70"
-                          placeholder="Ex: Disjoncteur principal"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Localisation
-                        </label>
-                        <input
-                          type="text"
-                          value={point.location}
-                          onChange={(e) => updateLockoutPoint(point.id, { location: e.target.value })}
-                          className="input-field w-full px-4 py-3 rounded-lg bg-white/70"
-                          placeholder="Ex: Panneau électrique B-2"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Type de Cadenas/Dispositif
-                          </label>
-                          <input
-                            type="text"
-                            value={point.lockType}
-                            onChange={(e) => updateLockoutPoint(point.id, { lockType: e.target.value })}
-                            className="input-field w-full px-3 py-2 rounded-lg bg-white/70 text-sm"
-                            placeholder="Ex: Cadenas rouge C-Secur360"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Numéro d'Étiquette
-                          </label>
-                          <input
-                            type="text"
-                            value={point.tagNumber}
-                            onChange={(e) => updateLockoutPoint(point.id, { tagNumber: e.target.value })}
-                            className="input-field w-full px-3 py-2 rounded-lg bg-white/70 text-sm"
-                            placeholder="TAG-123456"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Vérifié par
-                          </label>
-                          <input
-                            type="text"
-                            value={point.verifiedBy}
-                            onChange={(e) => updateLockoutPoint(point.id, { verifiedBy: e.target.value })}
-                            className="input-field w-full px-3 py-2 rounded-lg bg-white/70 text-sm"
-                            placeholder="Nom de la personne"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Heure de Vérification
-                          </label>
-                          <div className="flex gap-2">
-                            <input
-                              type="time"
-                              value={point.verificationTime}
-                              onChange={(e) => updateLockoutPoint(point.id, { verificationTime: e.target.value })}
-                              className="input-field flex-1 px-3 py-2 rounded-lg bg-white/70 text-sm"
-                            />
-                            <button
-                              onClick={() => updateLockoutPoint(point.id, { 
-                                verificationTime: new Date().toTimeString().split(' ')[0].slice(0, 5) 
-                              })}
-                              className="btn-secondary px-3 py-2 rounded-lg text-white text-xs"
-                            >
-                              <Clock className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Procédures et photos */}
-                    <div className="space-y-4">
-                      {/* Procédures à suivre */}
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                          <Settings className="w-4 h-4" />
-                          🔧 Procédures à Suivre:
-                        </h4>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {procedures.map((procedure, procIndex) => (
-                            <div
-                              key={procIndex}
-                              className={`procedure-step p-3 rounded-lg border text-sm ${
-                                point.completedProcedures.includes(procIndex)
-                                  ? 'completed'
-                                  : 'bg-white/50 border-gray-200'
-                              }`}
-                              onClick={() => {
-                                const completed = point.completedProcedures.includes(procIndex)
-                                  ? point.completedProcedures.filter(i => i !== procIndex)
-                                  : [...point.completedProcedures, procIndex];
-                                updateLockoutPoint(point.id, { completedProcedures: completed });
-                              }}
-                            >
-                              <div className="flex items-start gap-2 cursor-pointer">
-                                <div className={`w-4 h-4 rounded border-2 flex-shrink-0 mt-0.5 ${
-                                  point.completedProcedures.includes(procIndex)
-                                    ? 'bg-green-500 border-green-500'
-                                    : 'border-gray-300'
-                                }`}>
-                                  {point.completedProcedures.includes(procIndex) && (
-                                    <Check className="w-3 h-3 text-white" />
-                                  )}
-                                </div>
-                                <span>{procedure}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-2">
-                          {point.completedProcedures.length}/{procedures.length} étapes complétées
-                        </div>
-                      </div>
-
-                      {/* Photos du point */}
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                          <Camera className="w-4 h-4" />
-                          Photos de ce Point de Verrouillage
-                        </h4>
-                        <div className="grid grid-cols-3 gap-2">
-                          {['before_lockout', 'during_lockout', 'lockout_device'].map((category) => {
-                            const pointPhotos = lockoutPhotos.filter(photo => 
-                              photo.lockoutPointId === point.id && photo.category === category
-                            );
-                            return (
-                              <button
-                                key={category}
-                                onClick={() => handlePhotoCapture(category, point.id)}
-                                className="aspect-square rounded-lg border-2 border-dashed border-gray-300 hover:border-red-500 hover:bg-red-50 transition-all duration-300 flex flex-col items-center justify-center text-xs"
-                              >
-                                <Camera className="w-4 h-4 text-gray-600 mb-1" />
-                                <span className="capitalize">{category.split('_')[0]}</span>
-                                <span className="text-gray-500">({pointPhotos.length})</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  <div className="mt-4">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Notes et Observations
-                    </label>
-                    <textarea
-                      value={point.notes}
-                      onChange={(e) => updateLockoutPoint(point.id, { notes: e.target.value })}
-                      className="input-field w-full px-4 py-3 rounded-lg bg-white/70 h-20 resize-none text-sm"
-                      placeholder="Observations particulières, difficultés rencontrées, modifications apportées..."
-                    />
-                  </div>
-                </div>
-              );
-            })
-          )}
-
-          <button
-            onClick={addLockoutPoint}
-            className="w-full border-2 border-dashed border-red-300 rounded-xl p-6 text-red-600 hover:border-red-500 hover:bg-red-50 transition-all duration-300 flex items-center justify-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Ajouter Point de Verrouillage
-          </button>
         </div>
       </div>
 
@@ -2298,6 +1938,31 @@ export default Step1ProjectInfo;
                 placeholder={t.emergencyPhonePlaceholder}
               />
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =================== SECTION DESCRIPTION DES TRAVAUX =================== */}
+      <div className="glass-card rounded-2xl p-6 animate-fade-in">
+        <div className="glass-header -m-6 mb-6 p-6 rounded-t-2xl">
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+            <FileText className="w-7 h-7 text-indigo-600" />
+            {t.workDescription}
+          </h2>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              {t.workDescriptionLabel}
+            </label>
+            <textarea
+              value={formData.workDescription || ''}
+              onChange={(e) => handleInputChange('workDescription', e.target.value)}
+              className="input-field w-full px-4 py-4 rounded-lg bg-white/50 h-40 resize-none"
+              placeholder={t.workDescriptionPlaceholder}
+            />
+            <p className="text-xs text-gray-500 mt-2">{t.workDescriptionHelp}</p>
           </div>
         </div>
       </div>
