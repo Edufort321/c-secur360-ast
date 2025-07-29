@@ -262,6 +262,128 @@ const translations = {
     confinedSpaceDetails: "🏠 Confined Space Characteristics",
     lockoutSection: "🔒 Lockout / Tagout (LOTO)",
     
+    // Client fields
+    clientName: "Client Name",
+    clientNamePlaceholder: "Ex: Hydro-Quebec, Bell Canada...",
+    clientPhone: "Client Phone",
+    clientPhonePlaceholder: "Ex: (514) 555-0123",
+    clientRepresentative: "Client Representative",
+    clientRepPlaceholder: "Project manager name",
+    repPhone: "Representative Phone",
+    repPhonePlaceholder: "Ex: (514) 555-0456",
+    
+    // Project fields
+    projectNumber: "Project Number",
+    projectNumberPlaceholder: "Ex: PRJ-2025-001",
+    astClientNumber: "# Client JSA (Optional)",
+    astClientPlaceholder: "Number provided by client",
+    astClientHelp: "Client reference number (if applicable)",
+    date: "Date",
+    time: "Time",
+    
+    // Location
+    workLocation: "Work Location",
+    workLocationPlaceholder: "Complete address of work site",
+    industryType: "Industry Type",
+    
+    // Industries
+    electrical: "⚡ Electrical",
+    construction: "🏗️ Construction",
+    industrial: "🏭 Industrial",
+    manufacturing: "⚙️ Manufacturing",
+    office: "🏢 Office/Administrative",
+    wastewater: "💧 Water Treatment",
+    mining: "⛏️ Mining",
+    petrochemical: "🛢️ Petrochemical",
+    marine: "🚢 Marine",
+    food: "🍕 Food Processing",
+    pharmaceutical: "💊 Pharmaceutical",
+    other: "🔧 Other",
+    
+    // Team
+    workerCount: "Number of People",
+    workerCountPlaceholder: "Ex: 5",
+    workerCountHelp: "This number will be compared to team approvals",
+    estimatedDuration: "Estimated Duration",
+    durationPlaceholder: "Ex: 4 hours, 2 days, 1 week",
+    
+    // Emergency
+    emergencyContact: "Emergency Contact",
+    emergencyContactPlaceholder: "Emergency contact name",
+    emergencyPhone: "Emergency Phone",
+    emergencyPhonePlaceholder: "911 or specific number",
+    
+    // Description
+    workDescriptionLabel: "Complete Description",
+    workDescriptionPlaceholder: "Describe in detail the work to be performed:\n\n• Methods used\n• Equipment involved\n• Work areas\n• Special procedures\n• Particular conditions\n\nThe more detailed the description, the more accurate the safety analysis.",
+    workDescriptionHelp: "A complete description helps identify all potential risks and choose appropriate safety measures.",
+    
+    // Confined Space - General characteristics
+    spaceIdentification: "🏠 Space Identification",
+    spaceType: "Confined Space Type",
+    spaceCategory: "Category",
+    entryMethod: "Entry Method",
+    accessType: "Access Type",
+    spaceDimensions: "📏 Dimensions and Volume",
+    length: "Length (m)",
+    width: "Width (m)",
+    height: "Height (m)",
+    diameter: "Diameter (m)",
+    volume: "Calculated Volume",
+    volumeUnit: "m³",
+    calculateVolume: "Calculate Volume",
+    
+    // Entry points
+    entryPoints: "🚪 Entry Points",
+    addEntryPoint: "Add Entry Point",
+    entryPoint: "Entry Point #",
+    entryType: "Opening Type",
+    entryDimensions: "Dimensions",
+    entryLocation: "Location",
+    entryCondition: "State/Condition",
+    entryPhotos: "Entry Point Photos",
+    
+    // Environmental conditions
+    environmentalConditions: "🌡️ Environmental Conditions",
+    ventilationRequired: "Ventilation Required",
+    ventilationType: "Ventilation Type",
+    emergencyEgress: "Emergency Egress",
+    communicationMethod: "Communication Method",
+    lightingConditions: "Lighting Conditions",
+    temperatureConditions: "Temperature Conditions",
+    moistureLevel: "Moisture Level",
+    noiseLevel: "Noise Level",
+    structuralIntegrity: "Structural Integrity",
+    
+    // Content and hazards
+    contentAndHazards: "⚠️ Content and Hazards",
+    contents: "Space Contents",
+    residues: "Residues/Substances",
+    workSpace: "Available Work Space",
+    atmosphericHazards: "Atmospheric Hazards",
+    physicalHazards: "Physical Hazards",
+    previousHistory: "Entry History",
+    lastEntry: "Last Entry",
+    
+    // Photo documentation
+    spaceDocumentation: "📸 Photographic Documentation",
+    spaceExterior: "Space exterior",
+    spaceInterior: "Space interior",
+    entryPointPhoto: "Entry point",
+    hazardIdentification: "Hazard identification",
+    equipmentStaging: "Equipment staging",
+    atmosphericTesting: "Atmospheric testing",
+    
+    // Actions
+    yes: "Yes",
+    no: "No",
+    select: "Select",
+    selectMultiple: "Select (multiple)",
+    
+    // Units
+    meters: "meters",
+    cubicMeters: "cubic meters",
+    
     // Space types
     spaceTypes: {
       tank: "🛢️ Tank/Cistern",
