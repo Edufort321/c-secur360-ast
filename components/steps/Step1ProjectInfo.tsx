@@ -228,21 +228,57 @@ const translations = {
       solvent_vapors: "Vapeurs de solvants"
     },
     
-    // Dangers physiques
-    physicalHazardTypes: {
-      engulfment: "Ensevelissement",
-      crushing: "Écrasement",
-      electrical: "Électriques",
-      mechanical: "Mécaniques",
-      temperature: "Températures extrêmes",
-      noise: "Bruit excessif",
-      radiation: "Radiations",
-      falling_objects: "Chute d'objets",
-      slips_falls: "Glissades/Chutes",
-      confined_layout: "Configuration confinée",
-      poor_visibility: "Visibilité réduite",
-      structural_collapse: "Effondrement structural"
-    }
+    // Actions
+    yes: "Oui",
+    no: "Non",
+    select: "Sélectionner",
+    selectMultiple: "Sélectionner (multiple)",
+    
+    // Unités
+    meters: "mètres",
+    cubicMeters: "mètres cubes",
+    
+    // Catégories
+    spaceCategories: {
+      class1: "Classe 1 - Dangers immédiats",
+      class2: "Classe 2 - Dangers potentiels", 
+      class3: "Classe 3 - Aucun danger identifié"
+    },
+    
+    // Méthodes d'entrée
+    entryMethods: {
+      top: "Par le haut",
+      side: "Par le côté",
+      bottom: "Par le bas",
+      multiple: "Entrées multiples"
+    },
+    
+    // Types d'accès
+    accessTypes: {
+      manhole: "Trou d'homme",
+      hatch: "Trappe",
+      door: "Porte",
+      removable_cover: "Couvercle amovible",
+      cut_opening: "Ouverture découpée"
+    },
+    
+    // Types d'ouvertures d'entrée
+    entryTypes: {
+      circular: "Circulaire",
+      rectangular: "Rectangulaire",
+      square: "Carré",
+      oval: "Ovale",
+      irregular: "Irrégulière"
+    },
+    
+    // Conditions d'entrée
+    entryConditions: {
+      good: "Bon état",
+      rust: "Rouille présente",
+      damage: "Endommagé",
+      stuck: "Coincé/Bloqué",
+      missing_parts: "Pièces manquantes"
+    },
   },
   
   en: {
