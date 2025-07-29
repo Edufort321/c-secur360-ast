@@ -1,122 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
-  Shield, Wrench, Users, Clock, Plus, Trash2, Phone, MapPin, 
-  AlertTriangle, CheckCircle, X, Edit3, Copy, FileText, 
-  User, Stethoscope, Radio, Car, Building, Zap
+  Shield, Wrench, Users, Clock, Plus, Trash2
 } from 'lucide-react';
-
-// =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
-const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
-const styles = {
-  container: {
-    maxWidth: '100%',
-    margin: '0 auto',
-    padding: isMobile ? '4px' : '24px',
-    backgroundColor: '#111827',
-    minHeight: '100vh',
-    color: 'white',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
-    overflowX: 'hidden' as const
-  },
-  card: {
-    backgroundColor: '#1f2937',
-    borderRadius: isMobile ? '8px' : '16px',
-    padding: isMobile ? '12px' : '24px',
-    border: '1px solid #374151',
-    marginBottom: isMobile ? '12px' : '24px',
-    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
-    width: '100%',
-    boxSizing: 'border-box' as const
-  },
-  input: {
-    backgroundColor: '#374151',
-    color: 'white',
-    border: '1px solid #4b5563',
-    borderRadius: isMobile ? '6px' : '8px',
-    padding: isMobile ? '10px 12px' : '14px',
-    width: '100%',
-    fontSize: '16px',
-    outline: 'none',
-    transition: 'all 0.2s ease',
-    boxSizing: 'border-box' as const,
-    WebkitAppearance: 'none' as const,
-    MozAppearance: 'textfield' as const
-  },
-  button: {
-    padding: isMobile ? '8px 12px' : '14px 24px',
-    borderRadius: isMobile ? '6px' : '8px',
-    fontWeight: '600',
-    display: 'flex',
-    alignItems: 'center',
-    gap: isMobile ? '4px' : '8px',
-    transition: 'all 0.2s ease',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '16px',
-    touchAction: 'manipulation' as const,
-    minHeight: '44px',
-    boxSizing: 'border-box' as const,
-    width: '100%',
-    justifyContent: 'center' as const
-  },
-  buttonPrimary: {
-    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-    color: 'white',
-    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-  },
-  buttonSuccess: {
-    background: 'linear-gradient(135deg, #059669, #047857)',
-    color: 'white',
-    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
-  },
-  buttonDanger: {
-    background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
-    color: 'white',
-    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
-  },
-  buttonSecondary: {
-    backgroundColor: '#4b5563',
-    color: 'white',
-    border: '1px solid #6b7280'
-  },
-  grid2: {
-    display: 'grid',
-    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-    gap: isMobile ? '8px' : '20px',
-    width: '100%'
-  },
-  grid3: {
-    display: 'grid',
-    gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-    gap: isMobile ? '8px' : '16px',
-    width: '100%'
-  },
-  grid4: {
-    display: 'grid',
-    gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
-    gap: isMobile ? '8px' : '16px',
-    width: '100%'
-  },
-  label: {
-    display: 'block',
-    color: '#9ca3af',
-    fontSize: isMobile ? '13px' : '15px',
-    fontWeight: '500',
-    marginBottom: isMobile ? '4px' : '8px'
-  },
-  cardTitle: {
-    fontSize: isMobile ? '16px' : '20px',
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: isMobile ? '12px' : '20px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: isMobile ? '6px' : '12px'
-  }
-};
 
 // =================== TYPES ET INTERFACES ===================
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
@@ -140,68 +27,32 @@ interface RegulationData {
     competent_person_required?: boolean;
     max_work_period_hours?: number;
   };
-  emergency_contacts: Array<{
-    name: string;
-    role: string;
-    phone: string;
-    available_24h: boolean;
-  }>;
-}
-
-interface RescueTeamMember {
-  id: string;
-  name: string;
-  role: 'leader' | 'rescuer' | 'medical' | 'backup';
-  company: string;
-  phone: string;
-  certification: string;
-  expiry_date: string;
-  available_24h: boolean;
-  equipment_assigned: string[];
-}
-
-interface EmergencyContact {
-  id: string;
-  name: string;
-  role: string;
-  phone: string;
-  available_24h: boolean;
-  response_time_minutes: number;
-}
-
-interface RescueEquipment {
-  id: string;
-  name: string;
-  type: 'breathing' | 'lifting' | 'medical' | 'communication' | 'safety';
-  serial_number: string;
-  inspection_date: string;
-  condition: 'operational' | 'needs_maintenance' | 'out_of_service';
-  location: string;
 }
 
 interface LegalRescueData {
-  // Plan obligatoire
-  rescue_plan_developed: boolean;
-  rescue_procedures_written: boolean;
-  emergency_response_time_acceptable: boolean;
+  // Certification équipe
+  rescue_team_certifications: {
+    csa_z1006_certified: boolean;
+    certification_expiry: string;
+    first_aid_level2: boolean;
+    cpr_certified: boolean;
+    rescue_training_hours: number;
+  };
   
-  // Équipe qualifiée
-  rescue_team_designated: boolean;
-  rescue_training_current: boolean;
-  medical_personnel_available: boolean;
+  // Équipements certifiés
+  equipment_certifications: {
+    harness_inspection_date: string;
+    scba_certification: string;
+    mechanical_recovery_cert: string;
+    last_equipment_inspection: string;
+    equipment_serial_numbers: string[];
+  };
   
-  // Équipements
-  rescue_equipment_inspected: boolean;
-  breathing_apparatus_available: boolean;
-  lifting_equipment_certified: boolean;
-  
-  // Communications
-  emergency_communication_tested: boolean;
-  backup_communication_available: boolean;
-  
-  // Coordination
-  external_rescue_coordination: boolean;
-  hospital_notification_protocol: boolean;
+  // Tests réglementaires
+  annual_drill_required: boolean;
+  last_effectiveness_test: string;
+  regulatory_compliance_verified: boolean;
+  response_time_verified: boolean;
 }
 
 interface RescuePlanProps {
@@ -212,7 +63,6 @@ interface RescuePlanProps {
   isMobile: boolean;
   language: 'fr' | 'en';
   styles: any;
-  updateParentData: (section: string, data: any) => void;
 }
 
 // =================== COMPOSANT RESCUE PLAN ===================
@@ -223,308 +73,120 @@ const RescuePlan: React.FC<RescuePlanProps> = ({
   PROVINCIAL_REGULATIONS,
   isMobile,
   language,
-  styles,
-  updateParentData
+  styles
 }) => {
-
-  // =================== ÉTATS LOCAUX ===================
-  const [rescueTeam, setRescueTeam] = useState<RescueTeamMember[]>(permitData.rescue_team || []);
-  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>(permitData.emergency_contacts || []);
-  const [rescueEquipment, setRescueEquipment] = useState<RescueEquipment[]>(permitData.rescue_equipment || []);
-  
-  const [newTeamMember, setNewTeamMember] = useState({
-    name: '',
-    role: 'rescuer' as 'leader' | 'rescuer' | 'medical' | 'backup',
-    company: '',
-    phone: '',
-    certification: '',
-    expiry_date: ''
-  });
-
-  const [newContact, setNewContact] = useState({
-    name: '',
-    role: '',
-    phone: '',
-    response_time_minutes: 15
-  });
-
-  const [newEquipment, setNewEquipment] = useState({
-    name: '',
-    type: 'safety' as 'breathing' | 'lifting' | 'medical' | 'communication' | 'safety',
-    serial_number: '',
-    location: ''
-  });
 
   // =================== TRADUCTIONS ===================
   const getTexts = (language: 'fr' | 'en') => ({
     fr: {
-      title: "Plan de Sauvetage d'Urgence Obligatoire",
-      legalCompliance: "Conformité Réglementaire Plan de Sauvetage",
-      rescueTeam: "Équipe de Sauvetage Désignée",
-      emergencyContacts: "Contacts d'Urgence",
-      rescueEquipment: "Équipements de Sauvetage",
-      rescueProcedures: "Procédures de Sauvetage",
-      addTeamMember: "Ajouter Membre Équipe",
-      addContact: "Ajouter Contact",
-      addEquipment: "Ajouter Équipement",
-      fullName: "Nom complet",
-      company: "Compagnie/Organisation",
-      phone: "Téléphone",
-      role: "Rôle",
-      certification: "Certification",
-      expiryDate: "Date d'expiration",
-      available24h: "Disponible 24h",
-      responseTime: "Temps de réponse (min)",
-      equipmentName: "Nom de l'équipement",
-      equipmentType: "Type d'équipement",
-      serialNumber: "N° série",
-      location: "Emplacement",
-      condition: "État",
-      inspectionDate: "Date d'inspection",
-      operational: "Opérationnel",
-      needsMaintenance: "Maintenance requise",
-      outOfService: "Hors service",
-      leader: "Chef d'équipe",
-      rescuer: "Sauveteur",
-      medical: "Personnel médical",
-      backup: "Soutien",
-      breathing: "Appareil respiratoire",
-      lifting: "Équipement de levage",
-      communication: "Communication",
-      safety: "Sécurité générale",
-      delete: "Supprimer",
-      edit: "Modifier",
-      testCommunication: "Tester Communication",
-      emergencyProcedure: "PROCÉDURE D'URGENCE",
-      step1: "1. ARRÊT IMMÉDIAT des travaux",
-      step2: "2. ÉVACUATION de l'espace clos", 
-      step3: "3. APPEL équipe de sauvetage",
-      step4: "4. VENTILATION d'urgence",
-      step5: "5. ÉVALUATION médicale",
-      step6: "6. SAUVETAGE sécurisé"
+      title: "Plan de Sauvetage Obligatoire (Art. 309 RSST)",
+      legalObligation: "OBLIGATION LÉGALE",
+      obligationText: "Un plan de sauvetage personnalisé avec personnel et équipements requis doit être disponible sur place pour intervention rapide (réglementation 25 juillet 2023).",
+      criticalStatistic: "Statistique critique",
+      statisticText: "Plus de 60% des victimes d'accidents fatals en espace clos sont des personnes ayant tenté un sauvetage sans formation adéquate.",
+      rescuePlanType: "Type de plan de sauvetage *",
+      selectType: "Sélectionner le type de sauvetage",
+      internalTeam: "Équipe de sauvetage interne",
+      externalSpecialist: "Firme spécialisée externe", 
+      fireDepartment: "Service incendie municipal",
+      contractor: "Contracteur externe",
+      planResponsible: "Responsable du plan *",
+      emergencyPhone: "Téléphone d'urgence équipe *",
+      maxResponseTime: "Temps de réponse maximum",
+      immediate: "Immédiat (sur place)",
+      minutes2: "2 minutes",
+      minutes5: "5 minutes", 
+      minutes10: "10 minutes",
+      minutes15: "15 minutes",
+      generalDescription: "Description générale du plan de sauvetage",
+      generalDescriptionPlaceholder: "Décrivez le plan de sauvetage général, les procédures d'accès, les points de rassemblement...",
+      requiredEquipment: "Équipements de Sauvetage Requis",
+      equipmentValidation: "VALIDATION ÉQUIPEMENTS",
+      equipmentValidationText: "Je certifie que tous les équipements de sauvetage obligatoires sont disponibles, inspectés et en bon état de fonctionnement sur le site. *",
+      rescueTraining: "Formation Équipe de Sauvetage",
+      testValidation: "Test et Validation du Plan",
+      lastDrillDate: "Date dernier exercice",
+      drillResults: "Résultats test",
+      selectResult: "Sélectionner",
+      successful: "Réussi - Plan efficace",
+      needsImprovement: "À améliorer",
+      failed: "Échec - Révision requise",
+      notTested: "Pas encore testé",
+      planEffectiveness: "Notes sur l'efficacité du plan",
+      effectivenessPlaceholder: "Observations des exercices, améliorations identifiées, temps de réponse mesuré...",
+      finalConfirmation: "CONFIRMATION",
+      confirmationText: "Je certifie que le plan de sauvetage est en place, l'équipe est formée et les équipements sont disponibles sur site pour intervention immédiate. *",
+      detailedProcedures: "Procédures détaillées de sauvetage *",
+      addStep: "Ajouter étape",
+      noStepsDefined: "Aucune étape définie. Cliquez sur \"Ajouter étape\" pour commencer.",
+      stepDescription: "Description de l'action",
+      deleteStep: "Supprimer cette étape",
+      shortDescription: "Description courte",
+      noText: "Aucun texte",
+      characters: "caractères"
     },
     en: {
-      title: "Mandatory Emergency Rescue Plan",
-      legalCompliance: "Rescue Plan Regulatory Compliance",
-      rescueTeam: "Designated Rescue Team",
-      emergencyContacts: "Emergency Contacts",
-      rescueEquipment: "Rescue Equipment",
-      rescueProcedures: "Rescue Procedures",
-      addTeamMember: "Add Team Member",
-      addContact: "Add Contact", 
-      addEquipment: "Add Equipment",
-      fullName: "Full name",
-      company: "Company/Organization",
-      phone: "Phone",
-      role: "Role",
-      certification: "Certification",
-      expiryDate: "Expiry date",
-      available24h: "Available 24h",
-      responseTime: "Response time (min)",
-      equipmentName: "Equipment name",
-      equipmentType: "Equipment type",
-      serialNumber: "Serial number",
-      location: "Location",
-      condition: "Condition",
-      inspectionDate: "Inspection date",
-      operational: "Operational",
-      needsMaintenance: "Needs maintenance",
-      outOfService: "Out of service",
-      leader: "Team leader",
-      rescuer: "Rescuer",
-      medical: "Medical personnel",
-      backup: "Backup",
-      breathing: "Breathing apparatus",
-      lifting: "Lifting equipment",
-      communication: "Communication",
-      safety: "General safety",
-      delete: "Delete",
-      edit: "Edit",  
-      testCommunication: "Test Communication",
-      emergencyProcedure: "EMERGENCY PROCEDURE",
-      step1: "1. IMMEDIATE STOP of work",
-      step2: "2. EVACUATION from confined space",
-      step3: "3. CALL rescue team", 
-      step4: "4. EMERGENCY ventilation",
-      step5: "5. MEDICAL assessment",
-      step6: "6. SAFE rescue"
+      title: "Mandatory Rescue Plan (Art. 309 RSST)",
+      legalObligation: "LEGAL OBLIGATION",
+      obligationText: "A personalized rescue plan with required personnel and equipment must be available on site for rapid intervention (regulation July 25, 2023).",
+      criticalStatistic: "Critical statistic",
+      statisticText: "More than 60% of victims of fatal accidents in confined spaces are people who attempted rescue without adequate training.",
+      rescuePlanType: "Rescue plan type *",
+      selectType: "Select rescue type",
+      internalTeam: "Internal rescue team",
+      externalSpecialist: "External specialist firm",
+      fireDepartment: "Municipal fire department", 
+      contractor: "External contractor",
+      planResponsible: "Plan responsible *",
+      emergencyPhone: "Team emergency phone *",
+      maxResponseTime: "Maximum response time",
+      immediate: "Immediate (on site)",
+      minutes2: "2 minutes",
+      minutes5: "5 minutes",
+      minutes10: "10 minutes", 
+      minutes15: "15 minutes",
+      generalDescription: "General rescue plan description",
+      generalDescriptionPlaceholder: "Describe the general rescue plan, access procedures, assembly points...",
+      requiredEquipment: "Required Rescue Equipment",
+      equipmentValidation: "EQUIPMENT VALIDATION",
+      equipmentValidationText: "I certify that all mandatory rescue equipment is available, inspected and in good working condition on site. *",
+      rescueTraining: "Rescue Team Training",
+      testValidation: "Plan Test and Validation",
+      lastDrillDate: "Last drill date",
+      drillResults: "Test results",
+      selectResult: "Select",
+      successful: "Successful - Effective plan",
+      needsImprovement: "Needs improvement",
+      failed: "Failed - Revision required",
+      notTested: "Not yet tested",
+      planEffectiveness: "Notes on plan effectiveness",
+      effectivenessPlaceholder: "Exercise observations, identified improvements, measured response time...",
+      finalConfirmation: "CONFIRMATION",
+      confirmationText: "I certify that the rescue plan is in place, the team is trained and the equipment is available on site for immediate intervention. *",
+      detailedProcedures: "Detailed rescue procedures *",
+      addStep: "Add step",
+      noStepsDefined: "No steps defined. Click \"Add step\" to start.",
+      stepDescription: "Action description",
+      deleteStep: "Delete this step", 
+      shortDescription: "Short description",
+      noText: "No text",
+      characters: "characters"
     }
   })[language];
 
   const texts = getTexts(language);
 
-  // =================== FONCTIONS UTILITAIRES ===================
-  const addTeamMember = () => {
-    if (!newTeamMember.name || !newTeamMember.company || !newTeamMember.phone || !newTeamMember.certification) {
-      alert('⚠️ Veuillez remplir tous les champs obligatoires');
-      return;
-    }
-
-    const member: RescueTeamMember = {
-      id: `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: newTeamMember.name,
-      role: newTeamMember.role,
-      company: newTeamMember.company,
-      phone: newTeamMember.phone,
-      certification: newTeamMember.certification,
-      expiry_date: newTeamMember.expiry_date,
-      available_24h: true,
-      equipment_assigned: []
-    };
-
-    const updatedTeam = [...rescueTeam, member];
-    setRescueTeam(updatedTeam);
-    updateParentData('rescue_team', updatedTeam);
-    
-    setNewTeamMember({
-      name: '',
-      role: 'rescuer',
-      company: '',
-      phone: '',
-      certification: '',
-      expiry_date: ''
-    });
-  };
-
-  const addEmergencyContact = () => {
-    if (!newContact.name || !newContact.role || !newContact.phone) {
-      alert('⚠️ Veuillez remplir tous les champs obligatoires');
-      return;
-    }
-
-    const contact: EmergencyContact = {
-      id: `contact_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: newContact.name,
-      role: newContact.role,
-      phone: newContact.phone,
-      available_24h: true,
-      response_time_minutes: newContact.response_time_minutes
-    };
-
-    const updatedContacts = [...emergencyContacts, contact];
-    setEmergencyContacts(updatedContacts);
-    updateParentData('emergency_contacts', updatedContacts);
-    
-    setNewContact({
-      name: '',
-      role: '',
-      phone: '',
-      response_time_minutes: 15
-    });
-  };
-
-  const addRescueEquipment = () => {
-    if (!newEquipment.name || !newEquipment.serial_number || !newEquipment.location) {
-      alert('⚠️ Veuillez remplir tous les champs obligatoires');
-      return;
-    }
-
-    const equipment: RescueEquipment = {
-      id: `equipment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: newEquipment.name,
-      type: newEquipment.type,
-      serial_number: newEquipment.serial_number,
-      inspection_date: new Date().toISOString().split('T')[0],
-      condition: 'operational',
-      location: newEquipment.location
-    };
-
-    const updatedEquipment = [...rescueEquipment, equipment];
-    setRescueEquipment(updatedEquipment);
-    updateParentData('rescue_equipment', updatedEquipment);
-    
-    setNewEquipment({
-      name: '',
-      type: 'safety',
-      serial_number: '',
-      location: ''
-    });
-  };
-
-  const deleteTeamMember = (memberId: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce membre de l\'équipe?')) {
-      const updatedTeam = rescueTeam.filter(m => m.id !== memberId);
-      setRescueTeam(updatedTeam);
-      updateParentData('rescue_team', updatedTeam);
-    }
-  };
-
-  const deleteContact = (contactId: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce contact?')) {
-      const updatedContacts = emergencyContacts.filter(c => c.id !== contactId);
-      setEmergencyContacts(updatedContacts);
-      updateParentData('emergency_contacts', updatedContacts);
-    }
-  };
-
-  const deleteEquipment = (equipmentId: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet équipement?')) {
-      const updatedEquipment = rescueEquipment.filter(e => e.id !== equipmentId);
-      setRescueEquipment(updatedEquipment);
-      updateParentData('rescue_equipment', updatedEquipment);
-    }
-  };
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'leader': return '👨‍💼';
-      case 'rescuer': return '🦺';
-      case 'medical': return '⚕️';
-      case 'backup': return '👤';
-      default: return '👷';
-    }
-  };
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'leader': return '#3b82f6';
-      case 'rescuer': return '#f59e0b';
-      case 'medical': return '#ef4444';
-      case 'backup': return '#6b7280';
-      default: return '#10b981';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'breathing': return '🫁';
-      case 'lifting': return '🏗️';
-      case 'medical': return '⚕️';
-      case 'communication': return '📻';
-      case 'safety': return '🦺';
-      default: return '🔧';
-    }
-  };
-
-  const getConditionColor = (condition: string) => {
-    switch (condition) {
-      case 'operational': return '#10b981';
-      case 'needs_maintenance': return '#f59e0b';
-      case 'out_of_service': return '#ef4444';
-      default: return '#6b7280';
-    }
-  };
-
-  const testCommunication = (phone: string) => {
-    if (confirm(`Tester la communication avec ${phone}?`)) {
-      // Simulation d'un test de communication
-      setTimeout(() => {
-        alert(`✅ Test de communication réussi avec ${phone}`);
-      }, 1000);
-    }
-  };
-
   // =================== RENDU PRINCIPAL ===================
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
       
-      {/* Section Conformité Réglementaire Plan de Sauvetage */}
+      {/* Section Plan de Sauvetage Obligatoire */}
       <div style={{
-        backgroundColor: '#dc2626',
+        backgroundColor: '#374151',
         borderRadius: '16px',
         padding: isMobile ? '20px' : '24px',
-        border: '2px solid #ef4444',
-        boxShadow: '0 8px 32px rgba(220, 38, 38, 0.3)'
+        border: '2px solid #4b5563',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
       }}>
         <h3 style={{
           fontSize: isMobile ? '18px' : '20px',
@@ -535,8 +197,8 @@ const RescuePlan: React.FC<RescuePlanProps> = ({
           alignItems: 'center',
           gap: '12px'
         }}>
-          <Shield style={{ width: '24px', height: '24px', color: '#fecaca' }} />
-          ⚖️ {texts.legalCompliance}
+          <Shield style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
+          🚨 {texts.title}
         </h3>
         
         <div style={{ 
@@ -544,939 +206,960 @@ const RescuePlan: React.FC<RescuePlanProps> = ({
           borderRadius: '12px',
           padding: isMobile ? '16px' : '20px',
           marginBottom: '20px',
-          border: '1px solid rgba(254, 202, 202, 0.3)'
+          border: '1px solid rgba(107, 114, 128, 0.3)'
         }}>
           <p style={{ 
-            color: '#fecaca', 
+            color: '#d1d5db', 
             fontSize: '15px',
             lineHeight: 1.6,
             margin: '0 0 12px 0',
             fontWeight: '600'
           }}>
-            🚨 <strong>PLAN DE SAUVETAGE OBLIGATOIRE</strong> : Plan écrit, équipe qualifiée et équipements certifiés requis avant toute entrée selon {PROVINCIAL_REGULATIONS[selectedProvince].code}.
+            ⚠️ <strong>{texts.legalObligation}</strong> : {texts.obligationText}
           </p>
           <p style={{ 
-            color: '#fca5a5', 
+            color: '#9ca3af', 
             fontSize: '14px',
             margin: 0,
             fontStyle: 'italic'
           }}>
-            ⏱️ <strong>Temps de réponse</strong> : Équipe de sauvetage prête à intervenir dans les 4 minutes maximum (norme CSA Z1006).
+            📊 <strong>{texts.criticalStatistic}</strong> : {texts.statisticText}
           </p>
         </div>
         
-        {/* Exigences légales plan de sauvetage */}
-        <div style={{ marginBottom: '20px' }}>
+        <div style={styles.grid2}>
+          <div>
+            <label style={{ ...styles.label, color: '#fecaca' }}>{texts.rescuePlanType}</label>
+            <select
+              value={permitData.rescue_plan_type || ''}
+              onChange={(e) => updatePermitData({ rescue_plan_type: e.target.value })}
+              style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+              required
+            >
+              <option value="">{texts.selectType}</option>
+              <option value="internal_team">{texts.internalTeam}</option>
+              <option value="external_specialist">{texts.externalSpecialist}</option>
+              <option value="fire_department">{texts.fireDepartment}</option>
+              <option value="contractor">{texts.contractor}</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ ...styles.label, color: '#fecaca' }}>{texts.planResponsible}</label>
+            <input
+              type="text"
+              placeholder="Nom et titre du responsable"
+              value={permitData.rescue_plan_responsible || ''}
+              onChange={(e) => updatePermitData({ rescue_plan_responsible: e.target.value })}
+              style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+              required
+            />
+          </div>
+        </div>
+        
+        <div style={styles.grid2}>
+          <div>
+            <label style={{ ...styles.label, color: '#fecaca' }}>{texts.emergencyPhone}</label>
+            <input
+              type="tel"
+              placeholder="Ex: 1-800-XXX-XXXX"
+              value={permitData.rescue_team_phone || ''}
+              onChange={(e) => updatePermitData({ rescue_team_phone: e.target.value })}
+              style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+              required
+            />
+          </div>
+          <div>
+            <label style={{ ...styles.label, color: '#fecaca' }}>{texts.maxResponseTime}</label>
+            <select
+              value={permitData.rescue_response_time || ''}
+              onChange={(e) => updatePermitData({ rescue_response_time: e.target.value })}
+              style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+            >
+              <option value="">{texts.selectResult}</option>
+              <option value="immediate">{texts.immediate}</option>
+              <option value="2_minutes">{texts.minutes2}</option>
+              <option value="5_minutes">{texts.minutes5}</option>
+              <option value="10_minutes">{texts.minutes10}</option>
+              <option value="15_minutes">{texts.minutes15}</option>
+            </select>
+          </div>
+        </div>
+        
+        {/* Description générale du plan de sauvetage */}
+        <div style={{ marginTop: '20px' }}>
+          <label style={{ ...styles.label, color: '#9ca3af' }}>{texts.generalDescription}</label>
+          <textarea
+            placeholder={texts.generalDescriptionPlaceholder}
+            value={permitData.rescue_plan || ''}
+            onChange={(e) => updatePermitData({ rescue_plan: e.target.value })}
+            style={{ 
+              ...styles.input, 
+              height: isMobile ? '100px' : '120px', 
+              resize: 'vertical',
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+              border: '1px solid #6b7280'
+            }}
+          />
+        </div>
+        
+        {/* Équipements de sauvetage obligatoires */}
+        <div style={{ marginTop: '20px' }}>
           <h4 style={{
             fontSize: isMobile ? '16px' : '18px',
             fontWeight: '700',
-            color: '#fecaca',
-            marginBottom: '16px'
+            color: '#d1d5db',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}>
-            📋 Exigences Légales Plan de Sauvetage
+            <Wrench style={{ width: '20px', height: '20px' }} />
+            {texts.requiredEquipment}
           </h4>
           
           <div style={styles.grid2}>
             {[
-              { 
-                id: 'rescue_plan_developed', 
-                label: '📝 Plan de sauvetage écrit développé et approuvé', 
-                required: true
-              },
-              { 
-                id: 'rescue_procedures_written', 
-                label: '📖 Procédures de sauvetage détaillées rédigées', 
-                required: true
-              },
-              { 
-                id: 'rescue_team_designated', 
-                label: '👥 Équipe de sauvetage qualifiée désignée', 
-                required: true
-              },
-              { 
-                id: 'rescue_training_current', 
-                label: '🎓 Formation de sauvetage à jour (CSA Z1006)', 
-                required: true
-              },
-              { 
-                id: 'rescue_equipment_inspected', 
-                label: '🔧 Équipements de sauvetage inspectés et certifiés', 
-                required: true
-              },
-              { 
-                id: 'emergency_communication_tested', 
-                label: '📻 Système de communication d\'urgence testé', 
-                required: true
-              }
-            ].map((req) => (
-              <div key={req.id} style={{
+              { id: 'harness_class_e', label: '🦺 Harnais classe E et ligne de vie', required: true },
+              { id: 'mechanical_recovery', label: '⛓️ Dispositif de récupération mécanique', required: true },
+              { id: 'scba_equipment', label: '🫁 Appareil respiratoire autonome (ARA)', required: true },
+              { id: 'first_aid_kit', label: '🏥 Trousse premiers soins et RCR', required: true },
+              { id: 'atmospheric_monitor', label: '📊 Détecteur multi-gaz portable', required: true },
+              { id: 'communication_device', label: '📻 Équipement communication bidirectionnel', required: true },
+              { id: 'ventilation_equipment', label: '💨 Équipement de ventilation d\'urgence', required: false },
+              { id: 'lighting_equipment', label: '💡 Éclairage d\'urgence étanche', required: false }
+            ].map((equipment, index) => (
+              <div key={equipment.id} style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
                 padding: '12px',
                 backgroundColor: 'rgba(0, 0, 0, 0.2)',
                 borderRadius: '8px',
-                border: '1px solid rgba(254, 202, 202, 0.3)'
+                border: '1px solid rgba(107, 114, 128, 0.2)'
               }}>
                 <input
                   type="checkbox"
-                  id={req.id}
-                  checked={permitData[req.id] || false}
-                  onChange={(e) => updatePermitData({ [req.id]: e.target.checked })}
+                  id={equipment.id}
+                  checked={permitData.rescue_equipment?.[equipment.id] || false}
+                  onChange={(e) => updatePermitData({ 
+                    rescue_equipment: { 
+                      ...permitData.rescue_equipment, 
+                      [equipment.id]: e.target.checked 
+                    }
+                  })}
                   style={{
                     width: '20px',
                     height: '20px',
-                    accentColor: '#ef4444'
+                    accentColor: '#10b981'
                   }}
-                  required={req.required}
                 />
                 <label 
-                  htmlFor={req.id}
+                  htmlFor={equipment.id}
                   style={{
-                    color: '#fecaca',
+                    color: equipment.required ? '#d1d5db' : '#9ca3af',
                     fontSize: '14px',
-                    fontWeight: req.required ? '600' : '500',
+                    fontWeight: equipment.required ? '600' : '500',
                     cursor: 'pointer',
                     flex: 1
                   }}
                 >
-                  {req.label}
-                  {req.required && <span style={{ color: '#fca5a5' }}> *</span>}
+                  {equipment.label}
+                  {equipment.required && <span style={{ color: '#f87171' }}> *</span>}
+                </label>
+              </div>
+            ))}
+          </div>
+          
+          {/* Validation des équipements de sauvetage */}
+          <div style={{
+            marginTop: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '16px',
+            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+            borderRadius: '12px',
+            border: '1px solid #10b981'
+          }}>
+            <input
+              type="checkbox"
+              id="rescue_equipment_validated"
+              checked={permitData.rescue_equipment_validated || false}
+              onChange={(e) => updatePermitData({ rescue_equipment_validated: e.target.checked })}
+              style={{
+                width: '24px',
+                height: '24px',
+                accentColor: '#10b981'
+              }}
+              required
+            />
+            <label 
+              htmlFor="rescue_equipment_validated"
+              style={{
+                color: '#86efac',
+                fontSize: isMobile ? '15px' : '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                flex: 1
+              }}
+            >
+              ✅ <strong>{texts.equipmentValidation}</strong> : {texts.equipmentValidationText}
+            </label>
+          </div>
+        </div>
+        
+        {/* Procédures de sauvetage avec système d'étapes dynamiques */}
+        <div style={{ marginTop: '20px' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '16px'
+          }}>
+            <label style={{ ...styles.label, color: '#9ca3af', margin: 0 }}>
+              {texts.detailedProcedures}
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                const currentSteps = permitData.rescue_steps || [];
+                const newStep = {
+                  id: Date.now(),
+                  step: currentSteps.length + 1,
+                  description: ''
+                };
+                updatePermitData({ 
+                  rescue_steps: [...currentSteps, newStep]
+                });
+              }}
+              style={{
+                ...styles.button,
+                ...styles.buttonPrimary,
+                width: 'auto',
+                padding: '8px 12px',
+                fontSize: '14px',
+                minHeight: 'auto'
+              }}
+            >
+              <Plus style={{ width: '16px', height: '16px' }} />
+              {texts.addStep}
+            </button>
+          </div>
+          
+          {/* Affichage des étapes */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {(permitData.rescue_steps || []).length === 0 ? (
+              <div style={{
+                padding: '20px',
+                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                borderRadius: '8px',
+                border: '2px dashed #6b7280',
+                textAlign: 'center'
+              }}>
+                <p style={{ color: '#9ca3af', margin: 0, fontSize: '14px' }}>
+                  {texts.noStepsDefined}
+                </p>
+              </div>
+            ) : (
+              (permitData.rescue_steps || []).map((step: any, index: number) => (
+                <div key={step.id} style={{
+                  display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  alignItems: isMobile ? 'stretch' : 'flex-start',
+                  gap: isMobile ? '12px' : '12px',
+                  padding: isMobile ? '16px' : '16px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(107, 114, 128, 0.3)',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                }}>
+                  {/* En-tête avec numéro et bouton supprimer */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    ...(isMobile ? { width: '100%' } : { flexDirection: 'column' })
+                  }}>
+                    <div style={{
+                      minWidth: isMobile ? '40px' : '32px',
+                      height: isMobile ? '40px' : '32px',
+                      backgroundColor: '#3b82f6',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontWeight: '700',
+                      fontSize: isMobile ? '16px' : '14px',
+                      boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+                      ...(isMobile ? {} : { marginBottom: '8px' })
+                    }}>
+                      {step.step}
+                    </div>
+                    
+                    {isMobile && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <span style={{
+                          color: '#9ca3af',
+                          fontSize: '14px',
+                          fontWeight: '600'
+                        }}>
+                          Étape {step.step}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedSteps = (permitData.rescue_steps || [])
+                              .filter((s: any) => s.id !== step.id)
+                              .map((s: any, idx: number) => ({ ...s, step: idx + 1 }));
+                            updatePermitData({ rescue_steps: updatedSteps });
+                          }}
+                          style={{
+                            backgroundColor: 'rgba(220, 38, 38, 0.8)',
+                            border: '1px solid #ef4444',
+                            borderRadius: '8px',
+                            padding: '10px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: '40px',
+                            minHeight: '40px',
+                            color: 'white',
+                            transition: 'all 0.2s ease'
+                          }}
+                          title={texts.deleteStep}
+                          onMouseEnter={(e) => {
+                            (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(220, 38, 38, 1)';
+                            (e.target as HTMLButtonElement).style.transform = 'scale(1.05)';
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(220, 38, 38, 0.8)';
+                            (e.target as HTMLButtonElement).style.transform = 'scale(1)';
+                          }}
+                        >
+                          <Trash2 style={{ width: '18px', height: '18px' }} />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {!isMobile && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedSteps = (permitData.rescue_steps || [])
+                            .filter((s: any) => s.id !== step.id)
+                            .map((s: any, idx: number) => ({ ...s, step: idx + 1 }));
+                          updatePermitData({ rescue_steps: updatedSteps });
+                        }}
+                        style={{
+                          backgroundColor: 'rgba(220, 38, 38, 0.8)',
+                          border: '1px solid #ef4444',
+                          borderRadius: '6px',
+                          padding: '8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: '32px',
+                          minHeight: '32px',
+                          color: 'white'
+                        }}
+                        title={texts.deleteStep}
+                      >
+                        <Trash2 style={{ width: '16px', height: '16px' }} />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Zone de texte optimisée */}
+                  <div style={{ 
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
+                    {isMobile && (
+                      <label style={{
+                        color: '#9ca3af',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        {texts.stepDescription}
+                      </label>
+                    )}
+                    <textarea
+                      placeholder={isMobile 
+                        ? `Décrire l'action à effectuer pour l'étape ${step.step}...` 
+                        : `Étape ${step.step}: Décrire l'action à effectuer...`
+                      }
+                      value={step.description}
+                      onChange={(e) => {
+                        const updatedSteps = (permitData.rescue_steps || []).map((s: any) =>
+                          s.id === step.id ? { ...s, description: e.target.value } : s
+                        );
+                        updatePermitData({ rescue_steps: updatedSteps });
+                      }}
+                      style={{
+                        ...styles.input,
+                        height: isMobile ? '80px' : '60px',
+                        resize: 'vertical',
+                        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                        border: '1px solid #6b7280',
+                        fontSize: isMobile ? '16px' : '14px',
+                        lineHeight: '1.5',
+                        padding: isMobile ? '12px' : '10px',
+                        borderRadius: '8px',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onFocus={(e) => {
+                        (e.target as HTMLTextAreaElement).style.borderColor = '#3b82f6';
+                        (e.target as HTMLTextAreaElement).style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        (e.target as HTMLTextAreaElement).style.borderColor = '#6b7280';
+                        (e.target as HTMLTextAreaElement).style.boxShadow = 'none';
+                      }}
+                    />
+                    {/* Compteur de caractères pour mobile */}
+                    {isMobile && (
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: '12px',
+                        color: '#6b7280'
+                      }}>
+                        <span>
+                          {step.description ? `${step.description.length} ${texts.characters}` : texts.noText}
+                        </span>
+                        {step.description && step.description.length < 20 && (
+                          <span style={{ color: '#f59e0b' }}>
+                            ⚠️ {texts.shortDescription}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+        
+        {/* Certification Réglementaire de l'Équipe */}
+        <div style={{
+          backgroundColor: '#dc2626',
+          borderRadius: '16px',
+          padding: isMobile ? '20px' : '24px',
+          border: '2px solid #ef4444',
+          boxShadow: '0 8px 32px rgba(220, 38, 38, 0.3)',
+          marginTop: '20px'
+        }}>
+          <h4 style={{
+            fontSize: isMobile ? '18px' : '20px',
+            fontWeight: '700',
+            color: 'white',
+            marginBottom: isMobile ? '16px' : '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <Users style={{ width: '24px', height: '24px', color: '#fecaca' }} />
+            🎓 Certification Réglementaire de l'Équipe de Sauvetage
+          </h4>
+          
+          <div style={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+            borderRadius: '12px',
+            padding: isMobile ? '16px' : '20px',
+            marginBottom: '20px',
+            border: '1px solid rgba(254, 202, 202, 0.3)'
+          }}>
+            <p style={{ 
+              color: '#fecaca', 
+              fontSize: '15px',
+              lineHeight: 1.6,
+              margin: '0 0 12px 0',
+              fontWeight: '600'
+            }}>
+              🎓 <strong>CERTIFICATION OBLIGATOIRE</strong> : L'équipe de sauvetage doit posséder les certifications réglementaires CSA Z1006-2023 et formations de premiers soins niveau 2.
+            </p>
+            <p style={{ 
+              color: '#fca5a5', 
+              fontSize: '14px',
+              margin: 0,
+              fontStyle: 'italic'
+            }}>
+              ⏰ <strong>Validité limitée</strong> : Certifications à renouveler selon les échéances réglementaires (généralement 2-3 ans).
+            </p>
+          </div>
+          
+          {/* Certifications de l'équipe */}
+          <div style={{ marginBottom: '20px' }}>
+            <h5 style={{
+              color: '#fecaca',
+              fontSize: '16px',
+              fontWeight: '700',
+              marginBottom: '16px'
+            }}>
+              Certifications Obligatoires de l'Équipe
+            </h5>
+            
+            <div style={styles.grid2}>
+              {[
+                { 
+                  id: 'csa_z1006_certified', 
+                  label: '🏅 Certification CSA Z1006 - Gestion travail espace clos', 
+                  required: true,
+                  field: 'csa_z1006_certified'
+                },
+                { 
+                  id: 'first_aid_level2', 
+                  label: '🏥 Premiers soins niveau 2 (16h minimum)', 
+                  required: true,
+                  field: 'first_aid_level2'
+                },
+                { 
+                  id: 'cpr_certified', 
+                  label: '💗 RCR/DEA certifié par organisme reconnu', 
+                  required: true,
+                  field: 'cpr_certified'
+                },
+                { 
+                  id: 'response_time_verified', 
+                  label: '⏱️ Temps de réponse ≤4 minutes vérifié', 
+                  required: true,
+                  field: 'response_time_verified'
+                }
+              ].map((cert) => (
+                <div key={cert.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(254, 202, 202, 0.3)'
+                }}>
+                  <input
+                    type="checkbox"
+                    id={cert.id}
+                    checked={permitData.rescue_team_certifications?.[cert.field] || false}
+                    onChange={(e) => updatePermitData({ 
+                      rescue_team_certifications: { 
+                        ...permitData.rescue_team_certifications, 
+                        [cert.field]: e.target.checked 
+                      }
+                    })}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      accentColor: '#ef4444'
+                    }}
+                    required={cert.required}
+                  />
+                  <label 
+                    htmlFor={cert.id}
+                    style={{
+                      color: '#fecaca',
+                      fontSize: '14px',
+                      fontWeight: cert.required ? '600' : '500',
+                      cursor: 'pointer',
+                      flex: 1
+                    }}
+                  >
+                    {cert.label}
+                    {cert.required && <span style={{ color: '#fca5a5' }}> *</span>}
+                  </label>
+                </div>
+              ))}
+            </div>
+            
+            {/* Dates d'expiration des certifications */}
+            <div style={{ marginTop: '16px' }}>
+              <div style={styles.grid2}>
+                <div>
+                  <label style={{ ...styles.label, color: '#fca5a5' }}>Expiration certification CSA Z1006 *</label>
+                  <input
+                    type="date"
+                    value={permitData.rescue_team_certifications?.certification_expiry || ''}
+                    onChange={(e) => updatePermitData({ 
+                      rescue_team_certifications: { 
+                        ...permitData.rescue_team_certifications, 
+                        certification_expiry: e.target.value 
+                      }
+                    })}
+                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ ...styles.label, color: '#fca5a5' }}>Heures formation sauvetage *</label>
+                  <input
+                    type="number"
+                    placeholder="Ex: 40"
+                    min="16"
+                    max="200"
+                    value={permitData.rescue_team_certifications?.rescue_training_hours || ''}
+                    onChange={(e) => updatePermitData({ 
+                      rescue_team_certifications: { 
+                        ...permitData.rescue_team_certifications, 
+                        rescue_training_hours: parseInt(e.target.value) || 0
+                      }
+                    })}
+                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Certification des équipements */}
+          <div style={{ marginBottom: '20px' }}>
+            <h5 style={{
+              color: '#fecaca',
+              fontSize: '16px',
+              fontWeight: '700',
+              marginBottom: '16px'
+            }}>
+              🔧 Certification des Équipements de Sauvetage
+            </h5>
+            
+            <div style={styles.grid2}>
+              <div>
+                <label style={{ ...styles.label, color: '#fca5a5' }}>Dernière inspection harnais *</label>
+                <input
+                  type="date"
+                  value={permitData.equipment_certifications?.harness_inspection_date || ''}
+                  onChange={(e) => updatePermitData({ 
+                    equipment_certifications: { 
+                      ...permitData.equipment_certifications, 
+                      harness_inspection_date: e.target.value 
+                    }
+                  })}
+                  style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                  required
+                />
+              </div>
+              <div>
+                <label style={{ ...styles.label, color: '#fca5a5' }}>Certification ARA/SCBA *</label>
+                <input
+                  type="text"
+                  placeholder="Ex: CSA-Z94.4-18"
+                  value={permitData.equipment_certifications?.scba_certification || ''}
+                  onChange={(e) => updatePermitData({ 
+                    equipment_certifications: { 
+                      ...permitData.equipment_certifications, 
+                      scba_certification: e.target.value 
+                    }
+                  })}
+                  style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                  required
+                />
+              </div>
+            </div>
+            
+            <div style={{ marginTop: '16px' }}>
+              <div style={styles.grid2}>
+                <div>
+                  <label style={{ ...styles.label, color: '#fca5a5' }}>Cert. récupération mécanique *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Treuil DBI-SALA 8518590"
+                    value={permitData.equipment_certifications?.mechanical_recovery_cert || ''}
+                    onChange={(e) => updatePermitData({ 
+                      equipment_certifications: { 
+                        ...permitData.equipment_certifications, 
+                        mechanical_recovery_cert: e.target.value 
+                      }
+                    })}
+                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ ...styles.label, color: '#fca5a5' }}>Dernière inspection générale *</label>
+                  <input
+                    type="date"
+                    value={permitData.equipment_certifications?.last_equipment_inspection || ''}
+                    onChange={(e) => updatePermitData({ 
+                      equipment_certifications: { 
+                        ...permitData.equipment_certifications, 
+                        last_equipment_inspection: e.target.value 
+                      }
+                    })}
+                    style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Tests réglementaires annuels */}
+          <div style={{ 
+            marginTop: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '12px',
+            border: '1px solid rgba(254, 202, 202, 0.3)'
+          }}>
+            <input
+              type="checkbox"
+              id="annual_drill_required"
+              checked={permitData.annual_drill_required || false}
+              onChange={(e) => updatePermitData({ annual_drill_required: e.target.checked })}
+              style={{
+                width: '24px',
+                height: '24px',
+                accentColor: '#ef4444'
+              }}
+              required
+            />
+            <label 
+              htmlFor="annual_drill_required"
+              style={{
+                color: '#fecaca',
+                fontSize: isMobile ? '15px' : '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                flex: 1
+              }}
+            >
+              📅 <strong>EXERCICE ANNUEL OBLIGATOIRE</strong> : Test d'efficacité du plan de sauvetage effectué dans les 12 derniers mois *
+            </label>
+          </div>
+          
+          {permitData.annual_drill_required && (
+            <div style={{ marginTop: '16px' }}>
+              <label style={{ ...styles.label, color: '#fca5a5' }}>Date dernier test d'efficacité *</label>
+              <input
+                type="date"
+                value={permitData.last_effectiveness_test || ''}
+                onChange={(e) => updatePermitData({ last_effectiveness_test: e.target.value })}
+                style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
+                required={permitData.annual_drill_required}
+              />
+            </div>
+          )}
+          
+          {/* Conformité réglementaire finale */}
+          <div style={{ 
+            marginTop: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '12px',
+            border: '1px solid rgba(254, 202, 202, 0.3)'
+          }}>
+            <input
+              type="checkbox"
+              id="regulatory_compliance_verified"
+              checked={permitData.regulatory_compliance_verified || false}
+              onChange={(e) => updatePermitData({ regulatory_compliance_verified: e.target.checked })}
+              style={{
+                width: '24px',
+                height: '24px',
+                accentColor: '#ef4444'
+              }}
+              required
+            />
+            <label 
+              htmlFor="regulatory_compliance_verified"
+              style={{
+                color: '#fecaca',
+                fontSize: isMobile ? '15px' : '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                flex: 1
+              }}
+            >
+              ⚖️ <strong>CONFORMITÉ RÉGLEMENTAIRE</strong> : Je certifie la conformité du plan de sauvetage aux exigences de {PROVINCIAL_REGULATIONS[selectedProvince].authority} *
+            </label>
+          </div>
+        </div>
+        
+        {/* Formation équipe de sauvetage */}
+        <div style={{ marginTop: '20px' }}>
+          <h4 style={{
+            fontSize: isMobile ? '16px' : '18px',
+            fontWeight: '700',
+            color: '#d1d5db',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Users style={{ width: '20px', height: '20px' }} />
+            {texts.rescueTraining}
+          </h4>
+          
+          <div style={styles.grid2}>
+            {[
+              { id: 'confined_space_rescue', label: '🚨 Sauvetage en espace clos', required: true },
+              { id: 'first_aid_cpr', label: '🏥 Premiers soins et RCR', required: true },
+              { id: 'respiratory_protection', label: '🫁 Protection respiratoire', required: true },
+              { id: 'vertical_rescue', label: '🧗 Sauvetage vertical', required: false },
+              { id: 'hazmat_awareness', label: '☢️ Sensibilisation matières dangereuses', required: false },
+              { id: 'fire_safety', label: '🔥 Sécurité incendie', required: false }
+            ].map((training, index) => (
+              <div key={training.id} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px',
+                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                borderRadius: '8px',
+                border: '1px solid rgba(107, 114, 128, 0.2)'
+              }}>
+                <input
+                  type="checkbox"
+                  id={training.id}
+                  checked={permitData.rescue_training?.[training.id] || false}
+                  onChange={(e) => updatePermitData({ 
+                    rescue_training: { 
+                      ...permitData.rescue_training, 
+                      [training.id]: e.target.checked 
+                    }
+                  })}
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    accentColor: '#10b981'
+                  }}
+                />
+                <label 
+                  htmlFor={training.id}
+                  style={{
+                    color: training.required ? '#93c5fd' : '#d1d5db',
+                    fontSize: '14px',
+                    fontWeight: training.required ? '600' : '500',
+                    cursor: 'pointer',
+                    flex: 1
+                  }}
+                >
+                  {training.label}
+                  {training.required && <span style={{ color: '#60a5fa' }}> *</span>}
                 </label>
               </div>
             ))}
           </div>
         </div>
         
-        {/* Coordination avec services externes */}
+        {/* Test du plan de sauvetage */}
         <div style={{ 
+          marginTop: '20px',
+          padding: '16px',
+          backgroundColor: 'rgba(0, 0, 0, 0.3)',
+          borderRadius: '12px',
+          border: '2px dashed #fca5a5'
+        }}>
+          <h4 style={{
+            fontSize: isMobile ? '16px' : '18px',
+            fontWeight: '700',
+            color: '#d1d5db',
+            marginBottom: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Clock style={{ width: '20px', height: '20px' }} />
+            📋 {texts.testValidation}
+          </h4>
+          
+          <div style={styles.grid2}>
+            <div>
+              <label style={{ ...styles.label, color: '#9ca3af' }}>{texts.lastDrillDate}</label>
+              <input
+                type="date"
+                value={permitData.last_drill_date || ''}
+                onChange={(e) => updatePermitData({ last_drill_date: e.target.value })}
+                style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+              />
+            </div>
+            <div>
+              <label style={{ ...styles.label, color: '#9ca3af' }}>{texts.drillResults}</label>
+              <select
+                value={permitData.drill_results || ''}
+                onChange={(e) => updatePermitData({ drill_results: e.target.value })}
+                style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #6b7280' }}
+              >
+                <option value="">{texts.selectResult}</option>
+                <option value="successful">✅ {texts.successful}</option>
+                <option value="needs_improvement">⚠️ {texts.needsImprovement}</option>
+                <option value="failed">❌ {texts.failed}</option>
+                <option value="not_tested">🔄 {texts.notTested}</option>
+              </select>
+            </div>
+          </div>
+          
+          <div style={{ marginTop: '16px' }}>
+            <label style={{ ...styles.label, color: '#9ca3af' }}>{texts.planEffectiveness}</label>
+            <textarea
+              placeholder={texts.effectivenessPlaceholder}
+              value={permitData.drill_notes || ''}
+              onChange={(e) => updatePermitData({ drill_notes: e.target.value })}
+              style={{ 
+                ...styles.input, 
+                height: '80px', 
+                resize: 'vertical',
+                backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                border: '1px solid #6b7280'
+              }}
+            />
+          </div>
+        </div>
+        
+        {/* Validation finale */}
+        <div style={{ 
+          marginTop: '20px',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
           padding: '16px',
-          backgroundColor: 'rgba(0, 0, 0, 0.2)',
+          backgroundColor: 'rgba(16, 185, 129, 0.2)',
           borderRadius: '12px',
-          border: '1px solid rgba(254, 202, 202, 0.3)'
+          border: '1px solid #10b981'
         }}>
           <input
             type="checkbox"
-            id="external_rescue_coordination"
-            checked={permitData.external_rescue_coordination || false}
-            onChange={(e) => updatePermitData({ external_rescue_coordination: e.target.checked })}
+            id="rescue_plan_validated"
+            checked={permitData.rescue_plan_validated || false}
+            onChange={(e) => updatePermitData({ rescue_plan_validated: e.target.checked })}
             style={{
               width: '24px',
               height: '24px',
-              accentColor: '#ef4444'
+              accentColor: '#10b981'
             }}
             required
           />
           <label 
-            htmlFor="external_rescue_coordination"
+            htmlFor="rescue_plan_validated"
             style={{
-              color: '#fecaca',
+              color: '#86efac',
               fontSize: isMobile ? '15px' : '16px',
               fontWeight: '600',
               cursor: 'pointer',
               flex: 1
             }}
           >
-            🚑 <strong>COORDINATION SERVICES D'URGENCE</strong> : Protocole établi avec {PROVINCIAL_REGULATIONS[selectedProvince].authority} et services d'urgence locaux *
+            ✅ <strong>{texts.finalConfirmation}</strong> : {texts.confirmationText}
           </label>
         </div>
-      </div>
-
-      {/* Section Procédures d'Urgence */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <AlertTriangle style={{ width: '20px', height: '20px' }} />
-          🚨 {texts.emergencyProcedure}
-        </h3>
-        
-        <div style={{
-          backgroundColor: 'rgba(220, 38, 38, 0.1)',
-          borderRadius: '12px',
-          padding: isMobile ? '16px' : '20px',
-          border: '2px solid #dc2626',
-          marginBottom: '20px'
-        }}>
-          <div style={styles.grid2}>
-            {[
-              { step: texts.step1, icon: '⏹️', color: '#ef4444' },
-              { step: texts.step2, icon: '🏃‍♂️', color: '#f59e0b' },
-              { step: texts.step3, icon: '📞', color: '#3b82f6' },
-              { step: texts.step4, icon: '💨', color: '#10b981' },
-              { step: texts.step5, icon: '⚕️', color: '#8b5cf6' },
-              { step: texts.step6, icon: '🦺', color: '#06b6d4' }
-            ].map((procedure, index) => (
-              <div key={index} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px',
-                backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                borderRadius: '8px',
-                border: `1px solid ${procedure.color}`,
-                marginBottom: '8px'
-              }}>
-                <span style={{ fontSize: '20px' }}>{procedure.icon}</span>
-                <span style={{
-                  color: 'white',
-                  fontSize: isMobile ? '14px' : '15px',
-                  fontWeight: '600'
-                }}>
-                  {procedure.step}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Numéros d'urgence */}
-        <div style={styles.grid3}>
-          <div style={{
-            padding: '16px',
-            backgroundColor: 'rgba(239, 68, 68, 0.2)',
-            borderRadius: '12px',
-            border: '2px solid #ef4444',
-            textAlign: 'center'
-          }}>
-            <Phone style={{ 
-              width: '32px', 
-              height: '32px', 
-              color: '#f87171',
-              margin: '0 auto 8px'
-            }} />
-            <div style={{ 
-              fontSize: '20px', 
-              fontWeight: 'bold', 
-              color: '#fecaca',
-              marginBottom: '4px'
-            }}>
-              911
-            </div>
-            <div style={{ color: '#fca5a5', fontSize: '12px' }}>
-              Urgences
-            </div>
-          </div>
-          
-          <div style={{
-            padding: '16px',
-            backgroundColor: 'rgba(59, 130, 246, 0.2)',
-            borderRadius: '12px',
-            border: '2px solid #3b82f6',
-            textAlign: 'center'
-          }}>
-            <Building style={{ 
-              width: '32px', 
-              height: '32px', 
-              color: '#60a5fa',
-              margin: '0 auto 8px'
-            }} />
-            <div style={{ 
-              fontSize: '14px', 
-              fontWeight: 'bold', 
-              color: '#93c5fd',
-              marginBottom: '4px'
-            }}>
-              {PROVINCIAL_REGULATIONS[selectedProvince].authority_phone}
-            </div>
-            <div style={{ color: '#bfdbfe', fontSize: '12px' }}>
-              {PROVINCIAL_REGULATIONS[selectedProvince].authority}
-            </div>
-          </div>
-          
-          <div style={{
-            padding: '16px',
-            backgroundColor: 'rgba(16, 185, 129, 0.2)',
-            borderRadius: '12px',
-            border: '2px solid #10b981',
-            textAlign: 'center'
-          }}>
-            <Stethoscope style={{ 
-              width: '32px', 
-              height: '32px', 
-              color: '#34d399',
-              margin: '0 auto 8px'
-            }} />
-            <div style={{ 
-              fontSize: '16px', 
-              fontWeight: 'bold', 
-              color: '#86efac',
-              marginBottom: '4px'
-            }}>
-              Info-Santé
-            </div>
-            <div style={{ color: '#6ee7b7', fontSize: '12px' }}>
-              811
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Section Ajout Membre Équipe */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Plus style={{ width: '20px', height: '20px' }} />
-          👥 {texts.addTeamMember}
-        </h3>
-        
-        <div style={styles.grid3}>
-          <div>
-            <label style={styles.label}>{texts.fullName} *</label>
-            <input
-              type="text"
-              placeholder="Ex: Marie Dubois"
-              value={newTeamMember.name}
-              onChange={(e) => setNewTeamMember(prev => ({ ...prev, name: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{texts.company} *</label>
-            <input
-              type="text"
-              placeholder="Ex: Services Sauvetage Inc."
-              value={newTeamMember.company}
-              onChange={(e) => setNewTeamMember(prev => ({ ...prev, company: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{texts.role} *</label>
-            <select
-              value={newTeamMember.role}
-              onChange={(e) => setNewTeamMember(prev => ({ ...prev, role: e.target.value as any }))}
-              style={styles.input}
-              required
-            >
-              <option value="rescuer">🦺 {texts.rescuer}</option>
-              <option value="leader">👨‍💼 {texts.leader}</option>
-              <option value="medical">⚕️ {texts.medical}</option>
-              <option value="backup">👤 {texts.backup}</option>
-            </select>
-          </div>
-        </div>
-        
-        <div style={{ ...styles.grid3, marginTop: '16px' }}>
-          <div>
-            <label style={styles.label}>{texts.phone} *</label>
-            <input
-              type="tel"
-              placeholder="Ex: (514) 555-0123"
-              value={newTeamMember.phone}
-              onChange={(e) => setNewTeamMember(prev => ({ ...prev, phone: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{texts.certification} *</label>
-            <input
-              type="text"
-              placeholder="Ex: CSA Z1006, Premiers soins"
-              value={newTeamMember.certification}
-              onChange={(e) => setNewTeamMember(prev => ({ ...prev, certification: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{texts.expiryDate}</label>
-            <input
-              type="date"
-              value={newTeamMember.expiry_date}
-              onChange={(e) => setNewTeamMember(prev => ({ ...prev, expiry_date: e.target.value }))}
-              style={styles.input}
-            />
-          </div>
-        </div>
-        
-        <button
-          onClick={addTeamMember}
-          style={{
-            ...styles.button,
-            ...styles.buttonSuccess,
-            marginTop: '16px',
-            justifyContent: 'center'
-          }}
-        >
-          <Plus style={{ width: '18px', height: '18px' }} />
-          Ajouter à l'Équipe
-        </button>
-      </div>
-
-      {/* Section Équipe de Sauvetage */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Users style={{ width: '20px', height: '20px' }} />
-          🦺 {texts.rescueTeam} ({rescueTeam.length})
-        </h3>
-        
-        {rescueTeam.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: isMobile ? '32px 20px' : '48px 32px', 
-            color: '#9ca3af',
-            backgroundColor: 'rgba(17, 24, 39, 0.5)',
-            borderRadius: '12px',
-            border: '1px solid #374151'
-          }}>
-            <Users style={{ 
-              width: isMobile ? '56px' : '72px', 
-              height: isMobile ? '56px' : '72px', 
-              margin: '0 auto 20px', 
-              color: '#4b5563'
-            }} />
-            <p style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: '12px', fontWeight: '600' }}>
-              Aucune équipe de sauvetage désignée
-            </p>
-            <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
-              Ajoutez les membres de l'équipe de sauvetage qualifiée ci-dessus.
-            </p>
-          </div>
-        ) : (
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '16px',
-            maxHeight: isMobile ? '500px' : '600px',
-            overflowY: 'auto'
-          }}>
-            {rescueTeam.map((member) => (
-              <div
-                key={member.id}
-                style={{
-                  backgroundColor: 'rgba(17, 24, 39, 0.6)',
-                  borderRadius: '12px',
-                  padding: isMobile ? '16px' : '20px',
-                  border: `2px solid ${getRoleColor(member.role)}`,
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between', 
-                  marginBottom: '16px',
-                  flexDirection: isMobile ? 'column' : 'row',
-                  gap: isMobile ? '12px' : '0'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '28px' }}>{getRoleIcon(member.role)}</span>
-                    <div>
-                      <div style={{ 
-                        fontWeight: '700', 
-                        color: 'white', 
-                        fontSize: isMobile ? '16px' : '18px',
-                        marginBottom: '4px'
-                      }}>
-                        {member.name}
-                      </div>
-                      <div style={{ 
-                        color: '#9ca3af', 
-                        fontSize: '14px',
-                        marginBottom: '4px'
-                      }}>
-                        🏢 {member.company}
-                      </div>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        backgroundColor: getRoleColor(member.role),
-                        color: 'white'
-                      }}>
-                        {member.role.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px',
-                    flexDirection: isMobile ? 'column' : 'row'
-                  }}>
-                    <button
-                      onClick={() => testCommunication(member.phone)}
-                      style={{
-                        ...styles.button,
-                        ...styles.buttonPrimary,
-                        width: 'auto',
-                        padding: '6px 10px',
-                        fontSize: '12px',
-                        minHeight: 'auto'
-                      }}
-                    >
-                      <Radio style={{ width: '14px', height: '14px' }} />
-                      {texts.testCommunication}
-                    </button>
-                    
-                    <button
-                      onClick={() => deleteTeamMember(member.id)}
-                      style={{
-                        ...styles.button,
-                        ...styles.buttonSecondary,
-                        width: 'auto',
-                        padding: '6px 10px',
-                        fontSize: '12px',
-                        minHeight: 'auto'
-                      }}
-                    >
-                      <Trash2 style={{ width: '14px', height: '14px' }} />
-                      {texts.delete}
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Détails du membre */}
-                <div style={{ 
-                  display: 'grid',
-                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-                  gap: '16px',
-                  padding: '16px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  borderRadius: '8px'
-                }}>
-                  <div>
-                    <span style={{ color: '#9ca3af', fontSize: '13px', display: 'block' }}>
-                      📞 {texts.phone}:
-                    </span>
-                    <span style={{ color: '#d1d5db', fontSize: '14px', fontWeight: '600' }}>
-                      {member.phone}
-                    </span>
-                  </div>
-                  <div>
-                    <span style={{ color: '#9ca3af', fontSize: '13px', display: 'block' }}>
-                      🎓 {texts.certification}:
-                    </span>
-                    <span style={{ color: '#d1d5db', fontSize: '14px', fontWeight: '600' }}>
-                      {member.certification}
-                    </span>
-                  </div>
-                  <div>
-                    <span style={{ color: '#9ca3af', fontSize: '13px', display: 'block' }}>
-                      📅 {texts.expiryDate}:
-                    </span>
-                    <span style={{ 
-                      color: member.expiry_date && new Date(member.expiry_date) < new Date() ? '#fca5a5' : '#d1d5db', 
-                      fontSize: '14px', 
-                      fontWeight: '600' 
-                    }}>
-                      {member.expiry_date ? 
-                        new Date(member.expiry_date).toLocaleDateString('fr-CA') : 
-                        'Non spécifiée'
-                      }
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Section Ajout Contact d'Urgence */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Plus style={{ width: '20px', height: '20px' }} />
-          📞 {texts.addContact}
-        </h3>
-        
-        <div style={styles.grid4}>
-          <div>
-            <label style={styles.label}>{texts.fullName} *</label>
-            <input
-              type="text"
-              placeholder="Ex: Dr. Jean Martin"
-              value={newContact.name}
-              onChange={(e) => setNewContact(prev => ({ ...prev, name: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{texts.role} *</label>
-            <input
-              type="text"
-              placeholder="Ex: Médecin d'urgence"
-              value={newContact.role}
-              onChange={(e) => setNewContact(prev => ({ ...prev, role: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{texts.phone} *</label>
-            <input
-              type="tel"
-              placeholder="Ex: (514) 555-0123"
-              value={newContact.phone}
-              onChange={(e) => setNewContact(prev => ({ ...prev, phone: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{texts.responseTime}</label>
-            <input
-              type="number"
-              min="1"
-              max="60"
-              value={newContact.response_time_minutes}
-              onChange={(e) => setNewContact(prev => ({ ...prev, response_time_minutes: parseInt(e.target.value) || 15 }))}
-              style={styles.input}
-            />
-          </div>
-        </div>
-        
-        <button
-          onClick={addEmergencyContact}
-          style={{
-            ...styles.button,
-            ...styles.buttonSuccess,
-            marginTop: '16px',
-            justifyContent: 'center'
-          }}
-        >
-          <Plus style={{ width: '18px', height: '18px' }} />
-          Ajouter Contact
-        </button>
-      </div>
-
-      {/* Section Contacts d'Urgence */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Phone style={{ width: '20px', height: '20px' }} />
-          📞 {texts.emergencyContacts} ({emergencyContacts.length})
-        </h3>
-        
-        {emergencyContacts.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: isMobile ? '32px 20px' : '48px 32px', 
-            color: '#9ca3af',
-            backgroundColor: 'rgba(17, 24, 39, 0.5)',
-            borderRadius: '12px',
-            border: '1px solid #374151'
-          }}>
-            <Phone style={{ 
-              width: isMobile ? '56px' : '72px', 
-              height: isMobile ? '56px' : '72px', 
-              margin: '0 auto 20px', 
-              color: '#4b5563'
-            }} />
-            <p style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: '12px', fontWeight: '600' }}>
-              Aucun contact d'urgence configuré
-            </p>
-            <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
-              Ajoutez les contacts d'urgence essentiels ci-dessus.
-            </p>
-          </div>
-        ) : (
-          <div style={styles.grid2}>
-            {emergencyContacts.map((contact) => (
-              <div
-                key={contact.id}
-                style={{
-                  backgroundColor: 'rgba(17, 24, 39, 0.6)',
-                  borderRadius: '12px',
-                  padding: isMobile ? '16px' : '20px',
-                  border: '2px solid #3b82f6',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between', 
-                  marginBottom: '12px'
-                }}>
-                  <div>
-                    <div style={{ 
-                      fontWeight: '700', 
-                      color: 'white', 
-                      fontSize: '16px',
-                      marginBottom: '4px'
-                    }}>
-                      📞 {contact.name}
-                    </div>
-                    <div style={{ 
-                      color: '#9ca3af', 
-                      fontSize: '14px',
-                      marginBottom: '8px'
-                    }}>
-                      {contact.role}
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={() => deleteContact(contact.id)}
-                    style={{
-                      ...styles.button,
-                      ...styles.buttonSecondary,
-                      width: 'auto',
-                      padding: '6px',
-                      fontSize: '12px',
-                      minHeight: 'auto'
-                    }}
-                  >
-                    <Trash2 style={{ width: '14px', height: '14px' }} />
-                  </button>
-                </div>
-                
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                  padding: '12px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  borderRadius: '8px'
-                }}>
-                  <div style={{ 
-                    color: '#60a5fa', 
-                    fontSize: '16px', 
-                    fontWeight: '700',
-                    fontFamily: 'JetBrains Mono, monospace'
-                  }}>
-                    {contact.phone}
-                  </div>
-                  <div style={{ 
-                    color: '#9ca3af', 
-                    fontSize: '13px'
-                  }}>
-                    ⏱️ Temps de réponse: {contact.response_time_minutes} min
-                  </div>
-                  <div style={{ 
-                    color: contact.available_24h ? '#86efac' : '#fbbf24', 
-                    fontSize: '13px',
-                    fontWeight: '600'
-                  }}>
-                    {contact.available_24h ? '🟢 Disponible 24h/24' : '🟡 Heures limitées'}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Section Ajout Équipement de Sauvetage */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Plus style={{ width: '20px', height: '20px' }} />
-          🔧 {texts.addEquipment}
-        </h3>
-        
-        <div style={styles.grid4}>
-          <div>
-            <label style={styles.label}>{texts.equipmentName} *</label>
-            <input
-              type="text"
-              placeholder="Ex: Treuil de sauvetage"
-              value={newEquipment.name}
-              onChange={(e) => setNewEquipment(prev => ({ ...prev, name: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{texts.equipmentType} *</label>
-            <select
-              value={newEquipment.type}
-              onChange={(e) => setNewEquipment(prev => ({ ...prev, type: e.target.value as any }))}
-              style={styles.input}
-              required
-            >
-              <option value="safety">🦺 {texts.safety}</option>
-              <option value="breathing">🫁 {texts.breathing}</option>
-              <option value="lifting">🏗️ {texts.lifting}</option>
-              <option value="medical">⚕️ Medical</option>
-              <option value="communication">📻 {texts.communication}</option>
-            </select>
-          </div>
-          <div>
-            <label style={styles.label}>{texts.serialNumber} *</label>
-            <input
-              type="text"
-              placeholder="Ex: WH-2024-001"
-              value={newEquipment.serial_number}
-              onChange={(e) => setNewEquipment(prev => ({ ...prev, serial_number: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{texts.location} *</label>
-            <input
-              type="text"
-              placeholder="Ex: Camion sauvetage A-1"
-              value={newEquipment.location}
-              onChange={(e) => setNewEquipment(prev => ({ ...prev, location: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-        </div>
-        
-        <button
-          onClick={addRescueEquipment}
-          style={{
-            ...styles.button,
-            ...styles.buttonSuccess,
-            marginTop: '16px',
-            justifyContent: 'center'
-          }}
-        >
-          <Plus style={{ width: '18px', height: '18px' }} />
-          Ajouter Équipement
-        </button>
-      </div>
-
-      {/* Section Équipements de Sauvetage */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Wrench style={{ width: '20px', height: '20px' }} />
-          🔧 {texts.rescueEquipment} ({rescueEquipment.length})
-        </h3>
-        
-        {rescueEquipment.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: isMobile ? '32px 20px' : '48px 32px', 
-            color: '#9ca3af',
-            backgroundColor: 'rgba(17, 24, 39, 0.5)',
-            borderRadius: '12px',
-            border: '1px solid #374151'
-          }}>
-            <Wrench style={{ 
-              width: isMobile ? '56px' : '72px', 
-              height: isMobile ? '56px' : '72px', 
-              margin: '0 auto 20px', 
-              color: '#4b5563'
-            }} />
-            <p style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: '12px', fontWeight: '600' }}>
-              Aucun équipement de sauvetage enregistré
-            </p>
-            <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
-              Ajoutez les équipements de sauvetage certifiés ci-dessus.
-            </p>
-          </div>
-        ) : (
-          <div style={styles.grid2}>
-            {rescueEquipment.map((equipment) => (
-              <div
-                key={equipment.id}
-                style={{
-                  backgroundColor: 'rgba(17, 24, 39, 0.6)',
-                  borderRadius: '12px',
-                  padding: isMobile ? '16px' : '20px',
-                  border: `2px solid ${getConditionColor(equipment.condition)}`,
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between', 
-                  marginBottom: '12px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '24px' }}>{getTypeIcon(equipment.type)}</span>
-                    <div>
-                      <div style={{ 
-                        fontWeight: '700', 
-                        color: 'white', 
-                        fontSize: '16px',
-                        marginBottom: '4px'
-                      }}>
-                        {equipment.name}
-                      </div>
-                      <div style={{ 
-                        color: '#9ca3af', 
-                        fontSize: '13px'
-                      }}>
-                        📟 {equipment.serial_number}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={() => deleteEquipment(equipment.id)}
-                    style={{
-                      ...styles.button,
-                      ...styles.buttonSecondary,
-                      width: 'auto',
-                      padding: '6px',
-                      fontSize: '12px',
-                      minHeight: 'auto'
-                    }}
-                  >
-                    <Trash2 style={{ width: '14px', height: '14px' }} />
-                  </button>
-                </div>
-                
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                  padding: '12px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  borderRadius: '8px'
-                }}>
-                  <div style={{ 
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{ color: '#9ca3af', fontSize: '13px' }}>
-                      📍 {texts.location}:
-                    </span>
-                    <span style={{ color: '#d1d5db', fontSize: '13px', fontWeight: '600' }}>
-                      {equipment.location}
-                    </span>
-                  </div>
-                  <div style={{ 
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{ color: '#9ca3af', fontSize: '13px' }}>
-                      📅 {texts.inspectionDate}:
-                    </span>
-                    <span style={{ color: '#d1d5db', fontSize: '13px', fontWeight: '600' }}>
-                      {new Date(equipment.inspection_date).toLocaleDateString('fr-CA')}
-                    </span>
-                  </div>
-                  <div style={{ 
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{ color: '#9ca3af', fontSize: '13px' }}>
-                      ⚙️ {texts.condition}:
-                    </span>
-                    <span style={{
-                      padding: '2px 6px',
-                      borderRadius: '8px',
-                      fontSize: '11px',
-                      fontWeight: '600',
-                      backgroundColor: getConditionColor(equipment.condition),
-                      color: 'white'
-                    }}>
-                      {equipment.condition === 'operational' ? `✅ ${texts.operational}` :
-                       equipment.condition === 'needs_maintenance' ? `⚠️ ${texts.needsMaintenance}` :
-                       `❌ ${texts.outOfService}`}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
