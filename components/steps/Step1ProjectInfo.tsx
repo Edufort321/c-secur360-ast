@@ -4,12 +4,9 @@ import React, { useState, useRef } from 'react';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
-  Droplets, Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, Home,
-  Ruler, Thermometer, Activity, Shield, Volume2, Gauge, Info, Search,
-  Heart, RotateCcw, Layers, Square, Circle, Triangle
+  Droplets, Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight
 } from 'lucide-react';
 
-// =================== INTERFACES TYPESCRIPT ===================
 interface Step1ProjectInfoProps {
   formData: any;
   onDataChange: (section: string, data: any) => void;
@@ -18,53 +15,28 @@ interface Step1ProjectInfoProps {
   errors: any;
 }
 
-interface ConfinedSpaceDetails {
-  spaceType: string;
-  spaceCategory: string;
-  entryMethod: string;
-  accessType: string;
-  dimensions: {
-    length: number;
-    width: number;
-    height: number;
-    diameter?: number;
-    volume: number;
-  };
-  entryPoints: Array<{
-    id: string;
-    type: string;
-    dimensions: string;
-    location: string;
-    condition: string;
-    photos: string[];
-  }>;
-  atmosphericHazards: string[];
-  physicalHazards: string[];
-  previousHistory: string;
-  lastEntry: string;
-  ventilationRequired: boolean;
-  ventilationType: string;
-  emergencyEgress: string;
-  communicationMethod: string;
-  lightingConditions: string;
-  temperatureConditions: string;
-  moistureLevel: string;
-  noiseLevel: string;
-  structuralIntegrity: string;
-  contents: string;
-  residues: string;
-  workSpace: string;
+interface LockoutPoint {
+  id: string;
+  energyType: 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'chemical' | 'thermal' | 'gravity';
+  equipmentName: string;
+  location: string;
+  lockType: string;
+  tagNumber: string;
+  isLocked: boolean;
+  verifiedBy: string;
+  verificationTime: string;
   photos: string[];
+  notes: string;
+  completedProcedures: number[];
 }
 
-interface SpacePhoto {
+interface LockoutPhoto {
   id: string;
   url: string;
   caption: string;
-  category: 'space_exterior' | 'space_interior' | 'entry_point' | 'hazard_identification' | 'equipment_staging' | 'atmospheric_testing';
+  category: 'before_lockout' | 'during_lockout' | 'lockout_device' | 'client_form' | 'verification';
   timestamp: string;
-  location?: string;
-  measurements?: string;
+  lockoutPointId?: string;
 }
 
 // =================== SYSTÈME DE TRADUCTIONS COMPLET ===================
@@ -83,7 +55,7 @@ const translations = {
     team: "👥 Équipe de Travail",
     emergency: "🚨 Contacts d'Urgence",
     workDescription: "📝 Description Détaillée des Travaux",
-    confinedSpaceDetails: "🏠 Caractéristiques de l'Espace Clos",
+    lockoutSection: "🔒 Verrouillage / Cadenassage (LOTO)",
     
     // Champs client
     clientName: "Nom du Client",
@@ -115,12 +87,6 @@ const translations = {
     industrial: "🏭 Industriel",
     manufacturing: "⚙️ Manufacturier",
     office: "🏢 Bureau/Administratif",
-    wastewater: "💧 Traitement des eaux",
-    mining: "⛏️ Minier",
-    petrochemical: "🛢️ Pétrochimique",
-    marine: "🚢 Maritime",
-    food: "🍕 Alimentaire",
-    pharmaceutical: "💊 Pharmaceutique",
     other: "🔧 Autre",
     
     // Équipe
@@ -141,107 +107,59 @@ const translations = {
     workDescriptionPlaceholder: "Décrivez en détail les travaux à effectuer :\n\n• Méthodes utilisées\n• Équipements impliqués\n• Zones d'intervention\n• Procédures spéciales\n• Conditions particulières\n\nPlus la description est détaillée, plus l'analyse de sécurité sera précise.",
     workDescriptionHelp: "Une description complète aide à identifier tous les risques potentiels et à choisir les mesures de sécurité appropriées.",
     
-    // Espace Clos - Caractéristiques générales
-    spaceIdentification: "🏠 Identification de l'Espace",
-    spaceType: "Type d'Espace Clos",
-    spaceCategory: "Catégorie",
-    entryMethod: "Méthode d'Entrée",
-    accessType: "Type d'Accès",
-    spaceDimensions: "📏 Dimensions et Volume",
-    length: "Longueur (m)",
-    width: "Largeur (m)", 
-    height: "Hauteur (m)",
-    diameter: "Diamètre (m)",
-    volume: "Volume Calculé",
-    volumeUnit: "m³",
-    calculateVolume: "Calculer Volume",
+    // Verrouillage
+    lockoutDescription: "Documentation des procédures de verrouillage/étiquetage des énergies dangereuses selon les normes RSST. Photographiez chaque étape pour assurer une traçabilité complète.",
+    generalPhotos: "Photos Générales de Verrouillage",
+    beforeLockout: "Avant verrouillage",
+    clientForm: "Fiche client",
+    verification: "Vérification finale",
+    duringLockout: "Pendant verrouillage",
+    lockoutDevice: "Dispositif",
     
-    // Points d'entrée
-    entryPoints: "🚪 Points d'Entrée",
-    addEntryPoint: "Ajouter Point d'Entrée",
-    entryPoint: "Point d'Entrée #",
-    entryType: "Type d'Ouverture",
-    entryDimensions: "Dimensions",
-    entryLocation: "Localisation",
-    entryCondition: "État/Condition",
-    entryPhotos: "Photos du Point d'Entrée",
+    // Points de verrouillage
+    lockoutPoint: "🔒 Point de Verrouillage #",
+    delete: "Supprimer",
+    energyType: "Type d'Énergie",
+    equipmentName: "Nom de l'Équipement",
+    equipmentPlaceholder: "Ex: Disjoncteur principal",
+    locationLabel: "Localisation",
+    locationPlaceholder: "Ex: Panneau électrique B-2",
+    lockType: "Type de Cadenas/Dispositif",
+    lockTypePlaceholder: "Ex: Cadenas rouge C-Secur360",
+    tagNumber: "Numéro d'Étiquette",
+    tagPlaceholder: "TAG-123456",
+    verifiedBy: "Vérifié par",
+    verifiedByPlaceholder: "Nom de la personne",
+    verificationTime: "Heure de Vérification",
+    now: "Maintenant",
+    notes: "Notes et Observations",
+    notesPlaceholder: "Observations particulières, difficultés rencontrées, modifications apportées...",
+    pointPhotos: "Photos de ce Point de Verrouillage",
+    addLockoutPoint: "Ajouter Point de Verrouillage",
     
-    // Contenu et risques
-    contentAndHazards: "⚠️ Contenu et Dangers",
-    contents: "Contenu de l'Espace",
-    residues: "Résidus/Substances",
-    workSpace: "Espace de Travail Disponible",
-    atmosphericHazards: "Dangers Atmosphériques",
-    physicalHazards: "Dangers Physiques",
-    previousHistory: "Historique d'Entrées",
-    lastEntry: "Dernière Entrée",
+    // Photos
+    noPhotos: "Aucune photo",
+    addPhoto: "Ajouter une photo",
+    addPhotoDescription: "Documentez cette étape avec une photo",
+    clickToPhoto: "Cliquez pour prendre votre première photo de verrouillage",
+    clickToPhotoDevice: "Cliquez pour prendre une photo avec l'appareil",
+    noLockoutPoints: "Aucun Point de Verrouillage",
+    noLockoutDescription: "Cliquez sur \"Ajouter Point de Verrouillage\" pour documenter les procédures LOTO",
     
-    // Photos d'archives
-    spaceDocumentation: "📸 Documentation Photographique",
-    spaceExterior: "Extérieur de l'espace",
-    spaceInterior: "Intérieur de l'espace",
-    entryPointPhoto: "Point d'entrée",
-    hazardIdentification: "Identification des dangers",
-    equipmentStaging: "Mise en place équipements",
-    atmosphericTesting: "Tests atmosphériques",
+    // Procédures
+    proceduresToFollow: "🔧 Procédures à Suivre:",
+    stepsCompleted: "étapes complétées",
     
-    // Actions
-    yes: "Oui",
-    no: "Non",
-    select: "Sélectionner",
-    selectMultiple: "Sélectionner (multiple)",
+    // Messages d'erreur
+    required: "*",
     
-    // Unités
-    meters: "mètres",
-    cubicMeters: "mètres cubes",
-    
-    // Types d'espaces clos
-    spaceTypes: {
-      tank: "🛢️ Réservoir/Citerne",
-      vessel: "🏺 Récipient sous pression",
-      vault: "🏛️ Voûte/Caveau",
-      pit: "🕳️ Fosse/Puits",
-      sewer: "🚰 Égout/Conduite",
-      silo: "🌾 Silo",
-      tunnel: "🚇 Tunnel/Galerie",
-      basement: "🏠 Sous-sol/Cave",
-      boiler: "🔥 Chaudière",
-      duct: "📦 Conduit/Gaine",
-      manhole: "🔍 Regard/Puisard",
-      bin: "📦 Bac/Conteneur",
-      other: "🔧 Autre"
-    },
-    
-    // Dangers atmosphériques
-    atmosphericHazardTypes: {
-      oxygen_deficiency: "Déficience en oxygène",
-      oxygen_enrichment: "Enrichissement en oxygène",
-      flammable_gases: "Gaz inflammables",
-      toxic_gases: "Gaz toxiques",
-      hydrogen_sulfide: "Sulfure d'hydrogène (H2S)",
-      carbon_monoxide: "Monoxyde de carbone (CO)",
-      methane: "Méthane (CH4)",
-      carbon_dioxide: "Dioxyde de carbone (CO2)",
-      ammonia: "Ammoniac (NH3)",
-      chlorine: "Chlore (Cl2)",
-      welding_fumes: "Fumées de soudage",
-      solvent_vapors: "Vapeurs de solvants"
-    },
-    
-    // Dangers physiques
-    physicalHazardTypes: {
-      engulfment: "Ensevelissement",
-      crushing: "Écrasement",
-      electrical: "Électriques",
-      mechanical: "Mécaniques",
-      temperature: "Températures extrêmes",
-      noise: "Bruit excessif",
-      radiation: "Radiations",
-      falling_objects: "Chute d'objets",
-      slips_falls: "Glissades/Chutes",
-      confined_layout: "Configuration confinée",
-      poor_visibility: "Visibilité réduite",
-      structural_collapse: "Effondrement structural"
+    // Catégories photo
+    categories: {
+      before_lockout: "Avant verrouillage",
+      during_lockout: "Pendant verrouillage",
+      lockout_device: "Dispositif de verrouillage",
+      client_form: "Fiche client",
+      verification: "Vérification"
     }
   },
   
@@ -259,7 +177,7 @@ const translations = {
     team: "👥 Work Team",
     emergency: "🚨 Emergency Contacts",
     workDescription: "📝 Detailed Work Description",
-    confinedSpaceDetails: "🏠 Confined Space Characteristics",
+    lockoutSection: "🔒 Lockout / Tagout (LOTO)",
     
     // Client fields
     clientName: "Client Name",
@@ -291,12 +209,6 @@ const translations = {
     industrial: "🏭 Industrial",
     manufacturing: "⚙️ Manufacturing",
     office: "🏢 Office/Administrative",
-    wastewater: "💧 Water Treatment",
-    mining: "⛏️ Mining",
-    petrochemical: "🛢️ Petrochemical",
-    marine: "🚢 Marine",
-    food: "🍕 Food Processing",
-    pharmaceutical: "💊 Pharmaceutical",
     other: "🔧 Other",
     
     // Team
@@ -317,1004 +229,1781 @@ const translations = {
     workDescriptionPlaceholder: "Describe in detail the work to be performed:\n\n• Methods used\n• Equipment involved\n• Work areas\n• Special procedures\n• Particular conditions\n\nThe more detailed the description, the more accurate the safety analysis.",
     workDescriptionHelp: "A complete description helps identify all potential risks and choose appropriate safety measures.",
     
-    // Confined Space - General characteristics
-    spaceIdentification: "🏠 Space Identification",
-    spaceType: "Confined Space Type",
-    spaceCategory: "Category",
-    entryMethod: "Entry Method",
-    accessType: "Access Type",
-    spaceDimensions: "📏 Dimensions and Volume",
-    length: "Length (m)",
-    width: "Width (m)",
-    height: "Height (m)",
-    diameter: "Diameter (m)",
-    volume: "Calculated Volume",
-    volumeUnit: "m³",
-    calculateVolume: "Calculate Volume",
+    // Lockout
+    lockoutDescription: "Documentation of lockout/tagout procedures for hazardous energies according to OHSA standards. Photograph each step to ensure complete traceability.",
+    generalPhotos: "General Lockout Photos",
+    beforeLockout: "Before lockout",
+    clientForm: "Client form",
+    verification: "Final verification",
+    duringLockout: "During lockout",
+    lockoutDevice: "Device",
     
-    // Entry points
-    entryPoints: "🚪 Entry Points",
-    addEntryPoint: "Add Entry Point",
-    entryPoint: "Entry Point #",
-    entryType: "Opening Type",
-    entryDimensions: "Dimensions",
-    entryLocation: "Location",
-    entryCondition: "State/Condition",
-    entryPhotos: "Entry Point Photos",
+    // Lockout points
+    lockoutPoint: "🔒 Lockout Point #",
+    delete: "Delete",
+    energyType: "Energy Type",
+    equipmentName: "Equipment Name",
+    equipmentPlaceholder: "Ex: Main breaker",
+    locationLabel: "Location",
+    locationPlaceholder: "Ex: Electrical panel B-2",
+    lockType: "Lock/Device Type",
+    lockTypePlaceholder: "Ex: Red C-Secur360 lock",
+    tagNumber: "Tag Number",
+    tagPlaceholder: "TAG-123456",
+    verifiedBy: "Verified by",
+    verifiedByPlaceholder: "Person's name",
+    verificationTime: "Verification Time",
+    now: "Now",
+    notes: "Notes and Observations",
+    notesPlaceholder: "Particular observations, difficulties encountered, modifications made...",
+    pointPhotos: "Photos of this Lockout Point",
+    addLockoutPoint: "Add Lockout Point",
     
-    // Content and hazards
-    contentAndHazards: "⚠️ Content and Hazards",
-    contents: "Space Contents",
-    residues: "Residues/Substances",
-    workSpace: "Available Work Space",
-    atmosphericHazards: "Atmospheric Hazards",
-    physicalHazards: "Physical Hazards",
-    previousHistory: "Entry History",
-    lastEntry: "Last Entry",
+    // Photos
+    noPhotos: "No photos",
+    addPhoto: "Add photo",
+    addPhotoDescription: "Document this step with a photo",
+    clickToPhoto: "Click to take your first lockout photo",
+    clickToPhotoDevice: "Click to take a photo with device",
+    noLockoutPoints: "No Lockout Points",
+    noLockoutDescription: "Click \"Add Lockout Point\" to document LOTO procedures",
     
-    // Photo documentation
-    spaceDocumentation: "📸 Photographic Documentation",
-    spaceExterior: "Space exterior",
-    spaceInterior: "Space interior",
-    entryPointPhoto: "Entry point",
-    hazardIdentification: "Hazard identification",
-    equipmentStaging: "Equipment staging",
-    atmosphericTesting: "Atmospheric testing",
+    // Procedures
+    proceduresToFollow: "🔧 Procedures to Follow:",
+    stepsCompleted: "steps completed",
     
-    // Actions
-    yes: "Yes",
-    no: "No",
-    select: "Select",
-    selectMultiple: "Select (multiple)",
+    // Error messages
+    required: "*",
     
-    // Units
-    meters: "meters",
-    cubicMeters: "cubic meters",
-    
-    // Space types
-    spaceTypes: {
-      tank: "🛢️ Tank/Cistern",
-      vessel: "🏺 Pressure Vessel",
-      vault: "🏛️ Vault/Chamber",
-      pit: "🕳️ Pit/Well",
-      sewer: "🚰 Sewer/Pipe",
-      silo: "🌾 Silo",
-      tunnel: "🚇 Tunnel/Gallery",
-      basement: "🏠 Basement/Cellar",
-      boiler: "🔥 Boiler",
-      duct: "📦 Duct/Vent",
-      manhole: "🔍 Manhole/Sump",
-      bin: "📦 Bin/Container",
-      other: "🔧 Other"
-    },
-    
-    // Atmospheric hazards
-    atmosphericHazardTypes: {
-      oxygen_deficiency: "Oxygen deficiency",
-      oxygen_enrichment: "Oxygen enrichment",
-      flammable_gases: "Flammable gases",
-      toxic_gases: "Toxic gases",
-      hydrogen_sulfide: "Hydrogen sulfide (H2S)",
-      carbon_monoxide: "Carbon monoxide (CO)",
-      methane: "Methane (CH4)",
-      carbon_dioxide: "Carbon dioxide (CO2)",
-      ammonia: "Ammonia (NH3)",
-      chlorine: "Chlorine (Cl2)",
-      welding_fumes: "Welding fumes",
-      solvent_vapors: "Solvent vapors"
-    },
-    
-    // Physical hazards
-    physicalHazardTypes: {
-      engulfment: "Engulfment",
-      crushing: "Crushing",
-      electrical: "Electrical",
-      mechanical: "Mechanical",
-      temperature: "Extreme temperatures",
-      noise: "Excessive noise",
-      radiation: "Radiation",
-      falling_objects: "Falling objects",
-      slips_falls: "Slips/Falls",
-      confined_layout: "Confined layout",
-      poor_visibility: "Poor visibility",
-      structural_collapse: "Structural collapse"
+    // Photo categories
+    categories: {
+      before_lockout: "Before lockout",
+      during_lockout: "During lockout",
+      lockout_device: "Lockout device",
+      client_form: "Client form",
+      verification: "Verification"
     }
   }
 };
 
-// =================== GÉNÉRATEUR DE NUMÉRO AST UNIQUE ===================
-const generateASTNumber = (): string => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hour = String(now.getHours()).padStart(2, '0');
-  const minute = String(now.getMinutes()).padStart(2, '0');
-  const second = String(now.getSeconds()).padStart(2, '0');
-  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  
-  return `AST-${year}${month}${day}-${hour}${minute}${second}-${random}`;
-};
+// Types d'énergie avec icônes et couleurs + traductions
+const getEnergyTypes = (language: 'fr' | 'en') => ({
+  electrical: { 
+    name: language === 'fr' ? 'Électrique' : 'Electrical', 
+    icon: Zap, 
+    color: '#fbbf24',
+    procedures: language === 'fr' ? [
+      'Identifier la source d\'alimentation (disjoncteur, sectionneur, etc...)',
+      'Couper l\'alimentation électrique', 
+      'Verrouiller la source d\'alimentation',
+      'Tester l\'absence de tension',
+      'Poser les étiquettes de sécurité',
+      'Installation des mises à la terre'
+    ] : [
+      'Identify power source (breaker, disconnect, etc...)',
+      'Turn off electrical power',
+      'Lock the power source',
+      'Test for absence of voltage',
+      'Apply safety tags',
+      'Install grounding connections'
+    ]
+  },
+  mechanical: { 
+    name: language === 'fr' ? 'Mécanique' : 'Mechanical', 
+    icon: Settings, 
+    color: '#6b7280',
+    procedures: language === 'fr' ? [
+      'Arrêter les équipements mécaniques', 
+      'Bloquer les parties mobiles',
+      'Verrouiller les commandes', 
+      'Vérifier l\'immobilisation',
+      'Signaler la zone', 
+      'Installer les dispositifs de blocage'
+    ] : [
+      'Stop mechanical equipment',
+      'Block moving parts',
+      'Lock controls',
+      'Verify immobilization',
+      'Mark the area',
+      'Install blocking devices'
+    ]
+  },
+  hydraulic: { 
+    name: language === 'fr' ? 'Hydraulique' : 'Hydraulic', 
+    icon: Droplets, 
+    color: '#3b82f6',
+    procedures: language === 'fr' ? [
+      'Fermer les vannes principales', 
+      'Purger la pression résiduelle',
+      'Verrouiller les vannes', 
+      'Vérifier la dépressurisation',
+      'Installer des bouchons de sécurité', 
+      'Tester l\'étanchéité du système'
+    ] : [
+      'Close main valves',
+      'Bleed residual pressure',
+      'Lock valves',
+      'Verify depressurization',
+      'Install safety plugs',
+      'Test system tightness'
+    ]
+  },
+  pneumatic: { 
+    name: language === 'fr' ? 'Pneumatique' : 'Pneumatic', 
+    icon: Wind, 
+    color: '#10b981',
+    procedures: language === 'fr' ? [
+      'Couper l\'alimentation en air', 
+      'Purger les réservoirs d\'air',
+      'Verrouiller les vannes', 
+      'Vérifier la dépressurisation',
+      'Isoler les circuits', 
+      'Contrôler l\'absence de pression'
+    ] : [
+      'Cut air supply',
+      'Bleed air tanks',
+      'Lock valves',
+      'Verify depressurization',
+      'Isolate circuits',
+      'Check absence of pressure'
+    ]
+  },
+  chemical: { 
+    name: language === 'fr' ? 'Chimique' : 'Chemical', 
+    icon: AlertTriangle, 
+    color: '#f59e0b',
+    procedures: language === 'fr' ? [
+      'Fermer les vannes d\'alimentation', 
+      'Purger les conduites',
+      'Neutraliser les résidus', 
+      'Verrouiller les accès',
+      'Installer la signalisation', 
+      'Vérifier l\'absence de vapeurs'
+    ] : [
+      'Close supply valves',
+      'Purge lines',
+      'Neutralize residues',
+      'Lock access points',
+      'Install signage',
+      'Check absence of vapors'
+    ]
+  },
+  thermal: { 
+    name: language === 'fr' ? 'Thermique' : 'Thermal', 
+    icon: Flame, 
+    color: '#ef4444',
+    procedures: language === 'fr' ? [
+      'Couper l\'alimentation de chauffage', 
+      'Laisser refroidir les équipements',
+      'Isoler les sources de chaleur', 
+      'Vérifier la température',
+      'Signaler les zones chaudes', 
+      'Installer les protections thermiques'
+    ] : [
+      'Cut heating supply',
+      'Let equipment cool down',
+      'Isolate heat sources',
+      'Check temperature',
+      'Mark hot zones',
+      'Install thermal protections'
+    ]
+  },
+  gravity: { 
+    name: language === 'fr' ? 'Gravité' : 'Gravity', 
+    icon: Wrench, 
+    color: '#8b5cf6',
+    procedures: language === 'fr' ? [
+      'Supporter les charges suspendues', 
+      'Bloquer les mécanismes de levage',
+      'Installer des supports de sécurité', 
+      'Vérifier la stabilité',
+      'Baliser la zone', 
+      'Contrôler les points d\'ancrage'
+    ] : [
+      'Support suspended loads',
+      'Block lifting mechanisms',
+      'Install safety supports',
+      'Verify stability',
+      'Mark the area',
+      'Check anchor points'
+    ]
+  }
+});
 
-// =================== COMPOSANT PRINCIPAL ===================
-const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
-  formData,
-  onDataChange,
-  language,
-  tenant,
-  errors
-}) => {
+// Générateur de numéro AST
+const generateASTNumber = (): string => {
+  const year = new Date().getFullYear();
+  const month = String(new Date().getMonth() + 1).padStart(2, '0');
+  const day = String(new Date().getDate()).padStart(2, '0');
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
+  return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
+};
+function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: Step1ProjectInfoProps) {
+  // =================== TRADUCTIONS ET CONFIGURATION ===================
   const t = translations[language];
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const ENERGY_TYPES = getEnergyTypes(language);
   
-  // =================== ÉTATS DU COMPOSANT ===================
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [showPhotos, setShowPhotos] = useState(false);
-  const [isGeneratingAST, setIsGeneratingAST] = useState(false);
-  const [astNumber, setAstNumber] = useState(formData.astNumber || generateASTNumber());
+  // =================== ÉTATS ===================
+  const [astNumber, setAstNumber] = useState(formData?.astNumber || generateASTNumber());
   const [copied, setCopied] = useState(false);
-  const [spacePhotos, setSpacePhotos] = useState<SpacePhoto[]>(formData.spacePhotos || []);
-  const [confinedSpaceDetails, setConfinedSpaceDetails] = useState<ConfinedSpaceDetails>(
-    formData.confinedSpaceDetails || {
-      spaceType: '',
-      spaceCategory: '',
-      entryMethod: '',
-      accessType: '',
-      dimensions: { length: 0, width: 0, height: 0, diameter: 0, volume: 0 },
-      entryPoints: [],
-      atmosphericHazards: [],
-      physicalHazards: [],
-      previousHistory: '',
-      lastEntry: '',
-      ventilationRequired: false,
-      ventilationType: '',
-      emergencyEgress: '',
-      communicationMethod: '',
-      lightingConditions: '',
-      temperatureConditions: '',
-      moistureLevel: '',
-      noiseLevel: '',
-      structuralIntegrity: '',
-      contents: '',
-      residues: '',
-      workSpace: '',
-      photos: []
-    }
-  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const projectInfo = formData?.projectInfo || {};
+  const lockoutPoints = projectInfo?.lockoutPoints || [];
+  const lockoutPhotos = projectInfo?.lockoutPhotos || [];
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [currentLockoutPhotoIndex, setCurrentLockoutPhotoIndex] = useState<{[key: string]: number}>({});
 
   // =================== FONCTIONS UTILITAIRES ===================
-  
-  // Calculer le volume selon la géométrie
-  const calculateVolume = () => {
-    const { length, width, height, diameter } = confinedSpaceDetails.dimensions;
-    let volume = 0;
-    
-    if (confinedSpaceDetails.spaceType === 'tank' && diameter && diameter > 0 && height > 0) {
-      // Volume cylindrique: π × r² × h
-      const radius = diameter / 2;
-      volume = Math.PI * radius * radius * height;
-    } else if (length > 0 && width > 0 && height > 0) {
-      // Volume rectangulaire: l × w × h
-      volume = length * width * height;
-    }
-    
-    setConfinedSpaceDetails(prev => ({
-      ...prev,
-      dimensions: { ...prev.dimensions, volume: Math.round(volume * 100) / 100 }
-    }));
+  const updateProjectInfo = (field: string, value: any) => {
+    onDataChange('projectInfo', { ...projectInfo, [field]: value });
   };
 
-  // Copier le numéro AST
   const copyASTNumber = async () => {
     try {
       await navigator.clipboard.writeText(astNumber);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Erreur lors de la copie:', err);
+      console.error('Erreur copie:', err);
     }
   };
 
-  // Générer un nouveau numéro AST
-  const generateNewASTNumber = () => {
-    setIsGeneratingAST(true);
-    setTimeout(() => {
-      const newNumber = generateASTNumber();
-      setAstNumber(newNumber);
-      onDataChange('astNumber', newNumber);
-      setIsGeneratingAST(false);
-    }, 500);
+  const regenerateASTNumber = () => {
+    const newNumber = generateASTNumber();
+    setAstNumber(newNumber);
+    onDataChange('astNumber', newNumber);
   };
 
-  // Ajouter un point d'entrée à l'espace clos
-  const addEntryPoint = () => {
-    const newEntryPoint = {
-      id: `entry_${Date.now()}`,
-      type: 'circular',
-      dimensions: '',
+  // =================== GESTION PHOTOS ===================
+  const handlePhotoCapture = async (category: string, lockoutPointId?: string) => {
+    try {
+      if (fileInputRef.current) {
+        fileInputRef.current.accept = 'image/*';
+        fileInputRef.current.capture = 'environment';
+        fileInputRef.current.multiple = true;
+        fileInputRef.current.onchange = (e) => {
+          const files = Array.from((e.target as HTMLInputElement).files || []);
+          if (files.length > 0) {
+            files.forEach(file => processPhoto(file, category, lockoutPointId));
+          }
+        };
+        fileInputRef.current.click();
+      }
+    } catch (error) {
+      console.error('Erreur capture photo:', error);
+    }
+  };
+
+  const processPhoto = async (file: File, category: string, lockoutPointId?: string) => {
+    try {
+      const photoUrl = URL.createObjectURL(file);
+      const newPhoto: LockoutPhoto = {
+        id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        url: photoUrl,
+        caption: `${getCategoryLabel(category)} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
+        category: category as any,
+        timestamp: new Date().toISOString(),
+        lockoutPointId
+      };
+      
+      const updatedPhotos = [...lockoutPhotos, newPhoto];
+      const newProjectInfo = {
+        ...projectInfo,
+        lockoutPhotos: updatedPhotos
+      };
+      
+      onDataChange('projectInfo', newProjectInfo);
+    } catch (error) {
+      console.error('Erreur traitement photo:', error);
+    }
+  };
+
+  const getCategoryLabel = (category: string): string => {
+    return t.categories[category as keyof typeof t.categories] || category;
+  };
+
+  const deletePhoto = (photoId: string) => {
+    const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId);
+    const newProjectInfo = {
+      ...projectInfo,
+      lockoutPhotos: updatedPhotos
+    };
+    onDataChange('projectInfo', newProjectInfo);
+  };
+
+  // =================== GESTION POINTS DE VERROUILLAGE ===================
+  const addLockoutPoint = () => {
+    const newPoint: LockoutPoint = {
+      id: `lockout_${Date.now()}`,
+      energyType: 'electrical',
+      equipmentName: '',
       location: '',
-      condition: 'good',
-      photos: []
+      lockType: '',
+      tagNumber: `TAG-${Date.now().toString().slice(-6)}`,
+      isLocked: false,
+      verifiedBy: '',
+      verificationTime: '',
+      photos: [],
+      notes: '',
+      completedProcedures: []
+    };
+    const updatedPoints = [...lockoutPoints, newPoint];
+    updateProjectInfo('lockoutPoints', updatedPoints);
+  };
+
+  const updateLockoutPoint = (pointId: string, field: string, value: any) => {
+    const updatedPoints = lockoutPoints.map((point: LockoutPoint) => 
+      point.id === pointId ? { ...point, [field]: value } : point
+    );
+    updateProjectInfo('lockoutPoints', updatedPoints);
+  };
+
+  const toggleProcedureComplete = (pointId: string, procedureIndex: number) => {
+    const point = lockoutPoints.find((p: LockoutPoint) => p.id === pointId);
+    if (!point) return;
+
+    const completedProcedures = point.completedProcedures || [];
+    const isCompleted = completedProcedures.includes(procedureIndex);
+    
+    const updatedCompleted = isCompleted 
+      ? completedProcedures.filter((index: number) => index !== procedureIndex)
+      : [...completedProcedures, procedureIndex];
+
+    updateLockoutPoint(pointId, 'completedProcedures', updatedCompleted);
+  };
+
+  const getProcedureProgress = (point: LockoutPoint): { completed: number; total: number; percentage: number } => {
+    const energyType = ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES];
+    const total = energyType?.procedures.length || 0;
+    const completed = (point.completedProcedures || []).length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { completed, total, percentage };
+  };
+
+  const deleteLockoutPoint = (pointId: string) => {
+    const updatedPoints = lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
+    const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
+    
+    const newProjectInfo = {
+      ...projectInfo,
+      lockoutPoints: updatedPoints,
+      lockoutPhotos: updatedPhotos
     };
     
-    const updatedDetails = {
-      ...confinedSpaceDetails,
-      entryPoints: [...confinedSpaceDetails.entryPoints, newEntryPoint]
+    onDataChange('projectInfo', newProjectInfo);
+  };
+
+  // =================== FONCTIONS GESTION TEMPS ===================
+  const setTimeNow = (pointId: string) => {
+    const now = new Date();
+    const timeString = now.toTimeString().substring(0, 5);
+    updateLockoutPoint(pointId, 'verificationTime', timeString);
+  };
+
+  const setTimePlus = (pointId: string, minutes: number) => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + minutes);
+    const timeString = now.toTimeString().substring(0, 5);
+    updateLockoutPoint(pointId, 'verificationTime', timeString);
+  };
+
+  // =================== CARROUSEL PHOTOS ===================
+  const PhotoCarousel = ({ photos, onAddPhoto, lockoutPointId }: {
+    photos: LockoutPhoto[];
+    onAddPhoto: () => void;
+    lockoutPointId?: string;
+  }) => {
+    const currentIndex = lockoutPointId ? (currentLockoutPhotoIndex[lockoutPointId] || 0) : currentPhotoIndex;
+    const totalSlides = photos.length + 1;
+
+    const setCurrentIndex = (index: number) => {
+      if (lockoutPointId) {
+        setCurrentLockoutPhotoIndex(prev => ({ ...prev, [lockoutPointId]: index }));
+      } else {
+        setCurrentPhotoIndex(index);
+      }
     };
-    
-    setConfinedSpaceDetails(updatedDetails);
-    onDataChange('confinedSpaceDetails', updatedDetails);
-  };
 
-  // Gestion des photos
-  const handlePhotoCapture = (category: string) => {
-    // Simulation de capture photo
-    const newPhoto: SpacePhoto = {
-      id: `photo_${Date.now()}`,
-      url: `https://via.placeholder.com/400x300?text=Photo+${Date.now()}`,
-      caption: `Photo ${category} - ${new Date().toLocaleString()}`,
-      category: category as any,
-      timestamp: new Date().toISOString(),
-      location: 'GPS: 45.5017, -73.5673',
-      measurements: category.includes('space') ? 'L:2.5m W:1.8m H:2.1m' : undefined
-    };
+    const nextSlide = () => setCurrentIndex((currentIndex + 1) % totalSlides);
+    const prevSlide = () => setCurrentIndex(currentIndex === 0 ? totalSlides - 1 : currentIndex - 1);
+    const goToSlide = (index: number) => setCurrentIndex(index);
 
-    const updatedPhotos = [...spacePhotos, newPhoto];
-    setSpacePhotos(updatedPhotos);
-    onDataChange('spacePhotos', updatedPhotos);
-  };
-
-  // Gestion des modifications de données
-  const handleInputChange = (field: string, value: any) => {
-    onDataChange(field, value);
-  };
-
-  const handleConfinedSpaceChange = (field: string, value: any) => {
-    const updatedDetails = { ...confinedSpaceDetails, [field]: value };
-    setConfinedSpaceDetails(updatedDetails);
-    onDataChange('confinedSpaceDetails', updatedDetails);
-  };
-
-  // =================== RENDU DU COMPOSANT ===================
-  return (
-    <div className="max-w-6xl mx-auto p-6 space-y-8">
-      <style jsx>{`
-        .glass-card {
-          background: rgba(255, 255, 255, 0.85);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .glass-card:hover {
-          background: rgba(255, 255, 255, 0.9);
-          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-          transform: translateY(-2px);
-        }
-        
-        .glass-header {
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
-          backdrop-filter: blur(10px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .confined-space-card {
-          background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(59, 130, 246, 0.05));
-          border: 2px solid rgba(34, 197, 94, 0.2);
-        }
-        
-        .input-field {
-          transition: all 0.3s ease;
-          border: 2px solid transparent;
-        }
-        
-        .input-field:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-          transform: translateY(-1px);
-        }
-        
-        .input-field.error {
-          border-color: #ef4444;
-          box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-        }
-        
-        .btn-primary {
-          background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-          transition: all 0.3s ease;
-          transform: translateY(0);
-        }
-        
-        .btn-primary:hover {
-          background: linear-gradient(135deg, #2563eb, #1e40af);
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
-        }
-        
-        .btn-secondary {
-          background: linear-gradient(135deg, #6b7280, #4b5563);
-          transition: all 0.3s ease;
-        }
-        
-        .btn-secondary:hover {
-          background: linear-gradient(135deg, #4b5563, #374151);
-          transform: translateY(-1px);
-        }
-        
-        .btn-danger {
-          background: linear-gradient(135deg, #ef4444, #dc2626);
-          transition: all 0.3s ease;
-        }
-        
-        .btn-danger:hover {
-          background: linear-gradient(135deg, #dc2626, #b91c1c);
-          transform: translateY(-1px);
-          box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
-        }
-        
-        .grid-responsive {
-          display: grid;
-          gap: 1.5rem;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        }
-        
-        .grid-2 {
-          display: grid;
-          gap: 1.5rem;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        }
-        
-        .grid-3 {
-          display: grid;
-          gap: 1rem;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        }
-        
-        .hazard-selector {
-          display: grid;
-          gap: 0.75rem;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        }
-        
-        .hazard-item {
-          transition: all 0.3s ease;
-          cursor: pointer;
-          border: 2px solid transparent;
-        }
-        
-        .hazard-item:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .hazard-item.selected {
-          border-color: #3b82f6;
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
-        }
-        
-        .volume-calculator {
-          background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
-          border: 2px solid rgba(16, 185, 129, 0.2);
-        }
-        
-        .entry-point-card {
-          background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(124, 58, 237, 0.05));
-          border: 1px solid rgba(99, 102, 241, 0.2);
-        }
-        
-        @media (max-width: 768px) {
-          .grid-responsive {
-            grid-template-columns: 1fr;
-          }
-          .grid-2 {
-            grid-template-columns: 1fr;
-          }
-          .grid-3 {
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-          }
-        }
-        
-        .animate-fade-in {
-          animation: fadeIn 0.5s ease-in-out;
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .photo-grid {
-          display: grid;
-          gap: 1rem;
-          grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        }
-        
-        .photo-item {
-          aspect-ratio: 1;
-          border-radius: 12px;
-          overflow: hidden;
-          position: relative;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-        
-        .photo-item:hover {
-          transform: scale(1.05);
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-        }
-      `}</style>
-
-      {/* =================== SECTION NUMÉRO AST UNIQUE =================== */}
-      <div className="glass-card rounded-2xl p-6 animate-fade-in">
-        <div className="glass-header -m-6 mb-6 p-6 rounded-t-2xl">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-              {t.astNumberTitle}
-            </h2>
-            <div className="flex gap-3">
-              <button
-                onClick={copyASTNumber}
-                className={`btn-secondary px-4 py-2 rounded-lg text-white font-medium flex items-center gap-2 ${
-                  copied ? 'bg-green-500' : ''
-                }`}
-                disabled={copied}
-              >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? '✓ Copié!' : t.copyNumber}
-              </button>
-              <button
-                onClick={generateNewASTNumber}
-                className="btn-primary px-4 py-2 rounded-lg text-white font-medium flex items-center gap-2"
-                disabled={isGeneratingAST}
-              >
-                {isGeneratingAST ? (
-                  <RotateCcw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RotateCcw className="w-4 h-4" />
-                )}
-                {t.generateNew}
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div className="text-center">
-          <div className="inline-block bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-xl text-xl font-mono font-bold tracking-wider shadow-lg">
-            {astNumber}
-          </div>
-          <p className="text-gray-600 mt-3 text-sm">{t.astNumberGenerated}</p>
-        </div>
-      </div>
-
-      {/* =================== SECTION ESPACE CLOS COMPLET =================== */}
-      <div className="confined-space-card glass-card rounded-2xl p-6 animate-fade-in">
-        <div className="glass-header -m-6 mb-6 p-6 rounded-t-2xl bg-gradient-to-r from-green-50 to-blue-50">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-            <Home className="w-7 h-7 text-green-600" />
-            {t.confinedSpaceDetails}
-          </h2>
-        </div>
-
-        {/* Identification de l'espace */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Info className="w-5 h-5 text-green-600" />
-            {t.spaceIdentification}
-          </h3>
-          
-          <div className="grid-2 mb-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                {t.spaceType}
-              </label>
-              <div className="grid-responsive">
-                {Object.entries(t.spaceTypes).map(([key, value]) => (
-                  <button
-                    key={key}
-                    onClick={() => handleConfinedSpaceChange('spaceType', key)}
-                    className={`p-3 rounded-lg border-2 text-left transition-all duration-300 ${
-                      confinedSpaceDetails.spaceType === key
-                        ? 'border-green-500 bg-green-50 shadow-lg scale-105'
-                        : 'border-gray-200 bg-white/50 hover:border-green-300'
-                    }`}
-                  >
-                    <div className="text-sm font-medium">{value}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t.spaceCategory}
-                </label>
-                <select
-                  value={confinedSpaceDetails.spaceCategory}
-                  onChange={(e) => handleConfinedSpaceChange('spaceCategory', e.target.value)}
-                  className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
-                >
-                  <option value="">{t.select}</option>
-                  <option value="class1">Classe 1 - Dangers immédiats</option>
-                  <option value="class2">Classe 2 - Dangers potentiels</option>
-                  <option value="class3">Classe 3 - Aucun danger identifié</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t.entryMethod}
-                </label>
-                <select
-                  value={confinedSpaceDetails.entryMethod}
-                  onChange={(e) => handleConfinedSpaceChange('entryMethod', e.target.value)}
-                  className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
-                >
-                  <option value="">{t.select}</option>
-                  <option value="top">Par le haut</option>
-                  <option value="side">Par le côté</option>
-                  <option value="bottom">Par le bas</option>
-                  <option value="multiple">Entrées multiples</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t.accessType}
-                </label>
-                <select
-                  value={confinedSpaceDetails.accessType}
-                  onChange={(e) => handleConfinedSpaceChange('accessType', e.target.value)}
-                  className="input-field w-full px-4 py-3 rounded-lg bg-white/50"
-                >
-                  <option value="">{t.select}</option>
-                  <option value="manhole">Trou d'homme</option>
-                  <option value="hatch">Trappe</option>
-                  <option value="door">Porte</option>
-                  <option value="removable_cover">Couvercle amovible</option>
-                  <option value="cut_opening">Ouverture découpée</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Dimensions et volume */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Ruler className="w-5 h-5 text-blue-600" />
-            {t.spaceDimensions}
-          </h3>
-          
-          <div className="volume-calculator rounded-xl p-6">
-            <div className="grid-3 mb-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t.length}
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={confinedSpaceDetails.dimensions.length || ''}
-                  onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                    ...confinedSpaceDetails.dimensions,
-                    length: parseFloat(e.target.value) || 0
-                  })}
-                  className="input-field w-full px-3 py-2 rounded-lg bg-white/50"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t.width}
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={confinedSpaceDetails.dimensions.width || ''}
-                  onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                    ...confinedSpaceDetails.dimensions,
-                    width: parseFloat(e.target.value) || 0
-                  })}
-                  className="input-field w-full px-3 py-2 rounded-lg bg-white/50"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t.height}
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={confinedSpaceDetails.dimensions.height || ''}
-                  onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                    ...confinedSpaceDetails.dimensions,
-                    height: parseFloat(e.target.value) || 0
-                  })}
-                  className="input-field w-full px-3 py-2 rounded-lg bg-white/50"
-                />
-              </div>
-
-              {(confinedSpaceDetails.spaceType === 'tank' || confinedSpaceDetails.spaceType === 'vessel') && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    {t.diameter}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={confinedSpaceDetails.dimensions.diameter || ''}
-                    onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                      ...confinedSpaceDetails.dimensions,
-                      diameter: parseFloat(e.target.value) || 0
-                    })}
-                    className="input-field w-full px-3 py-2 rounded-lg bg-white/50"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-4">
-              <button
-                onClick={calculateVolume}
-                className="btn-primary px-6 py-3 rounded-lg text-white font-medium flex items-center gap-2"
-              >
-                <Gauge className="w-4 h-4" />
-                {t.calculateVolume}
-              </button>
-              
-              {confinedSpaceDetails.dimensions.volume > 0 && (
-                <div className="bg-white/80 px-4 py-2 rounded-lg border border-green-300">
-                  <span className="text-sm font-medium text-gray-700">
-                    {t.volume}: <span className="font-bold text-green-600">
-                      {confinedSpaceDetails.dimensions.volume} {t.volumeUnit}
-                    </span>
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Points d'entrée */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Layers className="w-5 h-5 text-purple-600" />
-            {t.entryPoints}
-          </h3>
-
-          <div className="space-y-4">
-            {confinedSpaceDetails.entryPoints.map((entryPoint, index) => (
-              <div key={entryPoint.id} className="entry-point-card rounded-xl p-4">
-                <h4 className="font-medium text-gray-800 mb-3">
-                  {t.entryPoint}{index + 1}
-                </h4>
-                
-                <div className="grid-2">
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.entryType}
-                      </label>
-                      <select
-                        value={entryPoint.type}
-                        onChange={(e) => {
-                          const updatedEntryPoints = [...confinedSpaceDetails.entryPoints];
-                          updatedEntryPoints[index] = { ...entryPoint, type: e.target.value };
-                          handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
-                        }}
-                        className="input-field w-full px-3 py-2 rounded-lg bg-white/50 text-sm"
-                      >
-                        <option value="circular">Circulaire</option>
-                        <option value="rectangular">Rectangulaire</option>
-                        <option value="square">Carré</option>
-                        <option value="oval">Ovale</option>
-                        <option value="irregular">Irrégulière</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.entryDimensions}
-                      </label>
-                      <input
-                        type="text"
-                        value={entryPoint.dimensions}
-                        onChange={(e) => {
-                          const updatedEntryPoints = [...confinedSpaceDetails.entryPoints];
-                          updatedEntryPoints[index] = { ...entryPoint, dimensions: e.target.value };
-                          handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
-                        }}
-                        className="input-field w-full px-3 py-2 rounded-lg bg-white/50 text-sm"
-                        placeholder="Ex: 60cm x 80cm"
-                      />
-                    </div>
+    return (
+      <div className="photo-carousel">
+        <div className="carousel-container">
+          <div className="carousel-track" style={{ transform: `translateX(-${currentIndex * 100}%)` }}>
+            {photos.map((photo: LockoutPhoto, index: number) => (
+              <div key={photo.id} className="carousel-slide">
+                <img src={photo.url} alt={photo.caption} />
+                <div className="photo-info">
+                  <div className="photo-caption">
+                    <h4>{getCategoryLabel(photo.category)}</h4>
+                    <p>{new Date(photo.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}</p>
                   </div>
-
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.entryLocation}
-                      </label>
-                      <input
-                        type="text"
-                        value={entryPoint.location}
-                        onChange={(e) => {
-                          const updatedEntryPoints = [...confinedSpaceDetails.entryPoints];
-                          updatedEntryPoints[index] = { ...entryPoint, location: e.target.value };
-                          handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
-                        }}
-                        className="input-field w-full px-3 py-2 rounded-lg bg-white/50 text-sm"
-                        placeholder="Ex: Sommet ouest"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.entryCondition}
-                      </label>
-                      <select
-                        value={entryPoint.condition}
-                        onChange={(e) => {
-                          const updatedEntryPoints = [...confinedSpaceDetails.entryPoints];
-                          updatedEntryPoints[index] = { ...entryPoint, condition: e.target.value };
-                          handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
-                        }}
-                        className="input-field w-full px-3 py-2 rounded-lg bg-white/50 text-sm"
-                      >
-                        <option value="good">Bon état</option>
-                        <option value="rust">Rouille présente</option>
-                        <option value="damage">Endommagé</option>
-                        <option value="stuck">Coincé/Bloqué</option>
-                        <option value="missing_parts">Pièces manquantes</option>
-                      </select>
-                    </div>
+                  <div className="photo-actions">
+                    <button className="photo-action-btn delete" onClick={() => deletePhoto(photo.id)} title={language === 'fr' ? "Supprimer cette photo" : "Delete this photo"}>
+                      <Trash2 size={14} />
+                    </button>
                   </div>
-                </div>
-
-                <div className="mt-3 flex justify-between items-center">
-                  <button
-                    onClick={() => handlePhotoCapture('entry_point')}
-                    className="btn-secondary px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2"
-                  >
-                    <Camera className="w-4 h-4" />
-                    {t.entryPhotos} ({entryPoint.photos.length})
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const updatedEntryPoints = confinedSpaceDetails.entryPoints.filter(ep => ep.id !== entryPoint.id);
-                      handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
-                    }}
-                    className="btn-danger px-3 py-2 rounded-lg text-white text-sm flex items-center gap-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Supprimer
-                  </button>
                 </div>
               </div>
             ))}
-
-            <button
-              onClick={addEntryPoint}
-              className="w-full border-2 border-dashed border-purple-300 rounded-xl p-6 text-purple-600 hover:border-purple-500 hover:bg-purple-50 transition-all duration-300 flex items-center justify-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              {t.addEntryPoint}
-            </button>
-          </div>
-        </div>
-
-        {/* Dangers et conditions */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-orange-600" />
-            {t.contentAndHazards}
-          </h3>
-
-          <div className="grid-2 gap-6">
-            {/* Dangers atmosphériques */}
-            <div>
-              <h4 className="font-medium text-gray-800 mb-3">
-                💨 {t.atmosphericHazards}
-              </h4>
-              <div className="hazard-selector">
-                {Object.entries(t.atmosphericHazardTypes).map(([key, value]) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      const current = confinedSpaceDetails.atmosphericHazards;
-                      const updated = current.includes(key)
-                        ? current.filter(h => h !== key)
-                        : [...current, key];
-                      handleConfinedSpaceChange('atmosphericHazards', updated);
-                    }}
-                    className={`hazard-item p-3 rounded-lg text-sm text-left ${
-                      confinedSpaceDetails.atmosphericHazards.includes(key)
-                        ? 'selected'
-                        : 'bg-white/50 border-gray-200'
-                    }`}
-                  >
-                    {value}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Dangers physiques */}
-            <div>
-              <h4 className="font-medium text-gray-800 mb-3">
-                ⚙️ {t.physicalHazards}
-              </h4>
-              <div className="hazard-selector">
-                {Object.entries(t.physicalHazardTypes).map(([key, value]) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      const current = confinedSpaceDetails.physicalHazards;
-                      const updated = current.includes(key)
-                        ? current.filter(h => h !== key)
-                        : [...current, key];
-                      handleConfinedSpaceChange('physicalHazards', updated);
-                    }}
-                    className={`hazard-item p-3 rounded-lg text-sm text-left ${
-                      confinedSpaceDetails.physicalHazards.includes(key)
-                        ? 'selected'
-                        : 'bg-white/50 border-gray-200'
-                    }`}
-                  >
-                    {value}
-                  </button>
-                ))}
+            <div className="carousel-slide add-photo" onClick={onAddPhoto}>
+              <div className="add-photo-content">
+                <div className="add-photo-icon"><Camera size={24} /></div>
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>{t.addPhoto}</h4>
+                <p style={{ margin: 0, fontSize: '14px', opacity: 0.8, textAlign: 'center' }}>
+                  {t.addPhotoDescription}
+                </p>
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Documentation photographique */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Camera className="w-5 h-5 text-indigo-600" />
-            {t.spaceDocumentation}
-          </h3>
-
-          <div className="grid-3">
-            {[
-              { key: 'space_exterior', label: t.spaceExterior, icon: Home },
-              { key: 'space_interior', label: t.spaceInterior, icon: Eye },
-              { key: 'entry_point', label: t.entryPointPhoto, icon: Layers },
-              { key: 'hazard_identification', label: t.hazardIdentification, icon: AlertTriangle },
-              { key: 'equipment_staging', label: t.equipmentStaging, icon: Settings },
-              { key: 'atmospheric_testing', label: t.atmosphericTesting, icon: Activity }
-            ].map(({ key, label, icon: IconComponent }) => {
-              const categoryPhotos = spacePhotos.filter(photo => photo.category === key);
-              return (
-                <button
-                  key={key}
-                  onClick={() => handlePhotoCapture(key)}
-                  className="p-4 rounded-xl border-2 border-dashed border-gray-300 hover:border-indigo-500 hover:bg-indigo-50 transition-all duration-300 text-center"
-                >
-                  <IconComponent className="w-8 h-8 mx-auto mb-2 text-gray-600" />
-                  <div className="text-sm font-medium text-gray-800">{label}</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {categoryPhotos.length} photo{categoryPhotos.length !== 1 ? 's' : ''}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Affichage des photos */}
-          {spacePhotos.length > 0 && (
-            <div className="mt-6 p-4 bg-white/50 rounded-xl">
-              <h4 className="font-medium text-gray-800 mb-3">
-                Photos Récentes ({spacePhotos.length})
-              </h4>
-              <div className="photo-grid">
-                {spacePhotos.slice(-8).map((photo) => (
-                  <div
-                    key={photo.id}
-                    className="photo-item"
-                    onClick={() => {
-                      setCurrentPhotoIndex(spacePhotos.findIndex(p => p.id === photo.id));
-                      setShowPhotos(true);
-                    }}
-                  >
-                    <div
-                      className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white text-xs font-medium"
-                      style={{
-                        backgroundImage: `url(${photo.url})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center'
-                      }}
-                    >
-                      <Camera className="w-6 h-6" />
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {totalSlides > 1 && (
+            <>
+              <button className="carousel-nav prev" onClick={prevSlide} disabled={totalSlides <= 1}>
+                <ArrowLeft size={20} />
+              </button>
+              <button className="carousel-nav next" onClick={nextSlide} disabled={totalSlides <= 1}>
+                <ArrowRight size={20} />
+              </button>
+            </>
+          )}
+          {totalSlides > 1 && (
+            <div className="carousel-indicators">
+              {Array.from({ length: totalSlides }).map((_, index) => (
+                <div key={index} className={`carousel-indicator ${index === currentIndex ? 'active' : ''}`} onClick={() => goToSlide(index)} />
+              ))}
             </div>
           )}
         </div>
       </div>
+    );
+  };
 
-      {/* =================== CARROUSEL PHOTOS =================== */}
-      {showPhotos && spacePhotos.length > 0 && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4">
-          <div className="relative max-w-4xl max-h-full">
-            <button
-              onClick={() => setShowPhotos(false)}
-              className="absolute top-4 right-4 z-10 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
+  // =================== COMPOSANT SÉLECTEUR D'INDUSTRIE ===================
+  const IndustrySelector = () => (
+    <select 
+      className="premium-select" 
+      value={projectInfo.industry || 'electrical'}
+      onChange={(e) => updateProjectInfo('industry', e.target.value)}
+    >
+      <option value="electrical">{t.electrical}</option>
+      <option value="construction">{t.construction}</option>
+      <option value="industrial">{t.industrial}</option>
+      <option value="manufacturing">{t.manufacturing}</option>
+      <option value="office">{t.office}</option>
+      <option value="other">{t.other}</option>
+    </select>
+  );
 
-            <div className="relative">
-              <img
-                src={spacePhotos[currentPhotoIndex]?.url}
-                alt={spacePhotos[currentPhotoIndex]?.caption}
-                className="max-w-full max-h-[80vh] rounded-lg"
-              />
-
-              {spacePhotos.length > 1 && (
-                <>
-                  <button
-                    onClick={() => setCurrentPhotoIndex(prev => 
-                      prev === 0 ? spacePhotos.length - 1 : prev - 1
-                    )}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
-                  >
-                    <ArrowLeft className="w-6 h-6" />
-                  </button>
-
-                  <button
-                    onClick={() => setCurrentPhotoIndex(prev => 
-                      prev === spacePhotos.length - 1 ? 0 : prev + 1
-                    )}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
-                  >
-                    <ArrowRight className="w-6 h-6" />
-                  </button>
-                </>
-              )}
-            </div>
-
-            <div className="mt-4 text-white text-center">
-              <h3 className="text-lg font-medium">{spacePhotos[currentPhotoIndex]?.caption}</h3>
-              <p className="text-sm text-gray-300 mt-1">
-                {spacePhotos[currentPhotoIndex]?.timestamp} • {spacePhotos[currentPhotoIndex]?.location}
-              </p>
-              {spacePhotos[currentPhotoIndex]?.measurements && (
-                <p className="text-sm text-gray-300 mt-1">
-                  📏 {spacePhotos[currentPhotoIndex]?.measurements}
-                </p>
-              )}
-            </div>
-
-            {spacePhotos.length > 1 && (
-              <div className="flex justify-center mt-4 space-x-2">
-                {spacePhotos.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentPhotoIndex(index)}
-                    className={`w-3 h-3 rounded-full transition-colors ${
-                      index === currentPhotoIndex ? 'bg-white' : 'bg-white/50'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+  // =================== COMPOSANT VIDE POUR PHOTOS ===================
+  const EmptyPhotoPlaceholder = ({ 
+    onClick, 
+    title, 
+    description, 
+    color = "#60a5fa" 
+  }: {
+    onClick: () => void;
+    title: string;
+    description: string;
+    color?: string;
+  }) => (
+    <div style={{
+      background: `${color}20`, 
+      border: `2px dashed ${color}50`,
+      borderRadius: '12px', 
+      padding: '40px 20px', 
+      textAlign: 'center', 
+      cursor: 'pointer', 
+      transition: 'all 0.3s ease'
+    }}
+    onClick={onClick}
+    onMouseEnter={(e) => {
+      (e.target as HTMLDivElement).style.background = `${color}30`;
+      (e.target as HTMLDivElement).style.borderColor = `${color}70`;
+    }}
+    onMouseLeave={(e) => {
+      (e.target as HTMLDivElement).style.background = `${color}20`;
+      (e.target as HTMLDivElement).style.borderColor = `${color}50`;
+    }}>
+      <Camera size={32} color={color} style={{ marginBottom: '12px' }} />
+      <h4 style={{ margin: '0 0 8px', color }}>{title}</h4>
+      <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8' }}>
+        {description}
+      </p>
     </div>
   );
-};
+  return (
+    <>
+      {/* CSS Optimisé et Corrigé pour Step 1 */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          /* =================== CONTAINER PRINCIPAL =================== */
+          .step1-container { 
+            padding: 0; 
+            margin: 0;
+            max-width: 100%;
+            color: #ffffff;
+          }
+
+          /* =================== GRILLE PREMIUM =================== */
+          .premium-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+            gap: 24px; 
+            margin-bottom: 32px;
+            align-items: start;
+          }
+
+          /* =================== SECTIONS =================== */
+          .form-section { 
+            background: rgba(30, 41, 59, 0.6); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(100, 116, 139, 0.3); 
+            border-radius: 20px; 
+            padding: 24px; 
+            transition: all 0.3s ease;
+            height: fit-content;
+            min-height: auto;
+            display: flex;
+            flex-direction: column;
+          }
+
+          .form-section:hover { 
+            transform: translateY(-4px); 
+            border-color: rgba(59, 130, 246, 0.5); 
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15); 
+          }
+
+          .lockout-section { 
+            background: rgba(239, 68, 68, 0.1); 
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            grid-column: 1 / -1;
+            margin-top: 0;
+          }
+
+          .lockout-section:hover { 
+            border-color: rgba(239, 68, 68, 0.5); 
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.15); 
+          }
+
+          .full-width-section {
+            grid-column: 1 / -1;
+          }
+
+          /* =================== HEADERS DE SECTION =================== */
+          .section-header { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            margin-bottom: 20px; 
+            padding-bottom: 12px; 
+            border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+            min-height: 44px;
+            flex-shrink: 0;
+          }
+
+          .section-icon { 
+            width: 24px; 
+            height: 24px; 
+            color: #3b82f6; 
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            flex-shrink: 0;
+          }
+
+          .lockout-icon { 
+            color: #ef4444 !important; 
+          }
+
+          .section-title { 
+            color: #ffffff; 
+            font-size: 18px; 
+            font-weight: 700; 
+            margin: 0; 
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            line-height: 1.2;
+            flex-grow: 1;
+          }
+
+          /* =================== CHAMPS DE FORMULAIRE =================== */
+          .form-field { 
+            margin-bottom: 20px; 
+            display: flex;
+            flex-direction: column;
+          }
+
+          .form-field:last-child {
+            margin-bottom: 0;
+          }
+
+          .field-label { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            color: #e2e8f0; 
+            font-size: 14px; 
+            font-weight: 600; 
+            margin-bottom: 8px;
+            min-height: 20px;
+            flex-shrink: 0;
+          }
+
+          .premium-input, .premium-select, .premium-textarea { 
+            width: 100%; 
+            padding: 14px 16px; 
+            background: rgba(15, 23, 42, 0.8); 
+            border: 2px solid rgba(100, 116, 139, 0.3); 
+            border-radius: 12px; 
+            color: #ffffff; 
+            font-size: 15px; 
+            font-weight: 500; 
+            transition: all 0.3s ease; 
+            backdrop-filter: blur(10px);
+            box-sizing: border-box;
+            min-height: 50px;
+            font-family: inherit;
+          }
+
+          .premium-input:focus, .premium-select:focus, .premium-textarea:focus { 
+            outline: none; 
+            border-color: #3b82f6; 
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); 
+            background: rgba(15, 23, 42, 0.9); 
+          }
+
+          .premium-textarea { 
+            min-height: 120px; 
+            resize: vertical; 
+          }
+
+          .premium-input::placeholder, .premium-textarea::placeholder { 
+            color: #64748b; 
+            font-weight: 400; 
+          }
+
+          .premium-select { 
+            cursor: pointer; 
+          }
+
+          .required-indicator { 
+            color: #ef4444; 
+            margin-left: 4px; 
+          }
+
+          .field-help { 
+            font-size: 12px; 
+            color: #64748b; 
+            margin-top: 6px; 
+            font-style: italic; 
+          }
+
+          /* =================== GRILLES =================== */
+          .two-column { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 16px;
+            align-items: start;
+          }
+
+          /* =================== CARTE AST =================== */
+          .ast-number-card { 
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%); 
+            border: 2px solid #22c55e; 
+            border-radius: 20px; 
+            padding: 24px; 
+            margin-bottom: 32px; 
+            position: relative; 
+            overflow: hidden;
+          }
+
+          .ast-number-card::before { 
+            content: ''; 
+            position: absolute; 
+            top: 0; 
+            left: -100%; 
+            width: 100%; 
+            height: 100%; 
+            background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.1), transparent); 
+            animation: shine 3s ease-in-out infinite; 
+          }
+
+          @keyframes shine { 
+            0% { left: -100%; } 
+            50% { left: 100%; } 
+            100% { left: 100%; } 
+          }
+
+          .ast-number-header { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            margin-bottom: 16px;
+            min-height: 32px;
+          }
+
+          .ast-number-title { 
+            color: #22c55e; 
+            font-size: 16px; 
+            font-weight: 700; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+          }
+
+          .ast-number-value { 
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace; 
+            font-size: 24px; 
+            font-weight: 800; 
+            color: #22c55e; 
+            letter-spacing: 1px; 
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3); 
+            margin-bottom: 12px; 
+          }
+
+          .ast-actions { 
+            display: flex; 
+            gap: 12px;
+            align-items: center;
+          }
+
+          /* =================== BOUTONS =================== */
+          .btn-icon { 
+            background: rgba(34, 197, 94, 0.1); 
+            border: 1px solid #22c55e; 
+            color: #22c55e; 
+            padding: 8px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            min-width: 36px;
+            min-height: 36px;
+          }
+
+          .btn-icon:hover { 
+            background: rgba(34, 197, 94, 0.2); 
+            transform: translateY(-2px); 
+          }
+
+          .btn-icon.copied { 
+            background: rgba(34, 197, 94, 0.2); 
+            color: #22c55e; 
+          }
+
+          .btn-primary { 
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
+            border: none; 
+            color: white; 
+            padding: 12px 20px; 
+            border-radius: 12px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            min-height: 48px;
+            font-size: 14px;
+          }
+
+          .btn-primary:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3); 
+          }
+
+          .btn-danger { 
+            background: linear-gradient(135deg, #ef4444, #dc2626); 
+            border: none; 
+            color: white; 
+            padding: 8px 12px; 
+            border-radius: 8px; 
+            font-weight: 500; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            font-size: 14px;
+            min-height: 36px;
+          }
+
+          .btn-danger:hover { 
+            transform: translateY(-1px); 
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); 
+          }
+
+          /* =================== SÉLECTEUR TYPE D'ÉNERGIE =================== */
+          .energy-type-selector { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
+            gap: 12px; 
+            margin-bottom: 16px;
+          }
+
+          .energy-type-option { 
+            padding: 12px; 
+            background: rgba(15, 23, 42, 0.8); 
+            border: 2px solid rgba(100, 116, 139, 0.3); 
+            border-radius: 12px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            text-align: center; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 8px;
+            min-height: 80px;
+            justify-content: center;
+          }
+
+          .energy-type-option.selected { 
+            border-color: #ef4444; 
+            background: rgba(239, 68, 68, 0.1); 
+          }
+
+          .energy-type-option:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
+          }
+
+          /* =================== POINTS DE VERROUILLAGE =================== */
+          .lockout-point { 
+            background: rgba(15, 23, 42, 0.8); 
+            border: 1px solid rgba(239, 68, 68, 0.3); 
+            border-radius: 16px; 
+            padding: 20px; 
+            margin-bottom: 20px; 
+            position: relative;
+          }
+
+          .lockout-point:last-child {
+            margin-bottom: 0;
+          }
+
+          .lockout-point-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 16px; 
+            padding-bottom: 12px; 
+            border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+            min-height: 40px;
+          }
+
+          /* =================== PROCÉDURES =================== */
+          .procedures-list { 
+            background: rgba(15, 23, 42, 0.6); 
+            border: 1px solid rgba(100, 116, 139, 0.2); 
+            border-radius: 12px; 
+            padding: 16px; 
+            margin-top: 12px; 
+          }
+
+          .procedures-list h4 { 
+            color: #e2e8f0; 
+            font-size: 14px; 
+            font-weight: 600; 
+            margin: 0 0 12px 0; 
+          }
+
+          .procedures-checklist { 
+            margin: 0; 
+            padding: 0; 
+            list-style: none; 
+          }
+
+          .procedure-item { 
+            display: flex; 
+            align-items: flex-start; 
+            gap: 12px; 
+            margin-bottom: 12px; 
+            padding: 8px; 
+            border-radius: 8px; 
+            transition: all 0.3s ease; 
+            cursor: pointer; 
+          }
+
+          .procedure-item:hover { 
+            background: rgba(59, 130, 246, 0.1); 
+          }
+
+          .procedure-item.completed { 
+            background: rgba(34, 197, 94, 0.1); 
+            border: 1px solid rgba(34, 197, 94, 0.3); 
+          }
+
+          .procedure-checkbox { 
+            width: 18px; 
+            height: 18px; 
+            border: 2px solid rgba(100, 116, 139, 0.5); 
+            border-radius: 4px; 
+            background: rgba(15, 23, 42, 0.8); 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: all 0.3s ease; 
+            flex-shrink: 0; 
+            margin-top: 2px; 
+          }
+
+          .procedure-checkbox.checked { 
+            background: #22c55e; 
+            border-color: #22c55e; 
+            color: white; 
+          }
+
+          .procedure-checkbox:hover { 
+            border-color: #3b82f6; 
+            transform: scale(1.05); 
+          }
+
+          .procedure-text { 
+            color: #94a3b8; 
+            font-size: 13px; 
+            line-height: 1.5; 
+            flex: 1; 
+          }
+
+          .procedure-item.completed .procedure-text { 
+            color: #a7f3d0; 
+          }
+
+          /* =================== BARRE DE PROGRESSION =================== */
+          .procedures-progress { 
+            margin-top: 12px; 
+            padding-top: 12px; 
+            border-top: 1px solid rgba(100, 116, 139, 0.2); 
+          }
+
+          .progress-bar { 
+            background: rgba(15, 23, 42, 0.8); 
+            border-radius: 8px; 
+            height: 6px; 
+            overflow: hidden; 
+            margin-bottom: 8px; 
+          }
+
+          .progress-fill { 
+            height: 100%; 
+            background: linear-gradient(90deg, #22c55e, #16a34a); 
+            transition: width 0.5s ease; 
+            border-radius: 8px; 
+          }
+
+          .progress-text { 
+            font-size: 12px; 
+            color: #64748b; 
+            text-align: center; 
+          }
+
+          /* =================== BOUTONS TEMPS =================== */
+          .time-quick-select { 
+            display: flex; 
+            gap: 6px; 
+            margin-top: 8px; 
+          }
+
+          .time-btn { 
+            background: rgba(59, 130, 246, 0.1); 
+            border: 1px solid rgba(59, 130, 246, 0.3); 
+            color: #60a5fa; 
+            padding: 6px 10px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            display: flex; 
+            align-items: center; 
+            gap: 4px; 
+            font-size: 11px; 
+            font-weight: 500; 
+            flex: 1; 
+            justify-content: center;
+            min-height: 32px;
+          }
+
+          .time-btn:hover { 
+            background: rgba(59, 130, 246, 0.2); 
+            border-color: rgba(59, 130, 246, 0.5); 
+            transform: translateY(-1px); 
+          }
+
+          .time-btn.now { 
+            background: rgba(34, 197, 94, 0.1); 
+            border-color: rgba(34, 197, 94, 0.3); 
+            color: #4ade80; 
+          }
+
+          .time-btn.now:hover { 
+            background: rgba(34, 197, 94, 0.2); 
+            border-color: rgba(34, 197, 94, 0.5); 
+          }
+
+          .time-btn.plus5 { 
+            background: rgba(245, 158, 11, 0.1); 
+            border-color: rgba(245, 158, 11, 0.3); 
+            color: #fbbf24; 
+          }
+
+          .time-btn.plus5:hover { 
+            background: rgba(245, 158, 11, 0.2); 
+            border-color: rgba(245, 158, 11, 0.5); 
+          }
+
+          .time-btn.plus15 { 
+            background: rgba(139, 92, 246, 0.1); 
+            border-color: rgba(139, 92, 246, 0.3); 
+            color: #a78bfa; 
+          }
+
+          .time-btn.plus15:hover { 
+            background: rgba(139, 92, 246, 0.2); 
+            border-color: rgba(139, 92, 246, 0.5); 
+          }
+
+          /* =================== BOUTONS PHOTO =================== */
+          .photo-capture-buttons { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 8px; 
+            margin-top: 12px; 
+          }
+
+          .photo-capture-btn { 
+            background: rgba(59, 130, 246, 0.1); 
+            border: 1px solid rgba(59, 130, 246, 0.3); 
+            color: #60a5fa; 
+            padding: 8px 12px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            font-size: 12px; 
+            font-weight: 500;
+            min-height: 36px;
+          }
+
+          .photo-capture-btn:hover { 
+            background: rgba(59, 130, 246, 0.2); 
+            transform: translateY(-1px); 
+          }
+
+          /* =================== CARROUSEL PHOTOS =================== */
+          .photo-carousel { 
+            position: relative; 
+            margin-top: 16px; 
+            background: rgba(15, 23, 42, 0.8); 
+            border: 1px solid rgba(100, 116, 139, 0.3); 
+            border-radius: 16px; 
+            overflow: hidden; 
+          }
+
+          .carousel-container { 
+            position: relative; 
+            width: 100%; 
+            height: 300px; 
+            overflow: hidden; 
+          }
+
+          .carousel-track { 
+            display: flex; 
+            transition: transform 0.3s ease; 
+            height: 100%; 
+          }
+
+          .carousel-slide { 
+            min-width: 100%; 
+            height: 100%; 
+            position: relative; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+          }
+
+          .carousel-slide img { 
+            max-width: 100%; 
+            max-height: 100%; 
+            object-fit: contain; 
+            border-radius: 8px; 
+          }
+
+          .carousel-slide.add-photo { 
+            background: rgba(59, 130, 246, 0.1); 
+            border: 2px dashed rgba(59, 130, 246, 0.3); 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            flex-direction: column; 
+            gap: 16px; 
+          }
+
+          .carousel-slide.add-photo:hover { 
+            background: rgba(59, 130, 246, 0.2); 
+            border-color: rgba(59, 130, 246, 0.5); 
+          }
+
+          .add-photo-content { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 12px; 
+            color: #60a5fa; 
+          }
+
+          .add-photo-icon { 
+            width: 48px; 
+            height: 48px; 
+            background: rgba(59, 130, 246, 0.2); 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: all 0.3s ease; 
+          }
+
+          .carousel-slide.add-photo:hover .add-photo-icon { 
+            transform: scale(1.1); 
+            background: rgba(59, 130, 246, 0.3); 
+          }
+
+          .carousel-nav { 
+            position: absolute; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            background: rgba(0, 0, 0, 0.7); 
+            border: none; 
+            color: white; 
+            width: 40px; 
+            height: 40px; 
+            border-radius: 50%; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: all 0.3s ease; 
+            z-index: 10; 
+          }
+
+          .carousel-nav:hover { 
+            background: rgba(0, 0, 0, 0.9); 
+            transform: translateY(-50%) scale(1.1); 
+          }
+
+          .carousel-nav:disabled { 
+            opacity: 0.3; 
+            cursor: not-allowed; 
+          }
+
+          .carousel-nav.prev { 
+            left: 16px; 
+          }
+
+          .carousel-nav.next { 
+            right: 16px; 
+          }
+
+          .carousel-indicators { 
+            position: absolute; 
+            bottom: 16px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            display: flex; 
+            gap: 8px; 
+            z-index: 10; 
+          }
+
+          .carousel-indicator { 
+            width: 8px; 
+            height: 8px; 
+            border-radius: 50%; 
+            background: rgba(255, 255, 255, 0.4); 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+          }
+
+          .carousel-indicator.active { 
+            background: rgba(255, 255, 255, 0.9); 
+            transform: scale(1.2); 
+          }
+
+          .photo-info { 
+            position: absolute; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); 
+            color: white; 
+            padding: 20px 16px 16px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-end; 
+          }
+
+          .photo-caption { 
+            flex: 1; 
+            margin-right: 12px; 
+          }
+
+          .photo-caption h4 { 
+            margin: 0 0 4px; 
+            font-size: 14px; 
+            font-weight: 600; 
+          }
+
+          .photo-caption p { 
+            margin: 0; 
+            font-size: 12px; 
+            opacity: 0.8; 
+          }
+
+          .photo-actions { 
+            display: flex; 
+            gap: 8px; 
+          }
+
+          .photo-action-btn { 
+            background: rgba(255, 255, 255, 0.2); 
+            border: 1px solid rgba(255, 255, 255, 0.3); 
+            color: white; 
+            padding: 6px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            min-width: 28px;
+            min-height: 28px;
+          }
+
+          .photo-action-btn:hover { 
+            background: rgba(255, 255, 255, 0.3); 
+          }
+
+          .photo-action-btn.delete:hover { 
+            background: rgba(239, 68, 68, 0.8); 
+            border-color: #ef4444; 
+          }
+
+          /* =================== RESPONSIVE =================== */
+          @media (max-width: 768px) {
+            .premium-grid { 
+              grid-template-columns: 1fr; 
+              gap: 16px; 
+            }
+            
+            .form-section { 
+              padding: 16px; 
+            }
+            
+            .two-column { 
+              grid-template-columns: 1fr; 
+              gap: 12px; 
+            }
+            
+            .ast-number-value { 
+              font-size: 18px; 
+            }
+            
+            .section-title { 
+              font-size: 16px; 
+            }
+            
+            .premium-input, .premium-select, .premium-textarea { 
+              font-size: 16px; 
+            }
+            
+            .energy-type-selector { 
+              grid-template-columns: repeat(2, 1fr); 
+            }
+            
+            .photo-capture-buttons { 
+              flex-direction: column; 
+            }
+            
+            .time-quick-select { 
+              flex-direction: column; 
+              gap: 4px; 
+            }
+            
+            .time-btn { 
+              flex: none; 
+            }
+          }
+
+          @media (max-width: 480px) {
+            .form-section { 
+              padding: 12px; 
+            }
+            
+            .ast-number-card { 
+              padding: 16px; 
+            }
+            
+            .ast-actions { 
+              flex-direction: column; 
+              gap: 8px;
+            }
+            
+            .energy-type-selector { 
+              grid-template-columns: 1fr; 
+            }
+
+            .lockout-point-header {
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 12px;
+            }
+
+            .carousel-nav {
+              width: 36px;
+              height: 36px;
+            }
+
+            .carousel-nav.prev {
+              left: 8px;
+            }
+
+            .carousel-nav.next {
+              right: 8px;
+            }
+          }
+        `
+      }} />
+
+      {/* Input caché pour capture photo */}
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} />
+      
+      <div className="step1-container">
+        {/* Carte Numéro AST Premium */}
+        <div className="ast-number-card">
+          <div className="ast-number-header">
+            <div className="ast-number-title">
+              <FileText style={{ width: '20px', height: '20px' }} />
+              {t.astNumberTitle}
+            </div>
+            <div className="ast-actions">
+              <button className={`btn-icon ${copied ? 'copied' : ''}`} onClick={copyASTNumber} title={t.copyNumber}>
+                {copied ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
+              </button>
+              <button className="btn-icon" onClick={regenerateASTNumber} title={t.generateNew}>
+                <FileText style={{ width: '16px', height: '16px' }} />
+              </button>
+            </div>
+          </div>
+          <div className="ast-number-value">{astNumber}</div>
+          <div className="field-help">{t.astNumberGenerated}</div>
+        </div>
+
+        {/* Grille Premium des Sections */}
+        <div className="premium-grid">
+          {/* Section Client */}
+          <div className="form-section">
+            <div className="section-header">
+              <Building className="section-icon" />
+              <h3 className="section-title">{t.clientInfo}</h3>
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Building style={{ width: '18px', height: '18px' }} />
+                {t.clientName}<span className="required-indicator">{t.required}</span>
+              </label>
+              <input type="text" className="premium-input" placeholder={t.clientNamePlaceholder}
+                value={projectInfo.client || ''} onChange={(e) => updateProjectInfo('client', e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Phone style={{ width: '18px', height: '18px' }} />{t.clientPhone}
+              </label>
+              <input type="tel" className="premium-input" placeholder={t.clientPhonePlaceholder}
+                value={projectInfo.clientPhone || ''} onChange={(e) => updateProjectInfo('clientPhone', e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <User style={{ width: '18px', height: '18px' }} />{t.clientRepresentative}
+              </label>
+              <input type="text" className="premium-input" placeholder={t.clientRepPlaceholder}
+                value={projectInfo.clientRepresentative || ''} onChange={(e) => updateProjectInfo('clientRepresentative', e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Phone style={{ width: '18px', height: '18px' }} />{t.repPhone}
+              </label>
+              <input type="tel" className="premium-input" placeholder={t.repPhonePlaceholder}
+                value={projectInfo.clientRepresentativePhone || ''} onChange={(e) => updateProjectInfo('clientRepresentativePhone', e.target.value)} />
+            </div>
+          </div>
+
+          {/* Section Projet */}
+          <div className="form-section">
+            <div className="section-header">
+              <Briefcase className="section-icon" />
+              <h3 className="section-title">{t.projectDetails}</h3>
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Briefcase style={{ width: '18px', height: '18px' }} />
+                {t.projectNumber}<span className="required-indicator">{t.required}</span>
+              </label>
+              <input type="text" className="premium-input" placeholder={t.projectNumberPlaceholder}
+                value={projectInfo.projectNumber || ''} onChange={(e) => updateProjectInfo('projectNumber', e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <FileText style={{ width: '18px', height: '18px' }} />{t.astClientNumber}
+              </label>
+              <input type="text" className="premium-input" placeholder={t.astClientPlaceholder}
+                value={projectInfo.astClientNumber || ''} onChange={(e) => updateProjectInfo('astClientNumber', e.target.value)} />
+              <div className="field-help">{t.astClientHelp}</div>
+            </div>
+            <div className="two-column">
+              <div className="form-field">
+                <label className="field-label">
+                  <Calendar style={{ width: '18px', height: '18px' }} />{t.date}
+                </label>
+                <input type="date" className="premium-input"
+                  value={projectInfo.date || new Date().toISOString().split('T')[0]}
+                  onChange={(e) => updateProjectInfo('date', e.target.value)} />
+              </div>
+              <div className="form-field">
+                <label className="field-label">
+                  <Clock style={{ width: '18px', height: '18px' }} />{t.time}
+                </label>
+                <input type="time" className="premium-input"
+                  value={projectInfo.time || new Date().toTimeString().substring(0, 5)}
+                  onChange={(e) => updateProjectInfo('time', e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* Section Localisation */}
+          <div className="form-section">
+            <div className="section-header">
+              <MapPin className="section-icon" />
+              <h3 className="section-title">{t.location}</h3>
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <MapPin style={{ width: '18px', height: '18px' }} />
+                {t.workLocation}<span className="required-indicator">{t.required}</span>
+              </label>
+              <input type="text" className="premium-input" placeholder={t.workLocationPlaceholder}
+                value={projectInfo.workLocation || ''} onChange={(e) => updateProjectInfo('workLocation', e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Briefcase style={{ width: '18px', height: '18px' }} />{t.industryType}
+              </label>
+              <IndustrySelector />
+            </div>
+          </div>
+
+          {/* Section Équipe */}
+          <div className="form-section">
+            <div className="section-header">
+              <Users className="section-icon" />
+              <h3 className="section-title">{t.team}</h3>
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Users style={{ width: '18px', height: '18px' }} />
+                {t.workerCount}<span className="required-indicator">{t.required}</span>
+              </label>
+              <input type="number" min="1" max="100" className="premium-input" placeholder={t.workerCountPlaceholder}
+                value={projectInfo.workerCount || 1} onChange={(e) => updateProjectInfo('workerCount', parseInt(e.target.value) || 1)} />
+              <div className="field-help">{t.workerCountHelp}</div>
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <Clock style={{ width: '18px', height: '18px' }} />{t.estimatedDuration}
+              </label>
+              <input type="text" className="premium-input" placeholder={t.durationPlaceholder}
+                value={projectInfo.estimatedDuration || ''} onChange={(e) => updateProjectInfo('estimatedDuration', e.target.value)} />
+            </div>
+          </div>
+
+          {/* Section Contacts d'Urgence */}
+          <div className="form-section">
+            <div className="section-header">
+              <AlertTriangle className="section-icon" />
+              <h3 className="section-title">{t.emergency}</h3>
+            </div>
+            <div className="two-column">
+              <div className="form-field">
+                <label className="field-label">
+                  <AlertTriangle style={{ width: '18px', height: '18px' }} />{t.emergencyContact}
+                </label>
+                <input type="text" className="premium-input" placeholder={t.emergencyContactPlaceholder}
+                  value={projectInfo.emergencyContact || ''} onChange={(e) => updateProjectInfo('emergencyContact', e.target.value)} />
+              </div>
+              <div className="form-field">
+                <label className="field-label">
+                  <Phone style={{ width: '18px', height: '18px' }} />{t.emergencyPhone}
+                </label>
+                <input type="tel" className="premium-input" placeholder={t.emergencyPhonePlaceholder}
+                  value={projectInfo.emergencyPhone || ''} onChange={(e) => updateProjectInfo('emergencyPhone', e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* Section Description */}
+          <div className="form-section full-width-section">
+            <div className="section-header">
+              <FileText className="section-icon" />
+              <h3 className="section-title">{t.workDescription}</h3>
+            </div>
+            <div className="form-field">
+              <label className="field-label">
+                <FileText style={{ width: '18px', height: '18px' }} />
+                {t.workDescriptionLabel}<span className="required-indicator">{t.required}</span>
+              </label>
+              <textarea className="premium-textarea" style={{ width: '100%', minHeight: '200px', maxWidth: 'none', resize: 'vertical' }}
+                placeholder={t.workDescriptionPlaceholder}
+                value={projectInfo.workDescription || ''} onChange={(e) => updateProjectInfo('workDescription', e.target.value)} />
+              <div className="field-help">{t.workDescriptionHelp}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* =================== SECTION VERROUILLAGE/CADENASSAGE =================== */}
+        <div className="form-section lockout-section">
+          <div className="section-header">
+            <Lock className="section-icon lockout-icon" />
+            <h3 className="section-title">{t.lockoutSection}</h3>
+          </div>
+          <div className="field-help" style={{ marginBottom: '24px' }}>
+            {t.lockoutDescription}
+          </div>
+
+          {/* Photos générales de verrouillage */}
+          <div className="form-field">
+            <label className="field-label">
+              <Camera style={{ width: '18px', height: '18px' }} />{t.generalPhotos}
+            </label>
+            <div className="photo-capture-buttons">
+              <button className="photo-capture-btn" onClick={() => handlePhotoCapture('before_lockout')}>
+                <Camera size={14} />{t.beforeLockout}
+              </button>
+              <button className="photo-capture-btn" onClick={() => handlePhotoCapture('client_form')}>
+                <FileText size={14} />{t.clientForm}
+              </button>
+              <button className="photo-capture-btn" onClick={() => handlePhotoCapture('verification')}>
+                <Eye size={14} />{t.verification}
+              </button>
+            </div>
+
+            {lockoutPhotos.filter((photo: LockoutPhoto) => !photo.lockoutPointId).length > 0 ? (
+              <PhotoCarousel 
+                photos={lockoutPhotos.filter((photo: LockoutPhoto) => !photo.lockoutPointId)}
+                onAddPhoto={() => handlePhotoCapture('verification')}
+              />
+            ) : (
+              <EmptyPhotoPlaceholder
+                onClick={() => handlePhotoCapture('before_lockout')}
+                title={t.noPhotos}
+                description={t.clickToPhoto}
+              />
+            )}
+          </div>
+
+          {/* Liste des points de verrouillage */}
+          {lockoutPoints.map((point: LockoutPoint, index: number) => (
+            <div key={point.id} className="lockout-point">
+              <div className="lockout-point-header">
+                <h4 style={{ color: '#ef4444', margin: 0, fontSize: '16px', fontWeight: '600' }}>
+                  {t.lockoutPoint}{index + 1}
+                </h4>
+                <button 
+                  className="btn-danger" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    deleteLockoutPoint(point.id);
+                  }}
+                  type="button"
+                >
+                  <Trash2 size={14} />
+                  {t.delete}
+                </button>
+              </div>
+
+              {/* Type d'énergie */}
+              <div className="form-field">
+                <label className="field-label">{t.energyType}<span className="required-indicator">{t.required}</span></label>
+                <div className="energy-type-selector">
+                  {Object.entries(ENERGY_TYPES).map(([key, type]) => {
+                    const IconComponent = type.icon;
+                    return (
+                      <div key={key} className={`energy-type-option ${point.energyType === key ? 'selected' : ''}`}
+                        onClick={() => updateLockoutPoint(point.id, 'energyType', key)}
+                        style={{ 
+                          borderColor: point.energyType === key ? type.color : undefined,
+                          backgroundColor: point.energyType === key ? `${type.color}20` : undefined 
+                        }}>
+                        <IconComponent size={20} color={type.color} />
+                        <span style={{ fontSize: '12px', fontWeight: '500', color: '#e2e8f0' }}>{type.name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Procédures recommandées */}
+                {point.energyType && ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES] && (
+                  <div className="procedures-list">
+                    <h4>{t.proceduresToFollow}</h4>
+                    <ul className="procedures-checklist">
+                      {ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES].procedures.map((procedure, idx) => {
+                        const isCompleted = (point.completedProcedures || []).includes(idx);
+                        return (
+                          <li key={idx} className={`procedure-item ${isCompleted ? 'completed' : ''}`}
+                            onClick={() => toggleProcedureComplete(point.id, idx)}>
+                            <div className={`procedure-checkbox ${isCompleted ? 'checked' : ''}`}>
+                              {isCompleted && <Check size={12} />}
+                            </div>
+                            <span className="procedure-text">{procedure}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <div className="procedures-progress">
+                      <div className="progress-bar">
+                        <div className="progress-fill" style={{ width: `${getProcedureProgress(point).percentage}%` }} />
+                      </div>
+                      <div className="progress-text">
+                        {getProcedureProgress(point).completed} / {getProcedureProgress(point).total} {t.stepsCompleted} 
+                        ({getProcedureProgress(point).percentage}%)
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Détails du point */}
+              <div className="two-column">
+                <div className="form-field">
+                  <label className="field-label"><Settings style={{ width: '18px', height: '18px' }} />{t.equipmentName}</label>
+                  <input type="text" className="premium-input" placeholder={t.equipmentPlaceholder}
+                    value={point.equipmentName} onChange={(e) => updateLockoutPoint(point.id, 'equipmentName', e.target.value)} />
+                </div>
+                <div className="form-field">
+                  <label className="field-label"><MapPin style={{ width: '18px', height: '18px' }} />{t.locationLabel}</label>
+                  <input type="text" className="premium-input" placeholder={t.locationPlaceholder}
+                    value={point.location} onChange={(e) => updateLockoutPoint(point.id, 'location', e.target.value)} />
+                </div>
+              </div>
+
+              <div className="two-column">
+                <div className="form-field">
+                  <label className="field-label"><Lock style={{ width: '18px', height: '18px' }} />{t.lockType}</label>
+                  <input type="text" className="premium-input" placeholder={t.lockTypePlaceholder}
+                    value={point.lockType} onChange={(e) => updateLockoutPoint(point.id, 'lockType', e.target.value)} />
+                </div>
+                <div className="form-field">
+                  <label className="field-label"><FileText style={{ width: '18px', height: '18px' }} />{t.tagNumber}</label>
+                  <input type="text" className="premium-input" placeholder={t.tagPlaceholder}
+                    value={point.tagNumber} onChange={(e) => updateLockoutPoint(point.id, 'tagNumber', e.target.value)} />
+                </div>
+              </div>
+
+              {/* Status et vérification AVEC BOUTONS HORLOGE */}
+              <div className="two-column">
+                <div className="form-field">
+                  <label className="field-label"><User style={{ width: '18px', height: '18px' }} />{t.verifiedBy}</label>
+                  <input type="text" className="premium-input" placeholder={t.verifiedByPlaceholder}
+                    value={point.verifiedBy} onChange={(e) => updateLockoutPoint(point.id, 'verifiedBy', e.target.value)} />
+                </div>
+                <div className="form-field">
+                  <label className="field-label"><Clock style={{ width: '18px', height: '18px' }} />{t.verificationTime}</label>
+                  <input type="time" className="premium-input" value={point.verificationTime}
+                    onChange={(e) => updateLockoutPoint(point.id, 'verificationTime', e.target.value)} />
+                  
+                  {/* Boutons de sélection rapide */}
+                  <div className="time-quick-select">
+                    <button className="time-btn now" onClick={() => setTimeNow(point.id)}>
+                      <Clock size={12} />{t.now}
+                    </button>
+                    <button className="time-btn plus5" onClick={() => setTimePlus(point.id, 5)}>
+                      +5min
+                    </button>
+                    <button className="time-btn plus15" onClick={() => setTimePlus(point.id, 15)}>
+                      +15min
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="form-field">
+                <label className="field-label"><FileText style={{ width: '18px', height: '18px' }} />{t.notes}</label>
+                <textarea className="premium-textarea" style={{ minHeight: '80px' }}
+                  placeholder={t.notesPlaceholder}
+                  value={point.notes} onChange={(e) => updateLockoutPoint(point.id, 'notes', e.target.value)} />
+              </div>
+
+              {/* Photos spécifiques à ce point */}
+              <div className="form-field">
+                <label className="field-label"><Camera style={{ width: '18px', height: '18px' }} />{t.pointPhotos}</label>
+                
+                {/* Boutons de capture photo pour ce point */}
+                <div className="photo-capture-buttons">
+                  <button className="photo-capture-btn" onClick={() => handlePhotoCapture('during_lockout', point.id)}>
+                    <Camera size={14} />{t.duringLockout}
+                  </button>
+                  <button className="photo-capture-btn" onClick={() => handlePhotoCapture('lockout_device', point.id)}>
+                    <Lock size={14} />{t.lockoutDevice}
+                  </button>
+                  <button className="photo-capture-btn" onClick={() => handlePhotoCapture('verification', point.id)}>
+                    <Eye size={14} />{t.verification}
+                  </button>
+                </div>
+                
+                {lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id).length > 0 ? (
+                  <PhotoCarousel 
+                    photos={lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id)}
+                    onAddPhoto={() => handlePhotoCapture('lockout_device', point.id)}
+                    lockoutPointId={point.id}
+                  />
+                ) : (
+                  <EmptyPhotoPlaceholder
+                    onClick={() => handlePhotoCapture('during_lockout', point.id)}
+                    title={t.noPhotos}
+                    description={t.clickToPhotoDevice}
+                    color="#f87171"
+                  />
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Bouton ajouter point de verrouillage */}
+          <div style={{ marginTop: lockoutPoints.length > 0 ? '24px' : '0', marginBottom: '24px' }}>
+            <button className="btn-primary" onClick={addLockoutPoint}>
+              <Plus size={20} />{t.addLockoutPoint}
+            </button>
+          </div>
+
+          {/* Message si aucun point */}
+          {lockoutPoints.length === 0 && (
+            <div style={{
+              background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '12px', padding: '24px', textAlign: 'center', color: '#60a5fa'
+            }}>
+              <Lock size={32} style={{ marginBottom: '12px' }} />
+              <h4 style={{ margin: '0 0 8px', color: '#60a5fa' }}>{t.noLockoutPoints}</h4>
+              <p style={{ margin: 0, fontSize: '14px' }}>
+                {t.noLockoutDescription}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
 
 export default Step1ProjectInfo;
