@@ -57,28 +57,12 @@ interface ConfinedSpaceDetails {
   photos: string[];
 }
 
-interface LockoutPoint {
-  id: string;
-  energyType: 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'chemical' | 'thermal' | 'gravity';
-  equipmentName: string;
-  location: string;
-  lockType: string;
-  tagNumber: string;
-  isLocked: boolean;
-  verifiedBy: string;
-  verificationTime: string;
-  photos: string[];
-  notes: string;
-  completedProcedures: number[];
-}
-
-interface LockoutPhoto {
+interface SpacePhoto {
   id: string;
   url: string;
   caption: string;
-  category: 'before_lockout' | 'during_lockout' | 'lockout_device' | 'client_form' | 'verification' | 'space_exterior' | 'space_interior' | 'entry_point' | 'hazard_identification' | 'equipment_staging' | 'atmospheric_testing';
+  category: 'space_exterior' | 'space_interior' | 'entry_point' | 'hazard_identification' | 'equipment_staging' | 'atmospheric_testing';
   timestamp: string;
-  lockoutPointId?: string;
   location?: string;
   measurements?: string;
 }
@@ -100,7 +84,6 @@ const translations = {
     emergency: "🚨 Contacts d'Urgence",
     workDescription: "📝 Description Détaillée des Travaux",
     confinedSpaceDetails: "🏠 Caractéristiques de l'Espace Clos",
-    lockoutSection: "🔒 Verrouillage / Cadenassage (LOTO)",
     
     // Champs client
     clientName: "Nom du Client",
@@ -182,18 +165,6 @@ const translations = {
     entryLocation: "Localisation",
     entryCondition: "État/Condition",
     entryPhotos: "Photos du Point d'Entrée",
-    
-    // Conditions environnementales
-    environmentalConditions: "🌡️ Conditions Environnementales",
-    ventilationRequired: "Ventilation Requise",
-    ventilationType: "Type de Ventilation",
-    emergencyEgress: "Issue de Secours",
-    communicationMethod: "Méthode de Communication",
-    lightingConditions: "Conditions d'Éclairage",
-    temperatureConditions: "Conditions de Température",
-    moistureLevel: "Niveau d'Humidité",
-    noiseLevel: "Niveau de Bruit",
-    structuralIntegrity: "Intégrité Structurale",
     
     // Contenu et risques
     contentAndHazards: "⚠️ Contenu et Dangers",
@@ -289,7 +260,6 @@ const translations = {
     emergency: "🚨 Emergency Contacts",
     workDescription: "📝 Detailed Work Description",
     confinedSpaceDetails: "🏠 Confined Space Characteristics",
-    lockoutSection: "🔒 Lockout / Tagout (LOTO)",
     
     // Client fields
     clientName: "Client Name",
@@ -372,18 +342,6 @@ const translations = {
     entryCondition: "State/Condition",
     entryPhotos: "Entry Point Photos",
     
-    // Environmental conditions
-    environmentalConditions: "🌡️ Environmental Conditions",
-    ventilationRequired: "Ventilation Required",
-    ventilationType: "Ventilation Type",
-    emergencyEgress: "Emergency Egress",
-    communicationMethod: "Communication Method",
-    lightingConditions: "Lighting Conditions",
-    temperatureConditions: "Temperature Conditions",
-    moistureLevel: "Moisture Level",
-    noiseLevel: "Noise Level",
-    structuralIntegrity: "Structural Integrity",
-    
     // Content and hazards
     contentAndHazards: "⚠️ Content and Hazards",
     contents: "Space Contents",
@@ -463,238 +421,6 @@ const translations = {
     }
 };
 
-// =================== TYPES D'ÉNERGIE AVEC PROCÉDURES LOTO ===================
-const energyTypes = {
-  fr: {
-    electrical: {
-      icon: Zap,
-      name: "⚡ Électrique",
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
-      borderColor: "border-yellow-200",
-      procedures: [
-        "Identifier et localiser toutes les sources d'alimentation électrique",
-        "Ouvrir le disjoncteur ou sectionneur principal",
-        "Verrouiller le dispositif de coupure en position OUVERTE",
-        "Poser l'étiquette de cadenassage avec informations complètes",
-        "Tester l'absence de tension avec un voltmètre calibré",
-        "Vérifier que l'équipement ne peut pas être remis sous tension",
-        "Informer l'équipe que l'isolation électrique est complétée"
-      ]
-    },
-    mechanical: {
-      icon: Settings,
-      name: "🔧 Mécanique",
-      color: "text-gray-600",
-      bgColor: "bg-gray-50",
-      borderColor: "border-gray-200",
-      procedures: [
-        "Arrêter complètement tous les équipements mécaniques",
-        "Bloquer ou caler toutes les pièces mobiles",
-        "Déconnecter les accouplements et transmissions",
-        "Verrouiller les commandes de démarrage",
-        "Poser des étiquettes sur tous les points de commande",
-        "Vérifier l'immobilisation complète des pièces",
-        "S'assurer qu'aucun redémarrage accidentel n'est possible"
-      ]
-    },
-    hydraulic: {
-      icon: Droplets,
-      name: "💧 Hydraulique",
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-200",
-      procedures: [
-        "Arrêter la pompe hydraulique principale",
-        "Fermer les vannes d'alimentation hydraulique",
-        "Purger la pression résiduelle du système",
-        "Verrouiller les vannes en position fermée",
-        "Débrancher les flexibles sous pression",
-        "Installer des bouchons de sécurité si nécessaire",
-        "Confirmer la dépressurisation complète du circuit"
-      ]
-    },
-    pneumatic: {
-      icon: Wind,
-      name: "🌪️ Pneumatique",
-      color: "text-cyan-600",
-      bgColor: "bg-cyan-50",
-      borderColor: "border-cyan-200",
-      procedures: [
-        "Couper l'alimentation d'air comprimé",
-        "Fermer les vannes de sectionnement d'air",
-        "Purger complètement la pression d'air",
-        "Verrouiller les vannes en position fermée",
-        "Déconnecter les raccords pneumatiques",
-        "Vérifier l'absence totale de pression résiduelle",
-        "Étiqueter tous les points de coupure pneumatique"
-      ]
-    },
-    chemical: {
-      icon: Flame,
-      name: "🧪 Chimique",
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-      borderColor: "border-orange-200",
-      procedures: [
-        "Identifier toutes les substances chimiques présentes",
-        "Fermer les vannes d'alimentation chimique",
-        "Vidanger et rincer les conduites si requis",
-        "Neutraliser les résidus selon les FDS",
-        "Verrouiller les vannes et pompes doseuses",
-        "Installer des brides pleines si nécessaire",
-        "Confirmer l'isolement chimique complet"
-      ]
-    },
-    thermal: {
-      icon: Thermometer,
-      name: "🌡️ Thermique",
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-      borderColor: "border-red-200",
-      procedures: [
-        "Couper l'alimentation en combustible (gaz, mazout)",
-        "Arrêter les brûleurs et systèmes de chauffage",
-        "Fermer les vannes de vapeur et eau chaude",
-        "Attendre le refroidissement complet des surfaces",
-        "Verrouiller les commandes thermiques",
-        "Vérifier la température sécuritaire (<40°C)",
-        "Confirmer l'isolement thermique total"
-      ]
-    },
-    gravity: {
-      icon: ArrowRight,
-      name: "⬇️ Gravitaire",
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-      borderColor: "border-purple-200",
-      procedures: [
-        "Identifier tous les éléments suspendus ou surélevés",
-        "Bloquer mécaniquement les pièces mobiles",
-        "Installer des supports temporaires si requis",
-        "Sécuriser les contrepoids et systèmes à ressort",
-        "Verrouiller les mécanismes de levage",
-        "Vérifier la stabilité de tous les éléments",
-        "S'assurer qu'aucune chute n'est possible"
-      ]
-    }
-  },
-  en: {
-    electrical: {
-      icon: Zap,
-      name: "⚡ Electrical",
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
-      borderColor: "border-yellow-200",
-      procedures: [
-        "Identify and locate all electrical power sources",
-        "Open main breaker or disconnect switch",
-        "Lock disconnect device in OPEN position",
-        "Apply lockout tag with complete information",
-        "Test for absence of voltage with calibrated voltmeter",
-        "Verify equipment cannot be re-energized",
-        "Inform team that electrical isolation is complete"
-      ]
-    },
-    mechanical: {
-      icon: Settings,
-      name: "🔧 Mechanical",
-      color: "text-gray-600",
-      bgColor: "bg-gray-50",
-      borderColor: "border-gray-200",
-      procedures: [
-        "Completely stop all mechanical equipment",
-        "Block or chock all moving parts",
-        "Disconnect couplings and transmissions",
-        "Lock out start controls",
-        "Tag all control points",
-        "Verify complete immobilization of parts",
-        "Ensure no accidental restart is possible"
-      ]
-    },
-    hydraulic: {
-      icon: Droplets,
-      name: "💧 Hydraulic",
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-200",
-      procedures: [
-        "Stop main hydraulic pump",
-        "Close hydraulic supply valves",
-        "Bleed residual pressure from system",
-        "Lock valves in closed position",
-        "Disconnect pressurized hoses",
-        "Install safety plugs if necessary",
-        "Confirm complete system depressurization"
-      ]
-    },
-    pneumatic: {
-      icon: Wind,
-      name: "🌪️ Pneumatic",
-      color: "text-cyan-600",
-      bgColor: "bg-cyan-50",
-      borderColor: "border-cyan-200",
-      procedures: [
-        "Cut compressed air supply",
-        "Close air isolation valves",
-        "Completely bleed air pressure",
-        "Lock valves in closed position",
-        "Disconnect pneumatic fittings",
-        "Verify complete absence of residual pressure",
-        "Tag all pneumatic cutoff points"
-      ]
-    },
-    chemical: {
-      icon: Flame,
-      name: "🧪 Chemical",
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-      borderColor: "border-orange-200",
-      procedures: [
-        "Identify all chemical substances present",
-        "Close chemical supply valves",
-        "Drain and flush lines if required",
-        "Neutralize residues per SDS requirements",
-        "Lock valves and metering pumps",
-        "Install blank flanges if necessary",
-        "Confirm complete chemical isolation"
-      ]
-    },
-    thermal: {
-      icon: Thermometer,
-      name: "🌡️ Thermal",
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-      borderColor: "border-red-200",
-      procedures: [
-        "Cut fuel supply (gas, oil)",
-        "Stop burners and heating systems",
-        "Close steam and hot water valves",
-        "Wait for complete cooling of surfaces",
-        "Lock thermal controls",
-        "Verify safe temperature (<40°C)",
-        "Confirm total thermal isolation"
-      ]
-    },
-    gravity: {
-      icon: ArrowRight,
-      name: "⬇️ Gravity",
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-      borderColor: "border-purple-200",
-      procedures: [
-        "Identify all suspended or elevated elements",
-        "Mechanically block moving parts",
-        "Install temporary supports if required",
-        "Secure counterweights and spring systems",
-        "Lock lifting mechanisms",
-        "Verify stability of all elements",
-        "Ensure no falling hazard exists"
-      ]
-    }
-  }
-};
-
 // =================== GÉNÉRATEUR DE NUMÉRO AST UNIQUE ===================
 const generateASTNumber = (): string => {
   const now = new Date();
@@ -723,11 +449,10 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
   // =================== ÉTATS DU COMPOSANT ===================
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showPhotos, setShowPhotos] = useState(false);
-  const [photoCategory, setPhotoCategory] = useState<string>('space_exterior');
   const [isGeneratingAST, setIsGeneratingAST] = useState(false);
   const [astNumber, setAstNumber] = useState(formData.astNumber || generateASTNumber());
   const [copied, setCopied] = useState(false);
-  const [lockoutPhotos, setLockoutPhotos] = useState<LockoutPhoto[]>(formData.lockoutPhotos || []);
+  const [spacePhotos, setSpacePhotos] = useState<SpacePhoto[]>(formData.spacePhotos || []);
   const [confinedSpaceDetails, setConfinedSpaceDetails] = useState<ConfinedSpaceDetails>(
     formData.confinedSpaceDetails || {
       spaceType: '',
@@ -821,9 +546,9 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
   };
 
   // Gestion des photos
-  const handlePhotoCapture = (category: string, pointId?: string) => {
+  const handlePhotoCapture = (category: string) => {
     // Simulation de capture photo
-    const newPhoto: LockoutPhoto = {
+    const newPhoto: SpacePhoto = {
       id: `photo_${Date.now()}`,
       url: `https://via.placeholder.com/400x300?text=Photo+${Date.now()}`,
       caption: `Photo ${category} - ${new Date().toLocaleString()}`,
@@ -833,9 +558,9 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
       measurements: category.includes('space') ? 'L:2.5m W:1.8m H:2.1m' : undefined
     };
 
-    const updatedPhotos = [...lockoutPhotos, newPhoto];
-    setLockoutPhotos(updatedPhotos);
-    onDataChange('lockoutPhotos', updatedPhotos);
+    const updatedPhotos = [...spacePhotos, newPhoto];
+    setSpacePhotos(updatedPhotos);
+    onDataChange('spacePhotos', updatedPhotos);
   };
 
   // Gestion des modifications de données
@@ -853,7 +578,6 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">
       <style jsx>{`
-        /* =================== STYLES CSS COMPLETS =================== */
         .glass-card {
           background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(20px);
@@ -877,32 +601,6 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
         .confined-space-card {
           background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(59, 130, 246, 0.05));
           border: 2px solid rgba(34, 197, 94, 0.2);
-        }
-        
-        .energy-type-card {
-          transition: all 0.3s ease;
-          transform: scale(1);
-        }
-        
-        .energy-type-card:hover {
-          transform: scale(1.02);
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
-        
-        .photo-carousel {
-          background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.9));
-          backdrop-filter: blur(20px);
-        }
-        
-        .photo-thumbnail {
-          transition: all 0.3s ease;
-          filter: brightness(0.7);
-        }
-        
-        .photo-thumbnail.active {
-          filter: brightness(1);
-          transform: scale(1.1);
-          border: 3px solid #3b82f6;
         }
         
         .input-field {
@@ -1014,14 +712,6 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
           .grid-3 {
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
           }
-        }
-        
-        .animate-pulse-slow {
-          animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        .animate-bounce-soft {
-          animation: bounce 2s infinite;
         }
         
         .animate-fade-in {
@@ -1389,7 +1079,7 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
 
                 <div className="mt-3 flex justify-between items-center">
                   <button
-                    onClick={() => handlePhotoCapture('entry_point', entryPoint.id)}
+                    onClick={() => handlePhotoCapture('entry_point')}
                     className="btn-secondary px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2"
                   >
                     <Camera className="w-4 h-4" />
@@ -1502,7 +1192,7 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
               { key: 'equipment_staging', label: t.equipmentStaging, icon: Settings },
               { key: 'atmospheric_testing', label: t.atmosphericTesting, icon: Activity }
             ].map(({ key, label, icon: IconComponent }) => {
-              const categoryPhotos = lockoutPhotos.filter(photo => photo.category === key);
+              const categoryPhotos = spacePhotos.filter(photo => photo.category === key);
               return (
                 <button
                   key={key}
@@ -1520,18 +1210,18 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
           </div>
 
           {/* Affichage des photos */}
-          {lockoutPhotos.length > 0 && (
+          {spacePhotos.length > 0 && (
             <div className="mt-6 p-4 bg-white/50 rounded-xl">
               <h4 className="font-medium text-gray-800 mb-3">
-                Photos Récentes ({lockoutPhotos.length})
+                Photos Récentes ({spacePhotos.length})
               </h4>
               <div className="photo-grid">
-                {lockoutPhotos.slice(-8).map((photo) => (
+                {spacePhotos.slice(-8).map((photo) => (
                   <div
                     key={photo.id}
                     className="photo-item"
                     onClick={() => {
-                      setCurrentPhotoIndex(lockoutPhotos.findIndex(p => p.id === photo.id));
+                      setCurrentPhotoIndex(spacePhotos.findIndex(p => p.id === photo.id));
                       setShowPhotos(true);
                     }}
                   >
@@ -1554,8 +1244,8 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
       </div>
 
       {/* =================== CARROUSEL PHOTOS =================== */}
-      {showPhotos && lockoutPhotos.length > 0 && (
-        <div className="fixed inset-0 z-50 photo-carousel flex items-center justify-center p-4">
+      {showPhotos && spacePhotos.length > 0 && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4">
           <div className="relative max-w-4xl max-h-full">
             <button
               onClick={() => setShowPhotos(false)}
@@ -1566,16 +1256,16 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
 
             <div className="relative">
               <img
-                src={lockoutPhotos[currentPhotoIndex]?.url}
-                alt={lockoutPhotos[currentPhotoIndex]?.caption}
+                src={spacePhotos[currentPhotoIndex]?.url}
+                alt={spacePhotos[currentPhotoIndex]?.caption}
                 className="max-w-full max-h-[80vh] rounded-lg"
               />
 
-              {lockoutPhotos.length > 1 && (
+              {spacePhotos.length > 1 && (
                 <>
                   <button
                     onClick={() => setCurrentPhotoIndex(prev => 
-                      prev === 0 ? lockoutPhotos.length - 1 : prev - 1
+                      prev === 0 ? spacePhotos.length - 1 : prev - 1
                     )}
                     className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
                   >
@@ -1584,7 +1274,7 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
 
                   <button
                     onClick={() => setCurrentPhotoIndex(prev => 
-                      prev === lockoutPhotos.length - 1 ? 0 : prev + 1
+                      prev === spacePhotos.length - 1 ? 0 : prev + 1
                     )}
                     className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
                   >
@@ -1595,20 +1285,20 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({
             </div>
 
             <div className="mt-4 text-white text-center">
-              <h3 className="text-lg font-medium">{lockoutPhotos[currentPhotoIndex]?.caption}</h3>
+              <h3 className="text-lg font-medium">{spacePhotos[currentPhotoIndex]?.caption}</h3>
               <p className="text-sm text-gray-300 mt-1">
-                {lockoutPhotos[currentPhotoIndex]?.timestamp} • {lockoutPhotos[currentPhotoIndex]?.location}
+                {spacePhotos[currentPhotoIndex]?.timestamp} • {spacePhotos[currentPhotoIndex]?.location}
               </p>
-              {lockoutPhotos[currentPhotoIndex]?.measurements && (
+              {spacePhotos[currentPhotoIndex]?.measurements && (
                 <p className="text-sm text-gray-300 mt-1">
-                  📏 {lockoutPhotos[currentPhotoIndex]?.measurements}
+                  📏 {spacePhotos[currentPhotoIndex]?.measurements}
                 </p>
               )}
             </div>
 
-            {lockoutPhotos.length > 1 && (
+            {spacePhotos.length > 1 && (
               <div className="flex justify-center mt-4 space-x-2">
-                {lockoutPhotos.map((_, index) => (
+                {spacePhotos.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentPhotoIndex(index)}
