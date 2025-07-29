@@ -844,14 +844,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       case 'rescue':
         return (
           <RescuePlan
-            formData={permitData}
-            onDataChange={(section: string, data: any) => {
-              updatePermitData({ [section]: data });
-              updateParentData(section, data);
-            }}
-            tenant={selectedProvince || 'QC'}
-            errors={{}}
-            language={language}
+            {...commonProps}
           />
         );
       case 'atmospheric':
