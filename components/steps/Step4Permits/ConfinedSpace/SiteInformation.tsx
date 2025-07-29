@@ -22,13 +22,16 @@ interface SiteInformationProps {
   updateParentData: (section: string, data: any) => void;
 }
 
-// Interface pour RescuePlan - mappage vers commonProps
+// Interface pour TOUS les composants utilisant commonProps
 interface Step1ProjectInfoProps {
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  permitData: any;
+  updatePermitData: (updates: any) => void;
+  selectedProvince: any;
+  PROVINCIAL_REGULATIONS: any;
+  isMobile: boolean;
   language: 'fr' | 'en';
-  tenant: string;
-  errors: any;
+  styles: any;
+  updateParentData: (section: string, data: any) => void;
 }
 
 interface ConfinedSpaceDetails {
