@@ -2157,7 +2157,7 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       setIsGeneratingReport(false);
     }
   };
-
+  
   // =================== PARTAGE OPTIMISÉ MOBILE ===================
   const handleSharePermit = async () => {
     setIsGeneratingReport(true);
