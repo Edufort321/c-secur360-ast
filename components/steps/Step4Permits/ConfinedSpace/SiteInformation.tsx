@@ -13,6 +13,7 @@ import {
 // =================== TYPES ET INTERFACES ===================
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 type Language = 'fr' | 'en';
+type UnitSystem = 'metric' | 'imperial';
 
 interface PermitHistoryEntry {
   id: string;
@@ -49,6 +50,15 @@ interface SpacePhoto {
   gpsCoords?: { lat: number; lng: number };
 }
 
+interface Dimensions {
+  length: number;
+  width: number;
+  height: number;
+  diameter: number;
+  volume: number;
+  spaceShape: 'rectangular' | 'cylindrical' | 'spherical' | 'irregular';
+}
+
 interface ConfinedSpaceDetails {
   // Informations principales
   projectNumber: string;
@@ -68,14 +78,9 @@ interface ConfinedSpaceDetails {
   spaceLocation: string;
   spaceDescription: string;
 
-  // Dimensions
-  dimensions: {
-    length: number;
-    width: number;
-    height: number;
-    diameter: number;
-    volume: number;
-  };
+  // Dimensions avec forme
+  dimensions: Dimensions;
+  unitSystem: UnitSystem;
 
   // Points d'entrée
   entryPoints: Array<{
@@ -218,6 +223,18 @@ const translations = {
     workerCount: "Nombre de travailleurs",
     workDescription: "Description des travaux",
 
+    // Unités
+    unitSystem: "Système d'unités",
+    metric: "Métrique (m)",
+    imperial: "Impérial (ft)",
+
+    // Formes d'espaces
+    spaceShape: "Forme de l'espace",
+    rectangular: "Rectangulaire",
+    cylindrical: "Cylindrique",
+    spherical: "Sphérique",
+    irregular: "Irrégulier",
+
     // Types d'espaces
     spaceType: "Type d'espace",
     spaceTypes: {
@@ -245,12 +262,11 @@ const translations = {
     },
 
     // Dimensions
-    length: "Longueur (m)",
-    width: "Largeur (m)", 
-    height: "Hauteur (m)",
-    diameter: "Diamètre (m)",
+    length: "Longueur",
+    width: "Largeur", 
+    height: "Hauteur",
+    diameter: "Diamètre",
     volume: "Volume calculé",
-    volumeUnit: "m³",
     calculateVolume: "Calculer Volume",
 
     // Points d'entrée
@@ -401,6 +417,18 @@ const translations = {
     workerCount: "Number of workers",
     workDescription: "Work description",
 
+    // Unités
+    unitSystem: "Unit system",
+    metric: "Metric (m)",
+    imperial: "Imperial (ft)",
+
+    // Formes d'espaces
+    spaceShape: "Space shape",
+    rectangular: "Rectangular",
+    cylindrical: "Cylindrical",
+    spherical: "Spherical",
+    irregular: "Irregular",
+
     // Types d'espaces
     spaceType: "Space type",
     spaceTypes: {
@@ -428,12 +456,11 @@ const translations = {
     },
 
     // Dimensions
-    length: "Length (m)",
-    width: "Width (m)",
-    height: "Height (m)",
-    diameter: "Diameter (m)",
+    length: "Length",
+    width: "Width",
+    height: "Height",
+    diameter: "Diameter",
     volume: "Calculated volume",
-    volumeUnit: "m³",
     calculateVolume: "Calculate Volume",
 
     // Points d'entrée
@@ -532,7 +559,6 @@ const translations = {
     qrWillGenerate: "QR Code will be generated upon saving"
   }
 };
-
 // =================== COMPOSANT PRINCIPAL ===================
 const SiteInformation: React.FC<SiteInformationProps> = ({
   permitData,
@@ -544,7 +570,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   updateParentData
 }) => {
 
-  // =================== ÉTATS LOCAUX ===================
+  // =================== ÉTATS LOCAUX AVEC PRÉVENTION DU SCROLL ===================
   const [confinedSpaceDetails, setConfinedSpaceDetails] = useState<ConfinedSpaceDetails>({
     // Informations principales
     projectNumber: permitData.projectNumber || '',
@@ -564,14 +590,16 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     spaceLocation: permitData.spaceLocation || '',
     spaceDescription: permitData.spaceDescription || '',
 
-    // Dimensions
+    // Dimensions avec forme et unités
     dimensions: {
       length: permitData.dimensions?.length || 0,
       width: permitData.dimensions?.width || 0,
       height: permitData.dimensions?.height || 0,
       diameter: permitData.dimensions?.diameter || 0,
       volume: permitData.dimensions?.volume || 0,
+      spaceShape: permitData.dimensions?.spaceShape || 'rectangular'
     },
+    unitSystem: permitData.unitSystem || 'metric',
 
     // Points d'entrée
     entryPoints: permitData.entryPoints || [{
@@ -629,7 +657,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   const [showPermitDatabase, setShowPermitDatabase] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [showClassificationWizard, setShowClassificationWizard] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<PermitSearchResult>({
@@ -641,9 +668,443 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
 
   // Réfs
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Traductions
   const t = translations[language];
+
+  // =================== GÉNÉRATION QR CODE AVEC LOGO RÉEL ===================
+  const generatePermitQRCode = async (permitNumber: string): Promise<string> => {
+    try {
+      // Import dynamique pour éviter les erreurs SSR
+      const QRCode = (await import('qrcode')).default;
+      
+      const permitUrl = `${window.location.origin}/permits/confined-space/${permitNumber}`;
+      
+      const qrData = {
+        permitNumber,
+        type: 'confined_space',
+        province: selectedProvince,
+        authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente',
+        issueDate: new Date().toISOString(),
+        url: permitUrl,
+        projectNumber: confinedSpaceDetails.projectNumber,
+        location: confinedSpaceDetails.workLocation,
+        contractor: confinedSpaceDetails.contractor,
+        spaceType: confinedSpaceDetails.spaceType,
+        csaClass: confinedSpaceDetails.csaClass,
+        hazardCount: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length,
+        logo: '/c-secur360-logo.png'
+      };
+      
+      // Générer le QR Code avec haute résolution
+      const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
+        errorCorrectionLevel: 'M',
+        type: 'image/png',
+        quality: 0.92,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        },
+        width: 256
+      });
+      
+      return qrCodeDataUrl;
+    } catch (error) {
+      console.error('Erreur génération QR Code:', error);
+      return '';
+    }
+  };
+
+  // =================== HANDLERS DE DONNÉES OPTIMISÉS SANS SCROLL ===================
+  const handleConfinedSpaceChange = useCallback((field: string, value: any) => {
+    // Prévenir le scroll automatique
+    const currentScrollPosition = window.pageYOffset;
+    
+    setConfinedSpaceDetails(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      // Synchronisation avec les données du permis
+      updatePermitData({ [field]: value });
+      
+      // Notification au parent
+      updateParentData('siteInformation', updated);
+      
+      return updated;
+    });
+
+    // Restaurer la position de scroll après un court délai
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollPosition);
+    }, 0);
+  }, [updatePermitData, updateParentData]);
+
+  const handleEnvironmentalChange = useCallback((field: string, value: any) => {
+    const currentScrollPosition = window.pageYOffset;
+    
+    const updated = {
+      ...confinedSpaceDetails.environmentalConditions,
+      [field]: value
+    };
+    
+    handleConfinedSpaceChange('environmentalConditions', updated);
+    
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollPosition);
+    }, 0);
+  }, [confinedSpaceDetails.environmentalConditions, handleConfinedSpaceChange]);
+
+  const handleContentChange = useCallback((field: string, value: any) => {
+    const currentScrollPosition = window.pageYOffset;
+    
+    const updated = {
+      ...confinedSpaceDetails.spaceContent,
+      [field]: value
+    };
+    
+    handleConfinedSpaceChange('spaceContent', updated);
+    
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollPosition);
+    }, 0);
+  }, [confinedSpaceDetails.spaceContent, handleConfinedSpaceChange]);
+
+  const handleSafetyChange = useCallback((field: string, value: any) => {
+    const currentScrollPosition = window.pageYOffset;
+    
+    const updated = {
+      ...confinedSpaceDetails.safetyMeasures,
+      [field]: value
+    };
+    
+    handleConfinedSpaceChange('safetyMeasures', updated);
+    
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollPosition);
+    }, 0);
+  }, [confinedSpaceDetails.safetyMeasures, handleConfinedSpaceChange]);
+
+  // =================== CALCUL DE VOLUME INTELLIGENT ===================
+  const calculateVolume = () => {
+    const { length, width, height, diameter, spaceShape } = confinedSpaceDetails.dimensions;
+    const { unitSystem } = confinedSpaceDetails;
+    let volume = 0;
+    let formulaUsed = '';
+    let unitSuffix = unitSystem === 'metric' ? 'm³' : 'ft³';
+
+    switch (spaceShape) {
+      case 'rectangular':
+        if (length > 0 && width > 0 && height > 0) {
+          volume = length * width * height;
+          formulaUsed = `Rectangulaire: ${length} × ${width} × ${height}`;
+        }
+        break;
+        
+      case 'cylindrical':
+        if (diameter > 0 && height > 0) {
+          const radius = diameter / 2;
+          volume = Math.PI * Math.pow(radius, 2) * height;
+          formulaUsed = `Cylindrique: π × (${radius.toFixed(2)})² × ${height}`;
+        } else if (diameter > 0 && length > 0) {
+          const radius = diameter / 2;
+          volume = Math.PI * Math.pow(radius, 2) * length;
+          formulaUsed = `Cylindrique: π × (${radius.toFixed(2)})² × ${length}`;
+        }
+        break;
+        
+      case 'spherical':
+        if (diameter > 0) {
+          const radius = diameter / 2;
+          volume = (4/3) * Math.PI * Math.pow(radius, 3);
+          formulaUsed = `Sphérique: (4/3) × π × (${radius.toFixed(2)})³`;
+        }
+        break;
+        
+      case 'irregular':
+        // Pour les formes irrégulières, utiliser une approximation rectangulaire
+        if (length > 0 && width > 0 && height > 0) {
+          volume = length * width * height * 0.85; // Facteur de correction pour forme irrégulière
+          formulaUsed = `Irrégulier (approx.): ${length} × ${width} × ${height} × 0.85`;
+        }
+        break;
+        
+      default:
+        if (length > 0 && width > 0 && height > 0) {
+          volume = length * width * height;
+          formulaUsed = `Par défaut: ${length} × ${width} × ${height}`;
+        }
+        break;
+    }
+
+    // Conversion impériale si nécessaire
+    if (unitSystem === 'imperial') {
+      // Le volume est déjà en pieds cubes si les dimensions sont en pieds
+      unitSuffix = 'ft³';
+    }
+
+    const updatedDimensions = {
+      ...confinedSpaceDetails.dimensions,
+      volume: Math.round(volume * 100) / 100
+    };
+
+    handleConfinedSpaceChange('dimensions', updatedDimensions);
+    
+    console.log(`Volume calculé: ${updatedDimensions.volume} ${unitSuffix} - Formule: ${formulaUsed}`);
+    
+    // Notification de succès
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        new Notification(`✅ ${language === 'fr' ? 'Volume calculé' : 'Volume calculated'}`, {
+          body: `${updatedDimensions.volume} ${unitSuffix} - ${formulaUsed}`,
+          icon: '/c-secur360-logo.png'
+        });
+      }
+    }
+  };
+
+  // =================== CONVERSION D'UNITÉS ===================
+  const convertUnits = (fromSystem: UnitSystem, toSystem: UnitSystem) => {
+    if (fromSystem === toSystem) return;
+    
+    const currentScrollPosition = window.pageYOffset;
+    const { dimensions } = confinedSpaceDetails;
+    let conversionFactor = 1;
+    
+    if (fromSystem === 'metric' && toSystem === 'imperial') {
+      conversionFactor = 3.28084; // mètres vers pieds
+    } else if (fromSystem === 'imperial' && toSystem === 'metric') {
+      conversionFactor = 0.3048; // pieds vers mètres
+    }
+    
+    const convertedDimensions = {
+      ...dimensions,
+      length: Math.round(dimensions.length * conversionFactor * 100) / 100,
+      width: Math.round(dimensions.width * conversionFactor * 100) / 100,
+      height: Math.round(dimensions.height * conversionFactor * 100) / 100,
+      diameter: Math.round(dimensions.diameter * conversionFactor * 100) / 100,
+      volume: 0 // Recalculer après conversion
+    };
+    
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      dimensions: convertedDimensions,
+      unitSystem: toSystem
+    }));
+    
+    updatePermitData({ 
+      dimensions: convertedDimensions,
+      unitSystem: toSystem 
+    });
+    
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollPosition);
+    }, 0);
+  };
+
+  // =================== VALIDATION INTELLIGENTE ===================
+  const validateSiteInformation = (details: ConfinedSpaceDetails = confinedSpaceDetails) => {
+    const errors: string[] = [];
+    
+    // Champs obligatoires de base
+    if (!details.projectNumber.trim()) errors.push(language === 'fr' ? 'Numéro de projet manquant' : 'Project number missing');
+    if (!details.workLocation.trim()) errors.push(language === 'fr' ? 'Lieu des travaux manquant' : 'Work location missing');
+    if (!details.contractor.trim()) errors.push(language === 'fr' ? 'Entrepreneur manquant' : 'Contractor missing');
+    if (!details.supervisor.trim()) errors.push(language === 'fr' ? 'Superviseur manquant' : 'Supervisor missing');
+    if (!details.entryDate) errors.push(language === 'fr' ? 'Date d\'entrée manquante' : 'Entry date missing');
+    if (!details.spaceType) errors.push(language === 'fr' ? 'Type d\'espace manquant' : 'Space type missing');
+    if (!details.csaClass) errors.push(language === 'fr' ? 'Classification CSA manquante' : 'CSA classification missing');
+    
+    // Validation des dimensions selon la forme
+    const { dimensions } = details;
+    switch (dimensions.spaceShape) {
+      case 'rectangular':
+      case 'irregular':
+        if (dimensions.length <= 0 || dimensions.width <= 0 || dimensions.height <= 0) {
+          errors.push(language === 'fr' ? 'Longueur, largeur et hauteur requises pour forme rectangulaire' : 'Length, width and height required for rectangular shape');
+        }
+        break;
+      case 'cylindrical':
+        if (dimensions.diameter <= 0 || (dimensions.height <= 0 && dimensions.length <= 0)) {
+          errors.push(language === 'fr' ? 'Diamètre et hauteur (ou longueur) requis pour forme cylindrique' : 'Diameter and height (or length) required for cylindrical shape');
+        }
+        break;
+      case 'spherical':
+        if (dimensions.diameter <= 0) {
+          errors.push(language === 'fr' ? 'Diamètre requis pour forme sphérique' : 'Diameter required for spherical shape');
+        }
+        break;
+    }
+    
+    if (dimensions.volume === 0) {
+      errors.push(language === 'fr' ? 'Volume doit être calculé' : 'Volume must be calculated');
+    }
+    
+    // Validation des dangers selon la classification CSA
+    if ((details.csaClass === 'class1' || details.csaClass === 'class2') && 
+        details.atmosphericHazards.length === 0 && details.physicalHazards.length === 0) {
+      errors.push(language === 'fr' ? 'Au moins un danger doit être identifié pour cette classification' : 'At least one hazard must be identified for this classification');
+    }
+    
+    // Validation des points d'entrée
+    if (details.entryPoints.length === 0) {
+      errors.push(language === 'fr' ? 'Au moins un point d\'entrée requis' : 'At least one entry point required');
+    } else {
+      details.entryPoints.forEach((entry, index) => {
+        if (!entry.dimensions.trim()) {
+          errors.push(language === 'fr' ? `Dimensions manquantes pour le point d'entrée ${index + 1}` : `Missing dimensions for entry point ${index + 1}`);
+        }
+        if (!entry.location.trim()) {
+          errors.push(language === 'fr' ? `Localisation manquante pour le point d'entrée ${index + 1}` : `Missing location for entry point ${index + 1}`);
+        }
+      });
+    }
+    
+    return errors;
+  };
+
+  // =================== GESTION DES DANGERS AVEC PRÉVENTION SCROLL ===================
+  const toggleAtmosphericHazard = (hazardType: string) => {
+    const currentScrollPosition = window.pageYOffset;
+    
+    const currentHazards = confinedSpaceDetails.atmosphericHazards;
+    const updatedHazards = currentHazards.includes(hazardType)
+      ? currentHazards.filter(h => h !== hazardType)
+      : [...currentHazards, hazardType];
+    
+    handleConfinedSpaceChange('atmosphericHazards', updatedHazards);
+    
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollPosition);
+    }, 0);
+  };
+
+  const togglePhysicalHazard = (hazardType: string) => {
+    const currentScrollPosition = window.pageYOffset;
+    
+    const currentHazards = confinedSpaceDetails.physicalHazards;
+    const updatedHazards = currentHazards.includes(hazardType)
+      ? currentHazards.filter(h => h !== hazardType)
+      : [...currentHazards, hazardType];
+    
+    handleConfinedSpaceChange('physicalHazards', updatedHazards);
+    
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollPosition);
+    }, 0);
+  };
+
+  // =================== GESTION DES SECTIONS COLLAPSIBLES ===================
+  const toggleSection = (sectionId: string) => {
+    const currentScrollPosition = window.pageYOffset;
+    
+    setCollapsedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionId)) {
+        newSet.delete(sectionId);
+      } else {
+        newSet.add(sectionId);
+      }
+      return newSet;
+    });
+    
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollPosition);
+    }, 100);
+  };
+
+  // =================== GESTION DES POINTS D'ENTRÉE ===================
+  const addEntryPoint = () => {
+    const currentScrollPosition = window.pageYOffset;
+    
+    const newEntryPoint = {
+      id: `entry-${Date.now()}`,
+      type: 'circular',
+      dimensions: '',
+      location: '',
+      condition: 'good',
+      accessibility: 'normal',
+      photos: []
+    };
+    
+    handleConfinedSpaceChange('entryPoints', [...confinedSpaceDetails.entryPoints, newEntryPoint]);
+    
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollPosition);
+    }, 0);
+  };
+
+  const removeEntryPoint = (entryId: string) => {
+    if (confinedSpaceDetails.entryPoints.length <= 1) {
+      alert(language === 'fr' ? 'Au moins un point d\'entrée est requis' : 'At least one entry point is required');
+      return;
+    }
+    
+    const currentScrollPosition = window.pageYOffset;
+    
+    const updatedEntryPoints = confinedSpaceDetails.entryPoints.filter(entry => entry.id !== entryId);
+    handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
+    
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollPosition);
+    }, 0);
+  };
+
+  const updateEntryPoint = (entryId: string, field: string, value: any) => {
+    const currentScrollPosition = window.pageYOffset;
+    
+    const updatedEntryPoints = confinedSpaceDetails.entryPoints.map(entry =>
+      entry.id === entryId ? { ...entry, [field]: value } : entry
+    );
+    handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
+    
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollPosition);
+    }, 0);
+  };
+
+  // =================== EFFETS DE SYNCHRONISATION ===================
+  useEffect(() => {
+    // Synchroniser avec les données du permis au montage
+    if (permitData.spacePhotos) {
+      setSpacePhotos(permitData.spacePhotos);
+    }
+  }, [permitData]);
+
+  useEffect(() => {
+    // Synchroniser les photos avec les données du permis
+    updatePermitData({ spacePhotos });
+  }, [spacePhotos, updatePermitData]);
+
+  useEffect(() => {
+    // Demander la permission pour les notifications
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
+
+  // Prévenir le scroll automatique sur les changements d'état
+  useEffect(() => {
+    const preventAutoScroll = () => {
+      if (containerRef.current) {
+        const inputs = containerRef.current.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+          input.addEventListener('focus', () => {
+            // Empêcher le scroll automatique vers l'élément focalisé
+            if (isMobile) {
+              setTimeout(() => {
+                window.scrollTo(0, window.pageYOffset);
+              }, 100);
+            }
+          });
+        });
+      }
+    };
+    
+    preventAutoScroll();
+  }, [isMobile]);
   // =================== CLASSIFICATIONS CSA PAR PROVINCE CANADIENNE ===================
   const getCSAClassifications = (province: ProvinceCode, language: Language) => {
     const baseClassifications = {
@@ -976,9 +1437,8 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     const classifications = baseClassifications[language];
     const provinceRegs = provincialRegulations[province];
 
-    // Intégrer les réglementations provinciales avec typage correct
+    // Intégrer les réglementations provinciales
     Object.keys(classifications).forEach(classKey => {
-      // ✅ CORRECTION TYPESCRIPT : Cast explicite et accès sécurisé aux propriétés
       const classData = classifications[classKey as keyof typeof classifications];
       const provinceClassData = provinceRegs[classKey as 'class1' | 'class2' | 'class3'];
       
@@ -1180,12 +1640,1106 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     return 'class3';
   };
 
-  // =================== FONCTIONS DE BASE DE DONNÉES SUPABASE (IMPORTS CORRIGÉS) ===================
+  const handleClassificationComplete = (classification: string, answers: Record<string, any>) => {
+    handleConfinedSpaceChange('csaClass', classification);
+    
+    // Sauvegarder les réponses pour référence
+    updatePermitData({ 
+      classificationAnswers: answers,
+      classificationDate: new Date().toISOString()
+    });
+
+    // Notification de succès
+    const csaClassifications = getCSAClassifications(selectedProvince, language);
+    const selectedClassification = csaClassifications[classification as keyof typeof csaClassifications];
+    
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        new Notification(`✅ ${language === 'fr' ? 'Classification déterminée' : 'Classification determined'}`, {
+          body: selectedClassification?.title || classification,
+          icon: '/c-secur360-logo.png'
+        });
+      }
+    }
+  };
+
+  // =================== COMPOSANT QUESTIONNAIRE CLASSIFICATION CSA ===================
+  const CSAClassificationWizard = ({ 
+    isOpen, 
+    onClose, 
+    onClassificationComplete 
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+    onClassificationComplete: (classification: string, answers: Record<string, any>) => void;
+  }) => {
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [answers, setAnswers] = useState<Record<string, any>>({});
+    const questions = getClassificationQuestions(language)[language];
+
+    if (!isOpen) return null;
+
+    const currentQuestion = questions[currentQuestionIndex];
+    const isLastQuestion = currentQuestionIndex === questions.length - 1;
+
+    const handleAnswer = (questionId: string, answer: any) => {
+      const newAnswers = { ...answers, [questionId]: answer };
+      setAnswers(newAnswers);
+    };
+
+    const nextQuestion = () => {
+      if (isLastQuestion) {
+        const classification = calculateCSAClass(answers);
+        onClassificationComplete(classification, answers);
+        onClose();
+        setCurrentQuestionIndex(0);
+        setAnswers({});
+      } else {
+        setCurrentQuestionIndex(prev => prev + 1);
+      }
+    };
+
+    const prevQuestion = () => {
+      if (currentQuestionIndex > 0) {
+        setCurrentQuestionIndex(prev => prev - 1);
+      }
+    };
+
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.8)',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px'
+      }}>
+        <div style={{
+          background: 'var(--card-bg)',
+          borderRadius: 'var(--radius)',
+          maxWidth: isMobile ? '95vw' : '600px',
+          width: '100%',
+          maxHeight: isMobile ? '90vh' : '80vh',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: 'var(--shadow)'
+        }}>
+          {/* Header du questionnaire */}
+          <div style={{
+            padding: isMobile ? '16px' : '20px',
+            borderBottom: '1px solid var(--border-color)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div style={{ flex: 1, marginRight: '16px' }}>
+              <div style={{
+                width: '100%',
+                height: '8px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '4px',
+                overflow: 'hidden',
+                marginBottom: '8px'
+              }}>
+                <div style={{
+                  height: '100%',
+                  background: 'linear-gradient(90deg, var(--primary-color), var(--success-color))',
+                  transition: 'width 0.3s ease',
+                  width: `${((currentQuestionIndex + 1) / questions.length) * 100}%`
+                }} />
+              </div>
+              <span style={{
+                fontSize: isMobile ? '12px' : '14px',
+                color: 'var(--text-secondary)',
+                fontWeight: '600'
+              }}>
+                {currentQuestionIndex + 1} / {questions.length}
+              </span>
+            </div>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '4px',
+                borderRadius: '4px',
+                transition: 'var(--transition)'
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Contenu du questionnaire */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: isMobile ? '16px' : '24px'
+          }}>
+            <div>
+              <h3 style={{
+                fontSize: isMobile ? '16px' : '18px',
+                fontWeight: '600',
+                color: 'var(--text-primary)',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                lineHeight: 1.4
+              }}>
+                {currentQuestion.critical && <AlertTriangle color="var(--danger-color)" size={20} />}
+                {currentQuestion.question}
+              </h3>
+
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                {currentQuestion.options.map((option) => (
+                  <label key={option.value} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: isMobile ? '12px' : '16px',
+                    background: 'rgba(15, 23, 42, 0.6)',
+                    border: '2px solid var(--border-color)',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    transition: 'var(--transition)',
+                    fontSize: isMobile ? '14px' : '15px'
+                  }}>
+                    <input
+                      type={currentQuestion.type}
+                      name={currentQuestion.id}
+                      value={option.value}
+                      checked={
+                        currentQuestion.type === 'radio' 
+                          ? answers[currentQuestion.id] === option.value
+                          : answers[currentQuestion.id]?.includes(option.value)
+                      }
+                      onChange={(e) => {
+                        if (currentQuestion.type === 'radio') {
+                          handleAnswer(currentQuestion.id, option.value);
+                        } else {
+                          const currentAnswers = answers[currentQuestion.id] || [];
+                          if (e.target.checked) {
+                            if (option.value === 'none') {
+                              handleAnswer(currentQuestion.id, ['none']);
+                            } else {
+                              const newAnswers = currentAnswers.filter((a: string) => a !== 'none');
+                              handleAnswer(currentQuestion.id, [...newAnswers, option.value]);
+                            }
+                          } else {
+                            handleAnswer(currentQuestion.id, currentAnswers.filter((a: string) => a !== option.value));
+                          }
+                        }
+                      }}
+                      style={{ margin: 0, flexShrink: 0 }}
+                    />
+                    <span style={{
+                      flex: 1,
+                      color: 'var(--text-primary)',
+                      fontWeight: '500'
+                    }}>
+                      {option.label}
+                    </span>
+                    <span style={{
+                      fontSize: isMobile ? '11px' : '12px',
+                      color: 'var(--text-muted)',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      padding: '2px 6px',
+                      borderRadius: '4px'
+                    }}>
+                      {language === 'fr' ? 'Poids' : 'Weight'}: {option.weight}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer avec boutons de navigation */}
+          <div style={{
+            padding: isMobile ? '16px' : '20px',
+            borderTop: '1px solid var(--border-color)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: '12px'
+          }}>
+            <button
+              onClick={prevQuestion}
+              disabled={currentQuestionIndex === 0}
+              style={{
+                padding: isMobile ? '12px 16px' : '12px 20px',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'var(--transition)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                minHeight: '44px',
+                background: 'var(--card-bg)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                opacity: currentQuestionIndex === 0 ? 0.6 : 1
+              }}
+            >
+              <ArrowLeft size={16} />
+              {language === 'fr' ? 'Précédent' : 'Previous'}
+            </button>
+
+            <button
+              onClick={nextQuestion}
+              disabled={!answers[currentQuestion.id] || 
+                       (Array.isArray(answers[currentQuestion.id]) && answers[currentQuestion.id].length === 0)}
+              style={{
+                padding: isMobile ? '12px 16px' : '12px 20px',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'var(--transition)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                minHeight: '44px',
+                background: 'linear-gradient(135deg, var(--primary-color), #2563eb)',
+                color: 'white',
+                opacity: (!answers[currentQuestion.id] || 
+                         (Array.isArray(answers[currentQuestion.id]) && answers[currentQuestion.id].length === 0)) ? 0.6 : 1
+              }}
+            >
+              {isLastQuestion ? (language === 'fr' ? 'Terminer' : 'Finish') : (language === 'fr' ? 'Suivant' : 'Next')}
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // =================== COMPOSANT SECTION COLLAPSIBLE MOBILE ===================
+  const CollapsibleSection = ({ 
+    id, 
+    title, 
+    icon, 
+    children, 
+    className = '',
+    defaultCollapsed = false 
+  }: {
+    id: string;
+    title: string;
+    icon: React.ReactNode;
+    children: React.ReactNode;
+    className?: string;
+    defaultCollapsed?: boolean;
+  }) => {
+    const isCollapsed = collapsedSections.has(id) || (defaultCollapsed && !collapsedSections.has(id));
+
+    return (
+      <div className={`collapsible-section ${className}`} style={{
+        background: 'rgba(31, 41, 59, 0.6)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius)',
+        marginBottom: isMobile ? '16px' : '24px',
+        overflow: 'hidden',
+        transition: 'var(--transition)'
+      }}>
+        <button 
+          className="section-toggle"
+          onClick={() => toggleSection(id)}
+          aria-expanded={!isCollapsed}
+          style={{
+            width: '100%',
+            padding: isMobile ? '16px' : '20px',
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-primary)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: isMobile ? '16px' : '18px',
+            fontWeight: '600',
+            transition: 'var(--transition)',
+            minHeight: isMobile ? '60px' : '70px',
+            touchAction: 'manipulation'
+          }}
+        >
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? '12px' : '16px',
+            flex: 1
+          }}>
+            <div style={{
+              width: isMobile ? '20px' : '24px',
+              height: isMobile ? '20px' : '24px',
+              color: 'var(--primary-color)',
+              flexShrink: 0
+            }}>{icon}</div>
+            <h3 style={{
+              margin: 0,
+              fontSize: isMobile ? '16px' : '18px',
+              fontWeight: '700',
+              color: 'var(--text-primary)',
+              textAlign: 'left'
+            }}>{title}</h3>
+          </div>
+          <div style={{
+            color: 'var(--text-muted)',
+            transition: 'transform 0.2s ease'
+          }}>
+            {isCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+          </div>
+        </button>
+        
+        {!isCollapsed && (
+          <div style={{
+            padding: isMobile ? '16px' : '24px',
+            borderTop: '1px solid var(--border-color)',
+            animation: 'slideDown 0.3s ease'
+          }}>
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  };
+  // =================== COMPOSANT INDICATEUR DE VALIDATION SANS POURCENTAGE ===================
+  const ValidationIndicator = () => {
+    const errors = validateSiteInformation();
+    const isValid = errors.length === 0;
+
+    return (
+      <div style={{
+        background: 'var(--card-bg)',
+        borderRadius: 'var(--radius)',
+        padding: isMobile ? '16px' : '20px',
+        marginBottom: '20px',
+        borderLeft: `4px solid ${isValid ? 'var(--success-color)' : 'var(--danger-color)'}`,
+        backgroundColor: isValid ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: errors.length > 0 ? '12px' : 0
+        }}>
+          <div style={{ color: 'inherit' }}>
+            {isValid ? <CheckCircle size={24} color="#10b981" /> : <AlertTriangle size={24} color="#ef4444" />}
+          </div>
+          <div>
+            <h4 style={{
+              margin: '0 0 4px',
+              fontSize: isMobile ? '14px' : '16px',
+              fontWeight: '600',
+              color: isValid ? '#86efac' : '#fca5a5'
+            }}>
+              {isValid ? 
+                (language === 'fr' ? '✅ Informations Complètes' : '✅ Information Complete') :
+                (language === 'fr' ? '⚠️ Informations Incomplètes' : '⚠️ Incomplete Information')
+              }
+            </h4>
+          </div>
+        </div>
+
+        {errors.length > 0 && (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}>
+            {errors.map((error, index) => (
+              <div key={index} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: isMobile ? '12px' : '13px',
+                color: 'var(--danger-color)',
+                padding: '6px 12px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                borderRadius: '6px',
+                border: '1px solid rgba(239, 68, 68, 0.2)'
+              }}>
+                <AlertTriangle size={14} />
+                <span style={{ flex: 1, wordWrap: 'break-word' }}>{error}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // =================== COMPOSANT BOUTONS D'ACTION RAPIDE RESPONSIFS ===================
+  const QuickActionButtons = () => (
+    <div style={{
+      position: isMobile ? 'fixed' : 'sticky',
+      ...(isMobile ? { 
+        bottom: '20px', 
+        right: '20px',
+        zIndex: 1000
+      } : { 
+        top: '20px', 
+        zIndex: 100,
+        marginBottom: '20px'
+      }),
+      display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
+      gap: isMobile ? '12px' : '16px',
+      ...(isMobile ? {} : { justifyContent: 'center' })
+    }}>
+      <button
+        onClick={() => setShowPermitDatabase(true)}
+        style={{
+          ...(isMobile ? {
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%'
+          } : {
+            padding: '12px 20px',
+            borderRadius: 'var(--radius-sm)'
+          }),
+          border: 'none',
+          cursor: 'pointer',
+          transition: 'var(--transition)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          fontWeight: '600',
+          fontSize: '14px',
+          boxShadow: 'var(--shadow)',
+          touchAction: 'manipulation',
+          background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+          color: 'white'
+        }}
+        title={t.searchDatabase}
+      >
+        <Database size={16} />
+        {!isMobile && <span>{t.searchDatabase}</span>}
+      </button>
+
+      <button
+        onClick={handleSave}
+        disabled={isSaving}
+        style={{
+          ...(isMobile ? {
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%'
+          } : {
+            padding: '12px 20px',
+            borderRadius: 'var(--radius-sm)'
+          }),
+          border: 'none',
+          cursor: 'pointer',
+          transition: 'var(--transition)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          fontWeight: '600',
+          fontSize: '14px',
+          boxShadow: 'var(--shadow)',
+          touchAction: 'manipulation',
+          background: 'linear-gradient(135deg, var(--success-color), #059669)',
+          color: 'white',
+          opacity: isSaving ? 0.7 : 1
+        }}
+        title={t.savePermit}
+      >
+        {isSaving ? <div className="spinner" /> : <Save size={16} />}
+        {!isMobile && <span>{isSaving ? t.saving : t.savePermit}</span>}
+      </button>
+
+      <button
+        onClick={handlePrintPermit}
+        disabled={isGeneratingReport}
+        style={{
+          ...(isMobile ? {
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%'
+          } : {
+            padding: '12px 20px',
+            borderRadius: 'var(--radius-sm)'
+          }),
+          border: 'none',
+          cursor: 'pointer',
+          transition: 'var(--transition)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          fontWeight: '600',
+          fontSize: '14px',
+          boxShadow: 'var(--shadow)',
+          touchAction: 'manipulation',
+          background: 'linear-gradient(135deg, var(--primary-color), #2563eb)',
+          color: 'white',
+          opacity: isGeneratingReport ? 0.7 : 1
+        }}
+        title={t.printPermit}
+      >
+        {isGeneratingReport ? <div className="spinner" /> : <Printer size={16} />}
+        {!isMobile && <span>{t.printPermit}</span>}
+      </button>
+
+      <button
+        onClick={handleSharePermit}
+        style={{
+          ...(isMobile ? {
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%'
+          } : {
+            padding: '12px 20px',
+            borderRadius: 'var(--radius-sm)'
+          }),
+          border: 'none',
+          cursor: 'pointer',
+          transition: 'var(--transition)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          fontWeight: '600',
+          fontSize: '14px',
+          boxShadow: 'var(--shadow)',
+          touchAction: 'manipulation',
+          background: 'linear-gradient(135deg, var(--warning-color), #d97706)',
+          color: 'white'
+        }}
+        title={t.sharePermit}
+      >
+        <Share size={16} />
+        {!isMobile && <span>{t.sharePermit}</span>}
+      </button>
+    </div>
+  );
+
+  // =================== COMPOSANT SÉLECTEUR CSA AVEC ASSISTANT INTÉGRÉ ===================
+  const CSAClassificationSelector = () => {
+    const csaClassifications = getCSAClassifications(selectedProvince, language);
+    const currentClassification = confinedSpaceDetails.csaClass ? 
+      csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications] : null;
+
+    return (
+      <div style={{ width: '100%' }}>
+        <label style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          color: 'var(--text-secondary)',
+          fontSize: isMobile ? '14px' : '15px',
+          fontWeight: '600',
+          marginBottom: '8px',
+          minHeight: '20px'
+        }}>
+          <Shield style={{ width: '18px', height: '18px' }} />
+          {t.csaClass}<span style={{ color: 'var(--danger-color)' }}>*</span>
+        </label>
+
+        {/* Sélecteur et assistant côte à côte */}
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'stretch' : 'flex-start',
+          marginBottom: '12px'
+        }}>
+          <select
+            value={confinedSpaceDetails.csaClass}
+            onChange={(e) => handleConfinedSpaceChange('csaClass', e.target.value)}
+            style={{
+              flex: isMobile ? 'none' : '1',
+              width: isMobile ? '100%' : 'auto',
+              padding: isMobile ? '12px 16px' : '14px 16px',
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '2px solid var(--border-color)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-primary)',
+              fontSize: isMobile ? '16px' : '15px',
+              fontWeight: '500',
+              transition: 'var(--transition)',
+              backdropFilter: 'blur(10px)',
+              minHeight: isMobile ? '48px' : '50px',
+              fontFamily: 'inherit',
+              WebkitAppearance: 'none',
+              appearance: 'none'
+            }}
+          >
+            <option value="">{t.select}</option>
+            <option value="class1">{t.csaClasses.class1}</option>
+            <option value="class2">{t.csaClasses.class2}</option>
+            <option value="class3">{t.csaClasses.class3}</option>
+          </select>
+
+          {/* Assistant de classification à côté */}
+          <button
+            type="button"
+            onClick={() => setShowClassificationWizard(true)}
+            style={{
+              minWidth: isMobile ? '100%' : '120px',
+              whiteSpace: 'nowrap',
+              padding: isMobile ? '12px 16px' : '14px 20px',
+              borderRadius: 'var(--radius-sm)',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'var(--transition)',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              minHeight: isMobile ? '48px' : '50px',
+              fontSize: isMobile ? '14px' : '15px',
+              touchAction: 'manipulation',
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              color: 'white',
+              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
+            }}
+          >
+            <Star size={16} />
+            <span>{language === 'fr' ? 'Assistant' : 'Wizard'}</span>
+          </button>
+        </div>
+
+        {/* Affichage de la classification sélectionnée */}
+        {currentClassification && (
+          <div style={{
+            padding: '12px 16px',
+            background: confinedSpaceDetails.csaClass === 'class1' ? 'rgba(239, 68, 68, 0.1)' : 
+                       confinedSpaceDetails.csaClass === 'class2' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+            border: `1px solid ${confinedSpaceDetails.csaClass === 'class1' ? 'var(--danger-color)' : 
+                                confinedSpaceDetails.csaClass === 'class2' ? 'var(--warning-color)' : 'var(--success-color)'}`,
+            borderRadius: 'var(--radius-sm)',
+            fontSize: isMobile ? '12px' : '13px',
+            lineHeight: 1.4
+          }}>
+            <div style={{
+              fontWeight: '600',
+              color: confinedSpaceDetails.csaClass === 'class1' ? '#fca5a5' : 
+                     confinedSpaceDetails.csaClass === 'class2' ? '#fbbf24' : '#86efac',
+              marginBottom: '4px'
+            }}>
+              {currentClassification.title}
+            </div>
+            <div style={{
+              color: confinedSpaceDetails.csaClass === 'class1' ? '#fecaca' : 
+                     confinedSpaceDetails.csaClass === 'class2' ? '#fde68a' : '#bbf7d0'
+            }}>
+              {currentClassification.description}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // =================== COMPOSANT SÉLECTEUR DE FORME ET UNITÉS ===================
+  const DimensionsSelector = () => (
+    <div style={{
+      background: 'rgba(16, 185, 129, 0.1)',
+      border: '1px solid rgba(16, 185, 129, 0.3)',
+      borderRadius: 'var(--radius)',
+      padding: '20px'
+    }}>
+      {/* Sélecteurs de forme et unités */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+        gap: '16px',
+        marginBottom: '20px'
+      }}>
+        <div>
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            color: 'var(--text-secondary)',
+            fontSize: isMobile ? '14px' : '15px',
+            fontWeight: '600',
+            marginBottom: '8px'
+          }}>
+            <Layers style={{ width: '18px', height: '18px' }} />
+            {t.spaceShape}<span style={{ color: 'var(--danger-color)' }}>*</span>
+          </label>
+          <select
+            value={confinedSpaceDetails.dimensions.spaceShape}
+            onChange={(e) => handleConfinedSpaceChange('dimensions', {
+              ...confinedSpaceDetails.dimensions,
+              spaceShape: e.target.value as any,
+              volume: 0 // Reset volume when shape changes
+            })}
+            style={{
+              width: '100%',
+              padding: isMobile ? '12px 16px' : '14px 16px',
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '2px solid var(--border-color)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-primary)',
+              fontSize: isMobile ? '16px' : '15px',
+              fontWeight: '500',
+              transition: 'var(--transition)',
+              minHeight: isMobile ? '48px' : '50px'
+            }}
+          >
+            <option value="rectangular">📐 {t.rectangular}</option>
+            <option value="cylindrical">🔵 {t.cylindrical}</option>
+            <option value="spherical">⚪ {t.spherical}</option>
+            <option value="irregular">🔷 {t.irregular}</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            color: 'var(--text-secondary)',
+            fontSize: isMobile ? '14px' : '15px',
+            fontWeight: '600',
+            marginBottom: '8px'
+          }}>
+            <Ruler style={{ width: '18px', height: '18px' }} />
+            {t.unitSystem}
+          </label>
+          <select
+            value={confinedSpaceDetails.unitSystem}
+            onChange={(e) => {
+              const newSystem = e.target.value as UnitSystem;
+              convertUnits(confinedSpaceDetails.unitSystem, newSystem);
+            }}
+            style={{
+              width: '100%',
+              padding: isMobile ? '12px 16px' : '14px 16px',
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '2px solid var(--border-color)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-primary)',
+              fontSize: isMobile ? '16px' : '15px',
+              fontWeight: '500',
+              transition: 'var(--transition)',
+              minHeight: isMobile ? '48px' : '50px'
+            }}
+          >
+            <option value="metric">📏 {t.metric}</option>
+            <option value="imperial">📐 {t.imperial}</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Champs de dimensions adaptatifs */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+        gap: isMobile ? '12px' : '16px',
+        marginBottom: '20px'
+      }}>
+        {/* Longueur - toujours visible sauf pour sphérique */}
+        {confinedSpaceDetails.dimensions.spaceShape !== 'spherical' && (
+          <div>
+            <label style={{
+              color: 'var(--text-secondary)',
+              fontSize: isMobile ? '13px' : '14px',
+              fontWeight: '600',
+              marginBottom: '6px',
+              display: 'block'
+            }}>
+              {t.length} ({confinedSpaceDetails.unitSystem === 'metric' ? 'm' : 'ft'})
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={confinedSpaceDetails.dimensions.length || ''}
+              onChange={(e) => handleConfinedSpaceChange('dimensions', {
+                ...confinedSpaceDetails.dimensions,
+                length: parseFloat(e.target.value) || 0
+              })}
+              style={{
+                width: '100%',
+                padding: isMobile ? '10px 12px' : '12px 14px',
+                background: 'rgba(15, 23, 42, 0.8)',
+                border: '2px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-primary)',
+                fontSize: isMobile ? '15px' : '14px',
+                minHeight: isMobile ? '42px' : '44px'
+              }}
+            />
+          </div>
+        )}
+
+        {/* Largeur - seulement pour rectangulaire et irrégulier */}
+        {(confinedSpaceDetails.dimensions.spaceShape === 'rectangular' || 
+          confinedSpaceDetails.dimensions.spaceShape === 'irregular') && (
+          <div>
+            <label style={{
+              color: 'var(--text-secondary)',
+              fontSize: isMobile ? '13px' : '14px',
+              fontWeight: '600',
+              marginBottom: '6px',
+              display: 'block'
+            }}>
+              {t.width} ({confinedSpaceDetails.unitSystem === 'metric' ? 'm' : 'ft'})
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={confinedSpaceDetails.dimensions.width || ''}
+              onChange={(e) => handleConfinedSpaceChange('dimensions', {
+                ...confinedSpaceDetails.dimensions,
+                width: parseFloat(e.target.value) || 0
+              })}
+              style={{
+                width: '100%',
+                padding: isMobile ? '10px 12px' : '12px 14px',
+                background: 'rgba(15, 23, 42, 0.8)',
+                border: '2px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-primary)',
+                fontSize: isMobile ? '15px' : '14px',
+                minHeight: isMobile ? '42px' : '44px'
+              }}
+            />
+          </div>
+        )}
+
+        {/* Hauteur - pour toutes les formes sauf sphérique */}
+        {confinedSpaceDetails.dimensions.spaceShape !== 'spherical' && (
+          <div>
+            <label style={{
+              color: 'var(--text-secondary)',
+              fontSize: isMobile ? '13px' : '14px',
+              fontWeight: '600',
+              marginBottom: '6px',
+              display: 'block'
+            }}>
+              {t.height} ({confinedSpaceDetails.unitSystem === 'metric' ? 'm' : 'ft'})<span style={{ color: 'var(--danger-color)' }}>*</span>
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={confinedSpaceDetails.dimensions.height || ''}
+              onChange={(e) => handleConfinedSpaceChange('dimensions', {
+                ...confinedSpaceDetails.dimensions,
+                height: parseFloat(e.target.value) || 0
+              })}
+              style={{
+                width: '100%',
+                padding: isMobile ? '10px 12px' : '12px 14px',
+                background: 'rgba(15, 23, 42, 0.8)',
+                border: '2px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-primary)',
+                fontSize: isMobile ? '15px' : '14px',
+                minHeight: isMobile ? '42px' : '44px'
+              }}
+            />
+          </div>
+        )}
+
+        {/* Diamètre - pour cylindrique et sphérique */}
+        {(confinedSpaceDetails.dimensions.spaceShape === 'cylindrical' || 
+          confinedSpaceDetails.dimensions.spaceShape === 'spherical') && (
+          <div>
+            <label style={{
+              color: 'var(--text-secondary)',
+              fontSize: isMobile ? '13px' : '14px',
+              fontWeight: '600',
+              marginBottom: '6px',
+              display: 'block'
+            }}>
+              {t.diameter} ({confinedSpaceDetails.unitSystem === 'metric' ? 'm' : 'ft'})<span style={{ color: 'var(--danger-color)' }}>*</span>
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={confinedSpaceDetails.dimensions.diameter || ''}
+              onChange={(e) => handleConfinedSpaceChange('dimensions', {
+                ...confinedSpaceDetails.dimensions,
+                diameter: parseFloat(e.target.value) || 0
+              })}
+              style={{
+                width: '100%',
+                padding: isMobile ? '10px 12px' : '12px 14px',
+                background: 'rgba(15, 23, 42, 0.8)',
+                border: '2px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-primary)',
+                fontSize: isMobile ? '15px' : '14px',
+                minHeight: isMobile ? '42px' : '44px'
+              }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Bouton de calcul et affichage du volume */}
+      <div style={{ textAlign: 'center', margin: '20px 0' }}>
+        <button 
+          onClick={calculateVolume}
+          style={{
+            padding: isMobile ? '12px 20px' : '14px 24px',
+            borderRadius: 'var(--radius-sm)',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'var(--transition)',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            minHeight: isMobile ? '48px' : '50px',
+            fontSize: isMobile ? '14px' : '15px',
+            background: 'linear-gradient(135deg, var(--success-color), #059669)',
+            color: 'white',
+            boxShadow: 'var(--shadow-sm)',
+            margin: '0 auto'
+          }}
+        >
+          <Gauge size={20} />
+          {t.calculateVolume}
+        </button>
+      </div>
+
+      {/* Affichage du volume calculé */}
+      {confinedSpaceDetails.dimensions.volume > 0 && (
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.2)',
+          border: '1px solid rgba(16, 185, 129, 0.4)',
+          borderRadius: '12px',
+          padding: '16px',
+          textAlign: 'center'
+        }}>
+          <div style={{ 
+            fontSize: isMobile ? '20px' : '24px', 
+            fontWeight: '700', 
+            color: 'var(--success-color)', 
+            marginBottom: '4px'
+          }}>
+            {confinedSpaceDetails.dimensions.volume}
+          </div>
+          <div style={{ fontSize: '14px', color: '#6ee7b7' }}>
+            {confinedSpaceDetails.unitSystem === 'metric' ? 'm³' : 'ft³'} - {t.volume}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // =================== COMPOSANT QR CODE RÉEL ===================
+  const QRCodeDisplay = () => {
+    const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+
+    useEffect(() => {
+      if (permitData.permit_number) {
+        generatePermitQRCode(permitData.permit_number).then(setQrCodeDataUrl);
+      }
+    }, [permitData.permit_number]);
+
+    if (permitData.permit_number && qrCodeDataUrl) {
+      return (
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.1)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          borderRadius: '12px',
+          padding: '20px',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '16px',
+            borderRadius: '12px',
+            display: 'inline-block',
+            marginBottom: '16px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+          }}>
+            <img 
+              src={qrCodeDataUrl} 
+              alt={`QR Code pour ${permitData.permit_number}`}
+              style={{
+                width: isMobile ? '150px' : '200px',
+                height: isMobile ? '150px' : '200px',
+                display: 'block'
+              }}
+            />
+          </div>
+          <h4 style={{ color: '#10b981', margin: '0 0 8px 0', fontSize: isMobile ? '14px' : '16px' }}>
+            ✅ {language === 'fr' ? `QR Code généré pour : ${permitData.permit_number}` : `QR Code generated for: ${permitData.permit_number}`}
+          </h4>
+          <p style={{ color: '#6ee7b7', margin: 0, fontSize: '14px' }}>
+            {t.qrGenerated}
+          </p>
+          <div style={{
+            marginTop: '12px',
+            padding: '8px 12px',
+            background: 'rgba(16, 185, 129, 0.2)',
+            borderRadius: '6px',
+            fontSize: '12px',
+            color: '#047857'
+          }}>
+            📱 {language === 'fr' ? 'Scanner pour accès mobile instantané' : 'Scan for instant mobile access'}
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div style={{
+          background: 'rgba(59, 130, 246, 0.1)',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          borderRadius: '12px',
+          padding: '20px',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            width: isMobile ? '80px' : '100px',
+            height: isMobile ? '80px' : '100px',
+            background: 'rgba(59, 130, 246, 0.2)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px'
+          }}>
+            <QrCode size={isMobile ? 40 : 50} color="#3b82f6" />
+          </div>
+          <p style={{ color: '#93c5fd', margin: 0, fontSize: '14px' }}>
+            💡 {t.qrWillGenerate}
+          </p>
+        </div>
+      );
+    }
+  };
+  // =================== FONCTIONS DE BASE DE DONNÉES SUPABASE ===================
   const searchPermitsDatabase = async (query: string, page: number = 1): Promise<PermitSearchResult> => {
     setIsSearching(true);
     try {
-      // ✅ IMPORT SUPABASE CORRIGÉ : 4 niveaux vers le haut depuis components/steps/Step4Permits/ConfinedSpace/SiteInformation.tsx
-      const { supabase } = await import('../../../../lib/supabase');
+      // Import dynamique pour éviter les erreurs SSR
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+      const supabase = createClient(supabaseUrl, supabaseKey);
       
       let queryBuilder = supabase
         .from('confined_space_permits')
@@ -1228,7 +2782,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         `);
       }
 
-      // Filtrer par province si nécessaire
       queryBuilder = queryBuilder.eq('province', selectedProvince);
 
       const startRange = (page - 1) * 10;
@@ -1275,8 +2828,10 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   const savePermitToDatabase = async (): Promise<string | null> => {
     setIsSaving(true);
     try {
-      // ✅ IMPORT SUPABASE CORRIGÉ : 4 niveaux vers le haut
-      const { supabase } = await import('../../../../lib/supabase');
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+      const supabase = createClient(supabaseUrl, supabaseKey);
       
       const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
@@ -1296,6 +2851,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         worker_count: confinedSpaceDetails.workerCount,
         work_description: confinedSpaceDetails.workDescription,
         dimensions: confinedSpaceDetails.dimensions,
+        unit_system: confinedSpaceDetails.unitSystem,
         entry_points: confinedSpaceDetails.entryPoints,
         atmospheric_hazards: confinedSpaceDetails.atmosphericHazards,
         physical_hazards: confinedSpaceDetails.physicalHazards,
@@ -1305,7 +2861,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         space_photos: spacePhotos,
         status: 'active',
         province: selectedProvince,
-        authority: PROVINCIAL_REGULATIONS[selectedProvince].authority,
+        authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente',
         qr_code: qrCodeDataUrl,
         entry_count: 0,
         hazard_count: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length,
@@ -1326,7 +2882,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
 
       updatePermitData({ permit_number: permitNumber });
       
-      // Notification de succès avec détails
+      // Notification de succès
       if (typeof window !== 'undefined' && 'Notification' in window) {
         if (Notification.permission === 'granted') {
           new Notification(`✅ ${t.saveSuccess}`, {
@@ -1354,42 +2910,38 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     }
   };
 
-  // =================== GÉNÉRATION QR CODE AVEC LOGO ===================
-  const generatePermitQRCode = async (permitNumber: string): Promise<string> => {
-    try {
-      // ✅ IMPORT QR CODE CORRIGÉ : 4 niveaux vers le haut vers app/utils/generateQRCode.ts
-      const { generateQRCode } = await import('../../../../app/utils/generateQRCode');
-      
-      const permitUrl = `${window.location.origin}/permits/confined-space/${permitNumber}`;
-      
-      const qrData = {
-        permitNumber,
-        type: 'confined_space',
-        province: selectedProvince,
-        authority: PROVINCIAL_REGULATIONS[selectedProvince].authority,
-        issueDate: new Date().toISOString(),
-        url: permitUrl,
-        projectNumber: confinedSpaceDetails.projectNumber,
-        location: confinedSpaceDetails.workLocation,
-        contractor: confinedSpaceDetails.contractor,
-        spaceType: confinedSpaceDetails.spaceType,
-        csaClass: confinedSpaceDetails.csaClass,
-        hazardCount: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length,
-        logo: '/c-secur360-logo.png'
-      };
-      
-      return await generateQRCode(JSON.stringify(qrData));
-    } catch (error) {
-      console.error('Erreur génération QR Code:', error);
-      return '';
+  // =================== SAUVEGARDE AVEC VALIDATION ===================
+  const handleSave = async () => {
+    const errors = validateSiteInformation();
+    
+    if (errors.length > 0) {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'granted') {
+          new Notification(`❌ ${t.validationError}`, {
+            body: errors.join('\n'),
+            icon: '/c-secur360-logo.png'
+          });
+        }
+      }
+      return false;
     }
+    
+    const permitNumber = await savePermitToDatabase();
+    if (permitNumber) {
+      updateParentData('siteInformation', confinedSpaceDetails);
+      return true;
+    }
+    
+    return false;
   };
 
   // =================== CHARGEMENT D'UN PERMIS EXISTANT ===================
   const loadPermitFromHistory = async (permitNumber: string) => {
     try {
-      // ✅ IMPORT SUPABASE CORRIGÉ : 4 niveaux vers le haut
-      const { supabase } = await import('../../../../lib/supabase');
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+      const supabase = createClient(supabaseUrl, supabaseKey);
       
       const { data, error } = await supabase
         .from('confined_space_permits')
@@ -1416,8 +2968,9 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
           spaceLocation: data.space_location || '',
           spaceDescription: data.space_description || '',
           dimensions: data.dimensions || {
-            length: 0, width: 0, height: 0, diameter: 0, volume: 0
+            length: 0, width: 0, height: 0, diameter: 0, volume: 0, spaceShape: 'rectangular'
           },
+          unitSystem: data.unit_system || 'metric',
           entryPoints: data.entry_points || [{
             id: 'entry-1', type: 'circular', dimensions: '', location: '', 
             condition: 'good', accessibility: 'normal', photos: []
@@ -1446,7 +2999,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
           ...loadedPermit
         });
 
-        // Notification de succès
         if (typeof window !== 'undefined' && 'Notification' in window) {
           if (Notification.permission === 'granted') {
             new Notification(`✅ Permis ${permitNumber} chargé`, {
@@ -1471,33 +3023,59 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       }
     }
   };
-// =================== DÉFINITIONS D'AUTORITÉS PROVINCIALES ===================
-  const getProvinceAuthority = (province: ProvinceCode): string => {
-    const authorities: Record<ProvinceCode, string> = {
-      QC: 'CNESST',
-      ON: 'Ministry of Labour',
-      BC: 'WorkSafeBC',
-      AB: 'Alberta OHS',
-      SK: 'Saskatchewan OHS',
-      MB: 'Manitoba Workplace Safety',
-      NB: 'WorkSafeNB',
-      NS: 'Workers\' Compensation Board',
-      PE: 'PEI Workers Compensation Board',
-      NL: 'WorkplaceNL'
-    };
-    return authorities[province] || 'Autorité Compétente';
+
+  // =================== GÉNÉRATION QR CODE HAUTE QUALITÉ POUR IMPRESSION ===================
+  const generatePermitQRCodeForPrint = async (permitNumber: string): Promise<string> => {
+    try {
+      // Import dynamique pour éviter les erreurs SSR
+      const QRCode = (await import('qrcode')).default;
+      
+      const permitUrl = `${window.location.origin}/permits/confined-space/${permitNumber}`;
+      
+      const qrData = {
+        permitNumber,
+        type: 'confined_space',
+        province: selectedProvince,
+        authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente',
+        issueDate: new Date().toISOString(),
+        url: permitUrl,
+        projectNumber: confinedSpaceDetails.projectNumber,
+        location: confinedSpaceDetails.workLocation,
+        contractor: confinedSpaceDetails.contractor,
+        spaceType: confinedSpaceDetails.spaceType,
+        csaClass: confinedSpaceDetails.csaClass,
+        hazardCount: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length
+      };
+      
+      // Générer le QR Code avec TRÈS haute résolution pour l'impression
+      const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
+        errorCorrectionLevel: 'H', // Haute correction d'erreur
+        type: 'image/png',
+        quality: 1.0, // Qualité maximale
+        margin: 2, // Marge plus grande pour l'impression
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        },
+        width: 512, // Très haute résolution pour l'impression
+        scale: 8 // Facteur d'échelle élevé
+      });
+      
+      return qrCodeDataUrl;
+    } catch (error) {
+      console.error('Erreur génération QR Code pour impression:', error);
+      return '';
+    }
   };
 
   // =================== GÉNÉRATION DE RAPPORT PROFESSIONNEL COMPLET ===================
   const generateCompletePermitReport = async (): Promise<PermitReport> => {
     const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     
-    // Obtenir les classifications CSA provinciales
     const csaClassifications = getCSAClassifications(selectedProvince, language);
     const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
     
-    // ✅ CORRECTION : Obtenir l'autorité de manière sécurisée
-    const provinceAuthority = getProvinceAuthority(selectedProvince);
+    const provinceAuthority = PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente';
     
     return {
       metadata: {
@@ -1509,7 +3087,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         version: '2.0',
         language,
         companyLogo: '/c-secur360-logo.png',
-        qrCode: await generatePermitQRCode(permitNumber),
+        qrCode: await generatePermitQRCodeForPrint(permitNumber),
         classification: currentClassification
       },
       siteInformation: {
@@ -1525,706 +3103,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     };
   };
 
-  // =================== IMPRESSION LÉGALE PROFESSIONNELLE ===================
-  const handlePrintPermit = async () => {
-    setIsGeneratingReport(true);
-    try {
-      const report = await generateCompletePermitReport();
-      const csaClassifications = getCSAClassifications(selectedProvince, language);
-      const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
-      
-      // Création d'une nouvelle fenêtre pour l'impression
-      const printWindow = window.open('', '_blank', 'width=1200,height=800');
-      if (printWindow) {
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html lang="${language}">
-            <head>
-              <title>Permis d'Espace Clos - ${report.metadata.permitNumber}</title>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                /* =================== STYLES PROFESSIONNELS LÉGAUX =================== */
-                @page {
-                  size: A4;
-                  margin: 15mm;
-                  @top-left { content: "C-SECUR360 - Permis d'Espace Clos"; }
-                  @top-right { content: "Page " counter(page) " de " counter(pages); }
-                  @bottom-center { content: "Document officiel - ${new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA')}"; }
-                }
-                
-                * {
-                  margin: 0;
-                  padding: 0;
-                  box-sizing: border-box;
-                }
-                
-                body {
-                  font-family: 'Arial', 'Helvetica', sans-serif;
-                  font-size: 11pt;
-                  line-height: 1.4;
-                  color: #000;
-                  background: white;
-                  -webkit-print-color-adjust: exact;
-                  print-color-adjust: exact;
-                }
-                
-                /* Header officiel avec logo */
-                .legal-header {
-                  border-bottom: 4px solid #dc2626;
-                  padding-bottom: 20px;
-                  margin-bottom: 25px;
-                  display: flex;
-                  align-items: center;
-                  justify-content: space-between;
-                  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-                  padding: 20px;
-                  border-radius: 8px;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                }
-                
-                .logo-section {
-                  display: flex;
-                  align-items: center;
-                  gap: 15px;
-                }
-                
-                .company-logo {
-                  width: 80px;
-                  height: 80px;
-                  background: url('/c-secur360-logo.png') no-repeat center;
-                  background-size: contain;
-                  border: 2px solid #dc2626;
-                  border-radius: 8px;
-                  padding: 5px;
-                }
-                
-                .header-info h1 {
-                  color: #dc2626;
-                  font-size: 24pt;
-                  font-weight: 700;
-                  margin-bottom: 5px;
-                  text-transform: uppercase;
-                }
-                
-                .header-info .subtitle {
-                  color: #374151;
-                  font-size: 14pt;
-                  font-weight: 600;
-                }
-                
-                .permit-badge {
-                  background: linear-gradient(135deg, #dc2626, #b91c1c);
-                  color: white;
-                  padding: 15px 20px;
-                  border-radius: 8px;
-                  text-align: center;
-                  min-width: 200px;
-                  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-                }
-                
-                .permit-number {
-                  font-size: 16pt;
-                  font-weight: 700;
-                  margin-bottom: 5px;
-                }
-                
-                .permit-status {
-                  font-size: 10pt;
-                  opacity: 0.9;
-                }
-                
-                /* Classification CSA avec couleurs */
-                .csa-classification {
-                  background: ${confinedSpaceDetails.csaClass === 'class1' ? '#fef2f2' : 
-                               confinedSpaceDetails.csaClass === 'class2' ? '#fef3c7' : '#f0fdf4'};
-                  border: 2px solid ${confinedSpaceDetails.csaClass === 'class1' ? '#dc2626' : 
-                                     confinedSpaceDetails.csaClass === 'class2' ? '#d97706' : '#059669'};
-                  border-radius: 8px;
-                  padding: 15px;
-                  margin: 20px 0;
-                  page-break-inside: avoid;
-                }
-                
-                .csa-title {
-                  color: ${confinedSpaceDetails.csaClass === 'class1' ? '#dc2626' : 
-                           confinedSpaceDetails.csaClass === 'class2' ? '#d97706' : '#059669'};
-                  font-size: 16pt;
-                  font-weight: 700;
-                  margin-bottom: 10px;
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                }
-                
-                .csa-icon {
-                  width: 24px;
-                  height: 24px;
-                  background: ${confinedSpaceDetails.csaClass === 'class1' ? '#dc2626' : 
-                               confinedSpaceDetails.csaClass === 'class2' ? '#d97706' : '#059669'};
-                  border-radius: 50%;
-                  display: inline-flex;
-                  align-items: center;
-                  justify-content: center;
-                  color: white;
-                  font-weight: bold;
-                }
-                
-                /* Sections du document */
-                .section {
-                  margin-bottom: 25px;
-                  page-break-inside: avoid;
-                  border: 1px solid #e5e7eb;
-                  border-radius: 6px;
-                  overflow: hidden;
-                }
-                
-                .section-header {
-                  background: linear-gradient(135deg, #1f2937, #374151);
-                  color: white;
-                  padding: 12px 16px;
-                  font-size: 14pt;
-                  font-weight: 600;
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                }
-                
-                .section-content {
-                  padding: 16px;
-                  background: white;
-                }
-                
-                /* Grilles d'informations */
-                .info-grid {
-                  display: grid;
-                  grid-template-columns: 1fr 1fr;
-                  gap: 15px;
-                  margin-bottom: 15px;
-                }
-                
-                .info-item {
-                  border: 1px solid #d1d5db;
-                  border-radius: 4px;
-                  padding: 10px;
-                  background: #f9fafb;
-                }
-                
-                .info-label {
-                  font-weight: 600;
-                  color: #374151;
-                  font-size: 9pt;
-                  margin-bottom: 3px;
-                  text-transform: uppercase;
-                  letter-spacing: 0.5px;
-                }
-                
-                .info-value {
-                  color: #111827;
-                  font-size: 11pt;
-                  word-wrap: break-word;
-                }
-                
-                /* Dangers identifiés */
-                .hazards-grid {
-                  display: grid;
-                  grid-template-columns: 1fr 1fr;
-                  gap: 20px;
-                  margin: 15px 0;
-                }
-                
-                .hazard-category {
-                  border: 1px solid #fecaca;
-                  border-radius: 6px;
-                  overflow: hidden;
-                }
-                
-                .hazard-header {
-                  background: #fef2f2;
-                  color: #dc2626;
-                  padding: 8px 12px;
-                  font-weight: 600;
-                  font-size: 12pt;
-                }
-                
-                .hazard-list {
-                  padding: 12px;
-                  background: white;
-                }
-                
-                .hazard-item {
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  padding: 6px 0;
-                  border-bottom: 1px solid #f3f4f6;
-                  font-size: 10pt;
-                }
-                
-                .hazard-item:last-child {
-                  border-bottom: none;
-                }
-                
-                .hazard-icon {
-                  width: 16px;
-                  height: 16px;
-                  background: #dc2626;
-                  border-radius: 50%;
-                  color: white;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  font-size: 8pt;
-                  font-weight: bold;
-                }
-                
-                /* QR Code et signatures */
-                .qr-signature-section {
-                  display: grid;
-                  grid-template-columns: 200px 1fr;
-                  gap: 20px;
-                  margin-top: 30px;
-                  page-break-inside: avoid;
-                  border: 2px solid #3b82f6;
-                  border-radius: 8px;
-                  padding: 20px;
-                  background: #f0f9ff;
-                }
-                
-                .qr-container {
-                  text-align: center;
-                }
-                
-                .qr-code {
-                  width: 150px;
-                  height: 150px;
-                  border: 2px solid #3b82f6;
-                  border-radius: 8px;
-                  background: white;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  margin: 0 auto 10px;
-                  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%233b82f6"><path d="M3 3h6v6H3V3zm2 2v2h2V5H5zM3 15h6v6H3v-6zm2 2v2h2v-2H5zM15 3h6v6h-6V3zm2 2v2h2V5h-2z"/></svg>');
-                  background-size: 60px;
-                  background-repeat: no-repeat;
-                  background-position: center;
-                }
-                
-                .qr-info {
-                  font-size: 9pt;
-                  color: #1e40af;
-                  font-weight: 600;
-                }
-                
-                .signatures-area {
-                  display: grid;
-                  grid-template-columns: 1fr 1fr;
-                  gap: 20px;
-                }
-                
-                .signature-box {
-                  border: 1px solid #d1d5db;
-                  border-radius: 4px;
-                  padding: 15px;
-                  background: white;
-                  min-height: 80px;
-                }
-                
-                .signature-label {
-                  font-weight: 600;
-                  color: #374151;
-                  font-size: 10pt;
-                  margin-bottom: 40px;
-                }
-                
-                .signature-line {
-                  border-bottom: 1px solid #374151;
-                  width: 100%;
-                  margin-bottom: 5px;
-                }
-                
-                .signature-date {
-                  font-size: 8pt;
-                  color: #6b7280;
-                }
-                
-                /* Réglementations provinciales */
-                .regulations-box {
-                  background: #f8fafc;
-                  border: 1px solid #cbd5e1;
-                  border-radius: 6px;
-                  padding: 15px;
-                  margin: 15px 0;
-                  page-break-inside: avoid;
-                }
-                
-                .regulations-title {
-                  font-weight: 700;
-                  color: #1e293b;
-                  margin-bottom: 10px;
-                  font-size: 12pt;
-                }
-                
-                .regulation-item {
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  padding: 6px 0;
-                  border-bottom: 1px solid #e2e8f0;
-                  font-size: 10pt;
-                }
-                
-                .regulation-item:last-child {
-                  border-bottom: none;
-                }
-                
-                /* Footer légal */
-                .legal-footer {
-                  margin-top: 30px;
-                  padding-top: 20px;
-                  border-top: 2px solid #e5e7eb;
-                  text-align: center;
-                  page-break-inside: avoid;
-                }
-                
-                .footer-warning {
-                  background: #fef3c7;
-                  border: 1px solid #f59e0b;
-                  border-radius: 6px;
-                  padding: 15px;
-                  margin-bottom: 15px;
-                  color: #92400e;
-                  font-weight: 600;
-                  font-size: 11pt;
-                }
-                
-                .footer-info {
-                  color: #6b7280;
-                  font-size: 9pt;
-                  line-height: 1.4;
-                }
-                
-                /* Responsive pour impression */
-                @media print {
-                  body { margin: 0; font-size: 10pt; }
-                  .section { page-break-inside: avoid; }
-                  .qr-signature-section { page-break-inside: avoid; }
-                  .legal-footer { page-break-inside: avoid; }
-                  .csa-classification { page-break-inside: avoid; }
-                }
-                
-                /* Couleurs de danger */
-                .danger-critical { color: #dc2626; font-weight: 700; }
-                .danger-high { color: #d97706; font-weight: 600; }
-                .danger-medium { color: #059669; font-weight: 500; }
-              </style>
-            </head>
-            <body>
-              <!-- Header officiel avec logo -->
-              <div class="legal-header">
-                <div class="logo-section">
-                  <div class="company-logo"></div>
-                  <div class="header-info">
-                    <h1>🚨 ${language === 'fr' ? 'Permis d\'Entrée en Espace Clos' : 'Confined Space Entry Permit'}</h1>
-                    <div class="subtitle">${language === 'fr' ? 'Document Officiel - Conformité Réglementaire' : 'Official Document - Regulatory Compliance'}</div>
-                  </div>
-                </div>
-                <div class="permit-badge">
-                  <div class="permit-number">${report.metadata.permitNumber}</div>
-                  <div class="permit-status">${language === 'fr' ? 'ACTIF' : 'ACTIVE'}</div>
-                </div>
-              </div>
-
-              <!-- Classification CSA avec références provinciales -->
-              <div class="csa-classification">
-                <div class="csa-title">
-                  <span class="csa-icon">${confinedSpaceDetails.csaClass === 'class1' ? '1' : confinedSpaceDetails.csaClass === 'class2' ? '2' : '3'}</span>
-                  ${currentClassification?.title || 'Classification non définie'}
-                </div>
-                <p style="margin-bottom: 10px;"><strong>${language === 'fr' ? 'Description' : 'Description'}:</strong> ${currentClassification?.description || ''}</p>
-                
-                <div class="regulations-box">
-                  <div class="regulations-title">📋 ${language === 'fr' ? 'Réglementations Provinciales' : 'Provincial Regulations'} - ${selectedProvince}</div>
-                  <div class="regulation-item">
-                    <span><strong>${language === 'fr' ? 'Autorité' : 'Authority'}:</strong></span>
-                    <span>${getProvinceAuthority(selectedProvince)}</span>
-                  </div>
-                  <div class="regulation-item">
-                    <span><strong>${language === 'fr' ? 'Règlement principal' : 'Main Regulation'}:</strong></span>
-                    <span>${(currentClassification?.regulations as any)?.main || 'Réglementation applicable'}</span>
-                  </div>
-                  <div class="regulation-item">
-                    <span><strong>${language === 'fr' ? 'Article spécifique' : 'Specific Article'}:</strong></span>
-                    <span>${(currentClassification?.regulations as any)?.specific || 'Articles applicables'}</span>
-                  </div>
-                  <div class="regulation-item">
-                    <span><strong>${language === 'fr' ? 'Surveillance requise' : 'Monitoring Required'}:</strong></span>
-                    <span>${currentClassification?.monitoring || (currentClassification?.regulations as any)?.testing || 'Selon classification'}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Informations du projet -->
-              <div class="section">
-                <div class="section-header">
-                  🏢 ${language === 'fr' ? 'Informations du Projet' : 'Project Information'}
-                </div>
-                <div class="section-content">
-                  <div class="info-grid">
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Province/Autorité' : 'Province/Authority'}</div>
-                      <div class="info-value">${selectedProvince} - ${report.metadata.authority}</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Date d\'émission' : 'Issue Date'}</div>
-                      <div class="info-value">${new Date(report.metadata.issueDate).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Numéro de projet' : 'Project Number'}</div>
-                      <div class="info-value">${report.siteInformation.projectNumber || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Lieu des travaux' : 'Work Location'}</div>
-                      <div class="info-value">${report.siteInformation.workLocation || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Entrepreneur' : 'Contractor'}</div>
-                      <div class="info-value">${report.siteInformation.contractor || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Superviseur' : 'Supervisor'}</div>
-                      <div class="info-value">${report.siteInformation.supervisor || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Identification de l'espace -->
-              <div class="section">
-                <div class="section-header">
-                  🏗️ ${language === 'fr' ? 'Identification de l\'Espace Clos' : 'Confined Space Identification'}
-                </div>
-                <div class="section-content">
-                  <div class="info-grid">
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Type d\'espace' : 'Space Type'}</div>
-                      <div class="info-value">${report.siteInformation.spaceType ? (language === 'fr' ? (t.spaceTypes[report.siteInformation.spaceType as keyof typeof t.spaceTypes] || report.siteInformation.spaceType) : report.siteInformation.spaceType) : (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Dimensions' : 'Dimensions'}</div>
-                      <div class="info-value">L: ${report.siteInformation.dimensions?.length || 0}m × l: ${report.siteInformation.dimensions?.width || 0}m × H: ${report.siteInformation.dimensions?.height || 0}m</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Volume calculé' : 'Calculated Volume'}</div>
-                      <div class="info-value">${report.siteInformation.dimensions?.volume || 0} m³</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Nombre de travailleurs' : 'Number of Workers'}</div>
-                      <div class="info-value">${report.siteInformation.workerCount || 1}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Dangers identifiés -->
-              ${(report.siteInformation.atmosphericHazards && report.siteInformation.atmosphericHazards.length > 0) || (report.siteInformation.physicalHazards && report.siteInformation.physicalHazards.length > 0) ? `
-                <div class="section">
-                  <div class="section-header">
-                    ⚠️ ${language === 'fr' ? 'Dangers Identifiés' : 'Identified Hazards'} (${(report.siteInformation.atmosphericHazards?.length || 0) + (report.siteInformation.physicalHazards?.length || 0)})
-                  </div>
-                  <div class="section-content">
-                    <div class="hazards-grid">
-                      ${report.siteInformation.atmosphericHazards && report.siteInformation.atmosphericHazards.length > 0 ? `
-                        <div class="hazard-category">
-                          <div class="hazard-header">🌪️ ${language === 'fr' ? 'Dangers Atmosphériques' : 'Atmospheric Hazards'}</div>
-                          <div class="hazard-list">
-                            ${report.siteInformation.atmosphericHazards.map((hazard: string) => `
-                              <div class="hazard-item">
-                                <div class="hazard-icon">⚠</div>
-                                <span>${language === 'fr' ? (t.atmosphericHazardTypes?.[hazard as keyof typeof t.atmosphericHazardTypes] || hazard) : hazard.replace(/_/g, ' ')}</span>
-                              </div>
-                            `).join('')}
-                          </div>
-                        </div>
-                      ` : ''}
-                      ${report.siteInformation.physicalHazards && report.siteInformation.physicalHazards.length > 0 ? `
-                        <div class="hazard-category">
-                          <div class="hazard-header">⚡ ${language === 'fr' ? 'Dangers Physiques' : 'Physical Hazards'}</div>
-                          <div class="hazard-list">
-                            ${report.siteInformation.physicalHazards.map((hazard: string) => `
-                              <div class="hazard-item">
-                                <div class="hazard-icon">!</div>
-                                <span>${language === 'fr' ? (t.physicalHazardTypes?.[hazard as keyof typeof t.physicalHazardTypes] || hazard) : hazard.replace(/_/g, ' ')}</span>
-                              </div>
-                            `).join('')}
-                          </div>
-                        </div>
-                      ` : ''}
-                    </div>
-                  </div>
-                </div>
-              ` : ''}
-
-              <!-- QR Code et signatures -->
-              <div class="qr-signature-section">
-                <div class="qr-container">
-                  <div class="qr-code"></div>
-                  <div class="qr-info">
-                    ${language === 'fr' ? 'Scanner pour accès numérique' : 'Scan for digital access'}
-                    <br><strong>${report.metadata.permitNumber}</strong>
-                  </div>
-                </div>
-                <div class="signatures-area">
-                  <div class="signature-box">
-                    <div class="signature-label">${language === 'fr' ? 'Superviseur / Personne Compétente' : 'Supervisor / Competent Person'}</div>
-                    <div class="signature-line"></div>
-                    <div class="signature-date">${language === 'fr' ? 'Nom et signature' : 'Name and signature'}</div>
-                  </div>
-                  <div class="signature-box">
-                    <div class="signature-label">${language === 'fr' ? 'Surveillant d\'Espace Clos' : 'Confined Space Attendant'}</div>
-                    <div class="signature-line"></div>
-                    <div class="signature-date">${language === 'fr' ? 'Nom et signature' : 'Name and signature'}</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Footer légal -->
-              <div class="legal-footer">
-                <div class="footer-warning">
-                  ⚠️ ${language === 'fr' ? 'AVERTISSEMENT LÉGAL' : 'LEGAL WARNING'}: ${language === 'fr' ? 'Ce permis n\'est valide qu\'après validation complète de tous les éléments de sécurité et tests atmosphériques requis selon' : 'This permit is only valid after complete validation of all safety elements and atmospheric testing required by'} ${(currentClassification?.regulations as any)?.main || 'les réglementations applicables'}.
-                </div>
-                <div class="footer-info">
-                  <strong>C-SECUR360</strong> - ${language === 'fr' ? 'Système de Gestion de Sécurité Industrielle' : 'Industrial Safety Management System'}
-                  <br>${language === 'fr' ? 'Document généré automatiquement le' : 'Document automatically generated on'} ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
-                  <br>${language === 'fr' ? 'Conformité réglementaire' : 'Regulatory compliance'}: ${selectedProvince} - ${report.metadata.authority}
-                  <br>${language === 'fr' ? 'Ce document doit être conservé selon les exigences réglementaires provinciales' : 'This document must be retained according to provincial regulatory requirements'}
-                </div>
-              </div>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        
-        // Attendre que le contenu soit chargé avant d'imprimer
-        printWindow.addEventListener('load', () => {
-          setTimeout(() => {
-            printWindow.print();
-          }, 500);
-        });
-      }
-    } finally {
-      setIsGeneratingReport(false);
-    }
-  };
-
-// =================== ENVOI EMAIL PROFESSIONNEL ===================
-  const handleEmailPermit = async () => {
-    setIsGeneratingReport(true);
-    try {
-      const report = await generateCompletePermitReport();
-      const csaClassifications = getCSAClassifications(selectedProvince, language);
-      const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
-      
-      const subject = `${language === 'fr' ? 'Permis d\'Espace Clos' : 'Confined Space Permit'} - ${report.metadata.permitNumber}`;
-      const body = `${language === 'fr' ? 'Bonjour' : 'Hello'},
-
-${language === 'fr' ? 'Veuillez trouver ci-joint le permis d\'entrée en espace clos suivant' : 'Please find attached the following confined space entry permit'}:
-
-📋 ${language === 'fr' ? 'DÉTAILS DU PERMIS' : 'PERMIT DETAILS'}
-• ${language === 'fr' ? 'Numéro' : 'Number'}: ${report.metadata.permitNumber}
-• ${language === 'fr' ? 'Province/Autorité' : 'Province/Authority'}: ${selectedProvince} - ${report.metadata.authority}
-• ${language === 'fr' ? 'Classification CSA' : 'CSA Classification'}: ${currentClassification?.title || 'Non définie'}
-• ${language === 'fr' ? 'Projet' : 'Project'}: ${report.siteInformation.projectNumber || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
-• ${language === 'fr' ? 'Lieu' : 'Location'}: ${report.siteInformation.workLocation || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
-• ${language === 'fr' ? 'Date d\'émission' : 'Issue Date'}: ${new Date(report.metadata.issueDate).toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA')}
-• ${language === 'fr' ? 'Type d\'espace' : 'Space Type'}: ${report.siteInformation.spaceType || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
-• ${language === 'fr' ? 'Dangers identifiés' : 'Identified Hazards'}: ${(report.siteInformation.atmosphericHazards?.length || 0) + (report.siteInformation.physicalHazards?.length || 0)}
-
-🏛️ ${language === 'fr' ? 'CONFORMITÉ RÉGLEMENTAIRE' : 'REGULATORY COMPLIANCE'}
-• ${language === 'fr' ? 'Règlement principal' : 'Main Regulation'}: ${(currentClassification?.regulations as any)?.main || 'Réglementation applicable'}
-• ${language === 'fr' ? 'Article spécifique' : 'Specific Article'}: ${(currentClassification?.regulations as any)?.specific || 'Articles applicables'}
-• ${language === 'fr' ? 'Surveillance requise' : 'Monitoring Required'}: ${(currentClassification?.regulations as any)?.testing || 'Selon classification'}
-
-⚠️ ${language === 'fr' ? 'IMPORTANT' : 'IMPORTANT'}: ${language === 'fr' ? 'Ce document doit être affiché sur le site et tous les travailleurs doivent en prendre connaissance avant l\'entrée. La validation de tous les éléments de sécurité est obligatoire selon' : 'This document must be displayed on site and all workers must acknowledge it before entry. Validation of all safety elements is mandatory according to'} ${(currentClassification?.regulations as any)?.main || (language === 'fr' ? 'les réglementations applicables' : 'applicable regulations')}.
-
-${language === 'fr' ? 'Cordialement' : 'Best regards'},
-C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety Management System'}`;
-      
-      const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.open(mailtoLink);
-    } finally {
-      setIsGeneratingReport(false);
-    }
-  };
-  
-  // =================== PARTAGE OPTIMISÉ MOBILE ===================
-  const handleSharePermit = async () => {
-    setIsGeneratingReport(true);
-    try {
-      const report = await generateCompletePermitReport();
-      const shareData = {
-        title: `${language === 'fr' ? 'Permis Espace Clos' : 'Confined Space Permit'} - ${report.metadata.permitNumber}`,
-        text: `📋 ${report.siteInformation.projectNumber || (language === 'fr' ? 'Projet non spécifié' : 'Project not specified')}
-📍 ${report.siteInformation.workLocation || (language === 'fr' ? 'Lieu non spécifié' : 'Location not specified')}
-🏗️ ${language === 'fr' ? 'Type' : 'Type'}: ${report.siteInformation.spaceType || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
-⚠️ ${language === 'fr' ? 'Classification' : 'Classification'}: ${confinedSpaceDetails.csaClass?.toUpperCase() || 'Non définie'}
-📅 ${new Date(report.metadata.issueDate).toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA')}
-🏛️ ${selectedProvince} - ${report.metadata.authority}`,
-        url: window.location.href
-      };
-      
-      if (navigator.share && isMobile) {
-        await navigator.share(shareData);
-      } else if (navigator.clipboard) {
-        const textToShare = `${shareData.title}\n\n${shareData.text}\n\n🔗 ${shareData.url}`;
-        await navigator.clipboard.writeText(textToShare);
-        
-        // Notification de succès
-        if (typeof window !== 'undefined' && 'Notification' in window) {
-          if (Notification.permission === 'granted') {
-            new Notification(`✅ ${language === 'fr' ? 'Copié dans le presse-papiers' : 'Copied to clipboard'}`, {
-              body: language === 'fr' ? 'Informations du permis copiées' : 'Permit information copied',
-              icon: '/c-secur360-logo.png'
-            });
-          }
-        }
-      }
-    } finally {
-      setIsGeneratingReport(false);
-    }
-  };
-
-  // =================== TÉLÉCHARGEMENT DONNÉES COMPLÈTES ===================
-  const handleDownloadData = async () => {
-    setIsGeneratingReport(true);
-    try {
-      const report = await generateCompletePermitReport();
-      const dataStr = JSON.stringify(report, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      
-      const exportFileDefaultName = `c-secur360-permis-${report.metadata.permitNumber}-${new Date().toISOString().slice(0, 10)}.json`;
-      
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportFileDefaultName);
-      linkElement.click();
-      
-      // Notification de succès
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission === 'granted') {
-          new Notification(`📄 ${language === 'fr' ? 'Données téléchargées' : 'Data downloaded'}`, {
-            body: exportFileDefaultName,
-            icon: '/c-secur360-logo.png'
-          });
-        }
-      }
-    } finally {
-      setIsGeneratingReport(false);
-    }
-  };
-
-// =================== GÉNÉRATION CHECKLIST DE VALIDATION ===================
+  // =================== GÉNÉRATION CHECKLIST DE VALIDATION ===================
   const generateValidationChecklist = () => {
     const csaClassifications = getCSAClassifications(selectedProvince, language);
     const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
@@ -2262,197 +3141,343 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
     return baseChecklist;
   };
 
-  // =================== HANDLERS DE DONNÉES OPTIMISÉS ===================
-  const handleConfinedSpaceChange = useCallback((field: string, value: any) => {
-    setConfinedSpaceDetails(prev => {
-      const updated = { ...prev, [field]: value };
+  // =================== IMPRESSION LÉGALE PROFESSIONNELLE AVEC QR CODE CORRIGÉ ===================
+  const handlePrintPermit = async () => {
+    setIsGeneratingReport(true);
+    try {
+      const report = await generateCompletePermitReport();
+      const csaClassifications = getCSAClassifications(selectedProvince, language);
+      const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
       
-      // Validation en temps réel
-      const errors = validateSiteInformation(updated);
-      setValidationErrors(errors);
-      
-      // Synchronisation avec les données du permis
-      updatePermitData({ [field]: value });
-      
-      // Notification au parent
-      updateParentData('siteInformation', updated);
-      
-      return updated;
-    });
-  }, [updatePermitData, updateParentData]);
+      const printWindow = window.open('', '_blank', 'width=1200,height=800');
+      if (printWindow) {
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html lang="${language}">
+            <head>
+              <title>Permis d'Espace Clos - ${report.metadata.permitNumber}</title>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                @page {
+                  size: A4;
+                  margin: 15mm;
+                }
+                
+                * {
+                  margin: 0;
+                  padding: 0;
+                  box-sizing: border-box;
+                }
+                
+                body {
+                  font-family: 'Arial', 'Helvetica', sans-serif;
+                  font-size: 11pt;
+                  line-height: 1.4;
+                  color: #000;
+                  background: white;
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                }
+                
+                .legal-header {
+                  border-bottom: 4px solid #dc2626;
+                  padding-bottom: 20px;
+                  margin-bottom: 25px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+                  padding: 20px;
+                  border-radius: 8px;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+                
+                .company-logo {
+                  width: 80px;
+                  height: 80px;
+                  background: url('/c-secur360-logo.png') no-repeat center;
+                  background-size: contain;
+                  border: 2px solid #dc2626;
+                  border-radius: 8px;
+                  padding: 5px;
+                }
+                
+                .header-info h1 {
+                  color: #dc2626;
+                  font-size: 24pt;
+                  font-weight: 700;
+                  margin-bottom: 5px;
+                  text-transform: uppercase;
+                }
+                
+                .permit-badge {
+                  background: linear-gradient(135deg, #dc2626, #b91c1c);
+                  color: white;
+                  padding: 15px 20px;
+                  border-radius: 8px;
+                  text-align: center;
+                  min-width: 200px;
+                  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+                }
+                
+                .permit-number {
+                  font-size: 16pt;
+                  font-weight: 700;
+                  margin-bottom: 5px;
+                }
+                
+                .section {
+                  margin-bottom: 25px;
+                  page-break-inside: avoid;
+                  border: 1px solid #e5e7eb;
+                  border-radius: 6px;
+                  overflow: hidden;
+                }
+                
+                .section-header {
+                  background: linear-gradient(135deg, #1f2937, #374151);
+                  color: white;
+                  padding: 12px 16px;
+                  font-size: 14pt;
+                  font-weight: 600;
+                }
+                
+                .section-content {
+                  padding: 16px;
+                  background: white;
+                }
+                
+                .info-grid {
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 15px;
+                  margin-bottom: 15px;
+                }
+                
+                .info-item {
+                  border: 1px solid #d1d5db;
+                  border-radius: 4px;
+                  padding: 10px;
+                  background: #f9fafb;
+                }
+                
+                .info-label {
+                  font-weight: 600;
+                  color: #374151;
+                  font-size: 9pt;
+                  margin-bottom: 3px;
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                }
+                
+                .info-value {
+                  color: #111827;
+                  font-size: 11pt;
+                  word-wrap: break-word;
+                }
+                
+                .qr-signature-section {
+                  display: grid;
+                  grid-template-columns: 250px 1fr;
+                  gap: 20px;
+                  margin-top: 30px;
+                  page-break-inside: avoid;
+                  border: 2px solid #3b82f6;
+                  border-radius: 8px;
+                  padding: 20px;
+                  background: #f0f9ff;
+                }
+                
+                .qr-container {
+                  text-align: center;
+                }
+                
+                .qr-code-print {
+                  width: 200px;
+                  height: 200px;
+                  border: 2px solid #3b82f6;
+                  border-radius: 8px;
+                  background: white;
+                  margin: 0 auto 15px;
+                  padding: 10px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                }
+                
+                .qr-code-print img {
+                  max-width: 100%;
+                  max-height: 100%;
+                  width: auto;
+                  height: auto;
+                }
+                
+                .qr-info {
+                  font-size: 10pt;
+                  color: #1e40af;
+                  font-weight: 600;
+                  text-align: center;
+                  line-height: 1.3;
+                }
+                
+                .signatures-area {
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 20px;
+                }
+                
+                .signature-box {
+                  border: 1px solid #d1d5db;
+                  border-radius: 4px;
+                  padding: 15px;
+                  background: white;
+                  min-height: 100px;
+                }
+                
+                .signature-label {
+                  font-weight: 600;
+                  color: #374151;
+                  font-size: 10pt;
+                  margin-bottom: 50px;
+                }
+                
+                .signature-line {
+                  border-bottom: 1px solid #374151;
+                  width: 100%;
+                  margin-bottom: 5px;
+                }
+                
+                .signature-date {
+                  font-size: 8pt;
+                  color: #6b7280;
+                }
+                
+                .legal-footer {
+                  margin-top: 30px;
+                  padding-top: 20px;
+                  border-top: 2px solid #e5e7eb;
+                  text-align: center;
+                  page-break-inside: avoid;
+                }
+                
+                .footer-warning {
+                  background: #fef3c7;
+                  border: 1px solid #f59e0b;
+                  border-radius: 6px;
+                  padding: 15px;
+                  margin-bottom: 15px;
+                  color: #92400e;
+                  font-weight: 600;
+                  font-size: 11pt;
+                }
+                
+                @media print {
+                  body { margin: 0; font-size: 10pt; }
+                  .section { page-break-inside: avoid; }
+                  .qr-signature-section { page-break-inside: avoid; }
+                  .legal-footer { page-break-inside: avoid; }
+                }
+              </style>
+            </head>
+            <body>
+              <div class="legal-header">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                  <div class="company-logo"></div>
+                  <div class="header-info">
+                    <h1>🚨 ${language === 'fr' ? 'Permis d\'Entrée en Espace Clos' : 'Confined Space Entry Permit'}</h1>
+                    <div style="color: #374151; font-size: 14pt; font-weight: 600;">${language === 'fr' ? 'Document Officiel - Conformité Réglementaire' : 'Official Document - Regulatory Compliance'}</div>
+                  </div>
+                </div>
+                <div class="permit-badge">
+                  <div class="permit-number">${report.metadata.permitNumber}</div>
+                  <div style="font-size: 10pt; opacity: 0.9;">${language === 'fr' ? 'ACTIF' : 'ACTIVE'}</div>
+                </div>
+              </div>
 
-  const handleEnvironmentalChange = useCallback((field: string, value: any) => {
-    const updated = {
-      ...confinedSpaceDetails.environmentalConditions,
-      [field]: value
-    };
-    
-    handleConfinedSpaceChange('environmentalConditions', updated);
-  }, [confinedSpaceDetails.environmentalConditions, handleConfinedSpaceChange]);
+              <div class="section">
+                <div class="section-header">🏢 ${language === 'fr' ? 'Informations du Projet' : 'Project Information'}</div>
+                <div class="section-content">
+                  <div class="info-grid">
+                    <div class="info-item">
+                      <div class="info-label">${language === 'fr' ? 'Province/Autorité' : 'Province/Authority'}</div>
+                      <div class="info-value">${selectedProvince} - ${report.metadata.authority}</div>
+                    </div>
+                    <div class="info-item">
+                      <div class="info-label">${language === 'fr' ? 'Date d\'émission' : 'Issue Date'}</div>
+                      <div class="info-value">${new Date(report.metadata.issueDate).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}</div>
+                    </div>
+                    <div class="info-item">
+                      <div class="info-label">${language === 'fr' ? 'Numéro de projet' : 'Project Number'}</div>
+                      <div class="info-value">${report.siteInformation.projectNumber || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
+                    </div>
+                    <div class="info-item">
+                      <div class="info-label">${language === 'fr' ? 'Lieu des travaux' : 'Work Location'}</div>
+                      <div class="info-value">${report.siteInformation.workLocation || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
+                    </div>
+                    <div class="info-item">
+                      <div class="info-label">${language === 'fr' ? 'Classification' : 'Classification'}</div>
+                      <div class="info-value">${currentClassification?.title || 'Non définie'}</div>
+                    </div>
+                    <div class="info-item">
+                      <div class="info-label">${language === 'fr' ? 'Volume' : 'Volume'}</div>
+                      <div class="info-value">${report.siteInformation.dimensions?.volume || 0} ${report.siteInformation.unitSystem === 'metric' ? 'm³' : 'ft³'}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-  const handleContentChange = useCallback((field: string, value: any) => {
-    const updated = {
-      ...confinedSpaceDetails.spaceContent,
-      [field]: value
-    };
-    
-    handleConfinedSpaceChange('spaceContent', updated);
-  }, [confinedSpaceDetails.spaceContent, handleConfinedSpaceChange]);
+              <div class="qr-signature-section">
+                <div class="qr-container">
+                  <div class="qr-code-print">
+                    ${report.metadata.qrCode ? `<img src="${report.metadata.qrCode}" alt="QR Code ${report.metadata.permitNumber}" />` : 
+                      `<div style="color: #666; font-size: 12px; text-align: center;">QR Code<br/>Indisponible</div>`}
+                  </div>
+                  <div class="qr-info">
+                    📱 ${language === 'fr' ? 'Scanner pour accès numérique' : 'Scan for digital access'}
+                    <br><strong>${report.metadata.permitNumber}</strong>
+                    <br><small>${language === 'fr' ? 'Accès mobile instantané' : 'Instant mobile access'}</small>
+                  </div>
+                </div>
+                <div class="signatures-area">
+                  <div class="signature-box">
+                    <div class="signature-label">${language === 'fr' ? 'Superviseur / Personne Compétente' : 'Supervisor / Competent Person'}</div>
+                    <div class="signature-line"></div>
+                    <div class="signature-date">${language === 'fr' ? 'Nom et signature' : 'Name and signature'}</div>
+                  </div>
+                  <div class="signature-box">
+                    <div class="signature-label">${language === 'fr' ? 'Surveillant d\'Espace Clos' : 'Confined Space Attendant'}</div>
+                    <div class="signature-line"></div>
+                    <div class="signature-date">${language === 'fr' ? 'Nom et signature' : 'Name and signature'}</div>
+                  </div>
+                </div>
+              </div>
 
-  const handleSafetyChange = useCallback((field: string, value: any) => {
-    const updated = {
-      ...confinedSpaceDetails.safetyMeasures,
-      [field]: value
-    };
-    
-    handleConfinedSpaceChange('safetyMeasures', updated);
-  }, [confinedSpaceDetails.safetyMeasures, handleConfinedSpaceChange]);
-
-  // =================== VALIDATION COMPLÈTE ===================
-  const validateSiteInformation = (details: ConfinedSpaceDetails = confinedSpaceDetails) => {
-    const errors: string[] = [];
-    
-    // Validation des champs obligatoires
-    if (!details.projectNumber) errors.push(language === 'fr' ? 'Numéro de projet manquant' : 'Project number missing');
-    if (!details.workLocation) errors.push(language === 'fr' ? 'Lieu des travaux manquant' : 'Work location missing');
-    if (!details.contractor) errors.push(language === 'fr' ? 'Entrepreneur manquant' : 'Contractor missing');
-    if (!details.supervisor) errors.push(language === 'fr' ? 'Superviseur manquant' : 'Supervisor missing');
-    if (!details.entryDate) errors.push(language === 'fr' ? 'Date d\'entrée manquante' : 'Entry date missing');
-    if (!details.spaceType) errors.push(language === 'fr' ? 'Type d\'espace manquant' : 'Space type missing');
-    if (!details.csaClass) errors.push(language === 'fr' ? 'Classification CSA manquante' : 'CSA classification missing');
-    
-    // Validation des dimensions
-    if (details.dimensions.volume === 0) {
-      errors.push(language === 'fr' ? 'Dimensions et volume requis' : 'Dimensions and volume required');
-    }
-    
-    // Validation des dangers (au moins un doit être sélectionné pour Class 1 et 2)
-    if ((details.csaClass === 'class1' || details.csaClass === 'class2') && 
-        details.atmosphericHazards.length === 0 && details.physicalHazards.length === 0) {
-      errors.push(language === 'fr' ? 'Au moins un danger doit être identifié pour cette classification' : 'At least one hazard must be identified for this classification');
-    }
-    
-    return errors;
-  };
-
-  // =================== SAUVEGARDE AVEC VALIDATION ===================
-  const handleSave = async () => {
-    const errors = validateSiteInformation();
-    
-    if (errors.length > 0) {
-      // Notification d'erreurs
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission === 'granted') {
-          new Notification(`❌ ${t.validationError}`, {
-            body: errors.join('\n'),
-            icon: '/c-secur360-logo.png'
-          });
-        }
-      }
-      return false;
-    }
-    
-    const permitNumber = await savePermitToDatabase();
-    if (permitNumber) {
-      updateParentData('siteInformation', confinedSpaceDetails);
-      return true;
-    }
-    
-    return false;
-  };
-
-  // =================== GESTION DES SECTIONS COLLAPSIBLES ===================
-  const toggleSection = (sectionId: string) => {
-    setCollapsedSections(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(sectionId)) {
-        newSet.delete(sectionId);
-      } else {
-        newSet.add(sectionId);
-      }
-      return newSet;
-    });
-  };
-
-  // =================== EFFETS DE SYNCHRONISATION ===================
-  useEffect(() => {
-    // Synchroniser avec les données du permis au montage
-    if (permitData.spacePhotos) {
-      setSpacePhotos(permitData.spacePhotos);
-    }
-  }, [permitData]);
-
-  useEffect(() => {
-    // Synchroniser les photos avec les données du permis
-    updatePermitData({ spacePhotos });
-  }, [spacePhotos, updatePermitData]);
-
-  useEffect(() => {
-    // Demander la permission pour les notifications
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
-    }
-  }, []);
-
-  // =================== FONCTIONS UTILITAIRES ===================
-  const calculateVolume = () => {
-    const { length, width, height, diameter } = confinedSpaceDetails.dimensions;
-    let volume = 0;
-    let formulaUsed = '';
-
-    switch (confinedSpaceDetails.spaceType) {
-      case 'tank':
-      case 'vessel':
-      case 'silo':
-      case 'boiler':
-        if (diameter > 0 && height > 0) {
-          const radius = diameter / 2;
-          volume = Math.PI * Math.pow(radius, 2) * height;
-          formulaUsed = `Cylindrique: π × (${radius.toFixed(2)})² × ${height}`;
-        }
-        break;
+              <div class="legal-footer">
+                <div class="footer-warning">
+                  ⚠️ ${language === 'fr' ? 'AVERTISSEMENT LÉGAL' : 'LEGAL WARNING'}: ${language === 'fr' ? 'Ce permis n\'est valide qu\'après validation complète de tous les éléments de sécurité et tests atmosphériques requis selon' : 'This permit is only valid after complete validation of all safety elements and atmospheric testing required by'} ${(currentClassification?.regulations as any)?.main || 'les réglementations applicables'}.
+                </div>
+                <div style="color: #6b7280; font-size: 9pt; line-height: 1.4;">
+                  <strong>C-SECUR360</strong> - ${language === 'fr' ? 'Système de Gestion de Sécurité Industrielle' : 'Industrial Safety Management System'}
+                  <br>${language === 'fr' ? 'Document généré automatiquement le' : 'Document automatically generated on'} ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                  <br>${language === 'fr' ? 'Conformité réglementaire' : 'Regulatory compliance'}: ${selectedProvince} - ${report.metadata.authority}
+                </div>
+              </div>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
         
-      case 'pit':
-        if (diameter > 0 && height > 0) {
-          const radius = diameter / 2;
-          volume = Math.PI * Math.pow(radius, 2) * height;
-          formulaUsed = `Fosse circulaire: π × (${radius.toFixed(2)})² × ${height}`;
-        } else if (length > 0 && width > 0 && height > 0) {
-          volume = length * width * height;
-          formulaUsed = `Fosse rectangulaire: ${length} × ${width} × ${height}`;
-        }
-        break;
-        
-      case 'tunnel':
-      case 'duct':
-        if (diameter > 0 && length > 0) {
-          const radius = diameter / 2;
-          volume = Math.PI * Math.pow(radius, 2) * length;
-          formulaUsed = `Tunnel cylindrique: π × (${radius.toFixed(2)})² × ${length}`;
-        } else if (width > 0 && height > 0 && length > 0) {
-          volume = length * width * height;
-          formulaUsed = `Tunnel rectangulaire: ${length} × ${width} × ${height}`;
-        }
-        break;
-        
-      default:
-        if (length > 0 && width > 0 && height > 0) {
-          volume = length * width * height;
-          formulaUsed = `Rectangulaire: ${length} × ${width} × ${height}`;
-        }
-        break;
+        // Attendre que le contenu soit chargé avant d'imprimer
+        printWindow.addEventListener('load', () => {
+          setTimeout(() => {
+            printWindow.print();
+          }, 1000); // Délai plus long pour s'assurer que le QR Code est bien chargé
+        });
+      }
+    } finally {
+      setIsGeneratingReport(false);
     }
-
-    const updatedDimensions = {
-      ...confinedSpaceDetails.dimensions,
-      volume: Math.round(volume * 100) / 100
-    };
-
-    handleConfinedSpaceChange('dimensions', updatedDimensions);
-    
-    console.log(`Volume calculé: ${updatedDimensions.volume} m³ - Formule: ${formulaUsed}`);
   };
 
   // =================== GESTION DES PHOTOS AVEC GPS ===================
@@ -2504,29 +3529,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
     }
   };
 
-  const handleClassificationComplete = (classification: string, answers: Record<string, any>) => {
-    handleConfinedSpaceChange('csaClass', classification);
-    
-    // Sauvegarder les réponses pour référence
-    updatePermitData({ 
-      classificationAnswers: answers,
-      classificationDate: new Date().toISOString()
-    });
-
-    // Notification de succès
-    const csaClassifications = getCSAClassifications(selectedProvince, language);
-    const selectedClassification = csaClassifications[classification as keyof typeof csaClassifications];
-    
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'granted') {
-        new Notification(`✅ ${language === 'fr' ? 'Classification déterminée' : 'Classification determined'}`, {
-          body: selectedClassification?.title || classification,
-          icon: '/c-secur360-logo.png'
-        });
-      }
-    }
-  };
-
   // =================== RECHERCHE DANS LA BASE DE DONNÉES ===================
   const handleSearch = async (query: string) => {
     if (query.trim().length < 2) {
@@ -2538,57 +3540,68 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
     setSearchResults(results);
   };
 
-  // =================== GESTION DES DANGERS AVEC VALIDATION ===================
-  const toggleAtmosphericHazard = (hazardType: string) => {
-    const currentHazards = confinedSpaceDetails.atmosphericHazards;
-    const updatedHazards = currentHazards.includes(hazardType)
-      ? currentHazards.filter(h => h !== hazardType)
-      : [...currentHazards, hazardType];
-    
-    handleConfinedSpaceChange('atmosphericHazards', updatedHazards);
-  };
+  // =================== ENVOI EMAIL ET PARTAGE ===================
+  const handleEmailPermit = async () => {
+    setIsGeneratingReport(true);
+    try {
+      const report = await generateCompletePermitReport();
+      const csaClassifications = getCSAClassifications(selectedProvince, language);
+      const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
+      
+      const subject = `${language === 'fr' ? 'Permis d\'Espace Clos' : 'Confined Space Permit'} - ${report.metadata.permitNumber}`;
+      const body = `${language === 'fr' ? 'Bonjour' : 'Hello'},
 
-  const togglePhysicalHazard = (hazardType: string) => {
-    const currentHazards = confinedSpaceDetails.physicalHazards;
-    const updatedHazards = currentHazards.includes(hazardType)
-      ? currentHazards.filter(h => h !== hazardType)
-      : [...currentHazards, hazardType];
-    
-    handleConfinedSpaceChange('physicalHazards', updatedHazards);
-  };
+${language === 'fr' ? 'Veuillez trouver ci-joint le permis d\'entrée en espace clos suivant' : 'Please find attached the following confined space entry permit'}:
 
-  // =================== GESTION DES POINTS D'ENTRÉE ===================
-  const addEntryPoint = () => {
-    const newEntryPoint = {
-      id: `entry-${Date.now()}`,
-      type: 'circular',
-      dimensions: '',
-      location: '',
-      condition: 'good',
-      accessibility: 'normal',
-      photos: []
-    };
-    
-    handleConfinedSpaceChange('entryPoints', [...confinedSpaceDetails.entryPoints, newEntryPoint]);
-  };
+📋 ${language === 'fr' ? 'DÉTAILS DU PERMIS' : 'PERMIT DETAILS'}
+• ${language === 'fr' ? 'Numéro' : 'Number'}: ${report.metadata.permitNumber}
+• ${language === 'fr' ? 'Province/Autorité' : 'Province/Authority'}: ${selectedProvince} - ${report.metadata.authority}
+• ${language === 'fr' ? 'Classification CSA' : 'CSA Classification'}: ${currentClassification?.title || 'Non définie'}
+• ${language === 'fr' ? 'Projet' : 'Project'}: ${report.siteInformation.projectNumber || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
+• ${language === 'fr' ? 'Lieu' : 'Location'}: ${report.siteInformation.workLocation || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
 
-  const removeEntryPoint = (entryId: string) => {
-    if (confinedSpaceDetails.entryPoints.length <= 1) {
-      alert(language === 'fr' ? 'Au moins un point d\'entrée est requis' : 'At least one entry point is required');
-      return;
+${language === 'fr' ? 'Cordialement' : 'Best regards'},
+C-SECUR360`;
+      
+      const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(mailtoLink);
+    } finally {
+      setIsGeneratingReport(false);
     }
-    
-    const updatedEntryPoints = confinedSpaceDetails.entryPoints.filter(entry => entry.id !== entryId);
-    handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
   };
-
-  const updateEntryPoint = (entryId: string, field: string, value: any) => {
-    const updatedEntryPoints = confinedSpaceDetails.entryPoints.map(entry =>
-      entry.id === entryId ? { ...entry, [field]: value } : entry
-    );
-    handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
+  
+  const handleSharePermit = async () => {
+    setIsGeneratingReport(true);
+    try {
+      const report = await generateCompletePermitReport();
+      const shareData = {
+        title: `${language === 'fr' ? 'Permis Espace Clos' : 'Confined Space Permit'} - ${report.metadata.permitNumber}`,
+        text: `📋 ${report.siteInformation.projectNumber || (language === 'fr' ? 'Projet non spécifié' : 'Project not specified')}
+📍 ${report.siteInformation.workLocation || (language === 'fr' ? 'Lieu non spécifié' : 'Location not specified')}
+🏗️ ${language === 'fr' ? 'Type' : 'Type'}: ${report.siteInformation.spaceType || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
+⚠️ ${language === 'fr' ? 'Classification' : 'Classification'}: ${confinedSpaceDetails.csaClass?.toUpperCase() || 'Non définie'}`,
+        url: window.location.href
+      };
+      
+      if (navigator.share && isMobile) {
+        await navigator.share(shareData);
+      } else if (navigator.clipboard) {
+        const textToShare = `${shareData.title}\n\n${shareData.text}\n\n🔗 ${shareData.url}`;
+        await navigator.clipboard.writeText(textToShare);
+        
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+          if (Notification.permission === 'granted') {
+            new Notification(`✅ ${language === 'fr' ? 'Copié dans le presse-papiers' : 'Copied to clipboard'}`, {
+              body: language === 'fr' ? 'Informations du permis copiées' : 'Permit information copied',
+              icon: '/c-secur360-logo.png'
+            });
+          }
+        }
+      }
+    } finally {
+      setIsGeneratingReport(false);
+    }
   };
-
   // =================== COMPOSANT CARROUSEL PHOTOS OPTIMISÉ MOBILE ===================
   const PhotoCarousel = ({ photos, onAddPhoto, category }: {
     photos: SpacePhoto[];
@@ -2728,266 +3741,8 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
     </div>
   );
 
-  // =================== COMPOSANT QUESTIONNAIRE CLASSIFICATION CSA ===================
-  const CSAClassificationWizard = ({ 
-    isOpen, 
-    onClose, 
-    onClassificationComplete 
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-    onClassificationComplete: (classification: string, answers: Record<string, any>) => void;
-  }) => {
-    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [answers, setAnswers] = useState<Record<string, any>>({});
-    const questions = getClassificationQuestions(language)[language];
-
-    if (!isOpen) return null;
-
-    const currentQuestion = questions[currentQuestionIndex];
-    const isLastQuestion = currentQuestionIndex === questions.length - 1;
-
-    const handleAnswer = (questionId: string, answer: any) => {
-      const newAnswers = { ...answers, [questionId]: answer };
-      setAnswers(newAnswers);
-    };
-
-    const nextQuestion = () => {
-      if (isLastQuestion) {
-        const classification = calculateCSAClass(answers);
-        onClassificationComplete(classification, answers);
-        onClose();
-      } else {
-        setCurrentQuestionIndex(prev => prev + 1);
-      }
-    };
-
-    const prevQuestion = () => {
-      if (currentQuestionIndex > 0) {
-        setCurrentQuestionIndex(prev => prev - 1);
-      }
-    };
-
-    return (
-      <div className="modal-overlay">
-        <div className="classification-wizard">
-          <div className="wizard-header">
-            <div className="wizard-progress">
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-                />
-              </div>
-              <span className="progress-text">
-                {currentQuestionIndex + 1} / {questions.length}
-              </span>
-            </div>
-            <button className="close-wizard" onClick={onClose}>
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="wizard-content">
-            <div className="question-container">
-              <h3 className="question-title">
-                {currentQuestion.critical && <AlertTriangle className="critical-icon" />}
-                {currentQuestion.question}
-              </h3>
-
-              <div className="options-container">
-                {currentQuestion.options.map((option) => (
-                  <label key={option.value} className="option-label">
-                    <input
-                      type={currentQuestion.type}
-                      name={currentQuestion.id}
-                      value={option.value}
-                      checked={
-                        currentQuestion.type === 'radio' 
-                          ? answers[currentQuestion.id] === option.value
-                          : answers[currentQuestion.id]?.includes(option.value)
-                      }
-                      onChange={(e) => {
-                        if (currentQuestion.type === 'radio') {
-                          handleAnswer(currentQuestion.id, option.value);
-                        } else {
-                          const currentAnswers = answers[currentQuestion.id] || [];
-                          if (e.target.checked) {
-                            if (option.value === 'none') {
-                              handleAnswer(currentQuestion.id, ['none']);
-                            } else {
-                              const newAnswers = currentAnswers.filter((a: string) => a !== 'none');
-                              handleAnswer(currentQuestion.id, [...newAnswers, option.value]);
-                            }
-                          } else {
-                            handleAnswer(currentQuestion.id, currentAnswers.filter((a: string) => a !== option.value));
-                          }
-                        }
-                      }}
-                    />
-                    <span className="option-text">{option.label}</span>
-                    <span className="option-weight">
-                      {language === 'fr' ? 'Poids' : 'Weight'}: {option.weight}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="wizard-footer">
-            <button 
-              className="wizard-btn secondary" 
-              onClick={prevQuestion}
-              disabled={currentQuestionIndex === 0}
-            >
-              <ArrowLeft size={16} />
-              {language === 'fr' ? 'Précédent' : 'Previous'}
-            </button>
-
-            <button 
-              className="wizard-btn primary" 
-              onClick={nextQuestion}
-              disabled={!answers[currentQuestion.id] || 
-                       (Array.isArray(answers[currentQuestion.id]) && answers[currentQuestion.id].length === 0)}
-            >
-              {isLastQuestion ? (language === 'fr' ? 'Terminer' : 'Finish') : (language === 'fr' ? 'Suivant' : 'Next')}
-              <ArrowRight size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // =================== COMPOSANT SECTION COLLAPSIBLE MOBILE ===================
-  const CollapsibleSection = ({ 
-    id, 
-    title, 
-    icon, 
-    children, 
-    className = '',
-    defaultCollapsed = false 
-  }: {
-    id: string;
-    title: string;
-    icon: React.ReactNode;
-    children: React.ReactNode;
-    className?: string;
-    defaultCollapsed?: boolean;
-  }) => {
-    const isCollapsed = collapsedSections.has(id) || (defaultCollapsed && !collapsedSections.has(id));
-
-    return (
-      <div className={`collapsible-section ${className}`}>
-        <button 
-          className="section-toggle"
-          onClick={() => toggleSection(id)}
-          aria-expanded={!isCollapsed}
-        >
-          <div className="section-header-content">
-            <div className="section-icon">{icon}</div>
-            <h3 className="section-title">{title}</h3>
-          </div>
-          <div className="collapse-indicator">
-            {isCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
-          </div>
-        </button>
-        
-        {!isCollapsed && (
-          <div className="section-content">
-            {children}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // =================== COMPOSANT BOUTONS D'ACTION RAPIDE ===================
-  const QuickActionButtons = () => (
-    <div className="quick-actions">
-      <button
-        onClick={() => setShowPermitDatabase(true)}
-        className="quick-action-btn database"
-        title={t.searchDatabase}
-      >
-        <Database size={16} />
-        {!isMobile && <span>{t.searchDatabase}</span>}
-      </button>
-
-      <button
-        onClick={handleSave}
-        disabled={isSaving}
-        className="quick-action-btn save"
-        title={t.savePermit}
-      >
-        {isSaving ? <div className="spinner" /> : <Save size={16} />}
-        {!isMobile && <span>{isSaving ? t.saving : t.savePermit}</span>}
-      </button>
-
-      <button
-        onClick={handlePrintPermit}
-        disabled={isGeneratingReport}
-        className="quick-action-btn print"
-        title={t.printPermit}
-      >
-        {isGeneratingReport ? <div className="spinner" /> : <Printer size={16} />}
-        {!isMobile && <span>{t.printPermit}</span>}
-      </button>
-
-      <button
-        onClick={handleSharePermit}
-        className="quick-action-btn share"
-        title={t.sharePermit}
-      >
-        <Share size={16} />
-        {!isMobile && <span>{t.sharePermit}</span>}
-      </button>
-    </div>
-  );
-
-  // =================== COMPOSANT INDICATEUR DE VALIDATION ===================
-  const ValidationIndicator = () => {
-    const errors = validateSiteInformation();
-    const isValid = errors.length === 0;
-    const completionRate = Math.round(((Object.keys(confinedSpaceDetails).length - errors.length) / Object.keys(confinedSpaceDetails).length) * 100);
-
-    return (
-      <div className={`validation-indicator ${isValid ? 'valid' : 'invalid'}`}>
-        <div className="validation-header">
-          <div className="validation-icon">
-            {isValid ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
-          </div>
-          <div className="validation-info">
-            <h4>{isValid ? t.validationPassed : t.validationErrors}</h4>
-            <p>{language === 'fr' ? `Complété à ${completionRate}%` : `${completionRate}% Complete`}</p>
-          </div>
-        </div>
-        
-        {!isValid && (
-          <div className="validation-errors">
-            {errors.map((error, index) => (
-              <div key={index} className="validation-error">
-                <AlertTriangle size={14} />
-                <span>{error}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="completion-bar">
-          <div 
-            className="completion-fill"
-            style={{ width: `${completionRate}%` }}
-          />
-        </div>
-      </div>
-    );
-  };
-
   // =================== CSS RESPONSIVE MOBILE OPTIMISÉ ===================
   const mobileOptimizedStyles = `
-    /* =================== VARIABLES CSS POUR COHÉRENCE =================== */
     :root {
       --primary-color: #3b82f6;
       --success-color: #10b981;
@@ -3006,7 +3761,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       --transition: all 0.3s ease;
     }
 
-    /* =================== CONTAINER PRINCIPAL RESPONSIVE =================== */
     .site-information-container {
       padding: ${isMobile ? '8px' : '24px'};
       max-width: 100%;
@@ -3018,7 +3772,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       overflow-x: hidden;
     }
 
-    /* =================== GRILLES RESPONSIVES =================== */
     .premium-grid {
       display: grid;
       grid-template-columns: ${isMobile ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))'};
@@ -3048,7 +3801,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       align-items: start;
     }
 
-    /* =================== SECTIONS COLLAPSIBLES MOBILE =================== */
     .collapsible-section {
       background: rgba(31, 41, 59, 0.6);
       backdrop-filter: blur(20px);
@@ -3064,76 +3816,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       box-shadow: var(--shadow);
     }
 
-    .section-toggle {
-      width: 100%;
-      padding: ${isMobile ? '16px' : '20px'};
-      background: transparent;
-      border: none;
-      color: var(--text-primary);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: ${isMobile ? '16px' : '18px'};
-      font-weight: 600;
-      transition: var(--transition);
-      min-height: ${isMobile ? '60px' : '70px'};
-      touch-action: manipulation;
-    }
-
-    .section-toggle:hover {
-      background: rgba(59, 130, 246, 0.1);
-    }
-
-    .section-toggle:active {
-      transform: scale(0.98);
-    }
-
-    .section-header-content {
-      display: flex;
-      align-items: center;
-      gap: ${isMobile ? '12px' : '16px'};
-      flex: 1;
-    }
-
-    .section-icon {
-      width: ${isMobile ? '20px' : '24px'};
-      height: ${isMobile ? '20px' : '24px'};
-      color: var(--primary-color);
-      flex-shrink: 0;
-    }
-
-    .section-title {
-      margin: 0;
-      font-size: ${isMobile ? '16px' : '18px'};
-      font-weight: 700;
-      color: var(--text-primary);
-      text-align: left;
-    }
-
-    .collapse-indicator {
-      color: var(--text-muted);
-      transition: transform 0.2s ease;
-    }
-
-    .section-content {
-      padding: ${isMobile ? '16px' : '24px'};
-      border-top: 1px solid var(--border-color);
-      animation: slideDown 0.3s ease;
-    }
-
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* =================== CHAMPS DE FORMULAIRE OPTIMISÉS =================== */
     .form-field {
       margin-bottom: ${isMobile ? '16px' : '20px'};
       display: flex;
@@ -3185,13 +3867,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       resize: vertical;
     }
 
-    .premium-input::placeholder,
-    .premium-textarea::placeholder {
-      color: var(--text-muted);
-      font-weight: 400;
-    }
-
-    /* =================== BOUTONS RESPONSIVES =================== */
     .btn-primary,
     .btn-success,
     .btn-danger,
@@ -3252,70 +3927,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       transform: scale(0.98);
     }
 
-    .btn-primary:disabled,
-    .btn-success:disabled,
-    .btn-danger:disabled,
-    .btn-secondary:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    /* =================== ACTIONS RAPIDES MOBILES =================== */
-    .quick-actions {
-      position: ${isMobile ? 'fixed' : 'sticky'};
-      ${isMobile ? 'bottom: 20px; right: 20px;' : 'top: 20px; z-index: 100;'}
-      display: flex;
-      ${isMobile ? 'flex-direction: column' : 'flex-direction: row'};
-      gap: ${isMobile ? '12px' : '16px'};
-      ${isMobile ? '' : 'justify-content: center; margin-bottom: 20px;'}
-    }
-
-    .quick-action-btn {
-      ${isMobile ? 'width: 56px; height: 56px;' : 'padding: 12px 20px;'}
-      border-radius: ${isMobile ? '50%' : 'var(--radius-sm)'};
-      border: none;
-      cursor: pointer;
-      transition: var(--transition);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-weight: 600;
-      font-size: 14px;
-      box-shadow: var(--shadow);
-      touch-action: manipulation;
-    }
-
-    .quick-action-btn.database {
-      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-      color: white;
-    }
-
-    .quick-action-btn.save {
-      background: linear-gradient(135deg, var(--success-color), #059669);
-      color: white;
-    }
-
-    .quick-action-btn.print {
-      background: linear-gradient(135deg, var(--primary-color), #2563eb);
-      color: white;
-    }
-
-    .quick-action-btn.share {
-      background: linear-gradient(135deg, var(--warning-color), #d97706);
-      color: white;
-    }
-
-    .quick-action-btn:hover {
-      transform: ${isMobile ? 'scale(1.1)' : 'translateY(-2px)'};
-    }
-
-    .quick-action-btn:active {
-      transform: scale(0.95);
-    }
-
-    /* =================== CARROUSEL PHOTOS OPTIMISÉ =================== */
     .photo-carousel {
       position: relative;
       margin-top: 16px;
@@ -3442,8 +4053,8 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
     }
 
     .carousel-indicator {
-      width: ${isMobile ? '6px' : '8px'};
-      height: ${isMobile ? '6px' : '8px'};
+      width: ${isMobile ? '8px' : '10px'};
+      height: ${isMobile ? '8px' : '10px'};
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.4);
       border: none;
@@ -3528,7 +4139,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       border-color: var(--primary-color);
     }
 
-    /* =================== PLACEHOLDER PHOTOS VIDES =================== */
     .empty-photo-placeholder {
       border: 2px dashed;
       border-radius: var(--radius);
@@ -3556,275 +4166,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       color: var(--text-muted);
     }
 
-    /* =================== QUESTIONNAIRE CLASSIFICATION =================== */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.8);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .classification-wizard {
-      background: var(--card-bg);
-      border-radius: var(--radius);
-      max-width: ${isMobile ? '95vw' : '600px'};
-      width: 100%;
-      max-height: ${isMobile ? '90vh' : '80vh'};
-      display: flex;
-      flex-direction: column;
-      box-shadow: var(--shadow);
-    }
-
-    .wizard-header {
-      padding: ${isMobile ? '16px' : '20px'};
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .wizard-progress {
-      flex: 1;
-      margin-right: 16px;
-    }
-
-    .progress-bar {
-      width: 100%;
-      height: 8px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 8px;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary-color), var(--success-color));
-      transition: width 0.3s ease;
-    }
-
-    .progress-text {
-      font-size: ${isMobile ? '12px' : '14px'};
-      color: var(--text-secondary);
-      font-weight: 600;
-    }
-
-    .close-wizard {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      padding: 4px;
-      border-radius: 4px;
-      transition: var(--transition);
-    }
-
-    .close-wizard:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--text-primary);
-    }
-
-    .wizard-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: ${isMobile ? '16px' : '24px'};
-    }
-
-    .question-container {
-      max-width: 100%;
-    }
-
-    .question-title {
-      font-size: ${isMobile ? '16px' : '18px'};
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      line-height: 1.4;
-    }
-
-    .critical-icon {
-      color: var(--danger-color);
-      flex-shrink: 0;
-    }
-
-    .options-container {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .option-label {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: ${isMobile ? '12px' : '16px'};
-      background: rgba(15, 23, 42, 0.6);
-      border: 2px solid var(--border-color);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: var(--transition);
-      font-size: ${isMobile ? '14px' : '15px'};
-    }
-
-    .option-label:hover {
-      border-color: var(--primary-color);
-      background: rgba(59, 130, 246, 0.1);
-    }
-
-    .option-label input {
-      margin: 0;
-      flex-shrink: 0;
-    }
-
-    .option-text {
-      flex: 1;
-      color: var(--text-primary);
-      font-weight: 500;
-    }
-
-    .option-weight {
-      font-size: ${isMobile ? '11px' : '12px'};
-      color: var(--text-muted);
-      background: rgba(255, 255, 255, 0.1);
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-
-    .wizard-footer {
-      padding: ${isMobile ? '16px' : '20px'};
-      border-top: 1px solid var(--border-color);
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .wizard-btn {
-      padding: ${isMobile ? '12px 16px' : '12px 20px'};
-      border: none;
-      border-radius: var(--radius-sm);
-      font-weight: 600;
-      cursor: pointer;
-      transition: var(--transition);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      min-height: 44px;
-    }
-
-    .wizard-btn.primary {
-      background: linear-gradient(135deg, var(--primary-color), #2563eb);
-      color: white;
-    }
-
-    .wizard-btn.secondary {
-      background: var(--card-bg);
-      color: var(--text-primary);
-      border: 1px solid var(--border-color);
-    }
-
-    .wizard-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    /* =================== INDICATEUR DE VALIDATION =================== */
-    .validation-indicator {
-      background: var(--card-bg);
-      border-radius: var(--radius);
-      padding: ${isMobile ? '16px' : '20px'};
-      margin-bottom: 20px;
-      border-left: 4px solid;
-    }
-
-    .validation-indicator.valid {
-      border-left-color: var(--success-color);
-      background: rgba(16, 185, 129, 0.1);
-    }
-
-    .validation-indicator.invalid {
-      border-left-color: var(--danger-color);
-      background: rgba(239, 68, 68, 0.1);
-    }
-
-    .validation-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .validation-icon {
-      color: inherit;
-    }
-
-    .validation-info h4 {
-      margin: 0 0 4px;
-      font-size: ${isMobile ? '14px' : '16px'};
-      font-weight: 600;
-    }
-
-    .validation-info p {
-      margin: 0;
-      font-size: ${isMobile ? '12px' : '14px'};
-      opacity: 0.8;
-    }
-
-    .validation-errors {
-      margin-top: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .validation-error {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: ${isMobile ? '12px' : '13px'};
-      color: var(--danger-color);
-    }
-
-    .completion-bar {
-      height: 4px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-top: 12px;
-    }
-
-    .completion-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary-color), var(--success-color));
-      transition: width 0.3s ease;
-    }
-
-    /* =================== SPINNER D'ACTIVATION =================== */
-    .spinner {
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-top: 2px solid white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* =================== BOUTONS CAPTURE PHOTO =================== */
     .photo-capture-btn {
       display: flex;
       align-items: center;
@@ -3848,11 +4189,31 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       transform: ${isMobile ? 'none' : 'translateY(-1px)'};
     }
 
-    .photo-capture-btn:active {
-      transform: scale(0.98);
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
     }
 
-    /* =================== RESPONSIVE SPÉCIFIQUE MOBILE =================== */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     @media (max-width: 768px) {
       .premium-grid {
         grid-template-columns: 1fr;
@@ -3866,14 +4227,10 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
         gap: 12px;
       }
       
-      .section-title {
-        font-size: 16px;
-      }
-      
       .premium-input,
       .premium-select,
       .premium-textarea {
-        font-size: 16px; /* Évite le zoom sur iOS */
+        font-size: 16px;
       }
     }
 
@@ -3886,39 +4243,17 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
         margin-bottom: 12px;
       }
       
-      .section-toggle {
-        padding: 12px;
-        min-height: 56px;
-      }
-      
-      .section-content {
-        padding: 12px;
-      }
-      
-      .form-field {
-        margin-bottom: 12px;
-      }
-      
       .carousel-container {
         height: 200px;
       }
     }
 
-    /* =================== CLASSES UTILITAIRES =================== */
     .full-width {
       grid-column: 1 / -1;
     }
 
     .text-center {
       text-align: center;
-    }
-
-    .text-left {
-      text-align: left;
-    }
-
-    .text-right {
-      text-align: right;
     }
 
     .hidden {
@@ -3928,26 +4263,13 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
     .visible {
       display: block;
     }
-
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
   `;
+
   // =================== RENDU JSX PRINCIPAL COMPLET ===================
   return (
     <>
-      {/* CSS Styles intégrés */}
       <style dangerouslySetInnerHTML={{ __html: mobileOptimizedStyles }} />
-
-      {/* Input caché pour capture photo */}
+      
       <input
         type="file"
         ref={photoInputRef}
@@ -3956,16 +4278,25 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
         capture="environment"
       />
 
-      <div className="site-information-container">
-        {/* Actions rapides */}
+      <div className="site-information-container" ref={containerRef}>
         <QuickActionButtons />
-
-        {/* Indicateur de validation */}
         <ValidationIndicator />
 
         {/* Modal Base de Données des Permis */}
         {showPermitDatabase && (
-          <div className="modal-overlay">
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}>
             <div style={{
               background: 'rgba(30, 41, 59, 0.95)',
               backdropFilter: 'blur(20px)',
@@ -3996,7 +4327,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
                 </button>
               </div>
 
-              {/* Barre de recherche */}
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexDirection: isMobile ? 'column' : 'row' }}>
                   <div style={{ position: 'relative', flex: 1 }}>
@@ -4035,7 +4365,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
                 </div>
               </div>
 
-              {/* Résultats de recherche */}
               {isSearching ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
                   <div className="spinner"></div>
@@ -4052,15 +4381,7 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
                       cursor: 'pointer',
                       transition: 'all 0.3s ease'
                     }}
-                    onClick={() => loadPermitFromHistory(permit.permitNumber)}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59, 130, 246, 0.5)';
-                      if (!isMobile) (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = 'rgba(100, 116, 139, 0.3)';
-                      (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                    }}>
+                    onClick={() => loadPermitFromHistory(permit.permitNumber)}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
                         <div>
                           <h5 style={{ color: '#3b82f6', margin: '0 0 4px 0', fontSize: '14px', fontWeight: '600' }}>
@@ -4074,18 +4395,14 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
                           </p>
                         </div>
                         <span style={{
-                          background: permit.status === 'active' ? 'rgba(16, 185, 129, 0.2)' : 
-                                     permit.status === 'completed' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(156, 163, 175, 0.2)',
-                          color: permit.status === 'active' ? '#10b981' : 
-                                 permit.status === 'completed' ? '#3b82f6' : '#9ca3af',
+                          background: permit.status === 'active' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(156, 163, 175, 0.2)',
+                          color: permit.status === 'active' ? '#10b981' : '#9ca3af',
                           padding: '4px 8px',
                           borderRadius: '6px',
                           fontSize: '11px',
                           fontWeight: '600'
                         }}>
-                          {permit.status === 'active' ? (language === 'fr' ? '🟢 ACTIF' : '🟢 ACTIVE') :
-                           permit.status === 'completed' ? (language === 'fr' ? '🔵 TERMINÉ' : '🔵 COMPLETED') : 
-                           (language === 'fr' ? '⚪ AUTRE' : '⚪ OTHER')}
+                          {permit.status === 'active' ? '🟢 ACTIF' : '⚪ AUTRE'}
                         </span>
                       </div>
                     </div>
@@ -4105,7 +4422,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
           </div>
         )}
 
-        {/* Questionnaire Classification CSA */}
         <CSAClassificationWizard 
           isOpen={showClassificationWizard}
           onClose={() => setShowClassificationWizard(false)}
@@ -4324,7 +4640,7 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
                      key === 'trench' ? '🚧' : key === 'manhole' ? '🔧' : key === 'storage' ? '📦' : 
                      key === 'boiler' ? '🔥' : key === 'duct' ? '🌪️' : key === 'chamber' ? '🏢' : '❓'}
                   </div>
-                  <div style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: '600', textAlign: 'center' }}>
+                  <div style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: '600', textAlign: 'center', wordWrap: 'break-word', hyphens: 'auto' }}>
                     {label}
                   </div>
                 </div>
@@ -4332,90 +4648,8 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
             </div>
           </div>
 
-          <div className="three-column">
-            <div className="form-field">
-              <label className="field-label">
-                <Shield style={{ width: '18px', height: '18px' }} />
-                {t.csaClass}<span style={{ color: 'var(--danger-color)' }}>*</span>
-              </label>
-              <div style={{ display: 'flex', gap: '8px', flexDirection: isMobile ? 'column' : 'row' }}>
-                <select
-                  className="premium-select"
-                  value={confinedSpaceDetails.csaClass}
-                  onChange={(e) => handleConfinedSpaceChange('csaClass', e.target.value)}
-                  style={{ flex: 1 }}
-                >
-                  <option value="">{t.select}</option>
-                  <option value="class1">{t.csaClasses.class1}</option>
-                  <option value="class2">{t.csaClasses.class2}</option>
-                  <option value="class3">{t.csaClasses.class3}</option>
-                </select>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setShowClassificationWizard(true)}
-                  style={{ minWidth: isMobile ? '100%' : 'auto', whiteSpace: 'nowrap' }}
-                >
-                  <Star size={16} />
-                  {language === 'fr' ? 'Assistant' : 'Wizard'}
-                </button>
-              </div>
-              {confinedSpaceDetails.csaClass && (
-                <div style={{
-                  marginTop: '8px',
-                  padding: '8px 12px',
-                  background: confinedSpaceDetails.csaClass === 'class1' ? 'rgba(239, 68, 68, 0.1)' : 
-                             confinedSpaceDetails.csaClass === 'class2' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                  border: `1px solid ${confinedSpaceDetails.csaClass === 'class1' ? 'var(--danger-color)' : 
-                                      confinedSpaceDetails.csaClass === 'class2' ? 'var(--warning-color)' : 'var(--success-color)'}`,
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '12px'
-                }}>
-                  {(() => {
-                    const csaClassifications = getCSAClassifications(selectedProvince, language);
-                    const classification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
-                    return classification?.description || '';
-                  })()}
-                </div>
-              )}
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <ArrowRight style={{ width: '18px', height: '18px' }} />
-                {language === 'fr' ? 'Méthode d\'entrée' : 'Entry Method'}
-              </label>
-              <select
-                className="premium-select"
-                value={confinedSpaceDetails.entryMethod}
-                onChange={(e) => handleConfinedSpaceChange('entryMethod', e.target.value)}
-              >
-                <option value="">{t.select}</option>
-                <option value="top">{language === 'fr' ? 'Entrée par le dessus' : 'Top entry'}</option>
-                <option value="side">{language === 'fr' ? 'Entrée latérale' : 'Side entry'}</option>
-                <option value="bottom">{language === 'fr' ? 'Entrée par le dessous' : 'Bottom entry'}</option>
-                <option value="multiple">{language === 'fr' ? 'Entrées multiples' : 'Multiple entries'}</option>
-              </select>
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Layers style={{ width: '18px', height: '18px' }} />
-                {language === 'fr' ? 'Type d\'accès' : 'Access Type'}
-              </label>
-              <select
-                className="premium-select"
-                value={confinedSpaceDetails.accessType}
-                onChange={(e) => handleConfinedSpaceChange('accessType', e.target.value)}
-              >
-                <option value="">{t.select}</option>
-                <option value="ladder">{language === 'fr' ? 'Échelle' : 'Ladder'}</option>
-                <option value="stairs">{language === 'fr' ? 'Escalier' : 'Stairs'}</option>
-                <option value="rope">{language === 'fr' ? 'Corde' : 'Rope'}</option>
-                <option value="crane">{language === 'fr' ? 'Grue/Palan' : 'Crane/Hoist'}</option>
-                <option value="direct">{language === 'fr' ? 'Accès direct' : 'Direct access'}</option>
-              </select>
-            </div>
+          <div className="form-field">
+            <CSAClassificationSelector />
           </div>
         </CollapsibleSection>
 
@@ -4426,105 +4660,7 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
           icon={<Ruler />}
           className="full-width"
         >
-          <div style={{
-            background: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            borderRadius: 'var(--radius)',
-            padding: '20px'
-          }}>
-            <div className="four-column">
-              <div className="form-field">
-                <label className="field-label">{t.length}</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  className="premium-input"
-                  value={confinedSpaceDetails.dimensions.length || ''}
-                  onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                    ...confinedSpaceDetails.dimensions,
-                    length: parseFloat(e.target.value) || 0
-                  })}
-                />
-              </div>
-
-              <div className="form-field">
-                <label className="field-label">{t.width}</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  className="premium-input"
-                  value={confinedSpaceDetails.dimensions.width || ''}
-                  onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                    ...confinedSpaceDetails.dimensions,
-                    width: parseFloat(e.target.value) || 0
-                  })}
-                />
-              </div>
-
-              <div className="form-field">
-                <label className="field-label">
-                  {t.height}<span style={{ color: 'var(--danger-color)' }}>*</span>
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  className="premium-input"
-                  value={confinedSpaceDetails.dimensions.height || ''}
-                  onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                    ...confinedSpaceDetails.dimensions,
-                    height: parseFloat(e.target.value) || 0
-                  })}
-                />
-              </div>
-
-              <div className="form-field">
-                <label className="field-label">{t.diameter}</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  className="premium-input"
-                  value={confinedSpaceDetails.dimensions.diameter || ''}
-                  onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                    ...confinedSpaceDetails.dimensions,
-                    diameter: parseFloat(e.target.value) || 0
-                  })}
-                />
-              </div>
-            </div>
-
-            <div style={{ textAlign: 'center', margin: '20px 0' }}>
-              <button className="btn-success" onClick={calculateVolume}>
-                <Gauge size={20} />
-                {t.calculateVolume}
-              </button>
-            </div>
-
-            {confinedSpaceDetails.dimensions.volume > 0 && (
-              <div style={{
-                background: 'rgba(16, 185, 129, 0.2)',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                borderRadius: '12px',
-                padding: '16px',
-                textAlign: 'center'
-              }}>
-                <div style={{ 
-                  fontSize: '24px', 
-                  fontWeight: '700', 
-                  color: 'var(--success-color)', 
-                  marginBottom: '4px'
-                }}>
-                  {confinedSpaceDetails.dimensions.volume}
-                </div>
-                <div style={{ fontSize: '14px', color: '#6ee7b7' }}>
-                  {t.volumeUnit} - {t.volume}
-                </div>
-              </div>
-            )}
-          </div>
+          <DimensionsSelector />
         </CollapsibleSection>
 
         {/* Section Points d'Entrée */}
@@ -4627,7 +4763,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
           icon={<AlertTriangle />}
           className="full-width"
         >
-          {/* Dangers Atmosphériques */}
           <div className="form-field">
             <label className="field-label">
               <Wind style={{ width: '18px', height: '18px', color: 'var(--warning-color)' }} />
@@ -4649,7 +4784,7 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
                     cursor: 'pointer',
                     transition: 'var(--transition)',
                     display: 'flex',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
                     gap: '12px'
                   }}
                   onClick={() => toggleAtmosphericHazard(key)}
@@ -4663,14 +4798,18 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    marginTop: '2px'
                   }}>
                     {confinedSpaceDetails.atmosphericHazards.includes(key) && <Check size={12} color="white" />}
                   </div>
                   <span style={{ 
                     color: confinedSpaceDetails.atmosphericHazards.includes(key) ? '#fecaca' : 'var(--text-secondary)', 
-                    fontSize: '14px', 
-                    fontWeight: '500' 
+                    fontSize: isMobile ? '13px' : '14px', 
+                    fontWeight: '500',
+                    lineHeight: 1.4,
+                    wordWrap: 'break-word',
+                    hyphens: 'auto'
                   }}>
                     🌪️ {label}
                   </span>
@@ -4679,7 +4818,6 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
             </div>
           </div>
 
-          {/* Dangers Physiques */}
           <div className="form-field">
             <label className="field-label">
               <AlertTriangle style={{ width: '18px', height: '18px', color: 'var(--danger-color)' }} />
@@ -4701,7 +4839,7 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
                     cursor: 'pointer',
                     transition: 'var(--transition)',
                     display: 'flex',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
                     gap: '12px'
                   }}
                   onClick={() => togglePhysicalHazard(key)}
@@ -4715,303 +4853,23 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    marginTop: '2px'
                   }}>
                     {confinedSpaceDetails.physicalHazards.includes(key) && <Check size={12} color="white" />}
                   </div>
                   <span style={{ 
                     color: confinedSpaceDetails.physicalHazards.includes(key) ? '#fecaca' : 'var(--text-secondary)', 
-                    fontSize: '14px', 
-                    fontWeight: '500' 
+                    fontSize: isMobile ? '13px' : '14px', 
+                    fontWeight: '500',
+                    lineHeight: 1.4,
+                    wordWrap: 'break-word',
+                    hyphens: 'auto'
                   }}>
                     ⚡ {label}
                   </span>
                 </div>
               ))}
-            </div>
-          </div>
-        </CollapsibleSection>
-
-        {/* Section Conditions Environnementales */}
-        <CollapsibleSection
-          id="environmental-conditions"
-          title={t.environmentalConditions}
-          icon={<Activity />}
-        >
-          <div className="two-column">
-            <div className="form-field">
-              <label className="field-label">
-                <Wind style={{ width: '18px', height: '18px' }} />
-                {t.ventilationRequired}
-              </label>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    name="ventilationRequired"
-                    value="true"
-                    checked={confinedSpaceDetails.environmentalConditions.ventilationRequired === true}
-                    onChange={() => handleEnvironmentalChange('ventilationRequired', true)}
-                  />
-                  <span>{t.yes}</span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    name="ventilationRequired"
-                    value="false"
-                    checked={confinedSpaceDetails.environmentalConditions.ventilationRequired === false}
-                    onChange={() => handleEnvironmentalChange('ventilationRequired', false)}
-                  />
-                  <span>{t.no}</span>
-                </label>
-              </div>
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Wind style={{ width: '18px', height: '18px' }} />
-                {t.ventilationType}
-              </label>
-              <select
-                className="premium-select"
-                value={confinedSpaceDetails.environmentalConditions.ventilationType}
-                onChange={(e) => handleEnvironmentalChange('ventilationType', e.target.value)}
-              >
-                <option value="">{t.select}</option>
-                <option value="natural">{language === 'fr' ? 'Naturelle' : 'Natural'}</option>
-                <option value="mechanical">{language === 'fr' ? 'Mécanique' : 'Mechanical'}</option>
-                <option value="forced">{language === 'fr' ? 'Forcée' : 'Forced'}</option>
-                <option value="none">{language === 'fr' ? 'Aucune' : 'None'}</option>
-              </select>
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Eye style={{ width: '18px', height: '18px' }} />
-                {t.lightingConditions}
-              </label>
-              <select
-                className="premium-select"
-                value={confinedSpaceDetails.environmentalConditions.lightingConditions}
-                onChange={(e) => handleEnvironmentalChange('lightingConditions', e.target.value)}
-              >
-                <option value="">{t.select}</option>
-                <option value="natural">{language === 'fr' ? 'Éclairage naturel' : 'Natural lighting'}</option>
-                <option value="artificial">{language === 'fr' ? 'Éclairage artificiel requis' : 'Artificial lighting required'}</option>
-                <option value="poor">{language === 'fr' ? 'Éclairage faible' : 'Poor lighting'}</option>
-                <option value="none">{language === 'fr' ? 'Aucun éclairage' : 'No lighting'}</option>
-              </select>
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Thermometer style={{ width: '18px', height: '18px' }} />
-                {t.temperatureRange}
-              </label>
-              <input
-                type="text"
-                className="premium-input"
-                placeholder={language === 'fr' ? 'Ex: 15-25°C' : 'Ex: 15-25°C'}
-                value={confinedSpaceDetails.environmentalConditions.temperatureRange}
-                onChange={(e) => handleEnvironmentalChange('temperatureRange', e.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Droplets style={{ width: '18px', height: '18px' }} />
-                {t.moistureLevel}
-              </label>
-              <select
-                className="premium-select"
-                value={confinedSpaceDetails.environmentalConditions.moistureLevel}
-                onChange={(e) => handleEnvironmentalChange('moistureLevel', e.target.value)}
-              >
-                <option value="">{t.select}</option>
-                <option value="low">{language === 'fr' ? 'Faible (<40%)' : 'Low (<40%)'}</option>
-                <option value="normal">{language === 'fr' ? 'Normal (40-70%)' : 'Normal (40-70%)'}</option>
-                <option value="high">{language === 'fr' ? 'Élevé (>70%)' : 'High (>70%)'}</option>
-                <option value="wet">{language === 'fr' ? 'Humide/Mouillé' : 'Wet/Damp'}</option>
-              </select>
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Activity style={{ width: '18px', height: '18px' }} />
-                {t.noiseLevel}
-              </label>
-              <select
-                className="premium-select"
-                value={confinedSpaceDetails.environmentalConditions.noiseLevel}
-                onChange={(e) => handleEnvironmentalChange('noiseLevel', e.target.value)}
-              >
-                <option value="">{t.select}</option>
-                <option value="low">{language === 'fr' ? 'Faible (<70 dB)' : 'Low (<70 dB)'}</option>
-                <option value="moderate">{language === 'fr' ? 'Modéré (70-85 dB)' : 'Moderate (70-85 dB)'}</option>
-                <option value="high">{language === 'fr' ? 'Élevé (>85 dB)' : 'High (>85 dB)'}</option>
-                <option value="extreme">{language === 'fr' ? 'Extrême (>100 dB)' : 'Extreme (>100 dB)'}</option>
-              </select>
-            </div>
-          </div>
-        </CollapsibleSection>
-
-        {/* Section Contenu et Historique */}
-        <CollapsibleSection
-          id="space-content"
-          title={t.spaceContent}
-          icon={<FileText />}
-        >
-          <div className="two-column">
-            <div className="form-field">
-              <label className="field-label">
-                <FileText style={{ width: '18px', height: '18px' }} />
-                {t.contents}
-              </label>
-              <textarea
-                className="premium-textarea"
-                placeholder={language === 'fr' ? 'Décrire le contenu actuel de l\'espace' : 'Describe current space contents'}
-                value={confinedSpaceDetails.spaceContent.contents}
-                onChange={(e) => handleContentChange('contents', e.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <AlertTriangle style={{ width: '18px', height: '18px' }} />
-                {t.residues}
-              </label>
-              <textarea
-                className="premium-textarea"
-                placeholder={language === 'fr' ? 'Résidus chimiques, substances dangereuses...' : 'Chemical residues, hazardous substances...'}
-                value={confinedSpaceDetails.spaceContent.residues}
-                onChange={(e) => handleContentChange('residues', e.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Clock style={{ width: '18px', height: '18px' }} />
-                {t.previousUse}
-              </label>
-              <input
-                type="text"
-                className="premium-input"
-                placeholder={language === 'fr' ? 'Usage antérieur de l\'espace' : 'Previous use of space'}
-                value={confinedSpaceDetails.spaceContent.previousUse}
-                onChange={(e) => handleContentChange('previousUse', e.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Calendar style={{ width: '18px', height: '18px' }} />
-                {t.lastEntry}
-              </label>
-              <input
-                type="date"
-                className="premium-input"
-                value={confinedSpaceDetails.spaceContent.lastEntry}
-                onChange={(e) => handleContentChange('lastEntry', e.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Wrench style={{ width: '18px', height: '18px' }} />
-                {t.cleaningStatus}
-              </label>
-              <select
-                className="premium-select"
-                value={confinedSpaceDetails.spaceContent.cleaningStatus}
-                onChange={(e) => handleContentChange('cleaningStatus', e.target.value)}
-              >
-                <option value="">{t.select}</option>
-                <option value="clean">{language === 'fr' ? 'Nettoyé et décontaminé' : 'Cleaned and decontaminated'}</option>
-                <option value="partial">{language === 'fr' ? 'Partiellement nettoyé' : 'Partially cleaned'}</option>
-                <option value="dirty">{language === 'fr' ? 'Non nettoyé' : 'Not cleaned'}</option>
-                <option value="unknown">{language === 'fr' ? 'État inconnu' : 'Unknown status'}</option>
-              </select>
-            </div>
-          </div>
-        </CollapsibleSection>
-
-        {/* Section Mesures de Sécurité */}
-        <CollapsibleSection
-          id="safety-measures"
-          title={t.safetyMeasures}
-          icon={<Shield />}
-        >
-          <div className="two-column">
-            <div className="form-field">
-              <label className="field-label">
-                <ArrowLeft style={{ width: '18px', height: '18px' }} />
-                {t.emergencyEgress}
-              </label>
-              <textarea
-                className="premium-textarea"
-                placeholder={language === 'fr' ? 'Plan de sortie d\'urgence détaillé' : 'Detailed emergency egress plan'}
-                value={confinedSpaceDetails.safetyMeasures.emergencyEgress}
-                onChange={(e) => handleSafetyChange('emergencyEgress', e.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <MessageSquare style={{ width: '18px', height: '18px' }} />
-                {t.communicationMethod}
-              </label>
-              <select
-                className="premium-select"
-                value={confinedSpaceDetails.safetyMeasures.communicationMethod}
-                onChange={(e) => handleSafetyChange('communicationMethod', e.target.value)}
-              >
-                <option value="">{t.select}</option>
-                <option value="radio">{language === 'fr' ? 'Radio bidirectionnelle' : 'Two-way radio'}</option>
-                <option value="voice">{language === 'fr' ? 'Communication vocale' : 'Voice communication'}</option>
-                <option value="visual">{language === 'fr' ? 'Signaux visuels' : 'Visual signals'}</option>
-                <option value="rope">{language === 'fr' ? 'Signaux par corde' : 'Rope signals'}</option>
-                <option value="electronic">{language === 'fr' ? 'Système électronique' : 'Electronic system'}</option>
-              </select>
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Gauge style={{ width: '18px', height: '18px' }} />
-                {t.monitoringEquipment}
-              </label>
-              <textarea
-                className="premium-textarea"
-                placeholder={language === 'fr' ? 'Équipements de surveillance requis' : 'Required monitoring equipment'}
-                value={confinedSpaceDetails.safetyMeasures.monitoringEquipment.join(', ')}
-                onChange={(e) => handleSafetyChange('monitoringEquipment', e.target.value.split(', ').filter(item => item.trim()))}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Wind style={{ width: '18px', height: '18px' }} />
-                {t.ventilationEquipment}
-              </label>
-              <textarea
-                className="premium-textarea"
-                placeholder={language === 'fr' ? 'Équipements de ventilation nécessaires' : 'Required ventilation equipment'}
-                value={confinedSpaceDetails.safetyMeasures.ventilationEquipment.join(', ')}
-                onChange={(e) => handleSafetyChange('ventilationEquipment', e.target.value.split(', ').filter(item => item.trim()))}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="field-label">
-                <Shield style={{ width: '18px', height: '18px' }} />
-                {t.emergencyEquipment}
-              </label>
-              <textarea
-                className="premium-textarea"
-                placeholder={language === 'fr' ? 'Équipements d\'urgence et de sauvetage' : 'Emergency and rescue equipment'}
-                value={confinedSpaceDetails.safetyMeasures.emergencyEquipment.join(', ')}
-                onChange={(e) => handleSafetyChange('emergencyEquipment', e.target.value.split(', ').filter(item => item.trim()))}
-              />
             </div>
           </div>
         </CollapsibleSection>
@@ -5076,34 +4934,7 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
           icon={<QrCode />}
           className="full-width"
         >
-          {permitData.permit_number ? (
-            <div style={{
-              background: 'rgba(16, 185, 129, 0.1)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              borderRadius: '12px',
-              padding: '16px',
-              textAlign: 'center'
-            }}>
-              <h4 style={{ color: '#10b981', margin: '0 0 12px 0' }}>
-                ✅ {language === 'fr' ? `QR Code généré pour : ${permitData.permit_number}` : `QR Code generated for: ${permitData.permit_number}`}
-              </h4>
-              <p style={{ color: '#6ee7b7', margin: 0, fontSize: '14px' }}>
-                {t.qrGenerated}
-              </p>
-            </div>
-          ) : (
-            <div style={{
-              background: 'rgba(59, 130, 246, 0.1)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
-              borderRadius: '12px',
-              padding: '16px',
-              textAlign: 'center'
-            }}>
-              <p style={{ color: '#93c5fd', margin: 0 }}>
-                💡 {t.qrWillGenerate}
-              </p>
-            </div>
-          )}
+          <QRCodeDisplay />
         </CollapsibleSection>
 
         {/* Section de Validation Finale */}
@@ -5120,7 +4951,8 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
             padding: '16px', 
             background: validateSiteInformation().length === 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
             borderRadius: '12px', 
-            border: `1px solid ${validateSiteInformation().length === 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+            border: `1px solid ${validateSiteInformation().length === 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+            marginBottom: '20px'
           }}>
             {validateSiteInformation().length === 0 ? (
               <CheckCircle size={24} color="#10b981" />
@@ -5152,12 +4984,10 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
             </div>
           </div>
 
-          {/* Actions finales */}
           <div style={{ 
             display: 'grid', 
             gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
-            gap: '12px', 
-            marginTop: '20px' 
+            gap: '12px'
           }}>
             <button
               onClick={handleSave}
@@ -5223,5 +5053,4 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
   );
 };
 
-// =================== EXPORT AVEC GESTION D'ERREUR ===================
 export default React.memo(SiteInformation);
