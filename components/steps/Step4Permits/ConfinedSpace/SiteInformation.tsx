@@ -1471,6 +1471,23 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       }
     }
   };
+// =================== DÉFINITIONS D'AUTORITÉS PROVINCIALES ===================
+  const getProvinceAuthority = (province: ProvinceCode): string => {
+    const authorities: Record<ProvinceCode, string> = {
+      QC: 'CNESST',
+      ON: 'Ministry of Labour',
+      BC: 'WorkSafeBC',
+      AB: 'Alberta OHS',
+      SK: 'Saskatchewan OHS',
+      MB: 'Manitoba Workplace Safety',
+      NB: 'WorkSafeNB',
+      NS: 'Workers\' Compensation Board',
+      PE: 'PEI Workers Compensation Board',
+      NL: 'WorkplaceNL'
+    };
+    return authorities[province] || 'Autorité Compétente';
+  };
+
   // =================== GÉNÉRATION DE RAPPORT PROFESSIONNEL COMPLET ===================
   const generateCompletePermitReport = async (): Promise<PermitReport> => {
     const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -1479,12 +1496,15 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     const csaClassifications = getCSAClassifications(selectedProvince, language);
     const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
     
+    // ✅ CORRECTION : Obtenir l'autorité de manière sécurisée
+    const provinceAuthority = currentClassification?.regulations?.authority || getProvinceAuthority(selectedProvince);
+    
     return {
       metadata: {
         permitNumber,
         issueDate: new Date().toISOString(),
         province: selectedProvince,
-        authority: PROVINCIAL_REGULATIONS[selectedProvince].authority,
+        authority: provinceAuthority,
         generatedAt: new Date().toISOString(),
         version: '2.0',
         language,
@@ -1928,19 +1948,19 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                   <div class="regulations-title">📋 ${language === 'fr' ? 'Réglementations Provinciales' : 'Provincial Regulations'} - ${selectedProvince}</div>
                   <div class="regulation-item">
                     <span><strong>${language === 'fr' ? 'Autorité' : 'Authority'}:</strong></span>
-                    <span>${currentClassification?.regulations?.authority || provincialRegulations[selectedProvince]?.authority || 'Autorité Compétente'}
+                    <span>${currentClassification?.regulations?.authority || getProvinceAuthority(selectedProvince)}</span>
                   </div>
                   <div class="regulation-item">
                     <span><strong>${language === 'fr' ? 'Règlement principal' : 'Main Regulation'}:</strong></span>
-                    <span>${currentClassification?.regulations?.main || ''}</span>
+                    <span>${currentClassification?.regulations?.main || 'Réglementation applicable'}</span>
                   </div>
                   <div class="regulation-item">
                     <span><strong>${language === 'fr' ? 'Article spécifique' : 'Specific Article'}:</strong></span>
-                    <span>${currentClassification?.regulations?.specific || ''}</span>
+                    <span>${currentClassification?.regulations?.specific || 'Articles applicables'}</span>
                   </div>
                   <div class="regulation-item">
                     <span><strong>${language === 'fr' ? 'Surveillance requise' : 'Monitoring Required'}:</strong></span>
-                    <span>${currentClassification?.monitoring || ''}</span>
+                    <span>${currentClassification?.monitoring || currentClassification?.regulations?.testing || 'Selon classification'}</span>
                   </div>
                 </div>
               </div>
@@ -1962,19 +1982,19 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                     </div>
                     <div class="info-item">
                       <div class="info-label">${language === 'fr' ? 'Numéro de projet' : 'Project Number'}</div>
-                      <div class="info-value">${report.siteInformation.projectNumber || language === 'fr' ? 'Non spécifié' : 'Not specified'}</div>
+                      <div class="info-value">${report.siteInformation.projectNumber || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
                     </div>
                     <div class="info-item">
                       <div class="info-label">${language === 'fr' ? 'Lieu des travaux' : 'Work Location'}</div>
-                      <div class="info-value">${report.siteInformation.workLocation || language === 'fr' ? 'Non spécifié' : 'Not specified'}</div>
+                      <div class="info-value">${report.siteInformation.workLocation || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
                     </div>
                     <div class="info-item">
                       <div class="info-label">${language === 'fr' ? 'Entrepreneur' : 'Contractor'}</div>
-                      <div class="info-value">${report.siteInformation.contractor || language === 'fr' ? 'Non spécifié' : 'Not specified'}</div>
+                      <div class="info-value">${report.siteInformation.contractor || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
                     </div>
                     <div class="info-item">
                       <div class="info-label">${language === 'fr' ? 'Superviseur' : 'Supervisor'}</div>
-                      <div class="info-value">${report.siteInformation.supervisor || language === 'fr' ? 'Non spécifié' : 'Not specified'}</div>
+                      <div class="info-value">${report.siteInformation.supervisor || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
                     </div>
                   </div>
                 </div>
@@ -1989,7 +2009,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                   <div class="info-grid">
                     <div class="info-item">
                       <div class="info-label">${language === 'fr' ? 'Type d\'espace' : 'Space Type'}</div>
-                      <div class="info-value">${report.siteInformation.spaceType ? (language === 'fr' ? t.spaceTypes[report.siteInformation.spaceType as keyof typeof t.spaceTypes] : report.siteInformation.spaceType) : (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
+                      <div class="info-value">${report.siteInformation.spaceType ? (language === 'fr' ? (t.spaceTypes[report.siteInformation.spaceType as keyof typeof t.spaceTypes] || report.siteInformation.spaceType) : report.siteInformation.spaceType) : (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
                     </div>
                     <div class="info-item">
                       <div class="info-label">${language === 'fr' ? 'Dimensions' : 'Dimensions'}</div>
@@ -2022,7 +2042,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                             ${report.siteInformation.atmosphericHazards.map((hazard: string) => `
                               <div class="hazard-item">
                                 <div class="hazard-icon">⚠</div>
-                                <span>${language === 'fr' ? t.atmosphericHazardTypes[hazard as keyof typeof t.atmosphericHazardTypes] : hazard.replace(/_/g, ' ')}</span>
+                                <span>${language === 'fr' ? (t.atmosphericHazardTypes?.[hazard as keyof typeof t.atmosphericHazardTypes] || hazard) : hazard.replace(/_/g, ' ')}</span>
                               </div>
                             `).join('')}
                           </div>
@@ -2035,7 +2055,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                             ${report.siteInformation.physicalHazards.map((hazard: string) => `
                               <div class="hazard-item">
                                 <div class="hazard-icon">!</div>
-                                <span>${language === 'fr' ? t.physicalHazardTypes[hazard as keyof typeof t.physicalHazardTypes] : hazard.replace(/_/g, ' ')}</span>
+                                <span>${language === 'fr' ? (t.physicalHazardTypes?.[hazard as keyof typeof t.physicalHazardTypes] || hazard) : hazard.replace(/_/g, ' ')}</span>
                               </div>
                             `).join('')}
                           </div>
@@ -2115,18 +2135,18 @@ ${language === 'fr' ? 'Veuillez trouver ci-joint le permis d\'entrée en espace 
 • ${language === 'fr' ? 'Numéro' : 'Number'}: ${report.metadata.permitNumber}
 • ${language === 'fr' ? 'Province/Autorité' : 'Province/Authority'}: ${selectedProvince} - ${report.metadata.authority}
 • ${language === 'fr' ? 'Classification CSA' : 'CSA Classification'}: ${currentClassification?.title || 'Non définie'}
-• ${language === 'fr' ? 'Projet' : 'Project'}: ${report.siteInformation.projectNumber || language === 'fr' ? 'Non spécifié' : 'Not specified'}
-• ${language === 'fr' ? 'Lieu' : 'Location'}: ${report.siteInformation.workLocation || language === 'fr' ? 'Non spécifié' : 'Not specified'}
+• ${language === 'fr' ? 'Projet' : 'Project'}: ${report.siteInformation.projectNumber || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
+• ${language === 'fr' ? 'Lieu' : 'Location'}: ${report.siteInformation.workLocation || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
 • ${language === 'fr' ? 'Date d\'émission' : 'Issue Date'}: ${new Date(report.metadata.issueDate).toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA')}
-• ${language === 'fr' ? 'Type d\'espace' : 'Space Type'}: ${report.siteInformation.spaceType || language === 'fr' ? 'Non spécifié' : 'Not specified'}
+• ${language === 'fr' ? 'Type d\'espace' : 'Space Type'}: ${report.siteInformation.spaceType || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
 • ${language === 'fr' ? 'Dangers identifiés' : 'Identified Hazards'}: ${(report.siteInformation.atmosphericHazards?.length || 0) + (report.siteInformation.physicalHazards?.length || 0)}
 
 🏛️ ${language === 'fr' ? 'CONFORMITÉ RÉGLEMENTAIRE' : 'REGULATORY COMPLIANCE'}
-• ${language === 'fr' ? 'Règlement principal' : 'Main Regulation'}: ${currentClassification?.regulations?.main || ''}
-• ${language === 'fr' ? 'Article spécifique' : 'Specific Article'}: ${currentClassification?.regulations?.specific || ''}
-• ${language === 'fr' ? 'Surveillance requise' : 'Monitoring Required'}: ${currentClassification?.regulations?.testing || ''}
+• ${language === 'fr' ? 'Règlement principal' : 'Main Regulation'}: ${currentClassification?.regulations?.main || 'Réglementation applicable'}
+• ${language === 'fr' ? 'Article spécifique' : 'Specific Article'}: ${currentClassification?.regulations?.specific || 'Articles applicables'}
+• ${language === 'fr' ? 'Surveillance requise' : 'Monitoring Required'}: ${currentClassification?.regulations?.testing || 'Selon classification'}
 
-⚠️ ${language === 'fr' ? 'IMPORTANT' : 'IMPORTANT'}: ${language === 'fr' ? 'Ce document doit être affiché sur le site et tous les travailleurs doivent en prendre connaissance avant l\'entrée. La validation de tous les éléments de sécurité est obligatoire selon' : 'This document must be displayed on site and all workers must acknowledge it before entry. Validation of all safety elements is mandatory according to'} ${currentClassification?.regulations?.main || language === 'fr' ? 'les réglementations applicables' : 'applicable regulations'}.
+⚠️ ${language === 'fr' ? 'IMPORTANT' : 'IMPORTANT'}: ${language === 'fr' ? 'Ce document doit être affiché sur le site et tous les travailleurs doivent en prendre connaissance avant l\'entrée. La validation de tous les éléments de sécurité est obligatoire selon' : 'This document must be displayed on site and all workers must acknowledge it before entry. Validation of all safety elements is mandatory according to'} ${currentClassification?.regulations?.main || (language === 'fr' ? 'les réglementations applicables' : 'applicable regulations')}.
 
 ${language === 'fr' ? 'Cordialement' : 'Best regards'},
 C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety Management System'}`;
@@ -2145,9 +2165,9 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       const report = await generateCompletePermitReport();
       const shareData = {
         title: `${language === 'fr' ? 'Permis Espace Clos' : 'Confined Space Permit'} - ${report.metadata.permitNumber}`,
-        text: `📋 ${report.siteInformation.projectNumber || language === 'fr' ? 'Projet non spécifié' : 'Project not specified'}
-📍 ${report.siteInformation.workLocation || language === 'fr' ? 'Lieu non spécifié' : 'Location not specified'}
-🏗️ ${language === 'fr' ? 'Type' : 'Type'}: ${report.siteInformation.spaceType || language === 'fr' ? 'Non spécifié' : 'Not specified'}
+        text: `📋 ${report.siteInformation.projectNumber || (language === 'fr' ? 'Projet non spécifié' : 'Project not specified')}
+📍 ${report.siteInformation.workLocation || (language === 'fr' ? 'Lieu non spécifié' : 'Location not specified')}
+🏗️ ${language === 'fr' ? 'Type' : 'Type'}: ${report.siteInformation.spaceType || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
 ⚠️ ${language === 'fr' ? 'Classification' : 'Classification'}: ${confinedSpaceDetails.csaClass?.toUpperCase() || 'Non définie'}
 📅 ${new Date(report.metadata.issueDate).toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA')}
 🏛️ ${selectedProvince} - ${report.metadata.authority}`,
@@ -2216,16 +2236,16 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
           language === 'fr' ? 'Tests d\'oxygène (19.5% - 23%)' : 'Oxygen testing (19.5% - 23%)',
           language === 'fr' ? 'Tests de gaz inflammables (<10% LIE)' : 'Flammable gas testing (<10% LEL)',
           language === 'fr' ? 'Tests de gaz toxiques (H2S, CO)' : 'Toxic gas testing (H2S, CO)',
-          currentClassification?.regulations?.testing || language === 'fr' ? 'Surveillance selon réglementation' : 'Monitoring per regulations'
+          currentClassification?.regulations?.testing || (language === 'fr' ? 'Surveillance selon réglementation' : 'Monitoring per regulations')
         ]
       },
       {
         category: language === 'fr' ? 'Personnel et Formation' : 'Personnel and Training',
         items: [
-          currentClassification?.regulations?.attendant || language === 'fr' ? 'Personnel qualifié requis' : 'Qualified personnel required',
+          currentClassification?.regulations?.attendant || (language === 'fr' ? 'Personnel qualifié requis' : 'Qualified personnel required'),
           language === 'fr' ? 'Formation sur les dangers spécifiques' : 'Training on specific hazards',
           language === 'fr' ? 'Certification des équipements' : 'Equipment certification',
-          currentClassification?.regulations?.rescue || language === 'fr' ? 'Plan de sauvetage établi' : 'Rescue plan established'
+          currentClassification?.regulations?.rescue || (language === 'fr' ? 'Plan de sauvetage établi' : 'Rescue plan established')
         ]
       },
       {
@@ -2449,7 +2469,7 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
               id: `photo-${Date.now()}`,
               url: event.target?.result as string,
               category,
-              caption: `${t.photoCategories[category as keyof typeof t.photoCategories] || category} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
+              caption: `${t.photoCategories?.[category as keyof typeof t.photoCategories] || category} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
               timestamp: new Date().toISOString(),
               location: 'Localisation en cours...',
               measurements: category === 'interior' || category === 'entry' ? 'Mesures à ajouter' : undefined
@@ -2516,6 +2536,92 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
     
     const results = await searchPermitsDatabase(query);
     setSearchResults(results);
+  };
+
+  // =================== GESTION DES DANGERS ===================
+  const toggleAtmosphericHazard = (hazard: string) => {
+    setConfinedSpaceDetails(prev => {
+      const hazards = prev.atmosphericHazards.includes(hazard)
+        ? prev.atmosphericHazards.filter(h => h !== hazard)
+        : [...prev.atmosphericHazards, hazard];
+      
+      const updated = { ...prev, atmosphericHazards: hazards };
+      updatePermitData({ atmosphericHazards: hazards });
+      updateParentData('siteInformation', updated);
+      
+      return updated;
+    });
+  };
+
+  const togglePhysicalHazard = (hazard: string) => {
+    setConfinedSpaceDetails(prev => {
+      const hazards = prev.physicalHazards.includes(hazard)
+        ? prev.physicalHazards.filter(h => h !== hazard)
+        : [...prev.physicalHazards, hazard];
+      
+      const updated = { ...prev, physicalHazards: hazards };
+      updatePermitData({ physicalHazards: hazards });
+      updateParentData('siteInformation', updated);
+      
+      return updated;
+    });
+  };
+
+  // =================== GESTION DES POINTS D'ENTRÉE ===================
+  const addEntryPoint = () => {
+    const newEntryPoint = {
+      id: `entry-${Date.now()}`,
+      type: 'circular' as const,
+      dimensions: '',
+      location: '',
+      condition: 'good' as const,
+      accessibility: 'normal' as const,
+      photos: []
+    };
+
+    setConfinedSpaceDetails(prev => {
+      const updated = {
+        ...prev,
+        entryPoints: [...prev.entryPoints, newEntryPoint]
+      };
+      
+      updatePermitData({ entryPoints: updated.entryPoints });
+      updateParentData('siteInformation', updated);
+      
+      return updated;
+    });
+  };
+
+  const removeEntryPoint = (entryId: string) => {
+    setConfinedSpaceDetails(prev => {
+      if (prev.entryPoints.length <= 1) return prev; // Garder au moins un point d'entrée
+      
+      const updated = {
+        ...prev,
+        entryPoints: prev.entryPoints.filter(entry => entry.id !== entryId)
+      };
+      
+      updatePermitData({ entryPoints: updated.entryPoints });
+      updateParentData('siteInformation', updated);
+      
+      return updated;
+    });
+  };
+
+  const updateEntryPoint = (entryId: string, field: string, value: any) => {
+    setConfinedSpaceDetails(prev => {
+      const updated = {
+        ...prev,
+        entryPoints: prev.entryPoints.map(entry =>
+          entry.id === entryId ? { ...entry, [field]: value } : entry
+        )
+      };
+      
+      updatePermitData({ entryPoints: updated.entryPoints });
+      updateParentData('siteInformation', updated);
+      
+      return updated;
+    });
   };
   // =================== GESTION DES DANGERS AVEC VALIDATION ===================
   const toggleAtmosphericHazard = (hazardType: string) => {
