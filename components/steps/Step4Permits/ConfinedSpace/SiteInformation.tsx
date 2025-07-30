@@ -1176,12 +1176,12 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     return 'class3';
   };
 
-  // =================== FONCTIONS DE BASE DE DONNÉES SUPABASE (AVEC IMPORTS CORRIGÉS) ===================
+  // =================== FONCTIONS DE BASE DE DONNÉES SUPABASE (IMPORTS CORRIGÉS) ===================
   const searchPermitsDatabase = async (query: string, page: number = 1): Promise<PermitSearchResult> => {
     setIsSearching(true);
     try {
-      // ✅ IMPORT SUPABASE CORRIGÉ : components/steps/Step4Permits/ConfinedSpace/SiteInformation.tsx vers lib/supabase.ts
-      const { supabase } = await import('../../../lib/supabase');
+      // ✅ IMPORT SUPABASE CORRIGÉ : 4 niveaux vers le haut depuis components/steps/Step4Permits/ConfinedSpace/SiteInformation.tsx
+      const { supabase } = await import('../../../../lib/supabase');
       
       let queryBuilder = supabase
         .from('confined_space_permits')
@@ -1271,8 +1271,8 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   const savePermitToDatabase = async (): Promise<string | null> => {
     setIsSaving(true);
     try {
-      // ✅ IMPORT SUPABASE CORRIGÉ
-      const { supabase } = await import('../../../lib/supabase');
+      // ✅ IMPORT SUPABASE CORRIGÉ : 4 niveaux vers le haut
+      const { supabase } = await import('../../../../lib/supabase');
       
       const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
@@ -1353,8 +1353,8 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   // =================== GÉNÉRATION QR CODE AVEC LOGO ===================
   const generatePermitQRCode = async (permitNumber: string): Promise<string> => {
     try {
-      // ✅ IMPORT QR CODE CORRIGÉ : components/steps/Step4Permits/ConfinedSpace/SiteInformation.tsx vers app/utils/generateQRCode.ts
-      const { generateQRCode } = await import('../../../app/utils/generateQRCode');
+      // ✅ IMPORT QR CODE CORRIGÉ : 4 niveaux vers le haut vers app/utils/generateQRCode.ts
+      const { generateQRCode } = await import('../../../../app/utils/generateQRCode');
       
       const permitUrl = `${window.location.origin}/permits/confined-space/${permitNumber}`;
       
@@ -1384,8 +1384,8 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   // =================== CHARGEMENT D'UN PERMIS EXISTANT ===================
   const loadPermitFromHistory = async (permitNumber: string) => {
     try {
-      // ✅ IMPORT SUPABASE CORRIGÉ
-      const { supabase } = await import('../../../lib/supabase');
+      // ✅ IMPORT SUPABASE CORRIGÉ : 4 niveaux vers le haut
+      const { supabase } = await import('../../../../lib/supabase');
       
       const { data, error } = await supabase
         .from('confined_space_permits')
