@@ -1952,15 +1952,15 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                   </div>
                   <div class="regulation-item">
                     <span><strong>${language === 'fr' ? 'Règlement principal' : 'Main Regulation'}:</strong></span>
-                    <span>${currentClassification?.regulations?.main || 'Réglementation applicable'}</span>
+                    <span>${(currentClassification?.regulations as any)?.main || 'Réglementation applicable'}</span>
                   </div>
                   <div class="regulation-item">
                     <span><strong>${language === 'fr' ? 'Article spécifique' : 'Specific Article'}:</strong></span>
-                    <span>${currentClassification?.regulations?.specific || 'Articles applicables'}</span>
+                    <span>${(currentClassification?.regulations as any)?.specific || 'Articles applicables'}</span>
                   </div>
                   <div class="regulation-item">
                     <span><strong>${language === 'fr' ? 'Surveillance requise' : 'Monitoring Required'}:</strong></span>
-                    <span>${currentClassification?.monitoring || currentClassification?.regulations?.testing || 'Selon classification'}</span>
+                    <span>${currentClassification?.monitoring || (currentClassification?.regulations as any)?.testing || 'Selon classification'}</span>
                   </div>
                 </div>
               </div>
