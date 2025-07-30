@@ -2092,7 +2092,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
               <!-- Footer légal -->
               <div class="legal-footer">
                 <div class="footer-warning">
-                  ⚠️ ${language === 'fr' ? 'AVERTISSEMENT LÉGAL' : 'LEGAL WARNING'}: ${language === 'fr' ? 'Ce permis n\'est valide qu\'après validation complète de tous les éléments de sécurité et tests atmosphériques requis selon' : 'This permit is only valid after complete validation of all safety elements and atmospheric testing required by'} ${currentClassification?.regulations?.main || 'les réglementations applicables'}.
+                  ⚠️ ${language === 'fr' ? 'AVERTISSEMENT LÉGAL' : 'LEGAL WARNING'}: ${language === 'fr' ? 'Ce permis n\'est valide qu\'après validation complète de tous les éléments de sécurité et tests atmosphériques requis selon' : 'This permit is only valid after complete validation of all safety elements and atmospheric testing required by'} ${(currentClassification?.regulations as any)?.main || 'les réglementations applicables'}.
                 </div>
                 <div class="footer-info">
                   <strong>C-SECUR360</strong> - ${language === 'fr' ? 'Système de Gestion de Sécurité Industrielle' : 'Industrial Safety Management System'}
