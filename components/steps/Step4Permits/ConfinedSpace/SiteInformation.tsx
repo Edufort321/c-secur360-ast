@@ -978,14 +978,16 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
 
     // Intégrer les réglementations provinciales
     Object.keys(classifications).forEach(classKey => {
-      classifications[classKey].regulations = {
+      // ✅ CORRECTION TYPESCRIPT : Cast explicite du type
+      const classData = classifications[classKey as keyof typeof classifications];
+      classData.regulations = {
         authority: provinceRegs.authority,
         main: provinceRegs.mainRegulation,
         additional: provinceRegs.additionalRegs,
-        specific: provinceRegs[classKey].specific,
-        attendant: provinceRegs[classKey].attendant,
-        rescue: provinceRegs[classKey].rescue,
-        testing: provinceRegs[classKey].testing
+        specific: provinceRegs[classKey as keyof typeof provinceRegs].specific,
+        attendant: provinceRegs[classKey as keyof typeof provinceRegs].attendant,
+        rescue: provinceRegs[classKey as keyof typeof provinceRegs].rescue,
+        testing: provinceRegs[classKey as keyof typeof provinceRegs].testing
       };
     });
 
