@@ -1975,7 +1975,7 @@ Système C-SECUR360`;
         <div className="form-section full-width-section">
           <div className="section-header">
             <Settings className="section-icon" />
-            <h3 className="section-title">{t.permitActions}</h3>
+            <h3 className="section-title">Actions du Permis</h3>
           </div>
           
           <div className="four-column">
@@ -1983,7 +1983,7 @@ Système C-SECUR360`;
               onClick={async () => {
                 const report = await generateCompletePermitReport();
                 console.log('Rapport généré:', report);
-                alert(`${t.success} Rapport ${report.metadata.permitNumber} généré!`);
+                alert(`Succès! Rapport ${report.metadata.permitNumber} généré!`);
               }}
               disabled={isGeneratingReport}
               className="btn-primary"
@@ -1994,7 +1994,7 @@ Système C-SECUR360`;
               ) : (
                 <FileText size={20} />
               )}
-              <span style={{ fontSize: '12px' }}>{t.generateReport}</span>
+              <span style={{ fontSize: '12px' }}>Générer Rapport</span>
             </button>
 
             <button
@@ -2004,7 +2004,7 @@ Système C-SECUR360`;
               style={{ minHeight: '60px', flexDirection: 'column', gap: '4px' }}
             >
               <Printer size={20} />
-              <span style={{ fontSize: '12px' }}>{t.printPermit}</span>
+              <span style={{ fontSize: '12px' }}>Imprimer PDF</span>
             </button>
 
             <button
@@ -2014,7 +2014,7 @@ Système C-SECUR360`;
               style={{ minHeight: '60px', flexDirection: 'column', gap: '4px' }}
             >
               <Mail size={20} />
-              <span style={{ fontSize: '12px' }}>{t.emailPermit}</span>
+              <span style={{ fontSize: '12px' }}>Envoyer par Email</span>
             </button>
 
             <button
@@ -2023,7 +2023,7 @@ Système C-SECUR360`;
               style={{ minHeight: '60px', flexDirection: 'column', gap: '4px' }}
             >
               <Save size={20} />
-              <span style={{ fontSize: '12px' }}>{t.save}</span>
+              <span style={{ fontSize: '12px' }}>Sauvegarder</span>
             </button>
           </div>
         </div>
@@ -2034,13 +2034,13 @@ Système C-SECUR360`;
           <div className="form-section">
             <div className="section-header">
               <Building className="section-icon" />
-              <h3 className="section-title">{t.projectInfo}</h3>
+              <h3 className="section-title">Informations du Projet</h3>
             </div>
             
             <div className="form-field">
               <label className="field-label">
                 <Building style={{ width: '18px', height: '18px' }} />
-                {t.projectNumber}<span className="required-indicator">*</span>
+                Numéro de projet<span className="required-indicator">*</span>
               </label>
               <input 
                 type="text" 
@@ -2054,7 +2054,7 @@ Système C-SECUR360`;
             <div className="form-field">
               <label className="field-label">
                 <MapPin style={{ width: '18px', height: '18px' }} />
-                {t.workLocation}<span className="required-indicator">*</span>
+                Lieu des travaux<span className="required-indicator">*</span>
               </label>
               <input 
                 type="text" 
@@ -2068,7 +2068,7 @@ Système C-SECUR360`;
             <div className="form-field">
               <label className="field-label">
                 <User style={{ width: '18px', height: '18px' }} />
-                {t.contractor}<span className="required-indicator">*</span>
+                Entrepreneur<span className="required-indicator">*</span>
               </label>
               <input 
                 type="text" 
@@ -2082,7 +2082,7 @@ Système C-SECUR360`;
             <div className="form-field">
               <label className="field-label">
                 <User style={{ width: '18px', height: '18px' }} />
-                {t.supervisor}<span className="required-indicator">*</span>
+                Superviseur<span className="required-indicator">*</span>
               </label>
               <input 
                 type="text" 
@@ -2104,7 +2104,7 @@ Système C-SECUR360`;
             <div className="form-field">
               <label className="field-label">
                 <Calendar style={{ width: '18px', height: '18px' }} />
-                {t.entryDate}<span className="required-indicator">*</span>
+                Date d'entrée prévue<span className="required-indicator">*</span>
               </label>
               <input 
                 type="datetime-local" 
@@ -2117,7 +2117,7 @@ Système C-SECUR360`;
             <div className="form-field">
               <label className="field-label">
                 <Clock style={{ width: '18px', height: '18px' }} />
-                {t.duration}
+                Durée estimée
               </label>
               <input 
                 type="text" 
@@ -2131,7 +2131,7 @@ Système C-SECUR360`;
             <div className="form-field">
               <label className="field-label">
                 <Users style={{ width: '18px', height: '18px' }} />
-                {t.workerCount}
+                Nombre de travailleurs
               </label>
               <input 
                 type="number" 
@@ -2145,7 +2145,7 @@ Système C-SECUR360`;
             <div className="form-field">
               <label className="field-label">
                 <FileText style={{ width: '18px', height: '18px' }} />
-                {t.workDescription}
+                Description des travaux
               </label>
               <textarea 
                 className="premium-textarea" 
@@ -2162,24 +2162,70 @@ Système C-SECUR360`;
         <div className="form-section confined-space-section">
           <div className="section-header">
             <Home className="section-icon confined-space-icon" />
-            <h3 className="section-title">{t.spaceIdentification}</h3>
+            <h3 className="section-title">Identification de l'Espace Clos</h3>
           </div>
 
           <div className="form-field">
             <label className="field-label">
-              {t.spaceType}<span className="required-indicator">*</span>
+              Type d'espace<span className="required-indicator">*</span>
             </label>
             <div className="space-type-selector">
-              {Object.entries(t.spaceTypes).map(([key, value]) => (
-                <div
-                  key={key}
-                  className={`space-type-option ${confinedSpaceDetails.spaceType === key ? 'selected' : ''}`}
-                  onClick={() => handleConfinedSpaceChange('spaceType', key)}
-                >
-                  <div className="space-emoji">{value.split(' ')[0]}</div>
-                  <div className="space-name">{value.substring(2)}</div>
-                </div>
-              ))}
+              <div
+                className={`space-type-option ${confinedSpaceDetails.spaceType === 'tank' ? 'selected' : ''}`}
+                onClick={() => handleConfinedSpaceChange('spaceType', 'tank')}
+              >
+                <div className="space-emoji">🏗️</div>
+                <div className="space-name">Réservoir</div>
+              </div>
+              <div
+                className={`space-type-option ${confinedSpaceDetails.spaceType === 'vessel' ? 'selected' : ''}`}
+                onClick={() => handleConfinedSpaceChange('spaceType', 'vessel')}
+              >
+                <div className="space-emoji">⚗️</div>
+                <div className="space-name">Cuve/Récipient</div>
+              </div>
+              <div
+                className={`space-type-option ${confinedSpaceDetails.spaceType === 'silo' ? 'selected' : ''}`}
+                onClick={() => handleConfinedSpaceChange('spaceType', 'silo')}
+              >
+                <div className="space-emoji">🌾</div>
+                <div className="space-name">Silo</div>
+              </div>
+              <div
+                className={`space-type-option ${confinedSpaceDetails.spaceType === 'pit' ? 'selected' : ''}`}
+                onClick={() => handleConfinedSpaceChange('spaceType', 'pit')}
+              >
+                <div className="space-emoji">🕳️</div>
+                <div className="space-name">Fosse</div>
+              </div>
+              <div
+                className={`space-type-option ${confinedSpaceDetails.spaceType === 'vault' ? 'selected' : ''}`}
+                onClick={() => handleConfinedSpaceChange('spaceType', 'vault')}
+              >
+                <div className="space-emoji">🏛️</div>
+                <div className="space-name">Voûte</div>
+              </div>
+              <div
+                className={`space-type-option ${confinedSpaceDetails.spaceType === 'tunnel' ? 'selected' : ''}`}
+                onClick={() => handleConfinedSpaceChange('spaceType', 'tunnel')}
+              >
+                <div className="space-emoji">🚇</div>
+                <div className="space-name">Tunnel</div>
+              </div>
+              <div
+                className={`space-type-option ${confinedSpaceDetails.spaceType === 'manhole' ? 'selected' : ''}`}
+                onClick={() => handleConfinedSpaceChange('spaceType', 'manhole')}
+              >
+                <div className="space-emoji">🔧</div>
+                <div className="space-name">Regard d'égout</div>
+              </div>
+              <div
+                className={`space-type-option ${confinedSpaceDetails.spaceType === 'other' ? 'selected' : ''}`}
+                onClick={() => handleConfinedSpaceChange('spaceType', 'other')}
+              >
+                <div className="space-emoji">❓</div>
+                <div className="space-name">Autre</div>
+              </div>
             </div>
           </div>
 
@@ -2187,31 +2233,31 @@ Système C-SECUR360`;
             <div className="form-field">
               <label className="field-label">
                 <Shield style={{ width: '18px', height: '18px' }} />
-                {t.csaClass}<span className="required-indicator">*</span>
+                Classification CSA<span className="required-indicator">*</span>
               </label>
               <select
                 className="premium-select"
                 value={confinedSpaceDetails.csaClass}
                 onChange={(e) => handleConfinedSpaceChange('csaClass', e.target.value)}
               >
-                <option value="">{t.select}</option>
-                {Object.entries(t.csaClasses).map(([key, value]) => (
-                  <option key={key} value={key}>{value}</option>
-                ))}
+                <option value="">Sélectionner</option>
+                <option value="class1">Classe 1 - Danger immédiat pour la vie</option>
+                <option value="class2">Classe 2 - Risque potentiel</option>
+                <option value="class3">Classe 3 - Risque minimal</option>
               </select>
             </div>
 
             <div className="form-field">
               <label className="field-label">
                 <ArrowRight style={{ width: '18px', height: '18px' }} />
-                {t.entryMethod}
+                Méthode d'entrée
               </label>
               <select
                 className="premium-select"
                 value={confinedSpaceDetails.entryMethod}
                 onChange={(e) => handleConfinedSpaceChange('entryMethod', e.target.value)}
               >
-                <option value="">{t.select}</option>
+                <option value="">Sélectionner</option>
                 <option value="top">Entrée par le dessus</option>
                 <option value="side">Entrée latérale</option>
                 <option value="bottom">Entrée par le dessous</option>
@@ -2222,14 +2268,14 @@ Système C-SECUR360`;
             <div className="form-field">
               <label className="field-label">
                 <Layers style={{ width: '18px', height: '18px' }} />
-                {t.accessType}
+                Type d'accès
               </label>
               <select
                 className="premium-select"
                 value={confinedSpaceDetails.accessType}
                 onChange={(e) => handleConfinedSpaceChange('accessType', e.target.value)}
               >
-                <option value="">{t.select}</option>
+                <option value="">Sélectionner</option>
                 <option value="ladder">Échelle</option>
                 <option value="stairs">Escalier</option>
                 <option value="rope">Corde</option>
@@ -2243,7 +2289,7 @@ Système C-SECUR360`;
             <div className="form-field">
               <label className="field-label">
                 <MapPin style={{ width: '18px', height: '18px' }} />
-                {t.spaceLocation}
+                Localisation de l'espace
               </label>
               <input 
                 type="text" 
@@ -2257,7 +2303,7 @@ Système C-SECUR360`;
             <div className="form-field">
               <label className="field-label">
                 <FileText style={{ width: '18px', height: '18px' }} />
-                {t.spaceDescription}
+                Description de l'espace
               </label>
               <textarea 
                 className="premium-textarea" 
@@ -2274,13 +2320,13 @@ Système C-SECUR360`;
         <div className="form-section full-width-section">
           <div className="section-header">
             <Ruler className="section-icon" />
-            <h3 className="section-title">{t.spaceDimensions}</h3>
+            <h3 className="section-title">Dimensions et Volume</h3>
           </div>
 
           <div className="volume-calculator">
             <div className="four-column">
               <div className="form-field">
-                <label className="field-label">{t.length}</label>
+                <label className="field-label">Longueur (m)</label>
                 <input
                   type="number"
                   step="0.1"
@@ -2295,7 +2341,7 @@ Système C-SECUR360`;
               </div>
 
               <div className="form-field">
-                <label className="field-label">{t.width}</label>
+                <label className="field-label">Largeur (m)</label>
                 <input
                   type="number"
                   step="0.1"
@@ -2310,7 +2356,7 @@ Système C-SECUR360`;
               </div>
 
               <div className="form-field">
-                <label className="field-label">{t.height}</label>
+                <label className="field-label">Hauteur (m)</label>
                 <input
                   type="number"
                   step="0.1"
@@ -2325,7 +2371,7 @@ Système C-SECUR360`;
               </div>
 
               <div className="form-field">
-                <label className="field-label">{t.diameter}</label>
+                <label className="field-label">Diamètre (m)</label>
                 <input
                   type="number"
                   step="0.1"
@@ -2343,7 +2389,7 @@ Système C-SECUR360`;
             <div style={{ textAlign: 'center', marginTop: '16px' }}>
               <button className="btn-success" onClick={calculateVolume}>
                 <Gauge size={20} />
-                {t.calculateVolume}
+                Calculer le Volume
               </button>
             </div>
 
@@ -2353,7 +2399,7 @@ Système C-SECUR360`;
                   {confinedSpaceDetails.dimensions.volume}
                 </div>
                 <div className="volume-unit">
-                  {t.volumeUnit} - {t.volume}
+                  m³ - Volume calculé
                 </div>
               </div>
             )}
@@ -2364,24 +2410,24 @@ Système C-SECUR360`;
         <div className="form-section full-width-section">
           <div className="section-header">
             <Camera className="section-icon" />
-            <h3 className="section-title">{t.photoDocumentation}</h3>
+            <h3 className="section-title">Documentation Photographique</h3>
           </div>
 
           <div className="photo-capture-buttons">
             <button className="photo-capture-btn" onClick={() => handlePhotoCapture('spaceExterior')}>
-              <Camera size={14} />{t.spaceExterior}
+              <Camera size={14} />Extérieur de l'espace
             </button>
             <button className="photo-capture-btn" onClick={() => handlePhotoCapture('spaceInterior')}>
-              <Camera size={14} />{t.spaceInterior}
+              <Camera size={14} />Intérieur de l'espace
             </button>
             <button className="photo-capture-btn" onClick={() => handlePhotoCapture('entryPointPhoto')}>
-              <Camera size={14} />{t.entryPointPhoto}
+              <Camera size={14} />Points d'entrée
             </button>
             <button className="photo-capture-btn" onClick={() => handlePhotoCapture('hazardIdentification')}>
-              <AlertTriangle size={14} />{t.hazardIdentification}
+              <AlertTriangle size={14} />Identification des dangers
             </button>
             <button className="photo-capture-btn" onClick={() => handlePhotoCapture('safetyEquipment')}>
-              <Shield size={14} />{t.safetyEquipment}
+              <Shield size={14} />Équipement de sécurité
             </button>
           </div>
 
