@@ -2448,32 +2448,92 @@ Système C-SECUR360`;
         <div className="form-section hazard-section">
           <div className="section-header">
             <AlertTriangle className="section-icon hazard-icon" />
-            <h3 className="section-title">{t.hazardAssessment}</h3>
+            <h3 className="section-title">Évaluation des Dangers</h3>
           </div>
           
           <div className="field-help" style={{ marginBottom: '24px' }}>
-            {t.selectHazards}
+            Sélectionnez tous les dangers présents ou potentiels
           </div>
 
           {/* Dangers Atmosphériques */}
           <div className="form-field">
             <label className="field-label">
               <Wind style={{ width: '18px', height: '18px', color: '#f59e0b' }} />
-              {t.atmosphericHazards}
+              Dangers Atmosphériques
             </label>
             <div className="hazard-selector">
-              {Object.entries(t.atmosphericHazardTypes).map(([key, value]) => (
-                <div
-                  key={key}
-                  className={`hazard-item ${confinedSpaceDetails.atmosphericHazards.includes(key) ? 'selected' : ''}`}
-                  onClick={() => toggleAtmosphericHazard(key)}
-                >
-                  <div className={`hazard-checkbox ${confinedSpaceDetails.atmosphericHazards.includes(key) ? 'checked' : ''}`}>
-                    {confinedSpaceDetails.atmosphericHazards.includes(key) && <Check size={12} />}
-                  </div>
-                  <div className="hazard-text">🌪️ {value}</div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.atmosphericHazards.includes('oxygen_deficiency') ? 'selected' : ''}`}
+                onClick={() => toggleAtmosphericHazard('oxygen_deficiency')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.atmosphericHazards.includes('oxygen_deficiency') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.atmosphericHazards.includes('oxygen_deficiency') && <Check size={12} />}
                 </div>
-              ))}
+                <div className="hazard-text">🌪️ Déficience en oxygène (&lt;19.5%)</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.atmosphericHazards.includes('oxygen_enrichment') ? 'selected' : ''}`}
+                onClick={() => toggleAtmosphericHazard('oxygen_enrichment')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.atmosphericHazards.includes('oxygen_enrichment') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.atmosphericHazards.includes('oxygen_enrichment') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">🌪️ Enrichissement en oxygène (&gt;23%)</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.atmosphericHazards.includes('flammable_gases') ? 'selected' : ''}`}
+                onClick={() => toggleAtmosphericHazard('flammable_gases')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.atmosphericHazards.includes('flammable_gases') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.atmosphericHazards.includes('flammable_gases') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">🌪️ Gaz inflammables/combustibles</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.atmosphericHazards.includes('toxic_gases') ? 'selected' : ''}`}
+                onClick={() => toggleAtmosphericHazard('toxic_gases')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.atmosphericHazards.includes('toxic_gases') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.atmosphericHazards.includes('toxic_gases') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">🌪️ Gaz toxiques</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.atmosphericHazards.includes('hydrogen_sulfide') ? 'selected' : ''}`}
+                onClick={() => toggleAtmosphericHazard('hydrogen_sulfide')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.atmosphericHazards.includes('hydrogen_sulfide') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.atmosphericHazards.includes('hydrogen_sulfide') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">🌪️ Sulfure d'hydrogène (H2S)</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.atmosphericHazards.includes('carbon_monoxide') ? 'selected' : ''}`}
+                onClick={() => toggleAtmosphericHazard('carbon_monoxide')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.atmosphericHazards.includes('carbon_monoxide') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.atmosphericHazards.includes('carbon_monoxide') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">🌪️ Monoxyde de carbone (CO)</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.atmosphericHazards.includes('carbon_dioxide') ? 'selected' : ''}`}
+                onClick={() => toggleAtmosphericHazard('carbon_dioxide')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.atmosphericHazards.includes('carbon_dioxide') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.atmosphericHazards.includes('carbon_dioxide') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">🌪️ Dioxyde de carbone (CO2)</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.atmosphericHazards.includes('methane') ? 'selected' : ''}`}
+                onClick={() => toggleAtmosphericHazard('methane')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.atmosphericHazards.includes('methane') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.atmosphericHazards.includes('methane') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">🌪️ Méthane (CH4)</div>
+              </div>
             </div>
           </div>
 
@@ -2481,21 +2541,81 @@ Système C-SECUR360`;
           <div className="form-field">
             <label className="field-label">
               <Zap style={{ width: '18px', height: '18px', color: '#ef4444' }} />
-              {t.physicalHazards}
+              Dangers Physiques
             </label>
             <div className="hazard-selector">
-              {Object.entries(t.physicalHazardTypes).map(([key, value]) => (
-                <div
-                  key={key}
-                  className={`hazard-item ${confinedSpaceDetails.physicalHazards.includes(key) ? 'selected' : ''}`}
-                  onClick={() => togglePhysicalHazard(key)}
-                >
-                  <div className={`hazard-checkbox ${confinedSpaceDetails.physicalHazards.includes(key) ? 'checked' : ''}`}>
-                    {confinedSpaceDetails.physicalHazards.includes(key) && <Check size={12} />}
-                  </div>
-                  <div className="hazard-text">⚡ {value}</div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.physicalHazards.includes('engulfment') ? 'selected' : ''}`}
+                onClick={() => togglePhysicalHazard('engulfment')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.physicalHazards.includes('engulfment') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.physicalHazards.includes('engulfment') && <Check size={12} />}
                 </div>
-              ))}
+                <div className="hazard-text">⚡ Ensevelissement/Engloutissement</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.physicalHazards.includes('crushing') ? 'selected' : ''}`}
+                onClick={() => togglePhysicalHazard('crushing')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.physicalHazards.includes('crushing') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.physicalHazards.includes('crushing') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">⚡ Écrasement par équipement</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.physicalHazards.includes('electrical') ? 'selected' : ''}`}
+                onClick={() => togglePhysicalHazard('electrical')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.physicalHazards.includes('electrical') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.physicalHazards.includes('electrical') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">⚡ Dangers électriques</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.physicalHazards.includes('mechanical') ? 'selected' : ''}`}
+                onClick={() => togglePhysicalHazard('mechanical')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.physicalHazards.includes('mechanical') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.physicalHazards.includes('mechanical') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">⚡ Dangers mécaniques</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.physicalHazards.includes('falls') ? 'selected' : ''}`}
+                onClick={() => togglePhysicalHazard('falls')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.physicalHazards.includes('falls') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.physicalHazards.includes('falls') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">⚡ Chutes de hauteur</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.physicalHazards.includes('temperature_extreme') ? 'selected' : ''}`}
+                onClick={() => togglePhysicalHazard('temperature_extreme')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.physicalHazards.includes('temperature_extreme') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.physicalHazards.includes('temperature_extreme') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">⚡ Températures extrêmes</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.physicalHazards.includes('noise') ? 'selected' : ''}`}
+                onClick={() => togglePhysicalHazard('noise')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.physicalHazards.includes('noise') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.physicalHazards.includes('noise') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">⚡ Bruit excessif</div>
+              </div>
+              <div
+                className={`hazard-item ${confinedSpaceDetails.physicalHazards.includes('structural_collapse') ? 'selected' : ''}`}
+                onClick={() => togglePhysicalHazard('structural_collapse')}
+              >
+                <div className={`hazard-checkbox ${confinedSpaceDetails.physicalHazards.includes('structural_collapse') ? 'checked' : ''}`}>
+                  {confinedSpaceDetails.physicalHazards.includes('structural_collapse') && <Check size={12} />}
+                </div>
+                <div className="hazard-text">⚡ Effondrement structural</div>
+              </div>
             </div>
           </div>
 
@@ -2527,7 +2647,7 @@ Système C-SECUR360`;
         <div className="form-section full-width-section">
           <div className="section-header">
             <Home className="section-icon" />
-            <h3 className="section-title">{t.entryPoints}</h3>
+            <h3 className="section-title">Points d'Entrée et Accès</h3>
           </div>
 
           {/* Liste des points d'entrée */}
@@ -2535,7 +2655,7 @@ Système C-SECUR360`;
             <div key={entry.id} className="entry-point">
               <div className="entry-point-header">
                 <h4 style={{ color: '#a78bfa', margin: 0, fontSize: '16px', fontWeight: '600' }}>
-                  🚪 {t.entryPoint}{index + 1}
+                  🚪 Point d'entrée {index + 1}
                 </h4>
                 {confinedSpaceDetails.entryPoints.length > 1 && (
                   <button 
@@ -2544,7 +2664,7 @@ Système C-SECUR360`;
                     type="button"
                   >
                     <Trash2 size={14} />
-                    {t.remove}
+                    Supprimer
                   </button>
                 )}
               </div>
@@ -2553,7 +2673,7 @@ Système C-SECUR360`;
                 <div className="form-field">
                   <label className="field-label">
                     <Settings style={{ width: '18px', height: '18px' }} />
-                    {t.entryType}
+                    Type d'entrée
                   </label>
                   <select
                     className="premium-select"
@@ -2571,7 +2691,7 @@ Système C-SECUR360`;
                 <div className="form-field">
                   <label className="field-label">
                     <Ruler style={{ width: '18px', height: '18px' }} />
-                    {t.entryDimensions}
+                    Dimensions
                   </label>
                   <input 
                     type="text" 
@@ -2585,7 +2705,7 @@ Système C-SECUR360`;
                 <div className="form-field">
                   <label className="field-label">
                     <MapPin style={{ width: '18px', height: '18px' }} />
-                    {t.entryLocation}
+                    Localisation
                   </label>
                   <input 
                     type="text" 
@@ -2601,7 +2721,7 @@ Système C-SECUR360`;
                 <div className="form-field">
                   <label className="field-label">
                     <Eye style={{ width: '18px', height: '18px' }} />
-                    {t.entryCondition}
+                    État
                   </label>
                   <select
                     className="premium-select"
@@ -2619,7 +2739,7 @@ Système C-SECUR360`;
                 <div className="form-field">
                   <label className="field-label">
                     <Users style={{ width: '18px', height: '18px' }} />
-                    {t.entryAccessibility}
+                    Accessibilité
                   </label>
                   <select
                     className="premium-select"
@@ -2639,7 +2759,7 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Camera style={{ width: '18px', height: '18px' }} />
-                  {t.entryPhotos}
+                  Photos
                 </label>
                 
                 <div className="photo-capture-buttons">
@@ -2673,7 +2793,7 @@ Système C-SECUR360`;
           <div style={{ marginTop: confinedSpaceDetails.entryPoints.length > 0 ? '24px' : '0' }}>
             <button className="btn-primary" onClick={addEntryPoint}>
               <Plus size={20} />
-              {t.addEntryPoint}
+              Ajouter un point d'entrée
             </button>
           </div>
         </div>
@@ -2682,7 +2802,7 @@ Système C-SECUR360`;
         <div className="form-section full-width-section">
           <div className="section-header">
             <Thermometer className="section-icon" />
-            <h3 className="section-title">{t.environmentalConditions}</h3>
+            <h3 className="section-title">Conditions Environnementales</h3>
           </div>
 
           <div className="premium-grid">
@@ -2690,15 +2810,15 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Wind style={{ width: '18px', height: '18px' }} />
-                  {t.ventilationRequired}
+                  Ventilation requise
                 </label>
                 <select
                   className="premium-select"
                   value={confinedSpaceDetails.environmentalConditions.ventilationRequired ? 'yes' : 'no'}
                   onChange={(e) => handleEnvironmentalChange('ventilationRequired', e.target.value === 'yes')}
                 >
-                  <option value="no">{t.no}</option>
-                  <option value="yes">{t.yes}</option>
+                  <option value="no">Non</option>
+                  <option value="yes">Oui</option>
                 </select>
               </div>
 
@@ -2706,14 +2826,14 @@ Système C-SECUR360`;
                 <div className="form-field">
                   <label className="field-label">
                     <Wind style={{ width: '18px', height: '18px' }} />
-                    {t.ventilationType}
+                    Type de ventilation
                   </label>
                   <select
                     className="premium-select"
                     value={confinedSpaceDetails.environmentalConditions.ventilationType}
                     onChange={(e) => handleEnvironmentalChange('ventilationType', e.target.value)}
                   >
-                    <option value="">{t.select}</option>
+                    <option value="">Sélectionner</option>
                     <option value="natural">💨 Ventilation naturelle</option>
                     <option value="forced_supply">🌪️ Ventilation forcée - apport</option>
                     <option value="forced_exhaust">💨 Ventilation forcée - extraction</option>
@@ -2725,14 +2845,14 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Eye style={{ width: '18px', height: '18px' }} />
-                  {t.lightingConditions}
+                  Conditions d'éclairage
                 </label>
                 <select
                   className="premium-select"
                   value={confinedSpaceDetails.environmentalConditions.lightingConditions}
                   onChange={(e) => handleEnvironmentalChange('lightingConditions', e.target.value)}
                 >
-                  <option value="">{t.select}</option>
+                  <option value="">Sélectionner</option>
                   <option value="excellent">☀️ Excellent</option>
                   <option value="good">💡 Bon</option>
                   <option value="poor">🔦 Faible</option>
@@ -2745,14 +2865,14 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Thermometer style={{ width: '18px', height: '18px' }} />
-                  {t.temperatureRange}
+                  Plage de température
                 </label>
                 <select
                   className="premium-select"
                   value={confinedSpaceDetails.environmentalConditions.temperatureRange}
                   onChange={(e) => handleEnvironmentalChange('temperatureRange', e.target.value)}
                 >
-                  <option value="">{t.select}</option>
+                  <option value="">Sélectionner</option>
                   <option value="very_cold">🥶 Très froid (&lt; 0°C)</option>
                   <option value="cold">❄️ Froid (0-10°C)</option>
                   <option value="cool">🌡️ Frais (10-15°C)</option>
@@ -2765,14 +2885,14 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Droplets style={{ width: '18px', height: '18px' }} />
-                  {t.moistureLevel}
+                  Niveau d'humidité
                 </label>
                 <select
                   className="premium-select"
                   value={confinedSpaceDetails.environmentalConditions.moistureLevel}
                   onChange={(e) => handleEnvironmentalChange('moistureLevel', e.target.value)}
                 >
-                  <option value="">{t.select}</option>
+                  <option value="">Sélectionner</option>
                   <option value="dry">🏜️ Sec (&lt; 30%)</option>
                   <option value="normal">🌤️ Normal (30-60%)</option>
                   <option value="humid">💧 Humide (60-80%)</option>
@@ -2784,14 +2904,14 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Activity style={{ width: '18px', height: '18px' }} />
-                  {t.noiseLevel}
+                  Niveau de bruit
                 </label>
                 <select
                   className="premium-select"
                   value={confinedSpaceDetails.environmentalConditions.noiseLevel}
                   onChange={(e) => handleEnvironmentalChange('noiseLevel', e.target.value)}
                 >
-                  <option value="">{t.select}</option>
+                  <option value="">Sélectionner</option>
                   <option value="quiet">🔇 Silencieux (&lt; 50 dB)</option>
                   <option value="normal">🔉 Normal (50-80 dB)</option>
                   <option value="loud">🔊 Bruyant (80-100 dB)</option>
@@ -2804,7 +2924,7 @@ Système C-SECUR360`;
           <div className="form-field">
             <label className="field-label">
               <Wind style={{ width: '18px', height: '18px' }} />
-              {t.weatherConditions}
+              Conditions météorologiques
             </label>
             <input 
               type="text" 
@@ -2820,7 +2940,7 @@ Système C-SECUR360`;
         <div className="form-section full-width-section">
           <div className="section-header">
             <Layers className="section-icon" />
-            <h3 className="section-title">{t.spaceContent}</h3>
+            <h3 className="section-title">Contenu et Historique de l'Espace</h3>
           </div>
 
           <div className="premium-grid">
@@ -2828,7 +2948,7 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Eye style={{ width: '18px', height: '18px' }} />
-                  {t.contents}
+                  Contenu actuel
                 </label>
                 <textarea 
                   className="premium-textarea" 
@@ -2842,7 +2962,7 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <AlertTriangle style={{ width: '18px', height: '18px' }} />
-                  {t.residues}
+                  Résidus/Substances
                 </label>
                 <textarea 
                   className="premium-textarea" 
@@ -2856,7 +2976,7 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Clock style={{ width: '18px', height: '18px' }} />
-                  {t.previousUse}
+                  Usage antérieur
                 </label>
                 <input 
                   type="text" 
@@ -2872,7 +2992,7 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Calendar style={{ width: '18px', height: '18px' }} />
-                  {t.lastEntry}
+                  Dernière entrée
                 </label>
                 <input 
                   type="date" 
@@ -2885,14 +3005,14 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Wrench style={{ width: '18px', height: '18px' }} />
-                  {t.cleaningStatus}
+                  État de nettoyage
                 </label>
                 <select
                   className="premium-select"
                   value={confinedSpaceDetails.spaceContent.cleaningStatus}
                   onChange={(e) => handleContentChange('cleaningStatus', e.target.value)}
                 >
-                  <option value="">{t.select}</option>
+                  <option value="">Sélectionner</option>
                   <option value="clean">✅ Nettoyé et décontaminé</option>
                   <option value="partially_clean">⚠️ Partiellement nettoyé</option>
                   <option value="dirty">❌ Non nettoyé</option>
@@ -2908,7 +3028,7 @@ Système C-SECUR360`;
         <div className="form-section safety-section">
           <div className="section-header">
             <Shield className="section-icon safety-icon" />
-            <h3 className="section-title">{t.safetyMeasures}</h3>
+            <h3 className="section-title">Mesures de Sécurité</h3>
           </div>
 
           <div className="premium-grid">
@@ -2916,7 +3036,7 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <ArrowRight style={{ width: '18px', height: '18px' }} />
-                  {t.emergencyEgress}
+                  Plan de sortie d'urgence
                 </label>
                 <textarea 
                   className="premium-textarea" 
@@ -2930,14 +3050,14 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Phone style={{ width: '18px', height: '18px' }} />
-                  {t.communicationMethod}
+                  Méthode de communication
                 </label>
                 <select
                   className="premium-select"
                   value={confinedSpaceDetails.safetyMeasures.communicationMethod}
                   onChange={(e) => handleSafetyChange('communicationMethod', e.target.value)}
                 >
-                  <option value="">{t.select}</option>
+                  <option value="">Sélectionner</option>
                   <option value="radio">📻 Radio bidirectionnelle</option>
                   <option value="intercom">📞 Intercom</option>
                   <option value="hand_signals">👋 Signaux manuels</option>
@@ -2951,7 +3071,7 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Gauge style={{ width: '18px', height: '18px' }} />
-                  {t.monitoringEquipment}
+                  Équipement de surveillance
                 </label>
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {[
@@ -3012,7 +3132,7 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Wind style={{ width: '18px', height: '18px' }} />
-                  {t.ventilationEquipment}
+                  Équipement de ventilation
                 </label>
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {[
@@ -3070,7 +3190,7 @@ Système C-SECUR360`;
               <div className="form-field">
                 <label className="field-label">
                   <Shield style={{ width: '18px', height: '18px' }} />
-                  {t.emergencyEquipment}
+                  Équipement d'urgence
                 </label>
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {[
