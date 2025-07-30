@@ -640,14 +640,12 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   const t = getTranslations(language);
   // =================== FONCTIONS DE RECHERCHE ET BASE DE DONNÉES ===================
 
-  // =================== FONCTIONS DE RECHERCHE ET BASE DE DONNÉES ===================
-
   // Recherche dans la base de données des permis
   const searchPermitsDatabase = async (query: string, page: number = 1): Promise<PermitSearchResult> => {
     setIsSearching(true);
     try {
       // Import dynamique du client Supabase
-      const { supabase } = await import('../../../lib/supabase');
+      const { supabase } = await import('../../../../lib/supabase');
       
       let queryBuilder = supabase
         .from('confined_space_permits')
@@ -760,7 +758,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   // Charger un permis existant depuis l'historique
   const loadPermitFromHistory = async (permitNumber: string) => {
     try {
-      const { supabase } = await import('../../../lib/supabase');
+      const { supabase } = await import('../../../../lib/supabase');
       
       const { data, error } = await supabase
         .from('confined_space_permits')
@@ -839,7 +837,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   // Sauvegarder le permis actuel dans la base de données
   const savePermitToDatabase = async () => {
     try {
-      const { supabase } = await import('../../../lib/supabase');
+      const { supabase } = await import('../../../../lib/supabase');
       
       const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
@@ -892,6 +890,15 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       
       alert(`✅ Permis ${permitNumber} sauvegardé avec succès!\n\n📊 Données: ${JSON.stringify(permitToSave, null, 2).length} caractères\n🔗 QR Code: ${qrCodeDataUrl ? 'Généré' : 'Erreur'}\n📅 ${new Date().toLocaleString('fr-CA')}`);
       
+      return permitNumber;
+      
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('❌ Erreur lors de la sauvegarde. Vérifiez votre connexion.');
+      return null;
+    }
+  };
+
   // Traitement des données QR scannées
   const handleQRScan = async (qrData: string) => {
     try {
@@ -1530,7 +1537,7 @@ Système C-SECUR360`;
     alert('Informations du site sauvegardées avec succès!');
     return true;
   };
-     // =================== CARROUSEL PHOTOS IDENTIQUE AU STEP 1 ===================
+  // =================== CARROUSEL PHOTOS IDENTIQUE AU STEP 1 ===================
   const PhotoCarousel = ({ photos, onAddPhoto, category }: {
     photos: SpacePhoto[];
     onAddPhoto: () => void;
@@ -2681,7 +2688,6 @@ Système C-SECUR360`;
             </button>
           </div>
         </div>
-
         {/* Grille Premium des Sections */}
         <div className="premium-grid">
           {/* Section Informations du Projet */}
@@ -3725,7 +3731,6 @@ Système C-SECUR360`;
             </div>
           </div>
         </div>
-
         {/* Section Mesures de Sécurité */}
         <div className="form-section safety-section">
           <div className="section-header">
