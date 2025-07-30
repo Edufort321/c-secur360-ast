@@ -570,7 +570,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   updateParentData
 }) => {
 
-  // =================== ÉTATS LOCAUX AVEC PRÉVENTION DU SCROLL ===================
+  // =================== ÉTATS LOCAUX ISOLÉS - AUCUN useEffect PARASITE ===================
   const [confinedSpaceDetails, setConfinedSpaceDetails] = useState<ConfinedSpaceDetails>({
     // Informations principales
     projectNumber: permitData.projectNumber || '',
@@ -649,7 +649,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     spacePhotos: permitData.spacePhotos || []
   });
 
-  // États pour l'interface utilisateur
+  // États pour l'interface utilisateur - PAS de useEffect qui re-render
   const [spacePhotos, setSpacePhotos] = useState<SpacePhoto[]>(permitData.spacePhotos || []);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -666,16 +666,16 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     hasMore: false
   });
 
-  // Réfs - suppression des refs inutiles
+  // Réfs - seulement pour nécessaire
   const photoInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Traductions
   const t = translations[language];
 
-  // =================== HANDLERS DE DONNÉES COMPLÈTEMENT ISOLÉS ===================
+  // =================== HANDLERS ULTRA-SIMPLES - AUCUN EFFET DE BORD ===================
   const handleConfinedSpaceChange = useCallback((field: string, value: any) => {
-    // SEULEMENT mise à jour de l'état local - AUCUNE communication avec le parent
+    // SEULEMENT mise à jour de l'état local - JAMAIS de communication avec le parent
     setConfinedSpaceDetails(prev => ({ ...prev, [field]: value }));
   }, []);
 
@@ -709,23 +709,9 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     }));
   }, []);
 
-  // =================== SYNCHRONISATION UNIQUEMENT À LA SAUVEGARDE ===================
-  const syncWithParent = useCallback(() => {
-    // Synchroniser SEULEMENT quand on sauvegarde
-    updatePermitData({
-      ...confinedSpaceDetails,
-      spacePhotos
-    });
-    updateParentData('siteInformation', {
-      ...confinedSpaceDetails,
-      spacePhotos
-    });
-  }, [confinedSpaceDetails, spacePhotos, updatePermitData, updateParentData]);
-
-  // =================== GÉNÉRATION QR CODE AVEC LOGO RÉEL ===================
+  // =================== GÉNÉRATION QR CODE ===================
   const generatePermitQRCode = async (permitNumber: string): Promise<string> => {
     try {
-      // Import dynamique pour éviter les erreurs SSR
       const QRCode = (await import('qrcode')).default;
       
       const permitUrl = `${window.location.origin}/permits/confined-space/${permitNumber}`;
@@ -746,7 +732,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         logo: '/c-secur360-logo.png'
       };
       
-      // Générer le QR Code avec haute résolution - Options corrigées
       const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
         errorCorrectionLevel: 'M',
         margin: 1,
@@ -764,13 +749,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     }
   };
 
-  // =================== CLEANUP FUNCTION ===================
-  useEffect(() => {
-    // Plus de debouncing - nettoyage simple
-    return () => {
-      // Cleanup si nécessaire
-    };
-  }, []);
+  // =================== CALCUL VOLUME SANS SCROLL ===================
   const calculateVolume = () => {
     const { length, width, height, diameter, spaceShape } = confinedSpaceDetails.dimensions;
     const { unitSystem } = confinedSpaceDetails;
@@ -807,9 +786,8 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         break;
         
       case 'irregular':
-        // Pour les formes irrégulières, utiliser une approximation rectangulaire
         if (length > 0 && width > 0 && height > 0) {
-          volume = length * width * height * 0.85; // Facteur de correction pour forme irrégulière
+          volume = length * width * height * 0.85;
           formulaUsed = `Irrégulier (approx.): ${length} × ${width} × ${height} × 0.85`;
         }
         break;
@@ -822,9 +800,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         break;
     }
 
-    // Conversion impériale si nécessaire
     if (unitSystem === 'imperial') {
-      // Le volume est déjà en pieds cubes si les dimensions sont en pieds
       unitSuffix = 'ft³';
     }
 
@@ -833,11 +809,11 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       volume: Math.round(volume * 100) / 100
     };
 
+    // SEULEMENT mise à jour locale - PAS de communication avec le parent
     handleConfinedSpaceChange('dimensions', updatedDimensions);
     
     console.log(`Volume calculé: ${updatedDimensions.volume} ${unitSuffix} - Formule: ${formulaUsed}`);
     
-    // Notification de succès
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'granted') {
         new Notification(`✅ ${language === 'fr' ? 'Volume calculé' : 'Volume calculated'}`, {
@@ -848,18 +824,17 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     }
   };
 
-  // =================== CONVERSION D'UNITÉS ===================
+  // =================== CONVERSION D'UNITÉS SANS SCROLL ===================
   const convertUnits = (fromSystem: UnitSystem, toSystem: UnitSystem) => {
     if (fromSystem === toSystem) return;
     
-    const currentScrollPosition = window.pageYOffset;
     const { dimensions } = confinedSpaceDetails;
     let conversionFactor = 1;
     
     if (fromSystem === 'metric' && toSystem === 'imperial') {
-      conversionFactor = 3.28084; // mètres vers pieds
+      conversionFactor = 3.28084;
     } else if (fromSystem === 'imperial' && toSystem === 'metric') {
-      conversionFactor = 0.3048; // pieds vers mètres
+      conversionFactor = 0.3048;
     }
     
     const convertedDimensions = {
@@ -868,30 +843,21 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       width: Math.round(dimensions.width * conversionFactor * 100) / 100,
       height: Math.round(dimensions.height * conversionFactor * 100) / 100,
       diameter: Math.round(dimensions.diameter * conversionFactor * 100) / 100,
-      volume: 0 // Recalculer après conversion
+      volume: 0
     };
     
+    // SEULEMENT mise à jour locale
     setConfinedSpaceDetails(prev => ({
       ...prev,
       dimensions: convertedDimensions,
       unitSystem: toSystem
     }));
-    
-    updatePermitData({ 
-      dimensions: convertedDimensions,
-      unitSystem: toSystem 
-    });
-    
-    setTimeout(() => {
-      window.scrollTo(0, currentScrollPosition);
-    }, 0);
   };
 
-  // =================== VALIDATION INTELLIGENTE ===================
+  // =================== VALIDATION ===================
   const validateSiteInformation = (details: ConfinedSpaceDetails = confinedSpaceDetails) => {
     const errors: string[] = [];
     
-    // Champs obligatoires de base
     if (!details.projectNumber.trim()) errors.push(language === 'fr' ? 'Numéro de projet manquant' : 'Project number missing');
     if (!details.workLocation.trim()) errors.push(language === 'fr' ? 'Lieu des travaux manquant' : 'Work location missing');
     if (!details.contractor.trim()) errors.push(language === 'fr' ? 'Entrepreneur manquant' : 'Contractor missing');
@@ -900,7 +866,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     if (!details.spaceType) errors.push(language === 'fr' ? 'Type d\'espace manquant' : 'Space type missing');
     if (!details.csaClass) errors.push(language === 'fr' ? 'Classification CSA manquante' : 'CSA classification missing');
     
-    // Validation des dimensions selon la forme
     const { dimensions } = details;
     switch (dimensions.spaceShape) {
       case 'rectangular':
@@ -925,13 +890,11 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       errors.push(language === 'fr' ? 'Volume doit être calculé' : 'Volume must be calculated');
     }
     
-    // Validation des dangers selon la classification CSA
     if ((details.csaClass === 'class1' || details.csaClass === 'class2') && 
         details.atmosphericHazards.length === 0 && details.physicalHazards.length === 0) {
       errors.push(language === 'fr' ? 'Au moins un danger doit être identifié pour cette classification' : 'At least one hazard must be identified for this classification');
     }
     
-    // Validation des points d'entrée
     if (details.entryPoints.length === 0) {
       errors.push(language === 'fr' ? 'Au moins un point d\'entrée requis' : 'At least one entry point required');
     } else {
@@ -984,7 +947,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     });
   };
 
-  // =================== GESTION DES POINTS D'ENTRÉE ISOLÉE ===================
+  // =================== GESTION DES POINTS D'ENTRÉE ===================
   const addEntryPoint = useCallback(() => {
     const newEntryPoint = {
       id: `entry-${Date.now()}`,
@@ -1025,48 +988,23 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     }));
   }, []);
 
-  // =================== EFFETS DE SYNCHRONISATION ===================
+  // =================== EFFETS MINIMALISTES - PAS DE RE-RENDER ===================
+  
+  // SEULEMENT pour les notifications - AUCUN effet sur les states de saisie
   useEffect(() => {
-    // Synchroniser avec les données du permis au montage
-    if (permitData.spacePhotos) {
-      setSpacePhotos(permitData.spacePhotos);
-    }
-  }, [permitData]);
-
-  useEffect(() => {
-    // Synchroniser les photos avec les données du permis
-    updatePermitData({ spacePhotos });
-  }, [spacePhotos, updatePermitData]);
-
-  useEffect(() => {
-    // Demander la permission pour les notifications
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
         Notification.requestPermission();
       }
     }
-  }, []);
+  }, []); // Empty dependency - runs only once
 
-  // Prévenir le scroll automatique sur les changements d'état
+  // SEULEMENT synchronisation initiale des photos - SANS re-render
   useEffect(() => {
-    const preventAutoScroll = () => {
-      if (containerRef.current) {
-        const inputs = containerRef.current.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-          input.addEventListener('focus', () => {
-            // Empêcher le scroll automatique vers l'élément focalisé
-            if (isMobile) {
-              setTimeout(() => {
-                window.scrollTo(0, window.pageYOffset);
-              }, 100);
-            }
-          });
-        });
-      }
-    };
-    
-    preventAutoScroll();
-  }, [isMobile]);
+    if (permitData.spacePhotos && permitData.spacePhotos.length !== spacePhotos.length) {
+      setSpacePhotos(permitData.spacePhotos);
+    }
+  }, [permitData.spacePhotos]); // Only when permitData.spacePhotos changes externally
   // =================== CLASSIFICATIONS CSA PAR PROVINCE CANADIENNE ===================
   const getCSAClassifications = (province: ProvinceCode, language: Language) => {
     const baseClassifications = {
@@ -2691,886 +2629,410 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       );
     }
   };
-  // =================== FONCTIONS DE BASE DE DONNÉES SUPABASE ===================
-  const searchPermitsDatabase = async (query: string, page: number = 1): Promise<PermitSearchResult> => {
-    setIsSearching(true);
-    try {
-      // Import dynamique pour éviter les erreurs SSR
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
-      let queryBuilder = supabase
-        .from('confined_space_permits')
-        .select(`
-          id,
-          permit_number,
-          project_number,
-          work_location,
-          contractor,
-          supervisor,
-          space_type,
-          csa_class,
-          entry_date,
-          status,
-          created_at,
-          last_modified,
-          entry_count,
-          hazard_count,
-          qr_code,
-          atmospheric_hazards,
-          physical_hazards,
-          dimensions,
-          entry_points,
-          environmental_conditions,
-          space_content,
-          safety_measures,
-          space_photos,
-          province,
-          authority
-        `)
-        .order('created_at', { ascending: false });
-
-      if (query.trim()) {
-        queryBuilder = queryBuilder.or(`
-          permit_number.ilike.%${query}%,
-          project_number.ilike.%${query}%,
-          work_location.ilike.%${query}%,
-          contractor.ilike.%${query}%,
-          supervisor.ilike.%${query}%
-        `);
-      }
-
-      queryBuilder = queryBuilder.eq('province', selectedProvince);
-
-      const startRange = (page - 1) * 10;
-      const endRange = page * 10 - 1;
-      queryBuilder = queryBuilder.range(startRange, endRange);
-
-      const { data, error, count } = await queryBuilder;
-
-      if (error) throw error;
-
-      const permits: PermitHistoryEntry[] = (data || []).map(permit => ({
-        id: permit.id,
-        permitNumber: permit.permit_number,
-        projectNumber: permit.project_number || '',
-        workLocation: permit.work_location || '',
-        contractor: permit.contractor || '',
-        spaceType: permit.space_type || '',
-        csaClass: permit.csa_class || '',
-        entryDate: permit.entry_date || '',
-        status: permit.status as any,
-        createdAt: permit.created_at,
-        lastModified: permit.last_modified,
-        entryCount: permit.entry_count || 0,
-        hazardCount: permit.hazard_count || 0,
-        qrCode: permit.qr_code
-      }));
-
-      return {
-        permits,
-        total: count || 0,
-        page: page,
-        hasMore: (count || 0) > page * 10
-      };
-
-    } catch (error) {
-      console.error('Erreur recherche base de données:', error);
-      return { permits: [], total: 0, page: 1, hasMore: false };
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  // =================== SAUVEGARDE COMPLÈTE DANS SUPABASE ===================
-  const savePermitToDatabase = async (): Promise<string | null> => {
-    setIsSaving(true);
-    try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
-      const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      
-      // Générer le QR Code avec toutes les informations
-      const qrCodeDataUrl = await generatePermitQRCode(permitNumber);
-      
-      const permitToSave = {
-        permit_number: permitNumber,
-        project_number: confinedSpaceDetails.projectNumber,
-        work_location: confinedSpaceDetails.workLocation,
-        contractor: confinedSpaceDetails.contractor,
-        supervisor: confinedSpaceDetails.supervisor,
-        space_type: confinedSpaceDetails.spaceType,
-        csa_class: confinedSpaceDetails.csaClass,
-        entry_date: confinedSpaceDetails.entryDate,
-        duration: confinedSpaceDetails.duration,
-        worker_count: confinedSpaceDetails.workerCount,
-        work_description: confinedSpaceDetails.workDescription,
-        dimensions: confinedSpaceDetails.dimensions,
-        unit_system: confinedSpaceDetails.unitSystem,
-        entry_points: confinedSpaceDetails.entryPoints,
-        atmospheric_hazards: confinedSpaceDetails.atmosphericHazards,
-        physical_hazards: confinedSpaceDetails.physicalHazards,
-        environmental_conditions: confinedSpaceDetails.environmentalConditions,
-        space_content: confinedSpaceDetails.spaceContent,
-        safety_measures: confinedSpaceDetails.safetyMeasures,
-        space_photos: spacePhotos,
-        status: 'active',
-        province: selectedProvince,
-        authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente',
-        qr_code: qrCodeDataUrl,
-        entry_count: 0,
-        hazard_count: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length,
-        created_at: new Date().toISOString(),
-        last_modified: new Date().toISOString()
-      };
-
-      const { data, error } = await supabase
-        .from('confined_space_permits')
-        .upsert(permitToSave, { 
-          onConflict: 'permit_number',
-          ignoreDuplicates: false 
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      updatePermitData({ permit_number: permitNumber });
-      
-      // Notification de succès
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission === 'granted') {
-          new Notification(`✅ ${t.saveSuccess}`, {
-            body: `${t.projectNumber}: ${permitToSave.project_number}\n${t.workLocation}: ${permitToSave.work_location}`,
-            icon: '/c-secur360-logo.png'
-          });
-        }
-      }
-      
-      return permitNumber;
-      
-    } catch (error) {
-      console.error('Erreur sauvegarde:', error);
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission === 'granted') {
-          new Notification(`❌ ${t.saveError}`, {
-            body: error instanceof Error ? error.message : 'Erreur inconnue',
-            icon: '/c-secur360-logo.png'
-          });
-        }
-      }
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // =================== SAUVEGARDE AVEC VALIDATION ET SYNCHRONISATION ===================
-  const handleSave = async () => {
-    const errors = validateSiteInformation();
+  // =================== FONCTIONS DE BASE DE DONNÉES SANS EFFET DE BORD ===================
+const searchPermitsDatabase = async (query: string, page: number = 1): Promise<PermitSearchResult> => {
+  setIsSearching(true);
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
     
-    if (errors.length > 0) {
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission === 'granted') {
-          new Notification(`❌ ${t.validationError}`, {
-            body: errors.join('\n'),
-            icon: '/c-secur360-logo.png'
-          });
-        }
-      }
-      return false;
+    let queryBuilder = supabase
+      .from('confined_space_permits')
+      .select(`
+        id,
+        permit_number,
+        project_number,
+        work_location,
+        contractor,
+        supervisor,
+        space_type,
+        csa_class,
+        entry_date,
+        status,
+        created_at,
+        last_modified,
+        entry_count,
+        hazard_count,
+        qr_code,
+        atmospheric_hazards,
+        physical_hazards,
+        dimensions,
+        entry_points,
+        environmental_conditions,
+        space_content,
+        safety_measures,
+        space_photos,
+        province,
+        authority
+      `)
+      .order('created_at', { ascending: false });
+
+    if (query.trim()) {
+      queryBuilder = queryBuilder.or(`
+        permit_number.ilike.%${query}%,
+        project_number.ilike.%${query}%,
+        work_location.ilike.%${query}%,
+        contractor.ilike.%${query}%,
+        supervisor.ilike.%${query}%
+      `);
     }
+
+    queryBuilder = queryBuilder.eq('province', selectedProvince);
+
+    const startRange = (page - 1) * 10;
+    const endRange = page * 10 - 1;
+    queryBuilder = queryBuilder.range(startRange, endRange);
+
+    const { data, error, count } = await queryBuilder;
+
+    if (error) throw error;
+
+    const permits: PermitHistoryEntry[] = (data || []).map(permit => ({
+      id: permit.id,
+      permitNumber: permit.permit_number,
+      projectNumber: permit.project_number || '',
+      workLocation: permit.work_location || '',
+      contractor: permit.contractor || '',
+      spaceType: permit.space_type || '',
+      csaClass: permit.csa_class || '',
+      entryDate: permit.entry_date || '',
+      status: permit.status as any,
+      createdAt: permit.created_at,
+      lastModified: permit.last_modified,
+      entryCount: permit.entry_count || 0,
+      hazardCount: permit.hazard_count || 0,
+      qrCode: permit.qr_code
+    }));
+
+    return {
+      permits,
+      total: count || 0,
+      page: page,
+      hasMore: (count || 0) > page * 10
+    };
+
+  } catch (error) {
+    console.error('Erreur recherche base de données:', error);
+    return { permits: [], total: 0, page: 1, hasMore: false };
+  } finally {
+    setIsSearching(false);
+  }
+};
+
+// =================== SAUVEGARDE COMPLÈTE SANS RE-RENDER ===================
+const savePermitToDatabase = async (): Promise<string | null> => {
+  setIsSaving(true);
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // SYNCHRONISER avec le parent SEULEMENT ici
-    updatePermitData({
-      ...confinedSpaceDetails,
-      spacePhotos
-    });
-    updateParentData('siteInformation', {
-      ...confinedSpaceDetails,
-      spacePhotos
-    });
-    
-    const permitNumber = await savePermitToDatabase();
-    if (permitNumber) {
-      return true;
-    }
-    
-    return false;
-  };
-
-  // =================== CHARGEMENT D'UN PERMIS EXISTANT ===================
-  const loadPermitFromHistory = async (permitNumber: string) => {
-    try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
-      const { data, error } = await supabase
-        .from('confined_space_permits')
-        .select('*')
-        .eq('permit_number', permitNumber)
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
-        const loadedPermit: ConfinedSpaceDetails = {
-          projectNumber: data.project_number || '',
-          workLocation: data.work_location || '',
-          contractor: data.contractor || '',
-          supervisor: data.supervisor || '',
-          entryDate: data.entry_date || '',
-          duration: data.duration || '',
-          workerCount: data.worker_count || 1,
-          workDescription: data.work_description || '',
-          spaceType: data.space_type || '',
-          csaClass: data.csa_class || '',
-          entryMethod: data.entry_method || '',
-          accessType: data.access_type || '',
-          spaceLocation: data.space_location || '',
-          spaceDescription: data.space_description || '',
-          dimensions: data.dimensions || {
-            length: 0, width: 0, height: 0, diameter: 0, volume: 0, spaceShape: 'rectangular'
-          },
-          unitSystem: data.unit_system || 'metric',
-          entryPoints: data.entry_points || [{
-            id: 'entry-1', type: 'circular', dimensions: '', location: '', 
-            condition: 'good', accessibility: 'normal', photos: []
-          }],
-          atmosphericHazards: data.atmospheric_hazards || [],
-          physicalHazards: data.physical_hazards || [],
-          environmentalConditions: data.environmental_conditions || {
-            ventilationRequired: false, ventilationType: '', lightingConditions: '',
-            temperatureRange: '', moistureLevel: '', noiseLevel: '', weatherConditions: ''
-          },
-          spaceContent: data.space_content || {
-            contents: '', residues: '', previousUse: '', lastEntry: '', cleaningStatus: ''
-          },
-          safetyMeasures: data.safety_measures || {
-            emergencyEgress: '', communicationMethod: '', 
-            monitoringEquipment: [], ventilationEquipment: [], emergencyEquipment: []
-          },
-          spacePhotos: data.space_photos || []
-        };
-
-        setConfinedSpaceDetails(loadedPermit);
-        setSpacePhotos(data.space_photos || []);
-        
-        updatePermitData({
-          permit_number: data.permit_number,
-          ...loadedPermit
-        });
-
-        if (typeof window !== 'undefined' && 'Notification' in window) {
-          if (Notification.permission === 'granted') {
-            new Notification(`✅ Permis ${permitNumber} chargé`, {
-              body: `${loadedPermit.projectNumber} - ${loadedPermit.workLocation}`,
-              icon: '/c-secur360-logo.png'
-            });
-          }
-        }
-      }
-      
-      setShowPermitDatabase(false);
-      
-    } catch (error) {
-      console.error('Erreur chargement permis:', error);
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission === 'granted') {
-          new Notification(`❌ Erreur chargement`, {
-            body: `Impossible de charger le permis ${permitNumber}`,
-            icon: '/c-secur360-logo.png'
-          });
-        }
-      }
-    }
-  };
-
-  // =================== GÉNÉRATION QR CODE HAUTE QUALITÉ POUR IMPRESSION ===================
-  const generatePermitQRCodeForPrint = async (permitNumber: string): Promise<string> => {
-    try {
-      // Import dynamique pour éviter les erreurs SSR
-      const QRCode = (await import('qrcode')).default;
-      
-      const permitUrl = `${window.location.origin}/permits/confined-space/${permitNumber}`;
-      
-      const qrData = {
-        permitNumber,
-        type: 'confined_space',
-        province: selectedProvince,
-        authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente',
-        issueDate: new Date().toISOString(),
-        url: permitUrl,
-        projectNumber: confinedSpaceDetails.projectNumber,
-        location: confinedSpaceDetails.workLocation,
-        contractor: confinedSpaceDetails.contractor,
-        spaceType: confinedSpaceDetails.spaceType,
-        csaClass: confinedSpaceDetails.csaClass,
-        hazardCount: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length
-      };
-      
-      // Générer le QR Code avec TRÈS haute résolution pour l'impression - Options corrigées
-      const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
-        errorCorrectionLevel: 'H', // Haute correction d'erreur
-        margin: 2, // Marge plus grande pour l'impression
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        },
-        width: 512 // Très haute résolution pour l'impression
-      });
-      
-      return qrCodeDataUrl;
-    } catch (error) {
-      console.error('Erreur génération QR Code pour impression:', error);
-      return '';
-    }
-  };
-
-  // =================== GÉNÉRATION DE RAPPORT PROFESSIONNEL COMPLET ===================
-  const generateCompletePermitReport = async (): Promise<PermitReport> => {
     const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     
-    const csaClassifications = getCSAClassifications(selectedProvince, language);
-    const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
+    const qrCodeDataUrl = await generatePermitQRCode(permitNumber);
     
-    const provinceAuthority = PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente';
-    
-    return {
-      metadata: {
-        permitNumber,
-        issueDate: new Date().toISOString(),
-        province: selectedProvince,
-        authority: provinceAuthority,
-        generatedAt: new Date().toISOString(),
-        version: '2.0',
-        language,
-        companyLogo: '/c-secur360-logo.png',
-        qrCode: await generatePermitQRCodeForPrint(permitNumber),
-        classification: currentClassification
-      },
-      siteInformation: {
-        ...confinedSpaceDetails,
-        spacePhotos: spacePhotos,
-        csaClassification: currentClassification,
-        provincialRegulations: currentClassification?.regulations
-      },
-      atmosphericTesting: permitData.atmosphericTesting || {},
-      entryRegistry: permitData.entryRegistry || {},
-      rescuePlan: permitData.rescuePlan || {},
-      validationChecklist: generateValidationChecklist()
+    const permitToSave = {
+      permit_number: permitNumber,
+      project_number: confinedSpaceDetails.projectNumber,
+      work_location: confinedSpaceDetails.workLocation,
+      contractor: confinedSpaceDetails.contractor,
+      supervisor: confinedSpaceDetails.supervisor,
+      space_type: confinedSpaceDetails.spaceType,
+      csa_class: confinedSpaceDetails.csaClass,
+      entry_date: confinedSpaceDetails.entryDate,
+      duration: confinedSpaceDetails.duration,
+      worker_count: confinedSpaceDetails.workerCount,
+      work_description: confinedSpaceDetails.workDescription,
+      dimensions: confinedSpaceDetails.dimensions,
+      unit_system: confinedSpaceDetails.unitSystem,
+      entry_points: confinedSpaceDetails.entryPoints,
+      atmospheric_hazards: confinedSpaceDetails.atmosphericHazards,
+      physical_hazards: confinedSpaceDetails.physicalHazards,
+      environmental_conditions: confinedSpaceDetails.environmentalConditions,
+      space_content: confinedSpaceDetails.spaceContent,
+      safety_measures: confinedSpaceDetails.safetyMeasures,
+      space_photos: spacePhotos,
+      status: 'active',
+      province: selectedProvince,
+      authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente',
+      qr_code: qrCodeDataUrl,
+      entry_count: 0,
+      hazard_count: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length,
+      created_at: new Date().toISOString(),
+      last_modified: new Date().toISOString()
     };
-  };
 
-  // =================== GÉNÉRATION CHECKLIST DE VALIDATION ===================
-  const generateValidationChecklist = () => {
-    const csaClassifications = getCSAClassifications(selectedProvince, language);
-    const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
+    const { data, error } = await supabase
+      .from('confined_space_permits')
+      .upsert(permitToSave, { 
+        onConflict: 'permit_number',
+        ignoreDuplicates: false 
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // SEULEMENT ici on synchronise avec le parent - UNE SEULE FOIS
+    updatePermitData({ permit_number: permitNumber });
     
-    const baseChecklist = [
-      {
-        category: language === 'fr' ? 'Tests Atmosphériques' : 'Atmospheric Testing',
-        items: [
-          language === 'fr' ? 'Tests d\'oxygène (19.5% - 23%)' : 'Oxygen testing (19.5% - 23%)',
-          language === 'fr' ? 'Tests de gaz inflammables (<10% LIE)' : 'Flammable gas testing (<10% LEL)',
-          language === 'fr' ? 'Tests de gaz toxiques (H2S, CO)' : 'Toxic gas testing (H2S, CO)',
-          (currentClassification?.regulations as any)?.testing || (language === 'fr' ? 'Surveillance selon réglementation' : 'Monitoring per regulations')
-        ]
-      },
-      {
-        category: language === 'fr' ? 'Personnel et Formation' : 'Personnel and Training',
-        items: [
-          (currentClassification?.regulations as any)?.attendant || (language === 'fr' ? 'Personnel qualifié requis' : 'Qualified personnel required'),
-          language === 'fr' ? 'Formation sur les dangers spécifiques' : 'Training on specific hazards',
-          language === 'fr' ? 'Certification des équipements' : 'Equipment certification',
-          (currentClassification?.regulations as any)?.rescue || (language === 'fr' ? 'Plan de sauvetage établi' : 'Rescue plan established')
-        ]
-      },
-      {
-        category: language === 'fr' ? 'Équipements de Sécurité' : 'Safety Equipment',
-        items: [
-          language === 'fr' ? 'Équipement de surveillance atmosphérique' : 'Atmospheric monitoring equipment',
-          language === 'fr' ? 'Équipement de protection individuelle' : 'Personal protective equipment',
-          language === 'fr' ? 'Système de communication' : 'Communication system',
-          language === 'fr' ? 'Équipement de sauvetage d\'urgence' : 'Emergency rescue equipment'
-        ]
-      }
-    ];
-
-    return baseChecklist;
-  };
-
-  // =================== IMPRESSION LÉGALE PROFESSIONNELLE AVEC QR CODE CORRIGÉ ===================
-  const handlePrintPermit = async () => {
-    setIsGeneratingReport(true);
-    try {
-      const report = await generateCompletePermitReport();
-      const csaClassifications = getCSAClassifications(selectedProvince, language);
-      const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
-      
-      const printWindow = window.open('', '_blank', 'width=1200,height=800');
-      if (printWindow) {
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html lang="${language}">
-            <head>
-              <title>Permis d'Espace Clos - ${report.metadata.permitNumber}</title>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                @page {
-                  size: A4;
-                  margin: 15mm;
-                }
-                
-                * {
-                  margin: 0;
-                  padding: 0;
-                  box-sizing: border-box;
-                }
-                
-                body {
-                  font-family: 'Arial', 'Helvetica', sans-serif;
-                  font-size: 11pt;
-                  line-height: 1.4;
-                  color: #000;
-                  background: white;
-                  -webkit-print-color-adjust: exact;
-                  print-color-adjust: exact;
-                }
-                
-                .legal-header {
-                  border-bottom: 4px solid #dc2626;
-                  padding-bottom: 20px;
-                  margin-bottom: 25px;
-                  display: flex;
-                  align-items: center;
-                  justify-content: space-between;
-                  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-                  padding: 20px;
-                  border-radius: 8px;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                }
-                
-                .company-logo {
-                  width: 80px;
-                  height: 80px;
-                  background: url('/c-secur360-logo.png') no-repeat center;
-                  background-size: contain;
-                  border: 2px solid #dc2626;
-                  border-radius: 8px;
-                  padding: 5px;
-                }
-                
-                .header-info h1 {
-                  color: #dc2626;
-                  font-size: 24pt;
-                  font-weight: 700;
-                  margin-bottom: 5px;
-                  text-transform: uppercase;
-                }
-                
-                .permit-badge {
-                  background: linear-gradient(135deg, #dc2626, #b91c1c);
-                  color: white;
-                  padding: 15px 20px;
-                  border-radius: 8px;
-                  text-align: center;
-                  min-width: 200px;
-                  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-                }
-                
-                .permit-number {
-                  font-size: 16pt;
-                  font-weight: 700;
-                  margin-bottom: 5px;
-                }
-                
-                .section {
-                  margin-bottom: 25px;
-                  page-break-inside: avoid;
-                  border: 1px solid #e5e7eb;
-                  border-radius: 6px;
-                  overflow: hidden;
-                }
-                
-                .section-header {
-                  background: linear-gradient(135deg, #1f2937, #374151);
-                  color: white;
-                  padding: 12px 16px;
-                  font-size: 14pt;
-                  font-weight: 600;
-                }
-                
-                .section-content {
-                  padding: 16px;
-                  background: white;
-                }
-                
-                .info-grid {
-                  display: grid;
-                  grid-template-columns: 1fr 1fr;
-                  gap: 15px;
-                  margin-bottom: 15px;
-                }
-                
-                .info-item {
-                  border: 1px solid #d1d5db;
-                  border-radius: 4px;
-                  padding: 10px;
-                  background: #f9fafb;
-                }
-                
-                .info-label {
-                  font-weight: 600;
-                  color: #374151;
-                  font-size: 9pt;
-                  margin-bottom: 3px;
-                  text-transform: uppercase;
-                  letter-spacing: 0.5px;
-                }
-                
-                .info-value {
-                  color: #111827;
-                  font-size: 11pt;
-                  word-wrap: break-word;
-                }
-                
-                .qr-signature-section {
-                  display: grid;
-                  grid-template-columns: 250px 1fr;
-                  gap: 20px;
-                  margin-top: 30px;
-                  page-break-inside: avoid;
-                  border: 2px solid #3b82f6;
-                  border-radius: 8px;
-                  padding: 20px;
-                  background: #f0f9ff;
-                }
-                
-                .qr-container {
-                  text-align: center;
-                }
-                
-                .qr-code-print {
-                  width: 200px;
-                  height: 200px;
-                  border: 2px solid #3b82f6;
-                  border-radius: 8px;
-                  background: white;
-                  margin: 0 auto 15px;
-                  padding: 10px;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                }
-                
-                .qr-code-print img {
-                  max-width: 100%;
-                  max-height: 100%;
-                  width: auto;
-                  height: auto;
-                }
-                
-                .qr-info {
-                  font-size: 10pt;
-                  color: #1e40af;
-                  font-weight: 600;
-                  text-align: center;
-                  line-height: 1.3;
-                }
-                
-                .signatures-area {
-                  display: grid;
-                  grid-template-columns: 1fr 1fr;
-                  gap: 20px;
-                }
-                
-                .signature-box {
-                  border: 1px solid #d1d5db;
-                  border-radius: 4px;
-                  padding: 15px;
-                  background: white;
-                  min-height: 100px;
-                }
-                
-                .signature-label {
-                  font-weight: 600;
-                  color: #374151;
-                  font-size: 10pt;
-                  margin-bottom: 50px;
-                }
-                
-                .signature-line {
-                  border-bottom: 1px solid #374151;
-                  width: 100%;
-                  margin-bottom: 5px;
-                }
-                
-                .signature-date {
-                  font-size: 8pt;
-                  color: #6b7280;
-                }
-                
-                .legal-footer {
-                  margin-top: 30px;
-                  padding-top: 20px;
-                  border-top: 2px solid #e5e7eb;
-                  text-align: center;
-                  page-break-inside: avoid;
-                }
-                
-                .footer-warning {
-                  background: #fef3c7;
-                  border: 1px solid #f59e0b;
-                  border-radius: 6px;
-                  padding: 15px;
-                  margin-bottom: 15px;
-                  color: #92400e;
-                  font-weight: 600;
-                  font-size: 11pt;
-                }
-                
-                @media print {
-                  body { margin: 0; font-size: 10pt; }
-                  .section { page-break-inside: avoid; }
-                  .qr-signature-section { page-break-inside: avoid; }
-                  .legal-footer { page-break-inside: avoid; }
-                }
-              </style>
-            </head>
-            <body>
-              <div class="legal-header">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                  <div class="company-logo"></div>
-                  <div class="header-info">
-                    <h1>🚨 ${language === 'fr' ? 'Permis d\'Entrée en Espace Clos' : 'Confined Space Entry Permit'}</h1>
-                    <div style="color: #374151; font-size: 14pt; font-weight: 600;">${language === 'fr' ? 'Document Officiel - Conformité Réglementaire' : 'Official Document - Regulatory Compliance'}</div>
-                  </div>
-                </div>
-                <div class="permit-badge">
-                  <div class="permit-number">${report.metadata.permitNumber}</div>
-                  <div style="font-size: 10pt; opacity: 0.9;">${language === 'fr' ? 'ACTIF' : 'ACTIVE'}</div>
-                </div>
-              </div>
-
-              <div class="section">
-                <div class="section-header">🏢 ${language === 'fr' ? 'Informations du Projet' : 'Project Information'}</div>
-                <div class="section-content">
-                  <div class="info-grid">
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Province/Autorité' : 'Province/Authority'}</div>
-                      <div class="info-value">${selectedProvince} - ${report.metadata.authority}</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Date d\'émission' : 'Issue Date'}</div>
-                      <div class="info-value">${new Date(report.metadata.issueDate).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Numéro de projet' : 'Project Number'}</div>
-                      <div class="info-value">${report.siteInformation.projectNumber || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Lieu des travaux' : 'Work Location'}</div>
-                      <div class="info-value">${report.siteInformation.workLocation || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Classification' : 'Classification'}</div>
-                      <div class="info-value">${currentClassification?.title || 'Non définie'}</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">${language === 'fr' ? 'Volume' : 'Volume'}</div>
-                      <div class="info-value">${report.siteInformation.dimensions?.volume || 0} ${report.siteInformation.unitSystem === 'metric' ? 'm³' : 'ft³'}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="qr-signature-section">
-                <div class="qr-container">
-                  <div class="qr-code-print">
-                    ${report.metadata.qrCode ? `<img src="${report.metadata.qrCode}" alt="QR Code ${report.metadata.permitNumber}" />` : 
-                      `<div style="color: #666; font-size: 12px; text-align: center;">QR Code<br/>Indisponible</div>`}
-                  </div>
-                  <div class="qr-info">
-                    📱 ${language === 'fr' ? 'Scanner pour accès numérique' : 'Scan for digital access'}
-                    <br><strong>${report.metadata.permitNumber}</strong>
-                    <br><small>${language === 'fr' ? 'Accès mobile instantané' : 'Instant mobile access'}</small>
-                  </div>
-                </div>
-                <div class="signatures-area">
-                  <div class="signature-box">
-                    <div class="signature-label">${language === 'fr' ? 'Superviseur / Personne Compétente' : 'Supervisor / Competent Person'}</div>
-                    <div class="signature-line"></div>
-                    <div class="signature-date">${language === 'fr' ? 'Nom et signature' : 'Name and signature'}</div>
-                  </div>
-                  <div class="signature-box">
-                    <div class="signature-label">${language === 'fr' ? 'Surveillant d\'Espace Clos' : 'Confined Space Attendant'}</div>
-                    <div class="signature-line"></div>
-                    <div class="signature-date">${language === 'fr' ? 'Nom et signature' : 'Name and signature'}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="legal-footer">
-                <div class="footer-warning">
-                  ⚠️ ${language === 'fr' ? 'AVERTISSEMENT LÉGAL' : 'LEGAL WARNING'}: ${language === 'fr' ? 'Ce permis n\'est valide qu\'après validation complète de tous les éléments de sécurité et tests atmosphériques requis selon' : 'This permit is only valid after complete validation of all safety elements and atmospheric testing required by'} ${(currentClassification?.regulations as any)?.main || 'les réglementations applicables'}.
-                </div>
-                <div style="color: #6b7280; font-size: 9pt; line-height: 1.4;">
-                  <strong>C-SECUR360</strong> - ${language === 'fr' ? 'Système de Gestion de Sécurité Industrielle' : 'Industrial Safety Management System'}
-                  <br>${language === 'fr' ? 'Document généré automatiquement le' : 'Document automatically generated on'} ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
-                  <br>${language === 'fr' ? 'Conformité réglementaire' : 'Regulatory compliance'}: ${selectedProvince} - ${report.metadata.authority}
-                </div>
-              </div>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        
-        // Attendre que le contenu soit chargé avant d'imprimer
-        printWindow.addEventListener('load', () => {
-          setTimeout(() => {
-            printWindow.print();
-          }, 1000); // Délai plus long pour s'assurer que le QR Code est bien chargé
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        new Notification(`✅ ${t.saveSuccess}`, {
+          body: `${t.projectNumber}: ${permitToSave.project_number}\n${t.workLocation}: ${permitToSave.work_location}`,
+          icon: '/c-secur360-logo.png'
         });
       }
-    } finally {
-      setIsGeneratingReport(false);
-    }
-  };
-
-  const handlePhotoCapture = async (category: string) => {
-    if (photoInputRef.current) {
-      photoInputRef.current.accept = "image/*";
-      photoInputRef.current.capture = "environment";
-      photoInputRef.current.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = async (event) => {
-            const newPhoto: SpacePhoto = {
-              id: `photo-${Date.now()}`,
-              url: event.target?.result as string,
-              category,
-              caption: `${t.photoCategories?.[category as keyof typeof t.photoCategories] || category} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
-              timestamp: new Date().toISOString(),
-              location: 'Localisation en cours...',
-              measurements: category === 'interior' || category === 'entry' ? 'Mesures à ajouter' : undefined
-            };
-
-            // Géolocalisation avec précision élevée
-            if (navigator.geolocation) {
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  newPhoto.location = `GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
-                  newPhoto.gpsCoords = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                  };
-                  // SEULEMENT mise à jour locale
-                  setSpacePhotos(prev => [...prev, newPhoto]);
-                }, 
-                () => {
-                  newPhoto.location = 'Localisation non disponible';
-                  // SEULEMENT mise à jour locale
-                  setSpacePhotos(prev => [...prev, newPhoto]);
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-              );
-            } else {
-              newPhoto.location = 'Géolocalisation non supportée';
-              // SEULEMENT mise à jour locale
-              setSpacePhotos(prev => [...prev, newPhoto]);
-            }
-          };
-          reader.readAsDataURL(file);
-        }
-      };
-      photoInputRef.current.click();
-    }
-  };
-
-  // =================== RECHERCHE DANS LA BASE DE DONNÉES ===================
-  const handleSearch = async (query: string) => {
-    if (query.trim().length < 2) {
-      setSearchResults({ permits: [], total: 0, page: 1, hasMore: false });
-      return;
     }
     
-    const results = await searchPermitsDatabase(query);
-    setSearchResults(results);
-  };
-
-  // =================== ENVOI EMAIL ET PARTAGE ===================
-  const handleEmailPermit = async () => {
-    setIsGeneratingReport(true);
-    try {
-      const report = await generateCompletePermitReport();
-      const csaClassifications = getCSAClassifications(selectedProvince, language);
-      const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
-      
-      const subject = `${language === 'fr' ? 'Permis d\'Espace Clos' : 'Confined Space Permit'} - ${report.metadata.permitNumber}`;
-      const body = `${language === 'fr' ? 'Bonjour' : 'Hello'},
-
-${language === 'fr' ? 'Veuillez trouver ci-joint le permis d\'entrée en espace clos suivant' : 'Please find attached the following confined space entry permit'}:
-
-📋 ${language === 'fr' ? 'DÉTAILS DU PERMIS' : 'PERMIT DETAILS'}
-• ${language === 'fr' ? 'Numéro' : 'Number'}: ${report.metadata.permitNumber}
-• ${language === 'fr' ? 'Province/Autorité' : 'Province/Authority'}: ${selectedProvince} - ${report.metadata.authority}
-• ${language === 'fr' ? 'Classification CSA' : 'CSA Classification'}: ${currentClassification?.title || 'Non définie'}
-• ${language === 'fr' ? 'Projet' : 'Project'}: ${report.siteInformation.projectNumber || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
-• ${language === 'fr' ? 'Lieu' : 'Location'}: ${report.siteInformation.workLocation || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
-
-${language === 'fr' ? 'Cordialement' : 'Best regards'},
-C-SECUR360`;
-      
-      const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.open(mailtoLink);
-    } finally {
-      setIsGeneratingReport(false);
+    return permitNumber;
+    
+  } catch (error) {
+    console.error('Erreur sauvegarde:', error);
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        new Notification(`❌ ${t.saveError}`, {
+          body: error instanceof Error ? error.message : 'Erreur inconnue',
+          icon: '/c-secur360-logo.png'
+        });
+      }
     }
-  };
+    return null;
+  } finally {
+    setIsSaving(false);
+  }
+};
+
+// =================== SAUVEGARDE AVEC SYNCHRONISATION UNIQUE ===================
+const handleSave = async () => {
+  const errors = validateSiteInformation();
   
-  const handleSharePermit = async () => {
-    setIsGeneratingReport(true);
-    try {
-      const report = await generateCompletePermitReport();
-      const shareData = {
-        title: `${language === 'fr' ? 'Permis Espace Clos' : 'Confined Space Permit'} - ${report.metadata.permitNumber}`,
-        text: `📋 ${report.siteInformation.projectNumber || (language === 'fr' ? 'Projet non spécifié' : 'Project not specified')}
-📍 ${report.siteInformation.workLocation || (language === 'fr' ? 'Lieu non spécifié' : 'Location not specified')}
-🏗️ ${language === 'fr' ? 'Type' : 'Type'}: ${report.siteInformation.spaceType || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
-⚠️ ${language === 'fr' ? 'Classification' : 'Classification'}: ${confinedSpaceDetails.csaClass?.toUpperCase() || 'Non définie'}`,
-        url: window.location.href
+  if (errors.length > 0) {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        new Notification(`❌ ${t.validationError}`, {
+          body: errors.join('\n'),
+          icon: '/c-secur360-logo.png'
+        });
+      }
+    }
+    return false;
+  }
+  
+  // SYNCHRONISER avec le parent SEULEMENT ici lors de la sauvegarde
+  updatePermitData({
+    ...confinedSpaceDetails,
+    spacePhotos
+  });
+  updateParentData('siteInformation', {
+    ...confinedSpaceDetails,
+    spacePhotos
+  });
+  
+  const permitNumber = await savePermitToDatabase();
+  if (permitNumber) {
+    return true;
+  }
+  
+  return false;
+};
+
+// =================== CHARGEMENT D'UN PERMIS EXISTANT ===================
+const loadPermitFromHistory = async (permitNumber: string) => {
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const { data, error } = await supabase
+      .from('confined_space_permits')
+      .select('*')
+      .eq('permit_number', permitNumber)
+      .single();
+
+    if (error) throw error;
+
+    if (data) {
+      const loadedPermit: ConfinedSpaceDetails = {
+        projectNumber: data.project_number || '',
+        workLocation: data.work_location || '',
+        contractor: data.contractor || '',
+        supervisor: data.supervisor || '',
+        entryDate: data.entry_date || '',
+        duration: data.duration || '',
+        workerCount: data.worker_count || 1,
+        workDescription: data.work_description || '',
+        spaceType: data.space_type || '',
+        csaClass: data.csa_class || '',
+        entryMethod: data.entry_method || '',
+        accessType: data.access_type || '',
+        spaceLocation: data.space_location || '',
+        spaceDescription: data.space_description || '',
+        dimensions: data.dimensions || {
+          length: 0, width: 0, height: 0, diameter: 0, volume: 0, spaceShape: 'rectangular'
+        },
+        unitSystem: data.unit_system || 'metric',
+        entryPoints: data.entry_points || [{
+          id: 'entry-1', type: 'circular', dimensions: '', location: '', 
+          condition: 'good', accessibility: 'normal', photos: []
+        }],
+        atmosphericHazards: data.atmospheric_hazards || [],
+        physicalHazards: data.physical_hazards || [],
+        environmentalConditions: data.environmental_conditions || {
+          ventilationRequired: false, ventilationType: '', lightingConditions: '',
+          temperatureRange: '', moistureLevel: '', noiseLevel: '', weatherConditions: ''
+        },
+        spaceContent: data.space_content || {
+          contents: '', residues: '', previousUse: '', lastEntry: '', cleaningStatus: ''
+        },
+        safetyMeasures: data.safety_measures || {
+          emergencyEgress: '', communicationMethod: '', 
+          monitoringEquipment: [], ventilationEquipment: [], emergencyEquipment: []
+        },
+        spacePhotos: data.space_photos || []
       };
+
+      // CHARGEMENT DIRECT sans re-render
+      setConfinedSpaceDetails(loadedPermit);
+      setSpacePhotos(data.space_photos || []);
       
-      if (navigator.share && isMobile) {
-        await navigator.share(shareData);
-      } else if (navigator.clipboard) {
-        const textToShare = `${shareData.title}\n\n${shareData.text}\n\n🔗 ${shareData.url}`;
-        await navigator.clipboard.writeText(textToShare);
-        
-        if (typeof window !== 'undefined' && 'Notification' in window) {
-          if (Notification.permission === 'granted') {
-            new Notification(`✅ ${language === 'fr' ? 'Copié dans le presse-papiers' : 'Copied to clipboard'}`, {
-              body: language === 'fr' ? 'Informations du permis copiées' : 'Permit information copied',
-              icon: '/c-secur360-logo.png'
-            });
-          }
+      // SYNCHRONISATION unique lors du chargement
+      updatePermitData({
+        permit_number: data.permit_number,
+        ...loadedPermit
+      });
+
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'granted') {
+          new Notification(`✅ Permis ${permitNumber} chargé`, {
+            body: `${loadedPermit.projectNumber} - ${loadedPermit.workLocation}`,
+            icon: '/c-secur360-logo.png'
+          });
         }
       }
-    } finally {
-      setIsGeneratingReport(false);
     }
-  };
- // =================== COMPOSANT CARROUSEL PHOTOS OPTIMISÉ MOBILE ===================
+    
+    setShowPermitDatabase(false);
+    
+  } catch (error) {
+    console.error('Erreur chargement permis:', error);
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        new Notification(`❌ Erreur chargement`, {
+          body: `Impossible de charger le permis ${permitNumber}`,
+          icon: '/c-secur360-logo.png'
+        });
+      }
+    }
+  }
+};
+
+// =================== GÉNÉRATION QR CODE HAUTE QUALITÉ POUR IMPRESSION ===================
+const generatePermitQRCodeForPrint = async (permitNumber: string): Promise<string> => {
+  try {
+    const QRCode = (await import('qrcode')).default;
+    
+    const permitUrl = `${window.location.origin}/permits/confined-space/${permitNumber}`;
+    
+    const qrData = {
+      permitNumber,
+      type: 'confined_space',
+      province: selectedProvince,
+      authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente',
+      issueDate: new Date().toISOString(),
+      url: permitUrl,
+      projectNumber: confinedSpaceDetails.projectNumber,
+      location: confinedSpaceDetails.workLocation,
+      contractor: confinedSpaceDetails.contractor,
+      spaceType: confinedSpaceDetails.spaceType,
+      csaClass: confinedSpaceDetails.csaClass,
+      hazardCount: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length
+    };
+    
+    const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
+      errorCorrectionLevel: 'H',
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      },
+      width: 512
+    });
+    
+    return qrCodeDataUrl;
+  } catch (error) {
+    console.error('Erreur génération QR Code pour impression:', error);
+    return '';
+  }
+};
+
+// =================== GESTION DES PHOTOS SANS RE-RENDER ===================
+const handlePhotoCapture = async (category: string) => {
+  if (photoInputRef.current) {
+    photoInputRef.current.accept = "image/*";
+    photoInputRef.current.capture = "environment";
+    photoInputRef.current.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const newPhoto: SpacePhoto = {
+            id: `photo-${Date.now()}`,
+            url: event.target?.result as string,
+            category,
+            caption: `${t.photoCategories?.[category as keyof typeof t.photoCategories] || category} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
+            timestamp: new Date().toISOString(),
+            location: 'Localisation en cours...',
+            measurements: category === 'interior' || category === 'entry' ? 'Mesures à ajouter' : undefined
+          };
+
+          // Géolocalisation avec précision élevée
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                newPhoto.location = `GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
+                newPhoto.gpsCoords = {
+                  lat: position.coords.latitude,
+                  lng: position.coords.longitude
+                };
+                // SEULEMENT mise à jour locale des photos
+                setSpacePhotos(prev => [...prev, newPhoto]);
+              }, 
+              () => {
+                newPhoto.location = 'Localisation non disponible';
+                // SEULEMENT mise à jour locale des photos
+                setSpacePhotos(prev => [...prev, newPhoto]);
+              },
+              { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+            );
+          } else {
+            newPhoto.location = 'Géolocalisation non supportée';
+            // SEULEMENT mise à jour locale des photos
+            setSpacePhotos(prev => [...prev, newPhoto]);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    photoInputRef.current.click();
+  }
+};
+
+// =================== RECHERCHE DANS LA BASE DE DONNÉES ===================
+const handleSearch = async (query: string) => {
+  if (query.trim().length < 2) {
+    setSearchResults({ permits: [], total: 0, page: 1, hasMore: false });
+    return;
+  }
+  
+  const results = await searchPermitsDatabase(query);
+  setSearchResults(results);
+};
+  // =================== COMPOSANT CARROUSEL PHOTOS OPTIMISÉ MOBILE ===================
   const PhotoCarousel = ({ photos, onAddPhoto, category }: {
     photos: SpacePhoto[];
     onAddPhoto: () => void;
@@ -5021,4 +4483,4 @@ C-SECUR360`;
   );
 };
 
-export default React.memo(SiteInformation); 
+export default React.memo(SiteInformation);
