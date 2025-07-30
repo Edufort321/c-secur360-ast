@@ -1151,9 +1151,9 @@ Système C-SECUR360`;
             <div className="carousel-slide add-photo" onClick={onAddPhoto}>
               <div className="add-photo-content">
                 <div className="add-photo-icon"><Camera size={24} /></div>
-                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>{t.addPhoto}</h4>
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>Ajouter Photo</h4>
                 <p style={{ margin: 0, fontSize: '14px', opacity: 0.8, textAlign: 'center' }}>
-                  {t.addPhotoDescription}
+                  Documenter avec une photo
                 </p>
               </div>
             </div>
@@ -2393,12 +2393,12 @@ Système C-SECUR360`;
           ) : (
             <EmptyPhotoPlaceholder
               onClick={() => handlePhotoCapture('spaceExterior')}
-              title={t.noPhotos}
-              description={t.clickToPhoto}
+              title="Aucune photo"
+              description="Cliquez pour prendre une photo"
             />
           )}
         </div>
-       {/* Section Évaluation des Dangers */}
+        {/* Section Évaluation des Dangers */}
         <div className="form-section hazard-section">
           <div className="section-header">
             <AlertTriangle className="section-icon hazard-icon" />
@@ -3107,4 +3107,4 @@ Système C-SECUR360`;
   );
 };
 
-export default SiteInformation; 
+export default SiteInformation;
