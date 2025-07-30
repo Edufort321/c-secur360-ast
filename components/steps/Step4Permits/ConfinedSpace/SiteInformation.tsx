@@ -638,23 +638,87 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
 
   // Traductions
   const t = getTranslations(language);
- // =================== FONCTIONS DE RECHERCHE ET BASE DE DONNÉES ===================
+  // =================== FONCTIONS DE RECHERCHE ET BASE DE DONNÉES ===================
+
+  // =================== FONCTIONS DE RECHERCHE ET BASE DE DONNÉES ===================
 
   // Recherche dans la base de données des permis
   const searchPermitsDatabase = async (query: string, page: number = 1): Promise<PermitSearchResult> => {
     setIsSearching(true);
     try {
-      // Simulation d'une recherche dans Supabase - À remplacer par votre API
-      // const { data, error } = await supabase
-      //   .from('confined_space_permits')
-      //   .select('*')
-      //   .or(`permit_number.ilike.%${query}%,project_number.ilike.%${query}%,work_location.ilike.%${query}%,contractor.ilike.%${query}%`)
-      //   .range((page - 1) * 10, page * 10 - 1)
-      //   .order('created_at', { ascending: false });
-
-      // Simulation avec données d'exemple
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simule l'attente API
+      // Import dynamique du client Supabase
+      const { supabase } = await import('../../../lib/supabase');
       
+      let queryBuilder = supabase
+        .from('confined_space_permits')
+        .select(`
+          id,
+          permit_number,
+          project_number,
+          work_location,
+          contractor,
+          supervisor,
+          space_type,
+          csa_class,
+          entry_date,
+          status,
+          created_at,
+          last_modified,
+          entry_count,
+          hazard_count
+        `)
+        .order('created_at', { ascending: false });
+
+      // Si une requête est fournie, filtrer les résultats
+      if (query.trim()) {
+        queryBuilder = queryBuilder.or(`
+          permit_number.ilike.%${query}%,
+          project_number.ilike.%${query}%,
+          work_location.ilike.%${query}%,
+          contractor.ilike.%${query}%
+        `);
+      }
+
+      // Pagination
+      const startRange = (page - 1) * 10;
+      const endRange = page * 10 - 1;
+      queryBuilder = queryBuilder.range(startRange, endRange);
+
+      const { data, error, count } = await queryBuilder;
+
+      if (error) {
+        console.error('Erreur Supabase:', error);
+        throw error;
+      }
+
+      // Transformation des données pour correspondre à notre interface
+      const permits: PermitHistoryEntry[] = (data || []).map(permit => ({
+        id: permit.id,
+        permitNumber: permit.permit_number,
+        projectNumber: permit.project_number || '',
+        workLocation: permit.work_location || '',
+        contractor: permit.contractor || '',
+        spaceType: permit.space_type || '',
+        csaClass: permit.csa_class || '',
+        entryDate: permit.entry_date || '',
+        status: permit.status as any,
+        createdAt: permit.created_at,
+        lastModified: permit.last_modified,
+        entryCount: permit.entry_count || 0,
+        hazardCount: permit.hazard_count || 0
+      }));
+
+      return {
+        permits,
+        total: count || 0,
+        page: page,
+        hasMore: (count || 0) > page * 10
+      };
+
+    } catch (error) {
+      console.error('Erreur lors de la recherche:', error);
+      
+      // Fallback vers les données mockées en cas d'erreur
       const mockPermits: PermitHistoryEntry[] = [
         {
           id: '1',
@@ -670,40 +734,9 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
           lastModified: '2025-07-30T07:30:00',
           entryCount: 3,
           hazardCount: 5
-        },
-        {
-          id: '2',
-          permitNumber: 'CS-QC-20250729-XYZ789',
-          projectNumber: 'P-2024-002',
-          workLocation: 'Raffinerie Lévis',
-          contractor: 'Sécurité Plus Ltée',
-          spaceType: 'vessel',
-          csaClass: 'class1',
-          entryDate: '2025-07-29T14:00:00',
-          status: 'completed',
-          createdAt: '2025-07-29T10:00:00',
-          lastModified: '2025-07-29T16:00:00',
-          entryCount: 1,
-          hazardCount: 8
-        },
-        {
-          id: '3',
-          permitNumber: 'CS-QC-20250728-DEF456',
-          projectNumber: 'P-2024-003',
-          workLocation: 'Usine Trois-Rivières',
-          contractor: 'Maintenance Pro',
-          spaceType: 'pit',
-          csaClass: 'class3',
-          entryDate: '2025-07-28T09:30:00',
-          status: 'expired',
-          createdAt: '2025-07-28T07:00:00',
-          lastModified: '2025-07-28T18:00:00',
-          entryCount: 2,
-          hazardCount: 2
         }
       ];
 
-      // Filtrage simple basé sur la requête
       const filteredPermits = query 
         ? mockPermits.filter(permit => 
             permit.permitNumber.toLowerCase().includes(query.toLowerCase()) ||
@@ -719,14 +752,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         page: page,
         hasMore: false
       };
-    } catch (error) {
-      console.error('Erreur lors de la recherche:', error);
-      return {
-        permits: [],
-        total: 0,
-        page: 1,
-        hasMore: false
-      };
     } finally {
       setIsSearching(false);
     }
@@ -735,15 +760,71 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   // Charger un permis existant depuis l'historique
   const loadPermitFromHistory = async (permitNumber: string) => {
     try {
-      // Simulation du chargement depuis Supabase
-      // const { data, error } = await supabase
-      //   .from('confined_space_permits')
-      //   .select('*')
-      //   .eq('permit_number', permitNumber)
-      //   .single();
+      const { supabase } = await import('../../../lib/supabase');
+      
+      const { data, error } = await supabase
+        .from('confined_space_permits')
+        .select('*')
+        .eq('permit_number', permitNumber)
+        .single();
 
-      console.log(`Chargement du permis: ${permitNumber}`);
-      alert(`Permis ${permitNumber} chargé avec succès!\n\nLes données du permis ont été restaurées dans le formulaire.`);
+      if (error) {
+        console.error('Erreur chargement permis:', error);
+        throw error;
+      }
+
+      if (data) {
+        // Mapper les données Supabase vers notre état local
+        const loadedPermit = {
+          projectNumber: data.project_number || '',
+          workLocation: data.work_location || '',
+          contractor: data.contractor || '',
+          supervisor: data.supervisor || '',
+          entryDate: data.entry_date || '',
+          duration: data.duration || '',
+          workerCount: data.worker_count || 1,
+          workDescription: data.work_description || '',
+          spaceType: data.space_type || '',
+          csaClass: data.csa_class || '',
+          entryMethod: '',
+          accessType: '',
+          spaceLocation: '',
+          spaceDescription: '',
+          dimensions: data.dimensions || {
+            length: 0, width: 0, height: 0, diameter: 0, volume: 0
+          },
+          entryPoints: data.entry_points || [{
+            id: 'entry-1', type: 'circular', dimensions: '', location: '', 
+            condition: 'good', accessibility: 'normal', photos: []
+          }],
+          atmosphericHazards: data.atmospheric_hazards || [],
+          physicalHazards: data.physical_hazards || [],
+          environmentalConditions: data.environmental_conditions || {
+            ventilationRequired: false, ventilationType: '', lightingConditions: '',
+            temperatureRange: '', moistureLevel: '', noiseLevel: '', weatherConditions: ''
+          },
+          spaceContent: data.space_content || {
+            contents: '', residues: '', previousUse: '', lastEntry: '', cleaningStatus: ''
+          },
+          safetyMeasures: data.safety_measures || {
+            emergencyEgress: '', communicationMethod: '', 
+            monitoringEquipment: [], ventilationEquipment: [], emergencyEquipment: []
+          },
+          spacePhotos: data.space_photos || []
+        };
+
+        // Mettre à jour l'état avec les données chargées
+        setConfinedSpaceDetails(loadedPermit);
+        setSpacePhotos(data.space_photos || []);
+        
+        // Mettre à jour les données du permis parent
+        updatePermitData({
+          permit_number: data.permit_number,
+          ...loadedPermit
+        });
+
+        alert(`✅ Permis ${permitNumber} chargé avec succès!\n\nToutes les données ont été restaurées dans le formulaire.`);
+      }
       
       // Fermer la base de données après chargement
       setShowPermitDatabase(false);
@@ -751,10 +832,66 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       
     } catch (error) {
       console.error('Erreur lors du chargement du permis:', error);
-      alert('Erreur lors du chargement du permis. Veuillez réessayer.');
+      alert('❌ Erreur lors du chargement du permis. Vérifiez que le permis existe.');
     }
   };
 
+  // Sauvegarder le permis actuel dans la base de données
+  const savePermitToDatabase = async () => {
+    try {
+      const { supabase } = await import('../../../lib/supabase');
+      
+      const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      
+      // Générer le QR Code
+      const qrCodeDataUrl = await generatePermitQRCode(permitNumber);
+      
+      const permitToSave = {
+        permit_number: permitNumber,
+        project_number: confinedSpaceDetails.projectNumber,
+        work_location: confinedSpaceDetails.workLocation,
+        contractor: confinedSpaceDetails.contractor,
+        supervisor: confinedSpaceDetails.supervisor,
+        space_type: confinedSpaceDetails.spaceType,
+        csa_class: confinedSpaceDetails.csaClass,
+        entry_date: confinedSpaceDetails.entryDate,
+        duration: confinedSpaceDetails.duration,
+        worker_count: confinedSpaceDetails.workerCount,
+        work_description: confinedSpaceDetails.workDescription,
+        dimensions: confinedSpaceDetails.dimensions,
+        entry_points: confinedSpaceDetails.entryPoints,
+        atmospheric_hazards: confinedSpaceDetails.atmosphericHazards,
+        physical_hazards: confinedSpaceDetails.physicalHazards,
+        environmental_conditions: confinedSpaceDetails.environmentalConditions,
+        space_content: confinedSpaceDetails.spaceContent,
+        safety_measures: confinedSpaceDetails.safetyMeasures,
+        space_photos: spacePhotos,
+        status: 'active',
+        province: selectedProvince,
+        authority: PROVINCIAL_REGULATIONS[selectedProvince].authority,
+        qr_code: qrCodeDataUrl,
+        entry_count: 0
+      };
+
+      const { data, error } = await supabase
+        .from('confined_space_permits')
+        .upsert(permitToSave, { 
+          onConflict: 'permit_number',
+          ignoreDuplicates: false 
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erreur sauvegarde:', error);
+        throw error;
+      }
+
+      // Mettre à jour le numéro de permis dans l'état
+      updatePermitData({ permit_number: permitNumber });
+      
+      alert(`✅ Permis ${permitNumber} sauvegardé avec succès!\n\n📊 Données: ${JSON.stringify(permitToSave, null, 2).length} caractères\n🔗 QR Code: ${qrCodeDataUrl ? 'Généré' : 'Erreur'}\n📅 ${new Date().toLocaleString('fr-CA')}`);
+      
   // Traitement des données QR scannées
   const handleQRScan = async (qrData: string) => {
     try {
@@ -792,41 +929,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     
     const results = await searchPermitsDatabase(query);
     setSearchResults(results);
-  };
-
-  // Sauvegarder le permis actuel dans la base de données
-  const savePermitToDatabase = async () => {
-    try {
-      const permitToSave = {
-        permitNumber: permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-        projectNumber: confinedSpaceDetails.projectNumber,
-        workLocation: confinedSpaceDetails.workLocation,
-        contractor: confinedSpaceDetails.contractor,
-        supervisor: confinedSpaceDetails.supervisor,
-        spaceType: confinedSpaceDetails.spaceType,
-        csaClass: confinedSpaceDetails.csaClass,
-        entryDate: confinedSpaceDetails.entryDate,
-        status: 'active',
-        siteInformation: confinedSpaceDetails,
-        spacePhotos: spacePhotos,
-        createdAt: new Date().toISOString(),
-        lastModified: new Date().toISOString()
-      };
-
-      // Simulation de sauvegarde en base
-      // const { data, error } = await supabase
-      //   .from('confined_space_permits')
-      //   .upsert(permitToSave);
-
-      console.log('Permis sauvegardé:', permitToSave);
-      alert(`Permis ${permitToSave.permitNumber} sauvegardé avec succès dans la base de données!`);
-      
-      return permitToSave.permitNumber;
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde. Veuillez réessayer.');
-      return null;
-    }
   };
   
   // Calcul du volume automatique basé sur le type d'espace
@@ -1020,8 +1122,8 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   // Génération du QR Code pour le permis
   const generatePermitQRCode = async (permitNumber: string): Promise<string> => {
     try {
-      // Importer la fonction depuis utils
-      const { generateQRCode } = await import('../../utils/generateQRCode');
+      // Importer la fonction depuis utils - CHEMIN CORRIGÉ
+      const { generateQRCode } = await import('../../../../app/utils/generateQRCode');
       
       // URL vers le permis (à adapter selon votre structure)
       const permitUrl = `${window.location.origin}/permits/${permitNumber}`;
@@ -1045,7 +1147,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       console.error('Erreur génération QR Code:', error);
       // Fallback vers QR simple avec juste le numéro
       try {
-        const { generateQRCode } = await import('../../utils/generateQRCode');
+        const { generateQRCode } = await import('../../../../app/utils/generateQRCode');
         return await generateQRCode(permitNumber);
       } catch (fallbackError) {
         console.error('Erreur QR Code fallback:', fallbackError);
@@ -1428,7 +1530,7 @@ Système C-SECUR360`;
     alert('Informations du site sauvegardées avec succès!');
     return true;
   };
-  // =================== CARROUSEL PHOTOS IDENTIQUE AU STEP 1 ===================
+      // =================== CARROUSEL PHOTOS IDENTIQUE AU STEP 1 ===================
   const PhotoCarousel = ({ photos, onAddPhoto, category }: {
     photos: SpacePhoto[];
     onAddPhoto: () => void;
@@ -3044,7 +3146,7 @@ Système C-SECUR360`;
             />
           )}
         </div>
-     {/* Section Évaluation des Dangers */}
+        {/* Section Évaluation des Dangers */}
         <div className="form-section hazard-section">
           <div className="section-header">
             <AlertTriangle className="section-icon hazard-icon" />
@@ -3873,4 +3975,4 @@ Système C-SECUR360`;
   );
 };
 
-export default SiteInformation;   
+export default SiteInformation;
