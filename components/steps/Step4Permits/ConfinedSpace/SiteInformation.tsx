@@ -717,71 +717,74 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
 
   // =================== HANDLERS DE DONNÉES OPTIMISÉS SANS SCROLL ===================
   const handleConfinedSpaceChange = useCallback((field: string, value: any) => {
-    // Prévenir le scroll automatique
-    const currentScrollPosition = window.pageYOffset;
-    
     setConfinedSpaceDetails(prev => {
       const updated = { ...prev, [field]: value };
       
-      // Synchronisation avec les données du permis
+      // Synchronisation avec les données du permis sans déclencher de re-render
       updatePermitData({ [field]: value });
       
-      // Notification au parent
-      updateParentData('siteInformation', updated);
+      // Notification au parent sans déclencher de scroll
+      setTimeout(() => {
+        updateParentData('siteInformation', updated);
+      }, 0);
       
       return updated;
     });
-
-    // Restaurer la position de scroll après un court délai
-    setTimeout(() => {
-      window.scrollTo(0, currentScrollPosition);
-    }, 0);
   }, [updatePermitData, updateParentData]);
 
   const handleEnvironmentalChange = useCallback((field: string, value: any) => {
-    const currentScrollPosition = window.pageYOffset;
-    
     const updated = {
       ...confinedSpaceDetails.environmentalConditions,
       [field]: value
     };
     
-    handleConfinedSpaceChange('environmentalConditions', updated);
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      environmentalConditions: updated
+    }));
     
+    // Mise à jour sans déclencher de scroll
     setTimeout(() => {
-      window.scrollTo(0, currentScrollPosition);
+      updatePermitData({ environmentalConditions: updated });
+      updateParentData('siteInformation', { ...confinedSpaceDetails, environmentalConditions: updated });
     }, 0);
-  }, [confinedSpaceDetails.environmentalConditions, handleConfinedSpaceChange]);
+  }, [confinedSpaceDetails, updatePermitData, updateParentData]);
 
   const handleContentChange = useCallback((field: string, value: any) => {
-    const currentScrollPosition = window.pageYOffset;
-    
     const updated = {
       ...confinedSpaceDetails.spaceContent,
       [field]: value
     };
     
-    handleConfinedSpaceChange('spaceContent', updated);
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      spaceContent: updated
+    }));
     
+    // Mise à jour sans déclencher de scroll
     setTimeout(() => {
-      window.scrollTo(0, currentScrollPosition);
+      updatePermitData({ spaceContent: updated });
+      updateParentData('siteInformation', { ...confinedSpaceDetails, spaceContent: updated });
     }, 0);
-  }, [confinedSpaceDetails.spaceContent, handleConfinedSpaceChange]);
+  }, [confinedSpaceDetails, updatePermitData, updateParentData]);
 
   const handleSafetyChange = useCallback((field: string, value: any) => {
-    const currentScrollPosition = window.pageYOffset;
-    
     const updated = {
       ...confinedSpaceDetails.safetyMeasures,
       [field]: value
     };
     
-    handleConfinedSpaceChange('safetyMeasures', updated);
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      safetyMeasures: updated
+    }));
     
+    // Mise à jour sans déclencher de scroll
     setTimeout(() => {
-      window.scrollTo(0, currentScrollPosition);
+      updatePermitData({ safetyMeasures: updated });
+      updateParentData('siteInformation', { ...confinedSpaceDetails, safetyMeasures: updated });
     }, 0);
-  }, [confinedSpaceDetails.safetyMeasures, handleConfinedSpaceChange]);
+  }, [confinedSpaceDetails, updatePermitData, updateParentData]);
 
   // =================== CALCUL DE VOLUME INTELLIGENT ===================
   const calculateVolume = () => {
@@ -963,39 +966,43 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
 
   // =================== GESTION DES DANGERS AVEC PRÉVENTION SCROLL ===================
   const toggleAtmosphericHazard = (hazardType: string) => {
-    const currentScrollPosition = window.pageYOffset;
-    
     const currentHazards = confinedSpaceDetails.atmosphericHazards;
     const updatedHazards = currentHazards.includes(hazardType)
       ? currentHazards.filter(h => h !== hazardType)
       : [...currentHazards, hazardType];
     
-    handleConfinedSpaceChange('atmosphericHazards', updatedHazards);
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      atmosphericHazards: updatedHazards
+    }));
     
+    // Mise à jour sans déclencher de scroll
     setTimeout(() => {
-      window.scrollTo(0, currentScrollPosition);
+      updatePermitData({ atmosphericHazards: updatedHazards });
+      updateParentData('siteInformation', { ...confinedSpaceDetails, atmosphericHazards: updatedHazards });
     }, 0);
   };
 
   const togglePhysicalHazard = (hazardType: string) => {
-    const currentScrollPosition = window.pageYOffset;
-    
     const currentHazards = confinedSpaceDetails.physicalHazards;
     const updatedHazards = currentHazards.includes(hazardType)
       ? currentHazards.filter(h => h !== hazardType)
       : [...currentHazards, hazardType];
     
-    handleConfinedSpaceChange('physicalHazards', updatedHazards);
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      physicalHazards: updatedHazards
+    }));
     
+    // Mise à jour sans déclencher de scroll
     setTimeout(() => {
-      window.scrollTo(0, currentScrollPosition);
+      updatePermitData({ physicalHazards: updatedHazards });
+      updateParentData('siteInformation', { ...confinedSpaceDetails, physicalHazards: updatedHazards });
     }, 0);
   };
 
   // =================== GESTION DES SECTIONS COLLAPSIBLES ===================
   const toggleSection = (sectionId: string) => {
-    const currentScrollPosition = window.pageYOffset;
-    
     setCollapsedSections(prev => {
       const newSet = new Set(prev);
       if (newSet.has(sectionId)) {
@@ -1005,16 +1012,10 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       }
       return newSet;
     });
-    
-    setTimeout(() => {
-      window.scrollTo(0, currentScrollPosition);
-    }, 100);
   };
 
   // =================== GESTION DES POINTS D'ENTRÉE ===================
   const addEntryPoint = () => {
-    const currentScrollPosition = window.pageYOffset;
-    
     const newEntryPoint = {
       id: `entry-${Date.now()}`,
       type: 'circular',
@@ -1025,10 +1026,15 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       photos: []
     };
     
-    handleConfinedSpaceChange('entryPoints', [...confinedSpaceDetails.entryPoints, newEntryPoint]);
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      entryPoints: [...prev.entryPoints, newEntryPoint]
+    }));
     
+    // Mise à jour sans déclencher de scroll
     setTimeout(() => {
-      window.scrollTo(0, currentScrollPosition);
+      updatePermitData({ entryPoints: [...confinedSpaceDetails.entryPoints, newEntryPoint] });
+      updateParentData('siteInformation', { ...confinedSpaceDetails, entryPoints: [...confinedSpaceDetails.entryPoints, newEntryPoint] });
     }, 0);
   };
 
@@ -1038,26 +1044,34 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       return;
     }
     
-    const currentScrollPosition = window.pageYOffset;
-    
     const updatedEntryPoints = confinedSpaceDetails.entryPoints.filter(entry => entry.id !== entryId);
-    handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
     
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      entryPoints: updatedEntryPoints
+    }));
+    
+    // Mise à jour sans déclencher de scroll
     setTimeout(() => {
-      window.scrollTo(0, currentScrollPosition);
+      updatePermitData({ entryPoints: updatedEntryPoints });
+      updateParentData('siteInformation', { ...confinedSpaceDetails, entryPoints: updatedEntryPoints });
     }, 0);
   };
 
   const updateEntryPoint = (entryId: string, field: string, value: any) => {
-    const currentScrollPosition = window.pageYOffset;
-    
     const updatedEntryPoints = confinedSpaceDetails.entryPoints.map(entry =>
       entry.id === entryId ? { ...entry, [field]: value } : entry
     );
-    handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
     
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      entryPoints: updatedEntryPoints
+    }));
+    
+    // Mise à jour sans déclencher de scroll
     setTimeout(() => {
-      window.scrollTo(0, currentScrollPosition);
+      updatePermitData({ entryPoints: updatedEntryPoints });
+      updateParentData('siteInformation', { ...confinedSpaceDetails, entryPoints: updatedEntryPoints });
     }, 0);
   };
 
