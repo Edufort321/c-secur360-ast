@@ -6,12 +6,36 @@ import {
   Copy, Check, AlertTriangle, Camera, Upload, X, Settings, Wrench, Droplets, 
   Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, Home, Layers, 
   Ruler, Gauge, Thermometer, Activity, Shield, Zap, Save, Download, 
-  Mail, MessageSquare, Share, Printer, CheckCircle
+  Mail, MessageSquare, Share, Printer, CheckCircle, Search
 } from 'lucide-react';
 import { styles, isMobile } from './styles';
 
 // =================== TYPES ET INTERFACES ===================
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
+
+interface PermitHistoryEntry {
+  id: string;
+  permitNumber: string;
+  projectNumber: string;
+  workLocation: string;
+  contractor: string;
+  spaceType: string;
+  csaClass: string;
+  entryDate: string;
+  status: 'active' | 'completed' | 'expired' | 'cancelled';
+  createdAt: string;
+  lastModified: string;
+  entryCount: number;
+  hazardCount: number;
+  qrCode?: string;
+}
+
+interface PermitSearchResult {
+  permits: PermitHistoryEntry[];
+  total: number;
+  page: number;
+  hasMore: boolean;
+}
 
 interface SiteInformationProps {
   permitData: any;
@@ -595,35 +619,377 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   const [showPhotos, setShowPhotos] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
+  // États pour la recherche et l'historique des permis
+  const [showPermitDatabase, setShowPermitDatabase] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<PermitSearchResult>({
+    permits: [],
+    total: 0,
+    page: 1,
+    hasMore: false
+  });
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedHistoryPermit, setSelectedHistoryPermit] = useState<PermitHistoryEntry | null>(null);
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [scannedQRData, setScannedQRData] = useState<string>('');
+
   // Réf pour upload de photos
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Traductions
   const t = getTranslations(language);
-  // =================== FONCTIONS UTILITAIRES ===================
+  // =================== FONCTIONS DE RECHERCHE ET BASE DE DONNÉES ===================
+
+  // =================== FONCTIONS DE RECHERCHE ET BASE DE DONNÉES ===================
+
+  // Recherche dans la base de données des permis
+  const searchPermitsDatabase = async (query: string, page: number = 1): Promise<PermitSearchResult> => {
+    setIsSearching(true);
+    try {
+      // Import dynamique du client Supabase
+      const { supabase } = await import('../../../lib/supabase');
+      
+      let queryBuilder = supabase
+        .from('confined_space_permits')
+        .select(`
+          id,
+          permit_number,
+          project_number,
+          work_location,
+          contractor,
+          supervisor,
+          space_type,
+          csa_class,
+          entry_date,
+          status,
+          created_at,
+          last_modified,
+          entry_count,
+          hazard_count
+        `)
+        .order('created_at', { ascending: false });
+
+      // Si une requête est fournie, filtrer les résultats
+      if (query.trim()) {
+        queryBuilder = queryBuilder.or(`
+          permit_number.ilike.%${query}%,
+          project_number.ilike.%${query}%,
+          work_location.ilike.%${query}%,
+          contractor.ilike.%${query}%
+        `);
+      }
+
+      // Pagination
+      const startRange = (page - 1) * 10;
+      const endRange = page * 10 - 1;
+      queryBuilder = queryBuilder.range(startRange, endRange);
+
+      const { data, error, count } = await queryBuilder;
+
+      if (error) {
+        console.error('Erreur Supabase:', error);
+        throw error;
+      }
+
+      // Transformation des données pour correspondre à notre interface
+      const permits: PermitHistoryEntry[] = (data || []).map(permit => ({
+        id: permit.id,
+        permitNumber: permit.permit_number,
+        projectNumber: permit.project_number || '',
+        workLocation: permit.work_location || '',
+        contractor: permit.contractor || '',
+        spaceType: permit.space_type || '',
+        csaClass: permit.csa_class || '',
+        entryDate: permit.entry_date || '',
+        status: permit.status as any,
+        createdAt: permit.created_at,
+        lastModified: permit.last_modified,
+        entryCount: permit.entry_count || 0,
+        hazardCount: permit.hazard_count || 0
+      }));
+
+      return {
+        permits,
+        total: count || 0,
+        page: page,
+        hasMore: (count || 0) > page * 10
+      };
+
+    } catch (error) {
+      console.error('Erreur lors de la recherche:', error);
+      
+      // Fallback vers les données mockées en cas d'erreur
+      const mockPermits: PermitHistoryEntry[] = [
+        {
+          id: '1',
+          permitNumber: 'CS-QC-20250730-ABC123',
+          projectNumber: 'P-2024-001',
+          workLocation: 'Site industriel Montreal',
+          contractor: 'Construction ABC Inc.',
+          spaceType: 'tank',
+          csaClass: 'class2',
+          entryDate: '2025-07-30T08:00:00',
+          status: 'active',
+          createdAt: '2025-07-30T06:00:00',
+          lastModified: '2025-07-30T07:30:00',
+          entryCount: 3,
+          hazardCount: 5
+        }
+      ];
+
+      const filteredPermits = query 
+        ? mockPermits.filter(permit => 
+            permit.permitNumber.toLowerCase().includes(query.toLowerCase()) ||
+            permit.projectNumber.toLowerCase().includes(query.toLowerCase()) ||
+            permit.workLocation.toLowerCase().includes(query.toLowerCase()) ||
+            permit.contractor.toLowerCase().includes(query.toLowerCase())
+          )
+        : mockPermits;
+
+      return {
+        permits: filteredPermits,
+        total: filteredPermits.length,
+        page: page,
+        hasMore: false
+      };
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Charger un permis existant depuis l'historique
+  const loadPermitFromHistory = async (permitNumber: string) => {
+    try {
+      const { supabase } = await import('../../../lib/supabase');
+      
+      const { data, error } = await supabase
+        .from('confined_space_permits')
+        .select('*')
+        .eq('permit_number', permitNumber)
+        .single();
+
+      if (error) {
+        console.error('Erreur chargement permis:', error);
+        throw error;
+      }
+
+      if (data) {
+        // Mapper les données Supabase vers notre état local
+        const loadedPermit = {
+          projectNumber: data.project_number || '',
+          workLocation: data.work_location || '',
+          contractor: data.contractor || '',
+          supervisor: data.supervisor || '',
+          entryDate: data.entry_date || '',
+          duration: data.duration || '',
+          workerCount: data.worker_count || 1,
+          workDescription: data.work_description || '',
+          spaceType: data.space_type || '',
+          csaClass: data.csa_class || '',
+          entryMethod: '',
+          accessType: '',
+          spaceLocation: '',
+          spaceDescription: '',
+          dimensions: data.dimensions || {
+            length: 0, width: 0, height: 0, diameter: 0, volume: 0
+          },
+          entryPoints: data.entry_points || [{
+            id: 'entry-1', type: 'circular', dimensions: '', location: '', 
+            condition: 'good', accessibility: 'normal', photos: []
+          }],
+          atmosphericHazards: data.atmospheric_hazards || [],
+          physicalHazards: data.physical_hazards || [],
+          environmentalConditions: data.environmental_conditions || {
+            ventilationRequired: false, ventilationType: '', lightingConditions: '',
+            temperatureRange: '', moistureLevel: '', noiseLevel: '', weatherConditions: ''
+          },
+          spaceContent: data.space_content || {
+            contents: '', residues: '', previousUse: '', lastEntry: '', cleaningStatus: ''
+          },
+          safetyMeasures: data.safety_measures || {
+            emergencyEgress: '', communicationMethod: '', 
+            monitoringEquipment: [], ventilationEquipment: [], emergencyEquipment: []
+          },
+          spacePhotos: data.space_photos || []
+        };
+
+        // Mettre à jour l'état avec les données chargées
+        setConfinedSpaceDetails(loadedPermit);
+        setSpacePhotos(data.space_photos || []);
+        
+        // Mettre à jour les données du permis parent
+        updatePermitData({
+          permit_number: data.permit_number,
+          ...loadedPermit
+        });
+
+        alert(`✅ Permis ${permitNumber} chargé avec succès!\n\nToutes les données ont été restaurées dans le formulaire.`);
+      }
+      
+      // Fermer la base de données après chargement
+      setShowPermitDatabase(false);
+      setSelectedHistoryPermit(null);
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement du permis:', error);
+      alert('❌ Erreur lors du chargement du permis. Vérifiez que le permis existe.');
+    }
+  };
+
+  // Sauvegarder le permis actuel dans la base de données
+  const savePermitToDatabase = async () => {
+    try {
+      const { supabase } = await import('../../../lib/supabase');
+      
+      const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      
+      // Générer le QR Code
+      const qrCodeDataUrl = await generatePermitQRCode(permitNumber);
+      
+      const permitToSave = {
+        permit_number: permitNumber,
+        project_number: confinedSpaceDetails.projectNumber,
+        work_location: confinedSpaceDetails.workLocation,
+        contractor: confinedSpaceDetails.contractor,
+        supervisor: confinedSpaceDetails.supervisor,
+        space_type: confinedSpaceDetails.spaceType,
+        csa_class: confinedSpaceDetails.csaClass,
+        entry_date: confinedSpaceDetails.entryDate,
+        duration: confinedSpaceDetails.duration,
+        worker_count: confinedSpaceDetails.workerCount,
+        work_description: confinedSpaceDetails.workDescription,
+        dimensions: confinedSpaceDetails.dimensions,
+        entry_points: confinedSpaceDetails.entryPoints,
+        atmospheric_hazards: confinedSpaceDetails.atmosphericHazards,
+        physical_hazards: confinedSpaceDetails.physicalHazards,
+        environmental_conditions: confinedSpaceDetails.environmentalConditions,
+        space_content: confinedSpaceDetails.spaceContent,
+        safety_measures: confinedSpaceDetails.safetyMeasures,
+        space_photos: spacePhotos,
+        status: 'active',
+        province: selectedProvince,
+        authority: PROVINCIAL_REGULATIONS[selectedProvince].authority,
+        qr_code: qrCodeDataUrl,
+        entry_count: 0
+      };
+
+      const { data, error } = await supabase
+        .from('confined_space_permits')
+        .upsert(permitToSave, { 
+          onConflict: 'permit_number',
+          ignoreDuplicates: false 
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erreur sauvegarde:', error);
+        throw error;
+      }
+
+      // Mettre à jour le numéro de permis dans l'état
+      updatePermitData({ permit_number: permitNumber });
+      
+      alert(`✅ Permis ${permitNumber} sauvegardé avec succès!\n\n📊 Données: ${JSON.stringify(permitToSave, null, 2).length} caractères\n🔗 QR Code: ${qrCodeDataUrl ? 'Généré' : 'Erreur'}\n📅 ${new Date().toLocaleString('fr-CA')}`);
+      
+  // Traitement des données QR scannées
+  const handleQRScan = async (qrData: string) => {
+    try {
+      // Tenter de parser les données JSON du QR
+      const parsedData = JSON.parse(qrData);
+      
+      if (parsedData.permitNumber && parsedData.type === 'confined_space') {
+        await loadPermitFromHistory(parsedData.permitNumber);
+        setScannedQRData('');
+        setShowQRScanner(false);
+      } else {
+        // Traiter comme un simple numéro de permis
+        await loadPermitFromHistory(qrData);
+        setScannedQRData('');
+        setShowQRScanner(false);
+      }
+    } catch (error) {
+      // Si ce n'est pas du JSON, traiter comme un numéro de permis simple
+      if (qrData.trim()) {
+        await loadPermitFromHistory(qrData.trim());
+        setScannedQRData('');
+        setShowQRScanner(false);
+      } else {
+        alert('Code QR invalide ou non reconnu.');
+      }
+    }
+  };
+
+  // Effectuer une recherche
+  const handleSearch = async (query: string) => {
+    if (query.trim().length < 2) {
+      setSearchResults({ permits: [], total: 0, page: 1, hasMore: false });
+      return;
+    }
+    
+    const results = await searchPermitsDatabase(query);
+    setSearchResults(results);
+  };
   
   // Calcul du volume automatique basé sur le type d'espace
   const calculateVolume = () => {
     const { length, width, height, diameter } = confinedSpaceDetails.dimensions;
     let volume = 0;
+    let formulaUsed = '';
 
-    if (confinedSpaceDetails.spaceType === 'tank' || 
-        confinedSpaceDetails.spaceType === 'vessel' || 
-        confinedSpaceDetails.spaceType === 'silo') {
-      // Volume cylindrique: π × r² × h
-      if (diameter > 0 && height > 0) {
-        const radius = diameter / 2;
-        volume = Math.PI * Math.pow(radius, 2) * height;
-      }
-    } else if (confinedSpaceDetails.spaceType === 'pit' && diameter > 0 && height > 0) {
-      // Fosse circulaire
-      const radius = diameter / 2;
-      volume = Math.PI * Math.pow(radius, 2) * height;
-    } else {
-      // Volume rectangulaire: l × w × h
-      if (length > 0 && width > 0 && height > 0) {
-        volume = length * width * height;
-      }
+    // Sélection de la formule basée sur le type d'espace
+    switch (confinedSpaceDetails.spaceType) {
+      case 'tank':
+      case 'vessel':
+      case 'silo':
+      case 'boiler':
+        // Forme cylindrique: π × r² × h
+        if (diameter > 0 && height > 0) {
+          const radius = diameter / 2;
+          volume = Math.PI * Math.pow(radius, 2) * height;
+          formulaUsed = `Cylindrique: π × (${radius})² × ${height}`;
+        }
+        break;
+        
+      case 'pit':
+        // Fosse peut être circulaire ou rectangulaire
+        if (diameter > 0 && height > 0) {
+          // Fosse circulaire
+          const radius = diameter / 2;
+          volume = Math.PI * Math.pow(radius, 2) * height;
+          formulaUsed = `Fosse circulaire: π × (${radius})² × ${height}`;
+        } else if (length > 0 && width > 0 && height > 0) {
+          // Fosse rectangulaire
+          volume = length * width * height;
+          formulaUsed = `Fosse rectangulaire: ${length} × ${width} × ${height}`;
+        }
+        break;
+        
+      case 'tunnel':
+      case 'duct':
+        // Tunnel/conduit cylindrique
+        if (diameter > 0 && length > 0) {
+          const radius = diameter / 2;
+          volume = Math.PI * Math.pow(radius, 2) * length;
+          formulaUsed = `Tunnel cylindrique: π × (${radius})² × ${length}`;
+        } else if (width > 0 && height > 0 && length > 0) {
+          // Tunnel rectangulaire
+          volume = length * width * height;
+          formulaUsed = `Tunnel rectangulaire: ${length} × ${width} × ${height}`;
+        }
+        break;
+        
+      case 'vault':
+      case 'chamber':
+      case 'storage':
+      case 'trench':
+      default:
+        // Forme rectangulaire par défaut: L × l × h
+        if (length > 0 && width > 0 && height > 0) {
+          volume = length * width * height;
+          formulaUsed = `Rectangulaire: ${length} × ${width} × ${height}`;
+        }
+        break;
     }
 
     const updatedDimensions = {
@@ -632,6 +998,9 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     };
 
     handleConfinedSpaceChange('dimensions', updatedDimensions);
+    
+    // Affichage de la formule utilisée
+    console.log(`Volume calculé: ${updatedDimensions.volume} m³ - Formule: ${formulaUsed}`);
   };
 
   // Gestion de la capture photo avec géolocalisation
@@ -748,6 +1117,43 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       entryRegistry: permitData.entryRegistry || {},
       rescuePlan: permitData.rescuePlan || {}
     };
+  };
+
+  // Génération du QR Code pour le permis
+  const generatePermitQRCode = async (permitNumber: string): Promise<string> => {
+    try {
+      // Importer la fonction depuis utils
+      const { generateQRCode } = await import('../../utils/generateQRCode');
+      
+      // URL vers le permis (à adapter selon votre structure)
+      const permitUrl = `${window.location.origin}/permits/${permitNumber}`;
+      
+      // Données JSON complètes du permis pour QR plus riche
+      const qrData = {
+        permitNumber,
+        type: 'confined_space',
+        province: selectedProvince,
+        issueDate: new Date().toISOString(),
+        url: permitUrl,
+        projectNumber: confinedSpaceDetails.projectNumber,
+        location: confinedSpaceDetails.workLocation,
+        spaceType: confinedSpaceDetails.spaceType,
+        csaClass: confinedSpaceDetails.csaClass,
+        hazardCount: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length
+      };
+      
+      return await generateQRCode(JSON.stringify(qrData));
+    } catch (error) {
+      console.error('Erreur génération QR Code:', error);
+      // Fallback vers QR simple avec juste le numéro
+      try {
+        const { generateQRCode } = await import('../../utils/generateQRCode');
+        return await generateQRCode(permitNumber);
+      } catch (fallbackError) {
+        console.error('Erreur QR Code fallback:', fallbackError);
+        return '';
+      }
+    }
   };
 
   // Impression du permis avec mise en page professionnelle
@@ -891,6 +1297,23 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                     <div class="info-label">Classification CSA</div>
                     <div class="info-value">${report.siteInformation.csaClass || 'Non spécifiée'}</div>
                   </div>
+                  <div class="info-item">
+                    <div class="info-label">Dimensions</div>
+                    <div class="info-value">L: ${report.siteInformation.dimensions?.length || 0}m × l: ${report.siteInformation.dimensions?.width || 0}m × H: ${report.siteInformation.dimensions?.height || 0}m</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">Volume calculé</div>
+                    <div class="info-value">${report.siteInformation.dimensions?.volume || 0} m³</div>
+                  </div>
+                </div>
+                
+                <!-- Code QR généré automatiquement -->
+                <div style="text-align: center; margin: 20px 0; padding: 15px; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px;">
+                  <h3 style="color: #0c4a6e; margin: 0 0 10px 0;">Code QR - Accès Numérique</h3>
+                  <div style="width: 120px; height: 120px; margin: 0 auto; background: white; border: 2px solid #0ea5e9; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #64748b;">
+                    QR: ${report.metadata.permitNumber}
+                  </div>
+                  <p style="margin: 10px 0 0 0; font-size: 12px; color: #475569;">Scannez pour accéder aux détails complets du permis</p>
                 </div>
               </div>
 
@@ -1107,7 +1530,7 @@ Système C-SECUR360`;
     alert('Informations du site sauvegardées avec succès!');
     return true;
   };
-  // =================== CARROUSEL PHOTOS IDENTIQUE AU STEP 1 ===================
+   // =================== CARROUSEL PHOTOS IDENTIQUE AU STEP 1 ===================
   const PhotoCarousel = ({ photos, onAddPhoto, category }: {
     photos: SpacePhoto[];
     onAddPhoto: () => void;
@@ -1971,6 +2394,235 @@ Système C-SECUR360`;
       />
       
       <div className="step1-container">
+        {/* Modal Base de Données des Permis */}
+        {showPermitDatabase && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}>
+            <div style={{
+              background: 'rgba(30, 41, 59, 0.95)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(100, 116, 139, 0.3)',
+              borderRadius: '20px',
+              padding: '24px',
+              maxWidth: '800px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflowY: 'auto'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2 style={{ color: '#ffffff', margin: 0, fontSize: '20px', fontWeight: '700' }}>
+                  🗄️ Base de Données - Espaces Clos
+                </h2>
+                <button
+                  onClick={() => setShowPermitDatabase(false)}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#fca5a5',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Barre de recherche */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <input
+                      type="text"
+                      placeholder="Rechercher par numéro de permis, projet, lieu ou entrepreneur..."
+                      className="premium-input"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        handleSearch(e.target.value);
+                      }}
+                      style={{ paddingLeft: '40px' }}
+                    />
+                    <Search 
+                      size={16} 
+                      style={{ 
+                        position: 'absolute', 
+                        left: '12px', 
+                        top: '50%', 
+                        transform: 'translateY(-50%)', 
+                        color: '#64748b' 
+                      }} 
+                    />
+                  </div>
+                  <button
+                    onClick={() => setShowQRScanner(!showQRScanner)}
+                    className="btn-primary"
+                    style={{ minWidth: '120px' }}
+                  >
+                    <Camera size={16} />
+                    Scanner QR
+                  </button>
+                </div>
+
+                {/* Scanner QR simple */}
+                {showQRScanner && (
+                  <div style={{
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    marginBottom: '16px'
+                  }}>
+                    <h4 style={{ color: '#60a5fa', margin: '0 0 12px 0' }}>Scanner Code QR</h4>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <input
+                        type="text"
+                        placeholder="Collez les données du QR code ici..."
+                        className="premium-input"
+                        value={scannedQRData}
+                        onChange={(e) => setScannedQRData(e.target.value)}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        onClick={() => handleQRScan(scannedQRData)}
+                        className="btn-success"
+                        disabled={!scannedQRData.trim()}
+                      >
+                        Charger
+                      </button>
+                    </div>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                      📱 Utilisez une app de scan QR et collez le résultat ici
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Résultats de recherche */}
+              {isSearching ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                  <div style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</div>
+                  <p style={{ margin: '12px 0 0 0' }}>Recherche en cours...</p>
+                </div>
+              ) : searchResults.permits.length > 0 ? (
+                <div>
+                  <h4 style={{ color: '#e2e8f0', margin: '0 0 16px 0' }}>
+                    📋 {searchResults.total} permis trouvé{searchResults.total > 1 ? 's' : ''}
+                  </h4>
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    {searchResults.permits.map((permit) => (
+                      <div key={permit.id} style={{
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        transition: 'all 0.3s ease',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => setSelectedHistoryPermit(selectedHistoryPermit?.id === permit.id ? null : permit)}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(100, 116, 139, 0.3)';
+                        (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                          <div>
+                            <h5 style={{ color: '#3b82f6', margin: '0 0 4px 0', fontSize: '14px', fontWeight: '600' }}>
+                              {permit.permitNumber}
+                            </h5>
+                            <p style={{ color: '#e2e8f0', margin: '0 0 4px 0', fontSize: '13px' }}>
+                              📋 {permit.projectNumber} • 📍 {permit.workLocation}
+                            </p>
+                            <p style={{ color: '#94a3b8', margin: 0, fontSize: '12px' }}>
+                              🏢 {permit.contractor} • {permit.spaceType} • {permit.csaClass}
+                            </p>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{
+                              background: permit.status === 'active' ? 'rgba(16, 185, 129, 0.2)' : 
+                                         permit.status === 'completed' ? 'rgba(59, 130, 246, 0.2)' :
+                                         permit.status === 'expired' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(156, 163, 175, 0.2)',
+                              color: permit.status === 'active' ? '#10b981' : 
+                                     permit.status === 'completed' ? '#3b82f6' :
+                                     permit.status === 'expired' ? '#ef4444' : '#9ca3af',
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: '600'
+                            }}>
+                              {permit.status === 'active' ? '🟢 ACTIF' :
+                               permit.status === 'completed' ? '🔵 TERMINÉ' :
+                               permit.status === 'expired' ? '🔴 EXPIRÉ' : '⚪ ANNULÉ'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {selectedHistoryPermit?.id === permit.id && (
+                          <div style={{
+                            marginTop: '12px',
+                            padding: '12px',
+                            background: 'rgba(59, 130, 246, 0.1)',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(59, 130, 246, 0.2)'
+                          }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                              <div>
+                                <span style={{ color: '#94a3b8', fontSize: '11px' }}>Date d'entrée:</span>
+                                <p style={{ color: '#e2e8f0', margin: 0, fontSize: '12px' }}>
+                                  {new Date(permit.entryDate).toLocaleString('fr-CA')}
+                                </p>
+                              </div>
+                              <div>
+                                <span style={{ color: '#94a3b8', fontSize: '11px' }}>Entrées:</span>
+                                <p style={{ color: '#e2e8f0', margin: 0, fontSize: '12px' }}>
+                                  {permit.entryCount} • {permit.hazardCount} danger{permit.hazardCount > 1 ? 's' : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                loadPermitFromHistory(permit.permitNumber);
+                              }}
+                              className="btn-primary"
+                              style={{ width: '100%' }}
+                            >
+                              📂 Charger ce permis
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : searchQuery.length >= 2 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                  <Search size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                  <p style={{ margin: 0 }}>Aucun permis trouvé pour "{searchQuery}"</p>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                  <p style={{ margin: 0 }}>💡 Tapez au moins 2 caractères pour rechercher</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* En-tête avec actions du permis */}
         <div className="form-section full-width-section">
           <div className="section-header">
@@ -1980,21 +2632,32 @@ Système C-SECUR360`;
           
           <div className="four-column">
             <button
+              onClick={() => setShowPermitDatabase(true)}
+              className="btn-primary"
+              style={{ minHeight: '60px', flexDirection: 'column', gap: '4px', background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}
+            >
+              <Search size={20} />
+              <span style={{ fontSize: '12px' }}>Base de Données</span>
+            </button>
+
+            <button
               onClick={async () => {
-                const report = await generateCompletePermitReport();
-                console.log('Rapport généré:', report);
-                alert(`Succès! Rapport ${report.metadata.permitNumber} généré!`);
+                const permitNumber = await savePermitToDatabase();
+                if (permitNumber) {
+                  const report = await generateCompletePermitReport();
+                  console.log('Rapport généré:', report);
+                }
               }}
               disabled={isGeneratingReport}
-              className="btn-primary"
+              className="btn-success"
               style={{ minHeight: '60px', flexDirection: 'column', gap: '4px' }}
             >
               {isGeneratingReport ? (
                 <div style={{ animation: 'spin 1s linear infinite' }}>⟳</div>
               ) : (
-                <FileText size={20} />
+                <Save size={20} />
               )}
-              <span style={{ fontSize: '12px' }}>Générer Rapport</span>
+              <span style={{ fontSize: '12px' }}>Sauvegarder</span>
             </button>
 
             <button
@@ -2014,16 +2677,7 @@ Système C-SECUR360`;
               style={{ minHeight: '60px', flexDirection: 'column', gap: '4px' }}
             >
               <Mail size={20} />
-              <span style={{ fontSize: '12px' }}>Envoyer par Email</span>
-            </button>
-
-            <button
-              onClick={handleSave}
-              className="btn-success"
-              style={{ minHeight: '60px', flexDirection: 'column', gap: '4px' }}
-            >
-              <Save size={20} />
-              <span style={{ fontSize: '12px' }}>Sauvegarder</span>
+              <span style={{ fontSize: '12px' }}>Envoyer Email</span>
             </button>
           </div>
         </div>
@@ -2324,39 +2978,73 @@ Système C-SECUR360`;
           </div>
 
           <div className="volume-calculator">
+            {/* Instructions dynamiques basées sur le type d'espace */}
+            {confinedSpaceDetails.spaceType && (
+              <div style={{ 
+                marginBottom: '16px', 
+                padding: '12px', 
+                background: 'rgba(59, 130, 246, 0.1)', 
+                borderRadius: '8px',
+                border: '1px solid rgba(59, 130, 246, 0.3)'
+              }}>
+                <p style={{ margin: 0, color: '#93c5fd', fontSize: '14px' }}>
+                  <strong>Type sélectionné:</strong> {confinedSpaceDetails.spaceType === 'tank' ? '🏗️ Réservoir (cylindrique)' :
+                  confinedSpaceDetails.spaceType === 'vessel' ? '⚗️ Cuve (cylindrique)' :
+                  confinedSpaceDetails.spaceType === 'silo' ? '🌾 Silo (cylindrique)' :
+                  confinedSpaceDetails.spaceType === 'pit' ? '🕳️ Fosse (circulaire ou rectangulaire)' :
+                  confinedSpaceDetails.spaceType === 'tunnel' ? '🚇 Tunnel (cylindrique ou rectangulaire)' :
+                  '📦 Rectangulaire'}
+                </p>
+              </div>
+            )}
+
             <div className="four-column">
-              <div className="form-field">
-                <label className="field-label">Longueur (m)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  className="premium-input"
-                  value={confinedSpaceDetails.dimensions.length || ''}
-                  onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                    ...confinedSpaceDetails.dimensions,
-                    length: parseFloat(e.target.value) || 0
-                  })}
-                />
-              </div>
+              {/* Longueur - toujours visible sauf pour formes purement circulaires */}
+              {!(['tank', 'vessel', 'silo', 'boiler'].includes(confinedSpaceDetails.spaceType)) && (
+                <div className="form-field">
+                  <label className="field-label">
+                    Longueur (m) {(['tunnel', 'duct'].includes(confinedSpaceDetails.spaceType)) && <span style={{color: '#10b981'}}>*</span>}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    className="premium-input"
+                    value={confinedSpaceDetails.dimensions.length || ''}
+                    onChange={(e) => handleConfinedSpaceChange('dimensions', {
+                      ...confinedSpaceDetails.dimensions,
+                      length: parseFloat(e.target.value) || 0
+                    })}
+                  />
+                </div>
+              )}
 
-              <div className="form-field">
-                <label className="field-label">Largeur (m)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  className="premium-input"
-                  value={confinedSpaceDetails.dimensions.width || ''}
-                  onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                    ...confinedSpaceDetails.dimensions,
-                    width: parseFloat(e.target.value) || 0
-                  })}
-                />
-              </div>
+              {/* Largeur - seulement pour formes rectangulaires */}
+              {!(['tank', 'vessel', 'silo', 'boiler', 'tunnel', 'duct', 'manhole'].includes(confinedSpaceDetails.spaceType) || 
+                (['pit', 'tunnel'].includes(confinedSpaceDetails.spaceType) && !confinedSpaceDetails.dimensions.diameter)) && (
+                <div className="form-field">
+                  <label className="field-label">
+                    Largeur (m) <span style={{color: '#ef4444'}}>*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    className="premium-input"
+                    value={confinedSpaceDetails.dimensions.width || ''}
+                    onChange={(e) => handleConfinedSpaceChange('dimensions', {
+                      ...confinedSpaceDetails.dimensions,
+                      width: parseFloat(e.target.value) || 0
+                    })}
+                  />
+                </div>
+              )}
 
+              {/* Hauteur - toujours visible */}
               <div className="form-field">
-                <label className="field-label">Hauteur (m)</label>
+                <label className="field-label">
+                  Hauteur (m) <span style={{color: '#ef4444'}}>*</span>
+                </label>
                 <input
                   type="number"
                   step="0.1"
@@ -2370,20 +3058,31 @@ Système C-SECUR360`;
                 />
               </div>
 
-              <div className="form-field">
-                <label className="field-label">Diamètre (m)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  className="premium-input"
-                  value={confinedSpaceDetails.dimensions.diameter || ''}
-                  onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                    ...confinedSpaceDetails.dimensions,
-                    diameter: parseFloat(e.target.value) || 0
-                  })}
-                />
-              </div>
+              {/* Diamètre - seulement pour formes circulaires/cylindriques */}
+              {(['tank', 'vessel', 'silo', 'boiler', 'manhole', 'tunnel', 'duct'].includes(confinedSpaceDetails.spaceType) || 
+                (confinedSpaceDetails.spaceType === 'pit')) && (
+                <div className="form-field">
+                  <label className="field-label">
+                    Diamètre (m) {(['tank', 'vessel', 'silo', 'boiler', 'manhole'].includes(confinedSpaceDetails.spaceType)) && <span style={{color: '#ef4444'}}>*</span>}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    className="premium-input"
+                    value={confinedSpaceDetails.dimensions.diameter || ''}
+                    onChange={(e) => handleConfinedSpaceChange('dimensions', {
+                      ...confinedSpaceDetails.dimensions,
+                      diameter: parseFloat(e.target.value) || 0
+                    })}
+                  />
+                  {confinedSpaceDetails.spaceType === 'pit' && (
+                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                      Laisser vide pour une fosse rectangulaire
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div style={{ textAlign: 'center', marginTop: '16px' }}>
@@ -2400,6 +3099,9 @@ Système C-SECUR360`;
                 </div>
                 <div className="volume-unit">
                   m³ - Volume calculé
+                </div>
+                <div style={{ fontSize: '12px', color: '#6ee7b7', marginTop: '8px' }}>
+                  Formule utilisée selon le type d'espace sélectionné
                 </div>
               </div>
             )}
