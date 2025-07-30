@@ -2224,7 +2224,7 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
     }
   };
 
-  // =================== GÉNÉRATION CHECKLIST DE VALIDATION ===================
+// =================== GÉNÉRATION CHECKLIST DE VALIDATION ===================
   const generateValidationChecklist = () => {
     const csaClassifications = getCSAClassifications(selectedProvince, language);
     const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
@@ -2242,10 +2242,10 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       {
         category: language === 'fr' ? 'Personnel et Formation' : 'Personnel and Training',
         items: [
-          currentClassification?.regulations?.attendant || (language === 'fr' ? 'Personnel qualifié requis' : 'Qualified personnel required'),
+          (currentClassification?.regulations as any)?.attendant || (language === 'fr' ? 'Personnel qualifié requis' : 'Qualified personnel required'),
           language === 'fr' ? 'Formation sur les dangers spécifiques' : 'Training on specific hazards',
           language === 'fr' ? 'Certification des équipements' : 'Equipment certification',
-          currentClassification?.regulations?.rescue || (language === 'fr' ? 'Plan de sauvetage établi' : 'Rescue plan established')
+          (currentClassification?.regulations as any)?.rescue || (language === 'fr' ? 'Plan de sauvetage établi' : 'Rescue plan established')
         ]
       },
       {
