@@ -1460,7 +1460,7 @@ Système C-SECUR360`;
       setIsGeneratingReport(false);
     }
   };
-</div>
+        </div>
 
         {/* Section QR Code - NOUVEAU - AJOUTEZ ICI */}
         <div className="form-section full-width-section">
