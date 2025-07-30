@@ -697,11 +697,9 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         logo: '/c-secur360-logo.png'
       };
       
-      // Générer le QR Code avec haute résolution
+      // Générer le QR Code avec haute résolution - Options corrigées
       const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
         errorCorrectionLevel: 'M',
-        type: 'image/png',
-        quality: 0.92,
         margin: 1,
         color: {
           dark: '#000000',
