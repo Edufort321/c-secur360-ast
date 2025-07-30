@@ -2236,7 +2236,7 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
           language === 'fr' ? 'Tests d\'oxygène (19.5% - 23%)' : 'Oxygen testing (19.5% - 23%)',
           language === 'fr' ? 'Tests de gaz inflammables (<10% LIE)' : 'Flammable gas testing (<10% LEL)',
           language === 'fr' ? 'Tests de gaz toxiques (H2S, CO)' : 'Toxic gas testing (H2S, CO)',
-          currentClassification?.regulations?.testing || (language === 'fr' ? 'Surveillance selon réglementation' : 'Monitoring per regulations')
+          (currentClassification?.regulations as any)?.testing || (language === 'fr' ? 'Surveillance selon réglementation' : 'Monitoring per regulations')
         ]
       },
       {
