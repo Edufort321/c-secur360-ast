@@ -4,9 +4,8 @@ import React, { useState, useRef } from 'react';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase, 
   Copy, Check, AlertTriangle, Camera, Upload, X, Settings, Wrench, Droplets, 
-  Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, Home, Layers, 
-  Ruler, Gauge, Thermometer, Activity, Shield, Zap, Save, Download, 
-  Mail, MessageSquare, Share, Printer, CheckCircle, Search
+  Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, Home, 
+  Shield, Save, Download, Mail, MessageSquare, Share, Printer, Search, Database, QrCode
 } from 'lucide-react';
 import { styles, isMobile } from './styles';
 
@@ -176,356 +175,6 @@ interface RegulationData {
   }>;
 }
 
-// =================== TRADUCTIONS ===================
-const getTranslations = (language: 'fr' | 'en') => ({
-  fr: {
-    title: "Informations du Site - Espace Clos",
-    subtitle: "Identification et évaluation complète de l'espace de travail confiné",
-    
-    // Actions du permis
-    permitActions: "Actions du Permis",
-    generateReport: "Générer Rapport",
-    printPermit: "Imprimer PDF",
-    emailPermit: "Envoyer par Email",
-    sendSMS: "Envoyer par SMS",
-    downloadData: "Télécharger Données",
-    shareLink: "Partager Lien",
-    
-    // Informations du projet
-    projectInfo: "Informations du Projet",
-    projectNumber: "Numéro de projet",
-    workLocation: "Lieu des travaux",
-    contractor: "Entrepreneur",
-    supervisor: "Superviseur",
-    entryDate: "Date d'entrée prévue",
-    duration: "Durée estimée",
-    workerCount: "Nombre de travailleurs",
-    workDescription: "Description des travaux",
-    
-    // Identification de l'espace
-    spaceIdentification: "Identification de l'Espace Clos",
-    spaceType: "Type d'espace",
-    csaClass: "Classification CSA",
-    entryMethod: "Méthode d'entrée",
-    accessType: "Type d'accès",
-    spaceLocation: "Localisation de l'espace",
-    spaceDescription: "Description de l'espace",
-    
-    // Types d'espaces
-    spaceTypes: {
-      tank: "🏗️ Réservoir",
-      vessel: "⚗️ Cuve/Récipient",
-      silo: "🌾 Silo",
-      pit: "🕳️ Fosse",
-      vault: "🏛️ Voûte",
-      tunnel: "🚇 Tunnel",
-      trench: "🚧 Tranchée",
-      manhole: "🔧 Regard d'égout",
-      storage: "📦 Espace de stockage",
-      boiler: "🔥 Chaudière",
-      duct: "🌪️ Conduit",
-      chamber: "🏢 Chambre",
-      other: "❓ Autre"
-    },
-    
-    // Classifications CSA
-    csaClasses: {
-      class1: "Classe 1 - Danger immédiat pour la vie",
-      class2: "Classe 2 - Risque potentiel",
-      class3: "Classe 3 - Risque minimal"
-    },
-    
-    // Dimensions et volume
-    spaceDimensions: "Dimensions et Volume",
-    length: "Longueur (m)",
-    width: "Largeur (m)",
-    height: "Hauteur (m)",
-    diameter: "Diamètre (m)",
-    calculateVolume: "Calculer le Volume",
-    volume: "Volume calculé",
-    volumeUnit: "m³",
-    
-    // Points d'entrée
-    entryPoints: "Points d'Entrée et Accès",
-    entryPoint: "Point d'entrée ",
-    entryType: "Type d'entrée",
-    entryDimensions: "Dimensions",
-    entryLocation: "Localisation",
-    entryCondition: "État",
-    entryAccessibility: "Accessibilité",
-    entryPhotos: "Photos",
-    addEntryPoint: "Ajouter un point d'entrée",
-    remove: "Supprimer",
-    
-    // Évaluation des dangers
-    hazardAssessment: "Évaluation des Dangers",
-    selectHazards: "Sélectionnez tous les dangers présents ou potentiels",
-    atmosphericHazards: "Dangers Atmosphériques",
-    physicalHazards: "Dangers Physiques",
-    
-    // Types de dangers atmosphériques
-    atmosphericHazardTypes: {
-      oxygen_deficiency: "Déficience en oxygène (<19.5%)",
-      oxygen_enrichment: "Enrichissement en oxygène (>23%)",
-      flammable_gases: "Gaz inflammables/combustibles",
-      toxic_gases: "Gaz toxiques",
-      hydrogen_sulfide: "Sulfure d'hydrogène (H2S)",
-      carbon_monoxide: "Monoxyde de carbone (CO)",
-      carbon_dioxide: "Dioxyde de carbone (CO2)",
-      methane: "Méthane (CH4)",
-      ammonia: "Ammoniac (NH3)",
-      chlorine: "Chlore (Cl2)",
-      nitrogen: "Azote (N2)",
-      argon: "Argon (Ar)",
-      welding_fumes: "Fumées de soudage"
-    },
-    
-    // Types de dangers physiques
-    physicalHazardTypes: {
-      engulfment: "Ensevelissement/Engloutissement",
-      crushing: "Écrasement par équipement",
-      electrical: "Dangers électriques",
-      mechanical: "Dangers mécaniques",
-      structural_collapse: "Effondrement structural",
-      falls: "Chutes de hauteur",
-      temperature_extreme: "Températures extrêmes",
-      noise: "Bruit excessif",
-      vibration: "Vibrations",
-      radiation: "Radiation",
-      chemical_exposure: "Exposition chimique",
-      biological: "Dangers biologiques",
-      confined_space_hazard: "Configuration de l'espace",
-      traffic: "Circulation/Trafic"
-    },
-    
-    // Conditions environnementales
-    environmentalConditions: "Conditions Environnementales",
-    ventilationRequired: "Ventilation requise",
-    ventilationType: "Type de ventilation",
-    lightingConditions: "Conditions d'éclairage",
-    temperatureRange: "Plage de température",
-    moistureLevel: "Niveau d'humidité",
-    noiseLevel: "Niveau de bruit",
-    weatherConditions: "Conditions météorologiques",
-    yes: "Oui",
-    no: "Non",
-    select: "Sélectionner",
-    
-    // Contenu de l'espace
-    spaceContent: "Contenu et Historique de l'Espace",
-    contents: "Contenu actuel",
-    residues: "Résidus/Substances",
-    previousUse: "Usage antérieur",
-    lastEntry: "Dernière entrée",
-    cleaningStatus: "État de nettoyage",
-    
-    // Mesures de sécurité
-    safetyMeasures: "Mesures de Sécurité",
-    emergencyEgress: "Plan de sortie d'urgence",
-    communicationMethod: "Méthode de communication",
-    monitoringEquipment: "Équipement de surveillance",
-    ventilationEquipment: "Équipement de ventilation",
-    emergencyEquipment: "Équipement d'urgence",
-    
-    // Documentation photographique
-    photoDocumentation: "Documentation Photographique",
-    spaceExterior: "Extérieur de l'espace",
-    spaceInterior: "Intérieur de l'espace",
-    entryPointPhoto: "Points d'entrée",
-    hazardIdentification: "Identification des dangers",
-    equipmentStaging: "Mise en place équipement",
-    atmosphericTesting: "Tests atmosphériques",
-    safetyEquipment: "Équipement de sécurité",
-    ventilationSystem: "Système de ventilation",
-    
-    // Boutons et actions
-    save: "Sauvegarder",
-    cancel: "Annuler",
-    next: "Suivant",
-    previous: "Précédent",
-    loading: "Chargement...",
-    generating: "Génération...",
-    success: "Succès!",
-    addPhoto: "Ajouter photo",
-    addPhotoDescription: "Documenter avec une photo",
-    noPhotos: "Aucune photo",
-    clickToPhoto: "Cliquez pour prendre une photo"
-  },
-  en: {
-    title: "Site Information - Confined Space",
-    subtitle: "Complete identification and assessment of the confined workspace",
-    
-    // Actions du permis
-    permitActions: "Permit Actions",
-    generateReport: "Generate Report",
-    printPermit: "Print PDF",
-    emailPermit: "Send by Email",
-    sendSMS: "Send by SMS",
-    downloadData: "Download Data",
-    shareLink: "Share Link",
-    
-    // Informations du projet
-    projectInfo: "Project Information",
-    projectNumber: "Project number",
-    workLocation: "Work location",
-    contractor: "Contractor",
-    supervisor: "Supervisor",
-    entryDate: "Planned entry date",
-    duration: "Estimated duration",
-    workerCount: "Number of workers",
-    workDescription: "Work description",
-    
-    // Identification de l'espace
-    spaceIdentification: "Confined Space Identification",
-    spaceType: "Space type",
-    csaClass: "CSA Classification",
-    entryMethod: "Entry method",
-    accessType: "Access type",
-    spaceLocation: "Space location",
-    spaceDescription: "Space description",
-    
-    // Types d'espaces
-    spaceTypes: {
-      tank: "🏗️ Tank",
-      vessel: "⚗️ Vessel/Container",
-      silo: "🌾 Silo",
-      pit: "🕳️ Pit",
-      vault: "🏛️ Vault",
-      tunnel: "🚇 Tunnel",
-      trench: "🚧 Trench",
-      manhole: "🔧 Manhole",
-      storage: "📦 Storage space",
-      boiler: "🔥 Boiler",
-      duct: "🌪️ Duct",
-      chamber: "🏢 Chamber",
-      other: "❓ Other"
-    },
-    
-    // Classifications CSA
-    csaClasses: {
-      class1: "Class 1 - Immediate danger to life",
-      class2: "Class 2 - Potential risk",
-      class3: "Class 3 - Minimal risk"
-    },
-    
-    // Dimensions et volume
-    spaceDimensions: "Dimensions and Volume",
-    length: "Length (m)",
-    width: "Width (m)",
-    height: "Height (m)",
-    diameter: "Diameter (m)",
-    calculateVolume: "Calculate Volume",
-    volume: "Calculated volume",
-    volumeUnit: "m³",
-    
-    // Points d'entrée
-    entryPoints: "Entry Points and Access",
-    entryPoint: "Entry point ",
-    entryType: "Entry type",
-    entryDimensions: "Dimensions",
-    entryLocation: "Location",
-    entryCondition: "Condition",
-    entryAccessibility: "Accessibility",
-    entryPhotos: "Photos",
-    addEntryPoint: "Add entry point",
-    remove: "Remove",
-    
-    // Évaluation des dangers
-    hazardAssessment: "Hazard Assessment",
-    selectHazards: "Select all present or potential hazards",
-    atmosphericHazards: "Atmospheric Hazards",
-    physicalHazards: "Physical Hazards",
-    
-    // Types de dangers atmosphériques
-    atmosphericHazardTypes: {
-      oxygen_deficiency: "Oxygen deficiency (<19.5%)",
-      oxygen_enrichment: "Oxygen enrichment (>23%)",
-      flammable_gases: "Flammable/combustible gases",
-      toxic_gases: "Toxic gases",
-      hydrogen_sulfide: "Hydrogen sulfide (H2S)",
-      carbon_monoxide: "Carbon monoxide (CO)",
-      carbon_dioxide: "Carbon dioxide (CO2)",
-      methane: "Methane (CH4)",
-      ammonia: "Ammonia (NH3)",
-      chlorine: "Chlorine (Cl2)",
-      nitrogen: "Nitrogen (N2)",
-      argon: "Argon (Ar)",
-      welding_fumes: "Welding fumes"
-    },
-    
-    // Types de dangers physiques
-    physicalHazardTypes: {
-      engulfment: "Engulfment",
-      crushing: "Crushing by equipment",
-      electrical: "Electrical hazards",
-      mechanical: "Mechanical hazards",
-      structural_collapse: "Structural collapse",
-      falls: "Falls from height",
-      temperature_extreme: "Extreme temperatures",
-      noise: "Excessive noise",
-      vibration: "Vibrations",
-      radiation: "Radiation",
-      chemical_exposure: "Chemical exposure",
-      biological: "Biological hazards",
-      confined_space_hazard: "Space configuration",
-      traffic: "Traffic/Circulation"
-    },
-    
-    // Conditions environnementales
-    environmentalConditions: "Environmental Conditions",
-    ventilationRequired: "Ventilation required",
-    ventilationType: "Ventilation type",
-    lightingConditions: "Lighting conditions",
-    temperatureRange: "Temperature range",
-    moistureLevel: "Moisture level",
-    noiseLevel: "Noise level",
-    weatherConditions: "Weather conditions",
-    yes: "Yes",
-    no: "No",
-    select: "Select",
-    
-    // Contenu de l'espace
-    spaceContent: "Space Content and History",
-    contents: "Current contents",
-    residues: "Residues/Substances",
-    previousUse: "Previous use",
-    lastEntry: "Last entry",
-    cleaningStatus: "Cleaning status",
-    
-    // Mesures de sécurité
-    safetyMeasures: "Safety Measures",
-    emergencyEgress: "Emergency egress plan",
-    communicationMethod: "Communication method",
-    monitoringEquipment: "Monitoring equipment",
-    ventilationEquipment: "Ventilation equipment",
-    emergencyEquipment: "Emergency equipment",
-    
-    // Documentation photographique
-    photoDocumentation: "Photographic Documentation",
-    spaceExterior: "Space exterior",
-    spaceInterior: "Space interior",
-    entryPointPhoto: "Entry points",
-    hazardIdentification: "Hazard identification",
-    equipmentStaging: "Equipment staging",
-    atmosphericTesting: "Atmospheric testing",
-    safetyEquipment: "Safety equipment",
-    ventilationSystem: "Ventilation system",
-    
-    // Boutons et actions
-    save: "Save",
-    cancel: "Cancel",
-    next: "Next",
-    previous: "Previous",
-    loading: "Loading...",
-    generating: "Generating...",
-    success: "Success!",
-    addPhoto: "Add photo",
-    addPhotoDescription: "Document with photo",
-    noPhotos: "No photos",
-    clickToPhoto: "Click to take a photo"
-  }
-});
-
 // =================== COMPOSANT PRINCIPAL ===================
 const SiteInformation: React.FC<SiteInformationProps> = ({
   permitData,
@@ -636,8 +285,13 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   // Réf pour upload de photos
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  // Traductions
-  const t = getTranslations(language);
+  // Traductions simplifiées (pas d'objet complet car on utilise du texte en dur dans les sections suivantes)
+  const t = {
+    // Utilisé dans la Section 2 pour les fonctions
+    permitActions: "Actions du Permis",
+    generateReport: "Générer Rapport",
+    success: "Succès!"
+  };
   // =================== FONCTIONS DE RECHERCHE ET BASE DE DONNÉES ===================
 
   // =================== FONCTIONS DE RECHERCHE ET BASE DE DONNÉES ===================
@@ -1530,7 +1184,7 @@ Système C-SECUR360`;
     alert('Informations du site sauvegardées avec succès!');
     return true;
   };
-     // =================== CARROUSEL PHOTOS IDENTIQUE AU STEP 1 ===================
+   // =================== CARROUSEL PHOTOS IDENTIQUE AU STEP 1 ===================
   const PhotoCarousel = ({ photos, onAddPhoto, category }: {
     photos: SpacePhoto[];
     onAddPhoto: () => void;
@@ -3242,7 +2896,7 @@ Système C-SECUR360`;
           {/* Dangers Physiques */}
           <div className="form-field">
             <label className="field-label">
-              <Zap style={{ width: '18px', height: '18px', color: '#ef4444' }} />
+              <AlertTriangle style={{ width: '18px', height: '18px', color: '#ef4444' }} />
               Dangers Physiques
             </label>
             <div className="hazard-selector">
@@ -3392,7 +3046,7 @@ Système C-SECUR360`;
 
                 <div className="form-field">
                   <label className="field-label">
-                    <Ruler style={{ width: '18px', height: '18px' }} />
+                    <Settings style={{ width: '18px', height: '18px' }} />
                     Dimensions
                   </label>
                   <input 
@@ -3503,7 +3157,7 @@ Système C-SECUR360`;
         {/* Section Conditions Environnementales */}
         <div className="form-section full-width-section">
           <div className="section-header">
-            <Thermometer className="section-icon" />
+            <Wind style={{ width: '20px', height: '20px' }} />
             <h3 className="section-title">Conditions Environnementales</h3>
           </div>
 
@@ -3566,7 +3220,7 @@ Système C-SECUR360`;
             <div className="form-section">
               <div className="form-field">
                 <label className="field-label">
-                  <Thermometer style={{ width: '18px', height: '18px' }} />
+                  <Wind style={{ width: '18px', height: '18px' }} />
                   Plage de température
                 </label>
                 <select
@@ -3605,7 +3259,7 @@ Système C-SECUR360`;
 
               <div className="form-field">
                 <label className="field-label">
-                  <Activity style={{ width: '18px', height: '18px' }} />
+                  <Settings style={{ width: '18px', height: '18px' }} />
                   Niveau de bruit
                 </label>
                 <select
@@ -3641,7 +3295,7 @@ Système C-SECUR360`;
         {/* Section Contenu de l'Espace */}
         <div className="form-section full-width-section">
           <div className="section-header">
-            <Layers className="section-icon" />
+            <Settings style={{ width: '20px', height: '20px' }} />
             <h3 className="section-title">Contenu et Historique de l'Espace</h3>
           </div>
 
@@ -3772,7 +3426,7 @@ Système C-SECUR360`;
             <div className="form-section">
               <div className="form-field">
                 <label className="field-label">
-                  <Gauge style={{ width: '18px', height: '18px' }} />
+                  <Settings style={{ width: '18px', height: '18px' }} />
                   Équipement de surveillance
                 </label>
                 <div style={{ display: 'grid', gap: '8px' }}>
@@ -3959,7 +3613,7 @@ Système C-SECUR360`;
             borderRadius: '12px',
             border: '1px solid rgba(16, 185, 129, 0.3)'
           }}>
-            <CheckCircle size={24} color="#10b981" />
+            <Check size={24} color="#10b981" />
             <div style={{ flex: 1 }}>
               <h4 style={{ color: '#86efac', margin: '0 0 4px 0', fontSize: '16px', fontWeight: '600' }}>
                 ✅ Informations du Site Complétées
