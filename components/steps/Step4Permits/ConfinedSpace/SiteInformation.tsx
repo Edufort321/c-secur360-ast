@@ -1530,7 +1530,7 @@ Système C-SECUR360`;
     alert('Informations du site sauvegardées avec succès!');
     return true;
   };
-      // =================== CARROUSEL PHOTOS IDENTIQUE AU STEP 1 ===================
+     // =================== CARROUSEL PHOTOS IDENTIQUE AU STEP 1 ===================
   const PhotoCarousel = ({ photos, onAddPhoto, category }: {
     photos: SpacePhoto[];
     onAddPhoto: () => void;
