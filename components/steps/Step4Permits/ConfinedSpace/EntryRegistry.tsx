@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   UserCheck, Eye, LogIn, LogOut, Shield, Plus, Trash2, Timer, 
-  Users, PenTool, CheckCircle, X, Edit3, Copy, Wrench
+  Users, PenTool, CheckCircle, X, Edit3, Copy, Wrench, Clock,
+  History, UserPlus, UserMinus
 } from 'lucide-react';
 
 // =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
@@ -81,6 +82,11 @@ const styles = {
     color: 'white',
     border: '1px solid #6b7280'
   },
+  buttonWarning: {
+    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
+  },
   grid2: {
     display: 'grid',
     gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
@@ -141,40 +147,33 @@ interface RegulationData {
   };
 }
 
-interface AtmosphericReading {
-  id: string;
-  timestamp: string;
-  level: 'top' | 'middle' | 'bottom';
-  oxygen: number;
-  lel: number;
-  h2s: number;
-  co: number;
-  temperature?: number;
-  humidity?: number;
-  status: 'safe' | 'warning' | 'danger';
-  device_id?: string;
-  taken_by: string;
-  notes?: string;
-  retest_required?: boolean;
-}
-
-interface PersonnelEntry {
+interface SurveillantShift {
   id: string;
   name: string;
   company: string;
-  role: 'supervisor' | 'attendant' | 'entrant';
-  entry_time?: string;
+  start_time: string;
+  end_time?: string;
+  duration?: number;
+  status: 'active' | 'completed';
+}
+
+interface EntrySession {
+  id: string;
+  entry_time: string;
   exit_time?: string;
-  status: 'outside' | 'inside';
-  signature: string;
-  signature_time: string;
-  total_duration?: number;
-  qualifications?: {
-    age_verified: boolean;
-    training_completed: boolean;
-    medical_fitness: boolean;
-    ppe_verified: boolean;
-  };
+  duration?: number;
+  status: 'inside' | 'completed';
+}
+
+interface Entrant {
+  id: string;
+  name: string;
+  company: string;
+  total_entries: number;
+  total_duration: number;
+  current_status: 'outside' | 'inside';
+  entry_sessions: EntrySession[];
+  added_time: string;
 }
 
 interface Equipment {
@@ -188,38 +187,6 @@ interface Equipment {
   notes?: string;
 }
 
-interface LegalPersonnelData {
-  // Surveillant qualifié
-  attendant_qualifications: {
-    age_verified: boolean;              // ≥18 ans
-    confined_space_training: boolean;
-    training_expiry_date: string;
-    competent_person_designated: boolean;
-    authority_to_evacuate: boolean;
-  };
-  
-  // Entrants certifiés
-  entrant_qualifications: {
-    medical_fitness_confirmed: boolean;
-    ppe_training_verified: boolean;
-    emergency_procedures_trained: boolean;
-    max_work_hours_respected: boolean;
-  };
-  
-  // Communication obligatoire
-  communication_system: {
-    bidirectional_confirmed: boolean;
-    system_type: string;              // Radio, interphone, etc.
-    backup_communication: boolean;
-    continuous_contact_maintained: boolean;
-  };
-  
-  // Traçabilité légale
-  legal_entry_log: boolean;
-  regulatory_witness_present: boolean;
-  permit_readily_available: boolean;
-}
-
 interface EntryRegistryProps {
   permitData: any;
   updatePermitData: (updates: any) => void;
@@ -229,8 +196,8 @@ interface EntryRegistryProps {
   language: 'fr' | 'en';
   styles: any;
   updateParentData: (section: string, data: any) => void;
-  atmosphericReadings?: AtmosphericReading[];
-  setAtmosphericReadings?: (readings: AtmosphericReading[] | ((prev: AtmosphericReading[]) => AtmosphericReading[])) => void;
+  atmosphericReadings?: any[];
+  setAtmosphericReadings?: (readings: any[] | ((prev: any[]) => any[])) => void;
 }
 
 // =================== COMPOSANT ENTRY REGISTRY ===================
@@ -241,127 +208,35 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   PROVINCIAL_REGULATIONS,
   isMobile,
   language,
-  styles,
+  styles: originalStyles,
   updateParentData,
   atmosphericReadings = [],
   setAtmosphericReadings
 }) => {
 
   // =================== ÉTATS LOCAUX ===================
-  const [personnel, setPersonnel] = useState<PersonnelEntry[]>(permitData.personnel || []);
+  const [surveillantHistory, setSurveillantHistory] = useState<SurveillantShift[]>(permitData.surveillant_history || []);
+  const [entrants, setEntrants] = useState<Entrant[]>(permitData.entrants || []);
   const [equipment, setEquipment] = useState<Equipment[]>(permitData.equipment || []);
-  const [newPerson, setNewPerson] = useState({
+  const [currentSurveillant, setCurrentSurveillant] = useState<SurveillantShift | null>(
+    surveillantHistory.find(s => s.status === 'active') || null
+  );
+  
+  const [newSurveillant, setNewSurveillant] = useState({
     name: '',
-    company: '',
-    role: 'entrant' as 'supervisor' | 'attendant' | 'entrant'
+    company: ''
   });
+  
+  const [newEntrant, setNewEntrant] = useState({
+    name: '',
+    company: ''
+  });
+  
   const [newEquipment, setNewEquipment] = useState({
     name: '',
     serial_number: '',
     condition: 'good' as 'good' | 'fair' | 'poor'
   });
-
-  // =================== TRADUCTIONS ===================
-  const getTexts = (language: 'fr' | 'en') => ({
-    fr: {
-      title: "Registre d'Entrée et Personnel Autorisé",
-      supervisor: "Superviseur d'Entrée (Obligatoire)",
-      attendants: "Surveillants d'Espace Clos",  
-      entrants: "Personnel Entrant",
-      equipment: "Contrôle Équipements Obligatoires",
-      legalCompliance: "Conformité Réglementaire Personnel",
-      supervisorRole: "RÔLE CRITIQUE",
-      supervisorText: "Le superviseur d'entrée doit avoir les compétences et l'autorité pour contrôler l'accès à l'espace clos et ordonner l'évacuation (Art. 308 RSST).",
-      attendantRole: "SURVEILLANCE CONTINUE",
-      attendantText: "Surveillance continue, communication bidirectionnelle, autorité d'évacuation immédiate, ne doit jamais quitter son poste.",
-      entrantRestrictions: "RESTRICTIONS",
-      entrantText: "Âge minimum 18 ans, formation obligatoire, harnais de sécurité classe E, communication bidirectionnelle.",
-      equipmentRequirements: "ÉQUIPEMENTS OBLIGATOIRES",
-      equipmentText: "Détecteur 4 gaz, harnais classe E, ligne de vie, ARA, communication bidirectionnelle.",
-      addSupervisor: "Ajouter Superviseur",
-      addAttendant: "Ajouter Surveillant", 
-      addEntrant: "Ajouter Entrant",
-      addEquipment: "Ajouter Équipement",
-      fullName: "Nom complet",
-      company: "Compagnie/Organisation",
-      signatureDate: "Date de signature",
-      signatureTime: "Heure de signature", 
-      certification: "Certification et Signature Électronique",
-      entryTime: "Heure d'entrée",
-      exitTime: "Heure de sortie",
-      inside: "À L'INTÉRIEUR",
-      outside: "À L'EXTÉRIEUR",
-      markEntry: "Marquer Entrée",
-      markExit: "Marquer Sortie",
-      totalDuration: "Durée totale",
-      equipmentName: "Nom de l'équipement",
-      serialNumber: "N° série / Identification",
-      condition: "État",
-      goodCondition: "Bon état",
-      fairCondition: "État acceptable", 
-      poorCondition: "À remplacer",
-      checkIn: "Entrée",
-      checkOut: "Sortie",
-      delete: "Supprimer",
-      role: "Rôle",
-      status: "Statut",
-      duration: "Durée",
-      actions: "Actions",
-      personnelCount: "Personnel total",
-      insideCount: "À l'intérieur",
-      equipmentCount: "Équipements"
-    },
-    en: {
-      title: "Entry Registry and Authorized Personnel",
-      supervisor: "Entry Supervisor (Mandatory)",
-      attendants: "Confined Space Attendants",
-      entrants: "Entering Personnel", 
-      equipment: "Mandatory Equipment Control",
-      legalCompliance: "Personnel Regulatory Compliance",
-      supervisorRole: "CRITICAL ROLE",
-      supervisorText: "The entry supervisor must have the competence and authority to control access to the confined space and order evacuation (Art. 308 RSST).",
-      attendantRole: "CONTINUOUS MONITORING",
-      attendantText: "Continuous surveillance, bidirectional communication, immediate evacuation authority, must never leave their post.",
-      entrantRestrictions: "RESTRICTIONS", 
-      entrantText: "Minimum age 18 years, mandatory training, class E safety harness, bidirectional communication.",
-      equipmentRequirements: "MANDATORY EQUIPMENT",
-      equipmentText: "4-gas detector, class E harness, lifeline, SCBA, bidirectional communication.",
-      addSupervisor: "Add Supervisor",
-      addAttendant: "Add Attendant",
-      addEntrant: "Add Entrant", 
-      addEquipment: "Add Equipment",
-      fullName: "Full name",
-      company: "Company/Organization",
-      signatureDate: "Signature date",
-      signatureTime: "Signature time",
-      certification: "Certification and Electronic Signature", 
-      entryTime: "Entry time",
-      exitTime: "Exit time",
-      inside: "INSIDE",
-      outside: "OUTSIDE",
-      markEntry: "Mark Entry",
-      markExit: "Mark Exit",
-      totalDuration: "Total duration",
-      equipmentName: "Equipment name",
-      serialNumber: "Serial number / Identification",
-      condition: "Condition",
-      goodCondition: "Good condition",
-      fairCondition: "Acceptable condition",
-      poorCondition: "To replace",
-      checkIn: "Check In",
-      checkOut: "Check Out", 
-      delete: "Delete",
-      role: "Role",
-      status: "Status",
-      duration: "Duration",
-      actions: "Actions",
-      personnelCount: "Total personnel",
-      insideCount: "Inside",
-      equipmentCount: "Equipment"
-    }
-  })[language];
-
-  const texts = getTexts(language);
 
   // =================== FONCTIONS UTILITAIRES ===================
   const formatDuration = (seconds: number): string => {
@@ -370,29 +245,176 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     return `${hours}h ${minutes}m`;
   };
 
-  const addPerson = () => {
-    if (!newPerson.name || !newPerson.company) {
-      alert('⚠️ Veuillez remplir tous les champs obligatoires');
+  const formatTime = (isoString: string): string => {
+    return new Date(isoString).toLocaleTimeString('fr-CA', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  const formatDate = (isoString: string): string => {
+    return new Date(isoString).toLocaleDateString('fr-CA');
+  };
+
+  // =================== FONCTIONS SURVEILLANT ===================
+  const startSurveillance = () => {
+    if (!newSurveillant.name || !newSurveillant.company) {
+      alert('⚠️ Veuillez remplir tous les champs du surveillant');
       return;
     }
 
-    const person: PersonnelEntry = {
-      id: `person_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: newPerson.name,
-      company: newPerson.company,
-      role: newPerson.role,
-      status: 'outside',
-      signature: '',
-      signature_time: new Date().toISOString()
+    if (currentSurveillant) {
+      alert('⚠️ Un surveillant est déjà en service. Terminez sa surveillance avant d\'en commencer une nouvelle.');
+      return;
+    }
+
+    const surveillant: SurveillantShift = {
+      id: `surveillant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: newSurveillant.name,
+      company: newSurveillant.company,
+      start_time: new Date().toISOString(),
+      status: 'active'
     };
 
-    const updatedPersonnel = [...personnel, person];
-    setPersonnel(updatedPersonnel);
-    updateParentData('personnel', updatedPersonnel);
+    const updatedHistory = [...surveillantHistory, surveillant];
+    setSurveillantHistory(updatedHistory);
+    setCurrentSurveillant(surveillant);
+    updateParentData('surveillant_history', updatedHistory);
     
-    setNewPerson({ name: '', company: '', role: 'entrant' });
+    setNewSurveillant({ name: '', company: '' });
   };
 
+  const endSurveillance = () => {
+    if (!currentSurveillant) return;
+
+    const now = new Date();
+    const startTime = new Date(currentSurveillant.start_time);
+    const duration = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+
+    const updatedSurveillant: SurveillantShift = {
+      ...currentSurveillant,
+      end_time: now.toISOString(),
+      duration,
+      status: 'completed'
+    };
+
+    const updatedHistory = surveillantHistory.map(s => 
+      s.id === currentSurveillant.id ? updatedSurveillant : s
+    );
+
+    setSurveillantHistory(updatedHistory);
+    setCurrentSurveillant(null);
+    updateParentData('surveillant_history', updatedHistory);
+  };
+
+  const replaceSurveillant = () => {
+    if (!newSurveillant.name || !newSurveillant.company) {
+      alert('⚠️ Veuillez remplir tous les champs du nouveau surveillant');
+      return;
+    }
+
+    if (currentSurveillant) {
+      endSurveillance();
+    }
+
+    setTimeout(() => {
+      startSurveillance();
+    }, 100);
+  };
+
+  // =================== FONCTIONS ENTRANTS ===================
+  const addEntrant = () => {
+    if (!newEntrant.name || !newEntrant.company) {
+      alert('⚠️ Veuillez remplir tous les champs de l\'entrant');
+      return;
+    }
+
+    const entrant: Entrant = {
+      id: `entrant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: newEntrant.name,
+      company: newEntrant.company,
+      total_entries: 0,
+      total_duration: 0,
+      current_status: 'outside',
+      entry_sessions: [],
+      added_time: new Date().toISOString()
+    };
+
+    const updatedEntrants = [...entrants, entrant];
+    setEntrants(updatedEntrants);
+    updateParentData('entrants', updatedEntrants);
+    
+    setNewEntrant({ name: '', company: '' });
+  };
+
+  const toggleEntrantEntry = (entrantId: string) => {
+    if (!currentSurveillant) {
+      alert('⚠️ Un surveillant doit être en service avant qu\'un entrant puisse entrer dans l\'espace clos.');
+      return;
+    }
+
+    const updatedEntrants = entrants.map(entrant => {
+      if (entrant.id === entrantId) {
+        const now = new Date();
+        
+        if (entrant.current_status === 'outside') {
+          // Entrée dans l'espace clos
+          const newSession: EntrySession = {
+            id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            entry_time: now.toISOString(),
+            status: 'inside'
+          };
+
+          return {
+            ...entrant,
+            current_status: 'inside' as const,
+            entry_sessions: [...entrant.entry_sessions, newSession]
+          };
+        } else {
+          // Sortie de l'espace clos
+          const activeSession = entrant.entry_sessions.find(s => s.status === 'inside');
+          if (!activeSession) return entrant;
+
+          const entryTime = new Date(activeSession.entry_time);
+          const duration = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
+
+          const completedSession: EntrySession = {
+            ...activeSession,
+            exit_time: now.toISOString(),
+            duration,
+            status: 'completed'
+          };
+
+          const updatedSessions = entrant.entry_sessions.map(s => 
+            s.id === activeSession.id ? completedSession : s
+          );
+
+          return {
+            ...entrant,
+            current_status: 'outside' as const,
+            total_entries: entrant.total_entries + 1,
+            total_duration: entrant.total_duration + duration,
+            entry_sessions: updatedSessions
+          };
+        }
+      }
+      return entrant;
+    });
+
+    setEntrants(updatedEntrants);
+    updateParentData('entrants', updatedEntrants);
+  };
+
+  const deleteEntrant = (entrantId: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet entrant du registre?')) {
+      const updatedEntrants = entrants.filter(e => e.id !== entrantId);
+      setEntrants(updatedEntrants);
+      updateParentData('entrants', updatedEntrants);
+    }
+  };
+
+  // =================== FONCTIONS ÉQUIPEMENT (IDENTIQUES) ===================
   const addEquipmentItem = () => {
     if (!newEquipment.name || !newEquipment.serial_number) {
       alert('⚠️ Veuillez remplir tous les champs obligatoires');
@@ -415,53 +437,6 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     setNewEquipment({ name: '', serial_number: '', condition: 'good' });
   };
 
-  const toggleEntry = (personId: string) => {
-    const updatedPersonnel = personnel.map(person => {
-      if (person.id === personId) {
-        const now = new Date();
-        const currentTime = now.toISOString();
-        
-        if (person.status === 'outside') {
-          return {
-            ...person,
-            status: 'inside' as const,
-            entry_time: currentTime
-          };
-        } else {
-          const entryTime = person.entry_time ? new Date(person.entry_time) : now;
-          const duration = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
-          
-          return {
-            ...person,
-            status: 'outside' as const,
-            exit_time: currentTime,
-            total_duration: (person.total_duration || 0) + duration
-          };
-        }
-      }
-      return person;
-    });
-    
-    setPersonnel(updatedPersonnel);
-    updateParentData('personnel', updatedPersonnel);
-  };
-
-  const deletePerson = (personId: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette personne du registre?')) {
-      const updatedPersonnel = personnel.filter(p => p.id !== personId);
-      setPersonnel(updatedPersonnel);
-      updateParentData('personnel', updatedPersonnel);
-    }
-  };
-
-  const deleteEquipment = (equipmentId: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet équipement?')) {
-      const updatedEquipment = equipment.filter(e => e.id !== equipmentId);
-      setEquipment(updatedEquipment);
-      updateParentData('equipment', updatedEquipment);
-    }
-  };
-
   const toggleEquipmentCheck = (equipmentId: string, type: 'in' | 'out') => {
     const updatedEquipment = equipment.map(item => {
       if (item.id === equipmentId) {
@@ -478,21 +453,11 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     updateParentData('equipment', updatedEquipment);
   };
 
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'supervisor': return '👨‍💼';
-      case 'attendant': return '👁️';
-      case 'entrant': return '👷';
-      default: return '👤';
-    }
-  };
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'supervisor': return '#3b82f6';
-      case 'attendant': return '#f59e0b';
-      case 'entrant': return '#10b981';
-      default: return '#6b7280';
+  const deleteEquipment = (equipmentId: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet équipement?')) {
+      const updatedEquipment = equipment.filter(e => e.id !== equipmentId);
+      setEquipment(updatedEquipment);
+      updateParentData('equipment', updatedEquipment);
     }
   };
 
@@ -509,209 +474,6 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
       
-      {/* Section Conformité Réglementaire Personnel */}
-      <div style={{
-        backgroundColor: '#dc2626',
-        borderRadius: '16px',
-        padding: isMobile ? '20px' : '24px',
-        border: '2px solid #ef4444',
-        boxShadow: '0 8px 32px rgba(220, 38, 38, 0.3)'
-      }}>
-        <h3 style={{
-          fontSize: isMobile ? '18px' : '20px',
-          fontWeight: '700',
-          color: 'white',
-          marginBottom: isMobile ? '16px' : '20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          <Users style={{ width: '24px', height: '24px', color: '#fecaca' }} />
-          ⚖️ {texts.legalCompliance}
-        </h3>
-        
-        <div style={{ 
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          borderRadius: '12px',
-          padding: isMobile ? '16px' : '20px',
-          marginBottom: '20px',
-          border: '1px solid rgba(254, 202, 202, 0.3)'
-        }}>
-          <p style={{ 
-            color: '#fecaca', 
-            fontSize: '15px',
-            lineHeight: 1.6,
-            margin: '0 0 12px 0',
-            fontWeight: '600'
-          }}>
-            👥 <strong>PERSONNEL QUALIFIÉ OBLIGATOIRE</strong> : Toutes les personnes impliquées doivent respecter les exigences d'âge, formation et certification selon {PROVINCIAL_REGULATIONS[selectedProvince].code}.
-          </p>
-          <p style={{ 
-            color: '#fca5a5', 
-            fontSize: '14px',
-            margin: 0,
-            fontStyle: 'italic'
-          }}>
-            📋 <strong>Registre légal</strong> : Ce registre constitue une preuve légale d'entrée/sortie exigée lors d'inspections de {PROVINCIAL_REGULATIONS[selectedProvince].authority}.
-          </p>
-        </div>
-        
-        {/* Systèmes de communication obligatoires */}
-        <div style={{ marginBottom: '20px' }}>
-          <h4 style={{
-            fontSize: isMobile ? '16px' : '18px',
-            fontWeight: '700',
-            color: '#fecaca',
-            marginBottom: '16px'
-          }}>
-            📻 Système de Communication Bidirectionnelle Obligatoire
-          </h4>
-          
-          <div style={styles.grid2}>
-            <div>
-              <label style={{ ...styles.label, color: '#fca5a5' }}>Type de système *</label>
-              <select
-                value={permitData.communication_system?.system_type || ''}
-                onChange={(e) => updatePermitData({ 
-                  communication_system: { 
-                    ...permitData.communication_system, 
-                    system_type: e.target.value 
-                  }
-                })}
-                style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
-                required
-              >
-                <option value="">Sélectionner système</option>
-                <option value="radio_uhf">📻 Radio UHF/VHF</option>
-                <option value="intercom">🎤 Système interphone</option>
-                <option value="cell_phone">📱 Téléphone cellulaire</option>
-                <option value="hardwired">☎️ Ligne téléphonique filaire</option>
-                <option value="satellite">🛰️ Communication satellite</option>
-              </select>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'end' }}>
-              <div style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '16px',
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                borderRadius: '12px',
-                border: '1px solid rgba(254, 202, 202, 0.3)',
-                width: '100%'
-              }}>
-                <input
-                  type="checkbox"
-                  id="backup_communication"
-                  checked={permitData.communication_system?.backup_communication || false}
-                  onChange={(e) => updatePermitData({ 
-                    communication_system: { 
-                      ...permitData.communication_system, 
-                      backup_communication: e.target.checked 
-                    }
-                  })}
-                  style={{
-                    width: '24px',
-                    height: '24px',
-                    accentColor: '#ef4444'
-                  }}
-                  required
-                />
-                <label 
-                  htmlFor="backup_communication"
-                  style={{
-                    color: '#fecaca',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    flex: 1
-                  }}
-                >
-                  🔄 <strong>Système de sauvegarde</strong> disponible *
-                </label>
-              </div>
-            </div>
-          </div>
-          
-          <div style={{ 
-            marginTop: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '16px',
-            backgroundColor: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: '12px',
-            border: '1px solid rgba(254, 202, 202, 0.3)'
-          }}>
-            <input
-              type="checkbox"
-              id="bidirectional_confirmed"
-              checked={permitData.communication_system?.bidirectional_confirmed || false}
-              onChange={(e) => updatePermitData({ 
-                communication_system: { 
-                  ...permitData.communication_system, 
-                  bidirectional_confirmed: e.target.checked 
-                }
-              })}
-              style={{
-                width: '24px',
-                height: '24px',
-                accentColor: '#ef4444'
-              }}
-              required
-            />
-            <label 
-              htmlFor="bidirectional_confirmed"
-              style={{
-                color: '#fecaca',
-                fontSize: isMobile ? '15px' : '16px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                flex: 1
-              }}
-            >
-              📻 <strong>COMMUNICATION BIDIRECTIONNELLE CONFIRMÉE</strong> : Communication continue entre surveillant et entrants vérifiée *
-            </label>
-          </div>
-        </div>
-        
-        {/* Traçabilité légale */}
-        <div style={{ 
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '16px',
-          backgroundColor: 'rgba(0, 0, 0, 0.2)',
-          borderRadius: '12px',
-          border: '1px solid rgba(254, 202, 202, 0.3)'
-        }}>
-          <input
-            type="checkbox"
-            id="permit_readily_available"
-            checked={permitData.permit_readily_available || false}
-            onChange={(e) => updatePermitData({ permit_readily_available: e.target.checked })}
-            style={{
-              width: '24px',
-              height: '24px',
-              accentColor: '#ef4444'
-            }}
-            required
-          />
-          <label 
-            htmlFor="permit_readily_available"
-            style={{
-              color: '#fecaca',
-              fontSize: isMobile ? '15px' : '16px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              flex: 1
-            }}
-          >
-            📋 <strong>PERMIS ACCESSIBLE</strong> : Ce permis est disponible à tous les intervenants sur le site de travail *
-          </label>
-        </div>
-      </div>
-
       {/* Statistiques en temps réel */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
@@ -719,7 +481,37 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
           📊 Statistiques en Temps Réel
         </h3>
         
-        <div style={styles.grid3}>
+        <div style={styles.grid4}>
+          <div style={{
+            padding: '20px',
+            backgroundColor: currentSurveillant ? 'rgba(34, 197, 94, 0.2)' : 'rgba(220, 38, 38, 0.2)',
+            borderRadius: '12px',
+            border: `2px solid ${currentSurveillant ? '#22c55e' : '#dc2626'}`,
+            textAlign: 'center'
+          }}>
+            <Eye style={{ 
+              width: isMobile ? '32px' : '40px', 
+              height: isMobile ? '32px' : '40px', 
+              color: currentSurveillant ? '#4ade80' : '#f87171',
+              margin: '0 auto 12px'
+            }} />
+            <div style={{ 
+              fontSize: isMobile ? '14px' : '16px', 
+              fontWeight: 'bold', 
+              color: currentSurveillant ? '#86efac' : '#fca5a5',
+              marginBottom: '8px'
+            }}>
+              {currentSurveillant ? 'ACTIF' : 'INACTIF'}
+            </div>
+            <div style={{ 
+              color: currentSurveillant ? '#86efac' : '#fca5a5', 
+              fontSize: '12px',
+              fontWeight: '600'
+            }}>
+              Surveillant
+            </div>
+          </div>
+          
           <div style={{
             padding: '20px',
             backgroundColor: 'rgba(59, 130, 246, 0.2)',
@@ -739,44 +531,44 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
               color: '#93c5fd',
               marginBottom: '8px'
             }}>
-              {personnel.length}
+              {entrants.length}
             </div>
             <div style={{ 
               color: '#93c5fd', 
-              fontSize: '14px',
+              fontSize: '12px',
               fontWeight: '600'
             }}>
-              {texts.personnelCount}
+              Entrants
             </div>
           </div>
           
           <div style={{
             padding: '20px',
-            backgroundColor: personnel.filter(p => p.status === 'inside').length > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(107, 114, 128, 0.2)',
+            backgroundColor: entrants.filter(e => e.current_status === 'inside').length > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(107, 114, 128, 0.2)',
             borderRadius: '12px',
-            border: `2px solid ${personnel.filter(p => p.status === 'inside').length > 0 ? '#f59e0b' : '#6b7280'}`,
+            border: `2px solid ${entrants.filter(e => e.current_status === 'inside').length > 0 ? '#f59e0b' : '#6b7280'}`,
             textAlign: 'center'
           }}>
-            <Eye style={{ 
+            <LogIn style={{ 
               width: isMobile ? '32px' : '40px', 
               height: isMobile ? '32px' : '40px', 
-              color: personnel.filter(p => p.status === 'inside').length > 0 ? '#fbbf24' : '#9ca3af',
+              color: entrants.filter(e => e.current_status === 'inside').length > 0 ? '#fbbf24' : '#9ca3af',
               margin: '0 auto 12px'
             }} />
             <div style={{ 
               fontSize: isMobile ? '24px' : '32px', 
               fontWeight: 'bold', 
-              color: personnel.filter(p => p.status === 'inside').length > 0 ? '#fde047' : '#9ca3af',
+              color: entrants.filter(e => e.current_status === 'inside').length > 0 ? '#fde047' : '#9ca3af',
               marginBottom: '8px'
             }}>
-              {personnel.filter(p => p.status === 'inside').length}
+              {entrants.filter(e => e.current_status === 'inside').length}
             </div>
             <div style={{ 
-              color: personnel.filter(p => p.status === 'inside').length > 0 ? '#fde047' : '#9ca3af', 
-              fontSize: '14px',
+              color: entrants.filter(e => e.current_status === 'inside').length > 0 ? '#fde047' : '#9ca3af', 
+              fontSize: '12px',
               fontWeight: '600'
             }}>
-              {texts.insideCount}
+              À l'intérieur
             </div>
           </div>
           
@@ -803,89 +595,313 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
             </div>
             <div style={{ 
               color: '#86efac', 
-              fontSize: '14px',
+              fontSize: '12px',
               fontWeight: '600'
             }}>
-              {texts.equipmentCount}
+              Équipements
             </div>
           </div>
         </div>
       </div>
 
-      {/* Section Ajout Personnel */}
+      {/* Section Surveillant */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
-          <Plus style={{ width: '20px', height: '20px' }} />
-          👥 Ajouter Personnel Autorisé
+          <Eye style={{ width: '20px', height: '20px' }} />
+          👁️ Surveillant d'Espace Clos
         </h3>
         
+        {/* Surveillant actuel */}
+        {currentSurveillant ? (
+          <div style={{
+            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+            borderRadius: '12px',
+            padding: isMobile ? '16px' : '20px',
+            border: '2px solid #22c55e',
+            marginBottom: '20px'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              marginBottom: '16px',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? '16px' : '0'
+            }}>
+              <div>
+                <div style={{ 
+                  fontSize: isMobile ? '18px' : '20px',
+                  fontWeight: '700',
+                  color: '#22c55e',
+                  marginBottom: '8px'
+                }}>
+                  🟢 SURVEILLANT ACTIF
+                </div>
+                <div style={{ 
+                  fontSize: isMobile ? '16px' : '18px',
+                  fontWeight: '600',
+                  color: 'white',
+                  marginBottom: '4px'
+                }}>
+                  👤 {currentSurveillant.name}
+                </div>
+                <div style={{ 
+                  color: '#9ca3af',
+                  fontSize: '14px',
+                  marginBottom: '8px'
+                }}>
+                  🏢 {currentSurveillant.company}
+                </div>
+                <div style={{ 
+                  color: '#86efac',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}>
+                  🕐 Début surveillance: {formatTime(currentSurveillant.start_time)}
+                </div>
+              </div>
+              
+              <button
+                onClick={endSurveillance}
+                style={{
+                  ...styles.button,
+                  ...styles.buttonDanger,
+                  width: 'auto',
+                  padding: '12px 20px'
+                }}
+              >
+                <LogOut style={{ width: '18px', height: '18px' }} />
+                Terminer Surveillance
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+            borderRadius: '12px',
+            padding: isMobile ? '16px' : '20px',
+            border: '2px solid #dc2626',
+            marginBottom: '20px',
+            textAlign: 'center'
+          }}>
+            <div style={{ 
+              fontSize: isMobile ? '18px' : '20px',
+              fontWeight: '700',
+              color: '#ef4444',
+              marginBottom: '8px'
+            }}>
+              ⚠️ AUCUN SURVEILLANT ACTIF
+            </div>
+            <div style={{ 
+              color: '#fca5a5',
+              fontSize: '14px'
+            }}>
+              Un surveillant doit être en service avant que des entrants puissent accéder à l'espace clos.
+            </div>
+          </div>
+        )}
+        
+        {/* Formulaire nouveau surveillant / remplacement */}
         <div style={styles.grid3}>
           <div>
-            <label style={styles.label}>{texts.fullName} *</label>
+            <label style={styles.label}>Nom du surveillant *</label>
             <input
               type="text"
-              placeholder="Ex: Jean Tremblay"
-              value={newPerson.name}
-              onChange={(e) => setNewPerson(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Ex: Marie Dubois"
+              value={newSurveillant.name}
+              onChange={(e) => setNewSurveillant(prev => ({ ...prev, name: e.target.value }))}
               style={styles.input}
               required
             />
           </div>
           <div>
-            <label style={styles.label}>{texts.company} *</label>
+            <label style={styles.label}>Compagnie *</label>
             <input
               type="text"
-              placeholder="Ex: Entreprises ABC Inc."
-              value={newPerson.company}
-              onChange={(e) => setNewPerson(prev => ({ ...prev, company: e.target.value }))}
+              placeholder="Ex: Sécurité ABC Inc."
+              value={newSurveillant.company}
+              onChange={(e) => setNewSurveillant(prev => ({ ...prev, company: e.target.value }))}
               style={styles.input}
               required
             />
           </div>
-          <div>
-            <label style={styles.label}>{texts.role} *</label>
-            <select
-              value={newPerson.role}
-              onChange={(e) => setNewPerson(prev => ({ ...prev, role: e.target.value as any }))}
-              style={styles.input}
-              required
-            >
-              <option value="entrant">👷 Entrant</option>
-              <option value="attendant">👁️ Surveillant</option>
-              <option value="supervisor">👨‍💼 Superviseur</option>
-            </select>
+          <div style={{ display: 'flex', alignItems: 'end' }}>
+            {currentSurveillant ? (
+              <button
+                onClick={replaceSurveillant}
+                style={{
+                  ...styles.button,
+                  ...styles.buttonWarning
+                }}
+              >
+                <UserCheck style={{ width: '18px', height: '18px' }} />
+                Remplacer Surveillant
+              </button>
+            ) : (
+              <button
+                onClick={startSurveillance}
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSuccess
+                }}
+              >
+                <Eye style={{ width: '18px', height: '18px' }} />
+                Débuter Surveillance
+              </button>
+            )}
           </div>
         </div>
         
-        <button
-          onClick={addPerson}
-          style={{
-            ...styles.button,
-            ...styles.buttonSuccess,
-            marginTop: '16px',
-            justifyContent: 'center'
-          }}
-        >
-          <Plus style={{ width: '18px', height: '18px' }} />
-          Ajouter au Registre
-        </button>
+        {/* Historique des surveillants */}
+        {surveillantHistory.length > 0 && (
+          <div style={{ marginTop: '24px' }}>
+            <h4 style={{
+              fontSize: isMobile ? '16px' : '18px',
+              fontWeight: '600',
+              color: '#d1d5db',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <History style={{ width: '18px', height: '18px' }} />
+              📋 Historique des Surveillances
+            </h4>
+            
+            <div style={{ 
+              maxHeight: '300px',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              {surveillantHistory.slice().reverse().map((shift) => (
+                <div
+                  key={shift.id}
+                  style={{
+                    backgroundColor: 'rgba(17, 24, 39, 0.6)',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    border: `1px solid ${shift.status === 'active' ? '#22c55e' : '#6b7280'}`
+                  }}
+                >
+                  <div style={styles.grid3}>
+                    <div>
+                      <div style={{ 
+                        color: 'white',
+                        fontWeight: '600',
+                        marginBottom: '4px'
+                      }}>
+                        👤 {shift.name}
+                      </div>
+                      <div style={{ 
+                        color: '#9ca3af',
+                        fontSize: '13px'
+                      }}>
+                        🏢 {shift.company}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ 
+                        color: '#d1d5db',
+                        fontSize: '14px',
+                        marginBottom: '2px'
+                      }}>
+                        🕐 {formatTime(shift.start_time)}
+                      </div>
+                      {shift.end_time && (
+                        <div style={{ 
+                          color: '#d1d5db',
+                          fontSize: '14px'
+                        }}>
+                          🕓 {formatTime(shift.end_time)}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        backgroundColor: shift.status === 'active' ? '#22c55e' : '#6b7280',
+                        color: 'white'
+                      }}>
+                        {shift.status === 'active' ? '🟢 ACTIF' : '⚫ TERMINÉ'}
+                      </span>
+                      {shift.duration && (
+                        <div style={{ 
+                          color: '#9ca3af',
+                          fontSize: '13px',
+                          marginTop: '4px'
+                        }}>
+                          ⏱️ {formatDuration(shift.duration)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Section Registre Personnel */}
+      {/* Section Entrants */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
           <Users style={{ width: '20px', height: '20px' }} />
-          📋 {texts.title} ({personnel.length})
+          👷 Personnel Entrant ({entrants.length})
         </h3>
         
-        {personnel.length === 0 ? (
+        {/* Formulaire ajout entrant */}
+        <div style={styles.grid3}>
+          <div>
+            <label style={styles.label}>Nom de l'entrant *</label>
+            <input
+              type="text"
+              placeholder="Ex: Pierre Martin"
+              value={newEntrant.name}
+              onChange={(e) => setNewEntrant(prev => ({ ...prev, name: e.target.value }))}
+              style={styles.input}
+              required
+            />
+          </div>
+          <div>
+            <label style={styles.label}>Compagnie *</label>
+            <input
+              type="text"
+              placeholder="Ex: Construction XYZ"
+              value={newEntrant.company}
+              onChange={(e) => setNewEntrant(prev => ({ ...prev, company: e.target.value }))}
+              style={styles.input}
+              required
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'end' }}>
+            <button
+              onClick={addEntrant}
+              style={{
+                ...styles.button,
+                ...styles.buttonSuccess
+              }}
+            >
+              <UserPlus style={{ width: '18px', height: '18px' }} />
+              Ajouter Entrant
+            </button>
+          </div>
+        </div>
+        
+        {/* Liste des entrants */}
+        {entrants.length === 0 ? (
           <div style={{ 
             textAlign: 'center', 
             padding: isMobile ? '32px 20px' : '48px 32px', 
             color: '#9ca3af',
             backgroundColor: 'rgba(17, 24, 39, 0.5)',
             borderRadius: '12px',
-            border: '1px solid #374151'
+            border: '1px solid #374151',
+            marginTop: '20px'
           }}>
             <Users style={{ 
               width: isMobile ? '56px' : '72px', 
@@ -894,28 +910,29 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
               color: '#4b5563'
             }} />
             <p style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: '12px', fontWeight: '600' }}>
-              Aucun personnel enregistré
+              Aucun entrant enregistré
             </p>
             <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
-              Ajoutez du personnel autorisé ci-dessus pour commencer le registre d'entrée.
+              Ajoutez des entrants ci-dessus pour commencer le registre d'entrée.
             </p>
           </div>
         ) : (
           <div style={{ 
+            marginTop: '20px',
             display: 'flex', 
             flexDirection: 'column', 
             gap: '16px',
-            maxHeight: isMobile ? '600px' : '700px',
+            maxHeight: '600px',
             overflowY: 'auto'
           }}>
-            {personnel.map((person) => (
+            {entrants.map((entrant) => (
               <div
-                key={person.id}
+                key={entrant.id}
                 style={{
                   backgroundColor: 'rgba(17, 24, 39, 0.6)',
                   borderRadius: '12px',
                   padding: isMobile ? '16px' : '20px',
-                  border: `2px solid ${person.status === 'inside' ? '#f59e0b' : '#4b5563'}`,
+                  border: `2px solid ${entrant.current_status === 'inside' ? '#f59e0b' : '#4b5563'}`,
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -927,33 +944,56 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                   flexDirection: isMobile ? 'column' : 'row',
                   gap: isMobile ? '12px' : '0'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '24px' }}>{getRoleIcon(person.role)}</span>
-                    <div>
-                      <div style={{ 
-                        fontWeight: '700', 
-                        color: 'white', 
-                        fontSize: isMobile ? '16px' : '18px',
-                        marginBottom: '4px'
-                      }}>
-                        {person.name}
-                      </div>
-                      <div style={{ 
-                        color: '#9ca3af', 
-                        fontSize: '14px',
-                        marginBottom: '4px'
-                      }}>
-                        🏢 {person.company}
-                      </div>
+                  <div>
+                    <div style={{ 
+                      fontWeight: '700', 
+                      color: 'white', 
+                      fontSize: isMobile ? '16px' : '18px',
+                      marginBottom: '4px'
+                    }}>
+                      👷 {entrant.name}
+                    </div>
+                    <div style={{ 
+                      color: '#9ca3af', 
+                      fontSize: '14px',
+                      marginBottom: '8px'
+                    }}>
+                      🏢 {entrant.company}
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      gap: '12px',
+                      flexWrap: 'wrap'
+                    }}>
                       <span style={{
                         padding: '4px 8px',
                         borderRadius: '12px',
                         fontSize: '12px',
                         fontWeight: '600',
-                        backgroundColor: getRoleColor(person.role),
+                        backgroundColor: entrant.current_status === 'inside' ? '#f59e0b' : '#6b7280',
                         color: 'white'
                       }}>
-                        {person.role.toUpperCase()}
+                        {entrant.current_status === 'inside' ? '🟡 À L\'INTÉRIEUR' : '⚫ À L\'EXTÉRIEUR'}
+                      </span>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        backgroundColor: '#3b82f6',
+                        color: 'white'
+                      }}>
+                        📊 {entrant.total_entries} entrées
+                      </span>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        backgroundColor: '#10b981',
+                        color: 'white'
+                      }}>
+                        ⏱️ {formatDuration(entrant.total_duration)}
                       </span>
                     </div>
                   </div>
@@ -961,47 +1001,38 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    gap: '12px',
+                    gap: '8px',
                     flexDirection: isMobile ? 'column' : 'row'
                   }}>
-                    <span style={{
-                      padding: '8px 16px',
-                      borderRadius: '20px',
-                      fontSize: '14px',
-                      fontWeight: '700',
-                      backgroundColor: person.status === 'inside' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(107, 114, 128, 0.2)',
-                      color: person.status === 'inside' ? '#fbbf24' : '#9ca3af',
-                      border: `2px solid ${person.status === 'inside' ? '#f59e0b' : '#6b7280'}`
-                    }}>
-                      {person.status === 'inside' ? `🟡 ${texts.inside}` : `🔘 ${texts.outside}`}
-                    </span>
-                    
                     <button
-                      onClick={() => toggleEntry(person.id)}
+                      onClick={() => toggleEntrantEntry(entrant.id)}
+                      disabled={!currentSurveillant}
                       style={{
                         ...styles.button,
-                        ...(person.status === 'outside' ? styles.buttonSuccess : styles.buttonDanger),
+                        ...(entrant.current_status === 'outside' ? styles.buttonSuccess : styles.buttonDanger),
                         width: 'auto',
                         padding: '8px 12px',
                         fontSize: '14px',
-                        minHeight: 'auto'
+                        minHeight: 'auto',
+                        opacity: !currentSurveillant ? 0.5 : 1,
+                        cursor: !currentSurveillant ? 'not-allowed' : 'pointer'
                       }}
                     >
-                      {person.status === 'outside' ? (
+                      {entrant.current_status === 'outside' ? (
                         <>
                           <LogIn style={{ width: '16px', height: '16px' }} />
-                          {texts.markEntry}
+                          Marquer Entrée
                         </>
                       ) : (
                         <>
                           <LogOut style={{ width: '16px', height: '16px' }} />
-                          {texts.markExit}
+                          Marquer Sortie
                         </>
                       )}
                     </button>
                     
                     <button
-                      onClick={() => deletePerson(person.id)}
+                      onClick={() => deleteEntrant(entrant.id)}
                       style={{
                         ...styles.button,
                         ...styles.buttonSecondary,
@@ -1012,71 +1043,89 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                       }}
                     >
                       <Trash2 style={{ width: '16px', height: '16px' }} />
-                      {texts.delete}
+                      Supprimer
                     </button>
                   </div>
                 </div>
                 
-                {/* Détails temporels */}
-                <div style={{ 
-                  display: 'grid',
-                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-                  gap: '16px',
-                  marginTop: '16px',
-                  padding: '16px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  borderRadius: '8px'
-                }}>
-                  <div>
-                    <span style={{ color: '#9ca3af', fontSize: '13px', display: 'block' }}>
-                      {texts.entryTime}:
-                    </span>
-                    <span style={{ color: '#d1d5db', fontSize: '14px', fontWeight: '600' }}>
-                      {person.entry_time ? 
-                        new Date(person.entry_time).toLocaleTimeString('fr-CA') : 
-                        '---'
-                      }
-                    </span>
+                {/* Historique des sessions d'entrée */}
+                {entrant.entry_sessions.length > 0 && (
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '16px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                    borderRadius: '8px'
+                  }}>
+                    <h5 style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#d1d5db',
+                      marginBottom: '12px'
+                    }}>
+                      📋 Historique des entrées:
+                    </h5>
+                    
+                    <div style={{
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}>
+                      {entrant.entry_sessions.slice().reverse().map((session, index) => (
+                        <div
+                          key={session.id}
+                          style={{
+                            padding: '12px',
+                            backgroundColor: 'rgba(17, 24, 39, 0.8)',
+                            borderRadius: '6px',
+                            border: `1px solid ${session.status === 'inside' ? '#f59e0b' : '#6b7280'}`
+                          }}
+                        >
+                          <div style={styles.grid3}>
+                            <div>
+                              <div style={{ color: '#d1d5db', fontSize: '13px' }}>
+                                🕐 Entrée: {formatTime(session.entry_time)}
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ color: '#d1d5db', fontSize: '13px' }}>
+                                {session.exit_time ? 
+                                  `🕓 Sortie: ${formatTime(session.exit_time)}` : 
+                                  '🟡 En cours...'
+                                }
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ color: '#d1d5db', fontSize: '13px' }}>
+                                {session.duration ? 
+                                  `⏱️ ${formatDuration(session.duration)}` : 
+                                  '⏱️ En cours...'
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div>
-                    <span style={{ color: '#9ca3af', fontSize: '13px', display: 'block' }}>
-                      {texts.exitTime}:
-                    </span>
-                    <span style={{ color: '#d1d5db', fontSize: '14px', fontWeight: '600' }}>
-                      {person.exit_time ? 
-                        new Date(person.exit_time).toLocaleTimeString('fr-CA') : 
-                        person.status === 'inside' ? 'En cours...' : '---'
-                      }
-                    </span>
-                  </div>
-                  <div>
-                    <span style={{ color: '#9ca3af', fontSize: '13px', display: 'block' }}>
-                      {texts.totalDuration}:
-                    </span>
-                    <span style={{ color: '#d1d5db', fontSize: '14px', fontWeight: '600' }}>
-                      {person.total_duration ? 
-                        formatDuration(person.total_duration) : 
-                        '0h 0m'
-                      }
-                    </span>
-                  </div>
-                </div>
+                )}
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Section Ajout Équipement */}
+      {/* Section Équipements (identique à l'original) */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
           <Plus style={{ width: '20px', height: '20px' }} />
-          🔧 {texts.addEquipment}
+          🔧 Ajouter Équipement
         </h3>
         
         <div style={styles.grid3}>
           <div>
-            <label style={styles.label}>{texts.equipmentName} *</label>
+            <label style={styles.label}>Nom de l'équipement *</label>
             <input
               type="text"
               placeholder="Ex: Détecteur 4 gaz portable"
@@ -1087,7 +1136,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
             />
           </div>
           <div>
-            <label style={styles.label}>{texts.serialNumber} *</label>
+            <label style={styles.label}>N° série / Identification *</label>
             <input
               type="text"
               placeholder="Ex: MSA-001234"
@@ -1098,16 +1147,16 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
             />
           </div>
           <div>
-            <label style={styles.label}>{texts.condition} *</label>
+            <label style={styles.label}>État *</label>
             <select
               value={newEquipment.condition}
               onChange={(e) => setNewEquipment(prev => ({ ...prev, condition: e.target.value as any }))}
               style={styles.input}
               required
             >
-              <option value="good">✅ {texts.goodCondition}</option>
-              <option value="fair">⚠️ {texts.fairCondition}</option>
-              <option value="poor">❌ {texts.poorCondition}</option>
+              <option value="good">✅ Bon état</option>
+              <option value="fair">⚠️ État acceptable</option>
+              <option value="poor">❌ À remplacer</option>
             </select>
           </div>
         </div>
@@ -1130,7 +1179,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
           <Wrench style={{ width: '20px', height: '20px' }} />
-          🔧 {texts.equipment} ({equipment.length})
+          🔧 Contrôle Équipements Obligatoires ({equipment.length})
         </h3>
         
         {equipment.length === 0 ? (
@@ -1206,9 +1255,9 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                       backgroundColor: getConditionColor(item.condition),
                       color: 'white'
                     }}>
-                      {item.condition === 'good' ? `✅ ${texts.goodCondition}` :
-                       item.condition === 'fair' ? `⚠️ ${texts.fairCondition}` :
-                       `❌ ${texts.poorCondition}`}
+                      {item.condition === 'good' ? '✅ Bon état' :
+                       item.condition === 'fair' ? '⚠️ État acceptable' :
+                       '❌ À remplacer'}
                     </span>
                   </div>
                   
@@ -1230,7 +1279,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                       }}
                     >
                       <LogIn style={{ width: '14px', height: '14px' }} />
-                      {texts.checkIn}
+                      Entrée
                       {item.checked_in && <CheckCircle style={{ width: '14px', height: '14px' }} />}
                     </button>
                     
@@ -1246,7 +1295,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                       }}
                     >
                       <LogOut style={{ width: '14px', height: '14px' }} />
-                      {texts.checkOut}
+                      Sortie
                       {item.checked_out && <CheckCircle style={{ width: '14px', height: '14px' }} />}
                     </button>
                     
@@ -1262,7 +1311,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                       }}
                     >
                       <Trash2 style={{ width: '14px', height: '14px' }} />
-                      {texts.delete}
+                      Supprimer
                     </button>
                   </div>
                 </div>
