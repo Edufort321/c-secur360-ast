@@ -1497,7 +1497,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
     
     // ✅ CORRECTION : Obtenir l'autorité de manière sécurisée
-    const provinceAuthority = currentClassification?.regulations?.authority || getProvinceAuthority(selectedProvince);
+    const provinceAuthority = getProvinceAuthority(selectedProvince);
     
     return {
       metadata: {
