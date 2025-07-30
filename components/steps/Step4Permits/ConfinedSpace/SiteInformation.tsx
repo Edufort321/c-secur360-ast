@@ -1343,7 +1343,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       if (typeof window !== 'undefined' && 'Notification' in window) {
         if (Notification.permission === 'granted') {
           new Notification(`❌ ${t.saveError}`, {
-            body: error.message,
+            body: error instanceof Error ? error.message : 'Erreur inconnue',
             icon: '/c-secur360-logo.png'
           });
         }
