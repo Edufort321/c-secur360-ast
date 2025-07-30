@@ -2118,7 +2118,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     }
   };
 
-  // =================== ENVOI EMAIL PROFESSIONNEL ===================
+// =================== ENVOI EMAIL PROFESSIONNEL ===================
   const handleEmailPermit = async () => {
     setIsGeneratingReport(true);
     try {
@@ -2146,7 +2146,7 @@ ${language === 'fr' ? 'Veuillez trouver ci-joint le permis d\'entrée en espace 
 • ${language === 'fr' ? 'Article spécifique' : 'Specific Article'}: ${(currentClassification?.regulations as any)?.specific || 'Articles applicables'}
 • ${language === 'fr' ? 'Surveillance requise' : 'Monitoring Required'}: ${(currentClassification?.regulations as any)?.testing || 'Selon classification'}
 
-⚠️ ${language === 'fr' ? 'IMPORTANT' : 'IMPORTANT'}: ${language === 'fr' ? 'Ce document doit être affiché sur le site et tous les travailleurs doivent en prendre connaissance avant l\'entrée. La validation de tous les éléments de sécurité est obligatoire selon' : 'This document must be displayed on site and all workers must acknowledge it before entry. Validation of all safety elements is mandatory according to'} ${currentClassification?.regulations?.main || (language === 'fr' ? 'les réglementations applicables' : 'applicable regulations')}.
+⚠️ ${language === 'fr' ? 'IMPORTANT' : 'IMPORTANT'}: ${language === 'fr' ? 'Ce document doit être affiché sur le site et tous les travailleurs doivent en prendre connaissance avant l\'entrée. La validation de tous les éléments de sécurité est obligatoire selon' : 'This document must be displayed on site and all workers must acknowledge it before entry. Validation of all safety elements is mandatory according to'} ${(currentClassification?.regulations as any)?.main || (language === 'fr' ? 'les réglementations applicables' : 'applicable regulations')}.
 
 ${language === 'fr' ? 'Cordialement' : 'Best regards'},
 C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety Management System'}`;
