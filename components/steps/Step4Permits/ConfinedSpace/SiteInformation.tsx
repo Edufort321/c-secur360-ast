@@ -2970,6 +2970,480 @@ const generatePermitQRCodeForPrint = async (permitNumber: string): Promise<strin
   }
 };
 
+// =================== GÉNÉRATION DE RAPPORT PROFESSIONNEL COMPLET ===================
+const generateCompletePermitReport = async (): Promise<PermitReport> => {
+  const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  
+  const csaClassifications = getCSAClassifications(selectedProvince, language);
+  const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
+  
+  const provinceAuthority = PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente';
+  
+  return {
+    metadata: {
+      permitNumber,
+      issueDate: new Date().toISOString(),
+      province: selectedProvince,
+      authority: provinceAuthority,
+      generatedAt: new Date().toISOString(),
+      version: '2.0',
+      language,
+      companyLogo: '/c-secur360-logo.png',
+      qrCode: await generatePermitQRCodeForPrint(permitNumber),
+      classification: currentClassification
+    },
+    siteInformation: {
+      ...confinedSpaceDetails,
+      spacePhotos: spacePhotos,
+      csaClassification: currentClassification,
+      provincialRegulations: currentClassification?.regulations
+    },
+    atmosphericTesting: permitData.atmosphericTesting || {},
+    entryRegistry: permitData.entryRegistry || {},
+    rescuePlan: permitData.rescuePlan || {},
+    validationChecklist: generateValidationChecklist()
+  };
+};
+
+// =================== GÉNÉRATION CHECKLIST DE VALIDATION ===================
+const generateValidationChecklist = () => {
+  const csaClassifications = getCSAClassifications(selectedProvince, language);
+  const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
+  
+  const baseChecklist = [
+    {
+      category: language === 'fr' ? 'Tests Atmosphériques' : 'Atmospheric Testing',
+      items: [
+        language === 'fr' ? 'Tests d\'oxygène (19.5% - 23%)' : 'Oxygen testing (19.5% - 23%)',
+        language === 'fr' ? 'Tests de gaz inflammables (<10% LIE)' : 'Flammable gas testing (<10% LEL)',
+        language === 'fr' ? 'Tests de gaz toxiques (H2S, CO)' : 'Toxic gas testing (H2S, CO)',
+        (currentClassification?.regulations as any)?.testing || (language === 'fr' ? 'Surveillance selon réglementation' : 'Monitoring per regulations')
+      ]
+    },
+    {
+      category: language === 'fr' ? 'Personnel et Formation' : 'Personnel and Training',
+      items: [
+        (currentClassification?.regulations as any)?.attendant || (language === 'fr' ? 'Personnel qualifié requis' : 'Qualified personnel required'),
+        language === 'fr' ? 'Formation sur les dangers spécifiques' : 'Training on specific hazards',
+        language === 'fr' ? 'Certification des équipements' : 'Equipment certification',
+        (currentClassification?.regulations as any)?.rescue || (language === 'fr' ? 'Plan de sauvetage établi' : 'Rescue plan established')
+      ]
+    },
+    {
+      category: language === 'fr' ? 'Équipements de Sécurité' : 'Safety Equipment',
+      items: [
+        language === 'fr' ? 'Équipement de surveillance atmosphérique' : 'Atmospheric monitoring equipment',
+        language === 'fr' ? 'Équipement de protection individuelle' : 'Personal protective equipment',
+        language === 'fr' ? 'Système de communication' : 'Communication system',
+        language === 'fr' ? 'Équipement de sauvetage d\'urgence' : 'Emergency rescue equipment'
+      ]
+    }
+  ];
+
+  return baseChecklist;
+};
+
+// =================== IMPRESSION LÉGALE PROFESSIONNELLE AVEC QR CODE ===================
+const handlePrintPermit = async () => {
+  setIsGeneratingReport(true);
+  try {
+    const report = await generateCompletePermitReport();
+    const csaClassifications = getCSAClassifications(selectedProvince, language);
+    const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
+    
+    const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="${language}">
+          <head>
+            <title>Permis d'Espace Clos - ${report.metadata.permitNumber}</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              @page {
+                size: A4;
+                margin: 15mm;
+              }
+              
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              
+              body {
+                font-family: 'Arial', 'Helvetica', sans-serif;
+                font-size: 11pt;
+                line-height: 1.4;
+                color: #000;
+                background: white;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              
+              .legal-header {
+                border-bottom: 4px solid #dc2626;
+                padding-bottom: 20px;
+                margin-bottom: 25px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+              }
+              
+              .company-logo {
+                width: 80px;
+                height: 80px;
+                background: url('/c-secur360-logo.png') no-repeat center;
+                background-size: contain;
+                border: 2px solid #dc2626;
+                border-radius: 8px;
+                padding: 5px;
+              }
+              
+              .header-info h1 {
+                color: #dc2626;
+                font-size: 24pt;
+                font-weight: 700;
+                margin-bottom: 5px;
+                text-transform: uppercase;
+              }
+              
+              .permit-badge {
+                background: linear-gradient(135deg, #dc2626, #b91c1c);
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                text-align: center;
+                min-width: 200px;
+                box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+              }
+              
+              .permit-number {
+                font-size: 16pt;
+                font-weight: 700;
+                margin-bottom: 5px;
+              }
+              
+              .section {
+                margin-bottom: 25px;
+                page-break-inside: avoid;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                overflow: hidden;
+              }
+              
+              .section-header {
+                background: linear-gradient(135deg, #1f2937, #374151);
+                color: white;
+                padding: 12px 16px;
+                font-size: 14pt;
+                font-weight: 600;
+              }
+              
+              .section-content {
+                padding: 16px;
+                background: white;
+              }
+              
+              .info-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                margin-bottom: 15px;
+              }
+              
+              .info-item {
+                border: 1px solid #d1d5db;
+                border-radius: 4px;
+                padding: 10px;
+                background: #f9fafb;
+              }
+              
+              .info-label {
+                font-weight: 600;
+                color: #374151;
+                font-size: 9pt;
+                margin-bottom: 3px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              
+              .info-value {
+                color: #111827;
+                font-size: 11pt;
+                word-wrap: break-word;
+              }
+              
+              .qr-signature-section {
+                display: grid;
+                grid-template-columns: 250px 1fr;
+                gap: 20px;
+                margin-top: 30px;
+                page-break-inside: avoid;
+                border: 2px solid #3b82f6;
+                border-radius: 8px;
+                padding: 20px;
+                background: #f0f9ff;
+              }
+              
+              .qr-container {
+                text-align: center;
+              }
+              
+              .qr-code-print {
+                width: 200px;
+                height: 200px;
+                border: 2px solid #3b82f6;
+                border-radius: 8px;
+                background: white;
+                margin: 0 auto 15px;
+                padding: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              
+              .qr-code-print img {
+                max-width: 100%;
+                max-height: 100%;
+                width: auto;
+                height: auto;
+              }
+              
+              .qr-info {
+                font-size: 10pt;
+                color: #1e40af;
+                font-weight: 600;
+                text-align: center;
+                line-height: 1.3;
+              }
+              
+              .signatures-area {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+              }
+              
+              .signature-box {
+                border: 1px solid #d1d5db;
+                border-radius: 4px;
+                padding: 15px;
+                background: white;
+                min-height: 100px;
+              }
+              
+              .signature-label {
+                font-weight: 600;
+                color: #374151;
+                font-size: 10pt;
+                margin-bottom: 50px;
+              }
+              
+              .signature-line {
+                border-bottom: 1px solid #374151;
+                width: 100%;
+                margin-bottom: 5px;
+              }
+              
+              .signature-date {
+                font-size: 8pt;
+                color: #6b7280;
+              }
+              
+              .legal-footer {
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 2px solid #e5e7eb;
+                text-align: center;
+                page-break-inside: avoid;
+              }
+              
+              .footer-warning {
+                background: #fef3c7;
+                border: 1px solid #f59e0b;
+                border-radius: 6px;
+                padding: 15px;
+                margin-bottom: 15px;
+                color: #92400e;
+                font-weight: 600;
+                font-size: 11pt;
+              }
+              
+              @media print {
+                body { margin: 0; font-size: 10pt; }
+                .section { page-break-inside: avoid; }
+                .qr-signature-section { page-break-inside: avoid; }
+                .legal-footer { page-break-inside: avoid; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="legal-header">
+              <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="company-logo"></div>
+                <div class="header-info">
+                  <h1>🚨 ${language === 'fr' ? 'Permis d\'Entrée en Espace Clos' : 'Confined Space Entry Permit'}</h1>
+                  <div style="color: #374151; font-size: 14pt; font-weight: 600;">${language === 'fr' ? 'Document Officiel - Conformité Réglementaire' : 'Official Document - Regulatory Compliance'}</div>
+                </div>
+              </div>
+              <div class="permit-badge">
+                <div class="permit-number">${report.metadata.permitNumber}</div>
+                <div style="font-size: 10pt; opacity: 0.9;">${language === 'fr' ? 'ACTIF' : 'ACTIVE'}</div>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-header">🏢 ${language === 'fr' ? 'Informations du Projet' : 'Project Information'}</div>
+              <div class="section-content">
+                <div class="info-grid">
+                  <div class="info-item">
+                    <div class="info-label">${language === 'fr' ? 'Province/Autorité' : 'Province/Authority'}</div>
+                    <div class="info-value">${selectedProvince} - ${report.metadata.authority}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">${language === 'fr' ? 'Date d\'émission' : 'Issue Date'}</div>
+                    <div class="info-value">${new Date(report.metadata.issueDate).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">${language === 'fr' ? 'Numéro de projet' : 'Project Number'}</div>
+                    <div class="info-value">${report.siteInformation.projectNumber || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">${language === 'fr' ? 'Lieu des travaux' : 'Work Location'}</div>
+                    <div class="info-value">${report.siteInformation.workLocation || (language === 'fr' ? 'Non spécifié' : 'Not specified')}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">${language === 'fr' ? 'Classification' : 'Classification'}</div>
+                    <div class="info-value">${currentClassification?.title || 'Non définie'}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">${language === 'fr' ? 'Volume' : 'Volume'}</div>
+                    <div class="info-value">${report.siteInformation.dimensions?.volume || 0} ${report.siteInformation.unitSystem === 'metric' ? 'm³' : 'ft³'}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="qr-signature-section">
+              <div class="qr-container">
+                <div class="qr-code-print">
+                  ${report.metadata.qrCode ? `<img src="${report.metadata.qrCode}" alt="QR Code ${report.metadata.permitNumber}" />` : 
+                    `<div style="color: #666; font-size: 12px; text-align: center;">QR Code<br/>Indisponible</div>`}
+                </div>
+                <div class="qr-info">
+                  📱 ${language === 'fr' ? 'Scanner pour accès numérique' : 'Scan for digital access'}
+                  <br><strong>${report.metadata.permitNumber}</strong>
+                  <br><small>${language === 'fr' ? 'Accès mobile instantané' : 'Instant mobile access'}</small>
+                </div>
+              </div>
+              <div class="signatures-area">
+                <div class="signature-box">
+                  <div class="signature-label">${language === 'fr' ? 'Superviseur / Personne Compétente' : 'Supervisor / Competent Person'}</div>
+                  <div class="signature-line"></div>
+                  <div class="signature-date">${language === 'fr' ? 'Nom et signature' : 'Name and signature'}</div>
+                </div>
+                <div class="signature-box">
+                  <div class="signature-label">${language === 'fr' ? 'Surveillant d\'Espace Clos' : 'Confined Space Attendant'}</div>
+                  <div class="signature-line"></div>
+                  <div class="signature-date">${language === 'fr' ? 'Nom et signature' : 'Name and signature'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="legal-footer">
+              <div class="footer-warning">
+                ⚠️ ${language === 'fr' ? 'AVERTISSEMENT LÉGAL' : 'LEGAL WARNING'}: ${language === 'fr' ? 'Ce permis n\'est valide qu\'après validation complète de tous les éléments de sécurité et tests atmosphériques requis selon' : 'This permit is only valid after complete validation of all safety elements and atmospheric testing required by'} ${(currentClassification?.regulations as any)?.main || 'les réglementations applicables'}.
+              </div>
+              <div style="color: #6b7280; font-size: 9pt; line-height: 1.4;">
+                <strong>C-SECUR360</strong> - ${language === 'fr' ? 'Système de Gestion de Sécurité Industrielle' : 'Industrial Safety Management System'}
+                <br>${language === 'fr' ? 'Document généré automatiquement le' : 'Document automatically generated on'} ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                <br>${language === 'fr' ? 'Conformité réglementaire' : 'Regulatory compliance'}: ${selectedProvince} - ${report.metadata.authority}
+              </div>
+            </div>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      
+      printWindow.addEventListener('load', () => {
+        setTimeout(() => {
+          printWindow.print();
+        }, 1000);
+      });
+    }
+  } finally {
+    setIsGeneratingReport(false);
+  }
+};
+
+// =================== ENVOI EMAIL ET PARTAGE ===================
+const handleEmailPermit = async () => {
+  setIsGeneratingReport(true);
+  try {
+    const report = await generateCompletePermitReport();
+    const csaClassifications = getCSAClassifications(selectedProvince, language);
+    const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
+    
+    const subject = `${language === 'fr' ? 'Permis d\'Espace Clos' : 'Confined Space Permit'} - ${report.metadata.permitNumber}`;
+    const body = `${language === 'fr' ? 'Bonjour' : 'Hello'},
+
+${language === 'fr' ? 'Veuillez trouver ci-joint le permis d\'entrée en espace clos suivant' : 'Please find attached the following confined space entry permit'}:
+
+📋 ${language === 'fr' ? 'DÉTAILS DU PERMIS' : 'PERMIT DETAILS'}
+• ${language === 'fr' ? 'Numéro' : 'Number'}: ${report.metadata.permitNumber}
+• ${language === 'fr' ? 'Province/Autorité' : 'Province/Authority'}: ${selectedProvince} - ${report.metadata.authority}
+• ${language === 'fr' ? 'Classification CSA' : 'CSA Classification'}: ${currentClassification?.title || 'Non définie'}
+• ${language === 'fr' ? 'Projet' : 'Project'}: ${report.siteInformation.projectNumber || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
+• ${language === 'fr' ? 'Lieu' : 'Location'}: ${report.siteInformation.workLocation || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
+
+${language === 'fr' ? 'Cordialement' : 'Best regards'},
+C-SECUR360`;
+    
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoLink);
+  } finally {
+    setIsGeneratingReport(false);
+  }
+};
+
+const handleSharePermit = async () => {
+  setIsGeneratingReport(true);
+  try {
+    const report = await generateCompletePermitReport();
+    const shareData = {
+      title: `${language === 'fr' ? 'Permis Espace Clos' : 'Confined Space Permit'} - ${report.metadata.permitNumber}`,
+      text: `📋 ${report.siteInformation.projectNumber || (language === 'fr' ? 'Projet non spécifié' : 'Project not specified')}
+📍 ${report.siteInformation.workLocation || (language === 'fr' ? 'Lieu non spécifié' : 'Location not specified')}
+🏗️ ${language === 'fr' ? 'Type' : 'Type'}: ${report.siteInformation.spaceType || (language === 'fr' ? 'Non spécifié' : 'Not specified')}
+⚠️ ${language === 'fr' ? 'Classification' : 'Classification'}: ${confinedSpaceDetails.csaClass?.toUpperCase() || 'Non définie'}`,
+      url: window.location.href
+    };
+    
+    if (navigator.share && isMobile) {
+      await navigator.share(shareData);
+    } else if (navigator.clipboard) {
+      const textToShare = `${shareData.title}\n\n${shareData.text}\n\n🔗 ${shareData.url}`;
+      await navigator.clipboard.writeText(textToShare);
+      
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'granted') {
+          new Notification(`✅ ${language === 'fr' ? 'Copié dans le presse-papiers' : 'Copied to clipboard'}`, {
+            body: language === 'fr' ? 'Informations du permis copiées' : 'Permit information copied',
+            icon: '/c-secur360-logo.png'
+          });
+        }
+      }
+    }
+  } finally {
+    setIsGeneratingReport(false);
+  }
+};
+
 // =================== GESTION DES PHOTOS SANS RE-RENDER ===================
 const handlePhotoCapture = async (category: string) => {
   if (photoInputRef.current) {
