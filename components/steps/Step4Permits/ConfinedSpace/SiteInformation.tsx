@@ -2142,9 +2142,9 @@ ${language === 'fr' ? 'Veuillez trouver ci-joint le permis d\'entrée en espace 
 • ${language === 'fr' ? 'Dangers identifiés' : 'Identified Hazards'}: ${(report.siteInformation.atmosphericHazards?.length || 0) + (report.siteInformation.physicalHazards?.length || 0)}
 
 🏛️ ${language === 'fr' ? 'CONFORMITÉ RÉGLEMENTAIRE' : 'REGULATORY COMPLIANCE'}
-• ${language === 'fr' ? 'Règlement principal' : 'Main Regulation'}: ${currentClassification?.regulations?.main || 'Réglementation applicable'}
-• ${language === 'fr' ? 'Article spécifique' : 'Specific Article'}: ${currentClassification?.regulations?.specific || 'Articles applicables'}
-• ${language === 'fr' ? 'Surveillance requise' : 'Monitoring Required'}: ${currentClassification?.regulations?.testing || 'Selon classification'}
+• ${language === 'fr' ? 'Règlement principal' : 'Main Regulation'}: ${(currentClassification?.regulations as any)?.main || 'Réglementation applicable'}
+• ${language === 'fr' ? 'Article spécifique' : 'Specific Article'}: ${(currentClassification?.regulations as any)?.specific || 'Articles applicables'}
+• ${language === 'fr' ? 'Surveillance requise' : 'Monitoring Required'}: ${(currentClassification?.regulations as any)?.testing || 'Selon classification'}
 
 ⚠️ ${language === 'fr' ? 'IMPORTANT' : 'IMPORTANT'}: ${language === 'fr' ? 'Ce document doit être affiché sur le site et tous les travailleurs doivent en prendre connaissance avant l\'entrée. La validation de tous les éléments de sécurité est obligatoire selon' : 'This document must be displayed on site and all workers must acknowledge it before entry. Validation of all safety elements is mandatory according to'} ${currentClassification?.regulations?.main || (language === 'fr' ? 'les réglementations applicables' : 'applicable regulations')}.
 
