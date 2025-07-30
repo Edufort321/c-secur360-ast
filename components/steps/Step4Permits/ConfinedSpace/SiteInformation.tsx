@@ -1830,7 +1830,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
             </div>
           </div>
 
-          {/* Footer avec boutons de navigation */}
           <div style={{
             padding: isMobile ? '16px' : '20px',
             borderTop: '1px solid var(--border-color)',
@@ -1843,7 +1842,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
               disabled={currentQuestionIndex === 0}
               style={{
                 padding: isMobile ? '12px 16px' : '12px 20px',
-                border: 'none',
                 borderRadius: 'var(--radius-sm)',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -1869,7 +1867,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                        (Array.isArray(answers[currentQuestion.id]) && answers[currentQuestion.id].length === 0)}
               style={{
                 padding: isMobile ? '12px 16px' : '12px 20px',
-                border: 'none',
                 borderRadius: 'var(--radius-sm)',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -1881,6 +1878,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                 minHeight: '44px',
                 background: 'linear-gradient(135deg, var(--primary-color), #2563eb)',
                 color: 'white',
+                border: 'none',
                 opacity: (!answers[currentQuestion.id] || 
                          (Array.isArray(answers[currentQuestion.id]) && answers[currentQuestion.id].length === 0)) ? 0.6 : 1
               }}
@@ -2695,7 +2693,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       );
     }
   };
-  // =================== FONCTIONS DE BASE DE DONNÉES SUPABASE ===================
+ // =================== FONCTIONS DE BASE DE DONNÉES SUPABASE ===================
   const searchPermitsDatabase = async (query: string, page: number = 1): Promise<PermitSearchResult> => {
     setIsSearching(true);
     try {
