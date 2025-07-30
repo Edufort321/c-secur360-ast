@@ -1877,7 +1877,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
               disabled={currentQuestionIndex === 0}
               style={{
                 padding: isMobile ? '12px 16px' : '12px 20px',
-                border: 'none',
                 borderRadius: 'var(--radius-sm)',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -1903,7 +1902,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                        (Array.isArray(answers[currentQuestion.id]) && answers[currentQuestion.id].length === 0)}
               style={{
                 padding: isMobile ? '12px 16px' : '12px 20px',
-                border: 'none',
                 borderRadius: 'var(--radius-sm)',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -1915,6 +1913,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                 minHeight: '44px',
                 background: 'linear-gradient(135deg, var(--primary-color), #2563eb)',
                 color: 'white',
+                border: 'none',
                 opacity: (!answers[currentQuestion.id] || 
                          (Array.isArray(answers[currentQuestion.id]) && answers[currentQuestion.id].length === 0)) ? 0.6 : 1
               }}
@@ -3045,18 +3044,15 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         hazardCount: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length
       };
       
-      // Générer le QR Code avec TRÈS haute résolution pour l'impression
+      // Générer le QR Code avec TRÈS haute résolution pour l'impression - Options corrigées
       const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
         errorCorrectionLevel: 'H', // Haute correction d'erreur
-        type: 'image/png',
-        quality: 1.0, // Qualité maximale
         margin: 2, // Marge plus grande pour l'impression
         color: {
           dark: '#000000',
           light: '#FFFFFF'
         },
-        width: 512, // Très haute résolution pour l'impression
-        scale: 8 // Facteur d'échelle élevé
+        width: 512 // Très haute résolution pour l'impression
       });
       
       return qrCodeDataUrl;
