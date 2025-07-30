@@ -675,75 +675,54 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   // Traductions
   const t = translations[language];
 
-  // =================== HANDLERS DE DONNÉES OPTIMISÉS SANS RE-RENDER ===================
-  const debouncedUpdate = useCallback((updates: any) => {
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
-    }
-    
-    updateTimeoutRef.current = setTimeout(() => {
-      if (!isUpdatingRef.current) {
-        isUpdatingRef.current = true;
-        updatePermitData(updates);
-        updateParentData('siteInformation', { ...confinedSpaceDetails, ...updates });
-        isUpdatingRef.current = false;
-      }
-    }, 300); // Debounce de 300ms
-  }, [updatePermitData, updateParentData, confinedSpaceDetails]);
-
+  // =================== HANDLERS DE DONNÉES COMPLÈTEMENT ISOLÉS ===================
   const handleConfinedSpaceChange = useCallback((field: string, value: any) => {
-    // Mise à jour immédiate de l'état local seulement
-    setConfinedSpaceDetails(prev => {
-      const updated = { ...prev, [field]: value };
-      
-      // Debounced update pour éviter les re-renders multiples
-      debouncedUpdate({ [field]: value });
-      
-      return updated;
-    });
-  }, [debouncedUpdate]);
+    // SEULEMENT mise à jour de l'état local - AUCUNE communication avec le parent
+    setConfinedSpaceDetails(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   const handleEnvironmentalChange = useCallback((field: string, value: any) => {
-    setConfinedSpaceDetails(prev => {
-      const updated = {
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      environmentalConditions: {
         ...prev.environmentalConditions,
         [field]: value
-      };
-      
-      const newState = { ...prev, environmentalConditions: updated };
-      debouncedUpdate({ environmentalConditions: updated });
-      
-      return newState;
-    });
-  }, [debouncedUpdate]);
+      }
+    }));
+  }, []);
 
   const handleContentChange = useCallback((field: string, value: any) => {
-    setConfinedSpaceDetails(prev => {
-      const updated = {
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      spaceContent: {
         ...prev.spaceContent,
         [field]: value
-      };
-      
-      const newState = { ...prev, spaceContent: updated };
-      debouncedUpdate({ spaceContent: updated });
-      
-      return newState;
-    });
-  }, [debouncedUpdate]);
+      }
+    }));
+  }, []);
 
   const handleSafetyChange = useCallback((field: string, value: any) => {
-    setConfinedSpaceDetails(prev => {
-      const updated = {
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      safetyMeasures: {
         ...prev.safetyMeasures,
         [field]: value
-      };
-      
-      const newState = { ...prev, safetyMeasures: updated };
-      debouncedUpdate({ safetyMeasures: updated });
-      
-      return newState;
+      }
+    }));
+  }, []);
+
+  // =================== SYNCHRONISATION UNIQUEMENT À LA SAUVEGARDE ===================
+  const syncWithParent = useCallback(() => {
+    // Synchroniser SEULEMENT quand on sauvegarde
+    updatePermitData({
+      ...confinedSpaceDetails,
+      spacePhotos
     });
-  }, [debouncedUpdate]);
+    updateParentData('siteInformation', {
+      ...confinedSpaceDetails,
+      spacePhotos
+    });
+  }, [confinedSpaceDetails, spacePhotos, updatePermitData, updateParentData]);
 
   // =================== GÉNÉRATION QR CODE AVEC LOGO RÉEL ===================
   const generatePermitQRCode = async (permitNumber: string): Promise<string> => {
@@ -789,10 +768,9 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
 
   // =================== CLEANUP FUNCTION ===================
   useEffect(() => {
+    // Plus de debouncing - nettoyage simple
     return () => {
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
+      // Cleanup si nécessaire
     };
   }, []);
   const calculateVolume = () => {
@@ -972,7 +950,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     return errors;
   };
 
-  // =================== GESTION DES DANGERS SANS SCROLL ===================
+  // =================== GESTION DES DANGERS ISOLÉE ===================
   const toggleAtmosphericHazard = useCallback((hazardType: string) => {
     setConfinedSpaceDetails(prev => {
       const currentHazards = prev.atmosphericHazards;
@@ -980,12 +958,9 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         ? currentHazards.filter(h => h !== hazardType)
         : [...currentHazards, hazardType];
       
-      const newState = { ...prev, atmosphericHazards: updatedHazards };
-      debouncedUpdate({ atmosphericHazards: updatedHazards });
-      
-      return newState;
+      return { ...prev, atmosphericHazards: updatedHazards };
     });
-  }, [debouncedUpdate]);
+  }, []);
 
   const togglePhysicalHazard = useCallback((hazardType: string) => {
     setConfinedSpaceDetails(prev => {
@@ -994,12 +969,9 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         ? currentHazards.filter(h => h !== hazardType)
         : [...currentHazards, hazardType];
       
-      const newState = { ...prev, physicalHazards: updatedHazards };
-      debouncedUpdate({ physicalHazards: updatedHazards });
-      
-      return newState;
+      return { ...prev, physicalHazards: updatedHazards };
     });
-  }, [debouncedUpdate]);
+  }, []);
 
   // =================== GESTION DES SECTIONS COLLAPSIBLES ===================
   const toggleSection = (sectionId: string) => {
@@ -1014,7 +986,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     });
   };
 
-  // =================== GESTION DES POINTS D'ENTRÉE SANS SCROLL ===================
+  // =================== GESTION DES POINTS D'ENTRÉE ISOLÉE ===================
   const addEntryPoint = useCallback(() => {
     const newEntryPoint = {
       id: `entry-${Date.now()}`,
@@ -1026,12 +998,11 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       photos: []
     };
     
-    setConfinedSpaceDetails(prev => {
-      const newState = { ...prev, entryPoints: [...prev.entryPoints, newEntryPoint] };
-      debouncedUpdate({ entryPoints: newState.entryPoints });
-      return newState;
-    });
-  }, [debouncedUpdate]);
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      entryPoints: [...prev.entryPoints, newEntryPoint]
+    }));
+  }, []);
 
   const removeEntryPoint = useCallback((entryId: string) => {
     setConfinedSpaceDetails(prev => {
@@ -1040,23 +1011,21 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         return prev;
       }
       
-      const updatedEntryPoints = prev.entryPoints.filter(entry => entry.id !== entryId);
-      const newState = { ...prev, entryPoints: updatedEntryPoints };
-      debouncedUpdate({ entryPoints: updatedEntryPoints });
-      return newState;
+      return {
+        ...prev,
+        entryPoints: prev.entryPoints.filter(entry => entry.id !== entryId)
+      };
     });
-  }, [language, debouncedUpdate]);
+  }, [language]);
 
   const updateEntryPoint = useCallback((entryId: string, field: string, value: any) => {
-    setConfinedSpaceDetails(prev => {
-      const updatedEntryPoints = prev.entryPoints.map(entry =>
+    setConfinedSpaceDetails(prev => ({
+      ...prev,
+      entryPoints: prev.entryPoints.map(entry =>
         entry.id === entryId ? { ...entry, [field]: value } : entry
-      );
-      const newState = { ...prev, entryPoints: updatedEntryPoints };
-      debouncedUpdate({ entryPoints: updatedEntryPoints });
-      return newState;
-    });
-  }, [debouncedUpdate]);
+      )
+    }));
+  }, []);
 
   // =================== EFFETS DE SYNCHRONISATION ===================
   useEffect(() => {
@@ -1874,6 +1843,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
               disabled={currentQuestionIndex === 0}
               style={{
                 padding: isMobile ? '12px 16px' : '12px 20px',
+                border: 'none',
                 borderRadius: 'var(--radius-sm)',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -1899,6 +1869,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                        (Array.isArray(answers[currentQuestion.id]) && answers[currentQuestion.id].length === 0)}
               style={{
                 padding: isMobile ? '12px 16px' : '12px 20px',
+                border: 'none',
                 borderRadius: 'var(--radius-sm)',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -1910,7 +1881,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                 minHeight: '44px',
                 background: 'linear-gradient(135deg, var(--primary-color), #2563eb)',
                 color: 'white',
-                border: 'none',
                 opacity: (!answers[currentQuestion.id] || 
                          (Array.isArray(answers[currentQuestion.id]) && answers[currentQuestion.id].length === 0)) ? 0.6 : 1
               }}
@@ -2904,7 +2874,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     }
   };
 
-  // =================== SAUVEGARDE AVEC VALIDATION ===================
+  // =================== SAUVEGARDE AVEC VALIDATION ET SYNCHRONISATION ===================
   const handleSave = async () => {
     const errors = validateSiteInformation();
     
@@ -2920,9 +2890,18 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       return false;
     }
     
+    // SYNCHRONISER avec le parent SEULEMENT ici
+    updatePermitData({
+      ...confinedSpaceDetails,
+      spacePhotos
+    });
+    updateParentData('siteInformation', {
+      ...confinedSpaceDetails,
+      spacePhotos
+    });
+    
     const permitNumber = await savePermitToDatabase();
     if (permitNumber) {
-      updateParentData('siteInformation', confinedSpaceDetails);
       return true;
     }
     
