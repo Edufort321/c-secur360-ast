@@ -31,6 +31,13 @@ interface PermitHistoryEntry {
   qrCode?: string;
 }
 
+interface PermitSearchResult {
+  permits: PermitHistoryEntry[];
+  total: number;
+  page: number;
+  hasMore: boolean;
+}
+
 interface SpacePhoto {
   id: string;
   url: string;
@@ -116,6 +123,33 @@ interface ConfinedSpaceDetails {
 
   // Photos de l'espace
   spacePhotos: SpacePhoto[];
+}
+
+interface PermitReport {
+  metadata: {
+    permitNumber: string;
+    issueDate: string;
+    province: ProvinceCode;
+    authority: string;
+    generatedAt: string;
+    version: string;
+    language: Language;
+    companyLogo: string;
+    qrCode: string;
+    classification: any;
+  };
+  siteInformation: ConfinedSpaceDetails & {
+    spacePhotos: SpacePhoto[];
+    csaClassification: any;
+    provincialRegulations: any;
+  };
+  atmosphericTesting: any;
+  entryRegistry: any;
+  rescuePlan: any;
+  validationChecklist: Array<{
+    category: string;
+    items: string[];
+  }>;
 }
 
 interface SiteInformationProps {
@@ -216,6 +250,7 @@ const translations = {
     height: "Hauteur (m)",
     diameter: "Diamètre (m)",
     volume: "Volume calculé",
+    volumeUnit: "m³",
     calculateVolume: "Calculer Volume",
 
     // Points d'entrée
@@ -308,6 +343,8 @@ const translations = {
     saveSuccess: "Permis sauvegardé avec succès!",
     saveError: "Erreur lors de la sauvegarde",
     validationError: "Veuillez compléter tous les champs requis",
+    validationPassed: "Validation réussie",
+    validationErrors: "Erreurs de validation",
     qrGenerated: "Code QR généré automatiquement",
     qrWillGenerate: "Le QR Code sera généré lors de la sauvegarde"
   },
@@ -396,6 +433,7 @@ const translations = {
     height: "Height (m)",
     diameter: "Diameter (m)",
     volume: "Calculated volume",
+    volumeUnit: "m³",
     calculateVolume: "Calculate Volume",
 
     // Points d'entrée
@@ -488,6 +526,8 @@ const translations = {
     saveSuccess: "Permit saved successfully!",
     saveError: "Error saving permit",
     validationError: "Please complete all required fields",
+    validationPassed: "Validation passed",
+    validationErrors: "Validation errors",
     qrGenerated: "QR Code generated automatically",
     qrWillGenerate: "QR Code will be generated upon saving"
   }
@@ -590,6 +630,14 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showClassificationWizard, setShowClassificationWizard] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<PermitSearchResult>({
+    permits: [],
+    total: 0,
+    page: 1,
+    hasMore: false
+  });
 
   // Réfs
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -1128,11 +1176,12 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     return 'class3';
   };
 
-  // =================== FONCTIONS DE BASE DE DONNÉES SUPABASE ===================
+  // =================== FONCTIONS DE BASE DE DONNÉES SUPABASE (AVEC IMPORTS CORRIGÉS) ===================
   const searchPermitsDatabase = async (query: string, page: number = 1): Promise<PermitSearchResult> => {
     setIsSearching(true);
     try {
-      const { supabase } = await import('../../../../lib/supabase');
+      // ✅ IMPORT SUPABASE CORRIGÉ : components/steps/Step4Permits/ConfinedSpace/SiteInformation.tsx vers lib/supabase.ts
+      const { supabase } = await import('../../../lib/supabase');
       
       let queryBuilder = supabase
         .from('confined_space_permits')
@@ -1222,7 +1271,8 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   const savePermitToDatabase = async (): Promise<string | null> => {
     setIsSaving(true);
     try {
-      const { supabase } = await import('../../../../lib/supabase');
+      // ✅ IMPORT SUPABASE CORRIGÉ
+      const { supabase } = await import('../../../lib/supabase');
       
       const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
@@ -1303,8 +1353,8 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   // =================== GÉNÉRATION QR CODE AVEC LOGO ===================
   const generatePermitQRCode = async (permitNumber: string): Promise<string> => {
     try {
-      // CHEMIN CORRIGÉ selon votre structure
-      const { generateQRCode } = await import('../../../../utils/generateQRCode');
+      // ✅ IMPORT QR CODE CORRIGÉ : components/steps/Step4Permits/ConfinedSpace/SiteInformation.tsx vers app/utils/generateQRCode.ts
+      const { generateQRCode } = await import('../../../app/utils/generateQRCode');
       
       const permitUrl = `${window.location.origin}/permits/confined-space/${permitNumber}`;
       
@@ -1334,7 +1384,8 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   // =================== CHARGEMENT D'UN PERMIS EXISTANT ===================
   const loadPermitFromHistory = async (permitNumber: string) => {
     try {
-      const { supabase } = await import('../../../../lib/supabase');
+      // ✅ IMPORT SUPABASE CORRIGÉ
+      const { supabase } = await import('../../../lib/supabase');
       
       const { data, error } = await supabase
         .from('confined_space_permits')
@@ -1414,114 +1465,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
           });
         }
       }
-    }
-  };
-
-  // =================== FONCTIONS UTILITAIRES ===================
-  const calculateVolume = () => {
-    const { length, width, height, diameter } = confinedSpaceDetails.dimensions;
-    let volume = 0;
-    let formulaUsed = '';
-
-    switch (confinedSpaceDetails.spaceType) {
-      case 'tank':
-      case 'vessel':
-      case 'silo':
-      case 'boiler':
-        if (diameter > 0 && height > 0) {
-          const radius = diameter / 2;
-          volume = Math.PI * Math.pow(radius, 2) * height;
-          formulaUsed = `Cylindrique: π × (${radius.toFixed(2)})² × ${height}`;
-        }
-        break;
-        
-      case 'pit':
-        if (diameter > 0 && height > 0) {
-          const radius = diameter / 2;
-          volume = Math.PI * Math.pow(radius, 2) * height;
-          formulaUsed = `Fosse circulaire: π × (${radius.toFixed(2)})² × ${height}`;
-        } else if (length > 0 && width > 0 && height > 0) {
-          volume = length * width * height;
-          formulaUsed = `Fosse rectangulaire: ${length} × ${width} × ${height}`;
-        }
-        break;
-        
-      case 'tunnel':
-      case 'duct':
-        if (diameter > 0 && length > 0) {
-          const radius = diameter / 2;
-          volume = Math.PI * Math.pow(radius, 2) * length;
-          formulaUsed = `Tunnel cylindrique: π × (${radius.toFixed(2)})² × ${length}`;
-        } else if (width > 0 && height > 0 && length > 0) {
-          volume = length * width * height;
-          formulaUsed = `Tunnel rectangulaire: ${length} × ${width} × ${height}`;
-        }
-        break;
-        
-      default:
-        if (length > 0 && width > 0 && height > 0) {
-          volume = length * width * height;
-          formulaUsed = `Rectangulaire: ${length} × ${width} × ${height}`;
-        }
-        break;
-    }
-
-    const updatedDimensions = {
-      ...confinedSpaceDetails.dimensions,
-      volume: Math.round(volume * 100) / 100
-    };
-
-    handleConfinedSpaceChange('dimensions', updatedDimensions);
-    
-    console.log(`Volume calculé: ${updatedDimensions.volume} m³ - Formule: ${formulaUsed}`);
-  };
-
-  // =================== GESTION DES PHOTOS AVEC GPS ===================
-  const handlePhotoCapture = async (category: string) => {
-    if (photoInputRef.current) {
-      photoInputRef.current.accept = "image/*";
-      photoInputRef.current.capture = "environment";
-      photoInputRef.current.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = async (event) => {
-            const newPhoto: SpacePhoto = {
-              id: `photo-${Date.now()}`,
-              url: event.target?.result as string,
-              category,
-              caption: `${t.photoCategories[category as keyof typeof t.photoCategories] || category} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
-              timestamp: new Date().toISOString(),
-              location: 'Localisation en cours...',
-              measurements: category === 'interior' || category === 'entry' ? 'Mesures à ajouter' : undefined
-            };
-
-            // Géolocalisation avec précision élevée
-            if (navigator.geolocation) {
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  newPhoto.location = `GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
-                  newPhoto.gpsCoords = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                  };
-                  setSpacePhotos(prev => [...prev, newPhoto]);
-                }, 
-                () => {
-                  newPhoto.location = 'Localisation non disponible';
-                  setSpacePhotos(prev => [...prev, newPhoto]);
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-              );
-            } else {
-              newPhoto.location = 'Géolocalisation non supportée';
-              setSpacePhotos(prev => [...prev, newPhoto]);
-            }
-          };
-          reader.readAsDataURL(file);
-        }
-      };
-      photoInputRef.current.click();
     }
   };
   // =================== GÉNÉRATION DE RAPPORT PROFESSIONNEL COMPLET ===================
@@ -2428,6 +2371,199 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       }
     }
   }, []);
+
+  // =================== FONCTIONS UTILITAIRES ===================
+  const calculateVolume = () => {
+    const { length, width, height, diameter } = confinedSpaceDetails.dimensions;
+    let volume = 0;
+    let formulaUsed = '';
+
+    switch (confinedSpaceDetails.spaceType) {
+      case 'tank':
+      case 'vessel':
+      case 'silo':
+      case 'boiler':
+        if (diameter > 0 && height > 0) {
+          const radius = diameter / 2;
+          volume = Math.PI * Math.pow(radius, 2) * height;
+          formulaUsed = `Cylindrique: π × (${radius.toFixed(2)})² × ${height}`;
+        }
+        break;
+        
+      case 'pit':
+        if (diameter > 0 && height > 0) {
+          const radius = diameter / 2;
+          volume = Math.PI * Math.pow(radius, 2) * height;
+          formulaUsed = `Fosse circulaire: π × (${radius.toFixed(2)})² × ${height}`;
+        } else if (length > 0 && width > 0 && height > 0) {
+          volume = length * width * height;
+          formulaUsed = `Fosse rectangulaire: ${length} × ${width} × ${height}`;
+        }
+        break;
+        
+      case 'tunnel':
+      case 'duct':
+        if (diameter > 0 && length > 0) {
+          const radius = diameter / 2;
+          volume = Math.PI * Math.pow(radius, 2) * length;
+          formulaUsed = `Tunnel cylindrique: π × (${radius.toFixed(2)})² × ${length}`;
+        } else if (width > 0 && height > 0 && length > 0) {
+          volume = length * width * height;
+          formulaUsed = `Tunnel rectangulaire: ${length} × ${width} × ${height}`;
+        }
+        break;
+        
+      default:
+        if (length > 0 && width > 0 && height > 0) {
+          volume = length * width * height;
+          formulaUsed = `Rectangulaire: ${length} × ${width} × ${height}`;
+        }
+        break;
+    }
+
+    const updatedDimensions = {
+      ...confinedSpaceDetails.dimensions,
+      volume: Math.round(volume * 100) / 100
+    };
+
+    handleConfinedSpaceChange('dimensions', updatedDimensions);
+    
+    console.log(`Volume calculé: ${updatedDimensions.volume} m³ - Formule: ${formulaUsed}`);
+  };
+
+  // =================== GESTION DES PHOTOS AVEC GPS ===================
+  const handlePhotoCapture = async (category: string) => {
+    if (photoInputRef.current) {
+      photoInputRef.current.accept = "image/*";
+      photoInputRef.current.capture = "environment";
+      photoInputRef.current.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = async (event) => {
+            const newPhoto: SpacePhoto = {
+              id: `photo-${Date.now()}`,
+              url: event.target?.result as string,
+              category,
+              caption: `${t.photoCategories[category as keyof typeof t.photoCategories] || category} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
+              timestamp: new Date().toISOString(),
+              location: 'Localisation en cours...',
+              measurements: category === 'interior' || category === 'entry' ? 'Mesures à ajouter' : undefined
+            };
+
+            // Géolocalisation avec précision élevée
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  newPhoto.location = `GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
+                  newPhoto.gpsCoords = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                  };
+                  setSpacePhotos(prev => [...prev, newPhoto]);
+                }, 
+                () => {
+                  newPhoto.location = 'Localisation non disponible';
+                  setSpacePhotos(prev => [...prev, newPhoto]);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+              );
+            } else {
+              newPhoto.location = 'Géolocalisation non supportée';
+              setSpacePhotos(prev => [...prev, newPhoto]);
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      photoInputRef.current.click();
+    }
+  };
+
+  const handleClassificationComplete = (classification: string, answers: Record<string, any>) => {
+    handleConfinedSpaceChange('csaClass', classification);
+    
+    // Sauvegarder les réponses pour référence
+    updatePermitData({ 
+      classificationAnswers: answers,
+      classificationDate: new Date().toISOString()
+    });
+
+    // Notification de succès
+    const csaClassifications = getCSAClassifications(selectedProvince, language);
+    const selectedClassification = csaClassifications[classification as keyof typeof csaClassifications];
+    
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        new Notification(`✅ ${language === 'fr' ? 'Classification déterminée' : 'Classification determined'}`, {
+          body: selectedClassification?.title || classification,
+          icon: '/c-secur360-logo.png'
+        });
+      }
+    }
+  };
+
+  // =================== RECHERCHE DANS LA BASE DE DONNÉES ===================
+  const handleSearch = async (query: string) => {
+    if (query.trim().length < 2) {
+      setSearchResults({ permits: [], total: 0, page: 1, hasMore: false });
+      return;
+    }
+    
+    const results = await searchPermitsDatabase(query);
+    setSearchResults(results);
+  };
+  // =================== GESTION DES DANGERS AVEC VALIDATION ===================
+  const toggleAtmosphericHazard = (hazardType: string) => {
+    const currentHazards = confinedSpaceDetails.atmosphericHazards;
+    const updatedHazards = currentHazards.includes(hazardType)
+      ? currentHazards.filter(h => h !== hazardType)
+      : [...currentHazards, hazardType];
+    
+    handleConfinedSpaceChange('atmosphericHazards', updatedHazards);
+  };
+
+  const togglePhysicalHazard = (hazardType: string) => {
+    const currentHazards = confinedSpaceDetails.physicalHazards;
+    const updatedHazards = currentHazards.includes(hazardType)
+      ? currentHazards.filter(h => h !== hazardType)
+      : [...currentHazards, hazardType];
+    
+    handleConfinedSpaceChange('physicalHazards', updatedHazards);
+  };
+
+  // =================== GESTION DES POINTS D'ENTRÉE ===================
+  const addEntryPoint = () => {
+    const newEntryPoint = {
+      id: `entry-${Date.now()}`,
+      type: 'circular',
+      dimensions: '',
+      location: '',
+      condition: 'good',
+      accessibility: 'normal',
+      photos: []
+    };
+    
+    handleConfinedSpaceChange('entryPoints', [...confinedSpaceDetails.entryPoints, newEntryPoint]);
+  };
+
+  const removeEntryPoint = (entryId: string) => {
+    if (confinedSpaceDetails.entryPoints.length <= 1) {
+      alert(language === 'fr' ? 'Au moins un point d\'entrée est requis' : 'At least one entry point is required');
+      return;
+    }
+    
+    const updatedEntryPoints = confinedSpaceDetails.entryPoints.filter(entry => entry.id !== entryId);
+    handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
+  };
+
+  const updateEntryPoint = (entryId: string, field: string, value: any) => {
+    const updatedEntryPoints = confinedSpaceDetails.entryPoints.map(entry =>
+      entry.id === entryId ? { ...entry, [field]: value } : entry
+    );
+    handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
+  };
+
   // =================== COMPOSANT CARROUSEL PHOTOS OPTIMISÉ MOBILE ===================
   const PhotoCarousel = ({ photos, onAddPhoto, category }: {
     photos: SpacePhoto[];
@@ -3663,6 +3799,34 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       100% { transform: rotate(360deg); }
     }
 
+    /* =================== BOUTONS CAPTURE PHOTO =================== */
+    .photo-capture-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: ${isMobile ? '8px 12px' : '10px 16px'};
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: var(--radius-sm);
+      color: var(--primary-color);
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: ${isMobile ? '12px' : '13px'};
+      font-weight: 600;
+      min-height: ${isMobile ? '36px' : '40px'};
+    }
+
+    .photo-capture-btn:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+      transform: ${isMobile ? 'none' : 'translateY(-1px)'};
+    }
+
+    .photo-capture-btn:active {
+      transform: scale(0.98);
+    }
+
     /* =================== RESPONSIVE SPÉCIFIQUE MOBILE =================== */
     @media (max-width: 768px) {
       .premium-grid {
@@ -3752,102 +3916,7 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
       border: 0;
     }
   `;
-  // =================== GESTION DES DANGERS AVEC VALIDATION ===================
-  const toggleAtmosphericHazard = (hazardType: string) => {
-    const currentHazards = confinedSpaceDetails.atmosphericHazards;
-    const updatedHazards = currentHazards.includes(hazardType)
-      ? currentHazards.filter(h => h !== hazardType)
-      : [...currentHazards, hazardType];
-    
-    handleConfinedSpaceChange('atmosphericHazards', updatedHazards);
-  };
-
-  const togglePhysicalHazard = (hazardType: string) => {
-    const currentHazards = confinedSpaceDetails.physicalHazards;
-    const updatedHazards = currentHazards.includes(hazardType)
-      ? currentHazards.filter(h => h !== hazardType)
-      : [...currentHazards, hazardType];
-    
-    handleConfinedSpaceChange('physicalHazards', updatedHazards);
-  };
-
-  // =================== GESTION DES POINTS D'ENTRÉE ===================
-  const addEntryPoint = () => {
-    const newEntryPoint = {
-      id: `entry-${Date.now()}`,
-      type: 'circular',
-      dimensions: '',
-      location: '',
-      condition: 'good',
-      accessibility: 'normal',
-      photos: []
-    };
-    
-    handleConfinedSpaceChange('entryPoints', [...confinedSpaceDetails.entryPoints, newEntryPoint]);
-  };
-
-  const removeEntryPoint = (entryId: string) => {
-    if (confinedSpaceDetails.entryPoints.length <= 1) {
-      alert(language === 'fr' ? 'Au moins un point d\'entrée est requis' : 'At least one entry point is required');
-      return;
-    }
-    
-    const updatedEntryPoints = confinedSpaceDetails.entryPoints.filter(entry => entry.id !== entryId);
-    handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
-  };
-
-  const updateEntryPoint = (entryId: string, field: string, value: any) => {
-    const updatedEntryPoints = confinedSpaceDetails.entryPoints.map(entry =>
-      entry.id === entryId ? { ...entry, [field]: value } : entry
-    );
-    handleConfinedSpaceChange('entryPoints', updatedEntryPoints);
-  };
-
-  // =================== ÉTAT QUESTIONNAIRE CLASSIFICATION ===================
-  const [showClassificationWizard, setShowClassificationWizard] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<PermitSearchResult>({
-    permits: [],
-    total: 0,
-    page: 1,
-    hasMore: false
-  });
-
-  const handleClassificationComplete = (classification: string, answers: Record<string, any>) => {
-    handleConfinedSpaceChange('csaClass', classification);
-    
-    // Sauvegarder les réponses pour référence
-    updatePermitData({ 
-      classificationAnswers: answers,
-      classificationDate: new Date().toISOString()
-    });
-
-    // Notification de succès
-    const csaClassifications = getCSAClassifications(selectedProvince, language);
-    const selectedClassification = csaClassifications[classification as keyof typeof csaClassifications];
-    
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'granted') {
-        new Notification(`✅ ${language === 'fr' ? 'Classification déterminée' : 'Classification determined'}`, {
-          body: selectedClassification?.title || classification,
-          icon: '/c-secur360-logo.png'
-        });
-      }
-    }
-  };
-
-  // =================== RECHERCHE DANS LA BASE DE DONNÉES ===================
-  const handleSearch = async (query: string) => {
-    if (query.trim().length < 2) {
-      setSearchResults({ permits: [], total: 0, page: 1, hasMore: false });
-      return;
-    }
-    
-    const results = await searchPermitsDatabase(query);
-    setSearchResults(results);
-  };
-
-  // =================== RENDU JSX PRINCIPAL PARTIE 1 ===================
+  // =================== RENDU JSX PRINCIPAL COMPLET ===================
   return (
     <>
       {/* CSS Styles intégrés */}
@@ -4186,6 +4255,7 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
             </div>
           </div>
         </CollapsibleSection>
+
         {/* Section Identification de l'Espace Clos */}
         <CollapsibleSection
           id="space-identification"
@@ -4432,6 +4502,99 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
           </div>
         </CollapsibleSection>
 
+        {/* Section Points d'Entrée */}
+        <CollapsibleSection
+          id="entry-points"
+          title={t.entryPoints}
+          icon={<Home />}
+          className="full-width"
+        >
+          {confinedSpaceDetails.entryPoints.map((entry, index) => (
+            <div key={entry.id} style={{
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              borderRadius: 'var(--radius)',
+              padding: '20px',
+              marginBottom: '20px'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '16px',
+                paddingBottom: '12px',
+                borderBottom: '1px solid rgba(139, 92, 246, 0.2)'
+              }}>
+                <h4 style={{ 
+                  color: '#a78bfa', 
+                  margin: 0, 
+                  fontSize: '16px', 
+                  fontWeight: '600' 
+                }}>
+                  🚪 {t.entryPoint} {index + 1}
+                </h4>
+                {confinedSpaceDetails.entryPoints.length > 1 && (
+                  <button 
+                    className="btn-danger" 
+                    onClick={() => removeEntryPoint(entry.id)}
+                    type="button"
+                    style={{ padding: '8px 12px', fontSize: '12px' }}
+                  >
+                    <Trash2 size={14} />
+                    {t.remove}
+                  </button>
+                )}
+              </div>
+
+              <div className="three-column">
+                <div className="form-field">
+                  <label className="field-label">{t.entryType}</label>
+                  <select
+                    className="premium-select"
+                    value={entry.type}
+                    onChange={(e) => updateEntryPoint(entry.id, 'type', e.target.value)}
+                  >
+                    <option value="circular">🔵 {language === 'fr' ? 'Circulaire' : 'Circular'}</option>
+                    <option value="rectangular">🟨 {language === 'fr' ? 'Rectangulaire' : 'Rectangular'}</option>
+                    <option value="square">🟫 {language === 'fr' ? 'Carré' : 'Square'}</option>
+                    <option value="oval">🥚 {language === 'fr' ? 'Ovale' : 'Oval'}</option>
+                    <option value="irregular">🔷 {language === 'fr' ? 'Irrégulier' : 'Irregular'}</option>
+                  </select>
+                </div>
+
+                <div className="form-field">
+                  <label className="field-label">{t.entryDimensions}</label>
+                  <input 
+                    type="text" 
+                    className="premium-input" 
+                    placeholder={language === 'fr' ? 'Ex: 60cm x 40cm ou Ø80cm' : 'Ex: 60cm x 40cm or Ø80cm'}
+                    value={entry.dimensions}
+                    onChange={(e) => updateEntryPoint(entry.id, 'dimensions', e.target.value)}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label className="field-label">{t.entryLocation}</label>
+                  <input 
+                    type="text" 
+                    className="premium-input" 
+                    placeholder={language === 'fr' ? 'Ex: Partie supérieure, côté nord' : 'Ex: Top section, north side'}
+                    value={entry.location}
+                    onChange={(e) => updateEntryPoint(entry.id, 'location', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <button className="btn-primary" onClick={addEntryPoint}>
+              <Plus size={20} />
+              {t.addEntryPoint}
+            </button>
+          </div>
+        </CollapsibleSection>
+
         {/* Section Évaluation des Dangers */}
         <CollapsibleSection
           id="hazard-assessment"
@@ -4544,96 +4707,287 @@ C-SECUR360 - ${language === 'fr' ? 'Système de Gestion de Sécurité' : 'Safety
           </div>
         </CollapsibleSection>
 
-        {/* Section Points d'Entrée */}
+        {/* Section Conditions Environnementales */}
         <CollapsibleSection
-          id="entry-points"
-          title={t.entryPoints}
-          icon={<Home />}
-          className="full-width"
+          id="environmental-conditions"
+          title={t.environmentalConditions}
+          icon={<Activity />}
         >
-          {confinedSpaceDetails.entryPoints.map((entry, index) => (
-            <div key={entry.id} style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              border: '1px solid rgba(139, 92, 246, 0.3)',
-              borderRadius: 'var(--radius)',
-              padding: '20px',
-              marginBottom: '20px'
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '16px',
-                paddingBottom: '12px',
-                borderBottom: '1px solid rgba(139, 92, 246, 0.2)'
-              }}>
-                <h4 style={{ 
-                  color: '#a78bfa', 
-                  margin: 0, 
-                  fontSize: '16px', 
-                  fontWeight: '600' 
-                }}>
-                  🚪 {t.entryPoint} {index + 1}
-                </h4>
-                {confinedSpaceDetails.entryPoints.length > 1 && (
-                  <button 
-                    className="btn-danger" 
-                    onClick={() => removeEntryPoint(entry.id)}
-                    type="button"
-                    style={{ padding: '8px 12px', fontSize: '12px' }}
-                  >
-                    <Trash2 size={14} />
-                    {t.remove}
-                  </button>
-                )}
-              </div>
-
-              <div className="three-column">
-                <div className="form-field">
-                  <label className="field-label">{t.entryType}</label>
-                  <select
-                    className="premium-select"
-                    value={entry.type}
-                    onChange={(e) => updateEntryPoint(entry.id, 'type', e.target.value)}
-                  >
-                    <option value="circular">🔵 {language === 'fr' ? 'Circulaire' : 'Circular'}</option>
-                    <option value="rectangular">🟨 {language === 'fr' ? 'Rectangulaire' : 'Rectangular'}</option>
-                    <option value="square">🟫 {language === 'fr' ? 'Carré' : 'Square'}</option>
-                    <option value="oval">🥚 {language === 'fr' ? 'Ovale' : 'Oval'}</option>
-                    <option value="irregular">🔷 {language === 'fr' ? 'Irrégulier' : 'Irregular'}</option>
-                  </select>
-                </div>
-
-                <div className="form-field">
-                  <label className="field-label">{t.entryDimensions}</label>
-                  <input 
-                    type="text" 
-                    className="premium-input" 
-                    placeholder={language === 'fr' ? 'Ex: 60cm x 40cm ou Ø80cm' : 'Ex: 60cm x 40cm or Ø80cm'}
-                    value={entry.dimensions}
-                    onChange={(e) => updateEntryPoint(entry.id, 'dimensions', e.target.value)}
+          <div className="two-column">
+            <div className="form-field">
+              <label className="field-label">
+                <Wind style={{ width: '18px', height: '18px' }} />
+                {t.ventilationRequired}
+              </label>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="ventilationRequired"
+                    value="true"
+                    checked={confinedSpaceDetails.environmentalConditions.ventilationRequired === true}
+                    onChange={() => handleEnvironmentalChange('ventilationRequired', true)}
                   />
-                </div>
-
-                <div className="form-field">
-                  <label className="field-label">{t.entryLocation}</label>
-                  <input 
-                    type="text" 
-                    className="premium-input" 
-                    placeholder={language === 'fr' ? 'Ex: Partie supérieure, côté nord' : 'Ex: Top section, north side'}
-                    value={entry.location}
-                    onChange={(e) => updateEntryPoint(entry.id, 'location', e.target.value)}
+                  <span>{t.yes}</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="ventilationRequired"
+                    value="false"
+                    checked={confinedSpaceDetails.environmentalConditions.ventilationRequired === false}
+                    onChange={() => handleEnvironmentalChange('ventilationRequired', false)}
                   />
-                </div>
+                  <span>{t.no}</span>
+                </label>
               </div>
             </div>
-          ))}
 
-          <div style={{ textAlign: 'center', marginTop: '20px' }}>
-            <button className="btn-primary" onClick={addEntryPoint}>
-              <Plus size={20} />
-              {t.addEntryPoint}
-            </button>
+            <div className="form-field">
+              <label className="field-label">
+                <Wind style={{ width: '18px', height: '18px' }} />
+                {t.ventilationType}
+              </label>
+              <select
+                className="premium-select"
+                value={confinedSpaceDetails.environmentalConditions.ventilationType}
+                onChange={(e) => handleEnvironmentalChange('ventilationType', e.target.value)}
+              >
+                <option value="">{t.select}</option>
+                <option value="natural">{language === 'fr' ? 'Naturelle' : 'Natural'}</option>
+                <option value="mechanical">{language === 'fr' ? 'Mécanique' : 'Mechanical'}</option>
+                <option value="forced">{language === 'fr' ? 'Forcée' : 'Forced'}</option>
+                <option value="none">{language === 'fr' ? 'Aucune' : 'None'}</option>
+              </select>
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Eye style={{ width: '18px', height: '18px' }} />
+                {t.lightingConditions}
+              </label>
+              <select
+                className="premium-select"
+                value={confinedSpaceDetails.environmentalConditions.lightingConditions}
+                onChange={(e) => handleEnvironmentalChange('lightingConditions', e.target.value)}
+              >
+                <option value="">{t.select}</option>
+                <option value="natural">{language === 'fr' ? 'Éclairage naturel' : 'Natural lighting'}</option>
+                <option value="artificial">{language === 'fr' ? 'Éclairage artificiel requis' : 'Artificial lighting required'}</option>
+                <option value="poor">{language === 'fr' ? 'Éclairage faible' : 'Poor lighting'}</option>
+                <option value="none">{language === 'fr' ? 'Aucun éclairage' : 'No lighting'}</option>
+              </select>
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Thermometer style={{ width: '18px', height: '18px' }} />
+                {t.temperatureRange}
+              </label>
+              <input
+                type="text"
+                className="premium-input"
+                placeholder={language === 'fr' ? 'Ex: 15-25°C' : 'Ex: 15-25°C'}
+                value={confinedSpaceDetails.environmentalConditions.temperatureRange}
+                onChange={(e) => handleEnvironmentalChange('temperatureRange', e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Droplets style={{ width: '18px', height: '18px' }} />
+                {t.moistureLevel}
+              </label>
+              <select
+                className="premium-select"
+                value={confinedSpaceDetails.environmentalConditions.moistureLevel}
+                onChange={(e) => handleEnvironmentalChange('moistureLevel', e.target.value)}
+              >
+                <option value="">{t.select}</option>
+                <option value="low">{language === 'fr' ? 'Faible (<40%)' : 'Low (<40%)'}</option>
+                <option value="normal">{language === 'fr' ? 'Normal (40-70%)' : 'Normal (40-70%)'}</option>
+                <option value="high">{language === 'fr' ? 'Élevé (>70%)' : 'High (>70%)'}</option>
+                <option value="wet">{language === 'fr' ? 'Humide/Mouillé' : 'Wet/Damp'}</option>
+              </select>
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Activity style={{ width: '18px', height: '18px' }} />
+                {t.noiseLevel}
+              </label>
+              <select
+                className="premium-select"
+                value={confinedSpaceDetails.environmentalConditions.noiseLevel}
+                onChange={(e) => handleEnvironmentalChange('noiseLevel', e.target.value)}
+              >
+                <option value="">{t.select}</option>
+                <option value="low">{language === 'fr' ? 'Faible (<70 dB)' : 'Low (<70 dB)'}</option>
+                <option value="moderate">{language === 'fr' ? 'Modéré (70-85 dB)' : 'Moderate (70-85 dB)'}</option>
+                <option value="high">{language === 'fr' ? 'Élevé (>85 dB)' : 'High (>85 dB)'}</option>
+                <option value="extreme">{language === 'fr' ? 'Extrême (>100 dB)' : 'Extreme (>100 dB)'}</option>
+              </select>
+            </div>
+          </div>
+        </CollapsibleSection>
+
+        {/* Section Contenu et Historique */}
+        <CollapsibleSection
+          id="space-content"
+          title={t.spaceContent}
+          icon={<FileText />}
+        >
+          <div className="two-column">
+            <div className="form-field">
+              <label className="field-label">
+                <FileText style={{ width: '18px', height: '18px' }} />
+                {t.contents}
+              </label>
+              <textarea
+                className="premium-textarea"
+                placeholder={language === 'fr' ? 'Décrire le contenu actuel de l\'espace' : 'Describe current space contents'}
+                value={confinedSpaceDetails.spaceContent.contents}
+                onChange={(e) => handleContentChange('contents', e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <AlertTriangle style={{ width: '18px', height: '18px' }} />
+                {t.residues}
+              </label>
+              <textarea
+                className="premium-textarea"
+                placeholder={language === 'fr' ? 'Résidus chimiques, substances dangereuses...' : 'Chemical residues, hazardous substances...'}
+                value={confinedSpaceDetails.spaceContent.residues}
+                onChange={(e) => handleContentChange('residues', e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Clock style={{ width: '18px', height: '18px' }} />
+                {t.previousUse}
+              </label>
+              <input
+                type="text"
+                className="premium-input"
+                placeholder={language === 'fr' ? 'Usage antérieur de l\'espace' : 'Previous use of space'}
+                value={confinedSpaceDetails.spaceContent.previousUse}
+                onChange={(e) => handleContentChange('previousUse', e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Calendar style={{ width: '18px', height: '18px' }} />
+                {t.lastEntry}
+              </label>
+              <input
+                type="date"
+                className="premium-input"
+                value={confinedSpaceDetails.spaceContent.lastEntry}
+                onChange={(e) => handleContentChange('lastEntry', e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Wrench style={{ width: '18px', height: '18px' }} />
+                {t.cleaningStatus}
+              </label>
+              <select
+                className="premium-select"
+                value={confinedSpaceDetails.spaceContent.cleaningStatus}
+                onChange={(e) => handleContentChange('cleaningStatus', e.target.value)}
+              >
+                <option value="">{t.select}</option>
+                <option value="clean">{language === 'fr' ? 'Nettoyé et décontaminé' : 'Cleaned and decontaminated'}</option>
+                <option value="partial">{language === 'fr' ? 'Partiellement nettoyé' : 'Partially cleaned'}</option>
+                <option value="dirty">{language === 'fr' ? 'Non nettoyé' : 'Not cleaned'}</option>
+                <option value="unknown">{language === 'fr' ? 'État inconnu' : 'Unknown status'}</option>
+              </select>
+            </div>
+          </div>
+        </CollapsibleSection>
+
+        {/* Section Mesures de Sécurité */}
+        <CollapsibleSection
+          id="safety-measures"
+          title={t.safetyMeasures}
+          icon={<Shield />}
+        >
+          <div className="two-column">
+            <div className="form-field">
+              <label className="field-label">
+                <ArrowLeft style={{ width: '18px', height: '18px' }} />
+                {t.emergencyEgress}
+              </label>
+              <textarea
+                className="premium-textarea"
+                placeholder={language === 'fr' ? 'Plan de sortie d\'urgence détaillé' : 'Detailed emergency egress plan'}
+                value={confinedSpaceDetails.safetyMeasures.emergencyEgress}
+                onChange={(e) => handleSafetyChange('emergencyEgress', e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <MessageSquare style={{ width: '18px', height: '18px' }} />
+                {t.communicationMethod}
+              </label>
+              <select
+                className="premium-select"
+                value={confinedSpaceDetails.safetyMeasures.communicationMethod}
+                onChange={(e) => handleSafetyChange('communicationMethod', e.target.value)}
+              >
+                <option value="">{t.select}</option>
+                <option value="radio">{language === 'fr' ? 'Radio bidirectionnelle' : 'Two-way radio'}</option>
+                <option value="voice">{language === 'fr' ? 'Communication vocale' : 'Voice communication'}</option>
+                <option value="visual">{language === 'fr' ? 'Signaux visuels' : 'Visual signals'}</option>
+                <option value="rope">{language === 'fr' ? 'Signaux par corde' : 'Rope signals'}</option>
+                <option value="electronic">{language === 'fr' ? 'Système électronique' : 'Electronic system'}</option>
+              </select>
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Gauge style={{ width: '18px', height: '18px' }} />
+                {t.monitoringEquipment}
+              </label>
+              <textarea
+                className="premium-textarea"
+                placeholder={language === 'fr' ? 'Équipements de surveillance requis' : 'Required monitoring equipment'}
+                value={confinedSpaceDetails.safetyMeasures.monitoringEquipment.join(', ')}
+                onChange={(e) => handleSafetyChange('monitoringEquipment', e.target.value.split(', ').filter(item => item.trim()))}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Wind style={{ width: '18px', height: '18px' }} />
+                {t.ventilationEquipment}
+              </label>
+              <textarea
+                className="premium-textarea"
+                placeholder={language === 'fr' ? 'Équipements de ventilation nécessaires' : 'Required ventilation equipment'}
+                value={confinedSpaceDetails.safetyMeasures.ventilationEquipment.join(', ')}
+                onChange={(e) => handleSafetyChange('ventilationEquipment', e.target.value.split(', ').filter(item => item.trim()))}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Shield style={{ width: '18px', height: '18px' }} />
+                {t.emergencyEquipment}
+              </label>
+              <textarea
+                className="premium-textarea"
+                placeholder={language === 'fr' ? 'Équipements d\'urgence et de sauvetage' : 'Emergency and rescue equipment'}
+                value={confinedSpaceDetails.safetyMeasures.emergencyEquipment.join(', ')}
+                onChange={(e) => handleSafetyChange('emergencyEquipment', e.target.value.split(', ').filter(item => item.trim()))}
+              />
+            </div>
           </div>
         </CollapsibleSection>
 
