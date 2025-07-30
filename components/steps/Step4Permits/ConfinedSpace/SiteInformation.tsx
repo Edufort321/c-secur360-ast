@@ -976,18 +976,20 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     const classifications = baseClassifications[language];
     const provinceRegs = provincialRegulations[province];
 
-    // Intégrer les réglementations provinciales
+    // Intégrer les réglementations provinciales avec typage correct
     Object.keys(classifications).forEach(classKey => {
-      // ✅ CORRECTION TYPESCRIPT : Cast explicite du type
+      // ✅ CORRECTION TYPESCRIPT : Cast explicite et accès sécurisé aux propriétés
       const classData = classifications[classKey as keyof typeof classifications];
+      const provinceClassData = provinceRegs[classKey as 'class1' | 'class2' | 'class3'];
+      
       classData.regulations = {
         authority: provinceRegs.authority,
         main: provinceRegs.mainRegulation,
         additional: provinceRegs.additionalRegs,
-        specific: provinceRegs[classKey as keyof typeof provinceRegs].specific,
-        attendant: provinceRegs[classKey as keyof typeof provinceRegs].attendant,
-        rescue: provinceRegs[classKey as keyof typeof provinceRegs].rescue,
-        testing: provinceRegs[classKey as keyof typeof provinceRegs].testing
+        specific: provinceClassData.specific,
+        attendant: provinceClassData.attendant,
+        rescue: provinceClassData.rescue,
+        testing: provinceClassData.testing
       };
     });
 
