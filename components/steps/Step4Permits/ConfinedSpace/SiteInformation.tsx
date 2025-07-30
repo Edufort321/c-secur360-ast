@@ -666,11 +666,9 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     hasMore: false
   });
 
-  // Réfs
+  // Réfs - suppression des refs inutiles
   const photoInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isUpdatingRef = useRef(false);
 
   // Traductions
   const t = translations[language];
@@ -2693,7 +2691,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       );
     }
   };
- // =================== FONCTIONS DE BASE DE DONNÉES SUPABASE ===================
+  // =================== FONCTIONS DE BASE DE DONNÉES SUPABASE ===================
   const searchPermitsDatabase = async (query: string, page: number = 1): Promise<PermitSearchResult> => {
     setIsSearching(true);
     try {
@@ -3448,7 +3446,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     }
   };
 
-  // =================== GESTION DES PHOTOS AVEC GPS ===================
   const handlePhotoCapture = async (category: string) => {
     if (photoInputRef.current) {
       photoInputRef.current.accept = "image/*";
@@ -3458,7 +3455,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         if (file) {
           const reader = new FileReader();
           reader.onload = async (event) => {
-            const newPhoto: SpacePhoto = {
+            const newPhoto = {
               id: `photo-${Date.now()}`,
               url: event.target?.result as string,
               category,
@@ -3477,16 +3474,19 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                     lat: position.coords.latitude,
                     lng: position.coords.longitude
                   };
+                  // SEULEMENT mise à jour locale
                   setSpacePhotos(prev => [...prev, newPhoto]);
                 }, 
                 () => {
                   newPhoto.location = 'Localisation non disponible';
+                  // SEULEMENT mise à jour locale
                   setSpacePhotos(prev => [...prev, newPhoto]);
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
               );
             } else {
               newPhoto.location = 'Géolocalisation non supportée';
+              // SEULEMENT mise à jour locale
               setSpacePhotos(prev => [...prev, newPhoto]);
             }
           };
