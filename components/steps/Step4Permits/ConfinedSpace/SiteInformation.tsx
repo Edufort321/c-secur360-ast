@@ -3455,7 +3455,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         if (file) {
           const reader = new FileReader();
           reader.onload = async (event) => {
-            const newPhoto = {
+            const newPhoto: SpacePhoto = {
               id: `photo-${Date.now()}`,
               url: event.target?.result as string,
               category,
@@ -3570,7 +3570,7 @@ C-SECUR360`;
       setIsGeneratingReport(false);
     }
   };
-  // =================== COMPOSANT CARROUSEL PHOTOS OPTIMISÉ MOBILE ===================
+ // =================== COMPOSANT CARROUSEL PHOTOS OPTIMISÉ MOBILE ===================
   const PhotoCarousel = ({ photos, onAddPhoto, category }: {
     photos: SpacePhoto[];
     onAddPhoto: () => void;
@@ -5021,4 +5021,4 @@ C-SECUR360`;
   );
 };
 
-export default React.memo(SiteInformation);
+export default React.memo(SiteInformation); 
