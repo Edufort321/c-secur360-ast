@@ -1948,7 +1948,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
                   <div class="regulations-title">📋 ${language === 'fr' ? 'Réglementations Provinciales' : 'Provincial Regulations'} - ${selectedProvince}</div>
                   <div class="regulation-item">
                     <span><strong>${language === 'fr' ? 'Autorité' : 'Authority'}:</strong></span>
-                    <span>${currentClassification?.regulations?.authority || getProvinceAuthority(selectedProvince)}</span>
+                    <span>${getProvinceAuthority(selectedProvince)}</span>
                   </div>
                   <div class="regulation-item">
                     <span><strong>${language === 'fr' ? 'Règlement principal' : 'Main Regulation'}:</strong></span>
