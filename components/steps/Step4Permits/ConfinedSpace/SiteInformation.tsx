@@ -10,7 +10,7 @@ import {
   Menu, ChevronDown, ChevronUp, Info, Star, Globe, Wifi, Navigation
 } from 'lucide-react';
 
-// =================== TYPES ET INTERFACES COMPLÈTES ===================
+// =================== TYPES ET INTERFACES ===================
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 type Language = 'fr' | 'en';
 type UnitSystem = 'metric' | 'imperial';
@@ -168,7 +168,7 @@ interface SiteInformationProps {
   updateParentData: (section: string, data: any) => void;
 }
 
-// =================== TRADUCTIONS ULTRA-COMPLÈTES ===================
+// =================== TRADUCTIONS COMPLÈTES ===================
 const translations = {
   fr: {
     // Navigation et interface
@@ -559,7 +559,7 @@ const translations = {
     qrWillGenerate: "QR Code will be generated upon saving"
   }
 };
-// =================== COMPOSANT PRINCIPAL AVEC ÉTATS 100% ISOLÉS ===================
+// =================== COMPOSANT PRINCIPAL ULTRA-ISOLÉ ===================
 const SiteInformation: React.FC<SiteInformationProps> = ({
   permitData,
   updatePermitData,
@@ -570,7 +570,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   updateParentData
 }) => {
 
-  // =================== ÉTATS LOCAUX COMPLÈTEMENT ISOLÉS - AUCUNE COMMUNICATION PARENT ===================
+  // =================== ÉTATS LOCAUX 100% ISOLÉS - AUCUN useEffect ===================
   const [confinedSpaceDetails, setConfinedSpaceDetails] = useState<ConfinedSpaceDetails>(() => ({
     // Informations principales
     projectNumber: permitData.projectNumber || '',
@@ -649,7 +649,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     spacePhotos: permitData.spacePhotos || []
   }));
 
-  // États pour l'interface utilisateur - PAS DE RE-RENDER
+  // États pour l'interface utilisateur - PAS DE useEffect QUI RE-RENDER
   const [spacePhotos, setSpacePhotos] = useState<SpacePhoto[]>(() => permitData.spacePhotos || []);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -666,14 +666,14 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     hasMore: false
   });
 
-  // Réfs - seulement pour les éléments nécessaires
+  // Réfs - seulement pour nécessaire
   const photoInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Traductions
   const t = translations[language];
 
-  // =================== HANDLERS ULTRA-ISOLÉS - ZERO COMMUNICATION PARENT ===================
+  // =================== HANDLERS ULTRA-SIMPLES - ZERO EFFET DE BORD ===================
   const handleConfinedSpaceChange = useCallback((field: string, value: any) => {
     // SEULEMENT mise à jour de l'état local - JAMAIS RIEN D'AUTRE
     setConfinedSpaceDetails(prev => ({ ...prev, [field]: value }));
@@ -709,26 +709,48 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     }));
   }, []);
 
-  // =================== HANDLERS D'ÉQUIPEMENTS DE SÉCURITÉ ===================
-  const handleEquipmentChange = useCallback((equipmentType: 'monitoringEquipment' | 'ventilationEquipment' | 'emergencyEquipment', equipment: string) => {
-    setConfinedSpaceDetails(prev => {
-      const currentEquipment = prev.safetyMeasures[equipmentType];
-      const updatedEquipment = currentEquipment.includes(equipment)
-        ? currentEquipment.filter(e => e !== equipment)
-        : [...currentEquipment, equipment];
+  // =================== GÉNÉRATION QR CODE ===================
+  const generatePermitQRCode = async (permitNumber: string): Promise<string> => {
+    try {
+      const QRCode = (await import('qrcode')).default;
       
-      return {
-        ...prev,
-        safetyMeasures: {
-          ...prev.safetyMeasures,
-          [equipmentType]: updatedEquipment
-        }
+      const permitUrl = `${window.location.origin}/permits/confined-space/${permitNumber}`;
+      
+      const qrData = {
+        permitNumber,
+        type: 'confined_space',
+        province: selectedProvince,
+        authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente',
+        issueDate: new Date().toISOString(),
+        url: permitUrl,
+        projectNumber: confinedSpaceDetails.projectNumber,
+        location: confinedSpaceDetails.workLocation,
+        contractor: confinedSpaceDetails.contractor,
+        spaceType: confinedSpaceDetails.spaceType,
+        csaClass: confinedSpaceDetails.csaClass,
+        hazardCount: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length,
+        logo: '/c-secur360-logo.png'
       };
-    });
-  }, []);
+      
+      const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
+        errorCorrectionLevel: 'M',
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        },
+        width: 256
+      });
+      
+      return qrCodeDataUrl;
+    } catch (error) {
+      console.error('Erreur génération QR Code:', error);
+      return '';
+    }
+  };
 
-  // =================== CALCUL VOLUME SANS COMMUNICATION PARENT ===================
-  const calculateVolume = useCallback(() => {
+  // =================== CALCUL VOLUME SANS SCROLL ===================
+  const calculateVolume = () => {
     const { length, width, height, diameter, spaceShape } = confinedSpaceDetails.dimensions;
     const { unitSystem } = confinedSpaceDetails;
     let volume = 0;
@@ -778,6 +800,10 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         break;
     }
 
+    if (unitSystem === 'imperial') {
+      unitSuffix = 'ft³';
+    }
+
     const updatedDimensions = {
       ...confinedSpaceDetails.dimensions,
       volume: Math.round(volume * 100) / 100
@@ -787,10 +813,10 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     handleConfinedSpaceChange('dimensions', updatedDimensions);
     
     console.log(`Volume calculé: ${updatedDimensions.volume} ${unitSuffix} - Formule: ${formulaUsed}`);
-  }, [confinedSpaceDetails.dimensions, confinedSpaceDetails.unitSystem, handleConfinedSpaceChange]);
+  };
 
-  // =================== CONVERSION D'UNITÉS ISOLÉE ===================
-  const convertUnits = useCallback((fromSystem: UnitSystem, toSystem: UnitSystem) => {
+  // =================== CONVERSION D'UNITÉS SANS SCROLL ===================
+  const convertUnits = (fromSystem: UnitSystem, toSystem: UnitSystem) => {
     if (fromSystem === toSystem) return;
     
     const { dimensions } = confinedSpaceDetails;
@@ -808,7 +834,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       width: Math.round(dimensions.width * conversionFactor * 100) / 100,
       height: Math.round(dimensions.height * conversionFactor * 100) / 100,
       diameter: Math.round(dimensions.diameter * conversionFactor * 100) / 100,
-      volume: 0 // Reset volume when units change
+      volume: 0
     };
     
     // SEULEMENT mise à jour locale
@@ -817,13 +843,12 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       dimensions: convertedDimensions,
       unitSystem: toSystem
     }));
-  }, [confinedSpaceDetails]);
+  };
 
-  // =================== VALIDATION COMPLÈTE SANS EFFETS DE BORD ===================
-  const validateSiteInformation = useCallback((details: ConfinedSpaceDetails = confinedSpaceDetails) => {
+  // =================== VALIDATION ===================
+  const validateSiteInformation = (details: ConfinedSpaceDetails = confinedSpaceDetails) => {
     const errors: string[] = [];
     
-    // Validation des champs obligatoires
     if (!details.projectNumber.trim()) errors.push(language === 'fr' ? 'Numéro de projet manquant' : 'Project number missing');
     if (!details.workLocation.trim()) errors.push(language === 'fr' ? 'Lieu des travaux manquant' : 'Work location missing');
     if (!details.contractor.trim()) errors.push(language === 'fr' ? 'Entrepreneur manquant' : 'Contractor missing');
@@ -832,7 +857,6 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     if (!details.spaceType) errors.push(language === 'fr' ? 'Type d\'espace manquant' : 'Space type missing');
     if (!details.csaClass) errors.push(language === 'fr' ? 'Classification CSA manquante' : 'CSA classification missing');
     
-    // Validation des dimensions selon la forme
     const { dimensions } = details;
     switch (dimensions.spaceShape) {
       case 'rectangular':
@@ -853,18 +877,15 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         break;
     }
     
-    // Validation du volume
     if (dimensions.volume === 0) {
       errors.push(language === 'fr' ? 'Volume doit être calculé' : 'Volume must be calculated');
     }
     
-    // Validation des dangers selon la classification
     if ((details.csaClass === 'class1' || details.csaClass === 'class2') && 
         details.atmosphericHazards.length === 0 && details.physicalHazards.length === 0) {
       errors.push(language === 'fr' ? 'Au moins un danger doit être identifié pour cette classification' : 'At least one hazard must be identified for this classification');
     }
     
-    // Validation des points d'entrée
     if (details.entryPoints.length === 0) {
       errors.push(language === 'fr' ? 'Au moins un point d\'entrée requis' : 'At least one entry point required');
     } else {
@@ -879,7 +900,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     }
     
     return errors;
-  }, [confinedSpaceDetails, language]);
+  };
 
   // =================== GESTION DES DANGERS ISOLÉE ===================
   const toggleAtmosphericHazard = useCallback((hazardType: string) => {
@@ -905,7 +926,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   }, []);
 
   // =================== GESTION DES SECTIONS COLLAPSIBLES ===================
-  const toggleSection = useCallback((sectionId: string) => {
+  const toggleSection = (sectionId: string) => {
     setCollapsedSections(prev => {
       const newSet = new Set(prev);
       if (newSet.has(sectionId)) {
@@ -915,9 +936,9 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       }
       return newSet;
     });
-  }, []);
+  };
 
-  // =================== GESTION DES POINTS D'ENTRÉE ISOLÉE ===================
+  // =================== GESTION DES POINTS D'ENTRÉE ===================
   const addEntryPoint = useCallback(() => {
     const newEntryPoint = {
       id: `entry-${Date.now()}`,
@@ -958,120 +979,17 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     }));
   }, []);
 
-  // =================== GESTION DES PHOTOS SANS COMMUNICATION PARENT ===================
-  const handlePhotoCapture = useCallback(async (category: string) => {
-    if (photoInputRef.current) {
-      photoInputRef.current.accept = "image/*";
-      photoInputRef.current.capture = "environment";
-      photoInputRef.current.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = async (event) => {
-            const newPhoto: SpacePhoto = {
-              id: `photo-${Date.now()}`,
-              url: event.target?.result as string,
-              category,
-              caption: `${t.photoCategories?.[category as keyof typeof t.photoCategories] || category} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
-              timestamp: new Date().toISOString(),
-              location: 'Localisation en cours...',
-              measurements: category === 'interior' || category === 'entry' ? 'Mesures à ajouter' : undefined
-            };
-
-            // Géolocalisation sans effet de bord
-            if (navigator.geolocation) {
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  newPhoto.location = `GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
-                  newPhoto.gpsCoords = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                  };
-                  // SEULEMENT mise à jour locale des photos
-                  setSpacePhotos(prev => [...prev, newPhoto]);
-                }, 
-                () => {
-                  newPhoto.location = 'Localisation non disponible';
-                  // SEULEMENT mise à jour locale des photos
-                  setSpacePhotos(prev => [...prev, newPhoto]);
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-              );
-            } else {
-              newPhoto.location = 'Géolocalisation non supportée';
-              // SEULEMENT mise à jour locale des photos
-              setSpacePhotos(prev => [...prev, newPhoto]);
-            }
-          };
-          reader.readAsDataURL(file);
-        }
-      };
-      photoInputRef.current.click();
-    }
-  }, [t.photoCategories, language]);
-
-  const removePhoto = useCallback((photoId: string) => {
-    setSpacePhotos(prev => prev.filter(photo => photo.id !== photoId));
-  }, []);
-
-  const updatePhotoCaption = useCallback((photoId: string, newCaption: string) => {
-    setSpacePhotos(prev => prev.map(photo => 
-      photo.id === photoId ? { ...photo, caption: newCaption } : photo
-    ));
-  }, []);
-
-  // =================== GÉNÉRATION QR CODE SIMPLE ===================
-  const generatePermitQRCode = useCallback(async (permitNumber: string): Promise<string> => {
-    try {
-      const QRCode = (await import('qrcode')).default;
-      
-      const permitUrl = `${window.location.origin}/permits/confined-space/${permitNumber}`;
-      
-      const qrData = {
-        permitNumber,
-        type: 'confined_space',
-        province: selectedProvince,
-        authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente',
-        issueDate: new Date().toISOString(),
-        url: permitUrl,
-        projectNumber: confinedSpaceDetails.projectNumber,
-        location: confinedSpaceDetails.workLocation,
-        contractor: confinedSpaceDetails.contractor,
-        spaceType: confinedSpaceDetails.spaceType,
-        csaClass: confinedSpaceDetails.csaClass,
-        hazardCount: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length,
-        logo: '/c-secur360-logo.png'
-      };
-      
-      const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
-        errorCorrectionLevel: 'M',
-        margin: 1,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        },
-        width: 256
-      });
-      
-      return qrCodeDataUrl;
-    } catch (error) {
-      console.error('Erreur génération QR Code:', error);
-      return '';
-    }
-  }, [selectedProvince, PROVINCIAL_REGULATIONS, confinedSpaceDetails]);
-
   // =================== AUCUN useEffect QUI PEUT CAUSER UN RE-RENDER ===================
   // SUPPRESSION TOTALE de tous les useEffect sauf celui pour les notifications une seule fois
   useEffect(() => {
-    // Seulement demander permission notifications une fois
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
         Notification.requestPermission();
       }
     }
   }, []); // SEULEMENT une fois au montage - AUCUNE dépendance
-  // =================== CLASSIFICATIONS CSA PAR PROVINCE CANADIENNE COMPLÈTES ===================
-  const getCSAClassifications = useCallback((province: ProvinceCode, language: Language) => {
+  // =================== CLASSIFICATIONS CSA PAR PROVINCE CANADIENNE ===================
+  const getCSAClassifications = (province: ProvinceCode, language: Language) => {
     const baseClassifications = {
       fr: {
         class1: {
@@ -1165,7 +1083,7 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       }
     };
 
-    // Réglementations spécifiques par province - COMPLÈTES
+    // Réglementations spécifiques par province
     const provincialRegulations = {
       QC: {
         authority: "CNESST",
@@ -1419,10 +1337,10 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     });
 
     return classifications;
-  }, []);
+  };
 
-  // =================== QUESTIONNAIRE DE CLASSIFICATION INTELLIGENTE COMPLET ===================
-  const getClassificationQuestions = useCallback((language: Language) => {
+  // =================== QUESTIONNAIRE DE CLASSIFICATION INTELLIGENTE ===================
+  const getClassificationQuestions = (language: Language) => {
     return {
       fr: [
         {
@@ -1577,10 +1495,10 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
         }
       ]
     };
-  }, []);
+  };
 
   // =================== SYSTÈME DE CLASSIFICATION AUTOMATIQUE ===================
-  const calculateCSAClass = useCallback((answers: Record<string, any>) => {
+  const calculateCSAClass = (answers: Record<string, any>) => {
     let totalWeight = 0;
     const questions = getClassificationQuestions(language);
 
@@ -1603,1877 +1521,32 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     if (totalWeight >= 150) return 'class1';
     if (totalWeight >= 50) return 'class2';
     return 'class3';
-  }, [language, getClassificationQuestions]);
+  };
 
-  const handleClassificationComplete = useCallback((classification: string, answers: Record<string, any>) => {
+  const handleClassificationComplete = (classification: string, answers: Record<string, any>) => {
     handleConfinedSpaceChange('csaClass', classification);
     
-    // Notification de succès simple (sans re-render du parent)
+    // Sauvegarder les réponses pour référence
+    updatePermitData({ 
+      classificationAnswers: answers,
+      classificationDate: new Date().toISOString()
+    });
+
+    // Notification de succès
     const csaClassifications = getCSAClassifications(selectedProvince, language);
     const selectedClassification = csaClassifications[classification as keyof typeof csaClassifications];
     
-    // Notification simple sans effet de bord
-    console.log(`✅ Classification déterminée: ${selectedClassification?.title || classification}`);
-    
-    // Optionnellement sauvegarder les réponses pour audit
-    // updatePermitData({ classificationAnswers: answers, classificationDate: new Date().toISOString() });
-  }, [handleConfinedSpaceChange, getCSAClassifications, selectedProvince, language]);
-
-  // =================== RECHERCHE DANS LA BASE DE DONNÉES COMPLÈTE ===================
-  const searchPermitsDatabase = useCallback(async (query: string, page: number = 1): Promise<PermitSearchResult> => {
-    setIsSearching(true);
-    try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
-      let queryBuilder = supabase
-        .from('confined_space_permits')
-        .select(`
-          id,
-          permit_number,
-          project_number,
-          work_location,
-          contractor,
-          supervisor,
-          space_type,
-          csa_class,
-          entry_date,
-          status,
-          created_at,
-          last_modified,
-          entry_count,
-          hazard_count,
-          qr_code,
-          dimensions,
-          atmospheric_hazards,
-          physical_hazards,
-          space_photos
-        `)
-        .order('created_at', { ascending: false });
-
-      if (query.trim()) {
-        queryBuilder = queryBuilder.or(`
-          permit_number.ilike.%${query}%,
-          project_number.ilike.%${query}%,
-          work_location.ilike.%${query}%,
-          contractor.ilike.%${query}%,
-          supervisor.ilike.%${query}%,
-          space_type.ilike.%${query}%,
-          csa_class.ilike.%${query}%
-        `);
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        new Notification(`✅ ${language === 'fr' ? 'Classification déterminée' : 'Classification determined'}`, {
+          body: selectedClassification?.title || classification,
+          icon: '/c-secur360-logo.png'
+        });
       }
-
-      queryBuilder = queryBuilder.eq('province', selectedProvince);
-
-      const startRange = (page - 1) * 10;
-      const endRange = page * 10 - 1;
-      queryBuilder = queryBuilder.range(startRange, endRange);
-
-      const { data, error, count } = await queryBuilder;
-
-      if (error) throw error;
-
-      const permits: PermitHistoryEntry[] = (data || []).map(permit => ({
-        id: permit.id,
-        permitNumber: permit.permit_number,
-        projectNumber: permit.project_number || '',
-        workLocation: permit.work_location || '',
-        contractor: permit.contractor || '',
-        spaceType: permit.space_type || '',
-        csaClass: permit.csa_class || '',
-        entryDate: permit.entry_date || '',
-        status: permit.status as any,
-        createdAt: permit.created_at,
-        lastModified: permit.last_modified,
-        entryCount: permit.entry_count || 0,
-        hazardCount: permit.hazard_count || 0,
-        qrCode: permit.qr_code
-      }));
-
-      return {
-        permits,
-        total: count || 0,
-        page: page,
-        hasMore: (count || 0) > page * 10
-      };
-
-    } catch (error) {
-      console.error('Erreur recherche base de données:', error);
-      return { permits: [], total: 0, page: 1, hasMore: false };
-    } finally {
-      setIsSearching(false);
-    }
-  }, [selectedProvince]);
-
-  const handleSearch = useCallback(async (query: string) => {
-    if (query.trim().length < 2) {
-      setSearchResults({ permits: [], total: 0, page: 1, hasMore: false });
-      return;
-    }
-    
-    const results = await searchPermitsDatabase(query);
-    setSearchResults(results);
-  }, [searchPermitsDatabase]);
-
-  // =================== CHARGEMENT D'UN PERMIS EXISTANT SANS RE-RENDER ===================
-  const loadPermitFromHistory = useCallback(async (permitNumber: string) => {
-    try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
-      const { data, error } = await supabase
-        .from('confined_space_permits')
-        .select('*')
-        .eq('permit_number', permitNumber)
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
-        const loadedPermit: ConfinedSpaceDetails = {
-          projectNumber: data.project_number || '',
-          workLocation: data.work_location || '',
-          contractor: data.contractor || '',
-          supervisor: data.supervisor || '',
-          entryDate: data.entry_date || '',
-          duration: data.duration || '',
-          workerCount: data.worker_count || 1,
-          workDescription: data.work_description || '',
-          spaceType: data.space_type || '',
-          csaClass: data.csa_class || '',
-          entryMethod: data.entry_method || '',
-          accessType: data.access_type || '',
-          spaceLocation: data.space_location || '',
-          spaceDescription: data.space_description || '',
-          dimensions: data.dimensions || {
-            length: 0, width: 0, height: 0, diameter: 0, volume: 0, spaceShape: 'rectangular'
-          },
-          unitSystem: data.unit_system || 'metric',
-          entryPoints: data.entry_points || [{
-            id: 'entry-1', type: 'circular', dimensions: '', location: '', 
-            condition: 'good', accessibility: 'normal', photos: []
-          }],
-          atmosphericHazards: data.atmospheric_hazards || [],
-          physicalHazards: data.physical_hazards || [],
-          environmentalConditions: data.environmental_conditions || {
-            ventilationRequired: false, ventilationType: '', lightingConditions: '',
-            temperatureRange: '', moistureLevel: '', noiseLevel: '', weatherConditions: ''
-          },
-          spaceContent: data.space_content || {
-            contents: '', residues: '', previousUse: '', lastEntry: '', cleaningStatus: ''
-          },
-          safetyMeasures: data.safety_measures || {
-            emergencyEgress: '', communicationMethod: '', 
-            monitoringEquipment: [], ventilationEquipment: [], emergencyEquipment: []
-          },
-          spacePhotos: data.space_photos || []
-        };
-
-        // CHARGEMENT DIRECT sans communication avec le parent
-        setConfinedSpaceDetails(loadedPermit);
-        setSpacePhotos(data.space_photos || []);
-        
-        alert(`✅ Permis ${permitNumber} chargé: ${loadedPermit.projectNumber} - ${loadedPermit.workLocation}`);
-      }
-      
-      setShowPermitDatabase(false);
-      
-    } catch (error) {
-      console.error('Erreur chargement permis:', error);
-      alert(`❌ Erreur chargement: Impossible de charger le permis ${permitNumber}`);
-    }
-  }, []);
-
-  // =================== DUPLICATION DE PERMIS ===================
-  const duplicatePermit = useCallback(async (permitNumber: string) => {
-    try {
-      await loadPermitFromHistory(permitNumber);
-      
-      // Réinitialiser les champs spécifiques pour le nouveau permis
-      setConfinedSpaceDetails(prev => ({
-        ...prev,
-        projectNumber: `${prev.projectNumber} - COPIE`,
-        entryDate: '', // Nouvelle date à définir
-        spacePhotos: [] // Nouvelles photos requises
-      }));
-      setSpacePhotos([]);
-      
-      alert(language === 'fr' ? 
-        '✅ Permis dupliqué ! Veuillez mettre à jour les informations nécessaires.' : 
-        '✅ Permit duplicated! Please update the necessary information.');
-        
-    } catch (error) {
-      console.error('Erreur duplication permis:', error);
-      alert(`❌ Erreur duplication: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-    }
-  }, [language, loadPermitFromHistory]);
-
-  // =================== EXPORTATION DE DONNÉES ===================
-  const exportPermitData = useCallback(async (format: 'json' | 'csv') => {
-    try {
-      const dataToExport = {
-        ...confinedSpaceDetails,
-        spacePhotos,
-        metadata: {
-          exportDate: new Date().toISOString(),
-          province: selectedProvince,
-          authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority,
-          language,
-          version: '2.0'
-        }
-      };
-
-      if (format === 'json') {
-        const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `permit-${confinedSpaceDetails.projectNumber || 'new'}-${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } else if (format === 'csv') {
-        const csvData = [
-          ['Champ', 'Valeur'],
-          ['Numéro de projet', confinedSpaceDetails.projectNumber],
-          ['Lieu', confinedSpaceDetails.workLocation],
-          ['Entrepreneur', confinedSpaceDetails.contractor],
-          ['Superviseur', confinedSpaceDetails.supervisor],
-          ['Date d\'entrée', confinedSpaceDetails.entryDate],
-          ['Type d\'espace', confinedSpaceDetails.spaceType],
-          ['Classification CSA', confinedSpaceDetails.csaClass],
-          ['Volume', `${confinedSpaceDetails.dimensions.volume} ${confinedSpaceDetails.unitSystem === 'metric' ? 'm³' : 'ft³'}`],
-          ['Dangers atmosphériques', confinedSpaceDetails.atmosphericHazards.join('; ')],
-          ['Dangers physiques', confinedSpaceDetails.physicalHazards.join('; ')],
-          ['Nombre de photos', spacePhotos.length.toString()]
-        ];
-        
-        const csvContent = csvData.map(row => 
-          row.map(field => `"${field.replace(/"/g, '""')}"`).join(',')
-        ).join('\n');
-        
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `permit-${confinedSpaceDetails.projectNumber || 'new'}-${new Date().toISOString().slice(0, 10)}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-      
-      alert(`✅ ${language === 'fr' ? 'Données exportées avec succès' : 'Data exported successfully'} (${format.toUpperCase()})`);
-      
-    } catch (error) {
-      console.error('Erreur exportation:', error);
-      alert(`❌ ${language === 'fr' ? 'Erreur lors de l\'exportation' : 'Error during export'}`);
-    }
-  }, [confinedSpaceDetails, spacePhotos, selectedProvince, PROVINCIAL_REGULATIONS, language]);
-  // =================== SAUVEGARDE AVEC SYNCHRONISATION UNIQUE ===================
-  const handleSave = useCallback(async () => {
-    const errors = validateSiteInformation();
-    
-    if (errors.length > 0) {
-      alert(`${t.validationError}:\n${errors.join('\n')}`);
-      return false;
-    }
-    
-    // SYNCHRONISER avec le parent SEULEMENT ici lors de la sauvegarde
-    const completeData = {
-      ...confinedSpaceDetails,
-      spacePhotos
-    };
-    
-    updatePermitData(completeData);
-    updateParentData('siteInformation', completeData);
-    
-    const permitNumber = await savePermitToDatabase();
-    if (permitNumber) {
-      return true;
-    }
-    
-    return false;
-  }, [validateSiteInformation, t.validationError, confinedSpaceDetails, spacePhotos, updatePermitData, updateParentData]);
-
-  // =================== SAUVEGARDE COMPLÈTE SANS RE-RENDER ===================
-  const savePermitToDatabase = useCallback(async (): Promise<string | null> => {
-    setIsSaving(true);
-    try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
-      const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      
-      const qrCodeDataUrl = await generatePermitQRCode(permitNumber);
-      
-      const permitToSave = {
-        permit_number: permitNumber,
-        project_number: confinedSpaceDetails.projectNumber,
-        work_location: confinedSpaceDetails.workLocation,
-        contractor: confinedSpaceDetails.contractor,
-        supervisor: confinedSpaceDetails.supervisor,
-        space_type: confinedSpaceDetails.spaceType,
-        csa_class: confinedSpaceDetails.csaClass,
-        entry_date: confinedSpaceDetails.entryDate,
-        duration: confinedSpaceDetails.duration,
-        worker_count: confinedSpaceDetails.workerCount,
-        work_description: confinedSpaceDetails.workDescription,
-        entry_method: confinedSpaceDetails.entryMethod,
-        access_type: confinedSpaceDetails.accessType,
-        space_location: confinedSpaceDetails.spaceLocation,
-        space_description: confinedSpaceDetails.spaceDescription,
-        dimensions: confinedSpaceDetails.dimensions,
-        unit_system: confinedSpaceDetails.unitSystem,
-        entry_points: confinedSpaceDetails.entryPoints,
-        atmospheric_hazards: confinedSpaceDetails.atmosphericHazards,
-        physical_hazards: confinedSpaceDetails.physicalHazards,
-        environmental_conditions: confinedSpaceDetails.environmentalConditions,
-        space_content: confinedSpaceDetails.spaceContent,
-        safety_measures: confinedSpaceDetails.safetyMeasures,
-        space_photos: spacePhotos,
-        status: 'active',
-        province: selectedProvince,
-        authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente',
-        qr_code: qrCodeDataUrl,
-        entry_count: 0,
-        hazard_count: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length,
-        photo_count: spacePhotos.length,
-        created_at: new Date().toISOString(),
-        last_modified: new Date().toISOString(),
-        compliance_version: '2.0',
-        language: language
-      };
-
-      const { data, error } = await supabase
-        .from('confined_space_permits')
-        .upsert(permitToSave, { 
-          onConflict: 'permit_number',
-          ignoreDuplicates: false 
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // PAS de updatePermitData ici pour éviter les re-renders
-      alert(`✅ ${t.saveSuccess}: ${permitNumber}`);
-      
-      return permitNumber;
-      
-    } catch (error) {
-      console.error('Erreur sauvegarde:', error);
-      alert(`❌ ${t.saveError}: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [permitData.permit_number, selectedProvince, generatePermitQRCode, confinedSpaceDetails, spacePhotos, PROVINCIAL_REGULATIONS, t.saveSuccess, t.saveError, language]);
-
-  // =================== GÉNÉRATION QR CODE HAUTE QUALITÉ POUR IMPRESSION ===================
-  const generatePermitQRCodeForPrint = useCallback(async (permitNumber: string): Promise<string> => {
-    try {
-      const QRCode = (await import('qrcode')).default;
-      
-      const permitUrl = `${window.location.origin}/permits/confined-space/${permitNumber}`;
-      
-      const qrData = {
-        permitNumber,
-        type: 'confined_space',
-        province: selectedProvince,
-        authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente',
-        issueDate: new Date().toISOString(),
-        url: permitUrl,
-        projectNumber: confinedSpaceDetails.projectNumber,
-        location: confinedSpaceDetails.workLocation,
-        contractor: confinedSpaceDetails.contractor,
-        spaceType: confinedSpaceDetails.spaceType,
-        csaClass: confinedSpaceDetails.csaClass,
-        hazardCount: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length,
-        volume: confinedSpaceDetails.dimensions.volume,
-        unitSystem: confinedSpaceDetails.unitSystem,
-        photoCount: spacePhotos.length,
-        entryPoints: confinedSpaceDetails.entryPoints.length,
-        complianceVersion: '2.0'
-      };
-      
-      const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
-        errorCorrectionLevel: 'H',
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        },
-        width: 512
-      });
-      
-      return qrCodeDataUrl;
-    } catch (error) {
-      console.error('Erreur génération QR Code pour impression:', error);
-      return '';
-    }
-  }, [selectedProvince, PROVINCIAL_REGULATIONS, confinedSpaceDetails, spacePhotos]);
-
-  // =================== GÉNÉRATION CHECKLIST DE VALIDATION COMPLÈTE ===================
-  const generateValidationChecklist = useCallback(() => {
-    const csaClassifications = getCSAClassifications(selectedProvince, language);
-    const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
-    
-    const baseChecklist = [
-      {
-        category: language === 'fr' ? 'Tests Atmosphériques' : 'Atmospheric Testing',
-        items: [
-          language === 'fr' ? 'Tests d\'oxygène (19.5% - 23%)' : 'Oxygen testing (19.5% - 23%)',
-          language === 'fr' ? 'Tests de gaz inflammables (<10% LIE)' : 'Flammable gas testing (<10% LEL)',
-          language === 'fr' ? 'Tests de gaz toxiques (H2S, CO)' : 'Toxic gas testing (H2S, CO)',
-          language === 'fr' ? 'Tests de gaz inertes (N2, Ar)' : 'Inert gas testing (N2, Ar)',
-          (currentClassification?.regulations as any)?.testing || (language === 'fr' ? 'Surveillance selon réglementation' : 'Monitoring per regulations')
-        ]
-      },
-      {
-        category: language === 'fr' ? 'Personnel et Formation' : 'Personnel and Training',
-        items: [
-          (currentClassification?.regulations as any)?.attendant || (language === 'fr' ? 'Personnel qualifié requis' : 'Qualified personnel required'),
-          language === 'fr' ? 'Formation sur les dangers spécifiques' : 'Training on specific hazards',
-          language === 'fr' ? 'Certification des équipements' : 'Equipment certification',
-          language === 'fr' ? 'Procédures d\'urgence connues' : 'Emergency procedures known',
-          (currentClassification?.regulations as any)?.rescue || (language === 'fr' ? 'Plan de sauvetage établi' : 'Rescue plan established')
-        ]
-      },
-      {
-        category: language === 'fr' ? 'Équipements de Sécurité' : 'Safety Equipment',
-        items: [
-          language === 'fr' ? 'Équipement de surveillance atmosphérique' : 'Atmospheric monitoring equipment',
-          language === 'fr' ? 'Équipement de protection individuelle' : 'Personal protective equipment',
-          language === 'fr' ? 'Système de communication' : 'Communication system',
-          language === 'fr' ? 'Équipement de ventilation' : 'Ventilation equipment',
-          language === 'fr' ? 'Équipement de sauvetage d\'urgence' : 'Emergency rescue equipment',
-          language === 'fr' ? 'Éclairage de sécurité' : 'Safety lighting'
-        ]
-      },
-      {
-        category: language === 'fr' ? 'Accès et Sortie' : 'Access and Egress',
-        items: [
-          language === 'fr' ? 'Points d\'entrée identifiés et sécurisés' : 'Entry points identified and secured',
-          language === 'fr' ? 'Voies d\'évacuation dégagées' : 'Evacuation routes clear',
-          language === 'fr' ? 'Signalisation appropriée' : 'Appropriate signage',
-          language === 'fr' ? 'Éclairage adéquat' : 'Adequate lighting'
-        ]
-      },
-      {
-        category: language === 'fr' ? 'Documentation' : 'Documentation',
-        items: [
-          language === 'fr' ? 'Permis d\'entrée signé' : 'Entry permit signed',
-          language === 'fr' ? 'Analyse des dangers complétée' : 'Hazard analysis completed',
-          language === 'fr' ? 'Photos documentaires prises' : 'Documentary photos taken',
-          language === 'fr' ? 'Registre d\'entrée/sortie' : 'Entry/exit log',
-          language === 'fr' ? 'Plan d\'urgence accessible' : 'Emergency plan accessible'
-        ]
-      }
-    ];
-
-    // Ajout d'éléments spécifiques selon la classification
-    if (confinedSpaceDetails.csaClass === 'class1') {
-      baseChecklist.push({
-        category: language === 'fr' ? 'Classe 1 - Exigences Spéciales' : 'Class 1 - Special Requirements',
-        items: [
-          language === 'fr' ? 'Surveillance continue obligatoire' : 'Continuous monitoring mandatory',
-          language === 'fr' ? 'Équipe de sauvetage sur site' : 'Rescue team on site',
-          language === 'fr' ? 'Tests atmosphériques toutes les 30 minutes' : 'Atmospheric testing every 30 minutes',
-          language === 'fr' ? 'Autorisation écrite requise' : 'Written authorization required'
-        ]
-      });
-    }
-
-    return baseChecklist;
-  }, [getCSAClassifications, selectedProvince, language, confinedSpaceDetails.csaClass]);
-
-  // =================== GÉNÉRATION DE RAPPORT PROFESSIONNEL COMPLET ===================
-  const generateCompletePermitReport = useCallback(async (): Promise<PermitReport> => {
-    const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    
-    const csaClassifications = getCSAClassifications(selectedProvince, language);
-    const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
-    
-    const provinceAuthority = PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente';
-    
-    return {
-      metadata: {
-        permitNumber,
-        issueDate: new Date().toISOString(),
-        province: selectedProvince,
-        authority: provinceAuthority,
-        generatedAt: new Date().toISOString(),
-        version: '2.0',
-        language,
-        companyLogo: '/c-secur360-logo.png',
-        qrCode: await generatePermitQRCodeForPrint(permitNumber),
-        classification: currentClassification
-      },
-      siteInformation: {
-        ...confinedSpaceDetails,
-        spacePhotos: spacePhotos,
-        csaClassification: currentClassification,
-        provincialRegulations: currentClassification?.regulations
-      },
-      atmosphericTesting: permitData.atmosphericTesting || {
-        oxygenLevel: null,
-        flammableGases: null,
-        toxicGases: null,
-        lastTested: null,
-        testingFrequency: currentClassification?.monitoring || 'Initial testing'
-      },
-      entryRegistry: permitData.entryRegistry || {
-        entries: [],
-        totalEntries: 0,
-        currentOccupants: 0
-      },
-      rescuePlan: permitData.rescuePlan || {
-        emergencyContacts: [],
-        rescueTeam: currentClassification?.regulations?.attendant || 'To be assigned',
-        emergencyProcedures: currentClassification?.regulations?.rescue || 'Standard procedures'
-      },
-      validationChecklist: generateValidationChecklist()
-    };
-  }, [permitData, selectedProvince, getCSAClassifications, language, confinedSpaceDetails, PROVINCIAL_REGULATIONS, generatePermitQRCodeForPrint, spacePhotos, generateValidationChecklist]);
-
-  // =================== IMPRESSION LÉGALE PROFESSIONNELLE COMPLÈTE ===================
-  const handlePrintPermit = useCallback(async () => {
-    setIsGeneratingReport(true);
-    try {
-      const report = await generateCompletePermitReport();
-      const csaClassifications = getCSAClassifications(selectedProvince, language);
-      const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
-      
-      const printWindow = window.open('', '_blank', 'width=1200,height=800');
-      if (printWindow) {
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html lang="${language}">
-            <head>
-              <title>Permis d'Espace Clos - ${report.metadata.permitNumber}</title>
-              <meta charset="utf-8">
-              <style>
-                @page { size: A4; margin: 15mm; }
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { 
-                  font-family: Arial, sans-serif; 
-                  font-size: 11pt; 
-                  line-height: 1.4; 
-                  color: #000; 
-                  background: white; 
-                }
-                .header { 
-                  border-bottom: 4px solid #dc2626; 
-                  padding: 20px; 
-                  margin-bottom: 25px; 
-                  text-align: center; 
-                  page-break-inside: avoid;
-                }
-                .permit-number { 
-                  font-size: 24pt; 
-                  font-weight: bold; 
-                  color: #dc2626; 
-                  margin-bottom: 10px; 
-                }
-                .subtitle {
-                  font-size: 14pt;
-                  color: #666;
-                  margin-bottom: 15px;
-                }
-                .info-grid { 
-                  display: grid; 
-                  grid-template-columns: 1fr 1fr; 
-                  gap: 15px; 
-                  margin: 20px 0; 
-                }
-                .info-item { 
-                  border: 1px solid #ccc; 
-                  padding: 10px; 
-                  border-radius: 4px; 
-                  page-break-inside: avoid;
-                }
-                .label { 
-                  font-weight: bold; 
-                  color: #333; 
-                  font-size: 9pt; 
-                  margin-bottom: 3px; 
-                }
-                .value { 
-                  color: #000; 
-                  font-size: 11pt; 
-                }
-                .classification-box {
-                  background: ${currentClassification?.title.includes('1') ? '#fee2e2' : 
-                              currentClassification?.title.includes('2') ? '#fef3c7' : '#dcfce7'};
-                  border: 2px solid ${currentClassification?.title.includes('1') ? '#dc2626' : 
-                                    currentClassification?.title.includes('2') ? '#f59e0b' : '#16a34a'};
-                  padding: 15px;
-                  margin: 20px 0;
-                  border-radius: 8px;
-                  page-break-inside: avoid;
-                }
-                .hazards-section {
-                  margin: 20px 0;
-                  padding: 15px;
-                  border: 1px solid #ccc;
-                  border-radius: 8px;
-                  page-break-inside: avoid;
-                }
-                .hazard-list {
-                  columns: 2;
-                  column-gap: 20px;
-                  list-style: none;
-                  padding: 0;
-                }
-                .hazard-list li {
-                  margin: 5px 0;
-                  padding: 3px 0;
-                  font-size: 10pt;
-                  break-inside: avoid;
-                }
-                .dimensions-box {
-                  background: #f8fafc;
-                  border: 1px solid #cbd5e1;
-                  padding: 15px;
-                  margin: 15px 0;
-                  border-radius: 8px;
-                  text-align: center;
-                }
-                .qr-section { 
-                  text-align: center; 
-                  margin: 30px 0; 
-                  border: 2px solid #3b82f6; 
-                  padding: 20px; 
-                  border-radius: 8px; 
-                  page-break-inside: avoid;
-                }
-                .checklist {
-                  margin: 20px 0;
-                  page-break-inside: avoid;
-                }
-                .checklist-category {
-                  background: #f1f5f9;
-                  padding: 10px;
-                  margin: 10px 0;
-                  border-left: 4px solid #3b82f6;
-                  border-radius: 4px;
-                }
-                .checklist-items {
-                  columns: 2;
-                  column-gap: 20px;
-                  list-style: none;
-                  padding: 10px 0;
-                }
-                .checklist-items li {
-                  margin: 5px 0;
-                  padding: 2px 0;
-                  font-size: 10pt;
-                  break-inside: avoid;
-                }
-                .signatures { 
-                  display: grid; 
-                  grid-template-columns: 1fr 1fr; 
-                  gap: 20px; 
-                  margin-top: 30px; 
-                  page-break-inside: avoid;
-                }
-                .signature-box { 
-                  border: 1px solid #ccc; 
-                  padding: 15px; 
-                  min-height: 100px; 
-                }
-                .signature-line { 
-                  border-bottom: 1px solid #000; 
-                  margin-top: 50px; 
-                  margin-bottom: 5px; 
-                }
-                .footer {
-                  margin-top: 30px;
-                  text-align: center;
-                  border-top: 2px solid #ccc;
-                  padding-top: 20px;
-                  font-size: 9pt;
-                  color: #666;
-                  page-break-inside: avoid;
-                }
-                .page-break {
-                  page-break-before: always;
-                }
-              </style>
-            </head>
-            <body>
-              <div class="header">
-                <div class="permit-number">🚨 ${language === 'fr' ? 'PERMIS D\'ENTRÉE EN ESPACE CLOS' : 'CONFINED SPACE ENTRY PERMIT'}</div>
-                <div class="subtitle">${report.metadata.permitNumber}</div>
-                <div style="font-size: 12pt; color: #666;">
-                  ${report.metadata.authority} - ${selectedProvince} | ${language === 'fr' ? 'Émis le' : 'Issued on'} ${new Date(report.metadata.issueDate).toLocaleDateString()}
-                </div>
-              </div>
-
-              <div class="classification-box">
-                <h3 style="margin-bottom: 10px; color: ${currentClassification?.title.includes('1') ? '#dc2626' : 
-                                                          currentClassification?.title.includes('2') ? '#f59e0b' : '#16a34a'};">
-                  🛡️ ${currentClassification?.title || 'Classification non définie'}
-                </h3>
-                <p style="margin: 0; font-style: italic;">
-                  ${currentClassification?.description || 'Description non disponible'}
-                </p>
-              </div>
-
-              <div class="info-grid">
-                <div class="info-item">
-                  <div class="label">${language === 'fr' ? 'Projet' : 'Project'}</div>
-                  <div class="value">${report.siteInformation.projectNumber || 'N/A'}</div>
-                </div>
-                <div class="info-item">
-                  <div class="label">${language === 'fr' ? 'Lieu' : 'Location'}</div>
-                  <div class="value">${report.siteInformation.workLocation || 'N/A'}</div>
-                </div>
-                <div class="info-item">
-                  <div class="label">${language === 'fr' ? 'Entrepreneur' : 'Contractor'}</div>
-                  <div class="value">${report.siteInformation.contractor || 'N/A'}</div>
-                </div>
-                <div class="info-item">
-                  <div class="label">${language === 'fr' ? 'Superviseur' : 'Supervisor'}</div>
-                  <div class="value">${report.siteInformation.supervisor || 'N/A'}</div>
-                </div>
-                <div class="info-item">
-                  <div class="label">${language === 'fr' ? 'Date d\'entrée' : 'Entry Date'}</div>
-                  <div class="value">${report.siteInformation.entryDate ? new Date(report.siteInformation.entryDate).toLocaleString() : 'N/A'}</div>
-                </div>
-                <div class="info-item">
-                  <div class="label">${language === 'fr' ? 'Durée' : 'Duration'}</div>
-                  <div class="value">${report.siteInformation.duration || 'N/A'}</div>
-                </div>
-                <div class="info-item">
-                  <div class="label">${language === 'fr' ? 'Type d\'espace' : 'Space Type'}</div>
-                  <div class="value">${t.spaceTypes[report.siteInformation.spaceType as keyof typeof t.spaceTypes] || report.siteInformation.spaceType || 'N/A'}</div>
-                </div>
-                <div class="info-item">
-                  <div class="label">${language === 'fr' ? 'Nombre de travailleurs' : 'Worker Count'}</div>
-                  <div class="value">${report.siteInformation.workerCount || 'N/A'}</div>
-                </div>
-              </div>
-
-              <div class="dimensions-box">
-                <h4 style="margin-bottom: 10px; color: #1e40af;">📏 ${language === 'fr' ? 'Dimensions de l\'Espace' : 'Space Dimensions'}</h4>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: center;">
-                  <div>
-                    <div style="font-weight: bold; color: #333;">${report.siteInformation.dimensions?.volume || 0}</div>
-                    <div style="font-size: 10pt; color: #666;">${report.siteInformation.unitSystem === 'metric' ? 'm³' : 'ft³'}</div>
-                    <div style="font-size: 9pt; color: #999;">${language === 'fr' ? 'Volume' : 'Volume'}</div>
-                  </div>
-                  <div>
-                    <div style="font-weight: bold; color: #333;">${report.siteInformation.dimensions?.length || 0}</div>
-                    <div style="font-size: 10pt; color: #666;">${report.siteInformation.unitSystem === 'metric' ? 'm' : 'ft'}</div>
-                    <div style="font-size: 9pt; color: #999;">${language === 'fr' ? 'Longueur' : 'Length'}</div>
-                  </div>
-                  <div>
-                    <div style="font-weight: bold; color: #333;">${report.siteInformation.dimensions?.width || 0}</div>
-                    <div style="font-size: 10pt; color: #666;">${report.siteInformation.unitSystem === 'metric' ? 'm' : 'ft'}</div>
-                    <div style="font-size: 9pt; color: #999;">${language === 'fr' ? 'Largeur' : 'Width'}</div>
-                  </div>
-                  <div>
-                    <div style="font-weight: bold; color: #333;">${report.siteInformation.dimensions?.height || 0}</div>
-                    <div style="font-size: 10pt; color: #666;">${report.siteInformation.unitSystem === 'metric' ? 'm' : 'ft'}</div>
-                    <div style="font-size: 9pt; color: #999;">${language === 'fr' ? 'Hauteur' : 'Height'}</div>
-                  </div>
-                </div>
-                <div style="margin-top: 10px; font-size: 10pt; color: #666;">
-                  ${language === 'fr' ? 'Forme' : 'Shape'}: ${t[report.siteInformation.dimensions?.spaceShape as keyof typeof t] || report.siteInformation.dimensions?.spaceShape || 'N/A'}
-                </div>
-              </div>
-
-              <div class="hazards-section">
-                <h4 style="margin-bottom: 15px; color: #dc2626;">⚠️ ${language === 'fr' ? 'Dangers Identifiés' : 'Identified Hazards'}</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                  <div>
-                    <h5 style="color: #f59e0b; margin-bottom: 10px;">🌪️ ${language === 'fr' ? 'Dangers Atmosphériques' : 'Atmospheric Hazards'}</h5>
-                    <ul class="hazard-list">
-                      ${report.siteInformation.atmosphericHazards.length > 0 ? 
-                        report.siteInformation.atmosphericHazards.map(hazard => 
-                          `<li>• ${t.atmosphericHazardTypes[hazard as keyof typeof t.atmosphericHazardTypes] || hazard}</li>`
-                        ).join('') : 
-                        `<li style="color: #16a34a;">• ${language === 'fr' ? 'Aucun danger identifié' : 'No hazards identified'}</li>`
-                      }
-                    </ul>
-                  </div>
-                  <div>
-                    <h5 style="color: #dc2626; margin-bottom: 10px;">⚡ ${language === 'fr' ? 'Dangers Physiques' : 'Physical Hazards'}</h5>
-                    <ul class="hazard-list">
-                      ${report.siteInformation.physicalHazards.length > 0 ? 
-                        report.siteInformation.physicalHazards.map(hazard => 
-                          `<li>• ${t.physicalHazardTypes[hazard as keyof typeof t.physicalHazardTypes] || hazard}</li>`
-                        ).join('') : 
-                        `<li style="color: #16a34a;">• ${language === 'fr' ? 'Aucun danger identifié' : 'No hazards identified'}</li>`
-                      }
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div class="page-break"></div>
-
-              <div class="checklist">
-                <h3 style="margin-bottom: 20px; color: #1e40af;">📋 ${language === 'fr' ? 'Liste de Vérification' : 'Validation Checklist'}</h3>
-                ${report.validationChecklist.map(category => `
-                  <div class="checklist-category">
-                    <h4 style="margin: 0 0 5px 0; color: #1e40af;">${category.category}</h4>
-                    <ul class="checklist-items">
-                      ${category.items.map(item => `<li>☐ ${item}</li>`).join('')}
-                    </ul>
-                  </div>
-                `).join('')}
-              </div>
-
-              <div class="qr-section">
-                ${report.metadata.qrCode ? `<img src="${report.metadata.qrCode}" alt="QR Code" style="width: 150px; height: 150px;" />` : '<div>QR Code indisponible</div>'}
-                <div style="margin-top: 10px; font-weight: bold;">📱 ${language === 'fr' ? 'Scanner pour accès mobile instantané' : 'Scan for instant mobile access'}</div>
-                <div style="margin-top: 5px; font-size: 10pt; color: #666;">
-                  ${language === 'fr' ? 'Contient toutes les informations du permis' : 'Contains all permit information'}
-                </div>
-              </div>
-
-              <div class="signatures">
-                <div class="signature-box">
-                  <div style="font-weight: bold; margin-bottom: 10px;">
-                    ${language === 'fr' ? 'Superviseur / Personne Compétente' : 'Supervisor / Competent Person'}
-                  </div>
-                  <div style="margin: 10px 0; font-size: 10pt; color: #666;">
-                    ${currentClassification?.regulations?.attendant || (language === 'fr' ? 'Qualification requise selon réglementation' : 'Qualification required per regulations')}
-                  </div>
-                  <div class="signature-line"></div>
-                  <div style="font-size: 8pt; color: #666;">
-                    ${language === 'fr' ? 'Nom, signature et date' : 'Name, signature and date'}
-                  </div>
-                </div>
-                <div class="signature-box">
-                  <div style="font-weight: bold; margin-bottom: 10px;">
-                    ${language === 'fr' ? 'Surveillant d\'Espace Clos' : 'Confined Space Attendant'}
-                  </div>
-                  <div style="margin: 10px 0; font-size: 10pt; color: #666;">
-                    ${currentClassification?.regulations?.rescue || (language === 'fr' ? 'Plan de sauvetage requis' : 'Rescue plan required')}
-                  </div>
-                  <div class="signature-line"></div>
-                  <div style="font-size: 8pt; color: #666;">
-                    ${language === 'fr' ? 'Nom, signature et date' : 'Name, signature and date'}
-                  </div>
-                </div>
-              </div>
-
-              <div class="footer">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div>
-                    <strong>C-SECUR360</strong> - ${language === 'fr' ? 'Système de Gestion de Sécurité Industrielle' : 'Industrial Safety Management System'}
-                  </div>
-                  <div>
-                    ${language === 'fr' ? 'Document généré le' : 'Document generated on'} ${new Date().toLocaleDateString()} - v${report.metadata.version}
-                  </div>
-                </div>
-                <div style="margin-top: 10px; font-size: 8pt;">
-                  ${language === 'fr' ? 'Conforme aux exigences' : 'Compliant with'} ${currentClassification?.regulations?.main || 'CSA Z1006'} | 
-                  ${language === 'fr' ? 'Autorité' : 'Authority'}: ${report.metadata.authority}
-                </div>
-              </div>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        
-        setTimeout(() => {
-          printWindow.print();
-        }, 1000);
-      }
-    } finally {
-      setIsGeneratingReport(false);
-    }
-  }, [generateCompletePermitReport, getCSAClassifications, selectedProvince, language, confinedSpaceDetails.csaClass, t]);
-
-  // =================== ENVOI EMAIL ET PARTAGE COMPLETS ===================
-  const handleEmailPermit = useCallback(async () => {
-    const subject = `${language === 'fr' ? 'Permis d\'Espace Clos' : 'Confined Space Permit'} - ${permitData.permit_number || 'Nouveau'}`;
-    const body = `${language === 'fr' ? 'Permis d\'entrée en espace clos' : 'Confined space entry permit'}:
-    
-📋 ${language === 'fr' ? 'Projet' : 'Project'}: ${confinedSpaceDetails.projectNumber}
-📍 ${language === 'fr' ? 'Lieu' : 'Location'}: ${confinedSpaceDetails.workLocation}
-🏗️ ${language === 'fr' ? 'Entrepreneur' : 'Contractor'}: ${confinedSpaceDetails.contractor}
-👷 ${language === 'fr' ? 'Superviseur' : 'Supervisor'}: ${confinedSpaceDetails.supervisor}
-📅 ${language === 'fr' ? 'Date d\'entrée' : 'Entry Date'}: ${confinedSpaceDetails.entryDate ? new Date(confinedSpaceDetails.entryDate).toLocaleDateString() : 'À définir'}
-🏷️ ${language === 'fr' ? 'Type' : 'Type'}: ${t.spaceTypes[confinedSpaceDetails.spaceType as keyof typeof t.spaceTypes] || confinedSpaceDetails.spaceType}
-🛡️ ${language === 'fr' ? 'Classification' : 'Classification'}: ${t.csaClasses[confinedSpaceDetails.csaClass as keyof typeof t.csaClasses] || confinedSpaceDetails.csaClass}
-📐 ${language === 'fr' ? 'Volume' : 'Volume'}: ${confinedSpaceDetails.dimensions.volume} ${confinedSpaceDetails.unitSystem === 'metric' ? 'm³' : 'ft³'}
-⚠️ ${language === 'fr' ? 'Dangers' : 'Hazards'}: ${confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length}
-📸 ${language === 'fr' ? 'Photos' : 'Photos'}: ${spacePhotos.length}
-
-${language === 'fr' ? 'Autorité' : 'Authority'}: ${PROVINCIAL_REGULATIONS[selectedProvince]?.authority} (${selectedProvince})
-
-${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated by C-SECUR360'}`;
-    
-    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(mailtoLink);
-  }, [language, permitData.permit_number, confinedSpaceDetails, spacePhotos, t, selectedProvince, PROVINCIAL_REGULATIONS]);
-
-  const handleSharePermit = useCallback(async () => {
-    const shareData = {
-      title: `${language === 'fr' ? 'Permis Espace Clos' : 'Confined Space Permit'}`,
-      text: `📋 ${confinedSpaceDetails.projectNumber}
-📍 ${confinedSpaceDetails.workLocation}
-🏗️ ${confinedSpaceDetails.contractor}
-🛡️ ${t.csaClasses[confinedSpaceDetails.csaClass as keyof typeof t.csaClasses] || confinedSpaceDetails.csaClass}
-📐 ${confinedSpaceDetails.dimensions.volume} ${confinedSpaceDetails.unitSystem === 'metric' ? 'm³' : 'ft³'}
-⚠️ ${confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length} ${language === 'fr' ? 'dangers identifiés' : 'hazards identified'}`,
-      url: window.location.href
-    };
-    
-    if (navigator.share && isMobile) {
-      try {
-        await navigator.share(shareData);
-      } catch (error) {
-        console.log('Partage annulé');
-      }
-    } else if (navigator.clipboard) {
-      const textToShare = `${shareData.title}\n\n${shareData.text}\n\n🔗 ${shareData.url}`;
-      await navigator.clipboard.writeText(textToShare);
-      alert(`✅ ${language === 'fr' ? 'Copié dans le presse-papiers' : 'Copied to clipboard'}`);
-    }
-  }, [language, confinedSpaceDetails, t, isMobile]);
-
-  // =================== GÉNÉRATION RAPPORT DÉTAILLÉ POUR AUDIT ===================
-  const generateDetailedAuditReport = useCallback(async () => {
-    const report = await generateCompletePermitReport();
-    const auditData = {
-      ...report,
-      auditTrail: {
-        createdBy: 'C-SECUR360 System',
-        createdAt: new Date().toISOString(),
-        lastModified: new Date().toISOString(),
-        version: '2.0',
-        complianceChecks: generateValidationChecklist(),
-        riskAssessment: {
-          overallRisk: confinedSpaceDetails.csaClass,
-          atmosphericRisks: confinedSpaceDetails.atmosphericHazards.length,
-          physicalRisks: confinedSpaceDetails.physicalHazards.length,
-          totalHazards: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length
-        },
-        documentation: {
-          photoCount: spacePhotos.length,
-          entryPointsDocumented: confinedSpaceDetails.entryPoints.length,
-          dimensionsCalculated: confinedSpaceDetails.dimensions.volume > 0,
-          qrCodeGenerated: !!report.metadata.qrCode
-        }
-      }
-    };
-
-    return auditData;
-  }, [generateCompletePermitReport, generateValidationChecklist, confinedSpaceDetails, spacePhotos]);
-  // =================== COMPOSANT CARROUSEL PHOTOS OPTIMISÉ MOBILE COMPLET ===================
-  const PhotoCarousel = ({ photos, onAddPhoto, category }: {
-    photos: SpacePhoto[];
-    onAddPhoto: () => void;
-    category?: string;
-  }) => {
-    const currentIndex = currentPhotoIndex;
-    const totalSlides = photos.length + 1; // +1 pour le bouton "Ajouter"
-
-    const nextSlide = useCallback(() => {
-      setCurrentPhotoIndex((currentIndex + 1) % totalSlides);
-    }, [currentIndex, totalSlides]);
-
-    const prevSlide = useCallback(() => {
-      setCurrentPhotoIndex(currentIndex === 0 ? totalSlides - 1 : currentIndex - 1);
-    }, [currentIndex, totalSlides]);
-
-    const goToSlide = useCallback((index: number) => {
-      setCurrentPhotoIndex(index);
-    }, []);
-
-    return (
-      <div className="photo-carousel" style={{
-        position: 'relative',
-        margin: '20px 0',
-        background: 'rgba(15, 23, 42, 0.8)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius)',
-        overflow: 'hidden'
-      }}>
-        <div className="carousel-container" style={{
-          position: 'relative',
-          width: '100%',
-          height: isMobile ? '300px' : '400px',
-          overflow: 'hidden'
-        }}>
-          <div className="carousel-track" style={{
-            display: 'flex',
-            transition: 'transform 0.3s ease',
-            height: '100%',
-            transform: `translateX(-${currentIndex * 100}%)`
-          }}>
-            {photos.map((photo: SpacePhoto, index: number) => (
-              <div key={photo.id} className="carousel-slide" style={{
-                minWidth: '100%',
-                height: '100%',
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <img 
-                  src={photo.url} 
-                  alt={photo.caption} 
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    objectFit: 'contain',
-                    borderRadius: 'var(--radius-sm)'
-                  }}
-                />
-                <div className="photo-info" style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  background: 'linear-gradient(transparent, rgba(0, 0, 0, 0.8))',
-                  color: 'white',
-                  padding: isMobile ? '15px 12px 12px' : '20px 16px 16px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-end'
-                }}>
-                  <div className="photo-caption" style={{ flex: 1, marginRight: '12px' }}>
-                    <h4 style={{
-                      margin: '0 0 4px',
-                      fontSize: isMobile ? '13px' : '14px',
-                      fontWeight: '600'
-                    }}>
-                      {t.photoCategories[photo.category as keyof typeof t.photoCategories] || photo.category}
-                    </h4>
-                    <p style={{
-                      margin: '0 0 2px',
-                      fontSize: isMobile ? '11px' : '12px',
-                      opacity: 0.8
-                    }}>
-                      {new Date(photo.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
-                    </p>
-                    {photo.gpsCoords && (
-                      <p className="gps-coords" style={{
-                        margin: '0 0 2px',
-                        fontSize: isMobile ? '10px' : '11px',
-                        opacity: 0.7
-                      }}>
-                        📍 GPS: {photo.gpsCoords.lat.toFixed(6)}, {photo.gpsCoords.lng.toFixed(6)}
-                      </p>
-                    )}
-                    {photo.measurements && (
-                      <p className="measurements" style={{
-                        margin: 0,
-                        fontSize: isMobile ? '10px' : '11px',
-                        opacity: 0.7
-                      }}>
-                        📏 {photo.measurements}
-                      </p>
-                    )}
-                  </div>
-                  <div className="photo-actions" style={{ display: 'flex', gap: '6px' }}>
-                    <button 
-                      className="photo-action-btn edit" 
-                      onClick={() => {
-                        const newCaption = prompt(
-                          language === 'fr' ? 'Nouvelle légende:' : 'New caption:', 
-                          photo.caption
-                        );
-                        if (newCaption) {
-                          updatePhotoCaption(photo.id, newCaption);
-                        }
-                      }}
-                      title={language === 'fr' ? "Modifier la légende" : "Edit caption"}
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.2)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                        color: 'white',
-                        padding: '6px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        transition: 'var(--transition)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '28px',
-                        minHeight: '28px',
-                        touchAction: 'manipulation'
-                      }}
-                    >
-                      <Settings size={14} />
-                    </button>
-                    <button 
-                      className="photo-action-btn delete" 
-                      onClick={() => {
-                        if (confirm(language === 'fr' ? 'Supprimer cette photo?' : 'Delete this photo?')) {
-                          removePhoto(photo.id);
-                        }
-                      }} 
-                      title={language === 'fr' ? "Supprimer cette photo" : "Delete this photo"}
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.2)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                        color: 'white',
-                        padding: '6px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        transition: 'var(--transition)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '28px',
-                        minHeight: '28px',
-                        touchAction: 'manipulation'
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {/* Slide pour ajouter une photo */}
-            <div className="carousel-slide add-photo" style={{
-              minWidth: '100%',
-              height: '100%',
-              background: 'rgba(59, 130, 246, 0.1)',
-              border: '2px dashed rgba(59, 130, 246, 0.3)',
-              cursor: 'pointer',
-              transition: 'var(--transition)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '16px'
-            }} onClick={onAddPhoto}>
-              <div className="add-photo-content" style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '12px',
-                color: 'var(--primary-color)',
-                textAlign: 'center'
-              }}>
-                <div className="add-photo-icon" style={{
-                  width: isMobile ? '48px' : '56px',
-                  height: isMobile ? '48px' : '56px',
-                  background: 'rgba(59, 130, 246, 0.2)',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'var(--transition)'
-                }}>
-                  <Camera size={isMobile ? 24 : 28} />
-                </div>
-                <h4 style={{
-                  margin: 0,
-                  fontSize: isMobile ? '16px' : '18px',
-                  fontWeight: '600'
-                }}>
-                  {t.addPhoto}
-                </h4>
-                <p style={{
-                  margin: 0,
-                  fontSize: isMobile ? '14px' : '15px',
-                  opacity: 0.8
-                }}>
-                  {t.takePhoto}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation arrows */}
-          {totalSlides > 1 && (
-            <>
-              <button 
-                className="carousel-nav prev" 
-                onClick={prevSlide} 
-                disabled={totalSlides <= 1}
-                aria-label={language === 'fr' ? 'Photo précédente' : 'Previous photo'}
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: isMobile ? '12px' : '16px',
-                  transform: 'translateY(-50%)',
-                  background: 'rgba(0, 0, 0, 0.7)',
-                  border: 'none',
-                  color: 'white',
-                  width: isMobile ? '36px' : '44px',
-                  height: isMobile ? '36px' : '44px',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'var(--transition)',
-                  zIndex: 10,
-                  touchAction: 'manipulation'
-                }}
-              >
-                <ArrowLeft size={isMobile ? 16 : 20} />
-              </button>
-              <button 
-                className="carousel-nav next" 
-                onClick={nextSlide} 
-                disabled={totalSlides <= 1}
-                aria-label={language === 'fr' ? 'Photo suivante' : 'Next photo'}
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  right: isMobile ? '12px' : '16px',
-                  transform: 'translateY(-50%)',
-                  background: 'rgba(0, 0, 0, 0.7)',
-                  border: 'none',
-                  color: 'white',
-                  width: isMobile ? '36px' : '44px',
-                  height: isMobile ? '36px' : '44px',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'var(--transition)',
-                  zIndex: 10,
-                  touchAction: 'manipulation'
-                }}
-              >
-                <ArrowRight size={isMobile ? 16 : 20} />
-              </button>
-            </>
-          )}
-
-          {/* Indicators */}
-          {totalSlides > 1 && (
-            <div className="carousel-indicators" style={{
-              position: 'absolute',
-              bottom: '16px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              display: 'flex',
-              gap: '8px',
-              zIndex: 10
-            }}>
-              {Array.from({ length: totalSlides }).map((_, index) => (
-                <button
-                  key={index}
-                  className={`carousel-indicator ${index === currentIndex ? 'active' : ''}`}
-                  onClick={() => goToSlide(index)}
-                  aria-label={`${language === 'fr' ? 'Aller à la photo' : 'Go to photo'} ${index + 1}`}
-                  style={{
-                    width: isMobile ? '8px' : '10px',
-                    height: isMobile ? '8px' : '10px',
-                    borderRadius: '50%',
-                    background: index === currentIndex ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.4)',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'var(--transition)',
-                    padding: 0,
-                    transform: index === currentIndex ? 'scale(1.2)' : 'scale(1)'
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // =================== COMPOSANT PLACEHOLDER PHOTOS VIDES ===================
-  const EmptyPhotoPlaceholder = ({ 
-    onClick, 
-    title, 
-    description, 
-    color = "#60a5fa" 
-  }: {
-    onClick: () => void;
-    title: string;
-    description: string;
-    color?: string;
-  }) => (
-    <div 
-      className="empty-photo-placeholder"
-      style={{ 
-        border: `2px dashed ${color}50`, 
-        background: `${color}20`,
-        borderRadius: 'var(--radius)',
-        padding: isMobile ? '30px 20px' : '40px 20px',
-        textAlign: 'center',
-        cursor: 'pointer',
-        transition: 'var(--transition)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '12px',
-        minHeight: isMobile ? '120px' : '150px',
-        justifyContent: 'center'
-      }}
-      onClick={onClick}
-    >
-      <Camera size={isMobile ? 32 : 40} color={color} />
-      <h4 style={{ 
-        color, 
-        margin: 0, 
-        fontSize: isMobile ? '14px' : '16px', 
-        fontWeight: '600' 
-      }}>
-        {title}
-      </h4>
-      <p style={{ 
-        margin: 0, 
-        fontSize: isMobile ? '12px' : '14px', 
-        color: 'var(--text-muted)' 
-      }}>
-        {description}
-      </p>
-    </div>
-  );
-
-  // =================== COMPOSANT SÉLECTEUR DE FORME ET UNITÉS COMPLET ===================
-  const DimensionsSelector = () => (
-    <div style={{
-      background: 'rgba(16, 185, 129, 0.1)',
-      border: '1px solid rgba(16, 185, 129, 0.3)',
-      borderRadius: 'var(--radius)',
-      padding: '20px'
-    }}>
-      {/* Sélecteurs de forme et unités */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-        gap: '16px',
-        marginBottom: '20px'
-      }}>
-        <div>
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            color: 'var(--text-secondary)',
-            fontSize: isMobile ? '14px' : '15px',
-            fontWeight: '600',
-            marginBottom: '8px'
-          }}>
-            <Layers style={{ width: '18px', height: '18px' }} />
-            {t.spaceShape}<span style={{ color: 'var(--danger-color)' }}>*</span>
-          </label>
-          <select
-            value={confinedSpaceDetails.dimensions.spaceShape}
-            onChange={(e) => handleConfinedSpaceChange('dimensions', {
-              ...confinedSpaceDetails.dimensions,
-              spaceShape: e.target.value as any,
-              volume: 0 // Reset volume when shape changes
-            })}
-            className="premium-select"
-          >
-            <option value="rectangular">📐 {t.rectangular}</option>
-            <option value="cylindrical">🔵 {t.cylindrical}</option>
-            <option value="spherical">⚪ {t.spherical}</option>
-            <option value="irregular">🔷 {t.irregular}</option>
-          </select>
-        </div>
-
-        <div>
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            color: 'var(--text-secondary)',
-            fontSize: isMobile ? '14px' : '15px',
-            fontWeight: '600',
-            marginBottom: '8px'
-          }}>
-            <Ruler style={{ width: '18px', height: '18px' }} />
-            {t.unitSystem}
-          </label>
-          <select
-            value={confinedSpaceDetails.unitSystem}
-            onChange={(e) => {
-              const newSystem = e.target.value as UnitSystem;
-              convertUnits(confinedSpaceDetails.unitSystem, newSystem);
-            }}
-            className="premium-select"
-          >
-            <option value="metric">📏 {t.metric}</option>
-            <option value="imperial">📐 {t.imperial}</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Champs de dimensions adaptatifs selon la forme */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
-        gap: isMobile ? '12px' : '16px',
-        marginBottom: '20px'
-      }}>
-        {/* Longueur - toujours visible sauf pour sphérique */}
-        {confinedSpaceDetails.dimensions.spaceShape !== 'spherical' && (
-          <div>
-            <label style={{
-              color: 'var(--text-secondary)',
-              fontSize: isMobile ? '13px' : '14px',
-              fontWeight: '600',
-              marginBottom: '6px',
-              display: 'block'
-            }}>
-              {t.length} ({confinedSpaceDetails.unitSystem === 'metric' ? 'm' : 'ft'})
-              {(confinedSpaceDetails.dimensions.spaceShape === 'rectangular' || confinedSpaceDetails.dimensions.spaceShape === 'irregular') && 
-               <span style={{ color: 'var(--danger-color)' }}>*</span>}
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={confinedSpaceDetails.dimensions.length || ''}
-              onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                ...confinedSpaceDetails.dimensions,
-                length: parseFloat(e.target.value) || 0
-              })}
-              className="premium-input"
-              placeholder="0.0"
-            />
-          </div>
-        )}
-
-        {/* Largeur - seulement pour rectangulaire et irrégulier */}
-        {(confinedSpaceDetails.dimensions.spaceShape === 'rectangular' || 
-          confinedSpaceDetails.dimensions.spaceShape === 'irregular') && (
-          <div>
-            <label style={{
-              color: 'var(--text-secondary)',
-              fontSize: isMobile ? '13px' : '14px',
-              fontWeight: '600',
-              marginBottom: '6px',
-              display: 'block'
-            }}>
-              {t.width} ({confinedSpaceDetails.unitSystem === 'metric' ? 'm' : 'ft'})<span style={{ color: 'var(--danger-color)' }}>*</span>
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={confinedSpaceDetails.dimensions.width || ''}
-              onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                ...confinedSpaceDetails.dimensions,
-                width: parseFloat(e.target.value) || 0
-              })}
-              className="premium-input"
-              placeholder="0.0"
-            />
-          </div>
-        )}
-
-        {/* Hauteur - pour toutes les formes sauf sphérique */}
-        {confinedSpaceDetails.dimensions.spaceShape !== 'spherical' && (
-          <div>
-            <label style={{
-              color: 'var(--text-secondary)',
-              fontSize: isMobile ? '13px' : '14px',
-              fontWeight: '600',
-              marginBottom: '6px',
-              display: 'block'
-            }}>
-              {t.height} ({confinedSpaceDetails.unitSystem === 'metric' ? 'm' : 'ft'})<span style={{ color: 'var(--danger-color)' }}>*</span>
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={confinedSpaceDetails.dimensions.height || ''}
-              onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                ...confinedSpaceDetails.dimensions,
-                height: parseFloat(e.target.value) || 0
-              })}
-              className="premium-input"
-              placeholder="0.0"
-            />
-          </div>
-        )}
-
-        {/* Diamètre - pour cylindrique et sphérique */}
-        {(confinedSpaceDetails.dimensions.spaceShape === 'cylindrical' || 
-          confinedSpaceDetails.dimensions.spaceShape === 'spherical') && (
-          <div>
-            <label style={{
-              color: 'var(--text-secondary)',
-              fontSize: isMobile ? '13px' : '14px',
-              fontWeight: '600',
-              marginBottom: '6px',
-              display: 'block'
-            }}>
-              {t.diameter} ({confinedSpaceDetails.unitSystem === 'metric' ? 'm' : 'ft'})<span style={{ color: 'var(--danger-color)' }}>*</span>
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={confinedSpaceDetails.dimensions.diameter || ''}
-              onChange={(e) => handleConfinedSpaceChange('dimensions', {
-                ...confinedSpaceDetails.dimensions,
-                diameter: parseFloat(e.target.value) || 0
-              })}
-              className="premium-input"
-              placeholder="0.0"
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Bouton de calcul et affichage du volume */}
-      <div style={{ textAlign: 'center', margin: '20px 0' }}>
-        <button 
-          onClick={calculateVolume}
-          style={{
-            padding: isMobile ? '12px 20px' : '14px 24px',
-            borderRadius: 'var(--radius-sm)',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'var(--transition)',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            minHeight: isMobile ? '48px' : '50px',
-            fontSize: isMobile ? '14px' : '15px',
-            background: 'linear-gradient(135deg, var(--success-color), #059669)',
-            color: 'white',
-            boxShadow: 'var(--shadow-sm)',
-            margin: '0 auto',
-            touchAction: 'manipulation'
-          }}
-        >
-          <Gauge size={20} />
-          {t.calculateVolume}
-        </button>
-      </div>
-
-      {/* Affichage du volume calculé */}
-      {confinedSpaceDetails.dimensions.volume > 0 && (
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.2)',
-          border: '1px solid rgba(16, 185, 129, 0.4)',
-          borderRadius: '12px',
-          padding: '16px',
-          textAlign: 'center'
-        }}>
-          <div style={{ 
-            fontSize: isMobile ? '24px' : '28px', 
-            fontWeight: '700', 
-            color: 'var(--success-color)', 
-            marginBottom: '8px'
-          }}>
-            {confinedSpaceDetails.dimensions.volume}
-          </div>
-          <div style={{ 
-            fontSize: isMobile ? '14px' : '16px', 
-            color: '#6ee7b7',
-            fontWeight: '600'
-          }}>
-            {confinedSpaceDetails.unitSystem === 'metric' ? 'm³' : 'ft³'} - {t.volume}
-          </div>
-          <div style={{ 
-            fontSize: '12px', 
-            color: '#86efac',
-            marginTop: '4px',
-            fontStyle: 'italic'
-          }}>
-            {language === 'fr' ? 'Forme' : 'Shape'}: {t[confinedSpaceDetails.dimensions.spaceShape as keyof typeof t] || confinedSpaceDetails.dimensions.spaceShape}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  // =================== COMPOSANT QR CODE RÉEL AVEC ÉTAT ===================
-  const QRCodeDisplay = () => {
-    const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
-    const [isGenerating, setIsGenerating] = useState(false);
-
-    useEffect(() => {
-      if (permitData.permit_number) {
-        setIsGenerating(true);
-        generatePermitQRCode(permitData.permit_number)
-          .then(setQrCodeDataUrl)
-          .finally(() => setIsGenerating(false));
-      }
-    }, [permitData.permit_number]);
-
-    if (permitData.permit_number && qrCodeDataUrl) {
-      return (
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.1)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          borderRadius: '12px',
-          padding: '20px',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            background: 'white',
-            padding: '16px',
-            borderRadius: '12px',
-            display: 'inline-block',
-            marginBottom: '16px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-          }}>
-            {isGenerating ? (
-              <div style={{
-                width: isMobile ? '150px' : '200px',
-                height: isMobile ? '150px' : '200px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#666'
-              }}>
-                <div className="spinner" style={{ width: '32px', height: '32px' }}></div>
-              </div>
-            ) : (
-              <img 
-                src={qrCodeDataUrl} 
-                alt={`QR Code pour ${permitData.permit_number}`}
-                style={{
-                  width: isMobile ? '150px' : '200px',
-                  height: isMobile ? '150px' : '200px',
-                  display: 'block'
-                }}
-              />
-            )}
-          </div>
-          <h4 style={{ 
-            color: '#10b981', 
-            margin: '0 0 8px 0', 
-            fontSize: isMobile ? '14px' : '16px',
-            fontWeight: '600'
-          }}>
-            ✅ {language === 'fr' ? `QR Code généré pour : ${permitData.permit_number}` : `QR Code generated for: ${permitData.permit_number}`}
-          </h4>
-          <p style={{ 
-            color: '#6ee7b7', 
-            margin: '0 0 12px 0', 
-            fontSize: '14px' 
-          }}>
-            {t.qrGenerated}
-          </p>
-          <div style={{
-            marginTop: '12px',
-            padding: '8px 12px',
-            background: 'rgba(16, 185, 129, 0.2)',
-            borderRadius: '6px',
-            fontSize: '12px',
-            color: '#047857'
-          }}>
-            📱 {language === 'fr' ? 'Scanner pour accès mobile instantané' : 'Scan for instant mobile access'}
-          </div>
-          <div style={{
-            marginTop: '8px',
-            fontSize: '11px',
-            color: '#6ee7b7'
-          }}>
-            {language === 'fr' ? 'Contient toutes les informations du permis' : 'Contains all permit information'}
-          </div>
-        </div>
-      );
-    } else {
-      return (
-        <div style={{
-          background: 'rgba(59, 130, 246, 0.1)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          borderRadius: '12px',
-          padding: '20px',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            width: isMobile ? '80px' : '100px',
-            height: isMobile ? '80px' : '100px',
-            background: 'rgba(59, 130, 246, 0.2)',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px'
-          }}>
-            <QrCode size={isMobile ? 40 : 50} color="#3b82f6" />
-          </div>
-          <p style={{ 
-            color: '#93c5fd', 
-            margin: 0, 
-            fontSize: '14px' 
-          }}>
-            💡 {t.qrWillGenerate}
-          </p>
-        </div>
-      );
     }
   };
 
-  // =================== COMPOSANT BOUTONS CAPTURE PHOTO ===================
-  const PhotoCaptureButtons = () => (
-    <div style={{ 
-      display: 'grid', 
-      gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
-      gap: '8px', 
-      marginBottom: '16px' 
-    }}>
-      <button 
-        className="photo-capture-btn" 
-        onClick={() => handlePhotoCapture('exterior')}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          padding: isMobile ? '8px 12px' : '10px 16px',
-          background: 'rgba(59, 130, 246, 0.1)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          borderRadius: 'var(--radius-sm)',
-          color: 'var(--primary-color)',
-          cursor: 'pointer',
-          transition: 'var(--transition)',
-          fontSize: isMobile ? '12px' : '13px',
-          fontWeight: '600',
-          minHeight: isMobile ? '36px' : '40px',
-          touchAction: 'manipulation'
-        }}
-      >
-        <Camera size={14} />
-        {t.photoCategories.exterior}
-      </button>
-      <button 
-        className="photo-capture-btn" 
-        onClick={() => handlePhotoCapture('interior')}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          padding: isMobile ? '8px 12px' : '10px 16px',
-          background: 'rgba(16, 185, 129, 0.1)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          borderRadius: 'var(--radius-sm)',
-          color: 'var(--success-color)',
-          cursor: 'pointer',
-          transition: 'var(--transition)',
-          fontSize: isMobile ? '12px' : '13px',
-          fontWeight: '600',
-          minHeight: isMobile ? '36px' : '40px',
-          touchAction: 'manipulation'
-        }}
-      >
-        <Home size={14} />
-        {t.photoCategories.interior}
-      </button>
-      <button 
-        className="photo-capture-btn" 
-        onClick={() => handlePhotoCapture('entry')}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          padding: isMobile ? '8px 12px' : '10px 16px',
-          background: 'rgba(245, 158, 11, 0.1)',
-          border: '1px solid rgba(245, 158, 11, 0.3)',
-          borderRadius: 'var(--radius-sm)',
-          color: 'var(--warning-color)',
-          cursor: 'pointer',
-          transition: 'var(--transition)',
-          fontSize: isMobile ? '12px' : '13px',
-          fontWeight: '600',
-          minHeight: isMobile ? '36px' : '40px',
-          touchAction: 'manipulation'
-        }}
-      >
-        <ArrowRight size={14} />
-        {t.photoCategories.entry}
-      </button>
-      <button 
-        className="photo-capture-btn" 
-        onClick={() => handlePhotoCapture('hazards')}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          padding: isMobile ? '8px 12px' : '10px 16px',
-          background: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: 'var(--radius-sm)',
-          color: 'var(--danger-color)',
-          cursor: 'pointer',
-          transition: 'var(--transition)',
-          fontSize: isMobile ? '12px' : '13px',
-          fontWeight: '600',
-          minHeight: isMobile ? '36px' : '40px',
-          touchAction: 'manipulation'
-        }}
-      >
-        <AlertTriangle size={14} />
-        {t.photoCategories.hazards}
-      </button>
-      <button 
-        className="photo-capture-btn" 
-        onClick={() => handlePhotoCapture('equipment')}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          padding: isMobile ? '8px 12px' : '10px 16px',
-          background: 'rgba(139, 92, 246, 0.1)',
-          border: '1px solid rgba(139, 92, 246, 0.3)',
-          borderRadius: 'var(--radius-sm)',
-          color: '#8b5cf6',
-          cursor: 'pointer',
-          transition: 'var(--transition)',
-          fontSize: isMobile ? '12px' : '13px',
-          fontWeight: '600',
-          minHeight: isMobile ? '36px' : '40px',
-          touchAction: 'manipulation'
-        }}
-      >
-        <Shield size={14} />
-        {t.photoCategories.equipment}
-      </button>
-      <button 
-        className="photo-capture-btn" 
-        onClick={() => handlePhotoCapture('safety')}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          padding: isMobile ? '8px 12px' : '10px 16px',
-          background: 'rgba(34, 197, 94, 0.1)',
-          border: '1px solid rgba(34, 197, 94, 0.3)',
-          borderRadius: 'var(--radius-sm)',
-          color: '#22c55e',
-          cursor: 'pointer',
-          transition: 'var(--transition)',
-          fontSize: isMobile ? '12px' : '13px',
-          fontWeight: '600',
-          minHeight: isMobile ? '36px' : '40px',
-          touchAction: 'manipulation'
-        }}
-      >
-        <Shield size={14} />
-        {t.photoCategories.safety}
-      </button>
-    </div>
-  );
-  // =================== COMPOSANT QUESTIONNAIRE CLASSIFICATION CSA COMPLET ===================
+  // =================== COMPOSANT QUESTIONNAIRE CLASSIFICATION CSA ===================
   const CSAClassificationWizard = ({ 
     isOpen, 
     onClose, 
@@ -3530,34 +1603,24 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
         padding: '20px'
       }}>
         <div style={{
-          background: 'rgba(30, 41, 59, 0.95)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(100, 116, 139, 0.3)',
-          borderRadius: '20px',
+          background: 'var(--card-bg)',
+          borderRadius: 'var(--radius)',
           maxWidth: isMobile ? '95vw' : '600px',
           width: '100%',
           maxHeight: isMobile ? '90vh' : '80vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)'
+          boxShadow: 'var(--shadow)'
         }}>
-          {/* Header du questionnaire avec progression */}
+          {/* Header du questionnaire */}
           <div style={{
             padding: isMobile ? '16px' : '20px',
-            borderBottom: '1px solid rgba(100, 116, 139, 0.3)',
+            borderBottom: '1px solid var(--border-color)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
             <div style={{ flex: 1, marginRight: '16px' }}>
-              <h2 style={{
-                margin: '0 0 12px 0',
-                fontSize: isMobile ? '16px' : '18px',
-                fontWeight: '700',
-                color: '#ffffff'
-              }}>
-                🎯 {language === 'fr' ? 'Assistant de Classification CSA' : 'CSA Classification Wizard'}
-              </h2>
               <div style={{
                 width: '100%',
                 height: '8px',
@@ -3575,25 +1638,22 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
               </div>
               <span style={{
                 fontSize: isMobile ? '12px' : '14px',
-                color: '#94a3b8',
+                color: 'var(--text-secondary)',
                 fontWeight: '600'
               }}>
-                {language === 'fr' ? 'Question' : 'Question'} {currentQuestionIndex + 1} / {questions.length}
+                {currentQuestionIndex + 1} / {questions.length}
               </span>
             </div>
             <button
               onClick={onClose}
               style={{
-                background: 'rgba(239, 68, 68, 0.2)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: '#fca5a5',
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
                 cursor: 'pointer',
-                padding: '8px',
-                borderRadius: '8px',
-                transition: 'var(--transition)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
+                padding: '4px',
+                borderRadius: '4px',
+                transition: 'var(--transition)'
               }}
             >
               <X size={20} />
@@ -3610,25 +1670,15 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
               <h3 style={{
                 fontSize: isMobile ? '16px' : '18px',
                 fontWeight: '600',
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 marginBottom: '20px',
                 display: 'flex',
-                alignItems: 'flex-start',
+                alignItems: 'center',
                 gap: '12px',
                 lineHeight: 1.4
               }}>
-                {currentQuestion.critical && (
-                  <div style={{
-                    background: 'rgba(239, 68, 68, 0.2)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    borderRadius: '6px',
-                    padding: '4px',
-                    flexShrink: 0
-                  }}>
-                    <AlertTriangle color="#ef4444" size={16} />
-                  </div>
-                )}
-                <span>{currentQuestion.question}</span>
+                {currentQuestion.critical && <AlertTriangle color="var(--danger-color)" size={20} />}
+                {currentQuestion.question}
               </h3>
 
               <div style={{
@@ -3642,12 +1692,8 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
                     alignItems: 'center',
                     gap: '12px',
                     padding: isMobile ? '12px' : '16px',
-                    background: answers[currentQuestion.id] === option.value || 
-                                (Array.isArray(answers[currentQuestion.id]) && answers[currentQuestion.id]?.includes(option.value)) ? 
-                                'rgba(59, 130, 246, 0.2)' : 'rgba(15, 23, 42, 0.6)',
-                    border: `2px solid ${answers[currentQuestion.id] === option.value || 
-                                        (Array.isArray(answers[currentQuestion.id]) && answers[currentQuestion.id]?.includes(option.value)) ? 
-                                        '#3b82f6' : 'rgba(100, 116, 139, 0.3)'}`,
+                    background: 'rgba(15, 23, 42, 0.6)',
+                    border: '2px solid var(--border-color)',
                     borderRadius: 'var(--radius-sm)',
                     cursor: 'pointer',
                     transition: 'var(--transition)',
@@ -3679,61 +1725,33 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
                           }
                         }
                       }}
-                      style={{ 
-                        margin: 0, 
-                        flexShrink: 0,
-                        width: '16px',
-                        height: '16px',
-                        accentColor: '#3b82f6'
-                      }}
+                      style={{ margin: 0, flexShrink: 0 }}
                     />
                     <span style={{
                       flex: 1,
-                      color: '#ffffff',
+                      color: 'var(--text-primary)',
                       fontWeight: '500'
                     }}>
                       {option.label}
                     </span>
                     <span style={{
                       fontSize: isMobile ? '11px' : '12px',
-                      color: '#94a3b8',
-                      background: option.weight > 50 ? 'rgba(239, 68, 68, 0.2)' : 
-                                  option.weight > 20 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-                      border: `1px solid ${option.weight > 50 ? 'rgba(239, 68, 68, 0.3)' : 
-                                          option.weight > 20 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
-                      padding: '3px 8px',
-                      borderRadius: '4px',
-                      fontWeight: '600'
+                      color: 'var(--text-muted)',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      padding: '2px 6px',
+                      borderRadius: '4px'
                     }}>
-                      {option.weight}
+                      {language === 'fr' ? 'Poids' : 'Weight'}: {option.weight}
                     </span>
                   </label>
                 ))}
               </div>
-
-              {/* Aide contextuelle */}
-              {currentQuestion.critical && (
-                <div style={{
-                  marginTop: '16px',
-                  padding: '12px',
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  color: '#fca5a5'
-                }}>
-                  ⚠️ {language === 'fr' ? 
-                    'Question critique : Cette réponse aura un impact majeur sur la classification finale.' : 
-                    'Critical question: This answer will have a major impact on the final classification.'}
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Navigation */}
           <div style={{
             padding: isMobile ? '16px' : '20px',
-            borderTop: '1px solid rgba(100, 116, 139, 0.3)',
+            borderTop: '1px solid var(--border-color)',
             display: 'flex',
             justifyContent: 'space-between',
             gap: '12px'
@@ -3745,17 +1763,17 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
                 padding: isMobile ? '12px 16px' : '12px 20px',
                 borderRadius: 'var(--radius-sm)',
                 fontWeight: '600',
-                cursor: currentQuestionIndex === 0 ? 'not-allowed' : 'pointer',
+                cursor: 'pointer',
                 transition: 'var(--transition)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 fontSize: '14px',
                 minHeight: '44px',
-                background: currentQuestionIndex === 0 ? 'rgba(100, 116, 139, 0.3)' : 'rgba(100, 116, 139, 0.6)',
-                color: currentQuestionIndex === 0 ? '#64748b' : '#ffffff',
-                border: 'none',
-                opacity: currentQuestionIndex === 0 ? 0.5 : 1
+                background: 'var(--card-bg)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                opacity: currentQuestionIndex === 0 ? 0.6 : 1
               }}
             >
               <ArrowLeft size={16} />
@@ -3770,18 +1788,14 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
                 padding: isMobile ? '12px 16px' : '12px 20px',
                 borderRadius: 'var(--radius-sm)',
                 fontWeight: '600',
-                cursor: (!answers[currentQuestion.id] || 
-                        (Array.isArray(answers[currentQuestion.id]) && answers[currentQuestion.id].length === 0)) ? 
-                        'not-allowed' : 'pointer',
+                cursor: 'pointer',
                 transition: 'var(--transition)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 fontSize: '14px',
                 minHeight: '44px',
-                background: (!answers[currentQuestion.id] || 
-                           (Array.isArray(answers[currentQuestion.id]) && answers[currentQuestion.id].length === 0)) ? 
-                           'rgba(59, 130, 246, 0.3)' : 'linear-gradient(135deg, var(--primary-color), #2563eb)',
+                background: 'linear-gradient(135deg, var(--primary-color), #2563eb)',
                 color: 'white',
                 border: 'none',
                 opacity: (!answers[currentQuestion.id] || 
@@ -3789,7 +1803,7 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
               }}
             >
               {isLastQuestion ? (language === 'fr' ? 'Terminer' : 'Finish') : (language === 'fr' ? 'Suivant' : 'Next')}
-              {isLastQuestion ? <CheckCircle size={16} /> : <ArrowRight size={16} />}
+              <ArrowRight size={16} />
             </button>
           </div>
         </div>
@@ -3797,15 +1811,14 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
     );
   };
 
-  // =================== COMPOSANT SECTION COLLAPSIBLE MOBILE OPTIMISÉ ===================
+  // =================== COMPOSANT SECTION COLLAPSIBLE MOBILE ===================
   const CollapsibleSection = ({ 
     id, 
     title, 
     icon, 
     children, 
     className = '',
-    defaultCollapsed = false,
-    validationErrors = 0 
+    defaultCollapsed = false 
   }: {
     id: string;
     title: string;
@@ -3813,7 +1826,6 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
     children: React.ReactNode;
     className?: string;
     defaultCollapsed?: boolean;
-    validationErrors?: number;
   }) => {
     const isCollapsed = collapsedSections.has(id) || (defaultCollapsed && !collapsedSections.has(id));
 
@@ -3825,11 +1837,7 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
         borderRadius: 'var(--radius)',
         marginBottom: isMobile ? '16px' : '24px',
         overflow: 'hidden',
-        transition: 'var(--transition)',
-        ...(validationErrors > 0 ? { 
-          borderColor: 'var(--danger-color)',
-          boxShadow: '0 0 0 1px rgba(239, 68, 68, 0.2)'
-        } : {})
+        transition: 'var(--transition)'
       }}>
         <button 
           className="section-toggle"
@@ -3861,37 +1869,22 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
             <div style={{
               width: isMobile ? '20px' : '24px',
               height: isMobile ? '20px' : '24px',
-              color: validationErrors > 0 ? 'var(--danger-color)' : 'var(--primary-color)',
+              color: 'var(--primary-color)',
               flexShrink: 0
             }}>{icon}</div>
-            <div style={{ textAlign: 'left', flex: 1 }}>
-              <h3 style={{
-                margin: 0,
-                fontSize: isMobile ? '16px' : '18px',
-                fontWeight: '700',
-                color: 'var(--text-primary)'
-              }}>{title}</h3>
-              {validationErrors > 0 && (
-                <div style={{
-                  fontSize: '12px',
-                  color: 'var(--danger-color)',
-                  marginTop: '2px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}>
-                  <AlertTriangle size={12} />
-                  {validationErrors} {language === 'fr' ? 'erreur(s)' : 'error(s)'}
-                </div>
-              )}
-            </div>
+            <h3 style={{
+              margin: 0,
+              fontSize: isMobile ? '16px' : '18px',
+              fontWeight: '700',
+              color: 'var(--text-primary)',
+              textAlign: 'left'
+            }}>{title}</h3>
           </div>
           <div style={{
             color: 'var(--text-muted)',
-            transition: 'transform 0.2s ease',
-            transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)'
+            transition: 'transform 0.2s ease'
           }}>
-            <ChevronDown size={20} />
+            {isCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
           </div>
         </button>
         
@@ -3907,37 +1900,30 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       </div>
     );
   };
-
-  // =================== COMPOSANT INDICATEUR DE VALIDATION AVANCÉ ===================
+  // =================== COMPOSANT INDICATEUR DE VALIDATION SANS POURCENTAGE ===================
   const ValidationIndicator = () => {
     const errors = validateSiteInformation();
     const isValid = errors.length === 0;
-    const completionPercentage = Math.max(0, Math.min(100, 
-      ((15 - errors.length) / 15) * 100 // Estimation basée sur ~15 champs requis
-    ));
 
     return (
       <div style={{
-        background: isValid ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+        background: 'var(--card-bg)',
         borderRadius: 'var(--radius)',
         padding: isMobile ? '16px' : '20px',
         marginBottom: '20px',
         borderLeft: `4px solid ${isValid ? 'var(--success-color)' : 'var(--danger-color)'}`,
-        border: `1px solid ${isValid ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+        backgroundColor: isValid ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'
       }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
-          marginBottom: errors.length > 0 ? '16px' : '8px'
+          marginBottom: errors.length > 0 ? '12px' : 0
         }}>
-          <div style={{ 
-            color: isValid ? 'var(--success-color)' : 'var(--danger-color)',
-            flexShrink: 0
-          }}>
-            {isValid ? <CheckCircle size={24} /> : <AlertTriangle size={24} />}
+          <div style={{ color: 'inherit' }}>
+            {isValid ? <CheckCircle size={24} color="#10b981" /> : <AlertTriangle size={24} color="#ef4444" />}
           </div>
-          <div style={{ flex: 1 }}>
+          <div>
             <h4 style={{
               margin: '0 0 4px',
               fontSize: isMobile ? '14px' : '16px',
@@ -3949,35 +1935,6 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
                 (language === 'fr' ? '⚠️ Informations Incomplètes' : '⚠️ Incomplete Information')
               }
             </h4>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginTop: '4px'
-            }}>
-              <div style={{
-                flex: 1,
-                height: '6px',
-                background: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: '3px',
-                overflow: 'hidden'
-              }}>
-                <div style={{
-                  height: '100%',
-                  background: isValid ? 'var(--success-color)' : 'var(--warning-color)',
-                  transition: 'width 0.3s ease',
-                  width: `${completionPercentage}%`
-                }} />
-              </div>
-              <span style={{
-                fontSize: '12px',
-                fontWeight: '600',
-                color: isValid ? '#86efac' : '#fbbf24',
-                minWidth: '35px'
-              }}>
-                {Math.round(completionPercentage)}%
-              </span>
-            </div>
           </div>
         </div>
 
@@ -3987,15 +1944,7 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
             flexDirection: 'column',
             gap: '8px'
           }}>
-            <h5 style={{
-              margin: '0 0 8px 0',
-              fontSize: '13px',
-              fontWeight: '600',
-              color: 'var(--danger-color)'
-            }}>
-              {language === 'fr' ? 'Éléments à compléter :' : 'Items to complete:'}
-            </h5>
-            {errors.slice(0, 5).map((error, index) => (
+            {errors.map((error, index) => (
               <div key={index} style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -4011,16 +1960,6 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
                 <span style={{ flex: 1, wordWrap: 'break-word' }}>{error}</span>
               </div>
             ))}
-            {errors.length > 5 && (
-              <div style={{
-                fontSize: '12px',
-                color: 'var(--text-muted)',
-                textAlign: 'center',
-                fontStyle: 'italic'
-              }}>
-                ... {language === 'fr' ? 'et' : 'and'} {errors.length - 5} {language === 'fr' ? 'autres' : 'more'}
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -4045,7 +1984,6 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       gap: isMobile ? '12px' : '16px',
       ...(isMobile ? {} : { justifyContent: 'center' })
     }}>
-      {/* Base de données */}
       <button
         onClick={() => setShowPermitDatabase(true)}
         style={{
@@ -4077,7 +2015,6 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
         {!isMobile && <span>{t.searchDatabase}</span>}
       </button>
 
-      {/* Sauvegarder */}
       <button
         onClick={handleSave}
         disabled={isSaving}
@@ -4091,7 +2028,7 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
             borderRadius: 'var(--radius-sm)'
           }),
           border: 'none',
-          cursor: isSaving ? 'not-allowed' : 'pointer',
+          cursor: 'pointer',
           transition: 'var(--transition)',
           display: 'flex',
           alignItems: 'center',
@@ -4111,7 +2048,6 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
         {!isMobile && <span>{isSaving ? t.saving : t.savePermit}</span>}
       </button>
 
-      {/* Imprimer */}
       <button
         onClick={handlePrintPermit}
         disabled={isGeneratingReport}
@@ -4125,7 +2061,7 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
             borderRadius: 'var(--radius-sm)'
           }),
           border: 'none',
-          cursor: isGeneratingReport ? 'not-allowed' : 'pointer',
+          cursor: 'pointer',
           transition: 'var(--transition)',
           display: 'flex',
           alignItems: 'center',
@@ -4145,7 +2081,6 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
         {!isMobile && <span>{t.printPermit}</span>}
       </button>
 
-      {/* Partager */}
       <button
         onClick={handleSharePermit}
         style={{
@@ -4176,50 +2111,6 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
         <Share size={16} />
         {!isMobile && <span>{t.sharePermit}</span>}
       </button>
-
-      {/* Menu supplémentaire pour mobile */}
-      {isMobile && (
-        <button
-          onClick={() => {
-            const menu = [
-              { label: t.emailPermit, action: handleEmailPermit, icon: '📧' },
-              { label: language === 'fr' ? 'Exporter JSON' : 'Export JSON', action: () => exportPermitData('json'), icon: '📄' },
-              { label: language === 'fr' ? 'Exporter CSV' : 'Export CSV', action: () => exportPermitData('csv'), icon: '📊' }
-            ];
-            
-            const choice = window.prompt(
-              `${language === 'fr' ? 'Actions supplémentaires' : 'Additional actions'}:\n` +
-              menu.map((item, index) => `${index + 1}. ${item.icon} ${item.label}`).join('\n') +
-              `\n\n${language === 'fr' ? 'Choisissez un numéro (1-3):' : 'Choose a number (1-3):'}`
-            );
-            
-            const index = parseInt(choice || '0') - 1;
-            if (index >= 0 && index < menu.length) {
-              menu[index].action();
-            }
-          }}
-          style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            border: 'none',
-            cursor: 'pointer',
-            transition: 'var(--transition)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: '600',
-            fontSize: '14px',
-            boxShadow: 'var(--shadow)',
-            touchAction: 'manipulation',
-            background: 'linear-gradient(135deg, #64748b, #475569)',
-            color: 'white'
-          }}
-          title={language === 'fr' ? 'Plus d\'actions' : 'More actions'}
-        >
-          <Menu size={16} />
-        </button>
-      )}
     </div>
   );
 
@@ -4256,21 +2147,36 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
           <select
             value={confinedSpaceDetails.csaClass}
             onChange={(e) => handleConfinedSpaceChange('csaClass', e.target.value)}
-            className="premium-select"
-            style={{ flex: isMobile ? 'none' : '1' }}
+            style={{
+              flex: isMobile ? 'none' : '1',
+              width: isMobile ? '100%' : 'auto',
+              padding: isMobile ? '12px 16px' : '14px 16px',
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '2px solid var(--border-color)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-primary)',
+              fontSize: isMobile ? '16px' : '15px',
+              fontWeight: '500',
+              transition: 'var(--transition)',
+              backdropFilter: 'blur(10px)',
+              minHeight: isMobile ? '48px' : '50px',
+              fontFamily: 'inherit',
+              WebkitAppearance: 'none',
+              appearance: 'none'
+            }}
           >
             <option value="">{t.select}</option>
-            <option value="class1">🔴 {t.csaClasses.class1}</option>
-            <option value="class2">🟡 {t.csaClasses.class2}</option>
-            <option value="class3">🟢 {t.csaClasses.class3}</option>
+            <option value="class1">{t.csaClasses.class1}</option>
+            <option value="class2">{t.csaClasses.class2}</option>
+            <option value="class3">{t.csaClasses.class3}</option>
           </select>
 
-          {/* Assistant de classification */}
+          {/* Assistant de classification à côté */}
           <button
             type="button"
             onClick={() => setShowClassificationWizard(true)}
             style={{
-              minWidth: isMobile ? '100%' : '140px',
+              minWidth: isMobile ? '100%' : '120px',
               whiteSpace: 'nowrap',
               padding: isMobile ? '12px 16px' : '14px 20px',
               borderRadius: 'var(--radius-sm)',
@@ -4311,49 +2217,1165 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
               fontWeight: '600',
               color: confinedSpaceDetails.csaClass === 'class1' ? '#fca5a5' : 
                      confinedSpaceDetails.csaClass === 'class2' ? '#fbbf24' : '#86efac',
-              marginBottom: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
+              marginBottom: '4px'
             }}>
-              <span>
-                {confinedSpaceDetails.csaClass === 'class1' ? '🔴' : 
-                 confinedSpaceDetails.csaClass === 'class2' ? '🟡' : '🟢'}
-              </span>
               {currentClassification.title}
             </div>
             <div style={{
               color: confinedSpaceDetails.csaClass === 'class1' ? '#fecaca' : 
-                     confinedSpaceDetails.csaClass === 'class2' ? '#fde68a' : '#bbf7d0',
-              marginBottom: '8px'
+                     confinedSpaceDetails.csaClass === 'class2' ? '#fde68a' : '#bbf7d0'
             }}>
               {currentClassification.description}
             </div>
-            {currentClassification.regulations && (
-              <div style={{
-                fontSize: '11px',
-                color: '#94a3b8',
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                paddingTop: '8px',
-                marginTop: '8px'
-              }}>
-                📋 {currentClassification.regulations.main} - {currentClassification.regulations.authority}
-              </div>
-            )}
           </div>
         )}
       </div>
     );
   };
-  // =================== CSS RESPONSIVE MOBILE ULTRA-OPTIMISÉ COMPLET ===================
+
+  // =================== COMPOSANT SÉLECTEUR DE FORME ET UNITÉS ===================
+  const DimensionsSelector = () => (
+    <div style={{
+      background: 'rgba(16, 185, 129, 0.1)',
+      border: '1px solid rgba(16, 185, 129, 0.3)',
+      borderRadius: 'var(--radius)',
+      padding: '20px'
+    }}>
+      {/* Sélecteurs de forme et unités */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+        gap: '16px',
+        marginBottom: '20px'
+      }}>
+        <div>
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            color: 'var(--text-secondary)',
+            fontSize: isMobile ? '14px' : '15px',
+            fontWeight: '600',
+            marginBottom: '8px'
+          }}>
+            <Layers style={{ width: '18px', height: '18px' }} />
+            {t.spaceShape}<span style={{ color: 'var(--danger-color)' }}>*</span>
+          </label>
+          <select
+            value={confinedSpaceDetails.dimensions.spaceShape}
+            onChange={(e) => handleConfinedSpaceChange('dimensions', {
+              ...confinedSpaceDetails.dimensions,
+              spaceShape: e.target.value as any,
+              volume: 0 // Reset volume when shape changes
+            })}
+            style={{
+              width: '100%',
+              padding: isMobile ? '12px 16px' : '14px 16px',
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '2px solid var(--border-color)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-primary)',
+              fontSize: isMobile ? '16px' : '15px',
+              fontWeight: '500',
+              transition: 'var(--transition)',
+              minHeight: isMobile ? '48px' : '50px'
+            }}
+          >
+            <option value="rectangular">📐 {t.rectangular}</option>
+            <option value="cylindrical">🔵 {t.cylindrical}</option>
+            <option value="spherical">⚪ {t.spherical}</option>
+            <option value="irregular">🔷 {t.irregular}</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            color: 'var(--text-secondary)',
+            fontSize: isMobile ? '14px' : '15px',
+            fontWeight: '600',
+            marginBottom: '8px'
+          }}>
+            <Ruler style={{ width: '18px', height: '18px' }} />
+            {t.unitSystem}
+          </label>
+          <select
+            value={confinedSpaceDetails.unitSystem}
+            onChange={(e) => {
+              const newSystem = e.target.value as UnitSystem;
+              convertUnits(confinedSpaceDetails.unitSystem, newSystem);
+            }}
+            style={{
+              width: '100%',
+              padding: isMobile ? '12px 16px' : '14px 16px',
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '2px solid var(--border-color)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-primary)',
+              fontSize: isMobile ? '16px' : '15px',
+              fontWeight: '500',
+              transition: 'var(--transition)',
+              minHeight: isMobile ? '48px' : '50px'
+            }}
+          >
+            <option value="metric">📏 {t.metric}</option>
+            <option value="imperial">📐 {t.imperial}</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Champs de dimensions adaptatifs */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+        gap: isMobile ? '12px' : '16px',
+        marginBottom: '20px'
+      }}>
+        {/* Longueur - toujours visible sauf pour sphérique */}
+        {confinedSpaceDetails.dimensions.spaceShape !== 'spherical' && (
+          <div>
+            <label style={{
+              color: 'var(--text-secondary)',
+              fontSize: isMobile ? '13px' : '14px',
+              fontWeight: '600',
+              marginBottom: '6px',
+              display: 'block'
+            }}>
+              {t.length} ({confinedSpaceDetails.unitSystem === 'metric' ? 'm' : 'ft'})
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={confinedSpaceDetails.dimensions.length || ''}
+              onChange={(e) => handleConfinedSpaceChange('dimensions', {
+                ...confinedSpaceDetails.dimensions,
+                length: parseFloat(e.target.value) || 0
+              })}
+              style={{
+                width: '100%',
+                padding: isMobile ? '10px 12px' : '12px 14px',
+                background: 'rgba(15, 23, 42, 0.8)',
+                border: '2px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-primary)',
+                fontSize: isMobile ? '15px' : '14px',
+                minHeight: isMobile ? '42px' : '44px'
+              }}
+            />
+          </div>
+        )}
+
+        {/* Largeur - seulement pour rectangulaire et irrégulier */}
+        {(confinedSpaceDetails.dimensions.spaceShape === 'rectangular' || 
+          confinedSpaceDetails.dimensions.spaceShape === 'irregular') && (
+          <div>
+            <label style={{
+              color: 'var(--text-secondary)',
+              fontSize: isMobile ? '13px' : '14px',
+              fontWeight: '600',
+              marginBottom: '6px',
+              display: 'block'
+            }}>
+              {t.width} ({confinedSpaceDetails.unitSystem === 'metric' ? 'm' : 'ft'})
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={confinedSpaceDetails.dimensions.width || ''}
+              onChange={(e) => handleConfinedSpaceChange('dimensions', {
+                ...confinedSpaceDetails.dimensions,
+                width: parseFloat(e.target.value) || 0
+              })}
+              style={{
+                width: '100%',
+                padding: isMobile ? '10px 12px' : '12px 14px',
+                background: 'rgba(15, 23, 42, 0.8)',
+                border: '2px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-primary)',
+                fontSize: isMobile ? '15px' : '14px',
+                minHeight: isMobile ? '42px' : '44px'
+              }}
+            />
+          </div>
+        )}
+
+        {/* Hauteur - pour toutes les formes sauf sphérique */}
+        {confinedSpaceDetails.dimensions.spaceShape !== 'spherical' && (
+          <div>
+            <label style={{
+              color: 'var(--text-secondary)',
+              fontSize: isMobile ? '13px' : '14px',
+              fontWeight: '600',
+              marginBottom: '6px',
+              display: 'block'
+            }}>
+              {t.height} ({confinedSpaceDetails.unitSystem === 'metric' ? 'm' : 'ft'})<span style={{ color: 'var(--danger-color)' }}>*</span>
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={confinedSpaceDetails.dimensions.height || ''}
+              onChange={(e) => handleConfinedSpaceChange('dimensions', {
+                ...confinedSpaceDetails.dimensions,
+                height: parseFloat(e.target.value) || 0
+              })}
+              style={{
+                width: '100%',
+                padding: isMobile ? '10px 12px' : '12px 14px',
+                background: 'rgba(15, 23, 42, 0.8)',
+                border: '2px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-primary)',
+                fontSize: isMobile ? '15px' : '14px',
+                minHeight: isMobile ? '42px' : '44px'
+              }}
+            />
+          </div>
+        )}
+
+        {/* Diamètre - pour cylindrique et sphérique */}
+        {(confinedSpaceDetails.dimensions.spaceShape === 'cylindrical' || 
+          confinedSpaceDetails.dimensions.spaceShape === 'spherical') && (
+          <div>
+            <label style={{
+              color: 'var(--text-secondary)',
+              fontSize: isMobile ? '13px' : '14px',
+              fontWeight: '600',
+              marginBottom: '6px',
+              display: 'block'
+            }}>
+              {t.diameter} ({confinedSpaceDetails.unitSystem === 'metric' ? 'm' : 'ft'})<span style={{ color: 'var(--danger-color)' }}>*</span>
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={confinedSpaceDetails.dimensions.diameter || ''}
+              onChange={(e) => handleConfinedSpaceChange('dimensions', {
+                ...confinedSpaceDetails.dimensions,
+                diameter: parseFloat(e.target.value) || 0
+              })}
+              style={{
+                width: '100%',
+                padding: isMobile ? '10px 12px' : '12px 14px',
+                background: 'rgba(15, 23, 42, 0.8)',
+                border: '2px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-primary)',
+                fontSize: isMobile ? '15px' : '14px',
+                minHeight: isMobile ? '42px' : '44px'
+              }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Bouton de calcul et affichage du volume */}
+      <div style={{ textAlign: 'center', margin: '20px 0' }}>
+        <button 
+          onClick={calculateVolume}
+          style={{
+            padding: isMobile ? '12px 20px' : '14px 24px',
+            borderRadius: 'var(--radius-sm)',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'var(--transition)',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            minHeight: isMobile ? '48px' : '50px',
+            fontSize: isMobile ? '14px' : '15px',
+            background: 'linear-gradient(135deg, var(--success-color), #059669)',
+            color: 'white',
+            boxShadow: 'var(--shadow-sm)',
+            margin: '0 auto'
+          }}
+        >
+          <Gauge size={20} />
+          {t.calculateVolume}
+        </button>
+      </div>
+
+      {/* Affichage du volume calculé */}
+      {confinedSpaceDetails.dimensions.volume > 0 && (
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.2)',
+          border: '1px solid rgba(16, 185, 129, 0.4)',
+          borderRadius: '12px',
+          padding: '16px',
+          textAlign: 'center'
+        }}>
+          <div style={{ 
+            fontSize: isMobile ? '20px' : '24px', 
+            fontWeight: '700', 
+            color: 'var(--success-color)', 
+            marginBottom: '4px'
+          }}>
+            {confinedSpaceDetails.dimensions.volume}
+          </div>
+          <div style={{ fontSize: '14px', color: '#6ee7b7' }}>
+            {confinedSpaceDetails.unitSystem === 'metric' ? 'm³' : 'ft³'} - {t.volume}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // =================== COMPOSANT QR CODE RÉEL ===================
+  const QRCodeDisplay = () => {
+    const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+
+    useEffect(() => {
+      if (permitData.permit_number) {
+        generatePermitQRCode(permitData.permit_number).then(setQrCodeDataUrl);
+      }
+    }, [permitData.permit_number]);
+
+    if (permitData.permit_number && qrCodeDataUrl) {
+      return (
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.1)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          borderRadius: '12px',
+          padding: '20px',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '16px',
+            borderRadius: '12px',
+            display: 'inline-block',
+            marginBottom: '16px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+          }}>
+            <img 
+              src={qrCodeDataUrl} 
+              alt={`QR Code pour ${permitData.permit_number}`}
+              style={{
+                width: isMobile ? '150px' : '200px',
+                height: isMobile ? '150px' : '200px',
+                display: 'block'
+              }}
+            />
+          </div>
+          <h4 style={{ color: '#10b981', margin: '0 0 8px 0', fontSize: isMobile ? '14px' : '16px' }}>
+            ✅ {language === 'fr' ? `QR Code généré pour : ${permitData.permit_number}` : `QR Code generated for: ${permitData.permit_number}`}
+          </h4>
+          <p style={{ color: '#6ee7b7', margin: 0, fontSize: '14px' }}>
+            {t.qrGenerated}
+          </p>
+          <div style={{
+            marginTop: '12px',
+            padding: '8px 12px',
+            background: 'rgba(16, 185, 129, 0.2)',
+            borderRadius: '6px',
+            fontSize: '12px',
+            color: '#047857'
+          }}>
+            📱 {language === 'fr' ? 'Scanner pour accès mobile instantané' : 'Scan for instant mobile access'}
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div style={{
+          background: 'rgba(59, 130, 246, 0.1)',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          borderRadius: '12px',
+          padding: '20px',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            width: isMobile ? '80px' : '100px',
+            height: isMobile ? '80px' : '100px',
+            background: 'rgba(59, 130, 246, 0.2)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px'
+          }}>
+            <QrCode size={isMobile ? 40 : 50} color="#3b82f6" />
+          </div>
+          <p style={{ color: '#93c5fd', margin: 0, fontSize: '14px' }}>
+            💡 {t.qrWillGenerate}
+          </p>
+        </div>
+      );
+    }
+  };
+  // =================== SAUVEGARDE AVEC SYNCHRONISATION UNIQUE ===================
+const handleSave = async () => {
+  const errors = validateSiteInformation();
+  
+  if (errors.length > 0) {
+    alert(`${t.validationError}:\n${errors.join('\n')}`);
+    return false;
+  }
+  
+  // SYNCHRONISER avec le parent SEULEMENT ici lors de la sauvegarde
+  updatePermitData({
+    ...confinedSpaceDetails,
+    spacePhotos
+  });
+  updateParentData('siteInformation', {
+    ...confinedSpaceDetails,
+    spacePhotos
+  });
+  
+  const permitNumber = await savePermitToDatabase();
+  if (permitNumber) {
+    return true;
+  }
+  
+  return false;
+};
+
+// =================== FONCTIONS DE BASE DE DONNÉES SANS EFFET DE BORD ===================
+const searchPermitsDatabase = async (query: string, page: number = 1): Promise<PermitSearchResult> => {
+  setIsSearching(true);
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    let queryBuilder = supabase
+      .from('confined_space_permits')
+      .select(`
+        id,
+        permit_number,
+        project_number,
+        work_location,
+        contractor,
+        supervisor,
+        space_type,
+        csa_class,
+        entry_date,
+        status,
+        created_at,
+        last_modified,
+        entry_count,
+        hazard_count,
+        qr_code
+      `)
+      .order('created_at', { ascending: false });
+
+    if (query.trim()) {
+      queryBuilder = queryBuilder.or(`
+        permit_number.ilike.%${query}%,
+        project_number.ilike.%${query}%,
+        work_location.ilike.%${query}%,
+        contractor.ilike.%${query}%,
+        supervisor.ilike.%${query}%
+      `);
+    }
+
+    queryBuilder = queryBuilder.eq('province', selectedProvince);
+
+    const startRange = (page - 1) * 10;
+    const endRange = page * 10 - 1;
+    queryBuilder = queryBuilder.range(startRange, endRange);
+
+    const { data, error, count } = await queryBuilder;
+
+    if (error) throw error;
+
+    const permits: PermitHistoryEntry[] = (data || []).map(permit => ({
+      id: permit.id,
+      permitNumber: permit.permit_number,
+      projectNumber: permit.project_number || '',
+      workLocation: permit.work_location || '',
+      contractor: permit.contractor || '',
+      spaceType: permit.space_type || '',
+      csaClass: permit.csa_class || '',
+      entryDate: permit.entry_date || '',
+      status: permit.status as any,
+      createdAt: permit.created_at,
+      lastModified: permit.last_modified,
+      entryCount: permit.entry_count || 0,
+      hazardCount: permit.hazard_count || 0,
+      qrCode: permit.qr_code
+    }));
+
+    return {
+      permits,
+      total: count || 0,
+      page: page,
+      hasMore: (count || 0) > page * 10
+    };
+
+  } catch (error) {
+    console.error('Erreur recherche base de données:', error);
+    return { permits: [], total: 0, page: 1, hasMore: false };
+  } finally {
+    setIsSearching(false);
+  }
+};
+
+// =================== SAUVEGARDE COMPLÈTE SANS RE-RENDER ===================
+const savePermitToDatabase = async (): Promise<string | null> => {
+  setIsSaving(true);
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    
+    const qrCodeDataUrl = await generatePermitQRCode(permitNumber);
+    
+    const permitToSave = {
+      permit_number: permitNumber,
+      project_number: confinedSpaceDetails.projectNumber,
+      work_location: confinedSpaceDetails.workLocation,
+      contractor: confinedSpaceDetails.contractor,
+      supervisor: confinedSpaceDetails.supervisor,
+      space_type: confinedSpaceDetails.spaceType,
+      csa_class: confinedSpaceDetails.csaClass,
+      entry_date: confinedSpaceDetails.entryDate,
+      duration: confinedSpaceDetails.duration,
+      worker_count: confinedSpaceDetails.workerCount,
+      work_description: confinedSpaceDetails.workDescription,
+      dimensions: confinedSpaceDetails.dimensions,
+      unit_system: confinedSpaceDetails.unitSystem,
+      entry_points: confinedSpaceDetails.entryPoints,
+      atmospheric_hazards: confinedSpaceDetails.atmosphericHazards,
+      physical_hazards: confinedSpaceDetails.physicalHazards,
+      environmental_conditions: confinedSpaceDetails.environmentalConditions,
+      space_content: confinedSpaceDetails.spaceContent,
+      safety_measures: confinedSpaceDetails.safetyMeasures,
+      space_photos: spacePhotos,
+      status: 'active',
+      province: selectedProvince,
+      authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente',
+      qr_code: qrCodeDataUrl,
+      entry_count: 0,
+      hazard_count: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length,
+      created_at: new Date().toISOString(),
+      last_modified: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('confined_space_permits')
+      .upsert(permitToSave, { 
+        onConflict: 'permit_number',
+        ignoreDuplicates: false 
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // PAS de updatePermitData ici pour éviter les re-renders
+    alert(`✅ ${t.saveSuccess}: ${permitNumber}`);
+    
+    return permitNumber;
+    
+  } catch (error) {
+    console.error('Erreur sauvegarde:', error);
+    alert(`❌ ${t.saveError}: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    return null;
+  } finally {
+    setIsSaving(false);
+  }
+};
+
+// =================== CHARGEMENT D'UN PERMIS EXISTANT ===================
+const loadPermitFromHistory = async (permitNumber: string) => {
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const { data, error } = await supabase
+      .from('confined_space_permits')
+      .select('*')
+      .eq('permit_number', permitNumber)
+      .single();
+
+    if (error) throw error;
+
+    if (data) {
+      const loadedPermit: ConfinedSpaceDetails = {
+        projectNumber: data.project_number || '',
+        workLocation: data.work_location || '',
+        contractor: data.contractor || '',
+        supervisor: data.supervisor || '',
+        entryDate: data.entry_date || '',
+        duration: data.duration || '',
+        workerCount: data.worker_count || 1,
+        workDescription: data.work_description || '',
+        spaceType: data.space_type || '',
+        csaClass: data.csa_class || '',
+        entryMethod: data.entry_method || '',
+        accessType: data.access_type || '',
+        spaceLocation: data.space_location || '',
+        spaceDescription: data.space_description || '',
+        dimensions: data.dimensions || {
+          length: 0, width: 0, height: 0, diameter: 0, volume: 0, spaceShape: 'rectangular'
+        },
+        unitSystem: data.unit_system || 'metric',
+        entryPoints: data.entry_points || [{
+          id: 'entry-1', type: 'circular', dimensions: '', location: '', 
+          condition: 'good', accessibility: 'normal', photos: []
+        }],
+        atmosphericHazards: data.atmospheric_hazards || [],
+        physicalHazards: data.physical_hazards || [],
+        environmentalConditions: data.environmental_conditions || {
+          ventilationRequired: false, ventilationType: '', lightingConditions: '',
+          temperatureRange: '', moistureLevel: '', noiseLevel: '', weatherConditions: ''
+        },
+        spaceContent: data.space_content || {
+          contents: '', residues: '', previousUse: '', lastEntry: '', cleaningStatus: ''
+        },
+        safetyMeasures: data.safety_measures || {
+          emergencyEgress: '', communicationMethod: '', 
+          monitoringEquipment: [], ventilationEquipment: [], emergencyEquipment: []
+        },
+        spacePhotos: data.space_photos || []
+      };
+
+      // CHARGEMENT DIRECT sans re-render
+      setConfinedSpaceDetails(loadedPermit);
+      setSpacePhotos(data.space_photos || []);
+      
+      alert(`✅ Permis ${permitNumber} chargé: ${loadedPermit.projectNumber} - ${loadedPermit.workLocation}`);
+    }
+    
+    setShowPermitDatabase(false);
+    
+  } catch (error) {
+    console.error('Erreur chargement permis:', error);
+    alert(`❌ Erreur chargement: Impossible de charger le permis ${permitNumber}`);
+  }
+};
+
+// =================== GÉNÉRATION QR CODE HAUTE QUALITÉ POUR IMPRESSION ===================
+const generatePermitQRCodeForPrint = async (permitNumber: string): Promise<string> => {
+  try {
+    const QRCode = (await import('qrcode')).default;
+    
+    const permitUrl = `${window.location.origin}/permits/confined-space/${permitNumber}`;
+    
+    const qrData = {
+      permitNumber,
+      type: 'confined_space',
+      province: selectedProvince,
+      authority: PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente',
+      issueDate: new Date().toISOString(),
+      url: permitUrl,
+      projectNumber: confinedSpaceDetails.projectNumber,
+      location: confinedSpaceDetails.workLocation,
+      contractor: confinedSpaceDetails.contractor,
+      spaceType: confinedSpaceDetails.spaceType,
+      csaClass: confinedSpaceDetails.csaClass,
+      hazardCount: confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length
+    };
+    
+    const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
+      errorCorrectionLevel: 'H',
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      },
+      width: 512
+    });
+    
+    return qrCodeDataUrl;
+  } catch (error) {
+    console.error('Erreur génération QR Code pour impression:', error);
+    return '';
+  }
+};
+
+// =================== GÉNÉRATION DE RAPPORT PROFESSIONNEL COMPLET ===================
+const generateCompletePermitReport = async (): Promise<PermitReport> => {
+  const permitNumber = permitData.permit_number || `CS-${selectedProvince}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  
+  const csaClassifications = getCSAClassifications(selectedProvince, language);
+  const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
+  
+  const provinceAuthority = PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente';
+  
+  return {
+    metadata: {
+      permitNumber,
+      issueDate: new Date().toISOString(),
+      province: selectedProvince,
+      authority: provinceAuthority,
+      generatedAt: new Date().toISOString(),
+      version: '2.0',
+      language,
+      companyLogo: '/c-secur360-logo.png',
+      qrCode: await generatePermitQRCodeForPrint(permitNumber),
+      classification: currentClassification
+    },
+    siteInformation: {
+      ...confinedSpaceDetails,
+      spacePhotos: spacePhotos,
+      csaClassification: currentClassification,
+      provincialRegulations: currentClassification?.regulations
+    },
+    atmosphericTesting: permitData.atmosphericTesting || {},
+    entryRegistry: permitData.entryRegistry || {},
+    rescuePlan: permitData.rescuePlan || {},
+    validationChecklist: generateValidationChecklist()
+  };
+};
+
+// =================== GÉNÉRATION CHECKLIST DE VALIDATION ===================
+const generateValidationChecklist = () => {
+  const csaClassifications = getCSAClassifications(selectedProvince, language);
+  const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
+  
+  const baseChecklist = [
+    {
+      category: language === 'fr' ? 'Tests Atmosphériques' : 'Atmospheric Testing',
+      items: [
+        language === 'fr' ? 'Tests d\'oxygène (19.5% - 23%)' : 'Oxygen testing (19.5% - 23%)',
+        language === 'fr' ? 'Tests de gaz inflammables (<10% LIE)' : 'Flammable gas testing (<10% LEL)',
+        language === 'fr' ? 'Tests de gaz toxiques (H2S, CO)' : 'Toxic gas testing (H2S, CO)',
+        (currentClassification?.regulations as any)?.testing || (language === 'fr' ? 'Surveillance selon réglementation' : 'Monitoring per regulations')
+      ]
+    },
+    {
+      category: language === 'fr' ? 'Personnel et Formation' : 'Personnel and Training',
+      items: [
+        (currentClassification?.regulations as any)?.attendant || (language === 'fr' ? 'Personnel qualifié requis' : 'Qualified personnel required'),
+        language === 'fr' ? 'Formation sur les dangers spécifiques' : 'Training on specific hazards',
+        language === 'fr' ? 'Certification des équipements' : 'Equipment certification',
+        (currentClassification?.regulations as any)?.rescue || (language === 'fr' ? 'Plan de sauvetage établi' : 'Rescue plan established')
+      ]
+    },
+    {
+      category: language === 'fr' ? 'Équipements de Sécurité' : 'Safety Equipment',
+      items: [
+        language === 'fr' ? 'Équipement de surveillance atmosphérique' : 'Atmospheric monitoring equipment',
+        language === 'fr' ? 'Équipement de protection individuelle' : 'Personal protective equipment',
+        language === 'fr' ? 'Système de communication' : 'Communication system',
+        language === 'fr' ? 'Équipement de sauvetage d\'urgence' : 'Emergency rescue equipment'
+      ]
+    }
+  ];
+
+  return baseChecklist;
+};
+
+// =================== IMPRESSION LÉGALE PROFESSIONNELLE ===================
+const handlePrintPermit = async () => {
+  setIsGeneratingReport(true);
+  try {
+    const report = await generateCompletePermitReport();
+    const csaClassifications = getCSAClassifications(selectedProvince, language);
+    const currentClassification = csaClassifications[confinedSpaceDetails.csaClass as keyof typeof csaClassifications];
+    
+    const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="${language}">
+          <head>
+            <title>Permis d'Espace Clos - ${report.metadata.permitNumber}</title>
+            <meta charset="utf-8">
+            <style>
+              @page { size: A4; margin: 15mm; }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { 
+                font-family: Arial, sans-serif; 
+                font-size: 11pt; 
+                line-height: 1.4; 
+                color: #000; 
+                background: white; 
+              }
+              .header { 
+                border-bottom: 4px solid #dc2626; 
+                padding: 20px; 
+                margin-bottom: 25px; 
+                text-align: center; 
+              }
+              .permit-number { 
+                font-size: 24pt; 
+                font-weight: bold; 
+                color: #dc2626; 
+                margin-bottom: 10px; 
+              }
+              .info-grid { 
+                display: grid; 
+                grid-template-columns: 1fr 1fr; 
+                gap: 15px; 
+                margin: 20px 0; 
+              }
+              .info-item { 
+                border: 1px solid #ccc; 
+                padding: 10px; 
+                border-radius: 4px; 
+              }
+              .label { 
+                font-weight: bold; 
+                color: #333; 
+                font-size: 9pt; 
+                margin-bottom: 3px; 
+              }
+              .value { 
+                color: #000; 
+                font-size: 11pt; 
+              }
+              .qr-section { 
+                text-align: center; 
+                margin: 30px 0; 
+                border: 2px solid #3b82f6; 
+                padding: 20px; 
+                border-radius: 8px; 
+              }
+              .signatures { 
+                display: grid; 
+                grid-template-columns: 1fr 1fr; 
+                gap: 20px; 
+                margin-top: 30px; 
+              }
+              .signature-box { 
+                border: 1px solid #ccc; 
+                padding: 15px; 
+                min-height: 100px; 
+              }
+              .signature-line { 
+                border-bottom: 1px solid #000; 
+                margin-top: 50px; 
+                margin-bottom: 5px; 
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="permit-number">🚨 ${language === 'fr' ? 'PERMIS D\'ENTRÉE EN ESPACE CLOS' : 'CONFINED SPACE ENTRY PERMIT'}</div>
+              <div>${report.metadata.permitNumber}</div>
+            </div>
+
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="label">${language === 'fr' ? 'Province/Autorité' : 'Province/Authority'}</div>
+                <div class="value">${selectedProvince} - ${report.metadata.authority}</div>
+              </div>
+              <div class="info-item">
+                <div class="label">${language === 'fr' ? 'Date d\'émission' : 'Issue Date'}</div>
+                <div class="value">${new Date(report.metadata.issueDate).toLocaleDateString()}</div>
+              </div>
+              <div class="info-item">
+                <div class="label">${language === 'fr' ? 'Projet' : 'Project'}</div>
+                <div class="value">${report.siteInformation.projectNumber || 'N/A'}</div>
+              </div>
+              <div class="info-item">
+                <div class="label">${language === 'fr' ? 'Lieu' : 'Location'}</div>
+                <div class="value">${report.siteInformation.workLocation || 'N/A'}</div>
+              </div>
+              <div class="info-item">
+                <div class="label">${language === 'fr' ? 'Classification' : 'Classification'}</div>
+                <div class="value">${currentClassification?.title || 'Non définie'}</div>
+              </div>
+              <div class="info-item">
+                <div class="label">${language === 'fr' ? 'Volume' : 'Volume'}</div>
+                <div class="value">${report.siteInformation.dimensions?.volume || 0} ${report.siteInformation.unitSystem === 'metric' ? 'm³' : 'ft³'}</div>
+              </div>
+            </div>
+
+            <div class="qr-section">
+              ${report.metadata.qrCode ? `<img src="${report.metadata.qrCode}" alt="QR Code" style="width: 150px; height: 150px;" />` : '<div>QR Code indisponible</div>'}
+              <div style="margin-top: 10px; font-weight: bold;">📱 ${language === 'fr' ? 'Scanner pour accès mobile' : 'Scan for mobile access'}</div>
+            </div>
+
+            <div class="signatures">
+              <div class="signature-box">
+                <div style="font-weight: bold; margin-bottom: 10px;">
+                  ${language === 'fr' ? 'Superviseur / Personne Compétente' : 'Supervisor / Competent Person'}
+                </div>
+                <div class="signature-line"></div>
+                <div style="font-size: 8pt; color: #666;">
+                  ${language === 'fr' ? 'Nom et signature' : 'Name and signature'}
+                </div>
+              </div>
+              <div class="signature-box">
+                <div style="font-weight: bold; margin-bottom: 10px;">
+                  ${language === 'fr' ? 'Surveillant d\'Espace Clos' : 'Confined Space Attendant'}
+                </div>
+                <div class="signature-line"></div>
+                <div style="font-size: 8pt; color: #666;">
+                  ${language === 'fr' ? 'Nom et signature' : 'Name and signature'}
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 30px; text-align: center; border-top: 2px solid #ccc; padding-top: 20px; font-size: 9pt; color: #666;">
+              <strong>C-SECUR360</strong> - ${language === 'fr' ? 'Document généré le' : 'Document generated on'} ${new Date().toLocaleDateString()}
+            </div>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      
+      setTimeout(() => {
+        printWindow.print();
+      }, 1000);
+    }
+  } finally {
+    setIsGeneratingReport(false);
+  }
+};
+
+// =================== ENVOI EMAIL ET PARTAGE ===================
+const handleEmailPermit = async () => {
+  const subject = `${language === 'fr' ? 'Permis d\'Espace Clos' : 'Confined Space Permit'} - ${permitData.permit_number || 'Nouveau'}`;
+  const body = `${language === 'fr' ? 'Permis d\'entrée en espace clos' : 'Confined space entry permit'}:
+  
+📋 ${confinedSpaceDetails.projectNumber}
+📍 ${confinedSpaceDetails.workLocation}
+🏗️ ${confinedSpaceDetails.contractor}`;
+  
+  const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(mailtoLink);
+};
+
+const handleSharePermit = async () => {
+  const shareData = {
+    title: `${language === 'fr' ? 'Permis Espace Clos' : 'Confined Space Permit'}`,
+    text: `📋 ${confinedSpaceDetails.projectNumber}
+📍 ${confinedSpaceDetails.workLocation}
+🏗️ ${confinedSpaceDetails.contractor}`,
+    url: window.location.href
+  };
+  
+  if (navigator.share && isMobile) {
+    try {
+      await navigator.share(shareData);
+    } catch (error) {
+      console.log('Partage annulé');
+    }
+  } else if (navigator.clipboard) {
+    const textToShare = `${shareData.title}\n\n${shareData.text}\n\n🔗 ${shareData.url}`;
+    await navigator.clipboard.writeText(textToShare);
+    alert(`✅ ${language === 'fr' ? 'Copié dans le presse-papiers' : 'Copied to clipboard'}`);
+  }
+};
+
+// =================== GESTION DES PHOTOS SANS RE-RENDER ===================
+const handlePhotoCapture = async (category: string) => {
+  if (photoInputRef.current) {
+    photoInputRef.current.accept = "image/*";
+    photoInputRef.current.capture = "environment";
+    photoInputRef.current.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const newPhoto: SpacePhoto = {
+            id: `photo-${Date.now()}`,
+            url: event.target?.result as string,
+            category,
+            caption: `${t.photoCategories?.[category as keyof typeof t.photoCategories] || category} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
+            timestamp: new Date().toISOString(),
+            location: 'Localisation en cours...',
+            measurements: category === 'interior' || category === 'entry' ? 'Mesures à ajouter' : undefined
+          };
+
+          // Géolocalisation
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                newPhoto.location = `GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
+                newPhoto.gpsCoords = {
+                  lat: position.coords.latitude,
+                  lng: position.coords.longitude
+                };
+                // SEULEMENT mise à jour locale des photos
+                setSpacePhotos(prev => [...prev, newPhoto]);
+              }, 
+              () => {
+                newPhoto.location = 'Localisation non disponible';
+                // SEULEMENT mise à jour locale des photos
+                setSpacePhotos(prev => [...prev, newPhoto]);
+              },
+              { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+            );
+          } else {
+            newPhoto.location = 'Géolocalisation non supportée';
+            // SEULEMENT mise à jour locale des photos
+            setSpacePhotos(prev => [...prev, newPhoto]);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    photoInputRef.current.click();
+  }
+};
+
+// =================== RECHERCHE DANS LA BASE DE DONNÉES ===================
+const handleSearch = async (query: string) => {
+  if (query.trim().length < 2) {
+    setSearchResults({ permits: [], total: 0, page: 1, hasMore: false });
+    return;
+  }
+  
+  const results = await searchPermitsDatabase(query);
+  setSearchResults(results);
+};
+  // =================== COMPOSANT CARROUSEL PHOTOS OPTIMISÉ MOBILE ===================
+  const PhotoCarousel = ({ photos, onAddPhoto, category }: {
+    photos: SpacePhoto[];
+    onAddPhoto: () => void;
+    category?: string;
+  }) => {
+    const currentIndex = currentPhotoIndex;
+    const totalSlides = photos.length + 1;
+
+    const nextSlide = () => setCurrentPhotoIndex((currentIndex + 1) % totalSlides);
+    const prevSlide = () => setCurrentPhotoIndex(currentIndex === 0 ? totalSlides - 1 : currentIndex - 1);
+    const goToSlide = (index: number) => setCurrentPhotoIndex(index);
+
+    return (
+      <div className="photo-carousel">
+        <div className="carousel-container">
+          <div className="carousel-track" style={{ transform: `translateX(-${currentIndex * 100}%)` }}>
+            {photos.map((photo: SpacePhoto, index: number) => (
+              <div key={photo.id} className="carousel-slide">
+                <img src={photo.url} alt={photo.caption} />
+                <div className="photo-info">
+                  <div className="photo-caption">
+                    <h4>{t.photoCategories[photo.category as keyof typeof t.photoCategories] || photo.category}</h4>
+                    <p>{new Date(photo.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}</p>
+                    {photo.gpsCoords && (
+                      <p className="gps-coords">
+                        📍 GPS: {photo.gpsCoords.lat.toFixed(6)}, {photo.gpsCoords.lng.toFixed(6)}
+                      </p>
+                    )}
+                    {photo.measurements && (
+                      <p className="measurements">📏 {photo.measurements}</p>
+                    )}
+                  </div>
+                  <div className="photo-actions">
+                    <button 
+                      className="photo-action-btn edit" 
+                      onClick={() => {
+                        const newCaption = prompt(
+                          language === 'fr' ? 'Nouvelle légende:' : 'New caption:', 
+                          photo.caption
+                        );
+                        if (newCaption) {
+                          const updatedPhotos = spacePhotos.map(p => 
+                            p.id === photo.id ? { ...p, caption: newCaption } : p
+                          );
+                          setSpacePhotos(updatedPhotos);
+                        }
+                      }}
+                      title={language === 'fr' ? "Modifier la légende" : "Edit caption"}
+                    >
+                      <Settings size={14} />
+                    </button>
+                    <button 
+                      className="photo-action-btn delete" 
+                      onClick={() => {
+                        if (confirm(language === 'fr' ? 'Supprimer cette photo?' : 'Delete this photo?')) {
+                          const updatedPhotos = spacePhotos.filter(p => p.id !== photo.id);
+                          setSpacePhotos(updatedPhotos);
+                          updatePermitData({ spacePhotos: updatedPhotos });
+                        }
+                      }} 
+                      title={language === 'fr' ? "Supprimer cette photo" : "Delete this photo"}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div className="carousel-slide add-photo" onClick={onAddPhoto}>
+              <div className="add-photo-content">
+                <div className="add-photo-icon">
+                  <Camera size={isMobile ? 20 : 24} />
+                </div>
+                <h4>{t.addPhoto}</h4>
+                <p>{t.takePhoto}</p>
+              </div>
+            </div>
+          </div>
+          {totalSlides > 1 && (
+            <>
+              <button 
+                className="carousel-nav prev" 
+                onClick={prevSlide} 
+                disabled={totalSlides <= 1}
+                aria-label={language === 'fr' ? 'Photo précédente' : 'Previous photo'}
+              >
+                <ArrowLeft size={isMobile ? 16 : 20} />
+              </button>
+              <button 
+                className="carousel-nav next" 
+                onClick={nextSlide} 
+                disabled={totalSlides <= 1}
+                aria-label={language === 'fr' ? 'Photo suivante' : 'Next photo'}
+              >
+                <ArrowRight size={isMobile ? 16 : 20} />
+              </button>
+            </>
+          )}
+          {totalSlides > 1 && (
+            <div className="carousel-indicators">
+              {Array.from({ length: totalSlides }).map((_, index) => (
+                <button
+                  key={index}
+                  className={`carousel-indicator ${index === currentIndex ? 'active' : ''}`}
+                  onClick={() => goToSlide(index)}
+                  aria-label={`${language === 'fr' ? 'Aller à la photo' : 'Go to photo'} ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // =================== COMPOSANT PLACEHOLDER PHOTOS VIDES ===================
+  const EmptyPhotoPlaceholder = ({ 
+    onClick, 
+    title, 
+    description, 
+    color = "#60a5fa" 
+  }: {
+    onClick: () => void;
+    title: string;
+    description: string;
+    color?: string;
+  }) => (
+    <div 
+      className="empty-photo-placeholder"
+      style={{ borderColor: `${color}50`, background: `${color}20` }}
+      onClick={onClick}
+    >
+      <Camera size={isMobile ? 28 : 32} color={color} />
+      <h4 style={{ color }}>{title}</h4>
+      <p>{description}</p>
+    </div>
+  );
+
+  // =================== CSS RESPONSIVE MOBILE OPTIMISÉ ===================
   const mobileOptimizedStyles = `
     :root {
       --primary-color: #3b82f6;
       --success-color: #10b981;
       --danger-color: #ef4444;
       --warning-color: #f59e0b;
-      --info-color: #06b6d4;
-      --purple-color: #8b5cf6;
       --dark-bg: #111827;
       --card-bg: #1f2937;
       --border-color: #374151;
@@ -4362,20 +3384,9 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       --text-muted: #9ca3af;
       --radius: 12px;
       --radius-sm: 8px;
-      --radius-lg: 16px;
       --shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
       --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.15);
-      --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.4);
       --transition: all 0.3s ease;
-      --transition-fast: all 0.15s ease;
-      --gradient-primary: linear-gradient(135deg, var(--primary-color), #2563eb);
-      --gradient-success: linear-gradient(135deg, var(--success-color), #059669);
-      --gradient-danger: linear-gradient(135deg, var(--danger-color), #dc2626);
-      --gradient-warning: linear-gradient(135deg, var(--warning-color), #d97706);
-    }
-
-    * {
-      box-sizing: border-box;
     }
 
     .site-information-container {
@@ -4385,12 +3396,10 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       background: var(--dark-bg);
       min-height: 100vh;
       color: var(--text-primary);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       overflow-x: hidden;
-      line-height: 1.5;
     }
 
-    /* =================== GRILLES RESPONSIVES =================== */
     .premium-grid {
       display: grid;
       grid-template-columns: ${isMobile ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))'};
@@ -4420,14 +3429,6 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       align-items: start;
     }
 
-    .six-column {
-      display: grid;
-      grid-template-columns: ${isMobile ? 'repeat(2, 1fr)' : 'repeat(6, 1fr)'};
-      gap: ${isMobile ? '8px' : '12px'};
-      align-items: start;
-    }
-
-    /* =================== SECTIONS COLLAPSIBLES =================== */
     .collapsible-section {
       background: rgba(31, 41, 59, 0.6);
       backdrop-filter: blur(20px);
@@ -4443,28 +3444,6 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       box-shadow: var(--shadow);
     }
 
-    .section-toggle {
-      width: 100%;
-      background: transparent;
-      border: none;
-      color: var(--text-primary);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      transition: var(--transition);
-      touch-action: manipulation;
-    }
-
-    .section-toggle:hover {
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    .section-toggle:active {
-      transform: scale(0.98);
-    }
-
-    /* =================== FORMULAIRES =================== */
     .form-field {
       margin-bottom: ${isMobile ? '16px' : '20px'};
       display: flex;
@@ -4511,23 +3490,15 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       background: rgba(15, 23, 42, 0.9);
     }
 
-    .premium-input:invalid {
-      border-color: var(--danger-color);
-    }
-
     .premium-textarea {
       min-height: ${isMobile ? '100px' : '120px'};
       resize: vertical;
-      line-height: 1.5;
     }
 
-    /* =================== BOUTONS =================== */
     .btn-primary,
     .btn-success,
     .btn-danger,
-    .btn-warning,
-    .btn-secondary,
-    .btn-outline {
+    .btn-secondary {
       padding: ${isMobile ? '12px 16px' : '14px 20px'};
       border-radius: var(--radius-sm);
       font-weight: 600;
@@ -4543,29 +3514,22 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       touch-action: manipulation;
       text-decoration: none;
       user-select: none;
-      font-family: inherit;
     }
 
     .btn-primary {
-      background: var(--gradient-primary);
+      background: linear-gradient(135deg, var(--primary-color), #2563eb);
       color: white;
       box-shadow: var(--shadow-sm);
     }
 
     .btn-success {
-      background: var(--gradient-success);
+      background: linear-gradient(135deg, var(--success-color), #059669);
       color: white;
       box-shadow: var(--shadow-sm);
     }
 
     .btn-danger {
-      background: var(--gradient-danger);
-      color: white;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .btn-warning {
-      background: var(--gradient-warning);
+      background: linear-gradient(135deg, var(--danger-color), #dc2626);
       color: white;
       box-shadow: var(--shadow-sm);
     }
@@ -4576,50 +3540,24 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       border: 1px solid var(--border-color);
     }
 
-    .btn-outline {
-      background: transparent;
-      color: var(--primary-color);
-      border: 2px solid var(--primary-color);
-    }
-
     .btn-primary:hover,
     .btn-success:hover,
     .btn-danger:hover,
-    .btn-warning:hover {
+    .btn-secondary:hover {
       transform: ${isMobile ? 'none' : 'translateY(-2px)'};
       box-shadow: var(--shadow);
-    }
-
-    .btn-secondary:hover,
-    .btn-outline:hover {
-      background: rgba(255, 255, 255, 0.05);
-      transform: ${isMobile ? 'none' : 'translateY(-1px)'};
     }
 
     .btn-primary:active,
     .btn-success:active,
     .btn-danger:active,
-    .btn-warning:active,
-    .btn-secondary:active,
-    .btn-outline:active {
+    .btn-secondary:active {
       transform: scale(0.98);
     }
 
-    .btn-primary:disabled,
-    .btn-success:disabled,
-    .btn-danger:disabled,
-    .btn-warning:disabled,
-    .btn-secondary:disabled,
-    .btn-outline:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    /* =================== CARROUSEL PHOTOS =================== */
     .photo-carousel {
       position: relative;
-      margin: 20px 0;
+      margin-top: 16px;
       background: rgba(15, 23, 42, 0.8);
       border: 1px solid var(--border-color);
       border-radius: var(--radius);
@@ -4629,7 +3567,7 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
     .carousel-container {
       position: relative;
       width: 100%;
-      height: ${isMobile ? '300px' : '400px'};
+      height: ${isMobile ? '250px' : '350px'};
       overflow: hidden;
     }
 
@@ -4679,8 +3617,8 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
     }
 
     .add-photo-icon {
-      width: ${isMobile ? '48px' : '56px'};
-      height: ${isMobile ? '48px' : '56px'};
+      width: ${isMobile ? '40px' : '48px'};
+      height: ${isMobile ? '40px' : '48px'};
       background: rgba(59, 130, 246, 0.2);
       border-radius: 50%;
       display: flex;
@@ -4829,7 +3767,6 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       border-color: var(--primary-color);
     }
 
-    /* =================== PLACEHOLDERS =================== */
     .empty-photo-placeholder {
       border: 2px dashed;
       border-radius: var(--radius);
@@ -4845,11 +3782,6 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       justify-content: center;
     }
 
-    .empty-photo-placeholder:hover {
-      transform: ${isMobile ? 'none' : 'translateY(-2px)'};
-      box-shadow: var(--shadow-sm);
-    }
-
     .empty-photo-placeholder h4 {
       margin: 0;
       font-size: ${isMobile ? '14px' : '16px'};
@@ -4862,33 +3794,29 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       color: var(--text-muted);
     }
 
-    /* =================== BOUTONS CAPTURE PHOTO =================== */
     .photo-capture-btn {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
       padding: ${isMobile ? '8px 12px' : '10px 16px'};
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
       border-radius: var(--radius-sm);
+      color: var(--primary-color);
       cursor: pointer;
       transition: var(--transition);
       font-size: ${isMobile ? '12px' : '13px'};
       font-weight: 600;
       min-height: ${isMobile ? '36px' : '40px'};
-      touch-action: manipulation;
-      border: 1px solid;
     }
 
     .photo-capture-btn:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
       transform: ${isMobile ? 'none' : 'translateY(-1px)'};
-      box-shadow: var(--shadow-sm);
     }
 
-    .photo-capture-btn:active {
-      transform: scale(0.98);
-    }
-
-    /* =================== ANIMATIONS ET TRANSITIONS =================== */
     .spinner {
       width: 16px;
       height: 16px;
@@ -4914,199 +3842,6 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       }
     }
 
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    .fade-in {
-      animation: fadeIn 0.3s ease;
-    }
-
-    .slide-up {
-      animation: slideUp 0.3s ease;
-    }
-
-    .pulse {
-      animation: pulse 2s infinite;
-    }
-
-    /* =================== SÉLECTEURS DE TYPES D'ESPACES =================== */
-    .space-type-grid {
-      display: grid;
-      grid-template-columns: ${isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)'};
-      gap: 12px;
-      margin: 16px 0;
-    }
-
-    .space-type-card {
-      padding: 16px 12px;
-      border: 2px solid var(--border-color);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: var(--transition);
-      text-align: center;
-      min-height: 80px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background: rgba(15, 23, 42, 0.8);
-    }
-
-    .space-type-card:hover {
-      transform: ${isMobile ? 'none' : 'translateY(-2px)'};
-      box-shadow: var(--shadow-sm);
-    }
-
-    .space-type-card.selected {
-      border-color: var(--primary-color);
-      background: rgba(59, 130, 246, 0.2);
-    }
-
-    .space-type-emoji {
-      font-size: 24px;
-      margin-bottom: 4px;
-    }
-
-    .space-type-label {
-      font-size: ${isMobile ? '12px' : '13px'};
-      font-weight: 600;
-      text-align: center;
-      word-wrap: break-word;
-      hyphens: auto;
-    }
-
-    /* =================== SÉLECTEURS DE DANGERS =================== */
-    .hazard-grid {
-      display: grid;
-      grid-template-columns: ${isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))'};
-      gap: 12px;
-    }
-
-    .hazard-item {
-      padding: 12px;
-      border: 2px solid var(--border-color);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: var(--transition);
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      background: rgba(15, 23, 42, 0.8);
-    }
-
-    .hazard-item:hover {
-      background: rgba(15, 23, 42, 0.9);
-    }
-
-    .hazard-item.selected {
-      border-color: var(--danger-color);
-      background: rgba(239, 68, 68, 0.1);
-    }
-
-    .hazard-checkbox {
-      width: 20px;
-      height: 20px;
-      border: 2px solid var(--border-color);
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      margin-top: 2px;
-      transition: var(--transition);
-    }
-
-    .hazard-item.selected .hazard-checkbox {
-      border-color: var(--danger-color);
-      background: var(--danger-color);
-    }
-
-    .hazard-label {
-      font-size: ${isMobile ? '13px' : '14px'};
-      font-weight: 500;
-      line-height: 1.4;
-      word-wrap: break-word;
-      hyphens: auto;
-      flex: 1;
-    }
-
-    .hazard-item.selected .hazard-label {
-      color: #fecaca;
-    }
-
-    /* =================== INDICATEURS DE VALIDATION =================== */
-    .validation-indicator {
-      border-radius: var(--radius);
-      padding: ${isMobile ? '16px' : '20px'};
-      margin-bottom: 20px;
-      border-left: 4px solid;
-    }
-
-    .validation-indicator.valid {
-      background: rgba(16, 185, 129, 0.1);
-      border-left-color: var(--success-color);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-
-    .validation-indicator.invalid {
-      background: rgba(239, 68, 68, 0.1);
-      border-left-color: var(--danger-color);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-    }
-
-    .validation-progress {
-      height: 6px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 3px;
-      overflow: hidden;
-      margin: 8px 0;
-    }
-
-    .validation-progress-bar {
-      height: 100%;
-      transition: width 0.3s ease;
-      border-radius: 3px;
-    }
-
-    .validation-errors {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .validation-error {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: ${isMobile ? '12px' : '13px'};
-      color: var(--danger-color);
-      padding: 6px 12px;
-      background: rgba(239, 68, 68, 0.1);
-      border-radius: 6px;
-      border: 1px solid rgba(239, 68, 68, 0.2);
-    }
-
-    /* =================== RESPONSIVE DESIGN =================== */
     @media (max-width: 768px) {
       .premium-grid {
         grid-template-columns: 1fr;
@@ -5115,24 +3850,15 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       
       .two-column,
       .three-column,
-      .four-column,
-      .six-column {
+      .four-column {
         grid-template-columns: 1fr;
         gap: 12px;
-      }
-      
-      .space-type-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      
-      .hazard-grid {
-        grid-template-columns: 1fr;
       }
       
       .premium-input,
       .premium-select,
       .premium-textarea {
-        font-size: 16px; /* Évite le zoom sur iOS */
+        font-size: 16px;
       }
     }
 
@@ -5146,84 +3872,16 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
       }
       
       .carousel-container {
-        height: 250px;
-      }
-      
-      .space-type-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      .photo-capture-btn {
-        font-size: 11px;
-        padding: 6px 10px;
+        height: 200px;
       }
     }
 
-    @media (max-width: 320px) {
-      .site-information-container {
-        padding: 2px;
-      }
-      
-      .btn-primary,
-      .btn-success,
-      .btn-danger,
-      .btn-warning,
-      .btn-secondary {
-        padding: 10px 12px;
-        font-size: 13px;
-      }
-    }
-
-    /* =================== AMÉLIORATION ACCESSIBILITÉ =================== */
-    @media (prefers-reduced-motion: reduce) {
-      * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-      }
-    }
-
-    @media (prefers-contrast: high) {
-      :root {
-        --border-color: #ffffff;
-        --text-muted: #ffffff;
-      }
-    }
-
-    /* =================== FOCUS ET ÉTATS =================== */
-    .premium-input:focus,
-    .premium-select:focus,
-    .premium-textarea:focus,
-    .btn-primary:focus,
-    .btn-success:focus,
-    .btn-danger:focus,
-    .btn-warning:focus,
-    .btn-secondary:focus {
-      outline: 2px solid var(--primary-color);
-      outline-offset: 2px;
-    }
-
-    .section-toggle:focus {
-      outline: 2px solid var(--primary-color);
-      outline-offset: 2px;
-      border-radius: var(--radius-sm);
-    }
-
-    /* =================== UTILITAIRES =================== */
     .full-width {
       grid-column: 1 / -1;
     }
 
     .text-center {
       text-align: center;
-    }
-
-    .text-left {
-      text-align: left;
-    }
-
-    .text-right {
-      text-align: right;
     }
 
     .hidden {
@@ -5233,831 +3891,794 @@ ${language === 'fr' ? 'Document généré par C-SECUR360' : 'Document generated 
     .visible {
       display: block;
     }
-
-    .flex {
-      display: flex;
-    }
-
-    .flex-col {
-      flex-direction: column;
-    }
-
-    .items-center {
-      align-items: center;
-    }
-
-    .justify-center {
-      justify-content: center;
-    }
-
-    .gap-2 {
-      gap: 8px;
-    }
-
-    .gap-4 {
-      gap: 16px;
-    }
-
-    .mb-4 {
-      margin-bottom: 16px;
-    }
-
-    .mt-4 {
-      margin-top: 16px;
-    }
-
-    .p-4 {
-      padding: 16px;
-    }
-
-    .rounded {
-      border-radius: var(--radius-sm);
-    }
-
-    .shadow {
-      box-shadow: var(--shadow-sm);
-    }
-
-    /* =================== PRINT STYLES =================== */
-    @media print {
-      .site-information-container {
-        background: white;
-        color: black;
-        padding: 0;
-      }
-      
-      .collapsible-section {
-        background: white;
-        border: 1px solid #ccc;
-        box-shadow: none;
-      }
-      
-      .btn-primary,
-      .btn-success,
-      .btn-danger,
-      .btn-warning {
-        background: white !important;
-        color: black !important;
-        border: 1px solid #ccc !important;
-      }
-      
-      .carousel-nav,
-      .carousel-indicators,
-      .photo-actions {
-        display: none;
-      }
-    }
-
-    /* =================== DARK MODE SUPPORT =================== */
-    @media (prefers-color-scheme: light) {
-      :root {
-        --dark-bg: #ffffff;
-        --card-bg: #f8fafc;
-        --border-color: #e2e8f0;
-        --text-primary: #1a202c;
-        --text-secondary: #4a5568;
-        --text-muted: #718096;
-      }
-    }
   `;
 
-  // =================== FONCTION D'INJECTION CSS SÉCURISÉE ===================
-  const injectStyles = useCallback(() => {
-    const styleId = 'site-information-styles';
-    let existingStyle = document.getElementById(styleId);
-    
-    if (existingStyle) {
-      existingStyle.remove();
-    }
-    
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = mobileOptimizedStyles;
-    document.head.appendChild(style);
-    
-    return () => {
-      const styleToRemove = document.getElementById(styleId);
-      if (styleToRemove) {
-        styleToRemove.remove();
-      }
-    };
-  }, [mobileOptimizedStyles]);
-
-  // Injecter les styles au montage du composant
-  useEffect(() => {
-    const cleanup = injectStyles();
-    return cleanup;
-  }, [injectStyles]);
-  // =================== SECTION 8/8 - RENDU JSX COMPLET ET FINAL ===================
-
-  // =================== RENDU JSX PRINCIPAL ===================
+  // =================== RENDU JSX PRINCIPAL COMPLET ===================
   return (
-    <div className="site-information-container">
-      <style>{mobileOptimizedStyles}</style>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: mobileOptimizedStyles }} />
       
-      {/* =================== HEADER AVEC VALIDATION =================== */}
-      <ValidationIndicator />
-      
-      {/* =================== SECTION 1: INFORMATIONS DE BASE =================== */}
-      <CollapsibleSection
-        title={translations.basicInfo}
-        icon={<Building size={isMobile ? 18 : 20} />}
-        isOpen={expandedSections.basicInfo}
-        onToggle={() => toggleSection('basicInfo')}
-      >
-        <div className="premium-grid">
-          <div className="form-field">
-            <label className="field-label">
-              <Building size={16} />
-              {translations.siteName}
-            </label>
-            <input
-              type="text"
-              className="premium-input"
-              value={formData.basicInfo.siteName}
-              onChange={(e) => updateBasicInfo('siteName', e.target.value)}
-              placeholder={translations.enterSiteName}
-              maxLength={100}
-            />
-          </div>
+      <input
+        type="file"
+        ref={photoInputRef}
+        style={{ display: 'none' }}
+        accept="image/*"
+        capture="environment"
+      />
 
-          <div className="form-field">
-            <label className="field-label">
-              <MapPin size={16} />
-              {translations.location}
-            </label>
-            <input
-              type="text"
-              className="premium-input"
-              value={formData.basicInfo.location}
-              onChange={(e) => updateBasicInfo('location', e.target.value)}
-              placeholder={translations.enterLocation}
-              maxLength={200}
-            />
-          </div>
+      <div className="site-information-container" ref={containerRef}>
+        <QuickActionButtons />
+        <ValidationIndicator />
 
-          <div className="form-field">
-            <label className="field-label">
-              <User size={16} />
-              {translations.inspector}
-            </label>
-            <input
-              type="text"
-              className="premium-input"
-              value={formData.basicInfo.inspector}
-              onChange={(e) => updateBasicInfo('inspector', e.target.value)}
-              placeholder={translations.enterInspector}
-              maxLength={100}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="field-label">
-              <Calendar size={16} />
-              {translations.inspectionDate}
-            </label>
-            <input
-              type="date"
-              className="premium-input"
-              value={formData.basicInfo.inspectionDate}
-              onChange={(e) => updateBasicInfo('inspectionDate', e.target.value)}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="field-label">
-              <Clock size={16} />
-              {translations.inspectionTime}
-            </label>
-            <input
-              type="time"
-              className="premium-input"
-              value={formData.basicInfo.inspectionTime}
-              onChange={(e) => updateBasicInfo('inspectionTime', e.target.value)}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="field-label">
-              <Briefcase size={16} />
-              {translations.company}
-            </label>
-            <input
-              type="text"
-              className="premium-input"
-              value={formData.basicInfo.company}
-              onChange={(e) => updateBasicInfo('company', e.target.value)}
-              placeholder={translations.enterCompany}
-              maxLength={100}
-            />
-          </div>
-
-          <div className="form-field full-width">
-            <label className="field-label">
-              <FileText size={16} />
-              {translations.description}
-            </label>
-            <textarea
-              className="premium-textarea"
-              value={formData.basicInfo.description}
-              onChange={(e) => updateBasicInfo('description', e.target.value)}
-              placeholder={translations.enterDescription}
-              maxLength={500}
-              rows={4}
-            />
-          </div>
-        </div>
-      </CollapsibleSection>
-
-      {/* =================== SECTION 2: TYPE D'ESPACE =================== */}
-      <CollapsibleSection
-        title={translations.spaceType}
-        icon={<Building size={isMobile ? 18 : 20} />}
-        isOpen={expandedSections.spaceType}
-        onToggle={() => toggleSection('spaceType')}
-      >
-        <SpaceTypeSelector />
-        
-        {formData.spaceType.type === 'other' && (
-          <div className="form-field mt-4">
-            <label className="field-label">
-              {translations.specifyOther}
-            </label>
-            <input
-              type="text"
-              className="premium-input"
-              value={formData.spaceType.customType}
-              onChange={(e) => updateSpaceType('customType', e.target.value)}
-              placeholder={translations.enterCustomType}
-              maxLength={100}
-            />
-          </div>
-        )}
-
-        <div className="form-field">
-          <label className="field-label">
-            <FileText size={16} />
-            {translations.spaceDescription}
-          </label>
-          <textarea
-            className="premium-textarea"
-            value={formData.spaceType.description}
-            onChange={(e) => updateSpaceType('description', e.target.value)}
-            placeholder={translations.enterSpaceDescription}
-            maxLength={300}
-            rows={3}
-          />
-        </div>
-      </CollapsibleSection>
-
-      {/* =================== SECTION 3: DIMENSIONS =================== */}
-      <CollapsibleSection
-        title={translations.dimensions}
-        icon={<Settings size={isMobile ? 18 : 20} />}
-        isOpen={expandedSections.dimensions}
-        onToggle={() => toggleSection('dimensions')}
-      >
-        <DimensionsSelector />
-      </CollapsibleSection>
-
-      {/* =================== SECTION 4: POINTS D'ENTRÉE =================== */}
-      <CollapsibleSection
-        title={translations.entryPoints}
-        icon={<MapPin size={isMobile ? 18 : 20} />}
-        isOpen={expandedSections.entryPoints}
-        onToggle={() => toggleSection('entryPoints')}
-      >
-        <div className="mb-4">
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => {
-              const newEntry = {
-                id: Date.now().toString(),
-                type: 'hatch',
-                location: '',
-                dimensions: '',
-                description: '',
-                accessibility: 'easy'
-              };
-              setFormData(prev => ({
-                ...prev,
-                entryPoints: {
-                  ...prev.entryPoints,
-                  entries: [...prev.entryPoints.entries, newEntry]
-                }
-              }));
-            }}
-          >
-            <Plus size={16} />
-            {translations.addEntryPoint}
-          </button>
-        </div>
-
-        {formData.entryPoints.entries.map((entry, index) => (
-          <div key={entry.id} className="collapsible-section mb-4">
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-semibold">
-                  {translations.entryPoint} {index + 1}
-                </h4>
+        {/* Modal Base de Données des Permis */}
+        {showPermitDatabase && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}>
+            <div style={{
+              background: 'rgba(30, 41, 59, 0.95)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(100, 116, 139, 0.3)',
+              borderRadius: '20px',
+              padding: '24px',
+              maxWidth: isMobile ? '95vw' : '800px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflowY: 'auto'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2 style={{ color: '#ffffff', margin: 0, fontSize: isMobile ? '18px' : '20px', fontWeight: '700' }}>
+                  🗄️ {t.searchDatabase} - {selectedProvince}
+                </h2>
                 <button
-                  type="button"
-                  className="btn-danger"
-                  onClick={() => {
-                    setFormData(prev => ({
-                      ...prev,
-                      entryPoints: {
-                        ...prev.entryPoints,
-                        entries: prev.entryPoints.entries.filter(e => e.id !== entry.id)
-                      }
-                    }));
+                  onClick={() => setShowPermitDatabase(false)}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#fca5a5',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
                   }}
                 >
-                  <Trash2 size={14} />
+                  <X size={16} />
                 </button>
               </div>
 
-              <div className="two-column">
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexDirection: isMobile ? 'column' : 'row' }}>
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <input
+                      type="text"
+                      placeholder={language === 'fr' ? 'Rechercher par numéro, projet, lieu...' : 'Search by number, project, location...'}
+                      className="premium-input"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        if (e.target.value.length >= 2) {
+                          handleSearch(e.target.value);
+                        }
+                      }}
+                      style={{ paddingLeft: '40px' }}
+                    />
+                    <Search 
+                      size={16} 
+                      style={{ 
+                        position: 'absolute', 
+                        left: '12px', 
+                        top: '50%', 
+                        transform: 'translateY(-50%)', 
+                        color: '#64748b' 
+                      }} 
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleSearch(searchQuery)}
+                    className="btn-primary"
+                    style={{ minWidth: isMobile ? '100%' : '120px' }}
+                  >
+                    <Search size={16} />
+                    {language === 'fr' ? 'Chercher' : 'Search'}
+                  </button>
+                </div>
+              </div>
+
+              {isSearching ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                  <div className="spinner"></div>
+                  <p style={{ margin: '12px 0 0 0' }}>{language === 'fr' ? 'Recherche en cours...' : 'Searching...'}</p>
+                </div>
+              ) : searchResults.permits.length > 0 ? (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {searchResults.permits.map((permit) => (
+                    <div key={permit.id} style={{
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      border: '1px solid rgba(100, 116, 139, 0.3)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onClick={() => loadPermitFromHistory(permit.permitNumber)}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                        <div>
+                          <h5 style={{ color: '#3b82f6', margin: '0 0 4px 0', fontSize: '14px', fontWeight: '600' }}>
+                            {permit.permitNumber}
+                          </h5>
+                          <p style={{ color: '#e2e8f0', margin: '0 0 4px 0', fontSize: '13px' }}>
+                            📋 {permit.projectNumber} • 📍 {permit.workLocation}
+                          </p>
+                          <p style={{ color: '#94a3b8', margin: 0, fontSize: '12px' }}>
+                            🏢 {permit.contractor} • {t.spaceTypes[permit.spaceType as keyof typeof t.spaceTypes] || permit.spaceType}
+                          </p>
+                        </div>
+                        <span style={{
+                          background: permit.status === 'active' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(156, 163, 175, 0.2)',
+                          color: permit.status === 'active' ? '#10b981' : '#9ca3af',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: '600'
+                        }}>
+                          {permit.status === 'active' ? '🟢 ACTIF' : '⚪ AUTRE'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : searchQuery.length >= 2 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                  <Search size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                  <p style={{ margin: 0 }}>{language === 'fr' ? `Aucun permis trouvé pour "${searchQuery}"` : `No permits found for "${searchQuery}"`}</p>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                  <p style={{ margin: 0 }}>{language === 'fr' ? '💡 Tapez au moins 2 caractères pour rechercher' : '💡 Type at least 2 characters to search'}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <CSAClassificationWizard 
+          isOpen={showClassificationWizard}
+          onClose={() => setShowClassificationWizard(false)}
+          onClassificationComplete={handleClassificationComplete}
+        />
+
+        {/* Header principal */}
+        <CollapsibleSection
+          id="header"
+          title={t.title}
+          icon={<Building />}
+          className="full-width"
+        >
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <p style={{ fontSize: isMobile ? '14px' : '16px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              {t.subtitle}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: '700', color: 'var(--primary-color)' }}>
+                  {selectedProvince}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  {PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité'}
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: '700', color: 'var(--success-color)' }}>
+                  {(confinedSpaceDetails.atmosphericHazards.length + confinedSpaceDetails.physicalHazards.length)}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  {language === 'fr' ? 'Dangers' : 'Hazards'}
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: '700', color: 'var(--warning-color)' }}>
+                  {spacePhotos.length}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  {language === 'fr' ? 'Photos' : 'Photos'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </CollapsibleSection>
+
+        {/* Section Informations du Projet */}
+        <CollapsibleSection
+          id="project-info"
+          title={t.projectInfo}
+          icon={<Building />}
+        >
+          <div className="two-column">
+            <div className="form-field">
+              <label className="field-label">
+                <Building style={{ width: '18px', height: '18px' }} />
+                {t.projectNumber}<span style={{ color: 'var(--danger-color)' }}>*</span>
+              </label>
+              <input 
+                type="text" 
+                className="premium-input" 
+                placeholder="Ex: CS-2024-001"
+                value={confinedSpaceDetails.projectNumber}
+                onChange={(e) => handleConfinedSpaceChange('projectNumber', e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <MapPin style={{ width: '18px', height: '18px' }} />
+                {t.workLocation}<span style={{ color: 'var(--danger-color)' }}>*</span>
+              </label>
+              <input 
+                type="text" 
+                className="premium-input" 
+                placeholder={language === 'fr' ? 'Adresse complète du site' : 'Complete site address'}
+                value={confinedSpaceDetails.workLocation}
+                onChange={(e) => handleConfinedSpaceChange('workLocation', e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <User style={{ width: '18px', height: '18px' }} />
+                {t.contractor}<span style={{ color: 'var(--danger-color)' }}>*</span>
+              </label>
+              <input 
+                type="text" 
+                className="premium-input" 
+                placeholder={language === 'fr' ? 'Nom de l\'entreprise contractante' : 'Contracting company name'}
+                value={confinedSpaceDetails.contractor}
+                onChange={(e) => handleConfinedSpaceChange('contractor', e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <User style={{ width: '18px', height: '18px' }} />
+                {t.supervisor}<span style={{ color: 'var(--danger-color)' }}>*</span>
+              </label>
+              <input 
+                type="text" 
+                className="premium-input" 
+                placeholder={language === 'fr' ? 'Nom du superviseur' : 'Supervisor name'}
+                value={confinedSpaceDetails.supervisor}
+                onChange={(e) => handleConfinedSpaceChange('supervisor', e.target.value)}
+              />
+            </div>
+          </div>
+        </CollapsibleSection>
+
+        {/* Section Planification */}
+        <CollapsibleSection
+          id="planning"
+          title={t.planning}
+          icon={<Calendar />}
+        >
+          <div className="two-column">
+            <div className="form-field">
+              <label className="field-label">
+                <Calendar style={{ width: '18px', height: '18px' }} />
+                {t.entryDate}<span style={{ color: 'var(--danger-color)' }}>*</span>
+              </label>
+              <input 
+                type="datetime-local" 
+                className="premium-input"
+                value={confinedSpaceDetails.entryDate}
+                onChange={(e) => handleConfinedSpaceChange('entryDate', e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Clock style={{ width: '18px', height: '18px' }} />
+                {t.duration}
+              </label>
+              <input 
+                type="text" 
+                className="premium-input" 
+                placeholder={language === 'fr' ? 'Ex: 4 heures' : 'Ex: 4 hours'}
+                value={confinedSpaceDetails.duration}
+                onChange={(e) => handleConfinedSpaceChange('duration', e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <Users style={{ width: '18px', height: '18px' }} />
+                {t.workerCount}
+              </label>
+              <input 
+                type="number" 
+                min="1" 
+                className="premium-input"
+                value={confinedSpaceDetails.workerCount}
+                onChange={(e) => handleConfinedSpaceChange('workerCount', parseInt(e.target.value) || 1)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="field-label">
+                <FileText style={{ width: '18px', height: '18px' }} />
+                {t.workDescription}
+              </label>
+              <textarea 
+                className="premium-textarea" 
+                style={{ minHeight: '80px' }}
+                placeholder={language === 'fr' ? 'Description détaillée des travaux' : 'Detailed work description'}
+                value={confinedSpaceDetails.workDescription}
+                onChange={(e) => handleConfinedSpaceChange('workDescription', e.target.value)}
+              />
+            </div>
+          </div>
+        </CollapsibleSection>
+
+        {/* Section Identification de l'Espace Clos */}
+        <CollapsibleSection
+          id="space-identification"
+          title={t.spaceIdentification}
+          icon={<Home />}
+          className="full-width"
+        >
+          <div className="form-field">
+            <label className="field-label">
+              {t.spaceType}<span style={{ color: 'var(--danger-color)' }}>*</span>
+            </label>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
+              gap: '12px', 
+              marginBottom: '16px' 
+            }}>
+              {Object.entries(t.spaceTypes).map(([key, label]) => (
+                <div
+                  key={key}
+                  style={{
+                    padding: '16px 12px',
+                    background: confinedSpaceDetails.spaceType === key ? 'rgba(59, 130, 246, 0.2)' : 'rgba(15, 23, 42, 0.8)',
+                    border: `2px solid ${confinedSpaceDetails.spaceType === key ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    transition: 'var(--transition)',
+                    textAlign: 'center',
+                    minHeight: '80px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                  onClick={() => handleConfinedSpaceChange('spaceType', key)}
+                >
+                  <div style={{ fontSize: '24px' }}>
+                    {key === 'tank' ? '🏗️' : key === 'vessel' ? '⚗️' : key === 'silo' ? '🌾' : 
+                     key === 'pit' ? '🕳️' : key === 'vault' ? '🏛️' : key === 'tunnel' ? '🚇' : 
+                     key === 'trench' ? '🚧' : key === 'manhole' ? '🔧' : key === 'storage' ? '📦' : 
+                     key === 'boiler' ? '🔥' : key === 'duct' ? '🌪️' : key === 'chamber' ? '🏢' : '❓'}
+                  </div>
+                  <div style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: '600', textAlign: 'center', wordWrap: 'break-word', hyphens: 'auto' }}>
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-field">
+            <CSAClassificationSelector />
+          </div>
+        </CollapsibleSection>
+
+        {/* Section Dimensions et Volume */}
+        <CollapsibleSection
+          id="dimensions"
+          title={t.spaceDimensions}
+          icon={<Ruler />}
+          className="full-width"
+        >
+          <DimensionsSelector />
+        </CollapsibleSection>
+
+        {/* Section Points d'Entrée */}
+        <CollapsibleSection
+          id="entry-points"
+          title={t.entryPoints}
+          icon={<Home />}
+          className="full-width"
+        >
+          {confinedSpaceDetails.entryPoints.map((entry, index) => (
+            <div key={entry.id} style={{
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              borderRadius: 'var(--radius)',
+              padding: '20px',
+              marginBottom: '20px'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '16px',
+                paddingBottom: '12px',
+                borderBottom: '1px solid rgba(139, 92, 246, 0.2)'
+              }}>
+                <h4 style={{ 
+                  color: '#a78bfa', 
+                  margin: 0, 
+                  fontSize: '16px', 
+                  fontWeight: '600' 
+                }}>
+                  🚪 {t.entryPoint} {index + 1}
+                </h4>
+                {confinedSpaceDetails.entryPoints.length > 1 && (
+                  <button 
+                    className="btn-danger" 
+                    onClick={() => removeEntryPoint(entry.id)}
+                    type="button"
+                    style={{ padding: '8px 12px', fontSize: '12px' }}
+                  >
+                    <Trash2 size={14} />
+                    {t.remove}
+                  </button>
+                )}
+              </div>
+
+              <div className="three-column">
                 <div className="form-field">
-                  <label className="field-label">
-                    {translations.entryType}
-                  </label>
+                  <label className="field-label">{t.entryType}</label>
                   <select
                     className="premium-select"
                     value={entry.type}
                     onChange={(e) => updateEntryPoint(entry.id, 'type', e.target.value)}
                   >
-                    <option value="hatch">{translations.hatch}</option>
-                    <option value="door">{translations.door}</option>
-                    <option value="window">{translations.window}</option>
-                    <option value="opening">{translations.opening}</option>
-                    <option value="other">{translations.other}</option>
+                    <option value="circular">🔵 {language === 'fr' ? 'Circulaire' : 'Circular'}</option>
+                    <option value="rectangular">🟨 {language === 'fr' ? 'Rectangulaire' : 'Rectangular'}</option>
+                    <option value="square">🟫 {language === 'fr' ? 'Carré' : 'Square'}</option>
+                    <option value="oval">🥚 {language === 'fr' ? 'Ovale' : 'Oval'}</option>
+                    <option value="irregular">🔷 {language === 'fr' ? 'Irrégulier' : 'Irregular'}</option>
                   </select>
                 </div>
 
                 <div className="form-field">
-                  <label className="field-label">
-                    {translations.accessibility}
-                  </label>
-                  <select
-                    className="premium-select"
-                    value={entry.accessibility}
-                    onChange={(e) => updateEntryPoint(entry.id, 'accessibility', e.target.value)}
-                  >
-                    <option value="easy">{translations.easy}</option>
-                    <option value="moderate">{translations.moderate}</option>
-                    <option value="difficult">{translations.difficult}</option>
-                    <option value="restricted">{translations.restricted}</option>
-                  </select>
-                </div>
-
-                <div className="form-field">
-                  <label className="field-label">
-                    {translations.location}
-                  </label>
-                  <input
-                    type="text"
-                    className="premium-input"
-                    value={entry.location}
-                    onChange={(e) => updateEntryPoint(entry.id, 'location', e.target.value)}
-                    placeholder={translations.enterLocation}
-                    maxLength={100}
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label className="field-label">
-                    {translations.dimensions}
-                  </label>
-                  <input
-                    type="text"
-                    className="premium-input"
+                  <label className="field-label">{t.entryDimensions}</label>
+                  <input 
+                    type="text" 
+                    className="premium-input" 
+                    placeholder={language === 'fr' ? 'Ex: 60cm x 40cm ou Ø80cm' : 'Ex: 60cm x 40cm or Ø80cm'}
                     value={entry.dimensions}
                     onChange={(e) => updateEntryPoint(entry.id, 'dimensions', e.target.value)}
-                    placeholder="ex: 60cm x 80cm"
-                    maxLength={50}
                   />
                 </div>
 
-                <div className="form-field full-width">
-                  <label className="field-label">
-                    {translations.description}
-                  </label>
-                  <textarea
-                    className="premium-textarea"
-                    value={entry.description}
-                    onChange={(e) => updateEntryPoint(entry.id, 'description', e.target.value)}
-                    placeholder={translations.enterDescription}
-                    maxLength={200}
-                    rows={2}
+                <div className="form-field">
+                  <label className="field-label">{t.entryLocation}</label>
+                  <input 
+                    type="text" 
+                    className="premium-input" 
+                    placeholder={language === 'fr' ? 'Ex: Partie supérieure, côté nord' : 'Ex: Top section, north side'}
+                    value={entry.location}
+                    onChange={(e) => updateEntryPoint(entry.id, 'location', e.target.value)}
                   />
                 </div>
               </div>
             </div>
+          ))}
+
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <button className="btn-primary" onClick={addEntryPoint}>
+              <Plus size={20} />
+              {t.addEntryPoint}
+            </button>
           </div>
-        ))}
-      </CollapsibleSection>
+        </CollapsibleSection>
 
-      {/* =================== SECTION 5: ÉVALUATION DES DANGERS =================== */}
-      <CollapsibleSection
-        title={translations.hazardAssessment}
-        icon={<AlertTriangle size={isMobile ? 18 : 20} />}
-        isOpen={expandedSections.hazardAssessment}
-        onToggle={() => toggleSection('hazardAssessment')}
-      >
-        <div className="mb-6">
-          <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Wind size={18} />
-            {translations.atmosphericHazards}
-          </h4>
-          <div className="hazard-grid">
-            {Object.entries(hazardTypes.atmospheric).map(([key, hazard]) => (
-              <div
-                key={key}
-                className={`hazard-item ${formData.hazardAssessment.atmospheric[key] ? 'selected' : ''}`}
-                onClick={() => toggleAtmosphericHazard(key)}
-              >
-                <div className="hazard-checkbox">
-                  {formData.hazardAssessment.atmospheric[key] && <Check size={14} />}
-                </div>
-                <div className="hazard-label">{hazard}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mb-6">
-          <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Wrench size={18} />
-            {translations.physicalHazards}
-          </h4>
-          <div className="hazard-grid">
-            {Object.entries(hazardTypes.physical).map(([key, hazard]) => (
-              <div
-                key={key}
-                className={`hazard-item ${formData.hazardAssessment.physical[key] ? 'selected' : ''}`}
-                onClick={() => togglePhysicalHazard(key)}
-              >
-                <div className="hazard-checkbox">
-                  {formData.hazardAssessment.physical[key] && <Check size={14} />}
-                </div>
-                <div className="hazard-label">{hazard}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="form-field">
-          <label className="field-label">
-            <FileText size={16} />
-            {translations.additionalNotes}
-          </label>
-          <textarea
-            className="premium-textarea"
-            value={formData.hazardAssessment.notes}
-            onChange={(e) => updateHazardAssessment('notes', e.target.value)}
-            placeholder={translations.enterAdditionalNotes}
-            maxLength={500}
-            rows={4}
-          />
-        </div>
-      </CollapsibleSection>
-
-      {/* =================== SECTION 6: CONDITIONS ENVIRONNEMENTALES =================== */}
-      <CollapsibleSection
-        title={translations.environmentalConditions}
-        icon={<Droplets size={isMobile ? 18 : 20} />}
-        isOpen={expandedSections.environmentalConditions}
-        onToggle={() => toggleSection('environmentalConditions')}
-      >
-        <div className="four-column">
-          <div className="form-field">
-            <label className="field-label">
-              <Droplets size={16} />
-              {translations.humidity} (%)
-            </label>
-            <input
-              type="number"
-              className="premium-input"
-              value={formData.environmentalConditions.humidity}
-              onChange={(e) => updateEnvironmentalConditions('humidity', e.target.value)}
-              placeholder="0-100"
-              min="0"
-              max="100"
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="field-label">
-              <Wind size={16} />
-              {translations.temperature} (°C)
-            </label>
-            <input
-              type="number"
-              className="premium-input"
-              value={formData.environmentalConditions.temperature}
-              onChange={(e) => updateEnvironmentalConditions('temperature', e.target.value)}
-              placeholder="-50 à 60"
-              min="-50"
-              max="60"
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="field-label">
-              <Eye size={16} />
-              {translations.visibility}
-            </label>
-            <select
-              className="premium-select"
-              value={formData.environmentalConditions.visibility}
-              onChange={(e) => updateEnvironmentalConditions('visibility', e.target.value)}
-            >
-              <option value="excellent">{translations.excellent}</option>
-              <option value="good">{translations.good}</option>
-              <option value="moderate">{translations.moderate}</option>
-              <option value="poor">{translations.poor}</option>
-              <option value="very-poor">{translations.veryPoor}</option>
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label className="field-label">
-              <Wind size={16} />
-              {translations.airflow}
-            </label>
-            <select
-              className="premium-select"
-              value={formData.environmentalConditions.airflow}
-              onChange={(e) => updateEnvironmentalConditions('airflow', e.target.value)}
-            >
-              <option value="none">{translations.none}</option>
-              <option value="natural">{translations.natural}</option>
-              <option value="forced">{translations.forced}</option>
-              <option value="mechanical">{translations.mechanical}</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="form-field">
-          <label className="field-label">
-            <FileText size={16} />
-            {translations.environmentalNotes}
-          </label>
-          <textarea
-            className="premium-textarea"
-            value={formData.environmentalConditions.notes}
-            onChange={(e) => updateEnvironmentalConditions('notes', e.target.value)}
-            placeholder={translations.enterEnvironmentalNotes}
-            maxLength={300}
-            rows={3}
-          />
-        </div>
-      </CollapsibleSection>
-
-      {/* =================== SECTION 7: CONTENU DE L'ESPACE =================== */}
-      <CollapsibleSection
-        title={translations.spaceContent}
-        icon={<Settings size={isMobile ? 18 : 20} />}
-        isOpen={expandedSections.spaceContent}
-        onToggle={() => toggleSection('spaceContent')}
-      >
-        <div className="two-column">
-          <div className="form-field">
-            <label className="field-label">
-              {translations.equipment}
-            </label>
-            <textarea
-              className="premium-textarea"
-              value={formData.spaceContent.equipment}
-              onChange={(e) => updateSpaceContent('equipment', e.target.value)}
-              placeholder={translations.enterEquipment}
-              maxLength={300}
-              rows={3}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="field-label">
-              {translations.materials}
-            </label>
-            <textarea
-              className="premium-textarea"
-              value={formData.spaceContent.materials}
-              onChange={(e) => updateSpaceContent('materials', e.target.value)}
-              placeholder={translations.enterMaterials}
-              maxLength={300}
-              rows={3}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="field-label">
-              {translations.chemicals}
-            </label>
-            <textarea
-              className="premium-textarea"
-              value={formData.spaceContent.chemicals}
-              onChange={(e) => updateSpaceContent('chemicals', e.target.value)}
-              placeholder={translations.enterChemicals}
-              maxLength={300}
-              rows={3}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="field-label">
-              {translations.otherContents}
-            </label>
-            <textarea
-              className="premium-textarea"
-              value={formData.spaceContent.other}
-              onChange={(e) => updateSpaceContent('other', e.target.value)}
-              placeholder={translations.enterOtherContents}
-              maxLength={300}
-              rows={3}
-            />
-          </div>
-        </div>
-      </CollapsibleSection>
-
-      {/* =================== SECTION 8: MESURES DE SÉCURITÉ =================== */}
-      <CollapsibleSection
-        title={translations.safetyMeasures}
-        icon={<Wrench size={isMobile ? 18 : 20} />}
-        isOpen={expandedSections.safetyMeasures}
-        onToggle={() => toggleSection('safetyMeasures')}
-      >
-        <div className="two-column">
-          <div className="form-field">
-            <label className="field-label">
-              {translations.requiredPPE}
-            </label>
-            <textarea
-              className="premium-textarea"
-              value={formData.safetyMeasures.requiredPPE}
-              onChange={(e) => updateSafetyMeasures('requiredPPE', e.target.value)}
-              placeholder={translations.enterRequiredPPE}
-              maxLength={300}
-              rows={3}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="field-label">
-              {translations.ventilationRequirements}
-            </label>
-            <textarea
-              className="premium-textarea"
-              value={formData.safetyMeasures.ventilation}
-              onChange={(e) => updateSafetyMeasures('ventilation', e.target.value)}
-              placeholder={translations.enterVentilationRequirements}
-              maxLength={300}
-              rows={3}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="field-label">
-              {translations.monitoringEquipment}
-            </label>
-            <textarea
-              className="premium-textarea"
-              value={formData.safetyMeasures.monitoring}
-              onChange={(e) => updateSafetyMeasures('monitoring', e.target.value)}
-              placeholder={translations.enterMonitoringEquipment}
-              maxLength={300}
-              rows={3}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="field-label">
-              {translations.emergencyProcedures}
-            </label>
-            <textarea
-              className="premium-textarea"
-              value={formData.safetyMeasures.emergency}
-              onChange={(e) => updateSafetyMeasures('emergency', e.target.value)}
-              placeholder={translations.enterEmergencyProcedures}
-              maxLength={300}
-              rows={3}
-            />
-          </div>
-        </div>
-      </CollapsibleSection>
-
-      {/* =================== SECTION 9: DOCUMENTATION PHOTOGRAPHIQUE =================== */}
-      <CollapsibleSection
-        title={translations.photographicDocumentation}
-        icon={<Camera size={isMobile ? 18 : 20} />}
-        isOpen={expandedSections.photographicDocumentation}
-        onToggle={() => toggleSection('photographicDocumentation')}
-      >
-        <PhotoCarousel />
-      </CollapsibleSection>
-
-      {/* =================== SECTION 10: CLASSIFICATION CSA =================== */}
-      <CollapsibleSection
-        title={translations.csaClassification}
-        icon={<Settings size={isMobile ? 18 : 20} />}
-        isOpen={expandedSections.csaClassification}
-        onToggle={() => toggleSection('csaClassification')}
-      >
-        <CSAClassificationSelector />
-        
-        <div className="form-field mt-4">
-          <label className="field-label">
-            {translations.justification}
-          </label>
-          <textarea
-            className="premium-textarea"
-            value={formData.csaClassification.justification}
-            onChange={(e) => updateCSAClassification('justification', e.target.value)}
-            placeholder={translations.enterJustification}
-            maxLength={500}
-            rows={4}
-          />
-        </div>
-      </CollapsibleSection>
-
-      {/* =================== SECTION 11: CODES QR =================== */}
-      <CollapsibleSection
-        title={translations.qrCodes}
-        icon={<Settings size={isMobile ? 18 : 20} />}
-        isOpen={expandedSections.qrCodes}
-        onToggle={() => toggleSection('qrCodes')}
-      >
-        <QRCodeSection />
-      </CollapsibleSection>
-
-      {/* =================== ACTIONS RAPIDES =================== */}
-      <QuickActions />
-
-      {/* =================== BOUTONS DE SAUVEGARDE =================== */}
-      <div className="flex gap-4 justify-center mt-8 mb-4">
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={handleSave}
-          disabled={isSaving}
+        {/* Section Évaluation des Dangers */}
+        <CollapsibleSection
+          id="hazard-assessment"
+          title={t.hazardAssessment}
+          icon={<AlertTriangle />}
+          className="full-width"
         >
-          {isSaving ? (
-            <>
-              <div className="spinner" />
-              {translations.saving}
-            </>
+          <div className="form-field">
+            <label className="field-label">
+              <Wind style={{ width: '18px', height: '18px', color: 'var(--warning-color)' }} />
+              {t.atmosphericHazards}
+            </label>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))', 
+              gap: '12px' 
+            }}>
+              {Object.entries(t.atmosphericHazardTypes).map(([key, label]) => (
+                <div
+                  key={key}
+                  style={{
+                    padding: '12px',
+                    background: confinedSpaceDetails.atmosphericHazards.includes(key) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(15, 23, 42, 0.8)',
+                    border: `2px solid ${confinedSpaceDetails.atmosphericHazards.includes(key) ? 'var(--danger-color)' : 'var(--border-color)'}`,
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    transition: 'var(--transition)',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px'
+                  }}
+                  onClick={() => toggleAtmosphericHazard(key)}
+                >
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    border: `2px solid ${confinedSpaceDetails.atmosphericHazards.includes(key) ? 'var(--danger-color)' : 'var(--border-color)'}`,
+                    borderRadius: '4px',
+                    background: confinedSpaceDetails.atmosphericHazards.includes(key) ? 'var(--danger-color)' : 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    marginTop: '2px'
+                  }}>
+                    {confinedSpaceDetails.atmosphericHazards.includes(key) && <Check size={12} color="white" />}
+                  </div>
+                  <span style={{ 
+                    color: confinedSpaceDetails.atmosphericHazards.includes(key) ? '#fecaca' : 'var(--text-secondary)', 
+                    fontSize: isMobile ? '13px' : '14px', 
+                    fontWeight: '500',
+                    lineHeight: 1.4,
+                    wordWrap: 'break-word',
+                    hyphens: 'auto'
+                  }}>
+                    🌪️ {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-field">
+            <label className="field-label">
+              <AlertTriangle style={{ width: '18px', height: '18px', color: 'var(--danger-color)' }} />
+              {t.physicalHazards}
+            </label>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))', 
+              gap: '12px' 
+            }}>
+              {Object.entries(t.physicalHazardTypes).map(([key, label]) => (
+                <div
+                  key={key}
+                  style={{
+                    padding: '12px',
+                    background: confinedSpaceDetails.physicalHazards.includes(key) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(15, 23, 42, 0.8)',
+                    border: `2px solid ${confinedSpaceDetails.physicalHazards.includes(key) ? 'var(--danger-color)' : 'var(--border-color)'}`,
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    transition: 'var(--transition)',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px'
+                  }}
+                  onClick={() => togglePhysicalHazard(key)}
+                >
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    border: `2px solid ${confinedSpaceDetails.physicalHazards.includes(key) ? 'var(--danger-color)' : 'var(--border-color)'}`,
+                    borderRadius: '4px',
+                    background: confinedSpaceDetails.physicalHazards.includes(key) ? 'var(--danger-color)' : 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    marginTop: '2px'
+                  }}>
+                    {confinedSpaceDetails.physicalHazards.includes(key) && <Check size={12} color="white" />}
+                  </div>
+                  <span style={{ 
+                    color: confinedSpaceDetails.physicalHazards.includes(key) ? '#fecaca' : 'var(--text-secondary)', 
+                    fontSize: isMobile ? '13px' : '14px', 
+                    fontWeight: '500',
+                    lineHeight: 1.4,
+                    wordWrap: 'break-word',
+                    hyphens: 'auto'
+                  }}>
+                    ⚡ {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CollapsibleSection>
+
+        {/* Section Documentation Photographique */}
+        <CollapsibleSection
+          id="photo-documentation"
+          title={t.photoDocumentation}
+          icon={<Camera />}
+          className="full-width"
+        >
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
+            gap: '8px', 
+            marginBottom: '16px' 
+          }}>
+            <button className="photo-capture-btn" onClick={() => handlePhotoCapture('exterior')}>
+              <Camera size={14} />
+              {t.photoCategories.exterior}
+            </button>
+            <button className="photo-capture-btn" onClick={() => handlePhotoCapture('interior')}>
+              <Camera size={14} />
+              {t.photoCategories.interior}
+            </button>
+            <button className="photo-capture-btn" onClick={() => handlePhotoCapture('entry')}>
+              <Camera size={14} />
+              {t.photoCategories.entry}
+            </button>
+            <button className="photo-capture-btn" onClick={() => handlePhotoCapture('hazards')}>
+              <AlertTriangle size={14} />
+              {t.photoCategories.hazards}
+            </button>
+            <button className="photo-capture-btn" onClick={() => handlePhotoCapture('equipment')}>
+              <Shield size={14} />
+              {t.photoCategories.equipment}
+            </button>
+            <button className="photo-capture-btn" onClick={() => handlePhotoCapture('safety')}>
+              <Shield size={14} />
+              {t.photoCategories.safety}
+            </button>
+          </div>
+
+          {spacePhotos.length > 0 ? (
+            <PhotoCarousel 
+              photos={spacePhotos}
+              onAddPhoto={() => handlePhotoCapture('interior')}
+            />
           ) : (
-            <>
-              <Check size={16} />
-              {translations.saveInformation}
-            </>
+            <EmptyPhotoPlaceholder
+              onClick={() => handlePhotoCapture('exterior')}
+              title={t.noPhotos}
+              description={t.takePhoto}
+            />
           )}
-        </button>
+        </CollapsibleSection>
 
-        <button
-          type="button"
-          className="btn-secondary"
-          onClick={handleGenerateReport}
-          disabled={isSaving}
+        {/* Section Code QR */}
+        <CollapsibleSection
+          id="qr-code"
+          title={t.qrCodeSection}
+          icon={<QrCode />}
+          className="full-width"
         >
-          <FileText size={16} />
-          {translations.generateReport}
-        </button>
+          <QRCodeDisplay />
+        </CollapsibleSection>
 
-        <button
-          type="button"
-          className="btn-warning"
-          onClick={() => setShowDatabaseModal(true)}
+        {/* Section de Validation Finale */}
+        <CollapsibleSection
+          id="final-validation"
+          title={language === 'fr' ? 'Validation et Finalisation' : 'Validation and Finalization'}
+          icon={<CheckCircle />}
+          className="full-width"
         >
-          <Settings size={16} />
-          {translations.database}
-        </button>
-      </div>
-
-      {/* =================== MODAUX =================== */}
-      {showDatabaseModal && (
-        <DatabaseModal />
-      )}
-
-      {showPhotoModal && selectedPhotoForEdit && (
-        <PhotoEditModal />
-      )}
-
-      {showQuestionnaire && (
-        <CSAQuestionnaireModal />
-      )}
-
-      {/* =================== NOTIFICATIONS =================== */}
-      {notification && (
-        <div className={`validation-indicator ${notification.type === 'success' ? 'valid' : 'invalid'} fade-in`}>
-          <div className="flex items-center gap-2">
-            {notification.type === 'success' ? <Check size={16} /> : <AlertTriangle size={16} />}
-            <span>{notification.message}</span>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '12px', 
+            padding: '16px', 
+            background: validateSiteInformation().length === 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+            borderRadius: '12px', 
+            border: `1px solid ${validateSiteInformation().length === 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+            marginBottom: '20px'
+          }}>
+            {validateSiteInformation().length === 0 ? (
+              <CheckCircle size={24} color="#10b981" />
+            ) : (
+              <AlertTriangle size={24} color="#ef4444" />
+            )}
+            <div style={{ flex: 1 }}>
+              <h4 style={{ 
+                color: validateSiteInformation().length === 0 ? '#86efac' : '#fca5a5', 
+                margin: '0 0 4px 0', 
+                fontSize: '16px', 
+                fontWeight: '600' 
+              }}>
+                {validateSiteInformation().length === 0 ? 
+                  (language === 'fr' ? '✅ Informations du Site Complétées' : '✅ Site Information Complete') :
+                  (language === 'fr' ? '⚠️ Informations Incomplètes' : '⚠️ Incomplete Information')
+                }
+              </h4>
+              <p style={{ 
+                color: validateSiteInformation().length === 0 ? '#6ee7b7' : '#fca5a5', 
+                margin: 0, 
+                fontSize: '14px' 
+              }}>
+                {validateSiteInformation().length === 0 ?
+                  (language === 'fr' ? 'Toutes les informations nécessaires ont été documentées.' : 'All necessary information has been documented.') :
+                  (language === 'fr' ? `${validateSiteInformation().length} erreur(s) à corriger` : `${validateSiteInformation().length} error(s) to fix`)
+                }
+              </p>
+            </div>
           </div>
+
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
+            gap: '12px'
+          }}>
+            <button
+              onClick={handleSave}
+              disabled={isSaving || validateSiteInformation().length > 0}
+              className="btn-success"
+              style={{ minHeight: '50px' }}
+            >
+              {isSaving ? <div className="spinner" /> : <Save size={20} />}
+              {isSaving ? t.saving : t.savePermit}
+            </button>
+
+            <button
+              onClick={handlePrintPermit}
+              disabled={isGeneratingReport || validateSiteInformation().length > 0}
+              className="btn-primary"
+              style={{ minHeight: '50px' }}
+            >
+              {isGeneratingReport ? <div className="spinner" /> : <Printer size={20} />}
+              {t.printPermit}
+            </button>
+          </div>
+        </CollapsibleSection>
+
+        {/* Footer avec informations légales */}
+        <div style={{
+          marginTop: '40px',
+          padding: '20px',
+          background: 'rgba(31, 41, 59, 0.6)',
+          borderRadius: 'var(--radius)',
+          border: '1px solid var(--border-color)',
+          textAlign: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '12px' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              background: 'url(/c-secur360-logo.png) no-repeat center',
+              backgroundSize: 'contain'
+            }}></div>
+            <h3 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '18px', fontWeight: '700' }}>
+              C-SECUR360
+            </h3>
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
+            {language === 'fr' ? 
+              'Système de Gestion de Sécurité Industrielle - Conformité Réglementaire Provinciale' :
+              'Industrial Safety Management System - Provincial Regulatory Compliance'
+            }
+            <br />
+            {language === 'fr' ? 
+              `Province: ${selectedProvince} - ${PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Autorité Compétente'}` :
+              `Province: ${selectedProvince} - ${PROVINCIAL_REGULATIONS[selectedProvince]?.authority || 'Competent Authority'}`
+            }
+            <br />
+            {language === 'fr' ? 
+              'Document généré automatiquement - Validation requise avant utilisation' :
+              'Automatically generated document - Validation required before use'
+            }
+          </p>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 };
+
+export default React.memo(SiteInformation);
