@@ -1460,7 +1460,46 @@ Système C-SECUR360`;
       setIsGeneratingReport(false);
     }
   };
+</div>
 
+        {/* Section QR Code - NOUVEAU - AJOUTEZ ICI */}
+        <div className="form-section full-width-section">
+          <div className="section-header">
+            <QrCode className="section-icon" />
+            <h3 className="section-title">Code QR - Accès Mobile</h3>
+          </div>
+          
+          {permitData.permit_number ? (
+            <div style={{
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: '12px',
+              padding: '16px',
+              textAlign: 'center'
+            }}>
+              <h4 style={{ color: '#10b981', margin: '0 0 12px 0' }}>
+                ✅ QR Code généré pour : {permitData.permit_number}
+              </h4>
+              <p style={{ color: '#6ee7b7', margin: 0, fontSize: '14px' }}>
+                Le QR Code a été généré automatiquement lors de la sauvegarde et est inclus dans tous les PDF
+              </p>
+            </div>
+          ) : (
+            <div style={{
+              background: 'rgba(59, 130, 246, 0.1)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '12px',
+              padding: '16px',
+              textAlign: 'center'
+            }}>
+              <p style={{ color: '#93c5fd', margin: 0 }}>
+                💡 Le QR Code sera généré automatiquement lors de la sauvegarde
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Section Évaluation des Dangers - EXISTANT */}
   // =================== HANDLERS DE DONNÉES ===================
   
   const handleConfinedSpaceChange = (field: string, value: any) => {
