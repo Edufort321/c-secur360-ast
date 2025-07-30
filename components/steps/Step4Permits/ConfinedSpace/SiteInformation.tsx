@@ -669,9 +669,81 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
   // Réfs
   const photoInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isUpdatingRef = useRef(false);
 
   // Traductions
   const t = translations[language];
+
+  // =================== HANDLERS DE DONNÉES OPTIMISÉS SANS RE-RENDER ===================
+  const debouncedUpdate = useCallback((updates: any) => {
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+    
+    updateTimeoutRef.current = setTimeout(() => {
+      if (!isUpdatingRef.current) {
+        isUpdatingRef.current = true;
+        updatePermitData(updates);
+        updateParentData('siteInformation', { ...confinedSpaceDetails, ...updates });
+        isUpdatingRef.current = false;
+      }
+    }, 300); // Debounce de 300ms
+  }, [updatePermitData, updateParentData, confinedSpaceDetails]);
+
+  const handleConfinedSpaceChange = useCallback((field: string, value: any) => {
+    // Mise à jour immédiate de l'état local seulement
+    setConfinedSpaceDetails(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      // Debounced update pour éviter les re-renders multiples
+      debouncedUpdate({ [field]: value });
+      
+      return updated;
+    });
+  }, [debouncedUpdate]);
+
+  const handleEnvironmentalChange = useCallback((field: string, value: any) => {
+    setConfinedSpaceDetails(prev => {
+      const updated = {
+        ...prev.environmentalConditions,
+        [field]: value
+      };
+      
+      const newState = { ...prev, environmentalConditions: updated };
+      debouncedUpdate({ environmentalConditions: updated });
+      
+      return newState;
+    });
+  }, [debouncedUpdate]);
+
+  const handleContentChange = useCallback((field: string, value: any) => {
+    setConfinedSpaceDetails(prev => {
+      const updated = {
+        ...prev.spaceContent,
+        [field]: value
+      };
+      
+      const newState = { ...prev, spaceContent: updated };
+      debouncedUpdate({ spaceContent: updated });
+      
+      return newState;
+    });
+  }, [debouncedUpdate]);
+
+  const handleSafetyChange = useCallback((field: string, value: any) => {
+    setConfinedSpaceDetails(prev => {
+      const updated = {
+        ...prev.safetyMeasures,
+        [field]: value
+      };
+      
+      const newState = { ...prev, safetyMeasures: updated };
+      debouncedUpdate({ safetyMeasures: updated });
+      
+      return newState;
+    });
+  }, [debouncedUpdate]);
 
   // =================== GÉNÉRATION QR CODE AVEC LOGO RÉEL ===================
   const generatePermitQRCode = async (permitNumber: string): Promise<string> => {
@@ -715,78 +787,14 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     }
   };
 
-  // =================== HANDLERS DE DONNÉES OPTIMISÉS SANS SCROLL ===================
-  const handleConfinedSpaceChange = useCallback((field: string, value: any) => {
-    setConfinedSpaceDetails(prev => {
-      const updated = { ...prev, [field]: value };
-      
-      // Synchronisation avec les données du permis sans déclencher de re-render
-      updatePermitData({ [field]: value });
-      
-      // Notification au parent sans déclencher de scroll
-      setTimeout(() => {
-        updateParentData('siteInformation', updated);
-      }, 0);
-      
-      return updated;
-    });
-  }, [updatePermitData, updateParentData]);
-
-  const handleEnvironmentalChange = useCallback((field: string, value: any) => {
-    const updated = {
-      ...confinedSpaceDetails.environmentalConditions,
-      [field]: value
+  // =================== CLEANUP FUNCTION ===================
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
     };
-    
-    setConfinedSpaceDetails(prev => ({
-      ...prev,
-      environmentalConditions: updated
-    }));
-    
-    // Mise à jour sans déclencher de scroll
-    setTimeout(() => {
-      updatePermitData({ environmentalConditions: updated });
-      updateParentData('siteInformation', { ...confinedSpaceDetails, environmentalConditions: updated });
-    }, 0);
-  }, [confinedSpaceDetails, updatePermitData, updateParentData]);
-
-  const handleContentChange = useCallback((field: string, value: any) => {
-    const updated = {
-      ...confinedSpaceDetails.spaceContent,
-      [field]: value
-    };
-    
-    setConfinedSpaceDetails(prev => ({
-      ...prev,
-      spaceContent: updated
-    }));
-    
-    // Mise à jour sans déclencher de scroll
-    setTimeout(() => {
-      updatePermitData({ spaceContent: updated });
-      updateParentData('siteInformation', { ...confinedSpaceDetails, spaceContent: updated });
-    }, 0);
-  }, [confinedSpaceDetails, updatePermitData, updateParentData]);
-
-  const handleSafetyChange = useCallback((field: string, value: any) => {
-    const updated = {
-      ...confinedSpaceDetails.safetyMeasures,
-      [field]: value
-    };
-    
-    setConfinedSpaceDetails(prev => ({
-      ...prev,
-      safetyMeasures: updated
-    }));
-    
-    // Mise à jour sans déclencher de scroll
-    setTimeout(() => {
-      updatePermitData({ safetyMeasures: updated });
-      updateParentData('siteInformation', { ...confinedSpaceDetails, safetyMeasures: updated });
-    }, 0);
-  }, [confinedSpaceDetails, updatePermitData, updateParentData]);
-
-  // =================== CALCUL DE VOLUME INTELLIGENT ===================
+  }, []);
   const calculateVolume = () => {
     const { length, width, height, diameter, spaceShape } = confinedSpaceDetails.dimensions;
     const { unitSystem } = confinedSpaceDetails;
@@ -964,42 +972,34 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     return errors;
   };
 
-  // =================== GESTION DES DANGERS AVEC PRÉVENTION SCROLL ===================
-  const toggleAtmosphericHazard = (hazardType: string) => {
-    const currentHazards = confinedSpaceDetails.atmosphericHazards;
-    const updatedHazards = currentHazards.includes(hazardType)
-      ? currentHazards.filter(h => h !== hazardType)
-      : [...currentHazards, hazardType];
-    
-    setConfinedSpaceDetails(prev => ({
-      ...prev,
-      atmosphericHazards: updatedHazards
-    }));
-    
-    // Mise à jour sans déclencher de scroll
-    setTimeout(() => {
-      updatePermitData({ atmosphericHazards: updatedHazards });
-      updateParentData('siteInformation', { ...confinedSpaceDetails, atmosphericHazards: updatedHazards });
-    }, 0);
-  };
+  // =================== GESTION DES DANGERS SANS SCROLL ===================
+  const toggleAtmosphericHazard = useCallback((hazardType: string) => {
+    setConfinedSpaceDetails(prev => {
+      const currentHazards = prev.atmosphericHazards;
+      const updatedHazards = currentHazards.includes(hazardType)
+        ? currentHazards.filter(h => h !== hazardType)
+        : [...currentHazards, hazardType];
+      
+      const newState = { ...prev, atmosphericHazards: updatedHazards };
+      debouncedUpdate({ atmosphericHazards: updatedHazards });
+      
+      return newState;
+    });
+  }, [debouncedUpdate]);
 
-  const togglePhysicalHazard = (hazardType: string) => {
-    const currentHazards = confinedSpaceDetails.physicalHazards;
-    const updatedHazards = currentHazards.includes(hazardType)
-      ? currentHazards.filter(h => h !== hazardType)
-      : [...currentHazards, hazardType];
-    
-    setConfinedSpaceDetails(prev => ({
-      ...prev,
-      physicalHazards: updatedHazards
-    }));
-    
-    // Mise à jour sans déclencher de scroll
-    setTimeout(() => {
-      updatePermitData({ physicalHazards: updatedHazards });
-      updateParentData('siteInformation', { ...confinedSpaceDetails, physicalHazards: updatedHazards });
-    }, 0);
-  };
+  const togglePhysicalHazard = useCallback((hazardType: string) => {
+    setConfinedSpaceDetails(prev => {
+      const currentHazards = prev.physicalHazards;
+      const updatedHazards = currentHazards.includes(hazardType)
+        ? currentHazards.filter(h => h !== hazardType)
+        : [...currentHazards, hazardType];
+      
+      const newState = { ...prev, physicalHazards: updatedHazards };
+      debouncedUpdate({ physicalHazards: updatedHazards });
+      
+      return newState;
+    });
+  }, [debouncedUpdate]);
 
   // =================== GESTION DES SECTIONS COLLAPSIBLES ===================
   const toggleSection = (sectionId: string) => {
@@ -1014,8 +1014,8 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
     });
   };
 
-  // =================== GESTION DES POINTS D'ENTRÉE ===================
-  const addEntryPoint = () => {
+  // =================== GESTION DES POINTS D'ENTRÉE SANS SCROLL ===================
+  const addEntryPoint = useCallback(() => {
     const newEntryPoint = {
       id: `entry-${Date.now()}`,
       type: 'circular',
@@ -1026,54 +1026,37 @@ const SiteInformation: React.FC<SiteInformationProps> = ({
       photos: []
     };
     
-    setConfinedSpaceDetails(prev => ({
-      ...prev,
-      entryPoints: [...prev.entryPoints, newEntryPoint]
-    }));
-    
-    // Mise à jour sans déclencher de scroll
-    setTimeout(() => {
-      updatePermitData({ entryPoints: [...confinedSpaceDetails.entryPoints, newEntryPoint] });
-      updateParentData('siteInformation', { ...confinedSpaceDetails, entryPoints: [...confinedSpaceDetails.entryPoints, newEntryPoint] });
-    }, 0);
-  };
+    setConfinedSpaceDetails(prev => {
+      const newState = { ...prev, entryPoints: [...prev.entryPoints, newEntryPoint] };
+      debouncedUpdate({ entryPoints: newState.entryPoints });
+      return newState;
+    });
+  }, [debouncedUpdate]);
 
-  const removeEntryPoint = (entryId: string) => {
-    if (confinedSpaceDetails.entryPoints.length <= 1) {
-      alert(language === 'fr' ? 'Au moins un point d\'entrée est requis' : 'At least one entry point is required');
-      return;
-    }
-    
-    const updatedEntryPoints = confinedSpaceDetails.entryPoints.filter(entry => entry.id !== entryId);
-    
-    setConfinedSpaceDetails(prev => ({
-      ...prev,
-      entryPoints: updatedEntryPoints
-    }));
-    
-    // Mise à jour sans déclencher de scroll
-    setTimeout(() => {
-      updatePermitData({ entryPoints: updatedEntryPoints });
-      updateParentData('siteInformation', { ...confinedSpaceDetails, entryPoints: updatedEntryPoints });
-    }, 0);
-  };
+  const removeEntryPoint = useCallback((entryId: string) => {
+    setConfinedSpaceDetails(prev => {
+      if (prev.entryPoints.length <= 1) {
+        alert(language === 'fr' ? 'Au moins un point d\'entrée est requis' : 'At least one entry point is required');
+        return prev;
+      }
+      
+      const updatedEntryPoints = prev.entryPoints.filter(entry => entry.id !== entryId);
+      const newState = { ...prev, entryPoints: updatedEntryPoints };
+      debouncedUpdate({ entryPoints: updatedEntryPoints });
+      return newState;
+    });
+  }, [language, debouncedUpdate]);
 
-  const updateEntryPoint = (entryId: string, field: string, value: any) => {
-    const updatedEntryPoints = confinedSpaceDetails.entryPoints.map(entry =>
-      entry.id === entryId ? { ...entry, [field]: value } : entry
-    );
-    
-    setConfinedSpaceDetails(prev => ({
-      ...prev,
-      entryPoints: updatedEntryPoints
-    }));
-    
-    // Mise à jour sans déclencher de scroll
-    setTimeout(() => {
-      updatePermitData({ entryPoints: updatedEntryPoints });
-      updateParentData('siteInformation', { ...confinedSpaceDetails, entryPoints: updatedEntryPoints });
-    }, 0);
-  };
+  const updateEntryPoint = useCallback((entryId: string, field: string, value: any) => {
+    setConfinedSpaceDetails(prev => {
+      const updatedEntryPoints = prev.entryPoints.map(entry =>
+        entry.id === entryId ? { ...entry, [field]: value } : entry
+      );
+      const newState = { ...prev, entryPoints: updatedEntryPoints };
+      debouncedUpdate({ entryPoints: updatedEntryPoints });
+      return newState;
+    });
+  }, [debouncedUpdate]);
 
   // =================== EFFETS DE SYNCHRONISATION ===================
   useEffect(() => {
