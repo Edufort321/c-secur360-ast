@@ -9,7 +9,16 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-// =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
+// 🚀 SOLUTION SCALABLE : Imports conditionnels intelligents
+import ConfinedSpace from './ConfinedSpace/index';
+// TODO: Décommenter au fur et à mesure du développement
+// import HotWork from './HotWork/index';
+// import ElectricalWork from './ElectricalWork/index';
+// import Excavation from './Excavation/index';
+// import HeightWork from './HeightWork/index';
+// import Lifting from './Lifting/index';
+
+// =================== DÉTECTION MOBILE ET STYLES ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
 const styles = {
@@ -82,12 +91,6 @@ const styles = {
     gap: isMobile ? '8px' : '16px',
     width: '100%'
   },
-  grid4: {
-    display: 'grid',
-    gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
-    gap: isMobile ? '8px' : '16px',
-    width: '100%'
-  },
   headerCard: {
     background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.9))',
     backdropFilter: 'blur(20px)',
@@ -117,21 +120,6 @@ const styles = {
 // =================== TYPES ===================
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 
-// =================== DONNÉES PROVINCIALES ===================
-const PROVINCES_DATA = {
-  QC: { name: 'Québec', authority: 'CNESST', color: '#1e40af' },
-  ON: { name: 'Ontario', authority: 'MOL', color: '#dc2626' },
-  BC: { name: 'Colombie-Britannique', authority: 'WorkSafeBC', color: '#059669' },
-  AB: { name: 'Alberta', authority: 'Alberta OHS', color: '#7c2d12' },
-  SK: { name: 'Saskatchewan', authority: 'Saskatchewan OHS', color: '#a21caf' },
-  MB: { name: 'Manitoba', authority: 'Manitoba Workplace Safety', color: '#ea580c' },
-  NB: { name: 'Nouveau-Brunswick', authority: 'WorkSafeNB', color: '#0891b2' },
-  NS: { name: 'Nouvelle-Écosse', authority: 'Workers\' Compensation Board', color: '#be123c' },
-  PE: { name: 'Île-du-Prince-Édouard', authority: 'PEI Workers Compensation Board', color: '#9333ea' },
-  NL: { name: 'Terre-Neuve-et-Labrador', authority: 'WorkplaceNL', color: '#0d9488' }
-};
-
-// =================== INTERFACES ===================
 interface Step4PermitsProps {
   formData: any;
   onDataChange: (section: string, data: any) => void;
@@ -159,16 +147,46 @@ interface PermitModule {
   completionRate: number;
   regulations: string[];
   features: string[];
-  component?: React.ComponentType<any>;
 }
 
-interface ConfinedSpaceComponent {
-  default: React.ComponentType<any>;
-}
+// =================== DONNÉES PROVINCIALES ===================
+const PROVINCES_DATA = {
+  QC: { name: 'Québec', authority: 'CNESST', color: '#1e40af' },
+  ON: { name: 'Ontario', authority: 'MOL', color: '#dc2626' },
+  BC: { name: 'Colombie-Britannique', authority: 'WorkSafeBC', color: '#059669' },
+  AB: { name: 'Alberta', authority: 'Alberta OHS', color: '#7c2d12' },
+  SK: { name: 'Saskatchewan', authority: 'Saskatchewan OHS', color: '#a21caf' },
+  MB: { name: 'Manitoba', authority: 'Manitoba Workplace Safety', color: '#ea580c' },
+  NB: { name: 'Nouveau-Brunswick', authority: 'WorkSafeNB', color: '#0891b2' },
+  NS: { name: 'Nouvelle-Écosse', authority: 'Workers\' Compensation Board', color: '#be123c' },
+  PE: { name: 'Île-du-Prince-Édouard', authority: 'PEI Workers Compensation Board', color: '#9333ea' },
+  NL: { name: 'Terre-Neuve-et-Labrador', authority: 'WorkplaceNL', color: '#0d9488' }
+};
 
-// =================== CONFIGURATION DES MODULES DE PERMIS ===================
+// 🚀 SYSTÈME DE ROUTAGE INTELLIGENT POUR MODULES DE PERMIS
+const getPermitComponent = (permitId: string): React.ComponentType<any> | null => {
+  switch (permitId) {
+    case 'confined-space':
+      return ConfinedSpace;
+    // TODO: Décommenter au fur et à mesure
+    // case 'hot-work':
+    //   return HotWork;
+    // case 'electrical-work':
+    //   return ElectricalWork;
+    // case 'excavation':
+    //   return Excavation;
+    // case 'height-work':
+    //   return HeightWork;
+    // case 'lifting':
+    //   return Lifting;
+    default:
+      return null; // Module en développement
+  }
+};
+
+// =================== CONFIGURATION DES MODULES ===================
 const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
-  const baseModules = [
+  return [
     {
       id: 'confined-space',
       name: language === 'en' ? 'Confined Space Entry Permit' : 'Permis d\'Espace Clos',
@@ -199,8 +217,37 @@ const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
         'Signatures électroniques horodatées',
         'Photos géolocalisées',
         'Plan de sauvetage intégré'
-      ],
-      component: undefined
+      ]
+    },
+    {
+      id: 'hot-work',
+      name: language === 'en' ? 'Hot Work Permit' : 'Permis Travail à Chaud',
+      description: language === 'en'
+        ? 'Hot work permit for welding/cutting with fire watch and post-work timer'
+        : 'Permis pour soudage/coupage avec surveillance incendie et timer post-travaux',
+      icon: Flame,
+      iconEmoji: '🔥',
+      color: '#ea580c',
+      riskLevel: 'critical' as const,
+      estimatedTime: 30,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['NFPA 51B', 'Fire Prevention Code', 'Provincial Fire Regs']
+        : ['NFPA 51B', 'RSST Art. 323', 'Code prévention incendie'],
+      features: language === 'en' ? [
+        '60min post-work fire watch',
+        'Automatic regulatory timer',
+        'Specialized fire extinguishers required',
+        'Combustible clearance zone',
+        'Qualified fire guard'
+      ] : [
+        'Surveillance incendie 60min post-travaux',
+        'Timer automatique réglementaire',
+        'Extincteurs spécialisés requis',
+        'Zone dégagement combustibles',
+        'Garde-feu qualifié'
+      ]
     },
     {
       id: 'electrical-work',
@@ -293,36 +340,6 @@ const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
       ]
     },
     {
-      id: 'hot-work',
-      name: language === 'en' ? 'Hot Work Permit' : 'Permis Travail à Chaud',
-      description: language === 'en'
-        ? 'Hot work permit for welding/cutting with fire watch and post-work timer'
-        : 'Permis pour soudage/coupage avec surveillance incendie et timer post-travaux',
-      icon: Flame,
-      iconEmoji: '🔥',
-      color: '#ea580c',
-      riskLevel: 'critical' as const,
-      estimatedTime: 30,
-      status: 'available' as const,
-      completionRate: 0,
-      regulations: language === 'en'
-        ? ['NFPA 51B', 'Fire Prevention Code', 'Provincial Fire Regs']
-        : ['NFPA 51B', 'RSST Art. 323', 'Code prévention incendie'],
-      features: language === 'en' ? [
-        '60min post-work fire watch',
-        'Automatic regulatory timer',
-        'Specialized fire extinguishers required',
-        'Combustible clearance zone',
-        'Qualified fire guard'
-      ] : [
-        'Surveillance incendie 60min post-travaux',
-        'Timer automatique réglementaire',
-        'Extincteurs spécialisés requis',
-        'Zone dégagement combustibles',
-        'Garde-feu qualifié'
-      ]
-    },
-    {
       id: 'lifting',
       name: language === 'en' ? 'Lifting Operations Permit' : 'Permis Opérations Levage',
       description: language === 'en'
@@ -353,8 +370,6 @@ const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
       ]
     }
   ];
-
-  return baseModules;
 };
 
 // =================== TRADUCTIONS ===================
@@ -363,13 +378,11 @@ const getTexts = (language: 'fr' | 'en') => {
     return {
       title: "Work Permits & Legal Authorizations",
       subtitle: "Select and configure work permits with full regulatory compliance",
-      selectPermit: "Select Permit Type",
       backToSelection: "← Back to Selection",
       estimatedTime: "Estimated Time",
       minutes: "min",
       riskLevel: "Risk Level",
       regulations: "Regulations",
-      features: "Key Features",
       startPermit: "Start Permit",
       continuePermit: "Continue",
       completed: "Completed",
@@ -399,13 +412,11 @@ const getTexts = (language: 'fr' | 'en') => {
   return {
     title: "Permis de Travail & Autorisations Légales",
     subtitle: "Sélectionnez et configurez vos permis de travail avec conformité réglementaire complète",
-    selectPermit: "Sélectionner le Type de Permis",
     backToSelection: "← Retour à la Sélection",
     estimatedTime: "Temps Estimé",
     minutes: "min",
     riskLevel: "Niveau de Risque",
     regulations: "Réglementations",
-    features: "Fonctionnalités Clés",
     startPermit: "Démarrer Permis",
     continuePermit: "Continuer",
     completed: "Complété",
@@ -449,13 +460,6 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   const texts = getTexts(language);
   const [selectedPermit, setSelectedPermit] = useState<string | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province as ProvinceCode || 'QC');
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // État pour stocker le composant ConfinedSpace une fois chargé
-  const [confinedSpaceComponent, setConfinedSpaceComponent] = useState<ConfinedSpaceComponent | null>(null);
-
-  // Générer les modules avec traductions selon la langue actuelle
-  const PERMIT_MODULES = getPermitModules(language);
 
   // Mettre à jour les statuts des permis selon les données sauvegardées
   const [permits, setPermits] = useState<PermitModule[]>(() => {
@@ -486,37 +490,14 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     });
   }, [language]);
 
-  // 🔧 CORRECTION : Chemin d'import corrigé
-  const handlePermitSelect = async (permitId: string) => {
+  // 🚀 SÉLECTION SIMPLIFIÉE - Plus d'import dynamique !
+  const handlePermitSelect = (permitId: string) => {
     setSelectedPermit(permitId);
-    setIsLoading(true);
-    
-    // Import avec le bon chemin pour ConfinedSpace
-    if (permitId === 'confined-space') {
-      try {
-        console.log('🔄 Tentative de chargement ConfinedSpace...');
-        // 🔧 CORRECTION : Chemin corrigé ./ConfinedSpace/index au lieu de ./permits/ConfinedSpace/index
-        const ConfinedSpaceModule = await import('./ConfinedSpace/index');
-        console.log('✅ Module ConfinedSpace importé avec succès:', !!ConfinedSpaceModule.default);
-        
-        setConfinedSpaceComponent(ConfinedSpaceModule);
-        
-      } catch (error) {
-        console.log('⚠️ Erreur chargement ConfinedSpace:', error);
-        setConfinedSpaceComponent(null);
-      }
-    }
-    
-    // Simulation de chargement pour UX
-    await new Promise(resolve => setTimeout(resolve, 800));
-    setIsLoading(false);
-    
-    console.log(`Permis sélectionné: ${permitId} - Chemin corrigé`);
+    console.log(`Permis sélectionné: ${permitId}`);
   };
 
   const handleBackToSelection = () => {
     setSelectedPermit(null);
-    setConfinedSpaceComponent(null);
   };
 
   const updatePermitStatus = (permitId: string, status: PermitModule['status'], completionRate: number = 0) => {
@@ -527,7 +508,6 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     );
     setPermits(updatedPermits);
 
-    // Sauvegarder dans formData
     const completedPermits = updatedPermits.filter(p => p.status === 'completed').map(p => p.id);
     const inProgressPermits = updatedPermits.filter(p => p.status === 'in-progress').map(p => p.id);
     const completion = Object.fromEntries(updatedPermits.map(p => [p.id, p.completionRate]));
@@ -539,13 +519,12 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
       total: permits.length
     });
 
-    // Appeler onPermitChange si fourni
     if (onPermitChange) {
       onPermitChange(updatedPermits);
     }
   };
 
-  // Callbacks pour ConfinedSpace
+  // Callbacks pour les modules de permis
   const handleSavePermit = useCallback((data: any) => {
     console.log('Sauvegarde du permis:', data);
     updatePermitStatus(selectedPermit!, 'in-progress', 50);
@@ -559,87 +538,49 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     handleBackToSelection();
   }, [selectedPermit, onDataChange]);
 
-  // 🔧 CORRECTION : Rendu conditionnel pour ConfinedSpace
-  if (selectedPermit === 'confined-space' && confinedSpaceComponent) {
-    const ConfinedSpaceModule = confinedSpaceComponent.default;
-    
-    console.log('Rendu ConfinedSpace avec props:', {
-      province: selectedProvince,
-      language,
-      initialData: formData?.permitData?.[selectedPermit] || {}
-    });
-    
-    return (
-      <div style={styles.container}>
-        {/* Header de retour */}
-        <div style={{
-          ...styles.card,
-          marginBottom: '16px',
-          padding: '16px 24px'
-        }}>
-          <button
-            onClick={handleBackToSelection}
-            style={{
-              ...styles.button,
-              ...styles.buttonSecondary,
-              width: 'auto',
-              padding: '12px 20px'
-            }}
-          >
-            <ChevronRight style={{ width: '18px', height: '18px', transform: 'rotate(180deg)' }} />
-            {texts.backToSelection}
-          </button>
-        </div>
-        
-        {/* Module ConfinedSpace */}
-        <ConfinedSpaceModule
-          province={selectedProvince}
-          language={language}
-          onSave={handleSavePermit}
-          onSubmit={handleSubmitPermit}
-          onCancel={handleBackToSelection}
-          initialData={formData?.permitData?.[selectedPermit] || {}}
-        />
-      </div>
-    );
-  }
-
-  // Si un permis est sélectionné, afficher le composant approprié
+  // 🚀 RENDU INTELLIGENT DES MODULES
   if (selectedPermit) {
+    const PermitComponent = getPermitComponent(selectedPermit);
     const permit = permits.find(p => p.id === selectedPermit);
     
-    // Afficher le spinner pendant le chargement
-    if (isLoading) {
+    // Si le composant existe, l'afficher
+    if (PermitComponent) {
       return (
         <div style={styles.container}>
-          <div style={{ ...styles.card, textAlign: 'center', padding: isMobile ? '40px 20px' : '60px 40px' }}>
-            <div style={{
-              width: '60px',
-              height: '60px',
-              border: '4px solid rgba(59, 130, 246, 0.3)',
-              borderTop: '4px solid #3b82f6',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 20px'
-            }}></div>
-            <h3 style={{ color: 'white', fontSize: '18px', marginBottom: '8px' }}>
-              {language === 'en' ? 'Loading module...' : 'Chargement du module...'}
-            </h3>
-            <p style={{ color: '#9ca3af', fontSize: '14px' }}>
-              {language === 'en' ? `Preparing ${permit?.name}` : `Préparation de ${permit?.name}`}
-            </p>
-            <style jsx>{`
-              @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-              }
-            `}</style>
+          {/* Header de retour */}
+          <div style={{
+            ...styles.card,
+            marginBottom: '16px',
+            padding: '16px 24px'
+          }}>
+            <button
+              onClick={handleBackToSelection}
+              style={{
+                ...styles.button,
+                ...styles.buttonSecondary,
+                width: 'auto',
+                padding: '12px 20px'
+              }}
+            >
+              <ChevronRight style={{ width: '18px', height: '18px', transform: 'rotate(180deg)' }} />
+              {texts.backToSelection}
+            </button>
           </div>
+          
+          {/* Module de permis */}
+          <PermitComponent
+            province={selectedProvince}
+            language={language}
+            onSave={handleSavePermit}
+            onSubmit={handleSubmitPermit}
+            onCancel={handleBackToSelection}
+            initialData={formData?.permitData?.[selectedPermit] || {}}
+          />
         </div>
       );
     }
     
-    // Fallback pour tous les modules (y compris ConfinedSpace si échec de chargement)
+    // Sinon, module en développement
     return (
       <div style={styles.container}>
         {/* Header de retour */}
@@ -650,8 +591,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               ...styles.button,
               ...styles.buttonSecondary,
               width: 'auto',
-              padding: isMobile ? '12px 16px' : '16px 20px',
-              fontSize: isMobile ? '14px' : '16px'
+              padding: isMobile ? '12px 16px' : '16px 20px'
             }}
           >
             <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
@@ -796,8 +736,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
               ...styles.button,
               ...styles.buttonPrimary,
               width: 'auto',
-              padding: isMobile ? '12px 24px' : '16px 32px',
-              fontSize: isMobile ? '14px' : '16px'
+              padding: isMobile ? '12px 24px' : '16px 32px'
             }}
           >
             {texts.backToSelection}
@@ -811,9 +750,8 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   return (
     <div style={styles.container}>
       
-      {/* Header avec style cohérent des autres étapes */}
+      {/* Header avec statistiques */}
       <div style={styles.headerCard}>
-        {/* Gradient overlay */}
         <div style={{
           position: 'absolute',
           top: 0,
@@ -867,7 +805,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
             </div>
           </div>
           
-          {/* Statistiques globales */}
+          {/* Statistiques */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
@@ -966,7 +904,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
         </div>
       </div>
 
-      {/* Section sélection province */}
+      {/* Sélection province */}
       <div style={styles.card}>
         <div style={{ 
           display: 'flex', 
