@@ -449,7 +449,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         if (!permitData.rescue_plan_type) errors.push('rescue_plan_type');
         break;
       case 'atmospheric':
-        if (!permettData.gas_detector_calibrated) errors.push('gas_detector_calibrated');
+        if (!permitData.gas_detector_calibrated) errors.push('gas_detector_calibrated');
         if (atmosphericReadings.length === 0) errors.push('atmospheric_readings');
         break;
       case 'registry':
