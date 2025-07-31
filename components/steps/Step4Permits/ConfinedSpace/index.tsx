@@ -8,15 +8,16 @@ import {
   Wrench, Target, ChevronDown, ChevronRight, Building, Construction, Flame, Zap, BarChart3
 } from 'lucide-react';
 
-// 🔧 CORRECTION: Import du SafetyManager + Imports lazy
+// 🔧 CORRECTION: Import du SafetyManager
 import { useSafetyManager } from './SafetyManager';
 
-const SiteInformation = lazy(() => import('./SiteInformation'));
-const RescuePlan = lazy(() => import('./RescuePlan'));
-const AtmosphericTesting = lazy(() => import('./AtmosphericTesting'));
-const EntryRegistry = lazy(() => import('./EntryRegistry'));
+// 🔧 CORRECTION: Imports statiques au lieu de lazy pour éviter les problèmes de props
+import SiteInformation from './SiteInformation';
+import RescuePlan from './RescuePlan';
+import AtmosphericTesting from './AtmosphericTesting';
+import EntryRegistry from './EntryRegistry';
 
-// =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
+// =================== DÉTECTION MOBILE ET STYLES ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
 const styles = {
@@ -91,57 +92,167 @@ interface ConfinedSpaceProps {
   initialData?: any;
 }
 
-// =================== DONNÉES RÉGLEMENTAIRES (SIMPLIFIÉES) ===================
+// =================== DONNÉES RÉGLEMENTAIRES ===================
 const PROVINCIAL_REGULATIONS: Record<ProvinceCode, any> = {
   QC: {
     name: "Règlement sur la santé et la sécurité du travail (RSST)",
     authority: "CNESST",
-    authority_phone: "1-844-838-0808"
+    authority_phone: "1-844-838-0808",
+    atmospheric_testing: {
+      frequency_minutes: 30,
+      continuous_monitoring_required: true,
+      documentation_required: true,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    }
   },
   ON: {
     name: "Ontario Regulation 632/05 - Confined Spaces",
     authority: "Ministry of Labour (MOL)",
-    authority_phone: "1-877-202-0008"
+    authority_phone: "1-877-202-0008",
+    atmospheric_testing: {
+      frequency_minutes: 15,
+      continuous_monitoring_required: true,
+      documentation_required: true,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    }
   },
   BC: {
     name: "Workers Compensation Act - Part 3, Division 8",
     authority: "WorkSafeBC",
-    authority_phone: "1-888-621-7233"
+    authority_phone: "1-888-621-7233",
+    atmospheric_testing: {
+      frequency_minutes: 10,
+      continuous_monitoring_required: true,
+      documentation_required: true,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    }
   },
   AB: {
     name: "Occupational Health and Safety Code - Part 5",
     authority: "Alberta Labour",
-    authority_phone: "1-866-415-8690"
+    authority_phone: "1-866-415-8690",
+    atmospheric_testing: {
+      frequency_minutes: 15,
+      continuous_monitoring_required: true,
+      documentation_required: true,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    }
   },
   SK: {
     name: "Saskatchewan Employment Act - Part III",
     authority: "Ministry of Labour Relations",
-    authority_phone: "1-800-567-7233"
+    authority_phone: "1-800-567-7233",
+    atmospheric_testing: {
+      frequency_minutes: 20,
+      continuous_monitoring_required: true,
+      documentation_required: true,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    }
   },
   MB: {
     name: "Workplace Safety and Health Act",
     authority: "Manitoba Labour",
-    authority_phone: "1-855-957-7233"
+    authority_phone: "1-855-957-7233",
+    atmospheric_testing: {
+      frequency_minutes: 20,
+      continuous_monitoring_required: true,
+      documentation_required: true,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    }
   },
   NB: {
     name: "General Regulation - Occupational Health and Safety Act",
     authority: "WorkSafeNB",
-    authority_phone: "1-800-222-9775"
+    authority_phone: "1-800-222-9775",
+    atmospheric_testing: {
+      frequency_minutes: 15,
+      continuous_monitoring_required: true,
+      documentation_required: true,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    }
   },
   NS: {
     name: "Occupational Health and Safety Act",
     authority: "Nova Scotia Labour",
-    authority_phone: "1-800-952-2687"
+    authority_phone: "1-800-952-2687",
+    atmospheric_testing: {
+      frequency_minutes: 15,
+      continuous_monitoring_required: true,
+      documentation_required: true,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    }
   },
   PE: {
     name: "Occupational Health and Safety Act",
     authority: "PEI Workers Compensation Board",
-    authority_phone: "1-800-237-5049"
+    authority_phone: "1-800-237-5049",
+    atmospheric_testing: {
+      frequency_minutes: 20,
+      continuous_monitoring_required: true,
+      documentation_required: true,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    }
   },
   NL: {
     name: "Occupational Health and Safety Regulations",
     authority: "Workplace NL",
-    authority_phone: "1-800-563-9000"
+    authority_phone: "1-800-563-9000",
+    atmospheric_testing: {
+      frequency_minutes: 20,
+      continuous_monitoring_required: true,
+      documentation_required: true,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    }
   }
 };
 
@@ -162,6 +273,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   const [permitData, setPermitData] = useState(initialData);
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  
+  // 🔧 CORRECTION: État pour les lectures atmosphériques
+  const [atmosphericReadings, setAtmosphericReadings] = useState<any[]>([]);
 
   // =================== TRADUCTIONS ===================
   const getTexts = (language: 'fr' | 'en') => ({
@@ -273,7 +387,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       await onSave({
         ...permitData,
         currentSection,
-        selectedProvince
+        selectedProvince,
+        atmosphericReadings
       });
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -302,36 +417,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     return 'inProgress';
   };
 
-  // 🔧 CORRECTION: Composant de loading pour Suspense
-  const LoadingSpinner = () => (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '400px',
-      flexDirection: 'column',
-      gap: '16px'
-    }}>
-      <div style={{
-        width: '40px',
-        height: '40px',
-        border: '4px solid rgba(59, 130, 246, 0.3)',
-        borderTop: '4px solid #3b82f6',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite'
-      }} />
-      <p style={{ color: '#9ca3af', fontSize: '16px' }}>{texts.loading}</p>
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
-  );
-
-  // =================== RENDU DES SECTIONS AVEC SUSPENSE ===================
+  // =================== RENDU DES SECTIONS ===================
   const renderSectionContent = () => {
+    // 🔧 CORRECTION: Props communes standardisées
     const commonProps = {
       permitData,
       updatePermitData,
@@ -340,28 +428,40 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       isMobile,
       language,
       styles,
-      safetyManager, // 🔧 AJOUT: Passer le SafetyManager aux composants
+      safetyManager,
       updateParentData: (section: string, data: any) => {
         updatePermitData({ [section]: data });
       }
     };
 
-    return (
-      <Suspense fallback={<LoadingSpinner />}>
-        {currentSection === 'site' && (
-          <SiteInformation {...commonProps} />
-        )}
-        {currentSection === 'rescue' && (
-          <RescuePlan {...commonProps} />
-        )}
-        {currentSection === 'atmospheric' && (
-          <AtmosphericTesting {...commonProps} atmosphericReadings={[]} setAtmosphericReadings={() => {}} />
-        )}
-        {currentSection === 'registry' && (
-          <EntryRegistry {...commonProps} atmosphericReadings={[]} />
-        )}
-      </Suspense>
-    );
+    // 🔧 CORRECTION: Rendu direct sans Suspense pour éviter les problèmes
+    switch (currentSection) {
+      case 'site':
+        return <SiteInformation {...commonProps} />;
+      
+      case 'rescue':
+        return <RescuePlan {...commonProps} />;
+      
+      case 'atmospheric':
+        return (
+          <AtmosphericTesting 
+            {...commonProps} 
+            atmosphericReadings={atmosphericReadings}
+            setAtmosphericReadings={setAtmosphericReadings}
+          />
+        );
+      
+      case 'registry':
+        return (
+          <EntryRegistry 
+            {...commonProps} 
+            atmosphericReadings={atmosphericReadings}
+          />
+        );
+      
+      default:
+        return <SiteInformation {...commonProps} />;
+    }
   };
 
   // Icônes des sections
@@ -649,7 +749,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         </div>
       </div>
 
-      {/* Contenu de la section active avec Suspense */}
+      {/* Contenu de la section active */}
       <div style={{
         backgroundColor: '#1f2937',
         borderRadius: '16px',
