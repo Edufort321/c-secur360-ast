@@ -699,6 +699,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
       
+      
       {/* Modal de signature légale pour surveillant */}
       {showSurveillantSignature && (
         <LegalSignatureForm
