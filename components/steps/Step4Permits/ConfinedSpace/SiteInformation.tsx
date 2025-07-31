@@ -208,7 +208,7 @@ const styles = {
   }
 };
 
-// =================== TRADUCTIONS COMPLÈTES (gardées du code original) ===================
+// =================== TRADUCTIONS COMPLÈTES AVEC photoCategories ===================
 const translations = {
   fr: {
     title: "Informations du Site - Espace Clos",
@@ -325,7 +325,7 @@ const translations = {
     title: "Site Information - Confined Space",
     subtitle: "Complete identification and assessment of the confined workspace",
     
-    // Sections (versions anglaises correspondantes)
+    // Sections principales
     projectInfo: "Project Information",
     planning: "Planning",
     spaceIdentification: "Confined Space Identification",
@@ -337,7 +337,7 @@ const translations = {
     safetyMeasures: "Safety Measures",
     photoDocumentation: "Photo Documentation",
     
-    // Etc... (même structure qu'en français)
+    // Champs du formulaire
     projectNumber: "Project number",
     workLocation: "Work location",
     contractor: "Contractor",
@@ -345,8 +345,92 @@ const translations = {
     entryDate: "Planned entry date",
     duration: "Estimated duration",
     workerCount: "Number of workers",
-    workDescription: "Work description"
-    // ... continuer avec toutes les traductions anglaises
+    workDescription: "Work description",
+    
+    // Unités
+    unitSystem: "Unit system",
+    metric: "Metric (m)",
+    imperial: "Imperial (ft)",
+    
+    // Formes d'espaces
+    spaceShape: "Space shape",
+    rectangular: "Rectangular",
+    cylindrical: "Cylindrical",
+    spherical: "Spherical",
+    irregular: "Irregular",
+    
+    // Types d'espaces
+    spaceType: "Space type",
+    spaceTypes: {
+      tank: "Tank",
+      vessel: "Vessel/Container",
+      silo: "Silo",
+      pit: "Pit",
+      vault: "Vault",
+      tunnel: "Tunnel",
+      trench: "Trench",
+      manhole: "Manhole",
+      storage: "Storage space",
+      boiler: "Boiler",
+      duct: "Duct",
+      chamber: "Chamber",
+      other: "Other"
+    },
+    
+    // Classifications CSA
+    csaClass: "CSA Classification",
+    csaClasses: {
+      class1: "Class 1 - Immediate danger to life",
+      class2: "Class 2 - Potential risk",
+      class3: "Class 3 - Minimal risk"
+    },
+    
+    // Dimensions
+    length: "Length",
+    width: "Width",
+    height: "Height",
+    diameter: "Diameter",
+    volume: "Calculated volume",
+    calculateVolume: "Calculate Volume",
+    
+    // Points d'entrée
+    entryPoint: "Entry point",
+    entryType: "Entry type",
+    entryDimensions: "Dimensions",
+    entryLocation: "Location",
+    entryCondition: "Condition",
+    entryAccessibility: "Accessibility",
+    addEntryPoint: "Add entry point",
+    
+    // Dangers
+    atmosphericHazards: "Atmospheric Hazards",
+    physicalHazards: "Physical Hazards",
+    selectHazards: "Select all present hazards",
+    
+    // Photos - CORRECTION: Ajout de photoCategories manquant
+    addPhoto: "Add photo",
+    takePhoto: "Take photo",
+    noPhotos: "No photos",
+    photoCategories: {
+      exterior: "Exterior",
+      interior: "Interior",
+      entry: "Entry points",
+      hazards: "Hazards",
+      equipment: "Equipment",
+      safety: "Safety"
+    },
+    
+    // Actions
+    save: "Save",
+    delete: "Delete",
+    edit: "Edit",
+    add: "Add",
+    remove: "Remove",
+    select: "Select",
+    required: "Required",
+    optional: "Optional",
+    yes: "Yes",
+    no: "No"
   }
 };
 // =================== COMPOSANT PRINCIPAL SIMPLIFIÉ ===================
