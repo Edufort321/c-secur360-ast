@@ -1743,7 +1743,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                                   setSelectedPersonId(null);
                                 }
                               }}
-                              disabled={!selectedPersonId || needsCalibration}
+                              disabled={Boolean(!selectedPersonId || needsCalibration)}
                               className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 transition-colors"
                             >
                               <LogOut className="w-4 h-4" />
