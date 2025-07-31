@@ -1,18 +1,214 @@
-// EntryRegistry.tsx - Section 1 (Imports et Types)
-
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   UserCheck, Eye, LogIn, LogOut, Shield, Plus, Trash2, Timer, Users, 
   PenTool, CheckCircle, X, Edit3, Copy, Wrench, Clock, History, 
-  UserPlus, UserMinus, AlertTriangle, FileText, PenTool as Signature 
+  UserPlus, UserMinus, AlertTriangle, FileText, PenTool as Signature,
+  Volume2, Activity
 } from 'lucide-react';
+
+// =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
+const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+const styles = {
+  container: {
+    maxWidth: '100%',
+    margin: '0 auto',
+    padding: isMobile ? '4px' : '24px',
+    backgroundColor: '#111827',
+    minHeight: '100vh',
+    color: 'white',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
+    overflowX: 'hidden' as const
+  },
+  card: {
+    backgroundColor: '#1f2937',
+    borderRadius: isMobile ? '8px' : '16px',
+    padding: isMobile ? '12px' : '24px',
+    border: '1px solid #374151',
+    marginBottom: isMobile ? '12px' : '24px',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+    width: '100%',
+    boxSizing: 'border-box' as const
+  },
+  input: {
+    backgroundColor: '#374151',
+    color: 'white',
+    border: '1px solid #4b5563',
+    borderRadius: isMobile ? '6px' : '8px',
+    padding: isMobile ? '10px 12px' : '14px',
+    width: '100%',
+    fontSize: '16px',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+    boxSizing: 'border-box' as const,
+    WebkitAppearance: 'none' as const,
+    MozAppearance: 'textfield' as const
+  },
+  button: {
+    padding: isMobile ? '8px 12px' : '14px 24px',
+    borderRadius: isMobile ? '6px' : '8px',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    gap: isMobile ? '4px' : '8px',
+    transition: 'all 0.2s ease',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '16px',
+    touchAction: 'manipulation' as const,
+    minHeight: '44px',
+    boxSizing: 'border-box' as const,
+    width: '100%',
+    justifyContent: 'center' as const
+  },
+  buttonPrimary: {
+    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+  },
+  buttonSuccess: {
+    background: 'linear-gradient(135deg, #059669, #047857)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+  },
+  buttonDanger: {
+    background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+  },
+  buttonSecondary: {
+    backgroundColor: '#4b5563',
+    color: 'white',
+    border: '1px solid #6b7280'
+  },
+  buttonSmall: {
+    padding: isMobile ? '6px 10px' : '8px 12px',
+    fontSize: isMobile ? '13px' : '14px',
+    minHeight: 'auto',
+    width: 'auto'
+  },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+    gap: isMobile ? '8px' : '20px',
+    width: '100%'
+  },
+  grid3: {
+    display: 'grid',
+    gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+    gap: isMobile ? '8px' : '16px',
+    width: '100%'
+  },
+  grid4: {
+    display: 'grid',
+    gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+    gap: isMobile ? '8px' : '16px',
+    width: '100%'
+  },
+  statusIndicator: {
+    width: '14px',
+    height: '14px',
+    borderRadius: '50%',
+    marginRight: '8px',
+    flexShrink: 0
+  },
+  statusSafe: {
+    backgroundColor: '#10b981',
+    boxShadow: '0 0 8px rgba(16, 185, 129, 0.4)'
+  },
+  statusWarning: {
+    backgroundColor: '#f59e0b',
+    boxShadow: '0 0 8px rgba(245, 158, 11, 0.4)'
+  },
+  statusDanger: {
+    backgroundColor: '#ef4444',
+    animation: 'pulse 2s infinite',
+    boxShadow: '0 0 12px rgba(239, 68, 68, 0.6)'
+  },
+  emergencyCard: {
+    backgroundColor: 'rgba(220, 38, 38, 0.2)',
+    border: '2px solid #ef4444',
+    borderRadius: '16px',
+    padding: isMobile ? '20px' : '28px',
+    animation: 'pulse 2s infinite',
+    boxShadow: '0 8px 32px rgba(220, 38, 38, 0.3)'
+  },
+  label: {
+    display: 'block',
+    color: '#9ca3af',
+    fontSize: isMobile ? '13px' : '15px',
+    fontWeight: '500',
+    marginBottom: isMobile ? '4px' : '8px'
+  },
+  cardTitle: {
+    fontSize: isMobile ? '16px' : '20px',
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: isMobile ? '12px' : '20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: isMobile ? '6px' : '12px'
+  },
+  statCard: {
+    backgroundColor: 'rgba(17, 24, 39, 0.6)',
+    borderRadius: '12px',
+    padding: isMobile ? '16px' : '20px',
+    border: '1px solid #4b5563',
+    transition: 'all 0.2s ease',
+    textAlign: 'center' as const
+  },
+  personCard: {
+    padding: isMobile ? '14px' : '18px',
+    borderRadius: '12px',
+    borderLeft: '4px solid',
+    transition: 'all 0.2s ease',
+    marginBottom: '16px'
+  },
+  personCardSurveillant: {
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    borderLeftColor: '#3b82f6',
+    border: '1px solid rgba(59, 130, 246, 0.3)'
+  },
+  personCardEntrant: {
+    backgroundColor: 'rgba(107, 114, 128, 0.15)',
+    borderLeftColor: '#6b7280',
+    border: '1px solid rgba(107, 114, 128, 0.3)'
+  },
+  personCardInside: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderLeftColor: '#10b981',
+    border: '1px solid rgba(16, 185, 129, 0.3)'
+  },
+  equipmentCard: {
+    padding: isMobile ? '14px' : '18px',
+    borderRadius: '12px',
+    borderLeft: '4px solid',
+    transition: 'all 0.2s ease',
+    marginBottom: '16px'
+  },
+  equipmentAvailable: {
+    backgroundColor: 'rgba(5, 150, 105, 0.15)',
+    borderLeftColor: '#10b981',
+    border: '1px solid rgba(16, 185, 129, 0.3)'
+  },
+  equipmentInUse: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderLeftColor: '#f59e0b',
+    border: '1px solid rgba(245, 158, 11, 0.3)'
+  },
+  equipmentDanger: {
+    backgroundColor: 'rgba(220, 38, 38, 0.15)',
+    borderLeftColor: '#ef4444',
+    border: '1px solid rgba(239, 68, 68, 0.3)'
+  }
+};
 
 // =================== TYPES PROVINCIAUX ===================
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 
-// =================== INTERFACES PRINCIPALES ===================
+// =================== INTERFACES RÉGLEMENTAIRES ===================
 interface RegulationData {
   name: string;
   authority: string;
@@ -310,8 +506,7 @@ interface EntryRegistryProps {
   onChange?: (data: any) => void;
   regulations?: RegulationData;
 }
-// EntryRegistry.tsx - Section 2 (Composant Principal et États)
-
+// =================== COMPOSANT PRINCIPAL ===================
 const EntryRegistry: React.FC<EntryRegistryProps> = ({
   permitData,
   updatePermitData,
@@ -319,7 +514,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   PROVINCIAL_REGULATIONS,
   isMobile,
   language,
-  styles,
+  styles: propStyles,
   updateParentData,
   atmosphericReadings,
   // Props optionnelles pour compatibilité
@@ -331,6 +526,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   const actualData = data || permitData;
   const actualOnChange = onChange || ((newData: any) => updatePermitData(newData));
   const actualRegulations = regulations || PROVINCIAL_REGULATIONS[selectedProvince];
+
   // =================== ÉTATS PRINCIPAUX ===================
   const [personnel, setPersonnel] = useState<Person[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
@@ -383,6 +579,74 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   // =================== REFS ===================
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // =================== TRADUCTIONS ===================
+  const getTexts = (language: 'fr' | 'en') => ({
+    fr: {
+      title: "Registre d'Entrée - Espace Clos",
+      personnel: "Gestion du Personnel",
+      equipment: "Gestion des Équipements",
+      compliance: "Validation et Conformité du Permis",
+      addPerson: "Ajouter Personnel",
+      addEquipment: "Ajouter Équipement",
+      surveillant: "Surveillant",
+      entrant: "Entrant",
+      active: "Actif",
+      inside: "À l'intérieur",
+      available: "Disponible",
+      inUse: "En utilisation",
+      maintenance: "Maintenance",
+      calibrated: "Calibré",
+      expired: "Expiré",
+      markEntry: "Marquer Entrée",
+      markExit: "Marquer Sortie",
+      checkout: "Sortir Équipement",
+      return: "Retourner Équipement",
+      edit: "Modifier",
+      delete: "Supprimer",
+      activate: "Activer",
+      deactivate: "Désactiver",
+      compliant: "CONFORME",
+      nonCompliant: "NON CONFORME",
+      noPersonnel: "Aucun personnel enregistré",
+      noEquipment: "Aucun équipement enregistré",
+      startWithSupervisor: "Commencez par ajouter un surveillant",
+      addEquipmentFirst: "Ajoutez des équipements pour commencer"
+    },
+    en: {
+      title: "Entry Registry - Confined Space",
+      personnel: "Personnel Management",
+      equipment: "Equipment Management", 
+      compliance: "Permit Validation and Compliance",
+      addPerson: "Add Personnel",
+      addEquipment: "Add Equipment",
+      surveillant: "Attendant",
+      entrant: "Entrant",
+      active: "Active",
+      inside: "Inside",
+      available: "Available",
+      inUse: "In Use",
+      maintenance: "Maintenance",
+      calibrated: "Calibrated",
+      expired: "Expired",
+      markEntry: "Mark Entry",
+      markExit: "Mark Exit",
+      checkout: "Checkout Equipment",
+      return: "Return Equipment",
+      edit: "Edit",
+      delete: "Delete",
+      activate: "Activate",
+      deactivate: "Deactivate",
+      compliant: "COMPLIANT",
+      nonCompliant: "NON-COMPLIANT",
+      noPersonnel: "No personnel registered",
+      noEquipment: "No equipment registered",
+      startWithSupervisor: "Start by adding an attendant",
+      addEquipmentFirst: "Add equipment to get started"
+    }
+  })[language];
+
+  const texts = getTexts(language);
 
   // =================== SAFETY MANAGER ===================
   const safetyManager: SafetyManager = {
@@ -491,6 +755,20 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
       }
     } catch (error) {
       console.warn('Cannot play alarm sound:', error);
+    }
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
     }
   };
 
@@ -730,22 +1008,6 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     showNotification(`⬅️ SORTIE: ${person.name} (Durée: ${durationText})`, 'info');
     playAlarmSound('warning');
   };
-
-  const formatDuration = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${secs}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`;
-    } else {
-      return `${secs}s`;
-    }
-  };
-  // EntryRegistry.tsx - Section 3 (Gestion Équipements et Conformité)
-
   // =================== GESTION ÉQUIPEMENTS ===================
   const addEquipment = () => {
     const newEquipment: Equipment = {
@@ -1122,16 +1384,16 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
 
   const drawSignatureBackground = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     // Background gris pâle
-    ctx.fillStyle = '#f8f9fa';
+    ctx.fillStyle = '#374151';
     ctx.fillRect(0, 0, width, height);
     
     // Bordure
-    ctx.strokeStyle = '#dee2e6';
+    ctx.strokeStyle = '#4b5563';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, width, height);
     
     // Logo C-Secure en background (simulé avec texte)
-    ctx.fillStyle = '#e9ecef';
+    ctx.fillStyle = '#6b7280';
     ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('C-SECURE', width / 2, height / 2 - 10);
@@ -1139,7 +1401,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     ctx.fillText('Signature numérique', width / 2, height / 2 + 10);
     
     // Reset pour la signature
-    ctx.strokeStyle = '#000';
+    ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -1225,733 +1487,1311 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
       updateParentData('registry', registryData);
     }
   }, [personnel, equipment, compliance_check, actualOnChange, updateParentData]);
-  // EntryRegistry.tsx - Section 4 (Rendu JSX - Dashboard et Personnel)
-
   // =================== RENDU PRINCIPAL ===================
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header principal */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-6 text-white">
-        <div className="flex items-center justify-between">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
+      
+      {/* Header principal avec style sombre */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1f2937, #374151)',
+        borderRadius: isMobile ? '12px' : '16px',
+        padding: isMobile ? '20px' : '24px',
+        border: '1px solid #4b5563',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? '16px' : '0'
+        }}>
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-3">
-              <Shield className="w-8 h-8" />
-              Registre d'Entrée - Espace Clos
+            <h1 style={{
+              fontSize: isMobile ? '20px' : '28px',
+              fontWeight: 'bold',
+              color: 'white',
+              marginBottom: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <Shield style={{ width: isMobile ? '24px' : '32px', height: isMobile ? '24px' : '32px', color: '#60a5fa' }} />
+              {texts.title}
             </h1>
-            <p className="mt-2 opacity-90">
-              Province: {selectedProvince} | Réglementation: {actualRegulations.name}
+            <p style={{ 
+              color: '#9ca3af', 
+              fontSize: isMobile ? '14px' : '16px',
+              margin: 0
+            }}>
+              🌍 Province: {selectedProvince} | ⚖️ Réglementation: {actualRegulations.name}
             </p>
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold">
+          <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
+            <div style={{ 
+              fontSize: isMobile ? '32px' : '48px', 
+              fontWeight: 'bold',
+              color: getPersonnelStats().activeEntrants > 0 ? '#10b981' : '#6b7280',
+              fontFamily: 'JetBrains Mono, monospace'
+            }}>
               {getPersonnelStats().activeEntrants}
             </div>
-            <div className="text-sm opacity-90">Personnel à l'intérieur</div>
+            <div style={{ 
+              color: '#9ca3af', 
+              fontSize: isMobile ? '12px' : '14px',
+              fontWeight: '600'
+            }}>
+              👥 Personnel à l'intérieur
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Dashboard - Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Dashboard - Statistiques avec style sombre */}
+      <div style={styles.grid4}>
         {/* Personnel Stats */}
-        <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
+        <div style={styles.statCard}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            marginBottom: '12px'
+          }}>
             <div>
-              <p className="text-sm font-medium text-gray-600">Personnel Total</p>
-              <p className="text-2xl font-bold text-gray-900">{getPersonnelStats().totalPersonnel}</p>
+              <p style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '12px' : '14px',
+                fontWeight: '500',
+                margin: '0 0 4px 0'
+              }}>
+                👥 Personnel Total
+              </p>
+              <p style={{ 
+                fontSize: isMobile ? '24px' : '32px',
+                fontWeight: 'bold',
+                color: 'white',
+                margin: 0,
+                fontFamily: 'JetBrains Mono, monospace'
+              }}>
+                {getPersonnelStats().totalPersonnel}
+              </p>
             </div>
-            <Users className="w-8 h-8 text-blue-600" />
+            <Users style={{ 
+              width: isMobile ? '32px' : '40px', 
+              height: isMobile ? '32px' : '40px', 
+              color: '#60a5fa'
+            }} />
           </div>
-          <div className="mt-4 flex items-center">
-            <div className={`flex items-center ${getCurrentSurveillant() ? 'text-green-600' : 'text-red-600'}`}>
-              <Eye className="w-4 h-4 mr-1" />
-              <span className="text-sm font-medium">
-                {getCurrentSurveillant() ? 'Surveillant actif' : 'Aucun surveillant'}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            padding: '8px 12px',
+            backgroundColor: getCurrentSurveillant() ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+            borderRadius: '8px',
+            border: `1px solid ${getCurrentSurveillant() ? '#10b981' : '#ef4444'}`
+          }}>
+            <Eye style={{ 
+              width: '16px', 
+              height: '16px', 
+              marginRight: '8px',
+              color: getCurrentSurveillant() ? '#10b981' : '#ef4444'
+            }} />
+            <span style={{ 
+              fontSize: isMobile ? '11px' : '12px',
+              fontWeight: '600',
+              color: getCurrentSurveillant() ? '#86efac' : '#fca5a5'
+            }}>
+              {getCurrentSurveillant() ? '✅ Surveillant actif' : '❌ Aucun surveillant'}
+            </span>
+          </div>
+        </div>
+
+        {/* Équipements Stats */}
+        <div style={styles.statCard}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            marginBottom: '12px'
+          }}>
+            <div>
+              <p style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '12px' : '14px',
+                fontWeight: '500',
+                margin: '0 0 4px 0'
+              }}>
+                🔧 Équipements
+              </p>
+              <p style={{ 
+                fontSize: isMobile ? '24px' : '32px',
+                fontWeight: 'bold',
+                color: 'white',
+                margin: 0,
+                fontFamily: 'JetBrains Mono, monospace'
+              }}>
+                {getEquipmentStats().totalEquipment}
+              </p>
+            </div>
+            <Wrench style={{ 
+              width: isMobile ? '32px' : '40px', 
+              height: isMobile ? '32px' : '40px', 
+              color: '#10b981'
+            }} />
+          </div>
+          <div style={{ fontSize: isMobile ? '11px' : '12px' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between',
+              marginBottom: '4px'
+            }}>
+              <span style={{ color: '#9ca3af' }}>📤 En cours:</span>
+              <span style={{ fontWeight: '600', color: '#f59e0b' }}>
+                {getEquipmentStats().inUse}
+              </span>
+            </div>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between'
+            }}>
+              <span style={{ color: '#9ca3af' }}>✅ Disponibles:</span>
+              <span style={{ fontWeight: '600', color: '#10b981' }}>
+                {getEquipmentStats().available}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Équipements Stats */}
-        <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Équipements</p>
-              <p className="text-2xl font-bold text-gray-900">{getEquipmentStats().totalEquipment}</p>
-            </div>
-            <Wrench className="w-8 h-8 text-green-600" />
-          </div>
-          <div className="mt-4 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">En cours:</span>
-              <span className="font-medium text-orange-600">{getEquipmentStats().inUse}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Disponibles:</span>
-              <span className="font-medium text-green-600">{getEquipmentStats().available}</span>
-            </div>
-          </div>
-        </div>
-
         {/* Conformité */}
-        <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
+        <div style={styles.statCard}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            marginBottom: '12px'
+          }}>
             <div>
-              <p className="text-sm font-medium text-gray-600">Conformité</p>
-              <p className="text-2xl font-bold text-gray-900">{getCompliancePercentage()}%</p>
+              <p style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '12px' : '14px',
+                fontWeight: '500',
+                margin: '0 0 4px 0'
+              }}>
+                ✅ Conformité
+              </p>
+              <p style={{ 
+                fontSize: isMobile ? '24px' : '32px',
+                fontWeight: 'bold',
+                color: isFullyCompliant() ? '#10b981' : '#f59e0b',
+                margin: 0,
+                fontFamily: 'JetBrains Mono, monospace'
+              }}>
+                {getCompliancePercentage()}%
+              </p>
             </div>
-            <CheckCircle className={`w-8 h-8 ${isFullyCompliant() ? 'text-green-600' : 'text-orange-600'}`} />
+            <CheckCircle style={{ 
+              width: isMobile ? '32px' : '40px', 
+              height: isMobile ? '32px' : '40px', 
+              color: isFullyCompliant() ? '#10b981' : '#f59e0b'
+            }} />
           </div>
-          <div className="mt-4">
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  isFullyCompliant() ? 'bg-green-600' : 'bg-orange-600'
-                }`}
-                style={{ width: `${getCompliancePercentage()}%` }}
-              />
+          <div>
+            <div style={{
+              width: '100%',
+              backgroundColor: '#374151',
+              borderRadius: '8px',
+              height: '8px',
+              overflow: 'hidden',
+              marginBottom: '8px'
+            }}>
+              <div style={{
+                height: '100%',
+                backgroundColor: isFullyCompliant() ? '#10b981' : '#f59e0b',
+                width: `${getCompliancePercentage()}%`,
+                transition: 'width 0.3s ease',
+                borderRadius: '8px'
+              }} />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {isFullyCompliant() ? 'Conforme ✅' : 'Vérifications requises ⚠️'}
+            <p style={{ 
+              fontSize: isMobile ? '10px' : '11px',
+              color: isFullyCompliant() ? '#86efac' : '#fde047',
+              margin: 0,
+              fontWeight: '600',
+              textAlign: 'center'
+            }}>
+              {isFullyCompliant() ? '🎉 Conforme' : '⚠️ Vérifications requises'}
             </p>
           </div>
         </div>
 
         {/* Alertes */}
-        <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
+        <div style={styles.statCard}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            marginBottom: '12px'
+          }}>
             <div>
-              <p className="text-sm font-medium text-gray-600">Alertes</p>
-              <p className="text-2xl font-bold text-gray-900">{getEquipmentStats().needsCalibration}</p>
+              <p style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '12px' : '14px',
+                fontWeight: '500',
+                margin: '0 0 4px 0'
+              }}>
+                🚨 Alertes
+              </p>
+              <p style={{ 
+                fontSize: isMobile ? '24px' : '32px',
+                fontWeight: 'bold',
+                color: getEquipmentStats().needsCalibration > 0 ? '#ef4444' : '#6b7280',
+                margin: 0,
+                fontFamily: 'JetBrains Mono, monospace'
+              }}>
+                {getEquipmentStats().needsCalibration}
+              </p>
             </div>
-            <AlertTriangle className={`w-8 h-8 ${getEquipmentStats().needsCalibration > 0 ? 'text-red-600' : 'text-gray-400'}`} />
+            <AlertTriangle style={{ 
+              width: isMobile ? '32px' : '40px', 
+              height: isMobile ? '32px' : '40px', 
+              color: getEquipmentStats().needsCalibration > 0 ? '#ef4444' : '#6b7280'
+            }} />
           </div>
-          <div className="mt-4">
-            <p className="text-xs text-gray-500">
-              {getEquipmentStats().needsCalibration > 0 
-                ? 'Calibrations expirées' 
-                : 'Aucune alerte active'
-              }
-            </p>
-          </div>
+          <p style={{ 
+            fontSize: isMobile ? '10px' : '11px',
+            color: '#9ca3af',
+            margin: 0,
+            textAlign: 'center'
+          }}>
+            {getEquipmentStats().needsCalibration > 0 
+              ? '📅 Calibrations expirées' 
+              : '✅ Aucune alerte active'
+            }
+          </p>
         </div>
       </div>
 
-      {/* Validation et Conformité du Permis */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <CheckCircle className="w-6 h-6 text-blue-600" />
-            Validation et Conformité du Permis
+      {/* Section Validation et Conformité du Permis avec style sombre */}
+      <div style={styles.card}>
+        <div style={{
+          borderBottom: '1px solid #4b5563',
+          paddingBottom: '20px',
+          marginBottom: '24px'
+        }}>
+          <h2 style={styles.cardTitle}>
+            <CheckCircle style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
+            {texts.compliance}
           </h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Vérifications requises avant autorisation d'entrée (cochables par le surveillant uniquement)
+          <p style={{ 
+            color: '#9ca3af', 
+            fontSize: isMobile ? '13px' : '15px',
+            margin: 0,
+            lineHeight: 1.5
+          }}>
+            ⚖️ Vérifications requises avant autorisation d'entrée (cochables par le surveillant uniquement)
           </p>
         </div>
         
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(compliance_check).map(([key, value]) => (
-              <div 
-                key={key}
-                className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                  value 
-                    ? 'border-green-300 bg-green-50' 
-                    : 'border-gray-200 bg-gray-50 hover:border-gray-300'
-                }`}
-                onClick={() => updateComplianceCheck(key as keyof ComplianceCheck, !value)}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                    value 
-                      ? 'border-green-500 bg-green-500' 
-                      : 'border-gray-300 bg-white'
-                  }`}>
-                    {value && <CheckCircle className="w-4 h-4 text-white" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className={`font-medium ${value ? 'text-green-800' : 'text-gray-700'}`}>
-                      {getComplianceLabel(key as keyof ComplianceCheck)}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {value ? '✓ Vérifié' : 'Cliquez pour cocher'}
-                    </p>
-                  </div>
+        <div style={styles.grid2}>
+          {Object.entries(compliance_check).map(([key, value]) => (
+            <div 
+              key={key}
+              style={{
+                padding: isMobile ? '16px' : '20px',
+                borderRadius: '12px',
+                border: `2px solid ${value ? '#10b981' : '#4b5563'}`,
+                backgroundColor: value ? 'rgba(16, 185, 129, 0.1)' : 'rgba(75, 85, 99, 0.1)',
+                transition: 'all 0.3s ease',
+                cursor: 'pointer'
+              }}
+              onClick={() => updateComplianceCheck(key as keyof ComplianceCheck, !value)}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '6px',
+                  border: `2px solid ${value ? '#10b981' : '#6b7280'}`,
+                  backgroundColor: value ? '#10b981' : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  {value && <CheckCircle style={{ width: '16px', height: '16px', color: 'white' }} />}
                 </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className={`mt-6 p-4 rounded-lg border-2 ${
-            isFullyCompliant() 
-              ? 'border-green-300 bg-green-50' 
-              : 'border-orange-300 bg-orange-50'
-          }`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                {isFullyCompliant() ? (
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                ) : (
-                  <AlertTriangle className="w-6 h-6 text-orange-600" />
-                )}
-                <div>
-                  <p className={`font-semibold ${isFullyCompliant() ? 'text-green-800' : 'text-orange-800'}`}>
-                    Statut Global: {isFullyCompliant() ? 'CONFORME ✅' : 'NON CONFORME ⚠️'}
+                <div style={{ flex: 1 }}>
+                  <p style={{
+                    fontWeight: '600',
+                    color: value ? '#86efac' : '#d1d5db',
+                    margin: '0 0 4px 0',
+                    fontSize: isMobile ? '14px' : '15px'
+                  }}>
+                    {getComplianceLabel(key as keyof ComplianceCheck)}
                   </p>
-                  <p className="text-sm text-gray-600">
-                    {getCompliancePercentage()}% des vérifications complétées
+                  <p style={{ 
+                    fontSize: isMobile ? '11px' : '12px',
+                    color: '#9ca3af',
+                    margin: 0
+                  }}>
+                    {value ? '✅ Vérifié' : '👆 Cliquez pour cocher'}
                   </p>
                 </div>
               </div>
-              <div className="text-right">
-                <div className={`text-2xl font-bold ${isFullyCompliant() ? 'text-green-600' : 'text-orange-600'}`}>
-                  {getCompliancePercentage()}%
-                </div>
+            </div>
+          ))}
+        </div>
+        
+        <div style={{
+          marginTop: '24px',
+          padding: isMobile ? '20px' : '24px',
+          borderRadius: '12px',
+          border: `2px solid ${isFullyCompliant() ? '#10b981' : '#f59e0b'}`,
+          backgroundColor: isFullyCompliant() ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? '16px' : '0'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              {isFullyCompliant() ? (
+                <CheckCircle style={{ width: '32px', height: '32px', color: '#10b981' }} />
+              ) : (
+                <AlertTriangle style={{ width: '32px', height: '32px', color: '#f59e0b' }} />
+              )}
+              <div>
+                <p style={{
+                  fontWeight: 'bold',
+                  color: isFullyCompliant() ? '#86efac' : '#fde047',
+                  margin: '0 0 4px 0',
+                  fontSize: isMobile ? '16px' : '18px'
+                }}>
+                  🎯 Statut Global: {isFullyCompliant() ? texts.compliant + ' ✅' : texts.nonCompliant + ' ⚠️'}
+                </p>
+                <p style={{ 
+                  color: '#9ca3af', 
+                  fontSize: isMobile ? '13px' : '14px',
+                  margin: 0
+                }}>
+                  📊 {getCompliancePercentage()}% des vérifications complétées
+                </p>
+              </div>
+            </div>
+            <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
+              <div style={{
+                fontSize: isMobile ? '28px' : '36px',
+                fontWeight: 'bold',
+                color: isFullyCompliant() ? '#10b981' : '#f59e0b',
+                fontFamily: 'JetBrains Mono, monospace'
+              }}>
+                {getCompliancePercentage()}%
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Section Personnel */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Users className="w-6 h-6 text-blue-600" />
-              Gestion du Personnel
+      {/* Section Personnel avec style sombre */}
+      <div style={styles.card}>
+        <div style={{
+          borderBottom: '1px solid #4b5563',
+          paddingBottom: '20px',
+          marginBottom: '24px'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? '16px' : '0'
+          }}>
+            <h2 style={styles.cardTitle}>
+              <Users style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
+              {texts.personnel}
             </h2>
             <button
               onClick={() => setShowPersonModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              style={{
+                ...styles.button,
+                ...styles.buttonPrimary,
+                ...styles.buttonSmall
+              }}
             >
-              <UserPlus className="w-5 h-5" />
-              Ajouter Personnel
+              <UserPlus style={{ width: '18px', height: '18px' }} />
+              {texts.addPerson}
             </button>
           </div>
         </div>
 
-        <div className="p-6">
-          {personnel.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900">Aucun personnel enregistré</h3>
-              <p className="text-gray-500">Commencez par ajouter un surveillant</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {personnel.map((person) => {
-                const isInside = person.entry_sessions.some(session => session.status === 'active');
-                const activeSessions = person.entry_sessions.filter(session => session.status === 'active');
-                const totalSessions = person.entry_sessions.length;
+        {personnel.length === 0 ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: isMobile ? '40px 20px' : '60px 40px',
+            backgroundColor: 'rgba(17, 24, 39, 0.5)',
+            borderRadius: '12px',
+            border: '1px solid #374151'
+          }}>
+            <Users style={{ 
+              width: isMobile ? '64px' : '80px', 
+              height: isMobile ? '64px' : '80px', 
+              color: '#6b7280',
+              margin: '0 auto 20px'
+            }} />
+            <h3 style={{ 
+              fontSize: isMobile ? '18px' : '20px',
+              fontWeight: '600',
+              color: '#d1d5db',
+              marginBottom: '12px'
+            }}>
+              {texts.noPersonnel}
+            </h3>
+            <p style={{ 
+              color: '#9ca3af', 
+              fontSize: isMobile ? '14px' : '15px',
+              lineHeight: 1.5
+            }}>
+              👨‍💼 {texts.startWithSupervisor}
+            </p>
+          </div>
+        ) : (
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '16px',
+            maxHeight: isMobile ? '500px' : '600px',
+            overflowY: 'auto',
+            paddingRight: '8px'
+          }}>
+            {personnel.map((person) => {
+              const isInside = person.entry_sessions.some(session => session.status === 'active');
+              const totalSessions = person.entry_sessions.length;
+              
+              const cardStyle = person.role === 'surveillant' 
+                ? styles.personCardSurveillant
+                : isInside 
+                  ? styles.personCardInside
+                  : styles.personCardEntrant;
 
-                return (
-                  <div
-                    key={person.id}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      person.role === 'surveillant' 
-                        ? 'border-blue-200 bg-blue-50'
-                        : isInside 
-                          ? 'border-green-200 bg-green-50'
-                          : 'border-gray-200 bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className={`p-2 rounded-full ${
-                          person.role === 'surveillant' 
-                            ? 'bg-blue-100' 
-                            : 'bg-gray-100'
-                        }`}>
-                          {person.role === 'surveillant' ? (
-                            <Eye className="w-6 h-6 text-blue-600" />
-                          ) : (
-                            <UserCheck className="w-6 h-6 text-gray-600" />
+              return (
+                <div key={person.id} style={{ ...styles.personCard, ...cardStyle }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    marginBottom: '16px',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: isMobile ? '16px' : '0'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{
+                        padding: '12px',
+                        borderRadius: '12px',
+                        backgroundColor: person.role === 'surveillant' 
+                          ? 'rgba(59, 130, 246, 0.2)' 
+                          : 'rgba(107, 114, 128, 0.2)'
+                      }}>
+                        {person.role === 'surveillant' ? (
+                          <Eye style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
+                        ) : (
+                          <UserCheck style={{ width: '24px', height: '24px', color: '#9ca3af' }} />
+                        )}
+                      </div>
+                      
+                      <div>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '12px',
+                          flexWrap: 'wrap'
+                        }}>
+                          <h3 style={{ 
+                            fontSize: isMobile ? '16px' : '18px',
+                            fontWeight: 'bold',
+                            color: 'white',
+                            margin: 0
+                          }}>
+                            {person.name}
+                          </h3>
+                          
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            backgroundColor: person.role === 'surveillant'
+                              ? 'rgba(59, 130, 246, 0.2)'
+                              : 'rgba(107, 114, 128, 0.2)',
+                            color: person.role === 'surveillant' ? '#93c5fd' : '#d1d5db',
+                            border: `1px solid ${person.role === 'surveillant' ? '#3b82f6' : '#6b7280'}`
+                          }}>
+                            {person.role === 'surveillant' ? '👁️ ' + texts.surveillant : '👤 ' + texts.entrant}
+                          </span>
+                          
+                          {person.is_active && (
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                              color: '#86efac',
+                              border: '1px solid #10b981'
+                            }}>
+                              ✅ {texts.active}
+                            </span>
+                          )}
+                          
+                          {isInside && (
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                              color: '#fde047',
+                              border: '1px solid #f59e0b',
+                              animation: 'pulse 2s infinite'
+                            }}>
+                              🚪 {texts.inside}
+                            </span>
                           )}
                         </div>
                         
-                        <div>
-                          <div className="flex items-center space-x-3">
-                            <h3 className="text-lg font-semibold text-gray-900">{person.name}</h3>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              person.role === 'surveillant'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {person.role === 'surveillant' ? 'Surveillant' : 'Entrant'}
-                            </span>
-                            
-                            {person.is_active && (
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Actif
-                              </span>
-                            )}
-                            
-                            {isInside && (
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 animate-pulse">
-                                À l'intérieur
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
-                            <span>📍 {person.company}</span>
-                            <span>📊 {totalSessions} session(s)</span>
-                            {person.training_expiry && (
-                              <span>📅 Expire: {new Date(person.training_expiry).toLocaleDateString()}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        {/* Boutons Entrée/Sortie pour entrants */}
-                        {person.role === 'entrant' && (
-                          <>
-                            {!isInside ? (
-                              <button
-                                onClick={() => markEntry(person.id)}
-                                disabled={!getCurrentSurveillant()}
-                                className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 transition-colors"
-                              >
-                                <LogIn className="w-4 h-4" />
-                                Marquer Entrée
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => markExit(person.id)}
-                                className="flex items-center gap-2 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-                              >
-                                <LogOut className="w-4 h-4" />
-                                Marquer Sortie
-                              </button>
-                            )}
-                          </>
-                        )}
-
-                        {/* Bouton Toggle Status */}
-                        <button
-                          onClick={() => togglePersonStatus(person.id)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                            person.is_active
-                              ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                              : 'bg-green-100 text-green-700 hover:bg-green-200'
-                          }`}
-                        >
-                          {person.is_active ? (
-                            <>
-                              <UserMinus className="w-4 h-4" />
-                              Désactiver
-                            </>
-                          ) : (
-                            <>
-                              <UserPlus className="w-4 h-4" />
-                              Activer
-                            </>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '16px', 
+                          marginTop: '8px',
+                          fontSize: isMobile ? '12px' : '13px',
+                          color: '#9ca3af',
+                          flexWrap: 'wrap'
+                        }}>
+                          <span>🏢 {person.company}</span>
+                          <span>📊 {totalSessions} session(s)</span>
+                          {person.training_expiry && (
+                            <span>📅 Expire: {new Date(person.training_expiry).toLocaleDateString()}</span>
                           )}
-                        </button>
-
-                        {/* Bouton Modifier */}
-                        <button
-                          onClick={() => editPerson(person)}
-                          className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                          Modifier
-                        </button>
-
-                        {/* Bouton Supprimer */}
-                        <button
-                          onClick={() => removePerson(person.id)}
-                          disabled={isInside}
-                          className="flex items-center gap-2 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:bg-gray-300 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Supprimer
-                        </button>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Historique des sessions (si présent) */}
-                    {person.entry_sessions.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                          <History className="w-4 h-4" />
-                          Historique des entrées/sorties
-                        </h4>
-                        <div className="space-y-2 max-h-32 overflow-y-auto">
-                          {person.entry_sessions.slice(-3).reverse().map((session, index) => (
-                            <div key={session.id} className="flex justify-between items-center text-sm bg-white p-2 rounded border">
-                              <div className="flex items-center space-x-2">
-                                {session.status === 'active' ? (
-                                  <div className="flex items-center text-green-600">
-                                    <LogIn className="w-4 h-4 mr-1" />
-                                    <span>Entrée en cours</span>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center text-gray-600">
-                                    <LogOut className="w-4 h-4 mr-1" />
-                                    <span>Session complétée</span>
-                                  </div>
-                                )}
-                                <span className="text-gray-500">
-                                  {new Date(session.timestamp).toLocaleString()}
-                                </span>
-                              </div>
-                              {session.duration && (
-                                <span className="text-gray-600 font-medium">
-                                  {formatDuration(session.duration)}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-      // EntryRegistry.tsx - Section 5 (Équipements, Modals et Fin)
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      flexWrap: 'wrap'
+                    }}>
+                      {/* Boutons Entrée/Sortie pour entrants */}
+                      {person.role === 'entrant' && (
+                        <>
+                          {!isInside ? (
+                            <button
+                              onClick={() => markEntry(person.id)}
+                              disabled={!getCurrentSurveillant()}
+                              style={{
+                                ...styles.button,
+                                ...styles.buttonSuccess,
+                                ...styles.buttonSmall,
+                                opacity: !getCurrentSurveillant() ? 0.5 : 1
+                              }}
+                            >
+                              <LogIn style={{ width: '16px', height: '16px' }} />
+                              {texts.markEntry}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => markExit(person.id)}
+                              style={{
+                                ...styles.button,
+                                backgroundColor: '#f59e0b',
+                                color: 'white',
+                                ...styles.buttonSmall
+                              }}
+                            >
+                              <LogOut style={{ width: '16px', height: '16px' }} />
+                              {texts.markExit}
+                            </button>
+                          )}
+                        </>
+                      )}
 
-      {/* Section Équipements */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Wrench className="w-6 h-6 text-green-600" />
-              Gestion des Équipements
+                      {/* Bouton Toggle Status */}
+                      <button
+                        onClick={() => togglePersonStatus(person.id)}
+                        style={{
+                          ...styles.button,
+                          backgroundColor: person.is_active ? '#dc2626' : '#059669',
+                          color: 'white',
+                          ...styles.buttonSmall
+                        }}
+                      >
+                        {person.is_active ? (
+                          <>
+                            <UserMinus style={{ width: '16px', height: '16px' }} />
+                            {texts.deactivate}
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus style={{ width: '16px', height: '16px' }} />
+                            {texts.activate}
+                          </>
+                        )}
+                      </button>
+
+                      {/* Bouton Modifier */}
+                      <button
+                        onClick={() => editPerson(person)}
+                        style={{
+                          ...styles.button,
+                          ...styles.buttonSecondary,
+                          ...styles.buttonSmall
+                        }}
+                      >
+                        <Edit3 style={{ width: '16px', height: '16px' }} />
+                        {texts.edit}
+                      </button>
+
+                      {/* Bouton Supprimer */}
+                      <button
+                        onClick={() => removePerson(person.id)}
+                        disabled={isInside}
+                        style={{
+                          ...styles.button,
+                          ...styles.buttonDanger,
+                          ...styles.buttonSmall,
+                          opacity: isInside ? 0.5 : 1
+                        }}
+                      >
+                        <Trash2 style={{ width: '16px', height: '16px' }} />
+                        {texts.delete}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Historique des sessions */}
+                  {person.entry_sessions.length > 0 && (
+                    <div style={{
+                      marginTop: '16px',
+                      paddingTop: '16px',
+                      borderTop: '1px solid #4b5563'
+                    }}>
+                      <h4 style={{ 
+                        fontSize: isMobile ? '13px' : '14px',
+                        fontWeight: '600',
+                        color: '#d1d5db',
+                        marginBottom: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <History style={{ width: '16px', height: '16px' }} />
+                        📋 Historique des entrées/sorties
+                      </h4>
+                      <div style={{ 
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        maxHeight: '120px',
+                        overflowY: 'auto'
+                      }}>
+                        {person.entry_sessions.slice(-3).reverse().map((session) => (
+                          <div 
+                            key={session.id} 
+                            style={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center',
+                              padding: '8px 12px',
+                              backgroundColor: 'rgba(17, 24, 39, 0.5)',
+                              borderRadius: '8px',
+                              border: '1px solid #374151',
+                              fontSize: isMobile ? '11px' : '12px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {session.status === 'active' ? (
+                                <div style={{ display: 'flex', alignItems: 'center', color: '#86efac' }}>
+                                  <LogIn style={{ width: '14px', height: '14px', marginRight: '4px' }} />
+                                  <span>🟢 Entrée en cours</span>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', color: '#9ca3af' }}>
+                                  <LogOut style={{ width: '14px', height: '14px', marginRight: '4px' }} />
+                                  <span>✅ Session complétée</span>
+                                </div>
+                              )}
+                              <span style={{ color: '#6b7280' }}>
+                                📅 {new Date(session.timestamp).toLocaleString()}
+                              </span>
+                            </div>
+                            {session.duration && (
+                              <span style={{ 
+                                color: '#d1d5db', 
+                                fontWeight: '600',
+                                fontFamily: 'JetBrains Mono, monospace'
+                              }}>
+                                ⏱️ {formatDuration(session.duration)}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {/* Section Équipements avec style sombre */}
+      <div style={styles.card}>
+        <div style={{
+          borderBottom: '1px solid #4b5563',
+          paddingBottom: '20px',
+          marginBottom: '24px'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? '16px' : '0'
+          }}>
+            <h2 style={styles.cardTitle}>
+              <Wrench style={{ width: '24px', height: '24px', color: '#10b981' }} />
+              {texts.equipment}
             </h2>
-            <div className="flex gap-2">
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button
                 onClick={() => setShowPresetEquipment(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSuccess,
+                  ...styles.buttonSmall
+                }}
               >
-                <Plus className="w-5 h-5" />
-                Équipement Prédéfini
+                <Plus style={{ width: '18px', height: '18px' }} />
+                📋 Équipement Prédéfini
               </button>
               <button
                 onClick={() => setShowEquipmentModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                style={{
+                  ...styles.button,
+                  ...styles.buttonPrimary,
+                  ...styles.buttonSmall
+                }}
               >
-                <Plus className="w-5 h-5" />
-                Équipement Personnalisé
+                <Plus style={{ width: '18px', height: '18px' }} />
+                🔧 Équipement Personnalisé
               </button>
             </div>
           </div>
         </div>
 
-        <div className="p-6">
-          {equipment.length === 0 ? (
-            <div className="text-center py-12">
-              <Wrench className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900">Aucun équipement enregistré</h3>
-              <p className="text-gray-500">Ajoutez des équipements pour commencer</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {equipment.map((eq) => {
-                const isInUse = eq.status === 'in_use';
-                const needsCalibration = eq.requires_calibration && eq.next_calibration && 
-                  new Date(eq.next_calibration) < new Date();
-                const assignedPerson = personnel.find(p => p.id === eq.assigned_to);
-                const activeSession = eq.usage_sessions.find(session => session.status === 'active');
+        {equipment.length === 0 ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: isMobile ? '40px 20px' : '60px 40px',
+            backgroundColor: 'rgba(17, 24, 39, 0.5)',
+            borderRadius: '12px',
+            border: '1px solid #374151'
+          }}>
+            <Wrench style={{ 
+              width: isMobile ? '64px' : '80px', 
+              height: isMobile ? '64px' : '80px', 
+              color: '#6b7280',
+              margin: '0 auto 20px'
+            }} />
+            <h3 style={{ 
+              fontSize: isMobile ? '18px' : '20px',
+              fontWeight: '600',
+              color: '#d1d5db',
+              marginBottom: '12px'
+            }}>
+              {texts.noEquipment}
+            </h3>
+            <p style={{ 
+              color: '#9ca3af', 
+              fontSize: isMobile ? '14px' : '15px',
+              lineHeight: 1.5
+            }}>
+              🔧 {texts.addEquipmentFirst}
+            </p>
+          </div>
+        ) : (
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '16px',
+            maxHeight: isMobile ? '500px' : '600px',
+            overflowY: 'auto',
+            paddingRight: '8px'
+          }}>
+            {equipment.map((eq) => {
+              const isInUse = eq.status === 'in_use';
+              const needsCalibration = eq.requires_calibration && eq.next_calibration && 
+                new Date(eq.next_calibration) < new Date();
+              const assignedPerson = personnel.find(p => p.id === eq.assigned_to);
+              
+              const cardStyle = needsCalibration
+                ? styles.equipmentDanger
+                : isInUse
+                  ? styles.equipmentInUse
+                  : styles.equipmentAvailable;
 
-                return (
-                  <div
-                    key={eq.id}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      needsCalibration
-                        ? 'border-red-200 bg-red-50'
-                        : isInUse
-                          ? 'border-orange-200 bg-orange-50'
-                          : 'border-gray-200 bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className={`p-2 rounded-full ${
-                          needsCalibration
-                            ? 'bg-red-100'
+              return (
+                <div key={eq.id} style={{ ...styles.equipmentCard, ...cardStyle }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    marginBottom: '16px',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: isMobile ? '16px' : '0'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{
+                        padding: '12px',
+                        borderRadius: '12px',
+                        backgroundColor: needsCalibration
+                          ? 'rgba(239, 68, 68, 0.2)'
+                          : isInUse
+                            ? 'rgba(245, 158, 11, 0.2)'
+                            : 'rgba(16, 185, 129, 0.2)'
+                      }}>
+                        <Wrench style={{ 
+                          width: '24px', 
+                          height: '24px', 
+                          color: needsCalibration
+                            ? '#ef4444'
                             : isInUse
-                              ? 'bg-orange-100'
-                              : 'bg-green-100'
-                        }`}>
-                          <Wrench className={`w-6 h-6 ${
-                            needsCalibration
-                              ? 'text-red-600'
-                              : isInUse
-                                ? 'text-orange-600'
-                                : 'text-green-600'
-                          }`} />
+                              ? '#f59e0b'
+                              : '#10b981'
+                        }} />
+                      </div>
+                      
+                      <div>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '12px',
+                          flexWrap: 'wrap'
+                        }}>
+                          <h3 style={{ 
+                            fontSize: isMobile ? '16px' : '18px',
+                            fontWeight: 'bold',
+                            color: 'white',
+                            margin: 0
+                          }}>
+                            {eq.name}
+                          </h3>
+                          
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            backgroundColor: eq.status === 'available'
+                              ? 'rgba(16, 185, 129, 0.2)'
+                              : eq.status === 'in_use'
+                                ? 'rgba(245, 158, 11, 0.2)'
+                                : 'rgba(239, 68, 68, 0.2)',
+                            color: eq.status === 'available' ? '#86efac' : 
+                                   eq.status === 'in_use' ? '#fde047' : '#fca5a5',
+                            border: `1px solid ${eq.status === 'available' ? '#10b981' : 
+                                                 eq.status === 'in_use' ? '#f59e0b' : '#ef4444'}`
+                          }}>
+                            {eq.status === 'available' ? '🟢 ' + texts.available : 
+                             eq.status === 'in_use' ? '🟡 ' + texts.inUse : '🔴 ' + texts.maintenance}
+                          </span>
+
+                          {eq.requires_calibration && (
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              backgroundColor: needsCalibration
+                                ? 'rgba(239, 68, 68, 0.2)'
+                                : 'rgba(59, 130, 246, 0.2)',
+                              color: needsCalibration ? '#fca5a5' : '#93c5fd',
+                              border: `1px solid ${needsCalibration ? '#ef4444' : '#3b82f6'}`
+                            }}>
+                              📅 {needsCalibration ? 'Calibration expirée' : texts.calibrated}
+                            </span>
+                          )}
+
+                          {/* Badges pour équipements critiques */}
+                          {(() => {
+                            const categoryData = Object.values(EQUIPMENT_CATEGORIES).find(cat => cat.name === eq.category);
+                            const itemData = categoryData?.items.find(item => item.name === eq.name);
+                            
+                            return (
+                              <>
+                                {itemData?.is_rescue && (
+                                  <span style={{
+                                    padding: '4px 8px',
+                                    borderRadius: '12px',
+                                    fontSize: '11px',
+                                    fontWeight: '600',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                                    color: '#fca5a5',
+                                    border: '1px solid #ef4444'
+                                  }}>
+                                    🆘 Sauvetage
+                                  </span>
+                                )}
+                                {itemData?.is_atmospheric && (
+                                  <span style={{
+                                    padding: '4px 8px',
+                                    borderRadius: '12px',
+                                    fontSize: '11px',
+                                    fontWeight: '600',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                    color: '#93c5fd',
+                                    border: '1px solid #3b82f6'
+                                  }}>
+                                    🌬️ Atmosphérique
+                                  </span>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                         
-                        <div>
-                          <div className="flex items-center space-x-3">
-                            <h3 className="text-lg font-semibold text-gray-900">{eq.name}</h3>
-                            
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              eq.status === 'available'
-                                ? 'bg-green-100 text-green-800'
-                                : eq.status === 'in_use'
-                                  ? 'bg-orange-100 text-orange-800'
-                                  : 'bg-red-100 text-red-800'
-                            }`}>
-                              {eq.status === 'available' ? '🟢 Disponible' : 
-                               eq.status === 'in_use' ? '🟡 En utilisation' : '🔴 Maintenance'}
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '16px', 
+                          marginTop: '8px',
+                          fontSize: isMobile ? '12px' : '13px',
+                          color: '#9ca3af',
+                          flexWrap: 'wrap'
+                        }}>
+                          <span>📂 {eq.category}</span>
+                          <span>📍 {eq.location}</span>
+                          <span>📊 {eq.usage_count} utilisation(s)</span>
+                          <span>⏱️ {formatDuration(eq.total_usage_time)}</span>
+                          {isInUse && assignedPerson && (
+                            <span style={{ color: '#fde047', fontWeight: '600' }}>
+                              👤 Assigné à: {assignedPerson.name}
                             </span>
-
-                            {eq.requires_calibration && (
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                needsCalibration
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-blue-100 text-blue-800'
-                              }`}>
-                                📅 {needsCalibration ? 'Calibration expirée' : 'Calibré'}
-                              </span>
-                            )}
-
-                            {/* Badges pour équipements critiques */}
-                            {(() => {
-                              const categoryData = Object.values(EQUIPMENT_CATEGORIES).find(cat => cat.name === eq.category);
-                              const itemData = categoryData?.items.find(item => item.name === eq.name);
-                              
-                              return (
-                                <>
-                                  {itemData?.is_rescue && (
-                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                      🆘 Sauvetage
-                                    </span>
-                                  )}
-                                  {itemData?.is_atmospheric && (
-                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                      🌬️ Atmosphérique
-                                    </span>
-                                  )}
-                                </>
-                              );
-                            })()}
-                          </div>
-                          
-                          <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
-                            <span>📂 {eq.category}</span>
-                            <span>📍 {eq.location}</span>
-                            <span>📊 {eq.usage_count} utilisation(s)</span>
-                            <span>⏱️ {formatDuration(eq.total_usage_time)}</span>
-                            {isInUse && assignedPerson && (
-                              <span className="text-orange-600 font-medium">
-                                👤 Assigné à: {assignedPerson.name}
-                              </span>
-                            )}
-                          </div>
+                          )}
                         </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        {/* Boutons Sortie/Retour */}
-                        {!isInUse ? (
-                          <div className="flex items-center space-x-2">
-                            <select
-                              value={selectedPersonId || ''}
-                              onChange={(e) => setSelectedPersonId(e.target.value)}
-                              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                              disabled={personnel.length === 0}
-                            >
-                              <option value="">Assigner à...</option>
-                              {personnel.filter(p => p.is_active).map(person => (
-                                <option key={person.id} value={person.id}>
-                                  {person.name} ({person.role})
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              onClick={() => {
-                                if (selectedPersonId) {
-                                  checkoutEquipment(eq.id, selectedPersonId);
-                                  setSelectedPersonId(null);
-                                }
-                              }}
-                              disabled={Boolean(!selectedPersonId || needsCalibration)}
-                              className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 transition-colors"
-                            >
-                              <LogOut className="w-4 h-4" />
-                              Sortir Équipement
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => returnEquipment(eq.id)}
-                            className="flex items-center gap-2 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-                          >
-                            <LogIn className="w-4 h-4" />
-                            Retourner Équipement
-                          </button>
-                        )}
-
-                        {/* Bouton Modifier */}
-                        <button
-                          onClick={() => editEquipment(eq)}
-                          className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                          Modifier
-                        </button>
-
-                        {/* Bouton Supprimer */}
-                        <button
-                          onClick={() => removeEquipment(eq.id)}
-                          disabled={isInUse}
-                          className="flex items-center gap-2 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:bg-gray-300 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Supprimer
-                        </button>
                       </div>
                     </div>
 
-                    {/* Historique des sessions d'utilisation */}
-                    {eq.usage_sessions.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                          <History className="w-4 h-4" />
-                          Historique d'utilisation
-                        </h4>
-                        <div className="space-y-2 max-h-32 overflow-y-auto">
-                          {eq.usage_sessions.slice(-3).reverse().map((session) => {
-                            const assignedPerson = personnel.find(p => p.id === session.assigned_to);
-                            return (
-                              <div key={session.id} className="flex justify-between items-center text-sm bg-white p-2 rounded border">
-                                <div className="flex items-center space-x-2">
-                                  {session.status === 'active' ? (
-                                    <div className="flex items-center text-orange-600">
-                                      <LogOut className="w-4 h-4 mr-1" />
-                                      <span>En cours d'utilisation</span>
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center text-gray-600">
-                                      <LogIn className="w-4 h-4 mr-1" />
-                                      <span>Session terminée</span>
-                                    </div>
-                                  )}
-                                  <span className="text-gray-500">
-                                    {assignedPerson?.name || 'Utilisateur inconnu'}
-                                  </span>
-                                  <span className="text-gray-400">
-                                    {new Date(session.timestamp).toLocaleString()}
-                                  </span>
-                                </div>
-                                {session.duration && (
-                                  <span className="text-gray-600 font-medium">
-                                    {formatDuration(session.duration)}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      flexWrap: 'wrap'
+                    }}>
+                      {/* Boutons Sortie/Retour */}
+                      {!isInUse ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <select
+                            value={selectedPersonId || ''}
+                            onChange={(e) => setSelectedPersonId(e.target.value)}
+                            style={{
+                              ...styles.input,
+                              width: 'auto',
+                              minWidth: '120px',
+                              padding: '8px 12px',
+                              fontSize: '13px'
+                            }}
+                            disabled={personnel.length === 0}
+                          >
+                            <option value="">Assigner à...</option>
+                            {personnel.filter(p => p.is_active).map(person => (
+                              <option key={person.id} value={person.id}>
+                                {person.name} ({person.role})
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => {
+                              if (selectedPersonId) {
+                                checkoutEquipment(eq.id, selectedPersonId);
+                                setSelectedPersonId(null);
+                              }
+                            }}
+                            disabled={!selectedPersonId || needsCalibration}
+                            style={{
+                              ...styles.button,
+                              ...styles.buttonSuccess,
+                              ...styles.buttonSmall,
+                              opacity: (!selectedPersonId || needsCalibration) ? 0.5 : 1
+                            }}
+                          >
+                            <LogOut style={{ width: '16px', height: '16px' }} />
+                            {texts.checkout}
+                          </button>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <button
+                          onClick={() => returnEquipment(eq.id)}
+                          style={{
+                            ...styles.button,
+                            backgroundColor: '#f59e0b',
+                            color: 'white',
+                            ...styles.buttonSmall
+                          }}
+                        >
+                          <LogIn style={{ width: '16px', height: '16px' }} />
+                          {texts.return}
+                        </button>
+                      )}
+
+                      {/* Bouton Modifier */}
+                      <button
+                        onClick={() => editEquipment(eq)}
+                        style={{
+                          ...styles.button,
+                          ...styles.buttonSecondary,
+                          ...styles.buttonSmall
+                        }}
+                      >
+                        <Edit3 style={{ width: '16px', height: '16px' }} />
+                        {texts.edit}
+                      </button>
+
+                      {/* Bouton Supprimer */}
+                      <button
+                        onClick={() => removeEquipment(eq.id)}
+                        disabled={isInUse}
+                        style={{
+                          ...styles.button,
+                          ...styles.buttonDanger,
+                          ...styles.buttonSmall,
+                          opacity: isInUse ? 0.5 : 1
+                        }}
+                      >
+                        <Trash2 style={{ width: '16px', height: '16px' }} />
+                        {texts.delete}
+                      </button>
+                    </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+
+                  {/* Historique des sessions d'utilisation */}
+                  {eq.usage_sessions.length > 0 && (
+                    <div style={{
+                      marginTop: '16px',
+                      paddingTop: '16px',
+                      borderTop: '1px solid #4b5563'
+                    }}>
+                      <h4 style={{ 
+                        fontSize: isMobile ? '13px' : '14px',
+                        fontWeight: '600',
+                        color: '#d1d5db',
+                        marginBottom: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <History style={{ width: '16px', height: '16px' }} />
+                        🔧 Historique d'utilisation
+                      </h4>
+                      <div style={{ 
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        maxHeight: '120px',
+                        overflowY: 'auto'
+                      }}>
+                        {eq.usage_sessions.slice(-3).reverse().map((session) => {
+                          const assignedPerson = personnel.find(p => p.id === session.assigned_to);
+                          return (
+                            <div 
+                              key={session.id} 
+                              style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center',
+                                padding: '8px 12px',
+                                backgroundColor: 'rgba(17, 24, 39, 0.5)',
+                                borderRadius: '8px',
+                                border: '1px solid #374151',
+                                fontSize: isMobile ? '11px' : '12px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {session.status === 'active' ? (
+                                  <div style={{ display: 'flex', alignItems: 'center', color: '#fde047' }}>
+                                    <LogOut style={{ width: '14px', height: '14px', marginRight: '4px' }} />
+                                    <span>🟡 En cours d'utilisation</span>
+                                  </div>
+                                ) : (
+                                  <div style={{ display: 'flex', alignItems: 'center', color: '#9ca3af' }}>
+                                    <LogIn style={{ width: '14px', height: '14px', marginRight: '4px' }} />
+                                    <span>✅ Session terminée</span>
+                                  </div>
+                                )}
+                                <span style={{ color: '#6b7280' }}>
+                                  👤 {assignedPerson?.name || 'Utilisateur inconnu'}
+                                </span>
+                                <span style={{ color: '#6b7280' }}>
+                                  📅 {new Date(session.timestamp).toLocaleString()}
+                                </span>
+                              </div>
+                              {session.duration && (
+                                <span style={{ 
+                                  color: '#d1d5db', 
+                                  fontWeight: '600',
+                                  fontFamily: 'JetBrains Mono, monospace'
+                                }}>
+                                  ⏱️ {formatDuration(session.duration)}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Modal Ajout/Modification Personnel */}
+      {/* Modal Ajout/Modification Personnel avec style sombre */}
       {showPersonModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold">
-                {editingPerson ? 'Modifier Personnel' : 'Ajouter Personnel'}
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50,
+          padding: isMobile ? '16px' : '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#1f2937',
+            borderRadius: '16px',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            border: '1px solid #374151',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)'
+          }}>
+            <div style={{
+              padding: '24px',
+              borderBottom: '1px solid #374151'
+            }}>
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: 'bold',
+                color: 'white',
+                margin: 0
+              }}>
+                {editingPerson ? '✏️ Modifier Personnel' : '➕ Ajouter Personnel'}
               </h3>
             </div>
             
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={styles.grid2}>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nom complet *
-                  </label>
+                  <label style={styles.label}>Nom complet *</label>
                   <input
                     type="text"
                     value={personData.name}
                     onChange={(e) => setPersonData(prev => ({...prev, name: e.target.value}))}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    style={styles.input}
                     placeholder="Nom et prénom"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Rôle *
-                  </label>
+                  <label style={styles.label}>Rôle *</label>
                   <select
                     value={personData.role}
                     onChange={(e) => setPersonData(prev => ({...prev, role: e.target.value as 'surveillant' | 'entrant'}))}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    style={styles.input}
                     disabled={!!editingPerson}
                   >
-                    <option value="entrant">Entrant</option>
-                    <option value="surveillant">Surveillant</option>
+                    <option value="entrant">👤 Entrant</option>
+                    <option value="surveillant">👁️ Surveillant</option>
                   </select>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Entreprise *
-                  </label>
+                  <label style={styles.label}>Entreprise *</label>
                   <input
                     type="text"
                     value={personData.company}
                     onChange={(e) => setPersonData(prev => ({...prev, company: e.target.value}))}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    style={styles.input}
                     placeholder="Nom de l'entreprise"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date d'expiration formation
-                  </label>
+                  <label style={styles.label}>Date d'expiration formation</label>
                   <input
                     type="date"
                     value={personData.training_expiry}
-                    onChange={(e) => setPersonData((prev: any) => ({...prev, training_expiry: e.target.value}))}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    onChange={(e) => setPersonData(prev => ({...prev, training_expiry: e.target.value}))}
+                    style={styles.input}
                   />
                 </div>
               </div>
 
               {/* Formations requises */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Formations requises pour {selectedProvince}
+                <label style={{ ...styles.label, marginBottom: '12px' }}>
+                  📚 Formations requises pour {selectedProvince}
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div style={styles.grid2}>
                   {getTrainingRequirements(selectedProvince).map((req) => (
-                    <div key={req.id} className="flex items-center space-x-3">
+                    <div key={req.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px',
+                      backgroundColor: 'rgba(17, 24, 39, 0.5)',
+                      borderRadius: '8px',
+                      border: '1px solid #374151'
+                    }}>
                       <input
                         type="checkbox"
                         id={req.id}
                         checked={personData.training[req.id] || false}
-                        onChange={(e) => setPersonData((prev: any) => ({
+                        onChange={(e) => setPersonData(prev => ({
                           ...prev,
                           training: {
                             ...prev.training,
                             [req.id]: e.target.checked
                           }
                         }))}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          accentColor: '#3b82f6'
+                        }}
                       />
-                      <label htmlFor={req.id} className="text-sm text-gray-700">
-                        <div className="font-medium">{req.name}</div>
-                        <div className="text-xs text-gray-500">{req.authority}</div>
+                      <label htmlFor={req.id} style={{ flex: 1, cursor: 'pointer' }}>
+                        <div style={{ 
+                          fontWeight: '600', 
+                          color: 'white',
+                          fontSize: '14px',
+                          marginBottom: '2px'
+                        }}>
+                          {req.name}
+                        </div>
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: '#9ca3af'
+                        }}>
+                          {req.authority}
+                        </div>
                       </label>
                     </div>
                   ))}
@@ -1960,40 +2800,69 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
 
               {/* Signature électronique */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Signature électronique
-                </label>
+                <label style={styles.label}>✍️ Signature électronique</label>
                 <input
                   type="text"
                   value={personData.electronic_signature}
-                  onChange={(e) => setPersonData((prev: any) => ({...prev, electronic_signature: e.target.value}))}
-                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  onChange={(e) => setPersonData(prev => ({...prev, electronic_signature: e.target.value}))}
+                  style={styles.input}
                   placeholder="Nom pour signature électronique"
                 />
               </div>
 
               {/* Confirmation formation */}
-              <div className="flex items-center space-x-3">
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '16px',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderRadius: '12px',
+                border: '1px solid #3b82f6'
+              }}>
                 <input
                   type="checkbox"
                   id="formation_confirmed"
                   checked={personData.formation_confirmed}
-                  onChange={(e) => setPersonData((prev: any) => ({...prev, formation_confirmed: e.target.checked}))}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                  onChange={(e) => setPersonData(prev => ({...prev, formation_confirmed: e.target.checked}))}
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    accentColor: '#3b82f6'
+                  }}
                 />
-                <label htmlFor="formation_confirmed" className="text-sm text-gray-700">
-                  Je confirme que toutes les formations sont valides et à jour
+                <label 
+                  htmlFor="formation_confirmed"
+                  style={{
+                    color: '#93c5fd',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    flex: 1
+                  }}
+                >
+                  ✅ Je confirme que toutes les formations sont valides et à jour *
                 </label>
               </div>
             </div>
             
-            <div className="p-6 border-t border-gray-200 flex gap-3">
+            <div style={{
+              padding: '24px',
+              borderTop: '1px solid #374151',
+              display: 'flex',
+              gap: '12px'
+            }}>
               <button
                 onClick={editingPerson ? updatePerson : addPerson}
                 disabled={!personData.name || !personData.company || !personData.formation_confirmed}
-                className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors"
+                style={{
+                  ...styles.button,
+                  ...styles.buttonPrimary,
+                  flex: 1,
+                  opacity: (!personData.name || !personData.company || !personData.formation_confirmed) ? 0.5 : 1
+                }}
               >
-                {editingPerson ? 'Mettre à jour' : 'Ajouter'}
+                {editingPerson ? '💾 Mettre à jour' : '➕ Ajouter'}
               </button>
               <button
                 onClick={() => {
@@ -2001,73 +2870,165 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                   setEditingPerson(null);
                   resetPersonForm();
                 }}
-                className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSecondary,
+                  flex: 1
+                }}
               >
-                Annuler
+                ❌ Annuler
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal Signature Numérique */}
+      {/* Modal Signature Numérique avec style sombre */}
       {showSignatureModal && selectedPersonId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full mx-4">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Signature className="w-5 h-5" />
-                Signature Numérique C-Secure
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50,
+          padding: isMobile ? '16px' : '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#1f2937',
+            borderRadius: '16px',
+            maxWidth: '700px',
+            width: '100%',
+            border: '1px solid #374151',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)'
+          }}>
+            <div style={{
+              padding: '24px',
+              borderBottom: '1px solid #374151'
+            }}>
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: 'bold',
+                color: 'white',
+                margin: '0 0 8px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <Signature style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
+                ✍️ Signature Numérique C-Secure
               </h3>
-              <p className="text-sm text-gray-600 mt-1">
-                Signez directement sur l'écran pour authentifier votre identité
+              <p style={{
+                color: '#9ca3af',
+                fontSize: '14px',
+                margin: 0
+              }}>
+                🖱️ Signez directement sur l'écran pour authentifier votre identité
               </p>
             </div>
             
-            <div className="p-6">
-              <div className="relative">
+            <div style={{ padding: '24px' }}>
+              <div style={{ position: 'relative' }}>
                 <canvas
                   ref={canvasRef}
                   width={600}
                   height={300}
-                  className="border-2 border-gray-300 rounded-lg cursor-crosshair w-full"
+                  style={{
+                    border: '2px solid #4b5563',
+                    borderRadius: '12px',
+                    cursor: 'crosshair',
+                    width: '100%',
+                    maxWidth: '600px',
+                    height: 'auto',
+                    backgroundColor: '#374151'
+                  }}
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
                   onMouseUp={stopDrawing}
                   onMouseLeave={stopDrawing}
                 />
                 
-                {/* Logo C-Secure en arrière-plan (sera ajouté par CSS) */}
-                <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-10">
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-gray-400">C-SECURE</div>
-                    <div className="text-sm text-gray-400">Signature numérique authentifiée</div>
+                {/* Logo C-Secure overlay */}
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0.1
+                }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ 
+                      fontSize: '32px', 
+                      fontWeight: 'bold', 
+                      color: '#9ca3af',
+                      marginBottom: '8px'
+                    }}>
+                      C-SECURE
+                    </div>
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: '#9ca3af'
+                    }}>
+                      Signature numérique authentifiée
+                    </div>
                   </div>
                 </div>
               </div>
               
-              <div className="mt-4 flex justify-between items-center">
-                <div className="text-sm text-gray-600">
-                  <div>Personne: <span className="font-medium">{personnel.find(p => p.id === selectedPersonId)?.name}</span></div>
-                  <div>Date: <span className="font-medium">{new Date().toLocaleString()}</span></div>
+              <div style={{
+                marginTop: '20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: isMobile ? '12px' : '0'
+              }}>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af',
+                  textAlign: isMobile ? 'center' : 'left'
+                }}>
+                  <div>👤 Personne: <span style={{ fontWeight: '600', color: 'white' }}>
+                    {personnel.find(p => p.id === selectedPersonId)?.name}
+                  </span></div>
+                  <div>📅 Date: <span style={{ fontWeight: '600', color: 'white' }}>
+                    {new Date().toLocaleString()}
+                  </span></div>
                 </div>
                 
                 <button
                   onClick={clearSignature}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                  style={{
+                    ...styles.button,
+                    ...styles.buttonSecondary,
+                    ...styles.buttonSmall
+                  }}
                 >
-                  Effacer
+                  🗑️ Effacer
                 </button>
               </div>
             </div>
             
-            <div className="p-6 border-t border-gray-200 flex gap-3">
+            <div style={{
+              padding: '24px',
+              borderTop: '1px solid #374151',
+              display: 'flex',
+              gap: '12px'
+            }}>
               <button
                 onClick={() => saveSignature(selectedPersonId)}
                 disabled={!signatureData}
-                className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors"
+                style={{
+                  ...styles.button,
+                  ...styles.buttonPrimary,
+                  flex: 1,
+                  opacity: !signatureData ? 0.5 : 1
+                }}
               >
-                Enregistrer Signature
+                💾 Enregistrer Signature
               </button>
               <button
                 onClick={() => {
@@ -2075,46 +3036,148 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                   setSelectedPersonId(null);
                   clearSignature();
                 }}
-                className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSecondary,
+                  flex: 1
+                }}
               >
-                Annuler
+                ❌ Annuler
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal Équipements Prédéfinis */}
+      {/* Modal Équipements Prédéfinis avec style sombre */}
       {showPresetEquipment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold">Équipements Prédéfinis</h3>
-              <p className="text-sm text-gray-600 mt-1">Sélectionnez un équipement dans notre catalogue</p>
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50,
+          padding: isMobile ? '16px' : '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#1f2937',
+            borderRadius: '16px',
+            maxWidth: '900px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            border: '1px solid #374151',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)'
+          }}>
+            <div style={{
+              padding: '24px',
+              borderBottom: '1px solid #374151'
+            }}>
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: 'bold',
+                color: 'white',
+                margin: '0 0 8px 0'
+              }}>
+                📋 Équipements Prédéfinis
+              </h3>
+              <p style={{
+                color: '#9ca3af',
+                fontSize: '14px',
+                margin: 0
+              }}>
+                🔧 Sélectionnez un équipement dans notre catalogue
+              </p>
             </div>
             
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div style={{ padding: '24px' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: '16px'
+              }}>
                 {Object.entries(EQUIPMENT_CATEGORIES).map(([categoryKey, category]) => (
-                  <div key={categoryKey} className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-900 mb-3">{category.name}</h4>
-                    <div className="space-y-2">
+                  <div key={categoryKey} style={{
+                    backgroundColor: 'rgba(17, 24, 39, 0.5)',
+                    border: '1px solid #374151',
+                    borderRadius: '12px',
+                    padding: '20px'
+                  }}>
+                    <h4 style={{
+                      fontWeight: '600',
+                      color: 'white',
+                      marginBottom: '16px',
+                      fontSize: '16px'
+                    }}>
+                      {category.name}
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {category.items.map((item) => (
                         <button
                           key={item.name}
                           onClick={() => selectPresetEquipment(categoryKey, item.name)}
-                          className="w-full text-left p-2 rounded hover:bg-gray-50 transition-colors text-sm"
+                          style={{
+                            width: '100%',
+                            textAlign: 'left',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            backgroundColor: 'rgba(55, 65, 81, 0.5)',
+                            border: '1px solid #4b5563',
+                            color: 'white',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            fontSize: '14px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(75, 85, 99, 0.5)';
+                            e.currentTarget.style.borderColor = '#6b7280';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(55, 65, 81, 0.5)';
+                            e.currentTarget.style.borderColor = '#4b5563';
+                          }}
                         >
-                          <div className="font-medium">{item.name}</div>
-                          <div className="flex gap-1 mt-1">
+                          <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                            {item.name}
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px' }}>
                             {item.requires_calibration && (
-                              <span className="px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">📅</span>
+                              <span style={{
+                                padding: '2px 6px',
+                                backgroundColor: '#3b82f6',
+                                color: 'white',
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: '600'
+                              }}>
+                                📅
+                              </span>
                             )}
                             {item.is_rescue && (
-                              <span className="px-1 py-0.5 bg-red-100 text-red-800 rounded text-xs">🆘</span>
+                              <span style={{
+                                padding: '2px 6px',
+                                backgroundColor: '#ef4444',
+                                color: 'white',
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: '600'
+                              }}>
+                                🆘
+                              </span>
                             )}
                             {item.is_atmospheric && (
-                              <span className="px-1 py-0.5 bg-green-100 text-green-800 rounded text-xs">🌬️</span>
+                              <span style={{
+                                padding: '2px 6px',
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: '600'
+                              }}>
+                                🌬️
+                              </span>
                             )}
                           </div>
                         </button>
@@ -2125,145 +3188,196 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
               </div>
             </div>
             
-            <div className="p-6 border-t border-gray-200">
+            <div style={{
+              padding: '24px',
+              borderTop: '1px solid #374151'
+            }}>
               <button
                 onClick={() => setShowPresetEquipment(false)}
-                className="w-full py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSecondary
+                }}
               >
-                Fermer
+                ❌ Fermer
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal Ajout/Modification Équipement */}
+      {/* Modal Ajout/Modification Équipement avec style sombre */}
       {showEquipmentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold">
-                {editingEquipment ? 'Modifier Équipement' : 'Ajouter Équipement'}
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50,
+          padding: isMobile ? '16px' : '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#1f2937',
+            borderRadius: '16px',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            border: '1px solid #374151',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)'
+          }}>
+            <div style={{
+              padding: '24px',
+              borderBottom: '1px solid #374151'
+            }}>
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: 'bold',
+                color: 'white',
+                margin: 0
+              }}>
+                {editingEquipment ? '✏️ Modifier Équipement' : '🔧 Ajouter Équipement'}
               </h3>
             </div>
             
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={styles.grid2}>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nom de l'équipement *
-                  </label>
+                  <label style={styles.label}>Nom de l'équipement *</label>
                   <input
                     type="text"
                     value={equipmentData.name}
                     onChange={(e) => setEquipmentData(prev => ({...prev, name: e.target.value}))}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    style={styles.input}
                     placeholder="Nom de l'équipement"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Catégorie
-                  </label>
+                  <label style={styles.label}>Catégorie</label>
                   <input
                     type="text"
                     value={equipmentData.category}
                     onChange={(e) => setEquipmentData(prev => ({...prev, category: e.target.value}))}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    style={styles.input}
                     placeholder="Catégorie"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Type
-                  </label>
+                  <label style={styles.label}>Type</label>
                   <input
                     type="text"
                     value={equipmentData.type}
                     onChange={(e) => setEquipmentData(prev => ({...prev, type: e.target.value}))}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    style={styles.input}
                     placeholder="Type d'équipement"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Localisation
-                  </label>
+                  <label style={styles.label}>Localisation</label>
                   <input
                     type="text"
                     value={equipmentData.location}
                     onChange={(e) => setEquipmentData(prev => ({...prev, location: e.target.value}))}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    style={styles.input}
                     placeholder="Emplacement"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3">
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '16px',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderRadius: '12px',
+                border: '1px solid #3b82f6'
+              }}>
                 <input
                   type="checkbox"
                   id="requires_calibration"
                   checked={equipmentData.requires_calibration}
                   onChange={(e) => setEquipmentData(prev => ({...prev, requires_calibration: e.target.checked}))}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    accentColor: '#3b82f6'
+                  }}
                 />
-                <label htmlFor="requires_calibration" className="text-sm text-gray-700">
-                  Cet équipement nécessite une calibration
+                <label 
+                  htmlFor="requires_calibration" 
+                  style={{
+                    color: '#93c5fd',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  📅 Cet équipement nécessite une calibration
                 </label>
               </div>
 
               {equipmentData.requires_calibration && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div style={styles.grid2}>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date de calibration
-                    </label>
+                    <label style={styles.label}>Date de calibration</label>
                     <input
                       type="date"
                       value={equipmentData.calibration_date}
                       onChange={(e) => setEquipmentData(prev => ({...prev, calibration_date: e.target.value}))}
-                      className="w-full p-3 border border-gray-300 rounded-lg"
+                      style={styles.input}
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Prochaine calibration
-                    </label>
+                    <label style={styles.label}>Prochaine calibration</label>
                     <input
                       type="date"
                       value={equipmentData.next_calibration}
                       onChange={(e) => setEquipmentData(prev => ({...prev, next_calibration: e.target.value}))}
-                      className="w-full p-3 border border-gray-300 rounded-lg"
+                      style={styles.input}
                     />
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Notes
-                </label>
+                <label style={styles.label}>Notes</label>
                 <textarea
                   value={equipmentData.notes}
                   onChange={(e) => setEquipmentData(prev => ({...prev, notes: e.target.value}))}
-                  className="w-full p-3 border border-gray-300 rounded-lg"
-                  rows={3}
+                  style={{
+                    ...styles.input,
+                    height: '80px',
+                    resize: 'vertical' as const
+                  }}
                   placeholder="Notes supplémentaires..."
                 />
               </div>
             </div>
             
-            <div className="p-6 border-t border-gray-200 flex gap-3">
+            <div style={{
+              padding: '24px',
+              borderTop: '1px solid #374151',
+              display: 'flex',
+              gap: '12px'
+            }}>
               <button
                 onClick={editingEquipment ? updateEquipment : addEquipment}
                 disabled={!equipmentData.name}
-                className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors"
+                style={{
+                  ...styles.button,
+                  ...styles.buttonPrimary,
+                  flex: 1,
+                  opacity: !equipmentData.name ? 0.5 : 1
+                }}
               >
-                {editingEquipment ? 'Mettre à jour' : 'Ajouter'}
+                {editingEquipment ? '💾 Mettre à jour' : '➕ Ajouter'}
               </button>
               <button
                 onClick={() => {
@@ -2271,9 +3385,13 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                   setEditingEquipment(null);
                   resetEquipmentForm();
                 }}
-                className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSecondary,
+                  flex: 1
+                }}
               >
-                Annuler
+                ❌ Annuler
               </button>
             </div>
           </div>
