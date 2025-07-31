@@ -224,14 +224,37 @@ interface Entrant {
   legal_signature: LegalSignature;
 }
 
+interface EquipmentSession {
+  id: string;
+  entry_time: string;
+  exit_time?: string;
+  duration?: number;
+  status: 'in_use' | 'completed';
+  used_by?: string;
+  location?: string;
+  forced_return?: {
+    timestamp: string;
+    reason: string;
+    returned_by: string;
+  };
+}
+
 interface Equipment {
   id: string;
   name: string;
   serial_number: string;
   condition: 'good' | 'fair' | 'poor';
-  checked_in: boolean;
-  checked_out: boolean;
+  current_status: 'available' | 'in_use' | 'maintenance';
+  total_uses: number;
+  total_duration: number;
+  usage_sessions: EquipmentSession[];
+  added_time: string;
+  calibration_date?: string;
+  next_calibration?: string;
+  rescue_plan_required: boolean;
+  atmospheric_testing_required: boolean;
   assigned_to?: string;
+  location?: string;
   notes?: string;
 }
 
@@ -247,6 +270,19 @@ interface PermitValidation {
     approved_by: string;
     approval_time?: string;
     approval_signature?: string;
+  };
+  compliance_check: {
+    atmospheric_testing_complete: boolean;
+    rescue_equipment_present: boolean;
+    communication_equipment_present: boolean;
+    ventilation_equipment_present: boolean;
+    emergency_procedures_reviewed: boolean;
+    personnel_training_verified: boolean;
+    equipment_calibration_current: boolean;
+    rescue_plan_accessible: boolean;
+    all_requirements_met: boolean;
+    checked_by?: string;
+    check_time?: string;
   };
 }
 
@@ -722,7 +758,18 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   const [equipment, setEquipment] = useState<Equipment[]>(permitData.equipment || []);
   const [permitValidation, setPermitValidation] = useState<PermitValidation>(permitData.permit_validation || {
     team_validation: { validated: false, validated_by: '' },
-    final_approval: { approved: false, approved_by: '' }
+    final_approval: { approved: false, approved_by: '' },
+    compliance_check: {
+      atmospheric_testing_complete: false,
+      rescue_equipment_present: false,
+      communication_equipment_present: false,
+      ventilation_equipment_present: false,
+      emergency_procedures_reviewed: false,
+      personnel_training_verified: false,
+      equipment_calibration_current: false,
+      rescue_plan_accessible: false,
+      all_requirements_met: false
+    }
   });
   
   const [currentSurveillant, setCurrentSurveillant] = useState<SurveillantShift | null>(
@@ -767,7 +814,12 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   const [newEquipment, setNewEquipment] = useState({
     name: '',
     serial_number: '',
-    condition: 'good' as 'good' | 'fair' | 'poor'
+    condition: 'good' as 'good' | 'fair' | 'poor',
+    calibration_date: '',
+    next_calibration: '',
+    rescue_plan_required: false,
+    atmospheric_testing_required: false,
+    location: ''
   });
 
   // =================== FONCTIONS UTILITAIRES ===================
@@ -1128,7 +1180,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     }
   };
 
-  // =================== FONCTIONS ÉQUIPEMENT ===================
+  // =================== FONCTIONS ÉQUIPEMENT AMÉLIORÉES ===================
   const addEquipmentItem = () => {
     if (!newEquipment.name || !newEquipment.serial_number) {
       alert('⚠️ Veuillez remplir tous les champs obligatoires');
@@ -1140,38 +1192,141 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
       name: newEquipment.name,
       serial_number: newEquipment.serial_number,
       condition: newEquipment.condition,
-      checked_in: false,
-      checked_out: false
+      current_status: 'available',
+      total_uses: 0,
+      total_duration: 0,
+      usage_sessions: [],
+      added_time: new Date().toISOString(),
+      calibration_date: newEquipment.calibration_date || undefined,
+      next_calibration: newEquipment.next_calibration || undefined,
+      rescue_plan_required: newEquipment.rescue_plan_required,
+      atmospheric_testing_required: newEquipment.atmospheric_testing_required,
+      location: newEquipment.location || undefined
     };
 
     const updatedEquipment = [...equipment, equipmentItem];
     setEquipment(updatedEquipment);
     updateParentData('equipment', updatedEquipment);
     
-    setNewEquipment({ name: '', serial_number: '', condition: 'good' });
+    setNewEquipment({ 
+      name: '', 
+      serial_number: '', 
+      condition: 'good',
+      calibration_date: '',
+      next_calibration: '',
+      rescue_plan_required: false,
+      atmospheric_testing_required: false,
+      location: ''
+    });
+
+    // Recalculer la conformité du permis
+    checkPermitCompliance();
   };
 
-  const toggleEquipmentCheck = (equipmentId: string, type: 'in' | 'out') => {
+  const toggleEquipmentUsage = (equipmentId: string, assignedTo?: string) => {
+    if (!currentSurveillant) {
+      alert('⚠️ Un surveillant doit être en service avant d\'utiliser des équipements.');
+      return;
+    }
+
+    const equipmentItem = equipment.find(e => e.id === equipmentId);
+    if (!equipmentItem) return;
+
     const updatedEquipment = equipment.map(item => {
       if (item.id === equipmentId) {
-        if (type === 'in') {
-          return { ...item, checked_in: !item.checked_in };
-        } else {
-          return { ...item, checked_out: !item.checked_out };
+        const now = new Date();
+        
+        if (item.current_status === 'available') {
+          // Commencer l'utilisation
+          const newSession: EquipmentSession = {
+            id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            entry_time: now.toISOString(),
+            status: 'in_use',
+            used_by: assignedTo || 'Non assigné',
+            location: item.location
+          };
+
+          // Notification d'utilisation
+          if (typeof window !== 'undefined' && 'Notification' in window) {
+            if (Notification.permission === 'granted') {
+              new Notification('🔧 ÉQUIPEMENT EN UTILISATION', {
+                body: `${item.name} (${item.serial_number}) utilisé par ${assignedTo || 'Non assigné'}`,
+                icon: '/c-secur360-logo.png',
+                tag: 'equipment-in-use'
+              });
+            }
+          }
+
+          return {
+            ...item,
+            current_status: 'in_use' as const,
+            assigned_to: assignedTo,
+            usage_sessions: [...item.usage_sessions, newSession]
+          };
+        } else if (item.current_status === 'in_use') {
+          // Terminer l'utilisation
+          const activeSession = item.usage_sessions.find(s => s.status === 'in_use');
+          if (!activeSession) return item;
+
+          const entryTime = new Date(activeSession.entry_time);
+          const duration = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
+
+          const completedSession: EquipmentSession = {
+            ...activeSession,
+            exit_time: now.toISOString(),
+            duration,
+            status: 'completed'
+          };
+
+          const updatedSessions = item.usage_sessions.map(s => 
+            s.id === activeSession.id ? completedSession : s
+          );
+
+          // Notification de retour
+          if (typeof window !== 'undefined' && 'Notification' in window) {
+            if (Notification.permission === 'granted') {
+              new Notification('🔧 ÉQUIPEMENT RETOURNÉ', {
+                body: `${item.name} retourné après ${formatDuration(duration)}`,
+                icon: '/c-secur360-logo.png',
+                tag: 'equipment-returned'
+              });
+            }
+          }
+
+          return {
+            ...item,
+            current_status: 'available' as const,
+            assigned_to: undefined,
+            total_uses: item.total_uses + 1,
+            total_duration: item.total_duration + duration,
+            usage_sessions: updatedSessions
+          };
         }
       }
       return item;
     });
-    
+
     setEquipment(updatedEquipment);
     updateParentData('equipment', updatedEquipment);
+    
+    // Recalculer la conformité du permis après changement d'équipement
+    setTimeout(() => checkPermitCompliance(), 100);
   };
 
   const deleteEquipment = (equipmentId: string) => {
+    const equipmentItem = equipment.find(e => e.id === equipmentId);
+    if (equipmentItem?.current_status === 'in_use') {
+      alert('⚠️ Impossible de supprimer un équipement actuellement en utilisation. Effectuez d\'abord son retour.');
+      return;
+    }
+
     if (confirm('Êtes-vous sûr de vouloir supprimer cet équipement?')) {
       const updatedEquipment = equipment.filter(e => e.id !== equipmentId);
       setEquipment(updatedEquipment);
       updateParentData('equipment', updatedEquipment);
+      
+      // Recalculer la conformité du permis
+      checkPermitCompliance();
     }
   };
 
@@ -1183,6 +1338,84 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
       default: return '#6b7280';
     }
   };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'available': return '#10b981';
+      case 'in_use': return '#f59e0b';
+      case 'maintenance': return '#ef4444';
+      default: return '#6b7280';
+    }
+  };
+
+  // =================== VALIDATION DE CONFORMITÉ DU PERMIS ===================
+  const checkPermitCompliance = () => {
+    const atmosphericTestingComplete = atmosphericReadings && atmosphericReadings.length > 0;
+    
+    const rescueEquipmentPresent = equipment.some(e => 
+      e.rescue_plan_required && e.current_status !== 'maintenance' && e.condition !== 'poor'
+    );
+    
+    const communicationEquipmentPresent = equipment.some(e => 
+      e.name.toLowerCase().includes('communication') || e.name.toLowerCase().includes('radio')
+    );
+    
+    const ventilationEquipmentPresent = equipment.some(e => 
+      e.name.toLowerCase().includes('ventilation') || e.name.toLowerCase().includes('ventilateur')
+    );
+    
+    const atmosphericTestingEquipmentPresent = equipment.some(e => 
+      e.atmospheric_testing_required && e.current_status !== 'maintenance' && e.condition !== 'poor'
+    );
+    
+    const equipmentCalibrationCurrent = equipment.every(e => {
+      if (!e.next_calibration) return true; // Si pas de calibration requise
+      return new Date(e.next_calibration) > new Date(); // Calibration valide
+    });
+    
+    const personnelTrainingVerified = entrants.every(e => e.legal_signature.training_confirmed) && 
+                                    (currentSurveillant ? currentSurveillant.legal_signature.training_confirmed : false);
+    
+    const emergencyProceduresReviewed = permitValidation.team_validation.validated;
+    
+    const rescuePlanAccessible = rescueEquipmentPresent;
+    
+    const allRequirementsMet = atmosphericTestingComplete && 
+                              rescueEquipmentPresent && 
+                              communicationEquipmentPresent && 
+                              ventilationEquipmentPresent && 
+                              equipmentCalibrationCurrent && 
+                              personnelTrainingVerified && 
+                              emergencyProceduresReviewed && 
+                              rescuePlanAccessible;
+
+    const updatedCompliance = {
+      ...permitValidation,
+      compliance_check: {
+        atmospheric_testing_complete: atmosphericTestingComplete,
+        rescue_equipment_present: rescueEquipmentPresent,
+        communication_equipment_present: communicationEquipmentPresent,
+        ventilation_equipment_present: ventilationEquipmentPresent,
+        emergency_procedures_reviewed: emergencyProceduresReviewed,
+        personnel_training_verified: personnelTrainingVerified,
+        equipment_calibration_current: equipmentCalibrationCurrent,
+        rescue_plan_accessible: rescuePlanAccessible,
+        all_requirements_met: allRequirementsMet,
+        checked_by: currentSurveillant?.name,
+        check_time: new Date().toISOString()
+      }
+    };
+
+    setPermitValidation(updatedCompliance);
+    updateParentData('permit_validation', updatedCompliance);
+
+    return allRequirementsMet;
+  };
+
+  // Vérifier la conformité à chaque changement
+  useEffect(() => {
+    checkPermitCompliance();
+  }, [equipment, entrants, currentSurveillant, atmosphericReadings]);
   // =================== RENDU JSX - SECTION 2B ===================
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
@@ -1413,12 +1646,89 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
         </div>
       </div>
 
-      {/* Section Validation du Permis */}
+      {/* Section Validation du Permis avec Conformité */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
           <FileText style={{ width: '20px', height: '20px' }} />
-          📋 Validation et Approbation du Permis
+          📋 Validation et Conformité du Permis
         </h3>
+        
+        {/* Vérification de conformité */}
+        <div style={{
+          backgroundColor: permitValidation.compliance_check.all_requirements_met ? 'rgba(16, 185, 129, 0.1)' : 'rgba(220, 38, 38, 0.1)',
+          borderRadius: '12px',
+          padding: '20px',
+          border: `2px solid ${permitValidation.compliance_check.all_requirements_met ? '#10b981' : '#dc2626'}`,
+          marginBottom: '20px'
+        }}>
+          <h4 style={{ 
+            color: permitValidation.compliance_check.all_requirements_met ? '#86efac' : '#fca5a5',
+            fontWeight: '600',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            {permitValidation.compliance_check.all_requirements_met ? '✅' : '⚠️'} 
+            Vérification de Conformité Réglementaire
+          </h4>
+          
+          <div style={styles.grid2}>
+            {[
+              { key: 'atmospheric_testing_complete', label: 'Tests atmosphériques effectués', icon: '🌬️' },
+              { key: 'rescue_equipment_present', label: 'Équipement de sauvetage présent', icon: '🆘' },
+              { key: 'communication_equipment_present', label: 'Équipement de communication présent', icon: '📻' },
+              { key: 'ventilation_equipment_present', label: 'Équipement de ventilation présent', icon: '💨' },
+              { key: 'emergency_procedures_reviewed', label: 'Procédures d\'urgence révisées', icon: '📋' },
+              { key: 'personnel_training_verified', label: 'Formation du personnel vérifiée', icon: '👨‍🎓' },
+              { key: 'equipment_calibration_current', label: 'Calibration des équipements à jour', icon: '⚙️' },
+              { key: 'rescue_plan_accessible', label: 'Plan de sauvetage accessible', icon: '🗺️' }
+            ].map((item) => (
+              <div key={item.key} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px',
+                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                borderRadius: '8px',
+                border: `1px solid ${permitValidation.compliance_check[item.key] ? '#10b981' : '#ef4444'}`
+              }}>
+                <span style={{ fontSize: '20px' }}>{item.icon}</span>
+                <span style={{ 
+                  color: permitValidation.compliance_check[item.key] ? '#86efac' : '#fca5a5',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  flex: 1
+                }}>
+                  {item.label}
+                </span>
+                <span style={{
+                  padding: '4px 8px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  backgroundColor: permitValidation.compliance_check[item.key] ? '#10b981' : '#ef4444',
+                  color: 'white'
+                }}>
+                  {permitValidation.compliance_check[item.key] ? '✓' : '✗'}
+                </span>
+              </div>
+            ))}
+          </div>
+          
+          {permitValidation.compliance_check.checked_by && (
+            <div style={{
+              marginTop: '16px',
+              padding: '12px',
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              borderRadius: '8px',
+              fontSize: '13px',
+              color: '#9ca3af'
+            }}>
+              Vérifié par: {permitValidation.compliance_check.checked_by} le {formatTime(permitValidation.compliance_check.check_time!)}
+            </div>
+          )}
+        </div>
         
         <div style={styles.grid2}>
           <div style={{
@@ -2241,14 +2551,14 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
         )}
       </div>
 
-      {/* Section Équipements - Ajouter */}
+      {/* Section Équipements - Ajouter avec validation */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
           <Plus style={{ width: '20px', height: '20px' }} />
-          🔧 Ajouter Équipement
+          🔧 Ajouter Équipement de Sécurité
         </h3>
         
-        <div style={styles.grid3}>
+        <div style={styles.grid2}>
           <div>
             <label style={styles.label}>Nom de l'équipement *</label>
             <input
@@ -2271,6 +2581,9 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
               required
             />
           </div>
+        </div>
+        
+        <div style={styles.grid3}>
           <div>
             <label style={styles.label}>État *</label>
             <select
@@ -2284,6 +2597,63 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
               <option value="poor">❌ À remplacer</option>
             </select>
           </div>
+          <div>
+            <label style={styles.label}>Date de calibration</label>
+            <input
+              type="date"
+              value={newEquipment.calibration_date}
+              onChange={(e) => setNewEquipment(prev => ({ ...prev, calibration_date: e.target.value }))}
+              style={styles.input}
+            />
+          </div>
+          <div>
+            <label style={styles.label}>Prochaine calibration</label>
+            <input
+              type="date"
+              value={newEquipment.next_calibration}
+              onChange={(e) => setNewEquipment(prev => ({ ...prev, next_calibration: e.target.value }))}
+              style={styles.input}
+            />
+          </div>
+        </div>
+        
+        <div style={styles.grid2}>
+          <div>
+            <label style={styles.label}>Localisation</label>
+            <input
+              type="text"
+              placeholder="Ex: Poste de contrôle principal"
+              value={newEquipment.location}
+              onChange={(e) => setNewEquipment(prev => ({ ...prev, location: e.target.value }))}
+              style={styles.input}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="checkbox"
+                id="rescue_required"
+                checked={newEquipment.rescue_plan_required}
+                onChange={(e) => setNewEquipment(prev => ({ ...prev, rescue_plan_required: e.target.checked }))}
+                style={{ width: '16px', height: '16px', accentColor: '#3b82f6' }}
+              />
+              <label htmlFor="rescue_required" style={{ color: '#d1d5db', fontSize: '14px' }}>
+                🆘 Requis pour plan de sauvetage
+              </label>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="checkbox"
+                id="atmospheric_required"
+                checked={newEquipment.atmospheric_testing_required}
+                onChange={(e) => setNewEquipment(prev => ({ ...prev, atmospheric_testing_required: e.target.checked }))}
+                style={{ width: '16px', height: '16px', accentColor: '#3b82f6' }}
+              />
+              <label htmlFor="atmospheric_required" style={{ color: '#d1d5db', fontSize: '14px' }}>
+                🌬️ Requis pour tests atmosphériques
+              </label>
+            </div>
+          </div>
         </div>
         
         <button
@@ -2296,15 +2666,15 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
           }}
         >
           <Plus style={{ width: '18px', height: '18px' }} />
-          Ajouter Équipement
+          Ajouter Équipement au Registre
         </button>
       </div>
 
-      {/* Section Contrôle Équipements */}
+      {/* Section Registre Équipements avec Sessions */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
           <Wrench style={{ width: '20px', height: '20px' }} />
-          🔧 Contrôle Équipements Obligatoires ({equipment.length})
+          🔧 Registre d'Utilisation des Équipements ({equipment.length})
         </h3>
         
         {equipment.length === 0 ? (
@@ -2326,7 +2696,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
               Aucun équipement enregistré
             </p>
             <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
-              Ajoutez les équipements obligatoires ci-dessus pour assurer la traçabilité.
+              Ajoutez les équipements de sécurité obligatoires pour assurer la conformité réglementaire.
             </p>
           </div>
         ) : (
@@ -2344,7 +2714,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                   backgroundColor: 'rgba(17, 24, 39, 0.6)',
                   borderRadius: '12px',
                   padding: isMobile ? '16px' : '20px',
-                  border: `2px solid ${getConditionColor(item.condition)}`,
+                  border: `2px solid ${getStatusColor(item.current_status)}`,
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -2370,20 +2740,109 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                       fontSize: '14px',
                       marginBottom: '8px'
                     }}>
-                      📟 {item.serial_number}
+                      📟 {item.serial_number} {item.location && `• 📍 ${item.location}`}
                     </div>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      backgroundColor: getConditionColor(item.condition),
-                      color: 'white'
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      flexWrap: 'wrap',
+                      marginBottom: '8px'
                     }}>
-                      {item.condition === 'good' ? '✅ Bon état' :
-                       item.condition === 'fair' ? '⚠️ État acceptable' :
-                       '❌ À remplacer'}
-                    </span>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        backgroundColor: getConditionColor(item.condition),
+                        color: 'white'
+                      }}>
+                        {item.condition === 'good' ? '✅ Bon état' :
+                         item.condition === 'fair' ? '⚠️ État acceptable' :
+                         '❌ À remplacer'}
+                      </span>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        backgroundColor: getStatusColor(item.current_status),
+                        color: 'white'
+                      }}>
+                        {item.current_status === 'available' ? '🟢 DISPONIBLE' :
+                         item.current_status === 'in_use' ? '🟡 EN UTILISATION' :
+                         '🔴 MAINTENANCE'}
+                      </span>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        backgroundColor: '#3b82f6',
+                        color: 'white'
+                      }}>
+                        📊 {item.total_uses} utilisations
+                      </span>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        backgroundColor: '#10b981',
+                        color: 'white'
+                      }}>
+                        ⏱️ {formatDuration(item.total_duration)}
+                      </span>
+                    </div>
+                    
+                    {/* Badges spéciaux */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                      {item.rescue_plan_required && (
+                        <span style={{
+                          padding: '2px 6px',
+                          borderRadius: '8px',
+                          fontSize: '10px',
+                          fontWeight: '600',
+                          backgroundColor: '#dc2626',
+                          color: 'white'
+                        }}>
+                          🆘 SAUVETAGE
+                        </span>
+                      )}
+                      {item.atmospheric_testing_required && (
+                        <span style={{
+                          padding: '2px 6px',
+                          borderRadius: '8px',
+                          fontSize: '10px',
+                          fontWeight: '600',
+                          backgroundColor: '#7c3aed',
+                          color: 'white'
+                        }}>
+                          🌬️ ATMOSPHÉRIQUE
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Calibration */}
+                    {item.next_calibration && (
+                      <div style={{
+                        fontSize: '11px',
+                        color: new Date(item.next_calibration) < new Date() ? '#fca5a5' : '#86efac'
+                      }}>
+                        📅 Calibration: {new Date(item.next_calibration).toLocaleDateString('fr-CA')}
+                        {new Date(item.next_calibration) < new Date() && ' ⚠️ EXPIRÉE'}
+                      </div>
+                    )}
+                    
+                    {/* Utilisateur actuel */}
+                    {item.assigned_to && (
+                      <div style={{
+                        fontSize: '11px',
+                        color: '#fbbf24',
+                        marginTop: '4px'
+                      }}>
+                        👤 Assigné à: {item.assigned_to}
+                      </div>
+                    )}
                   </div>
                   
                   <div style={{ 
@@ -2393,53 +2852,148 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                     flexDirection: isMobile ? 'column' : 'row'
                   }}>
                     <button
-                      onClick={() => toggleEquipmentCheck(item.id, 'in')}
+                      onClick={() => {
+                        if (item.current_status === 'available') {
+                          const assignedTo = prompt('Assigné à (nom de la personne):');
+                          if (assignedTo) {
+                            toggleEquipmentUsage(item.id, assignedTo);
+                          }
+                        } else {
+                          toggleEquipmentUsage(item.id);
+                        }
+                      }}
+                      disabled={!currentSurveillant || item.condition === 'poor'}
                       style={{
                         ...styles.button,
-                        ...(item.checked_in ? styles.buttonSuccess : styles.buttonSecondary),
+                        ...(item.current_status === 'available' ? styles.buttonSuccess : styles.buttonWarning),
                         width: 'auto',
-                        padding: '6px 10px',
-                        fontSize: '12px',
-                        minHeight: 'auto'
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        minHeight: 'auto',
+                        opacity: (!currentSurveillant || item.condition === 'poor') ? 0.5 : 1,
+                        cursor: (!currentSurveillant || item.condition === 'poor') ? 'not-allowed' : 'pointer'
                       }}
                     >
-                      <LogIn style={{ width: '14px', height: '14px' }} />
-                      Entrée
-                      {item.checked_in && <CheckCircle style={{ width: '14px', height: '14px' }} />}
-                    </button>
-                    
-                    <button
-                      onClick={() => toggleEquipmentCheck(item.id, 'out')}
-                      style={{
-                        ...styles.button,
-                        ...(item.checked_out ? styles.buttonDanger : styles.buttonSecondary),
-                        width: 'auto',
-                        padding: '6px 10px',
-                        fontSize: '12px',
-                        minHeight: 'auto'
-                      }}
-                    >
-                      <LogOut style={{ width: '14px', height: '14px' }} />
-                      Sortie
-                      {item.checked_out && <CheckCircle style={{ width: '14px', height: '14px' }} />}
+                      {item.current_status === 'available' ? (
+                        <>
+                          <LogIn style={{ width: '16px', height: '16px' }} />
+                          Prendre Équipement
+                        </>
+                      ) : (
+                        <>
+                          <LogOut style={{ width: '16px', height: '16px' }} />
+                          Retourner Équipement
+                        </>
+                      )}
                     </button>
                     
                     <button
                       onClick={() => deleteEquipment(item.id)}
+                      disabled={item.current_status === 'in_use'}
                       style={{
                         ...styles.button,
                         ...styles.buttonSecondary,
                         width: 'auto',
-                        padding: '6px 10px',
-                        fontSize: '12px',
-                        minHeight: 'auto'
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        minHeight: 'auto',
+                        opacity: item.current_status === 'in_use' ? 0.5 : 1
                       }}
                     >
-                      <Trash2 style={{ width: '14px', height: '14px' }} />
+                      <Trash2 style={{ width: '16px', height: '16px' }} />
                       Supprimer
                     </button>
                   </div>
                 </div>
+                
+                {/* Historique des utilisations */}
+                {item.usage_sessions.length > 0 && (
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '16px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                    borderRadius: '8px'
+                  }}>
+                    <h5 style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#d1d5db',
+                      marginBottom: '12px'
+                    }}>
+                      📋 Historique d'utilisation ({item.usage_sessions.length}):
+                    </h5>
+                    
+                    <div style={{
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}>
+                      {item.usage_sessions.slice().reverse().map((session, index) => (
+                        <div
+                          key={session.id}
+                          style={{
+                            padding: '12px',
+                            backgroundColor: 'rgba(17, 24, 39, 0.8)',
+                            borderRadius: '6px',
+                            border: `1px solid ${session.status === 'in_use' ? '#f59e0b' : '#6b7280'}`
+                          }}
+                        >
+                          <div style={styles.grid3}>
+                            <div>
+                              <div style={{ color: '#d1d5db', fontSize: '13px' }}>
+                                🕐 Pris: {formatTime(session.entry_time)}
+                              </div>
+                              <div style={{ color: '#9ca3af', fontSize: '12px' }}>
+                                👤 {session.used_by}
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ color: '#d1d5db', fontSize: '13px' }}>
+                                {session.exit_time ? 
+                                  `🕓 Retour: ${formatTime(session.exit_time)}` : 
+                                  '🟡 En cours...'
+                                }
+                              </div>
+                              {session.location && (
+                                <div style={{ color: '#9ca3af', fontSize: '12px' }}>
+                                  📍 {session.location}
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <div style={{ color: '#d1d5db', fontSize: '13px' }}>
+                                {session.duration ? 
+                                  `⏱️ ${formatDuration(session.duration)}` : 
+                                  '⏱️ En cours...'
+                                }
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Affichage des retours forcés */}
+                          {session.forced_return && (
+                            <div style={{
+                              marginTop: '8px',
+                              padding: '8px',
+                              backgroundColor: 'rgba(220, 38, 38, 0.2)',
+                              borderRadius: '4px',
+                              border: '1px solid #ef4444'
+                            }}>
+                              <div style={{ color: '#fca5a5', fontSize: '12px', fontWeight: '600' }}>
+                                🚨 RETOUR FORCÉ: {session.forced_return.reason}
+                              </div>
+                              <div style={{ color: '#fecaca', fontSize: '11px' }}>
+                                Par: {session.forced_return.returned_by} - {formatTime(session.forced_return.timestamp)}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
