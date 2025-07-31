@@ -420,6 +420,65 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
   };
 
+  const handleResetSection = () => {
+    // Réinitialise les données de la section actuelle
+    const sectionDefaults = {
+      site: {
+        projectNumber: '',
+        workLocation: '',
+        spaceDescription: '',
+        workDescription: '',
+        entry_supervisor: ''
+      },
+      rescue: {
+        rescue_plan_type: 'internal',
+        supervisor_name: ''
+      },
+      atmospheric: {
+        gas_detector_calibrated: false,
+        calibration_date: ''
+      },
+      registry: {
+        permit_valid_from: '',
+        permit_valid_to: ''
+      }
+    };
+
+    updatePermitData(sectionDefaults[currentSection]);
+    setSaveStatus('idle');
+  };
+
+  const handleSubmitPermit = async () => {
+    setIsLoading(true);
+    setSaveStatus('saving');
+    
+    try {
+      if (onSubmit) {
+        await onSubmit({
+          ...permitData,
+          currentSection,
+          selectedProvince,
+          submitted_at: new Date().toISOString(),
+          status: 'submitted'
+        });
+      }
+      
+      setSaveStatus('saved');
+      
+      // Afficher une notification de succès et optionnellement rediriger
+      setTimeout(() => {
+        setSaveStatus('idle');
+        // onCancel(); // Décommentez si vous voulez rediriger après soumission
+      }, 2000);
+      
+    } catch (error) {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const navigateToSection = (section: 'site' | 'rescue' | 'atmospheric' | 'registry') => {
     setCurrentSection(section);
   };
@@ -476,6 +535,44 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         margin: '0 auto'
       }}>
         
+        {/* Indicateur de statut de sauvegarde */}
+        {saveStatus !== 'idle' && (
+          <div style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 1000,
+            padding: '12px 20px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            fontWeight: '600',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            ...(saveStatus === 'saving' && {
+              backgroundColor: '#1f2937',
+              color: '#60a5fa',
+              border: '1px solid #3b82f6'
+            }),
+            ...(saveStatus === 'saved' && {
+              backgroundColor: '#065f46',
+              color: '#86efac',
+              border: '1px solid #10b981'
+            }),
+            ...(saveStatus === 'error' && {
+              backgroundColor: '#7f1d1d',
+              color: '#fca5a5',
+              border: '1px solid #ef4444'
+            })
+          }}>
+            {saveStatus === 'saving' && <Clock style={{ width: '16px', height: '16px' }} />}
+            {saveStatus === 'saved' && <CheckCircle style={{ width: '16px', height: '16px' }} />}
+            {saveStatus === 'error' && <AlertTriangle style={{ width: '16px', height: '16px' }} />}
+            {texts.status[saveStatus]}
+          </div>
+        )}
+
         {/* En-tête principal */}
         <div style={styles.headerCard}>
           <div style={{
@@ -674,6 +771,59 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           </div>
         </div>
 
+        {/* Menu d'actions rapides */}
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '20px',
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px'
+        }}>
+          <button
+            onClick={onCancel}
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              backgroundColor: '#7f1d1d',
+              border: '2px solid #ef4444',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+              transition: 'all 0.2s ease'
+            }}
+            title={language === 'fr' ? 'Quitter le permis' : 'Exit permit'}
+          >
+            <XCircle style={{ width: '20px', height: '20px' }} />
+          </button>
+          
+          <button
+            onClick={() => setCurrentSection('site')}
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              backgroundColor: '#374151',
+              border: '2px solid #6b7280',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+              transition: 'all 0.2s ease'
+            }}
+            title={language === 'fr' ? 'Retour au début' : 'Back to start'}
+          >
+            <Home style={{ width: '20px', height: '20px' }} />
+          </button>
+        </div>
+
         {/* Navigation bas de page */}
         <div style={{
           display: 'flex',
@@ -724,7 +874,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             </button>
             
             <button
-              onClick={onCancel}
+              onClick={handleResetSection}
               style={{
                 ...styles.button,
                 ...styles.buttonSecondary,
@@ -732,8 +882,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                 padding: '12px 16px'
               }}
             >
-              <XCircle style={{ width: '16px', height: '16px' }} />
-              {texts.navigation.cancel}
+              <RotateCcw style={{ width: '16px', height: '16px' }} />
+              {language === 'fr' ? 'Réinitialiser' : 'Reset'}
             </button>
             
             <button
@@ -742,20 +892,29 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                 const currentIndex = sections.indexOf(currentSection);
                 if (currentIndex < sections.length - 1) {
                   navigateToSection(sections[currentIndex + 1]);
+                } else {
+                  // Dernière section - proposer de soumettre
+                  handleSubmitPermit();
                 }
               }}
-              disabled={currentSection === 'registry'}
               style={{
                 ...styles.button,
-                ...styles.buttonPrimary,
-                opacity: currentSection === 'registry' ? 0.5 : 1,
-                cursor: currentSection === 'registry' ? 'not-allowed' : 'pointer',
+                ...(currentSection === 'registry' ? styles.buttonSuccess : styles.buttonPrimary),
                 width: 'auto',
                 padding: '12px 20px'
               }}
             >
-              {texts.navigation.next}
-              <ChevronRight style={{ width: '18px', height: '18px' }} />
+              {currentSection === 'registry' ? (
+                <>
+                  <CheckCircle style={{ width: '18px', height: '18px' }} />
+                  {texts.navigation.submit}
+                </>
+              ) : (
+                <>
+                  {texts.navigation.next}
+                  <ChevronRight style={{ width: '18px', height: '18px' }} />
+                </>
+              )}
             </button>
           </div>
         </div>
