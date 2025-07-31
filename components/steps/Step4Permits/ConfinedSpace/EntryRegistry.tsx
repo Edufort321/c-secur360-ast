@@ -1051,13 +1051,11 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
       </div>
 
       {/* Cette partie continue dans la section 2 avec les sections Surveillant et Entrants... */}
-    </div>
-  );
-};
-
-export default EntryRegistry;
-// =================== SUITE DU COMPOSANT ENTRY REGISTRY - SECTION 2 COMPLÈTE ===================
+      // =================== SUITE DU COMPOSANT ENTRY REGISTRY - SECTION 2 COMPLÈTE ===================
 // Cette section continue directement après la Section 1
+
+// ATTENTION: Cette section fait partie du composant EntryRegistry
+// Elle doit être intégrée APRÈS la Section 1, pas utilisée séparément
 
   // =================== FONCTIONS SURVEILLANT ===================
   const startSurveillance = () => {
@@ -1430,8 +1428,6 @@ export default EntryRegistry;
     }
   };
 
-  // =================== CONTINUATION DU RENDU JSX - SECTIONS PRINCIPALES ===================
-  
       {/* Section Surveillant avec signature légale */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
