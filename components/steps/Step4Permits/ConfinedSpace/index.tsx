@@ -146,7 +146,7 @@ interface AtmosphericReading {
   notes?: string;
   location?: string;
   status: 'safe' | 'warning' | 'danger';
-  level?: string;
+  level?: 'top' | 'bottom' | 'middle';
   taken_by?: string;
 }
 
