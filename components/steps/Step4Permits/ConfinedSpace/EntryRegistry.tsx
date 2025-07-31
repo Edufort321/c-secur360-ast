@@ -582,8 +582,7 @@ const LegalSignatureForm = ({
     </div>
   );
 };
-
-// =================== COMPOSANT ENTRY REGISTRY - DÉBUT ===================
+// =================== COMPOSANT ENTRY REGISTRY - SECTION 2A ===================
 const EntryRegistry: React.FC<EntryRegistryProps> = ({
   permitData,
   updatePermitData,
@@ -695,7 +694,377 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     }
   }, []);
 
-  // =================== RENDU JSX - SECTION 1 ===================
+  // =================== FONCTIONS SURVEILLANT ===================
+  const startSurveillance = () => {
+    if (!newSurveillant.name || !newSurveillant.company || !newSurveillant.signature) {
+      alert('⚠️ Veuillez remplir tous les champs obligatoires et signer');
+      return;
+    }
+
+    if (!newSurveillant.training_confirmed) {
+      alert('⚠️ Le surveillant doit confirmer sa formation avant de commencer la surveillance');
+      return;
+    }
+
+    if (currentSurveillant) {
+      alert('⚠️ Un surveillant est déjà en service. Terminez sa surveillance avant d\'en commencer une nouvelle.');
+      return;
+    }
+
+    const legalSignature = createLegalSignature(newSurveillant, 'surveillant');
+
+    const surveillant: SurveillantShift = {
+      id: `surveillant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: newSurveillant.name,
+      company: newSurveillant.company,
+      start_time: new Date().toISOString(),
+      status: 'active',
+      legal_signature: legalSignature,
+      forced_evacuations: []
+    };
+
+    const updatedHistory = [...surveillantHistory, surveillant];
+    setSurveillantHistory(updatedHistory);
+    setCurrentSurveillant(surveillant);
+    updateParentData('surveillant_history', updatedHistory);
+    
+    setNewSurveillant({
+      name: '',
+      company: '',
+      signature: '',
+      training_confirmed: false,
+      formation_details: {
+        espace_clos_formation: false,
+        formation_expiry: '',
+        csaz1006_compliant: false,
+        practical_training: false,
+        rescue_procedures: false,
+        emergency_response: false
+      }
+    });
+    setShowSurveillantSignature(false);
+  };
+
+  const endSurveillance = () => {
+    if (!currentSurveillant) return;
+
+    // Forcer la sortie de tous les entrants
+    const personnelInside = entrants.filter(e => e.current_status === 'inside');
+    if (personnelInside.length > 0) {
+      const evacuationRecord = {
+        timestamp: new Date().toISOString(),
+        reason: 'Changement de surveillant - Évacuation obligatoire',
+        evacuated_personnel: personnelInside.map(p => p.name)
+      };
+
+      // Forcer la sortie avec notification
+      const updatedEntrants = entrants.map(entrant => {
+        if (entrant.current_status === 'inside') {
+          const activeSession = entrant.entry_sessions.find(s => s.status === 'inside');
+          if (activeSession) {
+            const now = new Date();
+            const entryTime = new Date(activeSession.entry_time);
+            const duration = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
+
+            const forcedExitSession = {
+              ...activeSession,
+              exit_time: now.toISOString(),
+              duration,
+              status: 'completed' as const,
+              forced_exit: {
+                timestamp: now.toISOString(),
+                reason: 'Changement de surveillant',
+                new_surveillant: 'En attente'
+              }
+            };
+
+            const updatedSessions = entrant.entry_sessions.map(s => 
+              s.id === activeSession.id ? forcedExitSession : s
+            );
+
+            return {
+              ...entrant,
+              current_status: 'outside' as const,
+              total_entries: entrant.total_entries + 1,
+              total_duration: entrant.total_duration + duration,
+              entry_sessions: updatedSessions
+            };
+          }
+        }
+        return entrant;
+      });
+
+      setEntrants(updatedEntrants);
+      updateParentData('entrants', updatedEntrants);
+
+      // Notification d'alerte
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'granted') {
+          new Notification('🚨 ÉVACUATION FORCÉE - Changement de Surveillant', {
+            body: `${personnelInside.length} personne(s) évacuée(s) automatiquement`,
+            icon: '/c-secur360-logo.png',
+            tag: 'evacuation-alert'
+          });
+        }
+      }
+
+      alert(`🚨 ÉVACUATION FORCÉE: ${personnelInside.length} personne(s) évacuée(s) en raison du changement de surveillant. Un nouveau surveillant doit être en place avant toute nouvelle entrée.`);
+    }
+
+    const now = new Date();
+    const startTime = new Date(currentSurveillant.start_time);
+    const duration = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+
+    const updatedSurveillant: SurveillantShift = {
+      ...currentSurveillant,
+      end_time: now.toISOString(),
+      duration,
+      status: 'completed',
+      forced_evacuations: personnelInside.length > 0 ? 
+        [...currentSurveillant.forced_evacuations, {
+          timestamp: new Date().toISOString(),
+          reason: 'Changement de surveillant - Évacuation obligatoire',
+          evacuated_personnel: personnelInside.map(p => p.name)
+        }] : currentSurveillant.forced_evacuations
+    };
+
+    const updatedHistory = surveillantHistory.map(s => 
+      s.id === currentSurveillant.id ? updatedSurveillant : s
+    );
+
+    setSurveillantHistory(updatedHistory);
+    setCurrentSurveillant(null);
+    updateParentData('surveillant_history', updatedHistory);
+  };
+
+  const replaceSurveillant = () => {
+    if (!newSurveillant.name || !newSurveillant.company || !newSurveillant.signature) {
+      alert('⚠️ Veuillez remplir tous les champs du nouveau surveillant et signer');
+      return;
+    }
+
+    if (!newSurveillant.training_confirmed) {
+      alert('⚠️ Le nouveau surveillant doit confirmer sa formation');
+      return;
+    }
+
+    if (currentSurveillant) {
+      endSurveillance();
+    }
+
+    setTimeout(() => {
+      startSurveillance();
+    }, 100);
+  };
+
+  // =================== FONCTIONS ENTRANTS AVEC ALERTES ===================
+  const addEntrant = () => {
+    if (!newEntrant.name || !newEntrant.company || !newEntrant.signature) {
+      alert('⚠️ Veuillez remplir tous les champs obligatoires et signer');
+      return;
+    }
+
+    if (!newEntrant.training_confirmed) {
+      alert('⚠️ L\'entrant doit confirmer sa formation avant d\'être ajouté au registre');
+      return;
+    }
+
+    const legalSignature = createLegalSignature(newEntrant, 'entrant');
+
+    const entrant: Entrant = {
+      id: `entrant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: newEntrant.name,
+      company: newEntrant.company,
+      total_entries: 0,
+      total_duration: 0,
+      current_status: 'outside',
+      entry_sessions: [],
+      added_time: new Date().toISOString(),
+      legal_signature: legalSignature
+    };
+
+    const updatedEntrants = [...entrants, entrant];
+    setEntrants(updatedEntrants);
+    updateParentData('entrants', updatedEntrants);
+    
+    setNewEntrant({
+      name: '',
+      company: '',
+      signature: '',
+      training_confirmed: false,
+      formation_details: {
+        espace_clos_formation: false,
+        formation_expiry: '',
+        csaz1006_compliant: false,
+        practical_training: false,
+        rescue_procedures: false,
+        emergency_response: false
+      }
+    });
+    setShowEntrantSignature(false);
+    setCurrentSigningEntrant(null);
+  };
+
+  const toggleEntrantEntry = (entrantId: string) => {
+    if (!currentSurveillant) {
+      alert('⚠️ Un surveillant doit être en service avant qu\'un entrant puisse entrer dans l\'espace clos.');
+      return;
+    }
+
+    const entrant = entrants.find(e => e.id === entrantId);
+    if (!entrant) return;
+
+    const updatedEntrants = entrants.map(ent => {
+      if (ent.id === entrantId) {
+        const now = new Date();
+        
+        if (ent.current_status === 'outside') {
+          // Entrée dans l'espace clos
+          const newSession = {
+            id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            entry_time: now.toISOString(),
+            status: 'inside' as const
+          };
+
+          // Notification d'entrée
+          if (typeof window !== 'undefined' && 'Notification' in window) {
+            if (Notification.permission === 'granted') {
+              new Notification('🟡 ENTRÉE EN ESPACE CLOS', {
+                body: `${ent.name} entre dans l'espace clos - Surveillance active: ${currentSurveillant.name}`,
+                icon: '/c-secur360-logo.png',
+                tag: 'entry-alert'
+              });
+            }
+          }
+
+          return {
+            ...ent,
+            current_status: 'inside' as const,
+            entry_sessions: [...ent.entry_sessions, newSession]
+          };
+        } else {
+          // Sortie de l'espace clos
+          const activeSession = ent.entry_sessions.find(s => s.status === 'inside');
+          if (!activeSession) return ent;
+
+          const entryTime = new Date(activeSession.entry_time);
+          const duration = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
+
+          const completedSession = {
+            ...activeSession,
+            exit_time: now.toISOString(),
+            duration,
+            status: 'completed' as const
+          };
+
+          const updatedSessions = ent.entry_sessions.map(s => 
+            s.id === activeSession.id ? completedSession : s
+          );
+
+          // Notification de sortie avec alerte
+          if (typeof window !== 'undefined' && 'Notification' in window) {
+            if (Notification.permission === 'granted') {
+              new Notification('🔴 SORTIE D\'ESPACE CLOS - ALERTE', {
+                body: `${ent.name} sort de l'espace clos après ${formatDuration(duration)} - Vérification requise`,
+                icon: '/c-secur360-logo.png',
+                tag: 'exit-alert',
+                requireInteraction: true
+              });
+            }
+          }
+
+          // Alerte sonore dans le navigateur
+          try {
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAaBC6Mzd68dSgPOZjW89qDOQgVaLTj7qR');
+            audio.play().catch(() => {}); // Ignore les erreurs d'autoplay
+          } catch (e) {}
+
+          return {
+            ...ent,
+            current_status: 'outside' as const,
+            total_entries: ent.total_entries + 1,
+            total_duration: ent.total_duration + duration,
+            entry_sessions: updatedSessions
+          };
+        }
+      }
+      return ent;
+    });
+
+    setEntrants(updatedEntrants);
+    updateParentData('entrants', updatedEntrants);
+  };
+
+  const deleteEntrant = (entrantId: string) => {
+    const entrant = entrants.find(e => e.id === entrantId);
+    if (entrant?.current_status === 'inside') {
+      alert('⚠️ Impossible de supprimer un entrant qui est actuellement dans l\'espace clos. Effectuez d\'abord sa sortie.');
+      return;
+    }
+
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet entrant du registre?')) {
+      const updatedEntrants = entrants.filter(e => e.id !== entrantId);
+      setEntrants(updatedEntrants);
+      updateParentData('entrants', updatedEntrants);
+    }
+  };
+
+  // =================== FONCTIONS ÉQUIPEMENT ===================
+  const addEquipmentItem = () => {
+    if (!newEquipment.name || !newEquipment.serial_number) {
+      alert('⚠️ Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    const equipmentItem: Equipment = {
+      id: `equipment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: newEquipment.name,
+      serial_number: newEquipment.serial_number,
+      condition: newEquipment.condition,
+      checked_in: false,
+      checked_out: false
+    };
+
+    const updatedEquipment = [...equipment, equipmentItem];
+    setEquipment(updatedEquipment);
+    updateParentData('equipment', updatedEquipment);
+    
+    setNewEquipment({ name: '', serial_number: '', condition: 'good' });
+  };
+
+  const toggleEquipmentCheck = (equipmentId: string, type: 'in' | 'out') => {
+    const updatedEquipment = equipment.map(item => {
+      if (item.id === equipmentId) {
+        if (type === 'in') {
+          return { ...item, checked_in: !item.checked_in };
+        } else {
+          return { ...item, checked_out: !item.checked_out };
+        }
+      }
+      return item;
+    });
+    
+    setEquipment(updatedEquipment);
+    updateParentData('equipment', updatedEquipment);
+  };
+
+  const deleteEquipment = (equipmentId: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet équipement?')) {
+      const updatedEquipment = equipment.filter(e => e.id !== equipmentId);
+      setEquipment(updatedEquipment);
+      updateParentData('equipment', updatedEquipment);
+    }
+  };
+
+  const getConditionColor = (condition: string) => {
+    switch (condition) {
+      case 'good': return '#10b981';
+      case 'fair': return '#f59e0b';
+      case 'poor': return '#ef4444';
+      default: return '#6b7280';
+    }
+  };
+// =================== RENDU JSX - SECTION 2B ===================
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
       {/* Modal de signature légale pour surveillant */}
@@ -1048,383 +1417,6 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
           </div>
         </div>
       </div>
-
-      // =================== SUITE DU COMPOSANT ENTRY REGISTRY - SECTION 2 COMPLÈTE ===================
-// Cette section continue directement après la Section 1
-
-// ATTENTION: Cette section fait partie du composant EntryRegistry
-// Elle doit être intégrée APRÈS la Section 1, pas utilisée séparément
-
-  // =================== FONCTIONS SURVEILLANT ===================
-  const startSurveillance = () => {
-    if (!newSurveillant.name || !newSurveillant.company || !newSurveillant.signature) {
-      alert('⚠️ Veuillez remplir tous les champs obligatoires et signer');
-      return;
-    }
-
-    if (!newSurveillant.training_confirmed) {
-      alert('⚠️ Le surveillant doit confirmer sa formation avant de commencer la surveillance');
-      return;
-    }
-
-    if (currentSurveillant) {
-      alert('⚠️ Un surveillant est déjà en service. Terminez sa surveillance avant d\'en commencer une nouvelle.');
-      return;
-    }
-
-    const legalSignature = createLegalSignature(newSurveillant, 'surveillant');
-
-    const surveillant: SurveillantShift = {
-      id: `surveillant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: newSurveillant.name,
-      company: newSurveillant.company,
-      start_time: new Date().toISOString(),
-      status: 'active',
-      legal_signature: legalSignature,
-      forced_evacuations: []
-    };
-
-    const updatedHistory = [...surveillantHistory, surveillant];
-    setSurveillantHistory(updatedHistory);
-    setCurrentSurveillant(surveillant);
-    updateParentData('surveillant_history', updatedHistory);
-    
-    setNewSurveillant({
-      name: '',
-      company: '',
-      signature: '',
-      training_confirmed: false,
-      formation_details: {
-        espace_clos_formation: false,
-        formation_expiry: '',
-        csaz1006_compliant: false,
-        practical_training: false,
-        rescue_procedures: false,
-        emergency_response: false
-      }
-    });
-    setShowSurveillantSignature(false);
-  };
-
-  const endSurveillance = () => {
-    if (!currentSurveillant) return;
-
-    // Forcer la sortie de tous les entrants
-    const personnelInside = entrants.filter(e => e.current_status === 'inside');
-    if (personnelInside.length > 0) {
-      const evacuationRecord = {
-        timestamp: new Date().toISOString(),
-        reason: 'Changement de surveillant - Évacuation obligatoire',
-        evacuated_personnel: personnelInside.map(p => p.name)
-      };
-
-      // Forcer la sortie avec notification
-      const updatedEntrants = entrants.map(entrant => {
-        if (entrant.current_status === 'inside') {
-          const activeSession = entrant.entry_sessions.find(s => s.status === 'inside');
-          if (activeSession) {
-            const now = new Date();
-            const entryTime = new Date(activeSession.entry_time);
-            const duration = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
-
-            const forcedExitSession = {
-              ...activeSession,
-              exit_time: now.toISOString(),
-              duration,
-              status: 'completed' as const,
-              forced_exit: {
-                timestamp: now.toISOString(),
-                reason: 'Changement de surveillant',
-                new_surveillant: 'En attente'
-              }
-            };
-
-            const updatedSessions = entrant.entry_sessions.map(s => 
-              s.id === activeSession.id ? forcedExitSession : s
-            );
-
-            return {
-              ...entrant,
-              current_status: 'outside' as const,
-              total_entries: entrant.total_entries + 1,
-              total_duration: entrant.total_duration + duration,
-              entry_sessions: updatedSessions
-            };
-          }
-        }
-        return entrant;
-      });
-
-      setEntrants(updatedEntrants);
-      updateParentData('entrants', updatedEntrants);
-
-      // Notification d'alerte
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission === 'granted') {
-          new Notification('🚨 ÉVACUATION FORCÉE - Changement de Surveillant', {
-            body: `${personnelInside.length} personne(s) évacuée(s) automatiquement`,
-            icon: '/c-secur360-logo.png',
-            tag: 'evacuation-alert'
-          });
-        }
-      }
-
-      alert(`🚨 ÉVACUATION FORCÉE: ${personnelInside.length} personne(s) évacuée(s) en raison du changement de surveillant. Un nouveau surveillant doit être en place avant toute nouvelle entrée.`);
-    }
-
-    const now = new Date();
-    const startTime = new Date(currentSurveillant.start_time);
-    const duration = Math.floor((now.getTime() - startTime.getTime()) / 1000);
-
-    const updatedSurveillant: SurveillantShift = {
-      ...currentSurveillant,
-      end_time: now.toISOString(),
-      duration,
-      status: 'completed',
-      forced_evacuations: personnelInside.length > 0 ? 
-        [...currentSurveillant.forced_evacuations, {
-          timestamp: new Date().toISOString(),
-          reason: 'Changement de surveillant - Évacuation obligatoire',
-          evacuated_personnel: personnelInside.map(p => p.name)
-        }] : currentSurveillant.forced_evacuations
-    };
-
-    const updatedHistory = surveillantHistory.map(s => 
-      s.id === currentSurveillant.id ? updatedSurveillant : s
-    );
-
-    setSurveillantHistory(updatedHistory);
-    setCurrentSurveillant(null);
-    updateParentData('surveillant_history', updatedHistory);
-  };
-
-  const replaceSurveillant = () => {
-    if (!newSurveillant.name || !newSurveillant.company || !newSurveillant.signature) {
-      alert('⚠️ Veuillez remplir tous les champs du nouveau surveillant et signer');
-      return;
-    }
-
-    if (!newSurveillant.training_confirmed) {
-      alert('⚠️ Le nouveau surveillant doit confirmer sa formation');
-      return;
-    }
-
-    if (currentSurveillant) {
-      endSurveillance();
-    }
-
-    setTimeout(() => {
-      startSurveillance();
-    }, 100);
-  };
-
-  // =================== FONCTIONS ENTRANTS AVEC ALERTES ===================
-  const addEntrant = () => {
-    if (!newEntrant.name || !newEntrant.company || !newEntrant.signature) {
-      alert('⚠️ Veuillez remplir tous les champs obligatoires et signer');
-      return;
-    }
-
-    if (!newEntrant.training_confirmed) {
-      alert('⚠️ L\'entrant doit confirmer sa formation avant d\'être ajouté au registre');
-      return;
-    }
-
-    const legalSignature = createLegalSignature(newEntrant, 'entrant');
-
-    const entrant: Entrant = {
-      id: `entrant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: newEntrant.name,
-      company: newEntrant.company,
-      total_entries: 0,
-      total_duration: 0,
-      current_status: 'outside',
-      entry_sessions: [],
-      added_time: new Date().toISOString(),
-      legal_signature: legalSignature
-    };
-
-    const updatedEntrants = [...entrants, entrant];
-    setEntrants(updatedEntrants);
-    updateParentData('entrants', updatedEntrants);
-    
-    setNewEntrant({
-      name: '',
-      company: '',
-      signature: '',
-      training_confirmed: false,
-      formation_details: {
-        espace_clos_formation: false,
-        formation_expiry: '',
-        csaz1006_compliant: false,
-        practical_training: false,
-        rescue_procedures: false,
-        emergency_response: false
-      }
-    });
-    setShowEntrantSignature(false);
-    setCurrentSigningEntrant(null);
-  };
-
-  const toggleEntrantEntry = (entrantId: string) => {
-    if (!currentSurveillant) {
-      alert('⚠️ Un surveillant doit être en service avant qu\'un entrant puisse entrer dans l\'espace clos.');
-      return;
-    }
-
-    const entrant = entrants.find(e => e.id === entrantId);
-    if (!entrant) return;
-
-    const updatedEntrants = entrants.map(ent => {
-      if (ent.id === entrantId) {
-        const now = new Date();
-        
-        if (ent.current_status === 'outside') {
-          // Entrée dans l'espace clos
-          const newSession = {
-            id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            entry_time: now.toISOString(),
-            status: 'inside' as const
-          };
-
-          // Notification d'entrée
-          if (typeof window !== 'undefined' && 'Notification' in window) {
-            if (Notification.permission === 'granted') {
-              new Notification('🟡 ENTRÉE EN ESPACE CLOS', {
-                body: `${ent.name} entre dans l'espace clos - Surveillance active: ${currentSurveillant.name}`,
-                icon: '/c-secur360-logo.png',
-                tag: 'entry-alert'
-              });
-            }
-          }
-
-          return {
-            ...ent,
-            current_status: 'inside' as const,
-            entry_sessions: [...ent.entry_sessions, newSession]
-          };
-        } else {
-          // Sortie de l'espace clos
-          const activeSession = ent.entry_sessions.find(s => s.status === 'inside');
-          if (!activeSession) return ent;
-
-          const entryTime = new Date(activeSession.entry_time);
-          const duration = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
-
-          const completedSession = {
-            ...activeSession,
-            exit_time: now.toISOString(),
-            duration,
-            status: 'completed' as const
-          };
-
-          const updatedSessions = ent.entry_sessions.map(s => 
-            s.id === activeSession.id ? completedSession : s
-          );
-
-          // Notification de sortie avec alerte
-          if (typeof window !== 'undefined' && 'Notification' in window) {
-            if (Notification.permission === 'granted') {
-              new Notification('🔴 SORTIE D\'ESPACE CLOS - ALERTE', {
-                body: `${ent.name} sort de l'espace clos après ${formatDuration(duration)} - Vérification requise`,
-                icon: '/c-secur360-logo.png',
-                tag: 'exit-alert',
-                requireInteraction: true
-              });
-            }
-          }
-
-          // Alerte sonore dans le navigateur
-          try {
-            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAaBC6Mzd68dSgPOZjW89qDOQgVaLTj7qR');
-            audio.play().catch(() => {}); // Ignore les erreurs d'autoplay
-          } catch (e) {}
-
-          return {
-            ...ent,
-            current_status: 'outside' as const,
-            total_entries: ent.total_entries + 1,
-            total_duration: ent.total_duration + duration,
-            entry_sessions: updatedSessions
-          };
-        }
-      }
-      return ent;
-    });
-
-    setEntrants(updatedEntrants);
-    updateParentData('entrants', updatedEntrants);
-  };
-
-  const deleteEntrant = (entrantId: string) => {
-    const entrant = entrants.find(e => e.id === entrantId);
-    if (entrant?.current_status === 'inside') {
-      alert('⚠️ Impossible de supprimer un entrant qui est actuellement dans l\'espace clos. Effectuez d\'abord sa sortie.');
-      return;
-    }
-
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet entrant du registre?')) {
-      const updatedEntrants = entrants.filter(e => e.id !== entrantId);
-      setEntrants(updatedEntrants);
-      updateParentData('entrants', updatedEntrants);
-    }
-  };
-
-  // =================== FONCTIONS ÉQUIPEMENT (IDENTIQUES) ===================
-  const addEquipmentItem = () => {
-    if (!newEquipment.name || !newEquipment.serial_number) {
-      alert('⚠️ Veuillez remplir tous les champs obligatoires');
-      return;
-    }
-
-    const equipmentItem: Equipment = {
-      id: `equipment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: newEquipment.name,
-      serial_number: newEquipment.serial_number,
-      condition: newEquipment.condition,
-      checked_in: false,
-      checked_out: false
-    };
-
-    const updatedEquipment = [...equipment, equipmentItem];
-    setEquipment(updatedEquipment);
-    updateParentData('equipment', updatedEquipment);
-    
-    setNewEquipment({ name: '', serial_number: '', condition: 'good' });
-  };
-
-  const toggleEquipmentCheck = (equipmentId: string, type: 'in' | 'out') => {
-    const updatedEquipment = equipment.map(item => {
-      if (item.id === equipmentId) {
-        if (type === 'in') {
-          return { ...item, checked_in: !item.checked_in };
-        } else {
-          return { ...item, checked_out: !item.checked_out };
-        }
-      }
-      return item;
-    });
-    
-    setEquipment(updatedEquipment);
-    updateParentData('equipment', updatedEquipment);
-  };
-
-  const deleteEquipment = (equipmentId: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet équipement?')) {
-      const updatedEquipment = equipment.filter(e => e.id !== equipmentId);
-      setEquipment(updatedEquipment);
-      updateParentData('equipment', updatedEquipment);
-    }
-  };
-
-  const getConditionColor = (condition: string) => {
-    switch (condition) {
-      case 'good': return '#10b981';
-      case 'fair': return '#f59e0b';
-      case 'poor': return '#ef4444';
-      default: return '#6b7280';
-    }
-  };
 
       {/* Section Surveillant avec signature légale */}
       <div style={styles.card}>
@@ -2338,4 +2330,4 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   );
 };
 
-export default EntryRegistry;
+export default EntryRegistry;  
