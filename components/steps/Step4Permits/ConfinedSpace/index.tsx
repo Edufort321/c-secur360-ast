@@ -8,7 +8,9 @@ import {
   Wrench, Target, ChevronDown, ChevronRight, Building, Construction, Flame, Zap, BarChart3
 } from 'lucide-react';
 
-// 🔧 CORRECTION: Imports lazy pour éviter les problèmes d'import dynamique
+// 🔧 CORRECTION: Import du SafetyManager + Imports lazy
+import { useSafetyManager } from './SafetyManager';
+
 const SiteInformation = lazy(() => import('./SiteInformation'));
 const RescuePlan = lazy(() => import('./RescuePlan'));
 const AtmosphericTesting = lazy(() => import('./AtmosphericTesting'));
@@ -153,7 +155,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   initialData = {}
 }) => {
 
-  // =================== ÉTATS LOCAUX ===================
+  // =================== ÉTATS LOCAUX + SAFETYMANAGER ===================
+  const safetyManager = useSafetyManager();
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry'>('site');
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province);
   const [permitData, setPermitData] = useState(initialData);
@@ -337,6 +340,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       isMobile,
       language,
       styles,
+      safetyManager, // 🔧 AJOUT: Passer le SafetyManager aux composants
       updateParentData: (section: string, data: any) => {
         updatePermitData({ [section]: data });
       }
