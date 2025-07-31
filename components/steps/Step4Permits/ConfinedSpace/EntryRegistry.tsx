@@ -583,7 +583,7 @@ const LegalSignatureForm = ({
   );
 };
 
-// =================== COMPOSANT ENTRY REGISTRY ===================
+// =================== COMPOSANT ENTRY REGISTRY - DÉBUT ===================
 const EntryRegistry: React.FC<EntryRegistryProps> = ({
   permitData,
   updatePermitData,
@@ -688,8 +688,14 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     };
   };
 
-  // Cette partie continue dans la section 2...
-  
+  // Demander à confirmer notifications browser
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // =================== RENDU JSX - SECTION 1 ===================
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
       
@@ -1051,6 +1057,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
 
 export default EntryRegistry;
 // =================== SUITE DU COMPOSANT ENTRY REGISTRY - SECTION 2 COMPLÈTE ===================
+// Cette section continue directement après la Section 1
 
   // =================== FONCTIONS SURVEILLANT ===================
   const startSurveillance = () => {
@@ -1423,7 +1430,7 @@ export default EntryRegistry;
     }
   };
 
-  // =================== CONTINUATION DU RENDU JSX ===================
+  // =================== CONTINUATION DU RENDU JSX - SECTIONS PRINCIPALES ===================
   
       {/* Section Surveillant avec signature légale */}
       <div style={styles.card}>
@@ -2129,7 +2136,7 @@ export default EntryRegistry;
         )}
       </div>
 
-      {/* Section Équipements (identique à l'original) */}
+      {/* Section Équipements - Ajouter */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
           <Plus style={{ width: '20px', height: '20px' }} />
