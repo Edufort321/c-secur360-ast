@@ -164,12 +164,6 @@ interface RegulationData {
     competent_person_required?: boolean;
     max_work_period_hours?: number;
   };
-  training_requirements: {
-    surveillant: string[];
-    entrant: string[];
-    annual_recertification: boolean;
-    practical_training_required: boolean;
-  };
 }
 
 interface LegalSignature {
