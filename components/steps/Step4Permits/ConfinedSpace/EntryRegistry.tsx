@@ -1894,7 +1894,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
         </div>
       </div>
 
-      {/* Section Personnel avec style sombre */}
+      {/* Section Surveillant d'Espace Clos avec alerte */}
       <div style={styles.card}>
         <div style={{
           borderBottom: '1px solid #4b5563',
@@ -1909,11 +1909,14 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
             gap: isMobile ? '16px' : '0'
           }}>
             <h2 style={styles.cardTitle}>
-              <Users style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
-              {texts.personnel}
+              <Eye style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
+              👁️ Surveillant d'Espace Clos (Signature Légale Obligatoire)
             </h2>
             <button
-              onClick={() => setShowPersonModal(true)}
+              onClick={() => {
+                setPersonData(prev => ({ ...prev, role: 'surveillant' }));
+                setShowPersonModal(true);
+              }}
               style={{
                 ...styles.button,
                 ...styles.buttonPrimary,
@@ -1921,12 +1924,42 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
               }}
             >
               <UserPlus style={{ width: '18px', height: '18px' }} />
-              {texts.addPerson}
+              Ajouter Surveillant
             </button>
           </div>
         </div>
 
-        {personnel.length === 0 ? (
+        {/* Alerte si aucun surveillant */}
+        {!getCurrentSurveillant() && (
+          <div style={{
+            ...styles.emergencyCard,
+            marginBottom: '24px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <AlertTriangle style={{ width: '32px', height: '32px', color: '#fca5a5' }} />
+              <div>
+                <h3 style={{ 
+                  color: '#fca5a5', 
+                  fontWeight: 'bold', 
+                  fontSize: isMobile ? '16px' : '18px',
+                  marginBottom: '8px'
+                }}>
+                  ⚠️ AUCUN SURVEILLANT ACTIF
+                </h3>
+                <p style={{ 
+                  color: '#fca5a5', 
+                  fontSize: isMobile ? '13px' : '14px',
+                  margin: 0
+                }}>
+                  Un surveillant doit signer légalement et être en service avant que des entrants puissent accéder à l'espace clos.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Liste des surveillants */}
+        {personnel.filter(p => p.role === 'surveillant').length === 0 ? (
           <div style={{ 
             textAlign: 'center', 
             padding: isMobile ? '40px 20px' : '60px 40px',
@@ -1934,7 +1967,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
             borderRadius: '12px',
             border: '1px solid #374151'
           }}>
-            <Users style={{ 
+            <Eye style={{ 
               width: isMobile ? '64px' : '80px', 
               height: isMobile ? '64px' : '80px', 
               color: '#6b7280',
@@ -1946,37 +1979,26 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
               color: '#d1d5db',
               marginBottom: '12px'
             }}>
-              {texts.noPersonnel}
+              Aucun surveillant enregistré
             </h3>
             <p style={{ 
               color: '#9ca3af', 
               fontSize: isMobile ? '14px' : '15px',
               lineHeight: 1.5
             }}>
-              👨‍💼 {texts.startWithSupervisor}
+              👨‍💼 Un surveillant doit signer légalement et être en service avant que des entrants puissent accéder à l'espace clos.
             </p>
           </div>
         ) : (
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '16px',
-            maxHeight: isMobile ? '500px' : '600px',
-            overflowY: 'auto',
-            paddingRight: '8px'
-          }}>
-            {personnel.map((person) => {
-              const isInside = person.entry_sessions.some(session => session.status === 'active');
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {personnel.filter(p => p.role === 'surveillant').map((person) => {
               const totalSessions = person.entry_sessions.length;
-              
-              const cardStyle = person.role === 'surveillant' 
-                ? styles.personCardSurveillant
-                : isInside 
-                  ? styles.personCardInside
-                  : styles.personCardEntrant;
+              const todaySessions = person.entry_sessions.filter(session => 
+                new Date(session.timestamp).toDateString() === new Date().toDateString()
+              );
 
               return (
-                <div key={person.id} style={{ ...styles.personCard, ...cardStyle }}>
+                <div key={person.id} style={{ ...styles.personCard, ...styles.personCardSurveillant }}>
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
@@ -1989,15 +2011,9 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                       <div style={{
                         padding: '12px',
                         borderRadius: '12px',
-                        backgroundColor: person.role === 'surveillant' 
-                          ? 'rgba(59, 130, 246, 0.2)' 
-                          : 'rgba(107, 114, 128, 0.2)'
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)'
                       }}>
-                        {person.role === 'surveillant' ? (
-                          <Eye style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
-                        ) : (
-                          <UserCheck style={{ width: '24px', height: '24px', color: '#9ca3af' }} />
-                        )}
+                        <Eye style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
                       </div>
                       
                       <div>
@@ -2021,13 +2037,11 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                             borderRadius: '12px',
                             fontSize: '11px',
                             fontWeight: '600',
-                            backgroundColor: person.role === 'surveillant'
-                              ? 'rgba(59, 130, 246, 0.2)'
-                              : 'rgba(107, 114, 128, 0.2)',
-                            color: person.role === 'surveillant' ? '#93c5fd' : '#d1d5db',
-                            border: `1px solid ${person.role === 'surveillant' ? '#3b82f6' : '#6b7280'}`
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            color: '#93c5fd',
+                            border: '1px solid #3b82f6'
                           }}>
-                            {person.role === 'surveillant' ? '👁️ ' + texts.surveillant : '👤 ' + texts.entrant}
+                            👁️ SURVEILLANT
                           </span>
                           
                           {person.is_active && (
@@ -2040,22 +2054,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                               color: '#86efac',
                               border: '1px solid #10b981'
                             }}>
-                              ✅ {texts.active}
-                            </span>
-                          )}
-                          
-                          {isInside && (
-                            <span style={{
-                              padding: '4px 8px',
-                              borderRadius: '12px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              backgroundColor: 'rgba(245, 158, 11, 0.2)',
-                              color: '#fde047',
-                              border: '1px solid #f59e0b',
-                              animation: 'pulse 2s infinite'
-                            }}>
-                              🚪 {texts.inside}
+                              ✅ EN SERVICE
                             </span>
                           )}
                         </div>
@@ -2070,9 +2069,9 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                           flexWrap: 'wrap'
                         }}>
                           <span>🏢 {person.company}</span>
-                          <span>📊 {totalSessions} session(s)</span>
+                          <span>📊 Surveillances aujourd'hui: {todaySessions.length}</span>
                           {person.training_expiry && (
-                            <span>📅 Expire: {new Date(person.training_expiry).toLocaleDateString()}</span>
+                            <span>📅 Formation expire: {new Date(person.training_expiry).toLocaleDateString()}</span>
                           )}
                         </div>
                       </div>
@@ -2084,38 +2083,375 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                       gap: '8px',
                       flexWrap: 'wrap'
                     }}>
-                      {/* Boutons Entrée/Sortie pour entrants */}
-                      {person.role === 'entrant' && (
-                        <>
-                          {!isInside ? (
-                            <button
-                              onClick={() => markEntry(person.id)}
-                              disabled={!getCurrentSurveillant()}
-                              style={{
-                                ...styles.button,
-                                ...styles.buttonSuccess,
-                                ...styles.buttonSmall,
-                                opacity: !getCurrentSurveillant() ? 0.5 : 1
-                              }}
-                            >
-                              <LogIn style={{ width: '16px', height: '16px' }} />
-                              {texts.markEntry}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => markExit(person.id)}
-                              style={{
-                                ...styles.button,
-                                backgroundColor: '#f59e0b',
-                                color: 'white',
-                                ...styles.buttonSmall
-                              }}
-                            >
-                              <LogOut style={{ width: '16px', height: '16px' }} />
-                              {texts.markExit}
-                            </button>
+                      {/* Bouton Signature */}
+                      <button
+                        onClick={() => {
+                          setSelectedPersonId(person.id);
+                          setShowSignatureModal(true);
+                        }}
+                        style={{
+                          ...styles.button,
+                          backgroundColor: '#8b5cf6',
+                          color: 'white',
+                          ...styles.buttonSmall
+                        }}
+                      >
+                        <Signature style={{ width: '16px', height: '16px' }} />
+                        {person.signature ? 'Nouvelle Signature' : 'Signer Légalement'}
+                      </button>
+
+                      {/* Bouton Toggle Status */}
+                      <button
+                        onClick={() => togglePersonStatus(person.id)}
+                        style={{
+                          ...styles.button,
+                          backgroundColor: person.is_active ? '#dc2626' : '#059669',
+                          color: 'white',
+                          ...styles.buttonSmall
+                        }}
+                      >
+                        {person.is_active ? (
+                          <>
+                            <UserMinus style={{ width: '16px', height: '16px' }} />
+                            Mettre Hors Service
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus style={{ width: '16px', height: '16px' }} />
+                            Mettre En Service
+                          </>
+                        )}
+                      </button>
+
+                      {/* Bouton Modifier */}
+                      <button
+                        onClick={() => editPerson(person)}
+                        style={{
+                          ...styles.button,
+                          ...styles.buttonSecondary,
+                          ...styles.buttonSmall
+                        }}
+                      >
+                        <Edit3 style={{ width: '16px', height: '16px' }} />
+                        Modifier
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Historique journalier du surveillant */}
+                  <div style={{
+                    marginTop: '16px',
+                    paddingTop: '16px',
+                    borderTop: '1px solid #4b5563'
+                  }}>
+                    <h4 style={{ 
+                      fontSize: isMobile ? '13px' : '14px',
+                      fontWeight: '600',
+                      color: '#d1d5db',
+                      marginBottom: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <History style={{ width: '16px', height: '16px' }} />
+                      📋 Historique de Surveillance - {new Date().toLocaleDateString()}
+                    </h4>
+                    
+                    {todaySessions.length === 0 ? (
+                      <div style={{
+                        padding: '20px',
+                        textAlign: 'center',
+                        backgroundColor: 'rgba(17, 24, 39, 0.3)',
+                        borderRadius: '8px',
+                        border: '1px solid #374151'
+                      }}>
+                        <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>
+                          📊 Aucune surveillance enregistrée aujourd'hui
+                        </p>
+                      </div>
+                    ) : (
+                      <div style={{ 
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        maxHeight: '200px',
+                        overflowY: 'auto'
+                      }}>
+                        {todaySessions.reverse().map((session, index) => (
+                          <div 
+                            key={session.id} 
+                            style={{ 
+                              padding: '12px',
+                              backgroundColor: 'rgba(17, 24, 39, 0.5)',
+                              borderRadius: '8px',
+                              border: '1px solid #374151',
+                              fontSize: isMobile ? '11px' : '12px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Eye style={{ width: '14px', height: '14px', color: '#60a5fa' }} />
+                                <span style={{ color: '#93c5fd', fontWeight: '600' }}>
+                                  Surveillance #{index + 1}
+                                </span>
+                              </div>
+                              <span style={{ color: '#6b7280' }}>
+                                📅 {new Date(session.timestamp).toLocaleTimeString()}
+                              </span>
+                            </div>
+                            <div style={{ color: '#d1d5db', fontSize: '11px' }}>
+                              🎯 Supervision des entrées/sorties et surveillance générale de l'espace clos
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Signature status */}
+                    {person.signature && (
+                      <div style={{
+                        marginTop: '12px',
+                        padding: '12px',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderRadius: '8px',
+                        border: '1px solid #10b981'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />
+                          <span style={{ color: '#86efac', fontSize: '12px', fontWeight: '600' }}>
+                            ✍️ Signature légale enregistrée le {person.signature_timestamp ? 
+                              new Date(person.signature_timestamp).toLocaleString() : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Section Personnel Entrant avec Surveillance Multiple */}
+      <div style={styles.card}>
+        <div style={{
+          borderBottom: '1px solid #4b5563',
+          paddingBottom: '20px',
+          marginBottom: '24px'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? '16px' : '0'
+          }}>
+            <div>
+              <h2 style={styles.cardTitle}>
+                <UserCheck style={{ width: '24px', height: '24px', color: '#10b981' }} />
+                👤 Personnel Entrant avec Surveillance Multiple ({getActiveEntrants().length})
+              </h2>
+              <p style={{ 
+                color: '#9ca3af', 
+                fontSize: isMobile ? '12px' : '13px',
+                margin: 0
+              }}>
+                🔒 Nécessite un surveillant actif pour toute entrée/sortie
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setPersonData(prev => ({ ...prev, role: 'entrant' }));
+                setShowPersonModal(true);
+              }}
+              style={{
+                ...styles.button,
+                ...styles.buttonSuccess,
+                ...styles.buttonSmall
+              }}
+            >
+              <UserPlus style={{ width: '18px', height: '18px' }} />
+              Ajouter Entrant
+            </button>
+          </div>
+        </div>
+
+        {/* Liste des entrants */}
+        {personnel.filter(p => p.role === 'entrant').length === 0 ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: isMobile ? '40px 20px' : '60px 40px',
+            backgroundColor: 'rgba(17, 24, 39, 0.5)',
+            borderRadius: '12px',
+            border: '1px solid #374151'
+          }}>
+            <UserCheck style={{ 
+              width: isMobile ? '64px' : '80px', 
+              height: isMobile ? '64px' : '80px', 
+              color: '#6b7280',
+              margin: '0 auto 20px'
+            }} />
+            <h3 style={{ 
+              fontSize: isMobile ? '18px' : '20px',
+              fontWeight: '600',
+              color: '#d1d5db',
+              marginBottom: '12px'
+            }}>
+              Aucun entrant enregistré
+            </h3>
+            <p style={{ 
+              color: '#9ca3af', 
+              fontSize: isMobile ? '14px' : '15px',
+              lineHeight: 1.5
+            }}>
+              👥 Ajoutez des entrants ci-dessus pour commencer le registre d'entrée avec surveillance.
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {personnel.filter(p => p.role === 'entrant').map((person) => {
+              const isInside = person.entry_sessions.some(session => session.status === 'active');
+              const todaySessions = person.entry_sessions.filter(session => 
+                new Date(session.timestamp).toDateString() === new Date().toDateString()
+              );
+              const totalTimeToday = todaySessions
+                .filter(s => s.duration)
+                .reduce((sum, s) => sum + (s.duration || 0), 0);
+
+              const cardStyle = isInside ? styles.personCardInside : styles.personCardEntrant;
+
+              return (
+                <div key={person.id} style={{ ...styles.personCard, ...cardStyle }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    marginBottom: '16px',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: isMobile ? '16px' : '0'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{
+                        padding: '12px',
+                        borderRadius: '12px',
+                        backgroundColor: isInside ? 'rgba(16, 185, 129, 0.2)' : 'rgba(107, 114, 128, 0.2)'
+                      }}>
+                        <UserCheck style={{ 
+                          width: '24px', 
+                          height: '24px', 
+                          color: isInside ? '#10b981' : '#9ca3af'
+                        }} />
+                      </div>
+                      
+                      <div>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '12px',
+                          flexWrap: 'wrap'
+                        }}>
+                          <h3 style={{ 
+                            fontSize: isMobile ? '16px' : '18px',
+                            fontWeight: 'bold',
+                            color: 'white',
+                            margin: 0
+                          }}>
+                            {person.name}
+                          </h3>
+                          
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            backgroundColor: 'rgba(107, 114, 128, 0.2)',
+                            color: '#d1d5db',
+                            border: '1px solid #6b7280'
+                          }}>
+                            👤 ENTRANT
+                          </span>
+                          
+                          {person.is_active && (
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                              color: '#86efac',
+                              border: '1px solid #10b981'
+                            }}>
+                              ✅ ACTIF
+                            </span>
                           )}
-                        </>
+                          
+                          {isInside && (
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                              color: '#fde047',
+                              border: '1px solid #f59e0b',
+                              animation: 'pulse 2s infinite'
+                            }}>
+                              🚪 À L'INTÉRIEUR
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '16px', 
+                          marginTop: '8px',
+                          fontSize: isMobile ? '12px' : '13px',
+                          color: '#9ca3af',
+                          flexWrap: 'wrap'
+                        }}>
+                          <span>🏢 {person.company}</span>
+                          <span>📊 Entrées aujourd'hui: {todaySessions.length}</span>
+                          <span>⏱️ Temps total: {formatDuration(totalTimeToday)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      flexWrap: 'wrap'
+                    }}>
+                      {/* Boutons Entrée/Sortie */}
+                      {!isInside ? (
+                        <button
+                          onClick={() => markEntry(person.id)}
+                          disabled={!getCurrentSurveillant()}
+                          style={{
+                            ...styles.button,
+                            ...styles.buttonSuccess,
+                            ...styles.buttonSmall,
+                            opacity: !getCurrentSurveillant() ? 0.5 : 1
+                          }}
+                        >
+                          <LogIn style={{ width: '16px', height: '16px' }} />
+                          Marquer Entrée
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => markExit(person.id)}
+                          style={{
+                            ...styles.button,
+                            backgroundColor: '#f59e0b',
+                            color: 'white',
+                            ...styles.buttonSmall
+                          }}
+                        >
+                          <LogOut style={{ width: '16px', height: '16px' }} />
+                          Marquer Sortie
+                        </button>
                       )}
 
                       {/* Bouton Toggle Status */}
@@ -2131,12 +2467,12 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                         {person.is_active ? (
                           <>
                             <UserMinus style={{ width: '16px', height: '16px' }} />
-                            {texts.deactivate}
+                            Désactiver
                           </>
                         ) : (
                           <>
                             <UserPlus style={{ width: '16px', height: '16px' }} />
-                            {texts.activate}
+                            Activer
                           </>
                         )}
                       </button>
@@ -2151,7 +2487,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                         }}
                       >
                         <Edit3 style={{ width: '16px', height: '16px' }} />
-                        {texts.edit}
+                        Modifier
                       </button>
 
                       {/* Bouton Supprimer */}
@@ -2166,81 +2502,123 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                         }}
                       >
                         <Trash2 style={{ width: '16px', height: '16px' }} />
-                        {texts.delete}
+                        Supprimer
                       </button>
                     </div>
                   </div>
 
-                  {/* Historique des sessions */}
-                  {person.entry_sessions.length > 0 && (
-                    <div style={{
-                      marginTop: '16px',
-                      paddingTop: '16px',
-                      borderTop: '1px solid #4b5563'
+                  {/* Historique journalier de l'entrant */}
+                  <div style={{
+                    marginTop: '16px',
+                    paddingTop: '16px',
+                    borderTop: '1px solid #4b5563'
+                  }}>
+                    <h4 style={{ 
+                      fontSize: isMobile ? '13px' : '14px',
+                      fontWeight: '600',
+                      color: '#d1d5db',
+                      marginBottom: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
                     }}>
-                      <h4 style={{ 
-                        fontSize: isMobile ? '13px' : '14px',
-                        fontWeight: '600',
-                        color: '#d1d5db',
-                        marginBottom: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
+                      <History style={{ width: '16px', height: '16px' }} />
+                      📋 Historique Journalier - {new Date().toLocaleDateString()}
+                    </h4>
+                    
+                    {todaySessions.length === 0 ? (
+                      <div style={{
+                        padding: '20px',
+                        textAlign: 'center',
+                        backgroundColor: 'rgba(17, 24, 39, 0.3)',
+                        borderRadius: '8px',
+                        border: '1px solid #374151'
                       }}>
-                        <History style={{ width: '16px', height: '16px' }} />
-                        📋 Historique des entrées/sorties
-                      </h4>
+                        <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>
+                          📊 Aucune entrée enregistrée aujourd'hui
+                        </p>
+                      </div>
+                    ) : (
                       <div style={{ 
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '8px',
-                        maxHeight: '120px',
+                        maxHeight: '200px',
                         overflowY: 'auto'
                       }}>
-                        {person.entry_sessions.slice(-3).reverse().map((session) => (
+                        {todaySessions.reverse().map((session) => (
                           <div 
                             key={session.id} 
                             style={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between', 
-                              alignItems: 'center',
-                              padding: '8px 12px',
-                              backgroundColor: 'rgba(17, 24, 39, 0.5)',
+                              padding: '12px',
+                              backgroundColor: session.status === 'active' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(17, 24, 39, 0.5)',
                               borderRadius: '8px',
-                              border: '1px solid #374151',
+                              border: `1px solid ${session.status === 'active' ? '#10b981' : '#374151'}`,
                               fontSize: isMobile ? '11px' : '12px'
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              {session.status === 'active' ? (
-                                <div style={{ display: 'flex', alignItems: 'center', color: '#86efac' }}>
-                                  <LogIn style={{ width: '14px', height: '14px', marginRight: '4px' }} />
-                                  <span>🟢 Entrée en cours</span>
-                                </div>
-                              ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', color: '#9ca3af' }}>
-                                  <LogOut style={{ width: '14px', height: '14px', marginRight: '4px' }} />
-                                  <span>✅ Session complétée</span>
-                                </div>
-                              )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {session.status === 'active' ? (
+                                  <div style={{ display: 'flex', alignItems: 'center', color: '#86efac' }}>
+                                    <LogIn style={{ width: '14px', height: '14px', marginRight: '4px' }} />
+                                    <span style={{ fontWeight: '600' }}>🟢 EN COURS</span>
+                                  </div>
+                                ) : (
+                                  <div style={{ display: 'flex', alignItems: 'center', color: '#9ca3af' }}>
+                                    <LogOut style={{ width: '14px', height: '14px', marginRight: '4px' }} />
+                                    <span style={{ fontWeight: '600' }}>✅ TERMINÉE</span>
+                                  </div>
+                                )}
+                              </div>
                               <span style={{ color: '#6b7280' }}>
-                                📅 {new Date(session.timestamp).toLocaleString()}
+                                📅 {new Date(session.timestamp).toLocaleTimeString()}
                               </span>
                             </div>
-                            {session.duration && (
-                              <span style={{ 
-                                color: '#d1d5db', 
-                                fontWeight: '600',
-                                fontFamily: 'JetBrains Mono, monospace'
-                              }}>
-                                ⏱️ {formatDuration(session.duration)}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ color: '#d1d5db', fontSize: '11px' }}>
+                                👁️ Supervisé par {personnel.find(p => p.id === session.surveillant_id)?.name || 'Surveillant'}
                               </span>
-                            )}
+                              {session.duration && (
+                                <span style={{ 
+                                  color: '#fde047', 
+                                  fontWeight: '600',
+                                  fontFamily: 'JetBrains Mono, monospace'
+                                }}>
+                                  ⏱️ {formatDuration(session.duration)}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    )}
+                    
+                    {/* Résumé journalier */}
+                    {todaySessions.length > 0 && (
+                      <div style={{
+                        marginTop: '12px',
+                        padding: '12px',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderRadius: '8px',
+                        border: '1px solid #3b82f6'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: '#93c5fd', fontSize: '12px', fontWeight: '600' }}>
+                            📊 Résumé du jour: {todaySessions.length} entrée(s)
+                          </span>
+                          <span style={{ 
+                            color: '#60a5fa', 
+                            fontSize: '12px', 
+                            fontWeight: '600',
+                            fontFamily: 'JetBrains Mono, monospace'
+                          }}>
+                            ⏱️ Total: {formatDuration(totalTimeToday)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
