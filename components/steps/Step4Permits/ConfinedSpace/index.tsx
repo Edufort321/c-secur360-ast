@@ -565,8 +565,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             <div ref={el => { sectionRefs.current.atmospheric = el; }}>
               <AtmosphericTesting 
                 {...commonProps} 
-                atmosphericReadings={atmosphericReadings}
-                setAtmosphericReadings={handleAtmosphericReadingsUpdate}
+                atmosphericReadings={atmosphericReadings as any}
+                setAtmosphericReadings={handleAtmosphericReadingsUpdate as any}
               />
             </div>
           );
