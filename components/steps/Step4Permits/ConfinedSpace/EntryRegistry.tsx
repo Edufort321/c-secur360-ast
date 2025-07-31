@@ -1691,11 +1691,11 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                 padding: '12px',
                 backgroundColor: 'rgba(0, 0, 0, 0.2)',
                 borderRadius: '8px',
-                border: `1px solid ${permitValidation.compliance_check[item.key] ? '#10b981' : '#ef4444'}`
+                border: `1px solid ${(permitValidation.compliance_check as any)[item.key] ? '#10b981' : '#ef4444'}`
               }}>
                 <span style={{ fontSize: '20px' }}>{item.icon}</span>
                 <span style={{ 
-                  color: permitValidation.compliance_check[item.key] ? '#86efac' : '#fca5a5',
+                  color: (permitValidation.compliance_check as any)[item.key] ? '#86efac' : '#fca5a5',
                   fontSize: '14px',
                   fontWeight: '500',
                   flex: 1
@@ -1707,10 +1707,10 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                   borderRadius: '12px',
                   fontSize: '12px',
                   fontWeight: '600',
-                  backgroundColor: permitValidation.compliance_check[item.key] ? '#10b981' : '#ef4444',
+                  backgroundColor: (permitValidation.compliance_check as any)[item.key] ? '#10b981' : '#ef4444',
                   color: 'white'
                 }}>
-                  {permitValidation.compliance_check[item.key] ? '✓' : '✗'}
+                  {(permitValidation.compliance_check as any)[item.key] ? '✓' : '✗'}
                 </span>
               </div>
             ))}
