@@ -1239,7 +1239,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
               Registre d'Entrée - Espace Clos
             </h1>
             <p className="mt-2 opacity-90">
-              Province: {selectedProvince} | Réglementation: {regulations.name}
+              Province: {selectedProvince} | Réglementation: {actualRegulations.name}
             </p>
           </div>
           <div className="text-right">
