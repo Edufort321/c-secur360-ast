@@ -1471,64 +1471,47 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   };
 
   // =================== VALIDATION DE CONFORMITÉ DU PERMIS ===================
-  const checkPermitCompliance = () => {
-    const atmosphericTestingComplete = atmosphericReadings && atmosphericReadings.length > 0;
-    
-    const rescueEquipmentPresent = equipment.some(e => 
-      e.rescue_plan_required && e.current_status !== 'maintenance' && e.condition !== 'poor'
-    );
-    
-    const communicationEquipmentPresent = equipment.some(e => 
-      e.name.toLowerCase().includes('radio') || 
-      e.name.toLowerCase().includes('téléphone') || 
-      e.name.toLowerCase().includes('communication') ||
-      e.name.toLowerCase().includes('alarme')
-    );
-    
-    const ventilationEquipmentPresent = equipment.some(e => 
-      e.name.toLowerCase().includes('ventilateur') || 
-      e.name.toLowerCase().includes('ventilation') ||
-      e.name.toLowerCase().includes('extracteur') ||
-      e.name.toLowerCase().includes('soufflante')
-    );
-    
-    const atmosphericTestingEquipmentPresent = equipment.some(e => 
-      e.atmospheric_testing_required && e.current_status !== 'maintenance' && e.condition !== 'poor'
-    );
-    
-    const equipmentCalibrationCurrent = equipment.every(e => {
-      if (!e.next_calibration) return true; // Si pas de calibration requise
-      return new Date(e.next_calibration) > new Date(); // Calibration valide
-    });
-    
-    const personnelTrainingVerified = entrants.every(e => e.legal_signature.training_confirmed) && 
-                                    (currentSurveillant ? currentSurveillant.legal_signature.training_confirmed : false);
-    
-    const emergencyProceduresReviewed = permitValidation.team_validation.validated;
-    
-    const rescuePlanAccessible = rescueEquipmentPresent && emergencyProceduresReviewed;
-    
-    const allRequirementsMet = atmosphericTestingComplete && 
-                              (rescueEquipmentPresent || equipment.length === 0) && // Permettre si pas d'équipement encore
-                              (communicationEquipmentPresent || equipment.length === 0) && 
-                              (ventilationEquipmentPresent || equipment.length === 0) && 
-                              equipmentCalibrationCurrent && 
-                              (personnelTrainingVerified || entrants.length === 0) && // Permettre si pas d'entrants encore
-                              emergencyProceduresReviewed && 
-                              (rescuePlanAccessible || equipment.length === 0);
+  const toggleComplianceCheck = (checkKey: string) => {
+    if (!currentSurveillant) {
+      alert('⚠️ Un surveillant doit être en service pour effectuer les vérifications de conformité.');
+      return;
+    }
 
     const updatedCompliance = {
       ...permitValidation,
       compliance_check: {
-        atmospheric_testing_complete: atmosphericTestingComplete,
-        rescue_equipment_present: rescueEquipmentPresent || equipment.length === 0,
-        communication_equipment_present: communicationEquipmentPresent || equipment.length === 0,
-        ventilation_equipment_present: ventilationEquipmentPresent || equipment.length === 0,
-        emergency_procedures_reviewed: emergencyProceduresReviewed,
-        personnel_training_verified: personnelTrainingVerified || entrants.length === 0,
-        equipment_calibration_current: equipmentCalibrationCurrent,
-        rescue_plan_accessible: rescuePlanAccessible || equipment.length === 0,
-        all_requirements_met: allRequirementsMet,
+        ...permitValidation.compliance_check,
+        [checkKey]: !(permitValidation.compliance_check as any)[checkKey],
+        checked_by: currentSurveillant.name,
+        check_time: new Date().toISOString()
+      }
+    };
+
+    // Recalculer si tous les requis sont cochés
+    const allChecked = [
+      'atmospheric_testing_complete',
+      'rescue_equipment_present', 
+      'communication_equipment_present',
+      'ventilation_equipment_present',
+      'emergency_procedures_reviewed',
+      'personnel_training_verified',
+      'equipment_calibration_current',
+      'rescue_plan_accessible'
+    ].every(key => (updatedCompliance.compliance_check as any)[key]);
+
+    updatedCompliance.compliance_check.all_requirements_met = allChecked;
+
+    setPermitValidation(updatedCompliance);
+    updateParentData('permit_validation', updatedCompliance);
+  };
+
+  const checkPermitCompliance = () => {
+    // Cette fonction ne fait plus de vérification automatique, 
+    // elle garde juste l'état actuel des cases cochées manuellement
+    const updatedCompliance = {
+      ...permitValidation,
+      compliance_check: {
+        ...permitValidation.compliance_check,
         checked_by: currentSurveillant?.name,
         check_time: new Date().toISOString()
       }
@@ -1537,14 +1520,14 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     setPermitValidation(updatedCompliance);
     updateParentData('permit_validation', updatedCompliance);
 
-    return allRequirementsMet;
+    return permitValidation.compliance_check.all_requirements_met;
   };
 
   // Vérifier la conformité à chaque changement
   useEffect(() => {
     checkPermitCompliance();
   }, [equipment, entrants, currentSurveillant, atmosphericReadings]);
-  // =================== RENDU JSX - SECTION 2B ===================
+ // =================== RENDU JSX - SECTION 2B ===================
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
       {/* Modal de signature légale pour surveillant */}
@@ -1812,15 +1795,25 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
               { key: 'equipment_calibration_current', label: 'Calibration des équipements à jour', icon: '⚙️' },
               { key: 'rescue_plan_accessible', label: 'Plan de sauvetage accessible', icon: '🗺️' }
             ].map((item) => (
-              <div key={item.key} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px',
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                borderRadius: '8px',
-                border: `1px solid ${(permitValidation.compliance_check as any)[item.key] ? '#10b981' : '#ef4444'}`
-              }}>
+              <button
+                key={item.key}
+                onClick={() => toggleComplianceCheck(item.key)}
+                disabled={!currentSurveillant}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '16px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                  borderRadius: '8px',
+                  border: `2px solid ${(permitValidation.compliance_check as any)[item.key] ? '#10b981' : '#6b7280'}`,
+                  cursor: currentSurveillant ? 'pointer' : 'not-allowed',
+                  opacity: currentSurveillant ? 1 : 0.5,
+                  transition: 'all 0.2s ease',
+                  width: '100%',
+                  textAlign: 'left'
+                }}
+              >
                 <span style={{ fontSize: '20px' }}>{item.icon}</span>
                 <span style={{ 
                   color: (permitValidation.compliance_check as any)[item.key] ? '#86efac' : '#fca5a5',
@@ -1830,17 +1823,21 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                 }}>
                   {item.label}
                 </span>
-                <span style={{
-                  padding: '4px 8px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px',
                   fontWeight: '600',
                   backgroundColor: (permitValidation.compliance_check as any)[item.key] ? '#10b981' : '#ef4444',
                   color: 'white'
                 }}>
                   {(permitValidation.compliance_check as any)[item.key] ? '✓' : '✗'}
-                </span>
-              </div>
+                </div>
+              </button>
             ))}
           </div>
           
@@ -3061,7 +3058,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                       disabled={!currentSurveillant || item.condition === 'poor'}
                       style={{
                         ...styles.button,
-                        ...(item.current_status === 'available' ? styles.buttonSuccess : styles.buttonWarning),
+                        ...(item.current_status === 'available' ? styles.buttonSuccess : styles.buttonDanger),
                         width: 'auto',
                         padding: '8px 12px',
                         fontSize: '14px',
@@ -3073,7 +3070,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                       {item.current_status === 'available' ? (
                         <>
                           <LogIn style={{ width: '16px', height: '16px' }} />
-                          Prendre Équipement
+                          Sortir Équipement
                         </>
                       ) : (
                         <>
@@ -3139,7 +3136,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                           <div style={styles.grid3}>
                             <div>
                               <div style={{ color: '#d1d5db', fontSize: '13px' }}>
-                                🕐 Pris: {formatTime(session.entry_time)}
+                                🕐 Sorti: {formatTime(session.entry_time)}
                               </div>
                               <div style={{ color: '#9ca3af', fontSize: '12px' }}>
                                 👤 {session.used_by}
@@ -3199,4 +3196,4 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   );
 };
 
-export default EntryRegistry;
+export default EntryRegistry; 
