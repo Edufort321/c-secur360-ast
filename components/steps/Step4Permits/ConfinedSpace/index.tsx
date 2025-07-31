@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 // 🔧 CORRECTION: Import du SafetyManager
-import { useSafetyManager } from './SafetyManager';
+import ConfinedSpace from './ConfinedSpace/index';
 
 // 🔧 CORRECTION: Imports statiques au lieu de lazy pour éviter les problèmes de props
 import SiteInformation from './SiteInformation';
