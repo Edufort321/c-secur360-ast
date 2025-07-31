@@ -2520,7 +2520,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                                 setSelectedPersonId(null);
                               }
                             }}
-                            disabled={!selectedPersonId || needsCalibration}
+                            disabled={Boolean(!selectedPersonId || needsCalibration)}
                             style={{
                               ...styles.button,
                               ...styles.buttonSuccess,
