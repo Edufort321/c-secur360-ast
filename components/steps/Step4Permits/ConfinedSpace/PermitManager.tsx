@@ -1,17 +1,21 @@
-// PermitManager.tsx - Nouvel onglet pour gestion complète du permis
+// PermitManager.tsx - VERSION RÉVISÉE COMPLÈTE
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FileText, Database, QrCode, Printer, Mail, Share, Download, 
   Save, CheckCircle, AlertTriangle, Clock, Shield, Users, 
   Wrench, Activity, Eye, Globe, Smartphone, Copy, Check,
-  BarChart3, TrendingUp, Calendar, MapPin, Building, User
+  BarChart3, TrendingUp, Calendar, MapPin, Building, User,
+  Search, X, Plus, Edit3, Trash2, RefreshCw, Upload,
+  ArrowRight, ArrowLeft, Star, Target, Zap, Wind, History
 } from 'lucide-react';
 import { useSafetyManager } from './SafetyManager';
 
-// =================== TYPES ===================
+// =================== TYPES BASÉS SUR LA STRUCTURE RÉELLE ===================
 interface PermitManagerProps {
+  selectedProvince: string;
+  PROVINCIAL_REGULATIONS: Record<string, any>;
   isMobile?: boolean;
   language?: 'fr' | 'en';
 }
@@ -25,94 +29,133 @@ interface ValidationSummary {
   lastModified?: string;
 }
 
-// =================== TRADUCTIONS ===================
-const translations = {
-  fr: {
-    title: "Gestion et Finalisation du Permis",
-    subtitle: "Tableau de bord centralisé pour validation, sauvegarde et partage",
-    
-    // Actions principales
-    savePermit: "Sauvegarder",
-    printPDF: "Imprimer PDF",
-    emailPermit: "Envoyer par Email",
-    sharePermit: "Partager",
-    generateQR: "Générer QR Code",
-    exportData: "Exporter Données",
-    
-    // Sections
-    summary: "Résumé du Permis",
-    validation: "Validation et Conformité",
-    actions: "Actions du Permis",
-    statistics: "Statistiques",
-    qrCode: "Code QR - Accès Mobile",
-    sharing: "Partage et Distribution",
-    
-    // Statuts
-    complete: "Complété",
-    incomplete: "Incomplet",
-    valid: "Valide",
-    invalid: "Non valide",
-    saving: "Sauvegarde...",
-    saved: "Sauvegardé",
-    
-    // Messages
-    saveSuccess: "Permis sauvegardé avec succès!",
-    validationPassed: "Toutes les validations sont réussies",
-    validationErrors: "Erreurs de validation détectées",
-    qrGenerated: "Code QR généré avec succès",
-    linkCopied: "Lien copié dans le presse-papiers",
-    
-    // Sections du permis
-    siteInformation: "Informations du Site",
-    rescuePlan: "Plan de Sauvetage", 
-    atmosphericTesting: "Tests Atmosphériques",
-    entryRegistry: "Registre d'Entrée"
+interface PermitHistoryEntry {
+  id: string;
+  permitNumber: string;
+  projectNumber: string;
+  workLocation: string;
+  contractor: string;
+  spaceType: string;
+  csaClass: string;
+  status: 'draft' | 'active' | 'completed' | 'cancelled';
+  createdAt: string;
+  lastModified: string;
+  hazardCount: number;
+  photoCount: number;
+  qrCode?: string;
+}
+
+// =================== DÉTECTION MOBILE ET STYLES COHÉRENTS ===================
+const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
+
+const styles = {
+  container: {
+    maxWidth: '100%',
+    margin: '0 auto',
+    padding: isMobileDevice ? '4px' : '24px',
+    backgroundColor: '#111827',
+    minHeight: '100vh',
+    color: 'white',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
+    overflowX: 'hidden' as const
   },
-  en: {
-    title: "Permit Management and Finalization",
-    subtitle: "Centralized dashboard for validation, saving and sharing",
-    
-    // Actions principales
-    savePermit: "Save",
-    printPDF: "Print PDF",
-    emailPermit: "Send by Email",
-    sharePermit: "Share",
-    generateQR: "Generate QR Code",
-    exportData: "Export Data",
-    
-    // Sections
-    summary: "Permit Summary",
-    validation: "Validation and Compliance",
-    actions: "Permit Actions",
-    statistics: "Statistics",
-    qrCode: "QR Code - Mobile Access",
-    sharing: "Sharing and Distribution",
-    
-    // Statuts
-    complete: "Complete",
-    incomplete: "Incomplete",
-    valid: "Valid",
-    invalid: "Invalid",
-    saving: "Saving...",
-    saved: "Saved",
-    
-    // Messages
-    saveSuccess: "Permit saved successfully!",
-    validationPassed: "All validations passed",
-    validationErrors: "Validation errors detected",
-    qrGenerated: "QR Code generated successfully",
-    linkCopied: "Link copied to clipboard",
-    
-    // Sections du permis
-    siteInformation: "Site Information",
-    rescuePlan: "Rescue Plan",
-    atmosphericTesting: "Atmospheric Testing", 
-    entryRegistry: "Entry Registry"
+  card: {
+    backgroundColor: '#1f2937',
+    borderRadius: isMobileDevice ? '8px' : '16px',
+    padding: isMobileDevice ? '12px' : '24px',
+    border: '1px solid #374151',
+    marginBottom: isMobileDevice ? '12px' : '24px',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+    width: '100%',
+    boxSizing: 'border-box' as const
+  },
+  headerCard: {
+    background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.9))',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    borderRadius: isMobileDevice ? '12px' : '20px',
+    padding: isMobileDevice ? '20px' : '32px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+    position: 'relative' as const,
+    overflow: 'hidden' as const,
+    marginBottom: isMobileDevice ? '16px' : '24px'
+  },
+  button: {
+    padding: isMobileDevice ? '8px 12px' : '14px 24px',
+    borderRadius: isMobileDevice ? '6px' : '8px',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    gap: isMobileDevice ? '4px' : '8px',
+    transition: 'all 0.2s ease',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '16px',
+    touchAction: 'manipulation' as const,
+    minHeight: '44px',
+    boxSizing: 'border-box' as const,
+    justifyContent: 'center' as const
+  },
+  buttonPrimary: {
+    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+  },
+  buttonSuccess: {
+    background: 'linear-gradient(135deg, #059669, #047857)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+  },
+  buttonDanger: {
+    background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+  },
+  buttonSecondary: {
+    backgroundColor: '#4b5563',
+    color: 'white',
+    border: '1px solid #6b7280'
+  },
+  input: {
+    width: '100%',
+    padding: isMobileDevice ? '12px 16px' : '14px 16px',
+    background: 'rgba(15, 23, 42, 0.8)',
+    border: '2px solid #374151',
+    borderRadius: isMobileDevice ? '6px' : '8px',
+    color: 'white',
+    fontSize: isMobileDevice ? '16px' : '15px',
+    fontWeight: '500',
+    transition: 'all 0.3s ease',
+    backdropFilter: 'blur(10px)',
+    boxSizing: 'border-box' as const,
+    minHeight: isMobileDevice ? '48px' : '50px',
+    fontFamily: 'inherit'
+  },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: isMobileDevice ? '1fr' : '1fr 1fr',
+    gap: isMobileDevice ? '8px' : '20px',
+    width: '100%'
+  },
+  grid3: {
+    display: 'grid',
+    gridTemplateColumns: isMobileDevice ? '1fr' : 'repeat(3, 1fr)',
+    gap: isMobileDevice ? '8px' : '16px',
+    width: '100%'
+  },
+  grid4: {
+    display: 'grid',
+    gridTemplateColumns: isMobileDevice ? '1fr 1fr' : 'repeat(4, 1fr)',
+    gap: isMobileDevice ? '8px' : '16px',
+    width: '100%'
   }
 };
 
 // =================== COMPOSANT PRINCIPAL ===================
 const PermitManager: React.FC<PermitManagerProps> = ({
+  selectedProvince,
+  PROVINCIAL_REGULATIONS,
   isMobile = false,
   language = 'fr'
 }) => {
@@ -125,6 +168,11 @@ const PermitManager: React.FC<PermitManagerProps> = ({
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [selectedShareMethod, setSelectedShareMethod] = useState<'email' | 'sms' | 'whatsapp'>('email');
+  const [showHistory, setShowHistory] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<PermitHistoryEntry[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [currentView, setCurrentView] = useState<'main' | 'history' | 'database'>('main');
 
   // Validation globale
   const validation = safetyManager.validatePermitCompleteness();
@@ -155,7 +203,7 @@ const PermitManager: React.FC<PermitManagerProps> = ({
       link.download = `${permit.permit_number}_espace_clos.pdf`;
       link.click();
       URL.revokeObjectURL(url);
-      showNotification('PDF généré avec succès', 'success');
+      showNotification(t.pdfGenerated, 'success');
     } catch (error) {
       showNotification('Erreur génération PDF', 'error');
     } finally {
@@ -168,6 +216,10 @@ const PermitManager: React.FC<PermitManagerProps> = ({
     const permitNumber = await safetyManager.saveToDatabase();
     if (permitNumber) {
       showNotification(t.saveSuccess, 'success');
+      // Générer QR automatiquement après sauvegarde
+      if (!qrCodeUrl) {
+        handleGenerateQR();
+      }
     }
   };
 
@@ -175,6 +227,597 @@ const PermitManager: React.FC<PermitManagerProps> = ({
   const handleShare = async () => {
     try {
       await safetyManager.sharePermit(selectedShareMethod);
+      showNotification(t.emailSent, 'success');
+    } catch (error) {
+      showNotification('Erreur lors du partage', 'error');
+    }
+  };
+
+  // =================== COPIE LIEN ===================
+  const handleCopyLink = async () => {
+    const permitUrl = `${window.location.origin}/permits/confined-space/${permit.permit_number}`;
+    try {
+      await navigator.clipboard.writeText(permitUrl);
+      setLinkCopied(true);
+      showNotification(t.
+
+// =================== TRADUCTIONS COMPLÈTES ===================
+const translations = {
+  fr: {
+    title: "Gestion et Finalisation du Permis",
+    subtitle: "Tableau de bord centralisé pour validation, sauvegarde, historique et partage",
+    
+    // Actions principales
+    savePermit: "Sauvegarder",
+    printPDF: "Imprimer PDF",
+    emailPermit: "Envoyer par Email",
+    sharePermit: "Partager",
+    generateQR: "Générer QR Code",
+    exportData: "Exporter Données",
+    searchDatabase: "Rechercher Base",
+    viewHistory: "Voir Historique",
+    newPermit: "Nouveau Permis",
+    
+    // Sections
+    summary: "Résumé du Permis",
+    validation: "Validation et Conformité",
+    actions: "Actions du Permis",
+    statistics: "Statistiques",
+    qrCode: "Code QR - Accès Mobile",
+    sharing: "Partage et Distribution",
+    history: "Historique des Permis",
+    database: "Base de Données",
+    
+    // Statuts
+    complete: "Complété",
+    incomplete: "Incomplet",
+    valid: "Valide",
+    invalid: "Non valide",
+    saving: "Sauvegarde...",
+    saved: "Sauvegardé",
+    loading: "Chargement...",
+    searching: "Recherche...",
+    
+    // Messages
+    saveSuccess: "Permis sauvegardé avec succès!",
+    validationPassed: "Toutes les validations sont réussies",
+    validationErrors: "Erreurs de validation détectées",
+    qrGenerated: "Code QR généré avec succès",
+    linkCopied: "Lien copié dans le presse-papiers",
+    pdfGenerated: "PDF généré avec succès",
+    emailSent: "Email envoyé avec succès",
+    noResults: "Aucun résultat trouvé",
+    searchPlaceholder: "Rechercher par numéro, projet, lieu...",
+    
+    // Sections du permis
+    siteInformation: "Informations du Site",
+    rescuePlan: "Plan de Sauvetage", 
+    atmosphericTesting: "Tests Atmosphériques",
+    entryRegistry: "Registre d'Entrée",
+    
+    // Statistiques
+    totalPermits: "Total Permis",
+    activePermits: "Permis Actifs",
+    completedPermits: "Permis Complétés",
+    draftPermits: "Brouillons",
+    dangerousSpaces: "Espaces Dangereux",
+    safeSpaces: "Espaces Sécuritaires",
+    avgCompletion: "Complétude Moyenne",
+    lastActivity: "Dernière Activité",
+    
+    // Status
+    draft: "Brouillon",
+    active: "Actif",
+    completed: "Complété",
+    cancelled: "Annulé",
+    
+    // Types d'espaces
+    spaceTypes: {
+      tank: "Réservoir",
+      vessel: "Cuve",
+      silo: "Silo",
+      pit: "Fosse",
+      vault: "Voûte",
+      tunnel: "Tunnel",
+      trench: "Tranchée",
+      manhole: "Regard",
+      storage: "Stockage",
+      boiler: "Chaudière",
+      duct: "Conduit",
+      chamber: "Chambre",
+      other: "Autre"
+    }
+  },
+  en: {
+    title: "Permit Management and Finalization",
+    subtitle: "Centralized dashboard for validation, saving, history and sharing",
+    
+    // Actions principales
+    savePermit: "Save",
+    printPDF: "Print PDF",
+    emailPermit: "Send by Email",
+    sharePermit: "Share",
+    generateQR: "Generate QR Code",
+    exportData: "Export Data",
+    searchDatabase: "Search Database",
+    viewHistory: "View History",
+    newPermit: "New Permit",
+    
+    // Sections
+    summary: "Permit Summary",
+    validation: "Validation and Compliance",
+    actions: "Permit Actions",
+    statistics: "Statistics",
+    qrCode: "QR Code - Mobile Access",
+    sharing: "Sharing and Distribution",
+    history: "Permit History",
+    database: "Database",
+    
+    // Statuts
+    complete: "Complete",
+    incomplete: "Incomplete",
+    valid: "Valid",
+    invalid: "Invalid",
+    saving: "Saving...",
+    saved: "Saved",
+    loading: "Loading...",
+    searching: "Searching...",
+    
+    // Messages
+    saveSuccess: "Permit saved successfully!",
+    validationPassed: "All validations passed",
+    validationErrors: "Validation errors detected",
+    qrGenerated: "QR Code generated successfully",
+    linkCopied: "Link copied to clipboard",
+    pdfGenerated: "PDF generated successfully",
+    emailSent: "Email sent successfully",
+    noResults: "No results found",
+    searchPlaceholder: "Search by number, project, location...",
+    
+    // Sections du permis
+    siteInformation: "Site Information",
+    rescuePlan: "Rescue Plan",
+    atmosphericTesting: "Atmospheric Testing", 
+    entryRegistry: "Entry Registry",
+    
+    // Statistiques
+    totalPermits: "Total Permits",
+    activePermits: "Active Permits",
+    completedPermits: "Completed Permits",
+    draftPermits: "Drafts",
+    dangerousSpaces: "Dangerous Spaces",
+    safeSpaces: "Safe Spaces",
+    avgCompletion: "Average Completion",
+    lastActivity: "Last Activity",
+    
+    // Status
+    draft: "Draft",
+    active: "Active",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    
+    // Types d'espaces
+    spaceTypes: {
+      tank: "Tank",
+      vessel: "Vessel",
+      silo: "Silo",
+      pit: "Pit",
+      vault: "Vault",
+      tunnel: "Tunnel",
+      trench: "Trench",
+      manhole: "Manhole",
+      storage: "Storage",
+      boiler: "Boiler",
+      duct: "Duct",
+      chamber: "Chamber",
+      other: "Other"
+    }
+  }
+};
+      // PermitManager.tsx - VERSION RÉVISÉE COMPLÈTE
+"use client";
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  FileText, Database, QrCode, Printer, Mail, Share, Download, 
+  Save, CheckCircle, AlertTriangle, Clock, Shield, Users, 
+  Wrench, Activity, Eye, Globe, Smartphone, Copy, Check,
+  BarChart3, TrendingUp, Calendar, MapPin, Building, User,
+  Search, X, Plus, Edit3, Trash2, RefreshCw, Upload,
+  ArrowRight, ArrowLeft, Star, Target, Zap, Wind, History
+} from 'lucide-react';
+import { useSafetyManager } from './SafetyManager';
+
+// =================== TYPES BASÉS SUR LA STRUCTURE RÉELLE ===================
+interface PermitManagerProps {
+  selectedProvince: string;
+  PROVINCIAL_REGULATIONS: Record<string, any>;
+  isMobile?: boolean;
+  language?: 'fr' | 'en';
+}
+
+interface ValidationSummary {
+  sectionName: string;
+  icon: React.ReactNode;
+  isComplete: boolean;
+  completionPercentage: number;
+  errors: string[];
+  lastModified?: string;
+}
+
+interface PermitHistoryEntry {
+  id: string;
+  permitNumber: string;
+  projectNumber: string;
+  workLocation: string;
+  contractor: string;
+  spaceType: string;
+  csaClass: string;
+  status: 'draft' | 'active' | 'completed' | 'cancelled';
+  createdAt: string;
+  lastModified: string;
+  hazardCount: number;
+  photoCount: number;
+  qrCode?: string;
+}
+
+// =================== DÉTECTION MOBILE ET STYLES COHÉRENTS ===================
+const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
+
+const styles = {
+  container: {
+    maxWidth: '100%',
+    margin: '0 auto',
+    padding: isMobileDevice ? '4px' : '24px',
+    backgroundColor: '#111827',
+    minHeight: '100vh',
+    color: 'white',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
+    overflowX: 'hidden' as const
+  },
+  card: {
+    backgroundColor: '#1f2937',
+    borderRadius: isMobileDevice ? '8px' : '16px',
+    padding: isMobileDevice ? '12px' : '24px',
+    border: '1px solid #374151',
+    marginBottom: isMobileDevice ? '12px' : '24px',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+    width: '100%',
+    boxSizing: 'border-box' as const
+  },
+  headerCard: {
+    background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.9))',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    borderRadius: isMobileDevice ? '12px' : '20px',
+    padding: isMobileDevice ? '20px' : '32px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+    position: 'relative' as const,
+    overflow: 'hidden' as const,
+    marginBottom: isMobileDevice ? '16px' : '24px'
+  },
+  button: {
+    padding: isMobileDevice ? '8px 12px' : '14px 24px',
+    borderRadius: isMobileDevice ? '6px' : '8px',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    gap: isMobileDevice ? '4px' : '8px',
+    transition: 'all 0.2s ease',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '16px',
+    touchAction: 'manipulation' as const,
+    minHeight: '44px',
+    boxSizing: 'border-box' as const,
+    justifyContent: 'center' as const
+  },
+  buttonPrimary: {
+    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+  },
+  buttonSuccess: {
+    background: 'linear-gradient(135deg, #059669, #047857)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+  },
+  buttonDanger: {
+    background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+  },
+  buttonSecondary: {
+    backgroundColor: '#4b5563',
+    color: 'white',
+    border: '1px solid #6b7280'
+  },
+  input: {
+    width: '100%',
+    padding: isMobileDevice ? '12px 16px' : '14px 16px',
+    background: 'rgba(15, 23, 42, 0.8)',
+    border: '2px solid #374151',
+    borderRadius: isMobileDevice ? '6px' : '8px',
+    color: 'white',
+    fontSize: isMobileDevice ? '16px' : '15px',
+    fontWeight: '500',
+    transition: 'all 0.3s ease',
+    backdropFilter: 'blur(10px)',
+    boxSizing: 'border-box' as const,
+    minHeight: isMobileDevice ? '48px' : '50px',
+    fontFamily: 'inherit'
+  },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: isMobileDevice ? '1fr' : '1fr 1fr',
+    gap: isMobileDevice ? '8px' : '20px',
+    width: '100%'
+  },
+  grid3: {
+    display: 'grid',
+    gridTemplateColumns: isMobileDevice ? '1fr' : 'repeat(3, 1fr)',
+    gap: isMobileDevice ? '8px' : '16px',
+    width: '100%'
+  },
+  grid4: {
+    display: 'grid',
+    gridTemplateColumns: isMobileDevice ? '1fr 1fr' : 'repeat(4, 1fr)',
+    gap: isMobileDevice ? '8px' : '16px',
+    width: '100%'
+  }
+};
+
+// =================== TRADUCTIONS COMPLÈTES ===================
+const translations = {
+  fr: {
+    title: "Gestion et Finalisation du Permis",
+    subtitle: "Tableau de bord centralisé pour validation, sauvegarde, historique et partage",
+    
+    // Actions principales
+    savePermit: "Sauvegarder",
+    printPDF: "Imprimer PDF",
+    emailPermit: "Envoyer par Email",
+    sharePermit: "Partager",
+    generateQR: "Générer QR Code",
+    exportData: "Exporter Données",
+    searchDatabase: "Rechercher Base",
+    viewHistory: "Voir Historique",
+    newPermit: "Nouveau Permis",
+    
+    // Sections
+    summary: "Résumé du Permis",
+    validation: "Validation et Conformité",
+    actions: "Actions du Permis",
+    statistics: "Statistiques",
+    qrCode: "Code QR - Accès Mobile",
+    sharing: "Partage et Distribution",
+    history: "Historique des Permis",
+    database: "Base de Données",
+    
+    // Statuts
+    complete: "Complété",
+    incomplete: "Incomplet",
+    valid: "Valide",
+    invalid: "Non valide",
+    saving: "Sauvegarde...",
+    saved: "Sauvegardé",
+    loading: "Chargement...",
+    searching: "Recherche...",
+    
+    // Messages
+    saveSuccess: "Permis sauvegardé avec succès!",
+    validationPassed: "Toutes les validations sont réussies",
+    validationErrors: "Erreurs de validation détectées",
+    qrGenerated: "Code QR généré avec succès",
+    linkCopied: "Lien copié dans le presse-papiers",
+    pdfGenerated: "PDF généré avec succès",
+    emailSent: "Email envoyé avec succès",
+    noResults: "Aucun résultat trouvé",
+    searchPlaceholder: "Rechercher par numéro, projet, lieu...",
+    
+    // Sections du permis
+    siteInformation: "Informations du Site",
+    rescuePlan: "Plan de Sauvetage", 
+    atmosphericTesting: "Tests Atmosphériques",
+    entryRegistry: "Registre d'Entrée",
+    
+    // Statistiques
+    totalPermits: "Total Permis",
+    activePermits: "Permis Actifs",
+    completedPermits: "Permis Complétés",
+    draftPermits: "Brouillons",
+    dangerousSpaces: "Espaces Dangereux",
+    safeSpaces: "Espaces Sécuritaires",
+    avgCompletion: "Complétude Moyenne",
+    lastActivity: "Dernière Activité",
+    
+    // Status
+    draft: "Brouillon",
+    active: "Actif",
+    completed: "Complété",
+    cancelled: "Annulé",
+    
+    // Types d'espaces
+    spaceTypes: {
+      tank: "Réservoir",
+      vessel: "Cuve",
+      silo: "Silo",
+      pit: "Fosse",
+      vault: "Voûte",
+      tunnel: "Tunnel",
+      trench: "Tranchée",
+      manhole: "Regard",
+      storage: "Stockage",
+      boiler: "Chaudière",
+      duct: "Conduit",
+      chamber: "Chambre",
+      other: "Autre"
+    }
+  },
+  en: {
+    title: "Permit Management and Finalization",
+    subtitle: "Centralized dashboard for validation, saving, history and sharing",
+    
+    // Actions principales
+    savePermit: "Save",
+    printPDF: "Print PDF",
+    emailPermit: "Send by Email",
+    sharePermit: "Share",
+    generateQR: "Generate QR Code",
+    exportData: "Export Data",
+    searchDatabase: "Search Database",
+    viewHistory: "View History",
+    newPermit: "New Permit",
+    
+    // Sections
+    summary: "Permit Summary",
+    validation: "Validation and Compliance",
+    actions: "Permit Actions",
+    statistics: "Statistics",
+    qrCode: "QR Code - Mobile Access",
+    sharing: "Sharing and Distribution",
+    history: "Permit History",
+    database: "Database",
+    
+    // Statuts
+    complete: "Complete",
+    incomplete: "Incomplete",
+    valid: "Valid",
+    invalid: "Invalid",
+    saving: "Saving...",
+    saved: "Saved",
+    loading: "Loading...",
+    searching: "Searching...",
+    
+    // Messages
+    saveSuccess: "Permit saved successfully!",
+    validationPassed: "All validations passed",
+    validationErrors: "Validation errors detected",
+    qrGenerated: "QR Code generated successfully",
+    linkCopied: "Link copied to clipboard",
+    pdfGenerated: "PDF generated successfully",
+    emailSent: "Email sent successfully",
+    noResults: "No results found",
+    searchPlaceholder: "Search by number, project, location...",
+    
+    // Sections du permis
+    siteInformation: "Site Information",
+    rescuePlan: "Rescue Plan",
+    atmosphericTesting: "Atmospheric Testing", 
+    entryRegistry: "Entry Registry",
+    
+    // Statistiques
+    totalPermits: "Total Permits",
+    activePermits: "Active Permits",
+    completedPermits: "Completed Permits",
+    draftPermits: "Drafts",
+    dangerousSpaces: "Dangerous Spaces",
+    safeSpaces: "Safe Spaces",
+    avgCompletion: "Average Completion",
+    lastActivity: "Last Activity",
+    
+    // Status
+    draft: "Draft",
+    active: "Active",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    
+    // Types d'espaces
+    spaceTypes: {
+      tank: "Tank",
+      vessel: "Vessel",
+      silo: "Silo",
+      pit: "Pit",
+      vault: "Vault",
+      tunnel: "Tunnel",
+      trench: "Trench",
+      manhole: "Manhole",
+      storage: "Storage",
+      boiler: "Boiler",
+      duct: "Duct",
+      chamber: "Chamber",
+      other: "Other"
+    }
+  }
+};
+
+// =================== COMPOSANT PRINCIPAL ===================
+const PermitManager: React.FC<PermitManagerProps> = ({
+  selectedProvince,
+  PROVINCIAL_REGULATIONS,
+  isMobile = false,
+  language = 'fr'
+}) => {
+  const safetyManager = useSafetyManager();
+  const t = translations[language];
+  
+  // États locaux
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [selectedShareMethod, setSelectedShareMethod] = useState<'email' | 'sms' | 'whatsapp'>('email');
+  const [showHistory, setShowHistory] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<PermitHistoryEntry[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [currentView, setCurrentView] = useState<'main' | 'history' | 'database'>('main');
+
+  // Validation globale
+  const validation = safetyManager.validatePermitCompleteness();
+  const permit = safetyManager.currentPermit;
+
+  // =================== GÉNÉRATION QR CODE ===================
+  const handleGenerateQR = async () => {
+    setIsGeneratingQR(true);
+    try {
+      const qrUrl = await safetyManager.generateQRCode();
+      setQrCodeUrl(qrUrl);
+      showNotification(t.qrGenerated, 'success');
+    } catch (error) {
+      showNotification('Erreur génération QR Code', 'error');
+    } finally {
+      setIsGeneratingQR(false);
+    }
+  };
+
+  // =================== GÉNÉRATION PDF ===================
+  const handleGeneratePDF = async () => {
+    setIsGeneratingPDF(true);
+    try {
+      const pdfBlob = await safetyManager.generatePDF();
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${permit.permit_number}_espace_clos.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      showNotification(t.pdfGenerated, 'success');
+    } catch (error) {
+      showNotification('Erreur génération PDF', 'error');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  // =================== SAUVEGARDE ===================
+  const handleSave = async () => {
+    const permitNumber = await safetyManager.saveToDatabase();
+    if (permitNumber) {
+      showNotification(t.saveSuccess, 'success');
+      // Générer QR automatiquement après sauvegarde
+      if (!qrCodeUrl) {
+        handleGenerateQR();
+      }
+    }
+  };
+
+  // =================== PARTAGE ===================
+  const handleShare = async () => {
+    try {
+      await safetyManager.sharePermit(selectedShareMethod);
+      showNotification(t.emailSent, 'success');
     } catch (error) {
       showNotification('Erreur lors du partage', 'error');
     }
@@ -193,39 +836,94 @@ const PermitManager: React.FC<PermitManagerProps> = ({
     }
   };
 
+  // =================== RECHERCHE DANS L'HISTORIQUE ===================
+  const handleSearch = useCallback(async (query: string) => {
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      // Simuler recherche dans l'historique - à remplacer par vraie recherche Supabase
+      const allPermits = await safetyManager.loadPermitHistory();
+      const filtered = allPermits.filter(permit => 
+        permit.permit_number?.toLowerCase().includes(query.toLowerCase()) ||
+        permit.siteInformation?.projectNumber?.toLowerCase().includes(query.toLowerCase()) ||
+        permit.siteInformation?.workLocation?.toLowerCase().includes(query.toLowerCase()) ||
+        permit.siteInformation?.contractor?.toLowerCase().includes(query.toLowerCase())
+      );
+      
+      const results: PermitHistoryEntry[] = filtered.map(permit => ({
+        id: permit.id || '',
+        permitNumber: permit.permit_number,
+        projectNumber: permit.siteInformation?.projectNumber || '',
+        workLocation: permit.siteInformation?.workLocation || '',
+        contractor: permit.siteInformation?.contractor || '',
+        spaceType: permit.siteInformation?.spaceType || '',
+        csaClass: permit.siteInformation?.csaClass || '',
+        status: permit.status,
+        createdAt: permit.created_at,
+        lastModified: permit.last_modified,
+        hazardCount: (permit.siteInformation?.atmosphericHazards?.length || 0) + 
+                    (permit.siteInformation?.physicalHazards?.length || 0),
+        photoCount: permit.siteInformation?.spacePhotos?.length || 0,
+        qrCode: qrCodeUrl
+      }));
+      
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Erreur recherche:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [safetyManager, qrCodeUrl]);
+
+  // =================== CHARGEMENT D'UN PERMIS ===================
+  const handleLoadPermit = async (permitNumber: string) => {
+    try {
+      await safetyManager.loadFromDatabase(permitNumber);
+      setCurrentView('main');
+      showNotification(`Permis ${permitNumber} chargé`, 'success');
+    } catch (error) {
+      showNotification(`Erreur chargement ${permitNumber}`, 'error');
+    }
+  };
+
   // =================== VALIDATION DES SECTIONS ===================
   const getSectionValidation = (): ValidationSummary[] => {
     return [
       {
         sectionName: t.siteInformation,
-        icon: <Building className="w-5 h-5" />,
-        isComplete: Boolean(permit.siteInformation.projectNumber && permit.siteInformation.workLocation),
+        icon: <Building style={{ width: '20px', height: '20px' }} />,
+        isComplete: Boolean(permit.siteInformation?.projectNumber && permit.siteInformation?.workLocation),
         completionPercentage: getFieldCompletionPercentage(permit.siteInformation, ['projectNumber', 'workLocation', 'contractor', 'supervisor']),
-        errors: permit.siteInformation.projectNumber ? [] : ['Numéro de projet manquant'],
+        errors: permit.siteInformation?.projectNumber ? [] : ['Numéro de projet manquant'],
         lastModified: permit.last_modified
       },
       {
         sectionName: t.rescuePlan,
-        icon: <Shield className="w-5 h-5" />,
-        isComplete: Boolean(permit.rescuePlan.emergencyContacts?.length > 0),
-        completionPercentage: permit.rescuePlan.emergencyContacts?.length > 0 ? 100 : 0,
-        errors: permit.rescuePlan.emergencyContacts?.length > 0 ? [] : ['Plan de sauvetage incomplet'],
+        icon: <Shield style={{ width: '20px', height: '20px' }} />,
+        isComplete: Boolean(permit.rescuePlan?.emergencyContacts?.length > 0),
+        completionPercentage: permit.rescuePlan?.emergencyContacts?.length > 0 ? 100 : 0,
+        errors: permit.rescuePlan?.emergencyContacts?.length > 0 ? [] : ['Plan de sauvetage incomplet'],
         lastModified: permit.last_modified
       },
       {
         sectionName: t.atmosphericTesting,
-        icon: <Activity className="w-5 h-5" />,
-        isComplete: Boolean(permit.atmosphericTesting.readings?.length > 0),
-        completionPercentage: permit.atmosphericTesting.readings?.length > 0 ? 100 : 0,
-        errors: permit.atmosphericTesting.readings?.length > 0 ? [] : ['Tests atmosphériques manquants'],
+        icon: <Activity style={{ width: '20px', height: '20px' }} />,
+        isComplete: Boolean(permit.atmosphericTesting?.readings?.length > 0),
+        completionPercentage: permit.atmosphericTesting?.readings?.length > 0 ? 100 : 0,
+        errors: permit.atmosphericTesting?.readings?.length > 0 ? [] : ['Tests atmosphériques manquants'],
         lastModified: permit.last_modified
       },
       {
         sectionName: t.entryRegistry,
-        icon: <Users className="w-5 h-5" />,
-        isComplete: Boolean(permit.entryRegistry.personnel?.length > 0),
-        completionPercentage: permit.entryRegistry.personnel?.length > 0 ? 100 : 0,
-        errors: permit.entryRegistry.personnel?.length > 0 ? [] : ['Personnel manquant'],
+        icon: <Users style={{ width: '20px', height: '20px' }} />,
+        isComplete: Boolean(permit.entryRegistry?.personnel?.length > 0),
+        completionPercentage: permit.entryRegistry?.personnel?.length > 0 ? 100 : 0,
+        errors: permit.entryRegistry?.personnel?.length > 0 ? [] : ['Personnel manquant'],
         lastModified: permit.last_modified
       }
     ];
@@ -236,11 +934,16 @@ const PermitManager: React.FC<PermitManagerProps> = ({
     return {
       totalSections: 4,
       completedSections: getSectionValidation().filter(s => s.isComplete).length,
-      totalPersonnel: permit.entryRegistry.personnel?.length || 0,
-      activeEntrants: safetyManager.activeEntrants.length,
-      atmosphericReadings: permit.atmosphericTesting.readings?.length || 0,
+      totalPersonnel: permit.entryRegistry?.personnel?.length || 0,
+      activeEntrants: safetyManager.activeEntrants?.length || 0,
+      atmosphericReadings: permit.atmosphericTesting?.readings?.length || 0,
       lastSaved: safetyManager.lastSaved ? new Date(safetyManager.lastSaved).toLocaleString() : 'Jamais',
-      permitAge: permit.created_at ? Math.floor((Date.now() - new Date(permit.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0
+      permitAge: permit.created_at ? Math.floor((Date.now() - new Date(permit.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0,
+      hazardCount: (permit.siteInformation?.atmosphericHazards?.length || 0) + 
+                   (permit.siteInformation?.physicalHazards?.length || 0),
+      photoCount: permit.siteInformation?.spacePhotos?.length || 0,
+      volume: permit.siteInformation?.dimensions?.volume || 0,
+      unitSystem: permit.siteInformation?.unitSystem || 'metric'
     };
   };
 
@@ -251,418 +954,947 @@ const PermitManager: React.FC<PermitManagerProps> = ({
     }
   }, [permit.permit_number]);
 
-  // =================== RENDU ===================
+  // =================== RECHERCHE EN TEMPS RÉEL ===================
+  useEffect(() => {
+    if (searchQuery.length >= 2) {
+      const timeoutId = setTimeout(() => {
+        handleSearch(searchQuery);
+      }, 300);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery, handleSearch]);
+  // PermitManager.tsx - VERSION RÉVISÉE COMPLÈTE
+"use client";
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  FileText, Database, QrCode, Printer, Mail, Share, Download, 
+  Save, CheckCircle, AlertTriangle, Clock, Shield, Users, 
+  Wrench, Activity, Eye, Globe, Smartphone, Copy, Check,
+  BarChart3, TrendingUp, Calendar, MapPin, Building, User,
+  Search, X, Plus, Edit3, Trash2, RefreshCw, Upload,
+  ArrowRight, ArrowLeft, Star, Target, Zap, Wind, History
+} from 'lucide-react';
+import { useSafetyManager } from './SafetyManager';
+
+// =================== TYPES BASÉS SUR LA STRUCTURE RÉELLE ===================
+interface PermitManagerProps {
+  selectedProvince: string;
+  PROVINCIAL_REGULATIONS: Record<string, any>;
+  isMobile?: boolean;
+  language?: 'fr' | 'en';
+}
+
+interface ValidationSummary {
+  sectionName: string;
+  icon: React.ReactNode;
+  isComplete: boolean;
+  completionPercentage: number;
+  errors: string[];
+  lastModified?: string;
+}
+
+interface PermitHistoryEntry {
+  id: string;
+  permitNumber: string;
+  projectNumber: string;
+  workLocation: string;
+  contractor: string;
+  spaceType: string;
+  csaClass: string;
+  status: 'draft' | 'active' | 'completed' | 'cancelled';
+  createdAt: string;
+  lastModified: string;
+  hazardCount: number;
+  photoCount: number;
+  qrCode?: string;
+}
+
+// =================== DÉTECTION MOBILE ET STYLES COHÉRENTS ===================
+const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
+
+const styles = {
+  container: {
+    maxWidth: '100%',
+    margin: '0 auto',
+    padding: isMobileDevice ? '4px' : '24px',
+    backgroundColor: '#111827',
+    minHeight: '100vh',
+    color: 'white',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
+    overflowX: 'hidden' as const
+  },
+  card: {
+    backgroundColor: '#1f2937',
+    borderRadius: isMobileDevice ? '8px' : '16px',
+    padding: isMobileDevice ? '12px' : '24px',
+    border: '1px solid #374151',
+    marginBottom: isMobileDevice ? '12px' : '24px',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+    width: '100%',
+    boxSizing: 'border-box' as const
+  },
+  headerCard: {
+    background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.9))',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    borderRadius: isMobileDevice ? '12px' : '20px',
+    padding: isMobileDevice ? '20px' : '32px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+    position: 'relative' as const,
+    overflow: 'hidden' as const,
+    marginBottom: isMobileDevice ? '16px' : '24px'
+  },
+  button: {
+    padding: isMobileDevice ? '8px 12px' : '14px 24px',
+    borderRadius: isMobileDevice ? '6px' : '8px',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    gap: isMobileDevice ? '4px' : '8px',
+    transition: 'all 0.2s ease',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '16px',
+    touchAction: 'manipulation' as const,
+    minHeight: '44px',
+    boxSizing: 'border-box' as const,
+    justifyContent: 'center' as const
+  },
+  buttonPrimary: {
+    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+  },
+  buttonSuccess: {
+    background: 'linear-gradient(135deg, #059669, #047857)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+  },
+  buttonDanger: {
+    background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+    color: 'white',
+    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+  },
+  buttonSecondary: {
+    backgroundColor: '#4b5563',
+    color: 'white',
+    border: '1px solid #6b7280'
+  },
+  input: {
+    width: '100%',
+    padding: isMobileDevice ? '12px 16px' : '14px 16px',
+    background: 'rgba(15, 23, 42, 0.8)',
+    border: '2px solid #374151',
+    borderRadius: isMobileDevice ? '6px' : '8px',
+    color: 'white',
+    fontSize: isMobileDevice ? '16px' : '15px',
+    fontWeight: '500',
+    transition: 'all 0.3s ease',
+    backdropFilter: 'blur(10px)',
+    boxSizing: 'border-box' as const,
+    minHeight: isMobileDevice ? '48px' : '50px',
+    fontFamily: 'inherit'
+  },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: isMobileDevice ? '1fr' : '1fr 1fr',
+    gap: isMobileDevice ? '8px' : '20px',
+    width: '100%'
+  },
+  grid3: {
+    display: 'grid',
+    gridTemplateColumns: isMobileDevice ? '1fr' : 'repeat(3, 1fr)',
+    gap: isMobileDevice ? '8px' : '16px',
+    width: '100%'
+  },
+  grid4: {
+    display: 'grid',
+    gridTemplateColumns: isMobileDevice ? '1fr 1fr' : 'repeat(4, 1fr)',
+    gap: isMobileDevice ? '8px' : '16px',
+    width: '100%'
+  }
+};
+
+// =================== TRADUCTIONS COMPLÈTES ===================
+const translations = {
+  fr: {
+    title: "Gestion et Finalisation du Permis",
+    subtitle: "Tableau de bord centralisé pour validation, sauvegarde, historique et partage",
+    
+    // Actions principales
+    savePermit: "Sauvegarder",
+    printPDF: "Imprimer PDF",
+    emailPermit: "Envoyer par Email",
+    sharePermit: "Partager",
+    generateQR: "Générer QR Code",
+    exportData: "Exporter Données",
+    searchDatabase: "Rechercher Base",
+    viewHistory: "Voir Historique",
+    newPermit: "Nouveau Permis",
+    
+    // Sections
+    summary: "Résumé du Permis",
+    validation: "Validation et Conformité",
+    actions: "Actions du Permis",
+    statistics: "Statistiques",
+    qrCode: "Code QR - Accès Mobile",
+    sharing: "Partage et Distribution",
+    history: "Historique des Permis",
+    database: "Base de Données",
+    
+    // Statuts
+    complete: "Complété",
+    incomplete: "Incomplet",
+    valid: "Valide",
+    invalid: "Non valide",
+    saving: "Sauvegarde...",
+    saved: "Sauvegardé",
+    loading: "Chargement...",
+    searching: "Recherche...",
+    
+    // Messages
+    saveSuccess: "Permis sauvegardé avec succès!",
+    validationPassed: "Toutes les validations sont réussies",
+    validationErrors: "Erreurs de validation détectées",
+    qrGenerated: "Code QR généré avec succès",
+    linkCopied: "Lien copié dans le presse-papiers",
+    pdfGenerated: "PDF généré avec succès",
+    emailSent: "Email envoyé avec succès",
+    noResults: "Aucun résultat trouvé",
+    searchPlaceholder: "Rechercher par numéro, projet, lieu...",
+    
+    // Sections du permis
+    siteInformation: "Informations du Site",
+    rescuePlan: "Plan de Sauvetage", 
+    atmosphericTesting: "Tests Atmosphériques",
+    entryRegistry: "Registre d'Entrée",
+    
+    // Statistiques
+    totalPermits: "Total Permis",
+    activePermits: "Permis Actifs",
+    completedPermits: "Permis Complétés",
+    draftPermits: "Brouillons",
+    dangerousSpaces: "Espaces Dangereux",
+    safeSpaces: "Espaces Sécuritaires",
+    avgCompletion: "Complétude Moyenne",
+    lastActivity: "Dernière Activité",
+    
+    // Status
+    draft: "Brouillon",
+    active: "Actif",
+    completed: "Complété",
+    cancelled: "Annulé",
+    
+    // Types d'espaces
+    spaceTypes: {
+      tank: "Réservoir",
+      vessel: "Cuve",
+      silo: "Silo",
+      pit: "Fosse",
+      vault: "Voûte",
+      tunnel: "Tunnel",
+      trench: "Tranchée",
+      manhole: "Regard",
+      storage: "Stockage",
+      boiler: "Chaudière",
+      duct: "Conduit",
+      chamber: "Chambre",
+      other: "Autre"
+    }
+  },
+  en: {
+    title: "Permit Management and Finalization",
+    subtitle: "Centralized dashboard for validation, saving, history and sharing",
+    
+    // Actions principales
+    savePermit: "Save",
+    printPDF: "Print PDF",
+    emailPermit: "Send by Email",
+    sharePermit: "Share",
+    generateQR: "Generate QR Code",
+    exportData: "Export Data",
+    searchDatabase: "Search Database",
+    viewHistory: "View History",
+    newPermit: "New Permit",
+    
+    // Sections
+    summary: "Permit Summary",
+    validation: "Validation and Compliance",
+    actions: "Permit Actions",
+    statistics: "Statistics",
+    qrCode: "QR Code - Mobile Access",
+    sharing: "Sharing and Distribution",
+    history: "Permit History",
+    database: "Database",
+    
+    // Statuts
+    complete: "Complete",
+    incomplete: "Incomplete",
+    valid: "Valid",
+    invalid: "Invalid",
+    saving: "Saving...",
+    saved: "Saved",
+    loading: "Loading...",
+    searching: "Searching...",
+    
+    // Messages
+    saveSuccess: "Permit saved successfully!",
+    validationPassed: "All validations passed",
+    validationErrors: "Validation errors detected",
+    qrGenerated: "QR Code generated successfully",
+    linkCopied: "Link copied to clipboard",
+    pdfGenerated: "PDF generated successfully",
+    emailSent: "Email sent successfully",
+    noResults: "No results found",
+    searchPlaceholder: "Search by number, project, location...",
+    
+    // Sections du permis
+    siteInformation: "Site Information",
+    rescuePlan: "Rescue Plan",
+    atmosphericTesting: "Atmospheric Testing", 
+    entryRegistry: "Entry Registry",
+    
+    // Statistiques
+    totalPermits: "Total Permits",
+    activePermits: "Active Permits",
+    completedPermits: "Completed Permits",
+    draftPermits: "Drafts",
+    dangerousSpaces: "Dangerous Spaces",
+    safeSpaces: "Safe Spaces",
+    avgCompletion: "Average Completion",
+    lastActivity: "Last Activity",
+    
+    // Status
+    draft: "Draft",
+    active: "Active",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    
+    // Types d'espaces
+    spaceTypes: {
+      tank: "Tank",
+      vessel: "Vessel",
+      silo: "Silo",
+      pit: "Pit",
+      vault: "Vault",
+      tunnel: "Tunnel",
+      trench: "Trench",
+      manhole: "Manhole",
+      storage: "Storage",
+      boiler: "Boiler",
+      duct: "Duct",
+      chamber: "Chamber",
+      other: "Other"
+    }
+  }
+};
+
+// =================== COMPOSANT PRINCIPAL ===================
+const PermitManager: React.FC<PermitManagerProps> = ({
+  selectedProvince,
+  PROVINCIAL_REGULATIONS,
+  isMobile = false,
+  language = 'fr'
+}) => {
+  const safetyManager = useSafetyManager();
+  const t = translations[language];
+  
+  // États locaux
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [selectedShareMethod, setSelectedShareMethod] = useState<'email' | 'sms' | 'whatsapp'>('email');
+  const [showHistory, setShowHistory] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<PermitHistoryEntry[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [currentView, setCurrentView] = useState<'main' | 'history' | 'database'>('main');
+
+  // Validation globale
+  const validation = safetyManager.validatePermitCompleteness();
+  const permit = safetyManager.currentPermit;
+
+  // =================== GÉNÉRATION QR CODE ===================
+  const handleGenerateQR = async () => {
+    setIsGeneratingQR(true);
+    try {
+      const qrUrl = await safetyManager.generateQRCode();
+      setQrCodeUrl(qrUrl);
+      showNotification(t.qrGenerated, 'success');
+    } catch (error) {
+      showNotification('Erreur génération QR Code', 'error');
+    } finally {
+      setIsGeneratingQR(false);
+    }
+  };
+
+  // =================== GÉNÉRATION PDF ===================
+  const handleGeneratePDF = async () => {
+    setIsGeneratingPDF(true);
+    try {
+      const pdfBlob = await safetyManager.generatePDF();
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${permit.permit_number}_espace_clos.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      showNotification(t.pdfGenerated, 'success');
+    } catch (error) {
+      showNotification('Erreur génération PDF', 'error');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  // =================== SAUVEGARDE ===================
+  const handleSave = async () => {
+    const permitNumber = await safetyManager.saveToDatabase();
+    if (permitNumber) {
+      showNotification(t.saveSuccess, 'success');
+      // Générer QR automatiquement après sauvegarde
+      if (!qrCodeUrl) {
+        handleGenerateQR();
+      }
+    }
+  };
+
+  // =================== PARTAGE ===================
+  const handleShare = async () => {
+    try {
+      await safetyManager.sharePermit(selectedShareMethod);
+      showNotification(t.emailSent, 'success');
+    } catch (error) {
+      showNotification('Erreur lors du partage', 'error');
+    }
+  };
+
+  // =================== COPIE LIEN ===================
+  const handleCopyLink = async () => {
+    const permitUrl = `${window.location.origin}/permits/confined-space/${permit.permit_number}`;
+    try {
+      await navigator.clipboard.writeText(permitUrl);
+      setLinkCopied(true);
+      showNotification(t.linkCopied, 'success');
+      setTimeout(() => setLinkCopied(false), 3000);
+    } catch (error) {
+      showNotification('Erreur copie du lien', 'error');
+    }
+  };
+
+  // =================== RECHERCHE DANS L'HISTORIQUE ===================
+  const handleSearch = useCallback(async (query: string) => {
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      // Simuler recherche dans l'historique - à remplacer par vraie recherche Supabase
+      const allPermits = await safetyManager.loadPermitHistory();
+      const filtered = allPermits.filter(permit => 
+        permit.permit_number?.toLowerCase().includes(query.toLowerCase()) ||
+        permit.siteInformation?.projectNumber?.toLowerCase().includes(query.toLowerCase()) ||
+        permit.siteInformation?.workLocation?.toLowerCase().includes(query.toLowerCase()) ||
+        permit.siteInformation?.contractor?.toLowerCase().includes(query.toLowerCase())
+      );
+      
+      const results: PermitHistoryEntry[] = filtered.map(permit => ({
+        id: permit.id || '',
+        permitNumber: permit.permit_number,
+        projectNumber: permit.siteInformation?.projectNumber || '',
+        workLocation: permit.siteInformation?.workLocation || '',
+        contractor: permit.siteInformation?.contractor || '',
+        spaceType: permit.siteInformation?.spaceType || '',
+        csaClass: permit.siteInformation?.csaClass || '',
+        status: permit.status,
+        createdAt: permit.created_at,
+        lastModified: permit.last_modified,
+        hazardCount: (permit.siteInformation?.atmosphericHazards?.length || 0) + 
+                    (permit.siteInformation?.physicalHazards?.length || 0),
+        photoCount: permit.siteInformation?.spacePhotos?.length || 0,
+        qrCode: qrCodeUrl
+      }));
+      
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Erreur recherche:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [safetyManager, qrCodeUrl]);
+
+  // =================== CHARGEMENT D'UN PERMIS ===================
+  const handleLoadPermit = async (permitNumber: string) => {
+    try {
+      await safetyManager.loadFromDatabase(permitNumber);
+      setCurrentView('main');
+      showNotification(`Permis ${permitNumber} chargé`, 'success');
+    } catch (error) {
+      showNotification(`Erreur chargement ${permitNumber}`, 'error');
+    }
+  };
+
+  // =================== VALIDATION DES SECTIONS ===================
+  const getSectionValidation = (): ValidationSummary[] => {
+    return [
+      {
+        sectionName: t.siteInformation,
+        icon: <Building style={{ width: '20px', height: '20px' }} />,
+        isComplete: Boolean(permit.siteInformation?.projectNumber && permit.siteInformation?.workLocation),
+        completionPercentage: getFieldCompletionPercentage(permit.siteInformation, ['projectNumber', 'workLocation', 'contractor', 'supervisor']),
+        errors: permit.siteInformation?.projectNumber ? [] : ['Numéro de projet manquant'],
+        lastModified: permit.last_modified
+      },
+      {
+        sectionName: t.rescuePlan,
+        icon: <Shield style={{ width: '20px', height: '20px' }} />,
+        isComplete: Boolean(permit.rescuePlan?.emergencyContacts?.length > 0),
+        completionPercentage: permit.rescuePlan?.emergencyContacts?.length > 0 ? 100 : 0,
+        errors: permit.rescuePlan?.emergencyContacts?.length > 0 ? [] : ['Plan de sauvetage incomplet'],
+        lastModified: permit.last_modified
+      },
+      {
+        sectionName: t.atmosphericTesting,
+        icon: <Activity style={{ width: '20px', height: '20px' }} />,
+        isComplete: Boolean(permit.atmosphericTesting?.readings?.length > 0),
+        completionPercentage: permit.atmosphericTesting?.readings?.length > 0 ? 100 : 0,
+        errors: permit.atmosphericTesting?.readings?.length > 0 ? [] : ['Tests atmosphériques manquants'],
+        lastModified: permit.last_modified
+      },
+      {
+        sectionName: t.entryRegistry,
+        icon: <Users style={{ width: '20px', height: '20px' }} />,
+        isComplete: Boolean(permit.entryRegistry?.personnel?.length > 0),
+        completionPercentage: permit.entryRegistry?.personnel?.length > 0 ? 100 : 0,
+        errors: permit.entryRegistry?.personnel?.length > 0 ? [] : ['Personnel manquant'],
+        lastModified: permit.last_modified
+      }
+    ];
+  };
+
+  // =================== STATISTIQUES ===================
+  const getPermitStatistics = () => {
+    return {
+      totalSections: 4,
+      completedSections: getSectionValidation().filter(s => s.isComplete).length,
+      totalPersonnel: permit.entryRegistry?.personnel?.length || 0,
+      activeEntrants: safetyManager.activeEntrants?.length || 0,
+      atmosphericReadings: permit.atmosphericTesting?.readings?.length || 0,
+      lastSaved: safetyManager.lastSaved ? new Date(safetyManager.lastSaved).toLocaleString() : 'Jamais',
+      permitAge: permit.created_at ? Math.floor((Date.now() - new Date(permit.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0,
+      hazardCount: (permit.siteInformation?.atmosphericHazards?.length || 0) + 
+                   (permit.siteInformation?.physicalHazards?.length || 0),
+      photoCount: permit.siteInformation?.spacePhotos?.length || 0,
+      volume: permit.siteInformation?.dimensions?.volume || 0,
+      unitSystem: permit.siteInformation?.unitSystem || 'metric'
+    };
+  };
+
+  // =================== EFFET INITIAL ===================
+  useEffect(() => {
+    if (permit.permit_number && !qrCodeUrl) {
+      handleGenerateQR();
+    }
+  }, [permit.permit_number]);
+
+  // =================== RECHERCHE EN TEMPS RÉEL ===================
+  useEffect(() => {
+    if (searchQuery.length >= 2) {
+      const timeoutId = setTimeout(() => {
+        handleSearch(searchQuery);
+      }, 300);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery, handleSearch]);
+
+  // =================== RENDU CONDITIONNEL ===================
+  
+  // Vue Base de Données / Historique
+  if (currentView === 'database' || currentView === 'history') {
+    return (
+      <div style={styles.container}>
+        {/* Header de retour */}
+        <div style={styles.headerCard}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(59, 130, 246, 0.05))', zIndex: 0 }}></div>
+          
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <button
+                  onClick={() => setCurrentView('main')}
+                  style={{
+                    ...styles.button,
+                    ...styles.buttonSecondary,
+                    width: 'auto',
+                    padding: '12px 16px'
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                  Retour
+                </button>
+                <div>
+                  <h2 style={{ fontSize: isMobileDevice ? '20px' : '24px', fontWeight: '700', color: 'white', margin: 0 }}>
+                    <Database style={{ display: 'inline', marginRight: '12px', width: '24px', height: '24px' }} />
+                    {t.database}
+                  </h2>
+                  <p style={{ color: '#d1d5db', fontSize: isMobileDevice ? '14px' : '16px', margin: '4px 0 0 0' }}>
+                    {selectedProvince} - {PROVINCIAL_REGULATIONS[selectedProvince]?.authority}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Barre de recherche */}
+            <div style={{ position: 'relative', marginBottom: '20px' }}>
+              <input
+                type="text"
+                style={{ ...styles.input, paddingLeft: '48px' }}
+                placeholder={t.searchPlaceholder}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <Search 
+                size={20} 
+                style={{ 
+                  position: 'absolute', 
+                  left: '16px', 
+                  top: '50%', 
+                  transform: 'translateY(-50%)', 
+                  color: '#9ca3af' 
+                }} 
+              />
+              {isSearching && (
+                <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)' }}>
+                  <div style={{ width: '16px', height: '16px', border: '2px solid #3b82f6', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Résultats de recherche */}
+        <div style={styles.card}>
+          {isSearching ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+              <div style={{ width: '32px', height: '32px', border: '3px solid #3b82f6', borderTop: '3px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+              <p>{t.searching}</p>
+            </div>
+          ) : searchResults.length > 0 ? (
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {searchResults.map((result) => (
+                <div 
+                  key={result.id}
+                  style={{
+                    ...styles.card,
+                    margin: 0,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    border: '1px solid #4b5563'
+                  }}
+                  onClick={() => handleLoadPermit(result.permitNumber)}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ color: '#3b82f6', margin: '0 0 4px 0', fontSize: '16px', fontWeight: '600' }}>
+                        {result.permitNumber}
+                      </h4>
+                      <p style={{ color: 'white', margin: '0 0 4px 0', fontSize: '14px' }}>
+                        📋 {result.projectNumber} • 📍 {result.workLocation}
+                      </p>
+                      <p style={{ color: '#9ca3af', margin: 0, fontSize: '13px' }}>
+                        🏢 {result.contractor} • {t.spaceTypes[result.spaceType as keyof typeof t.spaceTypes] || result.spaceType}
+                      </p>
+                      <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '12px', color: '#6b7280' }}>
+                        <span>⚠️ {result.hazardCount} dangers</span>
+                        <span>📷 {result.photoCount} photos</span>
+                        <span>🕒 {new Date(result.lastModified).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <span style={{
+                      background: result.status === 'active' ? 'rgba(16, 185, 129, 0.2)' : 
+                                 result.status === 'completed' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(156, 163, 175, 0.2)',
+                      color: result.status === 'active' ? '#10b981' : 
+                             result.status === 'completed' ? '#3b82f6' : '#9ca3af',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: '600'
+                    }}>
+                      {result.status === 'active' ? '🟢 ACTIF' : 
+                       result.status === 'completed' ? '🔵 COMPLÉTÉ' :
+                       result.status === 'draft' ? '🟡 BROUILLON' : '⚪ AUTRE'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : searchQuery.length >= 2 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+              <Search size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+              <p>{t.noResults}</p>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+              <p>💡 {language === 'fr' ? 'Tapez au moins 2 caractères pour rechercher' : 'Type at least 2 characters to search'}</p>
+            </div>
+          )}
+        </div>
+
+        <style jsx>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // =================== RENDU PRINCIPAL ===================
   const stats = getPermitStatistics();
   const sections = getSectionValidation();
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6" style={{
-      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-      minHeight: '100vh',
-      color: '#ffffff'
-    }}>
+    <div style={styles.container}>
       {/* Header Principal */}
-      <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-3">
-              <FileText className="w-8 h-8 text-blue-400" />
-              {t.title}
-            </h1>
-            <p className="mt-2 text-blue-200 opacity-90">{t.subtitle}</p>
-          </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold text-blue-400">
-              {validation.percentage}%
+      <div style={styles.headerCard}>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05))',
+          zIndex: 0
+        }}></div>
+        
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            marginBottom: isMobileDevice ? '20px' : '24px' 
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: isMobileDevice ? '16px' : '20px' }}>
+              <div style={{
+                width: isMobileDevice ? '48px' : '60px',
+                height: isMobileDevice ? '48px' : '60px',
+                background: 'rgba(59, 130, 246, 0.2)',
+                borderRadius: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid rgba(59, 130, 246, 0.3)'
+              }}>
+                <Wrench style={{ 
+                  width: isMobileDevice ? '24px' : '30px', 
+                  height: isMobileDevice ? '24px' : '30px', 
+                  color: '#60a5fa' 
+                }} />
+              </div>
+              <div>
+                <h1 style={{
+                  fontSize: isMobileDevice ? '20px' : '28px',
+                  fontWeight: '700',
+                  color: 'white',
+                  marginBottom: '4px',
+                  lineHeight: 1.2
+                }}>
+                  ⚙️ {t.title}
+                </h1>
+                <p style={{
+                  color: '#d1d5db',
+                  fontSize: isMobileDevice ? '14px' : '16px',
+                  lineHeight: 1.5,
+                  margin: 0
+                }}>
+                  {t.subtitle}
+                </p>
+              </div>
             </div>
-            <div className="text-sm text-blue-200">Completé</div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{
+                fontSize: isMobileDevice ? '24px' : '32px',
+                fontWeight: '700',
+                color: validation.isValid ? '#10b981' : '#f59e0b',
+                marginBottom: '4px'
+              }}>
+                {validation.percentage}%
+              </div>
+              <div style={{ 
+                fontSize: isMobileDevice ? '12px' : '14px', 
+                color: '#d1d5db' 
+              }}>
+                {validation.isValid ? '✅ Valide' : '⚠️ Incomplet'}
+              </div>
+            </div>
+          </div>
+          
+          {/* Actions rapides */}
+          <div style={{
+            display: 'flex',
+            gap: isMobileDevice ? '8px' : '12px',
+            flexWrap: 'wrap'
+          }}>
+            <button
+              onClick={() => setCurrentView('database')}
+              style={{
+                ...styles.button,
+                background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                color: 'white',
+                flex: isMobileDevice ? '1' : 'none',
+                fontSize: isMobileDevice ? '12px' : '14px'
+              }}
+            >
+              <Database size={16} />
+              {t.searchDatabase}
+            </button>
+            <button
+              onClick={() => safetyManager.createNewPermit(selectedProvince)}
+              style={{
+                ...styles.button,
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: 'white',
+                flex: isMobileDevice ? '1' : 'none',
+                fontSize: isMobileDevice ? '12px' : '14px'
+              }}
+            >
+              <Plus size={16} />
+              {t.newPermit}
+            </button>
           </div>
         </div>
       </div>
 
       {/* Dashboard - Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div style={styles.grid4}>
         {/* Validation Globale */}
-        <div className="bg-white/5 backdrop-blur-lg rounded-lg p-6 border border-white/10">
-          <div className="flex items-center justify-between">
+        <div style={{
+          ...styles.card,
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(10px)',
+          margin: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <p className="text-sm font-medium text-gray-300">Validation</p>
-              <p className={`text-2xl font-bold ${validation.isValid ? 'text-green-400' : 'text-red-400'}`}>
+              <p style={{ fontSize: '13px', fontWeight: '500', color: '#9ca3af', margin: '0 0 4px 0' }}>Validation</p>
+              <p style={{ 
+                fontSize: isMobileDevice ? '20px' : '24px', 
+                fontWeight: '700', 
+                color: validation.isValid ? '#10b981' : '#f59e0b',
+                margin: 0
+              }}>
                 {stats.completedSections}/{stats.totalSections}
               </p>
             </div>
             {validation.isValid ? (
-              <CheckCircle className="w-8 h-8 text-green-400" />
+              <CheckCircle style={{ width: '32px', height: '32px', color: '#10b981' }} />
             ) : (
-              <AlertTriangle className="w-8 h-8 text-red-400" />
+              <AlertTriangle style={{ width: '32px', height: '32px', color: '#f59e0b' }} />
             )}
           </div>
-          <div className="mt-4">
-            <div className="w-full bg-gray-700 rounded-full h-2">
+          <div style={{ marginTop: '12px' }}>
+            <div style={{ width: '100%', background: '#374151', borderRadius: '4px', height: '6px', overflow: 'hidden' }}>
               <div 
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  validation.isValid ? 'bg-green-400' : 'bg-red-400'
-                }`}
-                style={{ width: `${validation.percentage}%` }}
+                style={{
+                  height: '100%',
+                  background: validation.isValid ? 'linear-gradient(90deg, #10b981, #059669)' : 'linear-gradient(90deg, #f59e0b, #d97706)',
+                  transition: 'width 0.3s ease',
+                  width: `${validation.percentage}%`
+                }}
               />
             </div>
-            <p className="text-xs text-gray-400 mt-1">
+            <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', margin: '4px 0 0 0' }}>
               {validation.isValid ? t.validationPassed : t.validationErrors}
             </p>
           </div>
         </div>
 
         {/* Personnel */}
-        <div className="bg-white/5 backdrop-blur-lg rounded-lg p-6 border border-white/10">
-          <div className="flex items-center justify-between">
+        <div style={{
+          ...styles.card,
+          background: 'rgba(139, 92, 246, 0.1)',
+          border: '1px solid rgba(139, 92, 246, 0.3)',
+          margin: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <p className="text-sm font-medium text-gray-300">Personnel</p>
-              <p className="text-2xl font-bold text-purple-400">{stats.totalPersonnel}</p>
-            </div>
-            <Users className="w-8 h-8 text-purple-400" />
-          </div>
-          <div className="mt-4 text-sm">
-            <div className="flex justify-between text-gray-300">
-              <span>À l'intérieur:</span>
-              <span className="font-medium text-orange-400">{stats.activeEntrants}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Tests Atmosphériques */}
-        <div className="bg-white/5 backdrop-blur-lg rounded-lg p-6 border border-white/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-300">Tests Atmo</p>
-              <p className="text-2xl font-bold text-cyan-400">{stats.atmosphericReadings}</p>
-            </div>
-            <Activity className="w-8 h-8 text-cyan-400" />
-          </div>
-          <div className="mt-4 text-sm">
-            <div className="flex justify-between text-gray-300">
-              <span>Alertes:</span>
-              <span className="font-medium text-yellow-400">{safetyManager.activeAlerts.length}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Dernière Sauvegarde */}
-        <div className="bg-white/5 backdrop-blur-lg rounded-lg p-6 border border-white/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-300">Sauvegarde</p>
-              <p className="text-lg font-bold text-green-400">
-                {stats.permitAge}j
+              <p style={{ fontSize: '13px', fontWeight: '500', color: '#c4b5fd', margin: '0 0 4px 0' }}>Personnel</p>
+              <p style={{ fontSize: isMobileDevice ? '20px' : '24px', fontWeight: '700', color: '#a78bfa', margin: 0 }}>
+                {stats.totalPersonnel}
               </p>
             </div>
-            <Clock className="w-8 h-8 text-green-400" />
+            <Users style={{ width: '32px', height: '32px', color: '#8b5cf6' }} />
           </div>
-          <div className="mt-4 text-xs text-gray-400">
-            {stats.lastSaved}
-          </div>
-        </div>
-      </div>
-
-      {/* Validation des Sections */}
-      <div className="bg-white/5 backdrop-blur-lg rounded-lg border border-white/10">
-        <div className="p-6 border-b border-white/10">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <CheckCircle className="w-6 h-6 text-blue-400" />
-            {t.validation}
-          </h2>
-        </div>
-        
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {sections.map((section, index) => (
-              <div 
-                key={index}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  section.isComplete 
-                    ? 'border-green-400/30 bg-green-400/10' 
-                    : 'border-red-400/30 bg-red-400/10'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-full ${
-                      section.isComplete ? 'bg-green-400/20' : 'bg-red-400/20'
-                    }`}>
-                      {section.icon}
-                    </div>
-                    <div>
-                      <p className={`font-medium ${
-                        section.isComplete ? 'text-green-300' : 'text-red-300'
-                      }`}>
-                        {section.sectionName}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {section.isComplete ? t.complete : t.incomplete}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`text-lg font-bold ${
-                      section.isComplete ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {section.completionPercentage}%
-                    </div>
-                  </div>
-                </div>
-                
-                {section.errors.length > 0 && (
-                  <div className="mt-3 text-xs text-red-300">
-                    {section.errors.map((error, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <AlertTriangle className="w-3 h-3" />
-                        {error}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Actions du Permis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Actions Principales */}
-        <div className="bg-white/5 backdrop-blur-lg rounded-lg border border-white/10">
-          <div className="p-6 border-b border-white/10">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Wrench className="w-6 h-6 text-green-400" />
-              {t.actions}
-            </h2>
-          </div>
-          
-          <div className="p-6 space-y-4">
-            {/* Sauvegarder */}
-            <button
-              onClick={handleSave}
-              disabled={safetyManager.isSaving}
-              className="w-full flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 disabled:opacity-50"
-            >
-              {safetyManager.isSaving ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <Save className="w-5 h-5" />
-              )}
-              {safetyManager.isSaving ? t.saving : t.savePermit}
-            </button>
-
-            {/* Imprimer PDF */}
-            <button
-              onClick={handleGeneratePDF}
-              disabled={isGeneratingPDF}
-              className="w-full flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all duration-200 disabled:opacity-50"
-            >
-              {isGeneratingPDF ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <Printer className="w-5 h-5" />
-              )}
-              {t.printPDF}
-            </button>
-
-            {/* Email */}
-            <button
-              onClick={() => safetyManager.sharePermit('email')}
-              className="w-full flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-lg hover:from-purple-600 hover:to-violet-700 transition-all duration-200"
-            >
-              <Mail className="w-5 h-5" />
-              {t.emailPermit}
-            </button>
-
-            {/* Partage */}
-            <div className="flex gap-2">
-              <select
-                value={selectedShareMethod}
-                onChange={(e) => setSelectedShareMethod(e.target.value as any)}
-                className="flex-1 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white"
-              >
-                <option value="email">📧 Email</option>
-                <option value="sms">📱 SMS</option>
-                <option value="whatsapp">💬 WhatsApp</option>
-              </select>
-              <button
-                onClick={handleShare}
-                className="px-4 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:from-orange-600 hover:to-red-700 transition-all duration-200"
-              >
-                <Share className="w-5 h-5" />
-              </button>
+          <div style={{ marginTop: '12px', fontSize: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c4b5fd' }}>
+              <span>À l'intérieur:</span>
+              <span style={{ fontWeight: '600', color: stats.activeEntrants > 0 ? '#f59e0b' : '#10b981' }}>
+                {stats.activeEntrants}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* QR Code */}
-        <div className="bg-white/5 backdrop-blur-lg rounded-lg border border-white/10">
-          <div className="p-6 border-b border-white/10">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <QrCode className="w-6 h-6 text-blue-400" />
-              {t.qrCode}
-            </h2>
-          </div>
-          
-          <div className="p-6 text-center">
-            {qrCodeUrl ? (
-              <div>
-                <div className="inline-block p-4 bg-white rounded-lg mb-4">
-                  <img 
-                    src={qrCodeUrl} 
-                    alt="QR Code" 
-                    className="w-48 h-48 mx-auto"
-                  />
-                </div>
-                <p className="text-sm text-gray-300 mb-4">
-                  📱 Scanner pour accès mobile instantané
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleCopyLink}
-                    className="flex-1 flex items-center justify-center gap-2 p-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                  >
-                    {linkCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    {linkCopied ? 'Copié!' : 'Copier Lien'}
-                  </button>
-                  <button
-                    onClick={handleGenerateQR}
-                    disabled={isGeneratingQR}
-                    className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                  >
-                    <QrCode className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="w-48 h-48 mx-auto mb-4 bg-gray-700 rounded-lg flex items-center justify-center">
-                  <QrCode className="w-16 h-16 text-gray-500" />
-                </div>
-                <button
-                  onClick={handleGenerateQR}
-                  disabled={isGeneratingQR}
-                  className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {isGeneratingQR ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <QrCode className="w-4 h-4" />
-                  )}
-                  {t.generateQR}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Résumé du Permis */}
-      <div className="bg-white/5 backdrop-blur-lg rounded-lg border border-white/10">
-        <div className="p-6 border-b border-white/10">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-purple-400" />
-            {t.summary}
-          </h2>
-        </div>
-        
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Informations Générales */}
+        {/* Dangers */}
+        <div style={{
+          ...styles.card,
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          margin: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h3 className="font-semibold text-purple-300 mb-3">Informations Générales</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Numéro:</span>
-                  <span className="text-white font-mono">{permit.permit_number || 'Non généré'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Statut:</span>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    permit.status === 'active' ? 'bg-green-400/20 text-green-300' : 'bg-yellow-400/20 text-yellow-300'
-                  }`}>
-                    {permit.status}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Province:</span>
-                  <span className="text-white">{permit.province}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Créé:</span>
-                  <span className="text-white">
-                    {permit.created_at ? new Date(permit.created_at).toLocaleDateString() : 'N/A'}
-                  </span>
-                </div>
-              </div>
+              <p style={{ fontSize: '13px', fontWeight: '500', color: '#fca5a5', margin: '0 0 4px 0' }}>Dangers</p>
+              <p style={{ fontSize: isMobileDevice ? '20px' : '24px', fontWeight: '700', color: '#f87171', margin: 0 }}>
+                {stats.hazardCount}
+              </p>
             </div>
-
-            {/* Détails du Site */}
-            <div>
-              <h3 className="font-semibold text-cyan-300 mb-3">Détails du Site</h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-gray-400">Projet:</span>
-                  <p className="text-white">{permit.siteInformation.projectNumber || 'Non défini'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-400">Lieu:</span>
-                  <p className="text-white">{permit.siteInformation.workLocation || 'Non défini'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-400">Entrepreneur:</span>
-                  <p className="text-white">{permit.siteInformation.contractor || 'Non défini'}</p>
-                </div>
-              </div>
+            <AlertTriangle style={{ width: '32px', height: '32px', color: '#ef4444' }} />
+          </div>
+          <div style={{ marginTop: '12px', fontSize: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fca5a5' }}>
+              <span>Photos:</span>
+              <span style={{ fontWeight: '600', color: '#60a5fa' }}>
+                {stats.photoCount}
+              </span>
             </div>
+          </div>
+        </div>
 
-            {/* Statut de Sécurité */}
+        {/* Volume */}
+        <div style={{
+          ...styles.card,
+          background: 'rgba(16, 185, 129, 0.1)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          margin: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h3 className="font-semibold text-red-300 mb-3">Statut de Sécurité</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Personnel total:</span>
-                  <span className="text-white">{stats.totalPersonnel}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">À l'intérieur:</span>
-                  <span className={`font-medium ${stats.activeEntrants > 0 ? 'text-orange-400' : 'text-green-400'}`}>
-                    {stats.activeEntrants}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Alertes actives:</span>
-                  <span className={`font-medium ${safetyManager.activeAlerts.length > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                    {safetyManager.activeAlerts.length}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Tests atmosphériques:</span>
-                  <span className="text-white">{stats.atmosphericReadings}</span>
-                </div>
-              </div>
+              <p style={{ fontSize: '13px', fontWeight: '500', color: '#6ee7b7', margin: '0 0 4px 0' }}>Volume</p>
+              <p style={{ fontSize: isMobileDevice ? '20px' : '24px', fontWeight: '700', color: '#34d399', margin: 0 }}>
+                {stats.volume}
+              </p>
+            </div>
+            <BarChart3 style={{ width: '32px', height: '32px', color: '#10b981' }} />
+          </div>
+          <div style={{ marginTop: '12px', fontSize: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6ee7b7' }}>
+              <span>Unité:</span>
+              <span style={{ fontWeight: '600' }}>
+                {stats.unitSystem === 'metric' ? 'm³' : 'ft³'}
+              </span>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-};
-
-// =================== FONCTIONS UTILITAIRES ===================
-const getFieldCompletionPercentage = (obj: any, requiredFields: string[]): number => {
-  const completedFields = requiredFields.filter(field => obj[field]).length;
-  return Math.round((completedFields / requiredFields.length) * 100);
-};
-
-const showNotification = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification('C-SECUR360', {
-      body: message,
-      icon: '/c-secur360-logo.png'
-    });
-  }
-};
-
-export default PermitManager;
