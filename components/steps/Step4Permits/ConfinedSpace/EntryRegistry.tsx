@@ -1185,10 +1185,10 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
         
         if (ent.current_status === 'outside') {
           // Entrée dans l'espace clos
-          const newSession = {
+          const newSession: EntrySession = {
             id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             entry_time: now.toISOString(),
-            status: 'inside' as const
+            status: 'inside'
           };
 
           // Notification d'entrée
@@ -1215,11 +1215,11 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
           const entryTime = new Date(activeSession.entry_time);
           const duration = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
 
-          const completedSession = {
+          const completedSession: EntrySession = {
             ...activeSession,
             exit_time: now.toISOString(),
             duration,
-            status: 'completed' as const
+            status: 'completed'
           };
 
           const updatedSessions = ent.entry_sessions.map(s => 
@@ -1359,7 +1359,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
         const now = new Date();
         
         if (item.current_status === 'available') {
-          // Commencer l'utilisation
+          // Sortir l'équipement
           const newSession: EquipmentSession = {
             id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             entry_time: now.toISOString(),
@@ -1368,13 +1368,13 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
             location: item.location
           };
 
-          // Notification d'utilisation
+          // Notification de sortie
           if (typeof window !== 'undefined' && 'Notification' in window) {
             if (Notification.permission === 'granted') {
-              new Notification('🔧 ÉQUIPEMENT EN UTILISATION', {
-                body: `${item.name} (${item.serial_number}) utilisé par ${assignedTo || 'Non assigné'}`,
+              new Notification('🔧 ÉQUIPEMENT SORTI', {
+                body: `${item.name} (${item.serial_number}) sorti par ${assignedTo || 'Non assigné'}`,
                 icon: '/c-secur360-logo.png',
-                tag: 'equipment-in-use'
+                tag: 'equipment-out'
               });
             }
           }
@@ -1386,7 +1386,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
             usage_sessions: [...item.usage_sessions, newSession]
           };
         } else if (item.current_status === 'in_use') {
-          // Terminer l'utilisation
+          // Retourner l'équipement
           const activeSession = item.usage_sessions.find(s => s.status === 'in_use');
           if (!activeSession) return item;
 
@@ -1430,9 +1430,6 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
 
     setEquipment(updatedEquipment);
     updateParentData('equipment', updatedEquipment);
-    
-    // Recalculer la conformité du permis après changement d'équipement
-    setTimeout(() => checkPermitCompliance(), 100);
   };
 
   const deleteEquipment = (equipmentId: string) => {
@@ -1523,11 +1520,11 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     return permitValidation.compliance_check.all_requirements_met;
   };
 
-  // Vérifier la conformité à chaque changement
+  // Vérifier la conformité seulement au changement des données, pas automatiquement
   useEffect(() => {
-    checkPermitCompliance();
+    // Ne pas recalculer automatiquement, garder les cases telles qu'elles sont
   }, [equipment, entrants, currentSurveillant, atmosphericReadings]);
- // =================== RENDU JSX - SECTION 2B ===================
+  // =================== RENDU JSX - SECTION 2B ===================
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
       {/* Modal de signature légale pour surveillant */}
@@ -3196,4 +3193,4 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   );
 };
 
-export default EntryRegistry; 
+export default EntryRegistry;
