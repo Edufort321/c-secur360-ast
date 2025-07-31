@@ -187,19 +187,6 @@ interface LegalSignature {
     rescue_procedures: boolean;
     emergency_response: boolean;
   };
-}: string;
-  timestamp: string;
-  ip_address?: string;
-  legal_declaration: string;
-  training_confirmed: boolean;
-  formation_details: {
-    espace_clos_formation: boolean;
-    formation_expiry?: string;
-    csaz1006_compliant: boolean;
-    practical_training: boolean;
-    rescue_procedures: boolean;
-    emergency_response: boolean;
-  };
 }
 
 interface SurveillantShift {
@@ -1440,6 +1427,8 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     }
   };
 
+  // =================== CONTINUATION DU RENDU JSX - SECTIONS PRINCIPALES ===================
+  
       {/* Section Surveillant avec signature légale */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
