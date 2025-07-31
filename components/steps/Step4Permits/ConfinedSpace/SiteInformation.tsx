@@ -309,6 +309,41 @@ const translations = {
       safety: "Sécurité"
     },
     
+    // Dangers atmosphériques - AJOUT MANQUANT
+    atmosphericHazardTypes: {
+      oxygen_deficiency: "Déficience en oxygène (<19.5%)",
+      oxygen_enrichment: "Enrichissement en oxygène (>23%)",
+      flammable_gases: "Gaz inflammables/combustibles",
+      toxic_gases: "Gaz toxiques",
+      hydrogen_sulfide: "Sulfure d'hydrogène (H2S)",
+      carbon_monoxide: "Monoxyde de carbone (CO)",
+      carbon_dioxide: "Dioxyde de carbone (CO2)",
+      methane: "Méthane (CH4)",
+      ammonia: "Ammoniac (NH3)",
+      chlorine: "Chlore (Cl2)",
+      nitrogen: "Azote (N2)",
+      argon: "Argon (Ar)",
+      welding_fumes: "Fumées de soudage"
+    },
+
+    // Dangers physiques - AJOUT MANQUANT
+    physicalHazardTypes: {
+      engulfment: "Ensevelissement/Engloutissement",
+      crushing: "Écrasement par équipement",
+      electrical: "Dangers électriques",
+      mechanical: "Dangers mécaniques",
+      structural_collapse: "Effondrement structural",
+      falls: "Chutes de hauteur",
+      temperature_extreme: "Températures extrêmes",
+      noise: "Bruit excessif",
+      vibration: "Vibrations",
+      radiation: "Radiation",
+      chemical_exposure: "Exposition chimique",
+      biological: "Dangers biologiques",
+      confined_space_hazard: "Configuration de l'espace",
+      traffic: "Circulation/Trafic"
+    },
+
     // Actions
     save: "Sauvegarder",
     delete: "Supprimer",
@@ -420,6 +455,41 @@ const translations = {
       safety: "Safety"
     },
     
+    // Dangers atmosphériques - AJOUT MANQUANT
+    atmosphericHazardTypes: {
+      oxygen_deficiency: "Oxygen deficiency (<19.5%)",
+      oxygen_enrichment: "Oxygen enrichment (>23%)",
+      flammable_gases: "Flammable/combustible gases",
+      toxic_gases: "Toxic gases",
+      hydrogen_sulfide: "Hydrogen sulfide (H2S)",
+      carbon_monoxide: "Carbon monoxide (CO)",
+      carbon_dioxide: "Carbon dioxide (CO2)",
+      methane: "Methane (CH4)",
+      ammonia: "Ammonia (NH3)",
+      chlorine: "Chlorine (Cl2)",
+      nitrogen: "Nitrogen (N2)",
+      argon: "Argon (Ar)",
+      welding_fumes: "Welding fumes"
+    },
+
+    // Dangers physiques - AJOUT MANQUANT
+    physicalHazardTypes: {
+      engulfment: "Engulfment",
+      crushing: "Crushing by equipment",
+      electrical: "Electrical hazards",
+      mechanical: "Mechanical hazards",
+      structural_collapse: "Structural collapse",
+      falls: "Falls from height",
+      temperature_extreme: "Extreme temperatures",
+      noise: "Excessive noise",
+      vibration: "Vibrations",
+      radiation: "Radiation",
+      chemical_exposure: "Chemical exposure",
+      biological: "Biological hazards",
+      confined_space_hazard: "Space configuration",
+      traffic: "Traffic/Circulation"
+    },
+
     // Actions
     save: "Save",
     delete: "Delete",
