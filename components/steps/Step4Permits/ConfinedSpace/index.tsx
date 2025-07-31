@@ -139,7 +139,15 @@ interface AtmosphericReading {
   h2s: number;
   co: number;
   tester_name: string;
+  device_serial?: string;
+  calibration_date?: string;
+  temperature?: number;
+  humidity?: number;
+  notes?: string;
+  location?: string;
   status: 'safe' | 'warning' | 'danger';
+  level?: string;
+  taken_by?: string;
 }
 
 interface PermitData {
@@ -505,7 +513,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     if (percentage === 100) return 'completed';
     return 'inProgress';
   };
- // =================== RENDU DES SECTIONS ===================
+  // =================== RENDU DES SECTIONS ===================
   const renderSectionContent = () => {
     const commonProps = {
       permitData,
@@ -1209,4 +1217,4 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   );
 };
 
-export default ConfinedSpace; 
+export default ConfinedSpace;
