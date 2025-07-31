@@ -9,9 +9,6 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-// 🔧 AJOUT CRUCIAL: Import de ConfinedSpace
-import ConfinedSpace from './ConfinedSpace/index';
-
 // =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -165,6 +162,10 @@ interface PermitModule {
   component?: React.ComponentType<any>;
 }
 
+interface ConfinedSpaceComponent {
+  default: React.ComponentType<any>;
+}
+
 // =================== CONFIGURATION DES MODULES DE PERMIS ===================
 const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
   const baseModules = [
@@ -199,7 +200,7 @@ const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
         'Photos géolocalisées',
         'Plan de sauvetage intégré'
       ],
-      component: ConfinedSpace
+      component: undefined
     },
     {
       id: 'electrical-work',
@@ -448,6 +449,10 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   const texts = getTexts(language);
   const [selectedPermit, setSelectedPermit] = useState<string | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province as ProvinceCode || 'QC');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // État pour stocker le composant ConfinedSpace une fois chargé
+  const [confinedSpaceComponent, setConfinedSpaceComponent] = useState<ConfinedSpaceComponent | null>(null);
 
   // Générer les modules avec traductions selon la langue actuelle
   const PERMIT_MODULES = getPermitModules(language);
@@ -481,14 +486,37 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     });
   }, [language]);
 
-  // 🔧 CORRECTION: Sélection de permis simplifiée
-  const handlePermitSelect = (permitId: string) => {
+  // 🔧 CORRECTION : Chemin d'import corrigé
+  const handlePermitSelect = async (permitId: string) => {
     setSelectedPermit(permitId);
-    console.log(`Permis sélectionné: ${permitId}`);
+    setIsLoading(true);
+    
+    // Import avec le bon chemin pour ConfinedSpace
+    if (permitId === 'confined-space') {
+      try {
+        console.log('🔄 Tentative de chargement ConfinedSpace...');
+        // 🔧 CORRECTION : Chemin corrigé ./ConfinedSpace/index au lieu de ./permits/ConfinedSpace/index
+        const ConfinedSpaceModule = await import('./ConfinedSpace/index');
+        console.log('✅ Module ConfinedSpace importé avec succès:', !!ConfinedSpaceModule.default);
+        
+        setConfinedSpaceComponent(ConfinedSpaceModule);
+        
+      } catch (error) {
+        console.log('⚠️ Erreur chargement ConfinedSpace:', error);
+        setConfinedSpaceComponent(null);
+      }
+    }
+    
+    // Simulation de chargement pour UX
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setIsLoading(false);
+    
+    console.log(`Permis sélectionné: ${permitId} - Chemin corrigé`);
   };
 
   const handleBackToSelection = () => {
     setSelectedPermit(null);
+    setConfinedSpaceComponent(null);
   };
 
   const updatePermitStatus = (permitId: string, status: PermitModule['status'], completionRate: number = 0) => {
@@ -531,8 +559,16 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     handleBackToSelection();
   }, [selectedPermit, onDataChange]);
 
-  // 🔧 CORRECTION: Rendu direct de ConfinedSpace
-  if (selectedPermit === 'confined-space') {
+  // 🔧 CORRECTION : Rendu conditionnel pour ConfinedSpace
+  if (selectedPermit === 'confined-space' && confinedSpaceComponent) {
+    const ConfinedSpaceModule = confinedSpaceComponent.default;
+    
+    console.log('Rendu ConfinedSpace avec props:', {
+      province: selectedProvince,
+      language,
+      initialData: formData?.permitData?.[selectedPermit] || {}
+    });
+    
     return (
       <div style={styles.container}>
         {/* Header de retour */}
@@ -556,7 +592,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
         </div>
         
         {/* Module ConfinedSpace */}
-        <ConfinedSpace
+        <ConfinedSpaceModule
           province={selectedProvince}
           language={language}
           onSave={handleSavePermit}
@@ -572,7 +608,38 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   if (selectedPermit) {
     const permit = permits.find(p => p.id === selectedPermit);
     
-    // Fallback pour tous les autres modules
+    // Afficher le spinner pendant le chargement
+    if (isLoading) {
+      return (
+        <div style={styles.container}>
+          <div style={{ ...styles.card, textAlign: 'center', padding: isMobile ? '40px 20px' : '60px 40px' }}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              border: '4px solid rgba(59, 130, 246, 0.3)',
+              borderTop: '4px solid #3b82f6',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 20px'
+            }}></div>
+            <h3 style={{ color: 'white', fontSize: '18px', marginBottom: '8px' }}>
+              {language === 'en' ? 'Loading module...' : 'Chargement du module...'}
+            </h3>
+            <p style={{ color: '#9ca3af', fontSize: '14px' }}>
+              {language === 'en' ? `Preparing ${permit?.name}` : `Préparation de ${permit?.name}`}
+            </p>
+            <style jsx>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        </div>
+      );
+    }
+    
+    // Fallback pour tous les modules (y compris ConfinedSpace si échec de chargement)
     return (
       <div style={styles.container}>
         {/* Header de retour */}
