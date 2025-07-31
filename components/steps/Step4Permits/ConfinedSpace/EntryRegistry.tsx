@@ -272,7 +272,12 @@ interface EntryRegistryProps {
 
 // =================== EXIGENCES DE FORMATION PAR PROVINCE ===================
 const getTrainingRequirements = (province: ProvinceCode) => {
-  const requirements = {
+  const requirements: Record<ProvinceCode, {
+    surveillant: string[];
+    entrant: string[];
+    annual_recertification: boolean;
+    practical_training_required: boolean;
+  }> = {
     QC: {
       surveillant: [
         "Formation en espace clos selon CSA Z1006",
@@ -352,10 +357,130 @@ const getTrainingRequirements = (province: ProvinceCode) => {
       ],
       annual_recertification: true,
       practical_training_required: true
+    },
+    SK: {
+      surveillant: [
+        "Formation selon Saskatchewan OHS",
+        "Certification en surveillance d'espace clos",
+        "Formation en identification des dangers",
+        "Formation en procédures de sauvetage",
+        "Compétences en surveillance atmosphérique",
+        "Formation en autorité d'évacuation"
+      ],
+      entrant: [
+        "Formation générale en espace clos selon Saskatchewan OHS",
+        "Formation sur l'équipement de protection",
+        "Formation en procédures de travail sécuritaires",
+        "Formation en communication d'urgence",
+        "Formation en reconnaissance des risques",
+        "Âge minimum et aptitudes physiques confirmés"
+      ],
+      annual_recertification: true,
+      practical_training_required: true
+    },
+    MB: {
+      surveillant: [
+        "Formation selon Manitoba Workplace Safety & Health",
+        "Certification en surveillance d'espace clos",
+        "Formation en identification des dangers",
+        "Formation en procédures de sauvetage",
+        "Compétences en surveillance atmosphérique",
+        "Formation en autorité d'évacuation"
+      ],
+      entrant: [
+        "Formation générale en espace clos selon Manitoba WSH",
+        "Formation sur l'équipement de protection",
+        "Formation en procédures de travail sécuritaires",
+        "Formation en communication d'urgence",
+        "Formation en reconnaissance des risques",
+        "Âge minimum et aptitudes physiques confirmés"
+      ],
+      annual_recertification: true,
+      practical_training_required: true
+    },
+    NB: {
+      surveillant: [
+        "Formation selon WorkSafeNB",
+        "Certification en surveillance d'espace clos",
+        "Formation en identification des dangers",
+        "Formation en procédures de sauvetage",
+        "Compétences en surveillance atmosphérique",
+        "Formation en autorité d'évacuation"
+      ],
+      entrant: [
+        "Formation générale en espace clos selon WorkSafeNB",
+        "Formation sur l'équipement de protection",
+        "Formation en procédures de travail sécuritaires",
+        "Formation en communication d'urgence",
+        "Formation en reconnaissance des risques",
+        "Âge minimum et aptitudes physiques confirmés"
+      ],
+      annual_recertification: true,
+      practical_training_required: true
+    },
+    NS: {
+      surveillant: [
+        "Formation selon Nova Scotia Labour Standards",
+        "Certification en surveillance d'espace clos",
+        "Formation en identification des dangers",
+        "Formation en procédures de sauvetage",
+        "Compétences en surveillance atmosphérique",
+        "Formation en autorité d'évacuation"
+      ],
+      entrant: [
+        "Formation générale en espace clos selon NS Labour",
+        "Formation sur l'équipement de protection",
+        "Formation en procédures de travail sécuritaires",
+        "Formation en communication d'urgence",
+        "Formation en reconnaissance des risques",
+        "Âge minimum et aptitudes physiques confirmés"
+      ],
+      annual_recertification: true,
+      practical_training_required: true
+    },
+    PE: {
+      surveillant: [
+        "Formation selon PEI Occupational Health & Safety",
+        "Certification en surveillance d'espace clos",
+        "Formation en identification des dangers",
+        "Formation en procédures de sauvetage",
+        "Compétences en surveillance atmosphérique",
+        "Formation en autorité d'évacuation"
+      ],
+      entrant: [
+        "Formation générale en espace clos selon PEI OHS",
+        "Formation sur l'équipement de protection",
+        "Formation en procédures de travail sécuritaires",
+        "Formation en communication d'urgence",
+        "Formation en reconnaissance des risques",
+        "Âge minimum et aptitudes physiques confirmés"
+      ],
+      annual_recertification: true,
+      practical_training_required: true
+    },
+    NL: {
+      surveillant: [
+        "Formation selon Newfoundland & Labrador OHS",
+        "Certification en surveillance d'espace clos",
+        "Formation en identification des dangers",
+        "Formation en procédures de sauvetage",
+        "Compétences en surveillance atmosphérique",
+        "Formation en autorité d'évacuation"
+      ],
+      entrant: [
+        "Formation générale en espace clos selon NL OHS",
+        "Formation sur l'équipement de protection",
+        "Formation en procédures de travail sécuritaires",
+        "Formation en communication d'urgence",
+        "Formation en reconnaissance des risques",
+        "Âge minimum et aptitudes physiques confirmés"
+      ],
+      annual_recertification: true,
+      practical_training_required: true
     }
   };
 
-  return requirements[province] || requirements.QC;
+  return requirements[province];
 };
 
 // =================== COMPOSANT SIGNATURE LÉGALE ===================
@@ -1064,7 +1189,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
       default: return '#6b7280';
     }
   };
-// =================== RENDU JSX - SECTION 2B ===================
+  // =================== RENDU JSX - SECTION 2B ===================
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
       {/* Modal de signature légale pour surveillant */}
@@ -2330,4 +2455,4 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   );
 };
 
-export default EntryRegistry;  
+export default EntryRegistry;
