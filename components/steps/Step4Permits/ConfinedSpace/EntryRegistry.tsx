@@ -1049,7 +1049,6 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
         </div>
       </div>
 
-      {/* Cette partie continue dans la section 2 avec les sections Surveillant et Entrants... */}
       // =================== SUITE DU COMPOSANT ENTRY REGISTRY - SECTION 2 COMPLÈTE ===================
 // Cette section continue directement après la Section 1
 
@@ -1427,8 +1426,6 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     }
   };
 
-  // =================== CONTINUATION DU RENDU JSX - SECTIONS PRINCIPALES ===================
-  
       {/* Section Surveillant avec signature légale */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
