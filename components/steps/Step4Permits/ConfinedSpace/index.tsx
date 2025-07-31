@@ -147,7 +147,7 @@ interface AtmosphericReading {
   location?: string;
   status: 'safe' | 'warning' | 'danger';
   level: 'top' | 'bottom' | 'middle';
-  taken_by?: string;
+  taken_by: string;
 }
 
 interface PermitData {
