@@ -14,6 +14,7 @@ import SiteInformation from './SiteInformation';
 import RescuePlan from './RescuePlan';
 import AtmosphericTesting from './AtmosphericTesting';
 import EntryRegistry from './EntryRegistry';
+import ConfinedSpace from './index';
 
 // =================== DÉTECTION MOBILE ET STYLES COMPLETS ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -321,7 +322,196 @@ const PROVINCIAL_REGULATIONS: Record<ProvinceCode, any> = {
     }
   }
 };
+// =================== CONFIGURATION DES MODULES DE PERMIS ===================
+const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
+  const baseModules = [
+    {
+      id: 'confined-space',
+      name: language === 'en' ? 'Confined Space Entry Permit' : 'Permis d\'Espace Clos',
+      description: language === 'en' 
+        ? 'Confined space entry permit with atmospheric testing and continuous monitoring'
+        : 'Permis d\'entrée en espace clos avec tests atmosphériques et surveillance continue',
+      icon: Home,
+      iconEmoji: '🏠',
+      color: '#dc2626',
+      riskLevel: 'critical' as const,
+      estimatedTime: 45,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en' 
+        ? ['OHSA Confined Space', 'CSA Z1006', 'Provincial Regs']
+        : ['RSST Art. 302-317', 'CSA Z1006', 'CNESST'],
+      features: language === 'en' ? [
+        '4-gas atmospheric testing',
+        'Real-time Bluetooth monitoring',
+        'Automatic regulatory timer',
+        'Timestamped electronic signatures',
+        'Geolocated photos',
+        'Integrated rescue plan'
+      ] : [
+        'Tests atmosphériques 4-gaz',
+        'Surveillance Bluetooth temps réel',
+        'Timer réglementaire automatique',
+        'Signatures électroniques horodatées',
+        'Photos géolocalisées',
+        'Plan de sauvetage intégré'
+      ],
+      component: ConfinedSpace  // ✅ CRUCIAL : ConfinedSpace assigné ici
+    },
+    {
+      id: 'electrical-work',
+      name: language === 'en' ? 'Electrical Work Permit' : 'Permis Travaux Électriques',
+      description: language === 'en'
+        ? 'Electrical work permit with LOTO lockout and VAT verification'
+        : 'Permis pour travaux électriques avec consignation LOTO et vérification VAT',
+      icon: Zap,
+      iconEmoji: '⚡',
+      color: '#dc2626',
+      riskLevel: 'critical' as const,
+      estimatedTime: 35,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['CSA Z462', 'NFPA 70E', 'Provincial Electrical Code']
+        : ['CSA Z462', 'RSST Art. 185', 'NFPA 70E'],
+      features: language === 'en' ? [
+        'Complete LOTO lockout',
+        'Voltage absence testing (VAT)',
+        'Arc flash incident energy calculation',
+        'Required arc-flash PPE',
+        'Automatic safety distances'
+      ] : [
+        'Consignation LOTO complète',
+        'Vérification absence tension (VAT)',
+        'Calcul énergie incidente arc',
+        'EPI arc-flash requis',
+        'Distances sécurité automatiques'
+      ]
+    },
+    {
+      id: 'excavation',
+      name: language === 'en' ? 'Excavation Permit' : 'Permis d\'Excavation',
+      description: language === 'en'
+        ? 'Excavation work permit with soil analysis and slope protection'
+        : 'Permis pour travaux d\'excavation avec analyse sol et protection talus',
+      icon: Construction,
+      iconEmoji: '🏗️',
+      color: '#d97706',
+      riskLevel: 'high' as const,
+      estimatedTime: 40,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['OHSA Excavation', 'CSA Z271', 'Call Before You Dig']
+        : ['RSST Art. 3.20', 'CSA Z271', 'Info-Excavation'],
+      features: language === 'en' ? [
+        'Public utilities location',
+        'Soil stability analysis',
+        'Slope protection calculation',
+        'Emergency evacuation plan',
+        'Continuous monitoring'
+      ] : [
+        'Localisation services publics',
+        'Analyse stabilité du sol',
+        'Calcul protection talus',
+        'Plan évacuation d\'urgence',
+        'Surveillance continue'
+      ]
+    },
+    {
+      id: 'height-work',
+      name: language === 'en' ? 'Work at Height Permit' : 'Permis Travail en Hauteur',
+      description: language === 'en'
+        ? 'Work at height permit with fall protection and rescue plan'
+        : 'Permis pour travaux en hauteur avec protection antichute et plan sauvetage',
+      icon: Building,
+      iconEmoji: '🏢',
+      color: '#7c3aed',
+      riskLevel: 'critical' as const,
+      estimatedTime: 50,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['OHSA Fall Protection', 'CSA Z259', 'Height Safety Regs']
+        : ['RSST Art. 347', 'CSA Z259', 'CNESST Hauteur'],
+      features: language === 'en' ? [
+        'Complete fall protection',
+        'Certified anchor points',
+        'Height rescue plan',
+        'Weather verification',
+        'On-site rescue team'
+      ] : [
+        'Protection antichute complète',
+        'Points ancrage certifiés',
+        'Plan sauvetage en hauteur',
+        'Vérification météo',
+        'Équipe sauvetage sur site'
+      ]
+    },
+    {
+      id: 'hot-work',
+      name: language === 'en' ? 'Hot Work Permit' : 'Permis Travail à Chaud',
+      description: language === 'en'
+        ? 'Hot work permit for welding/cutting with fire watch and post-work timer'
+        : 'Permis pour soudage/coupage avec surveillance incendie et timer post-travaux',
+      icon: Flame,
+      iconEmoji: '🔥',
+      color: '#ea580c',
+      riskLevel: 'critical' as const,
+      estimatedTime: 30,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['NFPA 51B', 'Fire Prevention Code', 'Provincial Fire Regs']
+        : ['NFPA 51B', 'RSST Art. 323', 'Code prévention incendie'],
+      features: language === 'en' ? [
+        '60min post-work fire watch',
+        'Automatic regulatory timer',
+        'Specialized fire extinguishers required',
+        'Combustible clearance zone',
+        'Qualified fire guard'
+      ] : [
+        'Surveillance incendie 60min post-travaux',
+        'Timer automatique réglementaire',
+        'Extincteurs spécialisés requis',
+        'Zone dégagement combustibles',
+        'Garde-feu qualifié'
+      ]
+    },
+    {
+      id: 'lifting',
+      name: language === 'en' ? 'Lifting Operations Permit' : 'Permis Opérations Levage',
+      description: language === 'en'
+        ? 'Lifting operations permit with load calculations and equipment inspection'
+        : 'Permis pour opérations de levage avec calcul charges et inspection équipements',
+      icon: Wrench,
+      iconEmoji: '🏗️',
+      color: '#059669',
+      riskLevel: 'high' as const,
+      estimatedTime: 55,
+      status: 'available' as const,
+      completionRate: 0,
+      regulations: language === 'en'
+        ? ['ASME B30', 'CSA B335', 'Provincial Lifting Regs']
+        : ['ASME B30', 'CSA B335', 'RSST Art. 260-290'],
+      features: language === 'en' ? [
+        'Safe working load calculation',
+        'Pre-use inspection',
+        'Detailed lifting plan',
+        'Certified signaler required',
+        'Automatic safety perimeter'
+      ] : [
+        'Calcul charge de travail sécuritaire',
+        'Inspection pré-utilisation',
+        'Plan de levage détaillé',
+        'Signaleur certifié requis',
+        'Périmètre sécurité automatique'
+      ]
+    }
+  ];
 
+  return baseModules;
+};
 // =================== TRADUCTIONS COMPLÈTES ===================
 const getTexts = (language: 'fr' | 'en') => ({
   fr: {
