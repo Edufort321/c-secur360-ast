@@ -8,6 +8,7 @@ import {
   Camera, MapPin, Bluetooth, Battery, Signal, Play, Pause, Mic, Upload, Download, Gauge,
   ArrowRight
 } from 'lucide-react';
+import ConfinedSpace from './ConfinedSpace/index';
 
 // =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
