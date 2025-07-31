@@ -578,7 +578,7 @@ const LegalSignatureForm = ({
           <input
             type="date"
             value={personData.formation_details?.formation_expiry || ''}
-            onChange={(e) => setPersonData(prev => ({
+            onChange={(e) => setPersonData((prev: any) => ({
               ...prev,
               formation_details: {
                 ...prev.formation_details,
@@ -612,7 +612,7 @@ const LegalSignatureForm = ({
                   type="checkbox"
                   id={item.key}
                   checked={personData.formation_details?.[item.key] || false}
-                  onChange={(e) => setPersonData(prev => ({
+                  onChange={(e) => setPersonData((prev: any) => ({
                     ...prev,
                     formation_details: {
                       ...prev.formation_details,
@@ -639,7 +639,7 @@ const LegalSignatureForm = ({
             type="text"
             placeholder="Tapez votre nom complet pour signer"
             value={personData.signature || ''}
-            onChange={(e) => setPersonData(prev => ({ ...prev, signature: e.target.value }))}
+            onChange={(e) => setPersonData((prev: any) => ({ ...prev, signature: e.target.value }))}
             style={styles.input}
             required
           />
@@ -659,7 +659,7 @@ const LegalSignatureForm = ({
             type="checkbox"
             id="training_confirmed"
             checked={personData.training_confirmed || false}
-            onChange={(e) => setPersonData(prev => ({ ...prev, training_confirmed: e.target.checked }))}
+            onChange={(e) => setPersonData((prev: any) => ({ ...prev, training_confirmed: e.target.checked }))}
             style={{ width: '24px', height: '24px', accentColor: '#10b981' }}
             required
           />
