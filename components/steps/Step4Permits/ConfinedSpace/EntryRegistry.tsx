@@ -1276,8 +1276,8 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
 
   // =================== FONCTIONS ÉQUIPEMENT AMÉLIORÉES ===================
   const selectPresetEquipment = (categoryKey: string, itemName: string) => {
-    const category = EQUIPMENT_CATEGORIES[categoryKey];
-    const item = category.items.find(i => i.name === itemName);
+    const category = (EQUIPMENT_CATEGORIES as any)[categoryKey];
+    const item = category.items.find((i: any) => i.name === itemName);
     
     if (item) {
       setNewEquipment(prev => ({
@@ -2724,7 +2724,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
             style={styles.input}
           >
             <option value="">-- Sélectionner un équipement ou saisir manuellement --</option>
-            {EQUIPMENT_CATEGORIES[selectedCategory].items.map((item, index) => (
+            {(EQUIPMENT_CATEGORIES as any)[selectedCategory].items.map((item: any, index: number) => (
               <option key={index} value={item.name}>
                 {item.name}
                 {item.calibration_required && ' 📅'}
