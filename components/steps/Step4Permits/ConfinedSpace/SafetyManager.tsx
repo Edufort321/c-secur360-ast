@@ -86,7 +86,7 @@ export const useSafetyManager = () => {
     }
   };
 
-  // Notification browser avec son
+  // Notification browser avec son (CORRECTION: suppression de la propriété vibrate)
   const sendNotification = (title: string, body: string, type: keyof typeof ALERT_SOUNDS) => {
     playAlert(type, type === 'evacuation');
     
@@ -96,8 +96,8 @@ export const useSafetyManager = () => {
           body,
           icon: '/c-secur360-logo.png',
           tag: `safety-alert-${type}`,
-          requireInteraction: type === 'evacuation',
-          vibrate: type === 'evacuation' ? [200, 100, 200] : [100]
+          requireInteraction: type === 'evacuation'
+          // vibrate propriété supprimée car non supportée par TypeScript
         });
         
         if (type === 'evacuation') {
