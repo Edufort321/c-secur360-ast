@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  UserCheck, Eye, LogIn, LogOut, Shield, Plus, Trash2, Timer, 
-  Users, PenTool, CheckCircle, X, Edit3, Copy, Wrench, Clock,
-  History, UserPlus, UserMinus, AlertTriangle, FileText, PenTool as Signature
+  Wind, Activity, Shield, Plus, AlertTriangle, FileText, Thermometer,
+  Volume2, Gauge, Play, Pause, RotateCcw, CheckCircle, XCircle, Clock
 } from 'lucide-react';
 
 // =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
@@ -82,21 +81,10 @@ const styles = {
     color: 'white',
     border: '1px solid #6b7280'
   },
-  buttonWarning: {
-    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-    color: 'white',
-    boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
-  },
   grid2: {
     display: 'grid',
     gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
     gap: isMobile ? '8px' : '20px',
-    width: '100%'
-  },
-  grid3: {
-    display: 'grid',
-    gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-    gap: isMobile ? '8px' : '16px',
     width: '100%'
   },
   grid4: {
@@ -121,16 +109,26 @@ const styles = {
     alignItems: 'center',
     gap: isMobile ? '6px' : '12px'
   },
-  signatureSection: {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+  readingCard: {
+    padding: isMobile ? '14px' : '18px',
     borderRadius: '12px',
-    padding: isMobile ? '16px' : '20px',
-    border: '2px solid rgba(59, 130, 246, 0.3)',
-    marginTop: '20px'
+    borderLeft: '4px solid',
+    transition: 'all 0.2s ease'
   },
-  signatureConfirmed: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    border: '2px solid rgba(16, 185, 129, 0.3)'
+  readingSafe: {
+    backgroundColor: 'rgba(5, 150, 105, 0.15)',
+    borderLeftColor: '#10b981',
+    border: '1px solid rgba(16, 185, 129, 0.3)'
+  },
+  readingWarning: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderLeftColor: '#f59e0b',
+    border: '1px solid rgba(245, 158, 11, 0.3)'
+  },
+  readingDanger: {
+    backgroundColor: 'rgba(220, 38, 38, 0.15)',
+    borderLeftColor: '#ef4444',
+    border: '1px solid rgba(239, 68, 68, 0.3)'
   },
   emergencyCard: {
     backgroundColor: 'rgba(220, 38, 38, 0.2)',
@@ -145,6 +143,68 @@ const styles = {
 // =================== TYPES ET INTERFACES ===================
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 
+interface AtmosphericLimits {
+  oxygen: {
+    min: number;
+    max: number;
+    critical_low: number;
+    critical_high: number;
+  };
+  lel: {
+    max: number;
+    critical: number;
+  };
+  h2s: {
+    max: number;
+    critical: number;
+  };
+  co: {
+    max: number;
+    critical: number;
+  };
+}
+
+interface AtmosphericReading {
+  id: string;
+  timestamp: string;
+  level: 'top' | 'middle' | 'bottom';
+  oxygen: number;
+  lel: number;
+  h2s: number;
+  co: number;
+  temperature?: number;
+  humidity?: number;
+  status: 'safe' | 'warning' | 'danger';
+  device_id?: string;
+  taken_by: string;
+  notes?: string;
+  retest_required?: boolean;
+  timer_remaining?: number;
+  timer_active?: boolean;
+  next_test_due?: string;
+}
+
+// Session de test pour un niveau spécifique
+interface AtmosphericSession {
+  id: string;
+  timestamp: string;
+  reading: AtmosphericReading;
+  timer_remaining?: number;
+  timer_active: boolean;
+  status: 'active' | 'expired' | 'completed';
+  next_test_due?: string;
+}
+
+// Données groupées par niveau
+interface LevelData {
+  level: 'top' | 'middle' | 'bottom';
+  sessions: AtmosphericSession[];
+  current_timer?: number;
+  needs_retest: boolean;
+  last_reading?: AtmosphericReading;
+  timer_active: boolean;
+}
+
 interface RegulationData {
   name: string;
   authority: string;
@@ -155,6 +215,7 @@ interface RegulationData {
     frequency_minutes: number;
     continuous_monitoring_required?: boolean;
     documentation_required?: boolean;
+    limits: AtmosphericLimits;
   };
   personnel_requirements: {
     min_age: number;
@@ -166,3226 +227,794 @@ interface RegulationData {
   };
 }
 
-interface LegalSignature {
-  person_name: string;
-  signature_text: string;
-  timestamp: string;
-  ip_address?: string;
-  legal_declaration: string;
-  training_confirmed: boolean;
-  formation_details: {
-    espace_clos_formation: boolean;
-    formation_expiry?: string;
-    csaz1006_compliant: boolean;
-    practical_training: boolean;
-    rescue_procedures: boolean;
-    emergency_response: boolean;
-  };
-}
-
-interface SurveillantShift {
-  id: string;
-  name: string;
-  company: string;
-  start_time: string;
-  end_time?: string;
-  duration?: number;
-  status: 'active' | 'completed';
-  legal_signature: LegalSignature;
-  forced_evacuations: Array<{
-    timestamp: string;
-    reason: string;
-    evacuated_personnel: string[];
-  }>;
-}
-
-interface EntrySession {
-  id: string;
-  entry_time: string;
-  exit_time?: string;
-  duration?: number;
-  status: 'inside' | 'completed';
-  forced_exit?: {
-    timestamp: string;
-    reason: string;
-    new_surveillant: string;
-  };
-}
-
-interface Entrant {
-  id: string;
-  name: string;
-  company: string;
-  total_entries: number;
-  total_duration: number;
-  current_status: 'outside' | 'inside';
-  entry_sessions: EntrySession[];
-  added_time: string;
-  legal_signature: LegalSignature;
-}
-
-interface EquipmentSession {
-  id: string;
-  entry_time: string;
-  exit_time?: string;
-  duration?: number;
-  status: 'in_use' | 'completed';
-  used_by?: string;
-  location?: string;
-  forced_return?: {
-    timestamp: string;
-    reason: string;
-    returned_by: string;
-  };
-}
-
-interface Equipment {
-  id: string;
-  name: string;
-  serial_number: string;
-  condition: 'good' | 'fair' | 'poor';
-  current_status: 'available' | 'in_use' | 'maintenance';
-  total_uses: number;
-  total_duration: number;
-  usage_sessions: EquipmentSession[];
-  added_time: string;
-  calibration_date?: string;
-  next_calibration?: string;
-  rescue_plan_required: boolean;
-  atmospheric_testing_required: boolean;
-  assigned_to?: string;
-  location?: string;
-  notes?: string;
-}
-
-interface PermitValidation {
-  team_validation: {
-    validated: boolean;
-    validated_by: string;
-    validation_time?: string;
-    validation_signature?: string;
-  };
-  final_approval: {
-    approved: boolean;
-    approved_by: string;
-    approval_time?: string;
-    approval_signature?: string;
-  };
-  compliance_check: {
-    atmospheric_testing_complete: boolean;
-    rescue_equipment_present: boolean;
-    communication_equipment_present: boolean;
-    ventilation_equipment_present: boolean;
-    emergency_procedures_reviewed: boolean;
-    personnel_training_verified: boolean;
-    equipment_calibration_current: boolean;
-    rescue_plan_accessible: boolean;
-    all_requirements_met: boolean;
-    checked_by?: string;
-    check_time?: string;
-  };
-}
-
-interface EntryRegistryProps {
+interface AtmosphericTestingProps {
   permitData: any;
   updatePermitData: (updates: any) => void;
   selectedProvince: ProvinceCode;
   PROVINCIAL_REGULATIONS: Record<ProvinceCode, RegulationData>;
+  atmosphericReadings: AtmosphericReading[];
+  setAtmosphericReadings: (readings: AtmosphericReading[] | ((prev: AtmosphericReading[]) => AtmosphericReading[])) => void;
   isMobile: boolean;
   language: 'fr' | 'en';
   styles: any;
   updateParentData: (section: string, data: any) => void;
-  atmosphericReadings?: any[];
-  setAtmosphericReadings?: (readings: any[] | ((prev: any[]) => any[])) => void;
-  retestTimer?: number;
-  retestLevel?: string;
-  personnelEvacuation?: () => void;
-  safetyAlerts?: any[];
-  activeSafetyTimers?: any[];
+  // Nouvelles props pour communication avec EntryRegistry
+  personnelStatus?: {
+    totalPersonnel: number;
+    personnelInside: number;
+    surveillantActive: boolean;
+  };
+  onRetestRequired?: (level: string, timeRemaining: number) => void;
+  onEmergencyEvacuation?: (level: string, reason: string) => void;
+  onSafetyAlert?: (alert: any) => void;
 }
+// AtmosphericTesting.tsx - Section 2
 
-// =================== EXIGENCES DE FORMATION PAR PROVINCE ===================
-const getTrainingRequirements = (province: ProvinceCode) => {
-  const requirements: Record<ProvinceCode, {
-    surveillant: string[];
-    entrant: string[];
-    annual_recertification: boolean;
-    practical_training_required: boolean;
-  }> = {
-    QC: {
-      surveillant: [
-        "Formation en espace clos selon CSA Z1006",
-        "Formation en surveillance d'espace clos par la CNESST", 
-        "Formation en procédures d'urgence et de sauvetage",
-        "Formation en communication bidirectionnelle",
-        "Compétences en identification des dangers atmosphériques",
-        "Autorité d'ordonner l'évacuation immédiate"
-      ],
-      entrant: [
-        "Formation générale en espace clos selon RSST Art. 302-317",
-        "Formation sur l'utilisation des EPI requis",
-        "Formation sur les procédures d'entrée/sortie", 
-        "Formation sur les systèmes de communication",
-        "Formation en reconnaissance des dangers",
-        "Âge minimum 18 ans confirmé"
-      ],
-      annual_recertification: true,
-      practical_training_required: true
-    },
-    ON: {
-      surveillant: [
-        "Formation adéquate selon le Règlement concernant les espaces clos",
-        "Connaissances en identification et évaluation des risques",
-        "Formation sur l'équipement de ventilation et de surveillance",
-        "Formation en procédures de sauvetage et premiers soins",
-        "Compétences en communication d'urgence",
-        "Formation pratique obligatoire"
-      ],
-      entrant: [
-        "Formation sur les pratiques de travail sécuritaires",
-        "Formation sur l'identification des risques",
-        "Formation sur l'équipement de protection individuelle",
-        "Formation sur les méthodes d'entrée/sortie",
-        "Formation sur les procédures d'urgence",
-        "Formation pratique avec équipement de sécurité"
-      ],
-      annual_recertification: true,
-      practical_training_required: true
-    },
-    BC: {
-      surveillant: [
-        "Formation conforme aux exigences de WorkSafeBC",
-        "Certification en surveillance d'espace clos",
-        "Formation en procédures d'urgence et de sauvetage",
-        "Formation sur l'utilisation des équipements de surveillance",
-        "Compétences en évaluation des risques atmosphériques",
-        "Formation en communication d'urgence"
-      ],
-      entrant: [
-        "Formation générale en espace clos selon WorkSafeBC",
-        "Formation sur l'utilisation sécuritaire des équipements",
-        "Formation en reconnaissance des dangers",
-        "Formation sur les procédures de travail",
-        "Formation en procédures d'urgence",
-        "Certification valide en sécurité au travail"
-      ],
-      annual_recertification: true,
-      practical_training_required: true
-    },
-    AB: {
-      surveillant: [
-        "Formation selon Alberta Occupational Health and Safety",
-        "Certification en surveillance d'espace clos",
-        "Formation en identification des dangers",
-        "Formation en procédures de sauvetage", 
-        "Compétences en surveillance atmosphérique",
-        "Formation en autorité d'évacuation"
-      ],
-      entrant: [
-        "Formation générale en espace clos selon Alberta OHS",
-        "Formation sur l'équipement de protection",
-        "Formation en procédures de travail sécuritaires",
-        "Formation en communication d'urgence",
-        "Formation en reconnaissance des risques",
-        "Âge minimum et aptitudes physiques confirmés"
-      ],
-      annual_recertification: true,
-      practical_training_required: true
-    },
-    SK: {
-      surveillant: [
-        "Formation selon Saskatchewan OHS",
-        "Certification en surveillance d'espace clos",
-        "Formation en identification des dangers",
-        "Formation en procédures de sauvetage",
-        "Compétences en surveillance atmosphérique",
-        "Formation en autorité d'évacuation"
-      ],
-      entrant: [
-        "Formation générale en espace clos selon Saskatchewan OHS",
-        "Formation sur l'équipement de protection",
-        "Formation en procédures de travail sécuritaires",
-        "Formation en communication d'urgence",
-        "Formation en reconnaissance des risques",
-        "Âge minimum et aptitudes physiques confirmés"
-      ],
-      annual_recertification: true,
-      practical_training_required: true
-    },
-    MB: {
-      surveillant: [
-        "Formation selon Manitoba Workplace Safety & Health",
-        "Certification en surveillance d'espace clos",
-        "Formation en identification des dangers",
-        "Formation en procédures de sauvetage",
-        "Compétences en surveillance atmosphérique",
-        "Formation en autorité d'évacuation"
-      ],
-      entrant: [
-        "Formation générale en espace clos selon Manitoba WSH",
-        "Formation sur l'équipement de protection",
-        "Formation en procédures de travail sécuritaires",
-        "Formation en communication d'urgence",
-        "Formation en reconnaissance des risques",
-        "Âge minimum et aptitudes physiques confirmés"
-      ],
-      annual_recertification: true,
-      practical_training_required: true
-    },
-    NB: {
-      surveillant: [
-        "Formation selon WorkSafeNB",
-        "Certification en surveillance d'espace clos",
-        "Formation en identification des dangers",
-        "Formation en procédures de sauvetage",
-        "Compétences en surveillance atmosphérique",
-        "Formation en autorité d'évacuation"
-      ],
-      entrant: [
-        "Formation générale en espace clos selon WorkSafeNB",
-        "Formation sur l'équipement de protection",
-        "Formation en procédures de travail sécuritaires",
-        "Formation en communication d'urgence",
-        "Formation en reconnaissance des risques",
-        "Âge minimum et aptitudes physiques confirmés"
-      ],
-      annual_recertification: true,
-      practical_training_required: true
-    },
-    NS: {
-      surveillant: [
-        "Formation selon Nova Scotia Labour Standards",
-        "Certification en surveillance d'espace clos",
-        "Formation en identification des dangers",
-        "Formation en procédures de sauvetage",
-        "Compétences en surveillance atmosphérique",
-        "Formation en autorité d'évacuation"
-      ],
-      entrant: [
-        "Formation générale en espace clos selon NS Labour",
-        "Formation sur l'équipement de protection",
-        "Formation en procédures de travail sécuritaires",
-        "Formation en communication d'urgence",
-        "Formation en reconnaissance des risques",
-        "Âge minimum et aptitudes physiques confirmés"
-      ],
-      annual_recertification: true,
-      practical_training_required: true
-    },
-    PE: {
-      surveillant: [
-        "Formation selon PEI Occupational Health & Safety",
-        "Certification en surveillance d'espace clos",
-        "Formation en identification des dangers",
-        "Formation en procédures de sauvetage",
-        "Compétences en surveillance atmosphérique",
-        "Formation en autorité d'évacuation"
-      ],
-      entrant: [
-        "Formation générale en espace clos selon PEI OHS",
-        "Formation sur l'équipement de protection",
-        "Formation en procédures de travail sécuritaires",
-        "Formation en communication d'urgence",
-        "Formation en reconnaissance des risques",
-        "Âge minimum et aptitudes physiques confirmés"
-      ],
-      annual_recertification: true,
-      practical_training_required: true
-    },
-    NL: {
-      surveillant: [
-        "Formation selon Newfoundland & Labrador OHS",
-        "Certification en surveillance d'espace clos",
-        "Formation en identification des dangers",
-        "Formation en procédures de sauvetage",
-        "Compétences en surveillance atmosphérique",
-        "Formation en autorité d'évacuation"
-      ],
-      entrant: [
-        "Formation générale en espace clos selon NL OHS",
-        "Formation sur l'équipement de protection",
-        "Formation en procédures de travail sécuritaires",
-        "Formation en communication d'urgence",
-        "Formation en reconnaissance des risques",
-        "Âge minimum et aptitudes physiques confirmés"
-      ],
-      annual_recertification: true,
-      practical_training_required: true
-    }
-  };
-
-  return requirements[province];
-};
-
-// =================== COMPOSANT SIGNATURE LÉGALE ===================
-const LegalSignatureForm = ({ 
-  role, 
-  personData, 
-  setPersonData, 
-  onConfirm, 
-  onCancel,
-  selectedProvince,
-  PROVINCIAL_REGULATIONS 
-}: { 
-  role: 'surveillant' | 'entrant';
-  personData: any;
-  setPersonData: (data: any) => void;
-  onConfirm: () => void;
-  onCancel: () => void;
-  selectedProvince: ProvinceCode;
-  PROVINCIAL_REGULATIONS: Record<ProvinceCode, RegulationData>;
+const AtmosphericTesting: React.FC<AtmosphericTestingProps> = ({
+  data,
+  onChange,
+  regulations,
+  safetyManager
 }) => {
-  const trainingRequirements = getTrainingRequirements(selectedProvince);
-  const requirements = role === 'surveillant' ? trainingRequirements.surveillant : trainingRequirements.entrant;
-
-  return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '20px'
-    }}>
-      <div style={{
-        backgroundColor: '#1f2937',
-        borderRadius: '16px',
-        padding: isMobile ? '20px' : '32px',
-        maxWidth: '600px',
-        width: '100%',
-        maxHeight: '80vh',
-        overflowY: 'auto',
-        border: '2px solid #3b82f6'
-      }}>
-        <h3 style={{
-          fontSize: isMobile ? '18px' : '22px',
-          fontWeight: '700',
-          color: 'white',
-          marginBottom: '20px',
-          textAlign: 'center'
-        }}>
-          📝 Signature Légale - {role === 'surveillant' ? 'Surveillant' : 'Entrant'}
-        </h3>
-
-        <div style={{ 
-          backgroundColor: 'rgba(220, 38, 38, 0.1)',
-          border: '2px solid rgba(220, 38, 38, 0.3)',
-          borderRadius: '12px',
-          padding: '16px',
-          marginBottom: '20px'
-        }}>
-          <h4 style={{ color: '#fca5a5', fontWeight: '600', marginBottom: '12px' }}>
-            ⚖️ Déclaration Légale - {PROVINCIAL_REGULATIONS[selectedProvince].authority}
-          </h4>
-          <p style={{ color: '#fecaca', fontSize: '14px', lineHeight: 1.6 }}>
-            En signant ce document, je certifie que j'ai reçu une formation adéquate selon les exigences de {PROVINCIAL_REGULATIONS[selectedProvince].authority} pour travailler comme {role} en espace clos. Je confirme posséder les compétences requises selon les normes en vigueur et m'engage à respecter toutes les procédures de sécurité.
-          </p>
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <h4 style={{ color: 'white', fontWeight: '600', marginBottom: '12px' }}>
-            📚 Formations Requises ({selectedProvince}):
-          </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {requirements.map((req, index) => (
-              <div key={index} style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px',
-                fontSize: '13px',
-                color: '#d1d5db'
-              }}>
-                <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />
-                {req}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={styles.label}>Date d'expiration de la formation</label>
-          <input
-            type="date"
-            value={personData.formation_details?.formation_expiry || ''}
-            onChange={(e) => setPersonData((prev: any) => ({
-              ...prev,
-              formation_details: {
-                ...prev.formation_details,
-                formation_expiry: e.target.value
-              }
-            }))}
-            style={styles.input}
-            required
-          />
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {[
-              { key: 'espace_clos_formation', label: 'Formation en espace clos complétée' },
-              { key: 'csaz1006_compliant', label: 'Formation conforme CSA Z1006' },
-              { key: 'practical_training', label: 'Formation pratique effectuée' },
-              { key: 'rescue_procedures', label: 'Formation en procédures de sauvetage' },
-              { key: 'emergency_response', label: 'Formation en réponse d\'urgence' }
-            ].map((item) => (
-              <div key={item.key} style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '12px',
-                padding: '12px',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                borderRadius: '8px',
-                border: '1px solid rgba(59, 130, 246, 0.3)'
-              }}>
-                <input
-                  type="checkbox"
-                  id={item.key}
-                  checked={personData.formation_details?.[item.key] || false}
-                  onChange={(e) => setPersonData((prev: any) => ({
-                    ...prev,
-                    formation_details: {
-                      ...prev.formation_details,
-                      [item.key]: e.target.checked
-                    }
-                  }))}
-                  style={{ width: '20px', height: '20px', accentColor: '#3b82f6' }}
-                  required
-                />
-                <label 
-                  htmlFor={item.key}
-                  style={{ color: '#93c5fd', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}
-                >
-                  {item.label} *
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={styles.label}>Signature électronique *</label>
-          <input
-            type="text"
-            placeholder="Tapez votre nom complet pour signer"
-            value={personData.signature || ''}
-            onChange={(e) => setPersonData((prev: any) => ({ ...prev, signature: e.target.value }))}
-            style={styles.input}
-            required
-          />
-        </div>
-
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '12px',
-          padding: '16px',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
-          borderRadius: '8px',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          marginBottom: '20px'
-        }}>
-          <input
-            type="checkbox"
-            id="training_confirmed"
-            checked={personData.training_confirmed || false}
-            onChange={(e) => setPersonData((prev: any) => ({ ...prev, training_confirmed: e.target.checked }))}
-            style={{ width: '24px', height: '24px', accentColor: '#10b981' }}
-            required
-          />
-          <label 
-            htmlFor="training_confirmed"
-            style={{ 
-              color: '#86efac', 
-              fontSize: '15px', 
-              fontWeight: '600', 
-              cursor: 'pointer',
-              flex: 1
-            }}
-          >
-            ✅ Je certifie avoir reçu toutes les formations requises et je m'engage légalement à respecter les procédures de sécurité *
-          </label>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={onCancel}
-            style={{
-              ...styles.button,
-              ...styles.buttonSecondary,
-              flex: 1
-            }}
-          >
-            <X style={{ width: '18px', height: '18px' }} />
-            Annuler
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={!personData.signature || !personData.training_confirmed}
-            style={{
-              ...styles.button,
-              ...styles.buttonSuccess,
-              flex: 1,
-              opacity: (!personData.signature || !personData.training_confirmed) ? 0.5 : 1
-            }}
-          >
-            <Signature style={{ width: '18px', height: '18px' }} />
-            Confirmer Signature
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-// =================== COMPOSANT ENTRY REGISTRY - SECTION 2A ===================
-const EntryRegistry: React.FC<EntryRegistryProps> = ({
-  permitData,
-  updatePermitData,
-  selectedProvince,
-  PROVINCIAL_REGULATIONS,
-  isMobile,
-  language,
-  styles: originalStyles,
-  updateParentData,
-  atmosphericReadings = [],
-  setAtmosphericReadings,
-  retestTimer = 0,
-  retestLevel,
-  personnelEvacuation,
-  safetyAlerts = [],
-  activeSafetyTimers = []
-}) => {
-
   // =================== ÉTATS LOCAUX ===================
-  const [surveillantHistory, setSurveillantHistory] = useState<SurveillantShift[]>(permitData.surveillant_history || []);
-  const [entrants, setEntrants] = useState<Entrant[]>(permitData.entrants || []);
-  const [equipment, setEquipment] = useState<Equipment[]>(permitData.equipment || []);
-  const [permitValidation, setPermitValidation] = useState<PermitValidation>(permitData.permit_validation || {
-    team_validation: { validated: false, validated_by: '' },
-    final_approval: { approved: false, approved_by: '' },
-    compliance_check: {
-      atmospheric_testing_complete: false,
-      rescue_equipment_present: false,
-      communication_equipment_present: false,
-      ventilation_equipment_present: false,
-      emergency_procedures_reviewed: false,
-      personnel_training_verified: false,
-      equipment_calibration_current: false,
-      rescue_plan_accessible: false,
-      all_requirements_met: false
-    }
+  const [isMobile, setIsMobile] = useState(false);
+  const [activeLevel, setActiveLevel] = useState(0);
+  const [showAddLevelModal, setShowAddLevelModal] = useState(false);
+  const [newLevelDepth, setNewLevelDepth] = useState('');
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const [currentReading, setCurrentReading] = useState<AtmosphereReading>({
+    oxygen: '',
+    combustible: '',
+    hydrogen_sulfide: '',
+    carbon_monoxide: '',
+    temperature: '',
+    notes: ''
   });
+  const [testTimers, setTestTimers] = useState<{ [key: string]: TestTimer }>({});
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   
-  const [currentSurveillant, setCurrentSurveillant] = useState<SurveillantShift | null>(
-    surveillantHistory.find(s => s.status === 'active') || null
-  );
-  
-  // États pour signature légale
-  const [showSurveillantSignature, setShowSurveillantSignature] = useState(false);
-  const [showEntrantSignature, setShowEntrantSignature] = useState(false);
-  const [currentSigningEntrant, setCurrentSigningEntrant] = useState<string | null>(null);
-  
-  const [newSurveillant, setNewSurveillant] = useState({
-    name: '',
-    company: '',
-    signature: '',
-    training_confirmed: false,
-    formation_details: {
-      espace_clos_formation: false,
-      formation_expiry: '',
-      csaz1006_compliant: false,
-      practical_training: false,
-      rescue_procedures: false,
-      emergency_response: false
-    }
-  });
-  
-  const [newEntrant, setNewEntrant] = useState({
-    name: '',
-    company: '',
-    signature: '',
-    training_confirmed: false,
-    formation_details: {
-      espace_clos_formation: false,
-      formation_expiry: '',
-      csaz1006_compliant: false,
-      practical_training: false,
-      rescue_procedures: false,
-      emergency_response: false
-    }
-  });
-  
-  // =================== ÉQUIPEMENTS PRÉDÉFINIS PAR CATÉGORIE ===================
-  const EQUIPMENT_CATEGORIES = {
-    detection: {
-      name: "Détection et Monitoring",
-      items: [
-        { name: "Détecteur 4 gaz portable", calibration_required: true, rescue_required: false, atmospheric_required: true },
-        { name: "Détecteur d'oxygène", calibration_required: true, rescue_required: false, atmospheric_required: true },
-        { name: "Détecteur de gaz combustibles", calibration_required: true, rescue_required: false, atmospheric_required: true },
-        { name: "Manomètre de pression", calibration_required: true, rescue_required: false, atmospheric_required: false },
-        { name: "Thermomètre infrarouge", calibration_required: true, rescue_required: false, atmospheric_required: false }
-      ]
-    },
-    safety: {
-      name: "Équipement de Sécurité",
-      items: [
-        { name: "Harnais de sécurité", calibration_required: false, rescue_required: true, atmospheric_required: false },
-        { name: "Longe d'assurance", calibration_required: false, rescue_required: true, atmospheric_required: false },
-        { name: "Casque de protection", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Gants de protection", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Chaussures de sécurité", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Lunettes de protection", calibration_required: false, rescue_required: false, atmospheric_required: false }
-      ]
-    },
-    breathing: {
-      name: "Protection Respiratoire",
-      items: [
-        { name: "Appareil respiratoire autonome (ARA)", calibration_required: true, rescue_required: true, atmospheric_required: false },
-        { name: "Masque à cartouche", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Ligne d'air comprimé", calibration_required: true, rescue_required: true, atmospheric_required: false },
-        { name: "Masque complet", calibration_required: false, rescue_required: false, atmospheric_required: false }
-      ]
-    },
-    rescue: {
-      name: "Équipement de Sauvetage",
-      items: [
-        { name: "Treuil de sauvetage", calibration_required: true, rescue_required: true, atmospheric_required: false },
-        { name: "Civière d'évacuation", calibration_required: false, rescue_required: true, atmospheric_required: false },
-        { name: "Corde de sauvetage", calibration_required: false, rescue_required: true, atmospheric_required: false },
-        { name: "Poulie de renvoi", calibration_required: false, rescue_required: true, atmospheric_required: false },
-        { name: "Mousquetons de sécurité", calibration_required: false, rescue_required: true, atmospheric_required: false }
-      ]
-    },
-    communication: {
-      name: "Communication",
-      items: [
-        { name: "Radio bidirectionnelle", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Téléphone d'urgence", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Système d'alarme", calibration_required: true, rescue_required: false, atmospheric_required: false },
-        { name: "Sifflet d'urgence", calibration_required: false, rescue_required: false, atmospheric_required: false }
-      ]
-    },
-    ventilation: {
-      name: "Ventilation",
-      items: [
-        { name: "Ventilateur portable", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Gaine de ventilation", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Extracteur d'air", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Soufflante industrielle", calibration_required: false, rescue_required: false, atmospheric_required: false }
-      ]
-    },
-    lighting: {
-      name: "Éclairage",
-      items: [
-        { name: "Lampe frontale LED", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Projecteur portable", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Éclairage de secours", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Lampe torche antidéflagrante", calibration_required: false, rescue_required: false, atmospheric_required: false }
-      ]
-    },
-    tools: {
-      name: "Outils",
-      items: [
-        { name: "Clés à molette", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Tournevis isolés", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Pince multiprise", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Marteau antidéflagrant", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Niveau à bulle", calibration_required: false, rescue_required: false, atmospheric_required: false }
-      ]
-    },
-    electrical: {
-      name: "Équipement Électrique",
-      items: [
-        { name: "Multimètre", calibration_required: true, rescue_required: false, atmospheric_required: false },
-        { name: "Testeur de tension", calibration_required: true, rescue_required: false, atmospheric_required: false },
-        { name: "Rallonge étanche", calibration_required: false, rescue_required: false, atmospheric_required: false },
-        { name: "Disjoncteur portable", calibration_required: false, rescue_required: false, atmospheric_required: false }
-      ]
-    }
-  };
+  // Refs pour les alarmes sonores
+  const alarmRef = useRef<HTMLAudioElement | null>(null);
+  const evacuationAlarmRef = useRef<HTMLAudioElement | null>(null);
 
-  const [selectedCategory, setSelectedCategory] = useState<string>('detection');
-  const [selectedPresetEquipment, setSelectedPresetEquipment] = useState<string>('');
-
-  const [newEquipment, setNewEquipment] = useState({
-    name: '',
-    serial_number: '',
-    condition: 'good' as 'good' | 'fair' | 'poor',
-    calibration_date: '',
-    next_calibration: '',
-    rescue_plan_required: false,
-    atmospheric_testing_required: false,
-    calibration_required: false,
-    location: ''
-  });
-
-  // =================== FONCTIONS UTILITAIRES ===================
-  const formatDuration = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
-  };
-
-  const formatTime = (isoString: string): string => {
-    return new Date(isoString).toLocaleTimeString('fr-CA', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  };
-
-  const formatTimeRemaining = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const createLegalSignature = (personData: any, role: 'surveillant' | 'entrant'): LegalSignature => {
-    const trainingRequirements = getTrainingRequirements(selectedProvince);
-    const authority = PROVINCIAL_REGULATIONS[selectedProvince].authority;
-    
-    return {
-      person_name: personData.name,
-      signature_text: personData.signature,
-      timestamp: new Date().toISOString(),
-      ip_address: 'LOCAL_SYSTEM',
-      legal_declaration: `Je certifie par la présente que j'ai reçu une formation adéquate selon les exigences de ${authority} pour travailler comme ${role} en espace clos. Je confirme posséder les compétences requises selon les normes en vigueur et m'engage à respecter toutes les procédures de sécurité.`,
-      training_confirmed: personData.training_confirmed,
-      formation_details: personData.formation_details
-    };
-  };
-
-  // Demander à confirmer notifications browser
+  // =================== DÉTECTION MOBILE ===================
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // =================== FONCTIONS SURVEILLANT ===================
-  const startSurveillance = () => {
-    if (!newSurveillant.name || !newSurveillant.company || !newSurveillant.signature) {
-      alert('⚠️ Veuillez remplir tous les champs obligatoires et signer');
-      return;
-    }
-
-    if (!newSurveillant.training_confirmed) {
-      alert('⚠️ Le surveillant doit confirmer sa formation avant de commencer la surveillance');
-      return;
-    }
-
-    if (currentSurveillant) {
-      alert('⚠️ Un surveillant est déjà en service. Terminez sa surveillance avant d\'en commencer une nouvelle.');
-      return;
-    }
-
-    const legalSignature = createLegalSignature(newSurveillant, 'surveillant');
-
-    const surveillant: SurveillantShift = {
-      id: `surveillant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: newSurveillant.name,
-      company: newSurveillant.company,
-      start_time: new Date().toISOString(),
-      status: 'active',
-      legal_signature: legalSignature,
-      forced_evacuations: []
+  // =================== AUDIO CONTEXT ===================
+  useEffect(() => {
+    const initAudio = () => {
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        setAudioContext(ctx);
+      } catch (error) {
+        console.warn('AudioContext not supported:', error);
+      }
     };
 
-    const updatedHistory = [...surveillantHistory, surveillant];
-    setSurveillantHistory(updatedHistory);
-    setCurrentSurveillant(surveillant);
-    updateParentData('surveillant_history', updatedHistory);
-    
-    setNewSurveillant({
-      name: '',
-      company: '',
-      signature: '',
-      training_confirmed: false,
-      formation_details: {
-        espace_clos_formation: false,
-        formation_expiry: '',
-        csaz1006_compliant: false,
-        practical_training: false,
-        rescue_procedures: false,
-        emergency_response: false
+    initAudio();
+    return () => {
+      if (audioContext) {
+        audioContext.close();
       }
-    });
-    setShowSurveillantSignature(false);
+    };
+  }, []);
+
+  // =================== FONCTIONS UTILITAIRES ===================
+  const getRetestInterval = (): number => {
+    const interval = regulations?.testing?.atmosphere?.retest_interval;
+    if (typeof interval === 'string') {
+      return parseInt(interval) * 60; // Convert minutes to seconds
+    }
+    return interval || 1800; // Default 30 minutes
   };
 
-  const endSurveillance = () => {
-    if (!currentSurveillant) return;
+  const generateTimerKey = (levelIndex: number, testIndex: number): string => {
+    return `level_${levelIndex}_test_${testIndex}`;
+  };
 
-    // Forcer la sortie de tous les entrants
-    const personnelInside = entrants.filter(e => e.current_status === 'inside');
-    if (personnelInside.length > 0) {
-      const evacuationRecord = {
-        timestamp: new Date().toISOString(),
-        reason: 'Changement de surveillant - Évacuation obligatoire',
-        evacuated_personnel: personnelInside.map(p => p.name)
-      };
+  const playAlarmSound = (type: 'warning' | 'evacuation' = 'warning') => {
+    if (!audioContext) return;
 
-      // Forcer la sortie avec notification
-      const updatedEntrants = entrants.map(entrant => {
-        if (entrant.current_status === 'inside') {
-          const activeSession = entrant.entry_sessions.find(s => s.status === 'inside');
-          if (activeSession) {
-            const now = new Date();
-            const entryTime = new Date(activeSession.entry_time);
-            const duration = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
+    try {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
 
-            const forcedExitSession = {
-              ...activeSession,
-              exit_time: now.toISOString(),
-              duration,
-              status: 'completed' as const,
-              forced_exit: {
-                timestamp: now.toISOString(),
-                reason: 'Changement de surveillant',
-                new_surveillant: 'En attente'
-              }
-            };
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
 
-            const updatedSessions = entrant.entry_sessions.map(s => 
-              s.id === activeSession.id ? forcedExitSession : s
-            );
+      if (type === 'evacuation') {
+        // Alarme d'évacuation : son plus aigu et plus fort
+        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(1500, audioContext.currentTime + 0.5);
+        gainNode.gain.setValueAtTime(0.7, audioContext.currentTime);
+      } else {
+        // Alarme normale : son standard
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.5);
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      }
 
-            return {
-              ...entrant,
-              current_status: 'outside' as const,
-              total_entries: entrant.total_entries + 1,
-              total_duration: entrant.total_duration + duration,
-              entry_sessions: updatedSessions
-            };
-          }
-        }
-        return entrant;
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+
+      // Répéter l'alarme plusieurs fois pour évacuation
+      if (type === 'evacuation') {
+        setTimeout(() => playAlarmSound('evacuation'), 600);
+        setTimeout(() => playAlarmSound('evacuation'), 1200);
+      }
+    } catch (error) {
+      console.warn('Cannot play alarm sound:', error);
+    }
+  };
+
+  const showNotification = (message: string, type: 'info' | 'warning' | 'error' = 'info') => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(`Test Atmosphérique - ${type.toUpperCase()}`, {
+        body: message,
+        icon: type === 'error' ? '🚨' : type === 'warning' ? '⚠️' : 'ℹ️'
       });
-
-      setEntrants(updatedEntrants);
-      updateParentData('entrants', updatedEntrants);
-
-      // Notification d'alerte
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission === 'granted') {
-          new Notification('🚨 ÉVACUATION FORCÉE - Changement de Surveillant', {
-            body: `${personnelInside.length} personne(s) évacuée(s) automatiquement`,
-            icon: '/c-secur360-logo.png',
-            tag: 'evacuation-alert'
-          });
-        }
-      }
-
-      alert(`🚨 ÉVACUATION FORCÉE: ${personnelInside.length} personne(s) évacuée(s) en raison du changement de surveillant. Un nouveau surveillant doit être en place avant toute nouvelle entrée.`);
     }
+  };
 
-    const now = new Date();
-    const startTime = new Date(currentSurveillant.start_time);
-    const duration = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+  const requestNotificationPermission = () => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  };
 
-    const updatedSurveillant: SurveillantShift = {
-      ...currentSurveillant,
-      end_time: now.toISOString(),
-      duration,
-      status: 'completed',
-      forced_evacuations: personnelInside.length > 0 ? 
-        [...currentSurveillant.forced_evacuations, {
-          timestamp: new Date().toISOString(),
-          reason: 'Changement de surveillant - Évacuation obligatoire',
-          evacuated_personnel: personnelInside.map(p => p.name)
-        }] : currentSurveillant.forced_evacuations
+  // =================== GESTION DES TIMERS ===================
+  const startTestTimer = (levelIndex: number, testIndex: number) => {
+    const timerKey = generateTimerKey(levelIndex, testIndex);
+    const interval = getRetestInterval();
+    
+    const timer: TestTimer = {
+      levelIndex,
+      testIndex,
+      startTime: Date.now(),
+      interval,
+      remaining: interval,
+      isActive: true,
+      hasWarned: false
     };
 
-    const updatedHistory = surveillantHistory.map(s => 
-      s.id === currentSurveillant.id ? updatedSurveillant : s
-    );
+    setTestTimers(prev => ({
+      ...prev,
+      [timerKey]: timer
+    }));
 
-    setSurveillantHistory(updatedHistory);
-    setCurrentSurveillant(null);
-    updateParentData('surveillant_history', updatedHistory);
+    // Démarrer le compte à rebours
+    const countdownInterval = setInterval(() => {
+      setTestTimers(prev => {
+        const currentTimer = prev[timerKey];
+        if (!currentTimer || !currentTimer.isActive) {
+          clearInterval(countdownInterval);
+          return prev;
+        }
+
+        const elapsed = Math.floor((Date.now() - currentTimer.startTime) / 1000);
+        const remaining = Math.max(0, currentTimer.interval - elapsed);
+
+        // Alarme à 1 minute
+        if (remaining <= 60 && !currentTimer.hasWarned) {
+          playAlarmSound('warning');
+          showNotification(`⚠️ Retest requis dans 1 minute pour le niveau ${levelIndex + 1}`, 'warning');
+          currentTimer.hasWarned = true;
+        }
+
+        // Timer expiré - démarrer auto-retest
+        if (remaining <= 0) {
+          clearInterval(countdownInterval);
+          handleAutoRetest(levelIndex);
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [timerKey]: {
+            ...currentTimer,
+            remaining
+          }
+        };
+      });
+    }, 1000);
   };
 
-  const replaceSurveillant = () => {
-    if (!newSurveillant.name || !newSurveillant.company || !newSurveillant.signature) {
-      alert('⚠️ Veuillez remplir tous les champs du nouveau surveillant et signer');
-      return;
-    }
-
-    if (!newSurveillant.training_confirmed) {
-      alert('⚠️ Le nouveau surveillant doit confirmer sa formation');
-      return;
-    }
-
-    if (currentSurveillant) {
-      endSurveillance();
-    }
-
-    setTimeout(() => {
-      startSurveillance();
-    }, 100);
+  const stopTestTimer = (levelIndex: number, testIndex: number) => {
+    const timerKey = generateTimerKey(levelIndex, testIndex);
+    setTestTimers(prev => {
+      const newTimers = { ...prev };
+      if (newTimers[timerKey]) {
+        newTimers[timerKey].isActive = false;
+      }
+      return newTimers;
+    });
   };
 
-  // =================== FONCTIONS ENTRANTS AVEC ALERTES ===================
-  const addEntrant = () => {
-    if (!newEntrant.name || !newEntrant.company || !newEntrant.signature) {
-      alert('⚠️ Veuillez remplir tous les champs obligatoires et signer');
-      return;
+  const handleAutoRetest = (levelIndex: number) => {
+    showNotification(`🔄 Auto-retest démarré pour le niveau ${levelIndex + 1}`, 'warning');
+    playAlarmSound('warning');
+    
+    // Ouvrir automatiquement le modal de test
+    setSelectedLevel(levelIndex);
+    setShowTestModal(true);
+  };
+
+  // =================== VALIDATION DES LECTURES ===================
+  const validateReading = (reading: AtmosphereReading): { isValid: boolean; hasFailures: boolean; failures: string[] } => {
+    const failures: string[] = [];
+    let isValid = true;
+
+    const oxygen = parseFloat(reading.oxygen);
+    const combustible = parseFloat(reading.combustible);
+    const h2s = parseFloat(reading.hydrogen_sulfide);
+    const co = parseFloat(reading.carbon_monoxide);
+
+    // Validation selon les standards OSHA/CSA
+    if (isNaN(oxygen) || oxygen < 19.5 || oxygen > 23.5) {
+      failures.push(`Oxygène: ${reading.oxygen}% (Normal: 19.5-23.5%)`);
+      isValid = false;
     }
 
-    if (!newEntrant.training_confirmed) {
-      alert('⚠️ L\'entrant doit confirmer sa formation avant d\'être ajouté au registre');
-      return;
+    if (isNaN(combustible) || combustible > 10) {
+      failures.push(`Combustible: ${reading.combustible}% LIE (Max: 10%)`);
+      isValid = false;
     }
 
-    const legalSignature = createLegalSignature(newEntrant, 'entrant');
+    if (isNaN(h2s) || h2s > 10) {
+      failures.push(`H₂S: ${reading.hydrogen_sulfide} ppm (Max: 10 ppm)`);
+      isValid = false;
+    }
 
-    const entrant: Entrant = {
-      id: `entrant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: newEntrant.name,
-      company: newEntrant.company,
-      total_entries: 0,
-      total_duration: 0,
-      current_status: 'outside',
-      entry_sessions: [],
-      added_time: new Date().toISOString(),
-      legal_signature: legalSignature
+    if (isNaN(co) || co > 35) {
+      failures.push(`CO: ${reading.carbon_monoxide} ppm (Max: 35 ppm)`);
+      isValid = false;
+    }
+
+    return {
+      isValid,
+      hasFailures: failures.length > 0,
+      failures
+    };
+  };
+
+  // =================== GESTION DES NIVEAUX ===================
+  const addLevel = () => {
+    if (!newLevelDepth.trim()) return;
+
+    const newLevel: TestingLevel = {
+      depth: newLevelDepth.trim(),
+      readings: []
     };
 
-    const updatedEntrants = [...entrants, entrant];
-    setEntrants(updatedEntrants);
-    updateParentData('entrants', updatedEntrants);
-    
-    setNewEntrant({
-      name: '',
-      company: '',
-      signature: '',
-      training_confirmed: false,
-      formation_details: {
-        espace_clos_formation: false,
-        formation_expiry: '',
-        csaz1006_compliant: false,
-        practical_training: false,
-        rescue_procedures: false,
-        emergency_response: false
-      }
-    });
-    setShowEntrantSignature(false);
-    setCurrentSigningEntrant(null);
-  };
-
-  const toggleEntrantEntry = (entrantId: string) => {
-    if (!currentSurveillant) {
-      alert('⚠️ Un surveillant doit être en service avant qu\'un entrant puisse entrer dans l\'espace clos.');
-      return;
-    }
-
-    const entrant = entrants.find(e => e.id === entrantId);
-    if (!entrant) return;
-
-    const updatedEntrants = entrants.map(ent => {
-      if (ent.id === entrantId) {
-        const now = new Date();
-        
-        if (ent.current_status === 'outside') {
-          // Entrée dans l'espace clos
-          const newSession: EntrySession = {
-            id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            entry_time: now.toISOString(),
-            status: 'inside'
-          };
-
-          // Notification d'entrée
-          if (typeof window !== 'undefined' && 'Notification' in window) {
-            if (Notification.permission === 'granted') {
-              new Notification('🟡 ENTRÉE EN ESPACE CLOS', {
-                body: `${ent.name} entre dans l'espace clos - Surveillance active: ${currentSurveillant.name}`,
-                icon: '/c-secur360-logo.png',
-                tag: 'entry-alert'
-              });
-            }
-          }
-
-          return {
-            ...ent,
-            current_status: 'inside' as const,
-            entry_sessions: [...ent.entry_sessions, newSession]
-          };
-        } else {
-          // Sortie de l'espace clos
-          const activeSession = ent.entry_sessions.find(s => s.status === 'inside');
-          if (!activeSession) return ent;
-
-          const entryTime = new Date(activeSession.entry_time);
-          const duration = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
-
-          const completedSession: EntrySession = {
-            ...activeSession,
-            exit_time: now.toISOString(),
-            duration,
-            status: 'completed'
-          };
-
-          const updatedSessions = ent.entry_sessions.map(s => 
-            s.id === activeSession.id ? completedSession : s
-          );
-
-          // Notification de sortie avec alerte
-          if (typeof window !== 'undefined' && 'Notification' in window) {
-            if (Notification.permission === 'granted') {
-              new Notification('🔴 SORTIE D\'ESPACE CLOS - ALERTE', {
-                body: `${ent.name} sort de l'espace clos après ${formatDuration(duration)} - Vérification requise`,
-                icon: '/c-secur360-logo.png',
-                tag: 'exit-alert',
-                requireInteraction: true
-              });
-            }
-          }
-
-          // Alerte sonore dans le navigateur
-          try {
-            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAaBC6Mzd68dSgPOZjW89qDOQgVaLTj7qR');
-            audio.play().catch(() => {}); // Ignore les erreurs d'autoplay
-          } catch (e) {}
-
-          return {
-            ...ent,
-            current_status: 'outside' as const,
-            total_entries: ent.total_entries + 1,
-            total_duration: ent.total_duration + duration,
-            entry_sessions: updatedSessions
-          };
-        }
-      }
-      return ent;
-    });
-
-    setEntrants(updatedEntrants);
-    updateParentData('entrants', updatedEntrants);
-  };
-
-  const deleteEntrant = (entrantId: string) => {
-    const entrant = entrants.find(e => e.id === entrantId);
-    if (entrant?.current_status === 'inside') {
-      alert('⚠️ Impossible de supprimer un entrant qui est actuellement dans l\'espace clos. Effectuez d\'abord sa sortie.');
-      return;
-    }
-
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet entrant du registre?')) {
-      const updatedEntrants = entrants.filter(e => e.id !== entrantId);
-      setEntrants(updatedEntrants);
-      updateParentData('entrants', updatedEntrants);
-    }
-  };
-
-  // =================== FONCTIONS ÉQUIPEMENT AMÉLIORÉES ===================
-  const selectPresetEquipment = (categoryKey: string, itemName: string) => {
-    const category = (EQUIPMENT_CATEGORIES as any)[categoryKey];
-    const item = category.items.find((i: any) => i.name === itemName);
-    
-    if (item) {
-      setNewEquipment(prev => ({
-        ...prev,
-        name: item.name,
-        rescue_plan_required: item.rescue_required,
-        atmospheric_testing_required: item.atmospheric_required,
-        calibration_required: item.calibration_required,
-        // Réinitialiser les autres champs
-        serial_number: '',
-        calibration_date: '',
-        next_calibration: '',
-        location: ''
-      }));
-    }
-  };
-
-  const addEquipmentItem = () => {
-    if (!newEquipment.name || !newEquipment.serial_number) {
-      alert('⚠️ Veuillez remplir tous les champs obligatoires');
-      return;
-    }
-
-    // Vérifier la calibration si requise
-    if (newEquipment.calibration_required && !newEquipment.next_calibration) {
-      alert('⚠️ Ce type d\'équipement nécessite une date de calibration');
-      return;
-    }
-
-    const equipmentItem: Equipment = {
-      id: `equipment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: newEquipment.name,
-      serial_number: newEquipment.serial_number,
-      condition: newEquipment.condition,
-      current_status: 'available',
-      total_uses: 0,
-      total_duration: 0,
-      usage_sessions: [],
-      added_time: new Date().toISOString(),
-      calibration_date: newEquipment.calibration_required ? newEquipment.calibration_date || undefined : undefined,
-      next_calibration: newEquipment.calibration_required ? newEquipment.next_calibration || undefined : undefined,
-      rescue_plan_required: newEquipment.rescue_plan_required,
-      atmospheric_testing_required: newEquipment.atmospheric_testing_required,
-      location: newEquipment.location || undefined
+    const updatedData = {
+      ...data,
+      levels: [...data.levels, newLevel]
     };
 
-    const updatedEquipment = [...equipment, equipmentItem];
-    setEquipment(updatedEquipment);
-    updateParentData('equipment', updatedEquipment);
+    onChange(updatedData);
+    setNewLevelDepth('');
+    setShowAddLevelModal(false);
+    setActiveLevel(updatedData.levels.length - 1);
+  };
+
+  const removeLevel = (index: number) => {
+    if (data.levels.length <= 1) return;
+
+    const updatedData = {
+      ...data,
+      levels: data.levels.filter((_, i) => i !== index)
+    };
+
+    onChange(updatedData);
     
-    setNewEquipment({ 
-      name: '', 
-      serial_number: '', 
-      condition: 'good',
-      calibration_date: '',
-      next_calibration: '',
-      rescue_plan_required: false,
-      atmospheric_testing_required: false,
-      calibration_required: false,
-      location: ''
-    });
-    setSelectedPresetEquipment('');
-
-    // Recalculer la conformité du permis
-    checkPermitCompliance();
+    if (activeLevel >= updatedData.levels.length) {
+      setActiveLevel(Math.max(0, updatedData.levels.length - 1));
+    }
   };
+  // AtmosphericTesting.tsx - Section 3
 
-  const toggleEquipmentUsage = (equipmentId: string, assignedTo?: string) => {
-    if (!currentSurveillant) {
-      alert('⚠️ Un surveillant doit être en service avant d\'utiliser des équipements.');
-      return;
+  // =================== GESTION DES TESTS ===================
+  const saveTest = () => {
+    if (!selectedLevel === null || selectedLevel < 0) return;
+
+    const validation = validateReading(currentReading);
+    
+    const newReading: AtmosphereReading = {
+      ...currentReading,
+      timestamp: new Date().toISOString(),
+      tester: data.tester || 'Non spécifié',
+      status: validation.isValid ? 'pass' : 'fail',
+      failures: validation.hasFailures ? validation.failures : undefined
+    };
+
+    const updatedLevels = [...data.levels];
+    updatedLevels[selectedLevel].readings.push(newReading);
+    
+    const updatedData = {
+      ...data,
+      levels: updatedLevels
+    };
+
+    onChange(updatedData);
+
+    // Démarrer le timer pour ce test
+    const testIndex = updatedLevels[selectedLevel].readings.length - 1;
+    startTestTimer(selectedLevel, testIndex);
+
+    // Gestion des échecs
+    if (!validation.isValid) {
+      handleTestFailure(selectedLevel, newReading);
+    } else {
+      showNotification(`✅ Test réussi pour le niveau ${selectedLevel + 1}`, 'info');
     }
 
-    const equipmentItem = equipment.find(e => e.id === equipmentId);
-    if (!equipmentItem) return;
-
-    const updatedEquipment = equipment.map(item => {
-      if (item.id === equipmentId) {
-        const now = new Date();
-        
-        if (item.current_status === 'available') {
-          // Sortir l'équipement
-          const newSession: EquipmentSession = {
-            id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            entry_time: now.toISOString(),
-            status: 'in_use',
-            used_by: assignedTo || 'Non assigné',
-            location: item.location
-          };
-
-          // Notification de sortie
-          if (typeof window !== 'undefined' && 'Notification' in window) {
-            if (Notification.permission === 'granted') {
-              new Notification('🔧 ÉQUIPEMENT SORTI', {
-                body: `${item.name} (${item.serial_number}) sorti par ${assignedTo || 'Non assigné'}`,
-                icon: '/c-secur360-logo.png',
-                tag: 'equipment-out'
-              });
-            }
-          }
-
-          return {
-            ...item,
-            current_status: 'in_use' as const,
-            assigned_to: assignedTo,
-            usage_sessions: [...item.usage_sessions, newSession]
-          };
-        } else if (item.current_status === 'in_use') {
-          // Retourner l'équipement
-          const activeSession = item.usage_sessions.find(s => s.status === 'in_use');
-          if (!activeSession) return item;
-
-          const entryTime = new Date(activeSession.entry_time);
-          const duration = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
-
-          const completedSession: EquipmentSession = {
-            ...activeSession,
-            exit_time: now.toISOString(),
-            duration,
-            status: 'completed'
-          };
-
-          const updatedSessions = item.usage_sessions.map(s => 
-            s.id === activeSession.id ? completedSession : s
-          );
-
-          // Notification de retour
-          if (typeof window !== 'undefined' && 'Notification' in window) {
-            if (Notification.permission === 'granted') {
-              new Notification('🔧 ÉQUIPEMENT RETOURNÉ', {
-                body: `${item.name} retourné après ${formatDuration(duration)}`,
-                icon: '/c-secur360-logo.png',
-                tag: 'equipment-returned'
-              });
-            }
-          }
-
-          return {
-            ...item,
-            current_status: 'available' as const,
-            assigned_to: undefined,
-            total_uses: item.total_uses + 1,
-            total_duration: item.total_duration + duration,
-            usage_sessions: updatedSessions
-          };
-        }
-      }
-      return item;
+    // Reset et fermer
+    setCurrentReading({
+      oxygen: '',
+      combustible: '',
+      hydrogen_sulfide: '',
+      carbon_monoxide: '',
+      temperature: '',
+      notes: ''
     });
-
-    setEquipment(updatedEquipment);
-    updateParentData('equipment', updatedEquipment);
+    setShowTestModal(false);
+    setSelectedLevel(null);
   };
 
-  const deleteEquipment = (equipmentId: string) => {
-    const equipmentItem = equipment.find(e => e.id === equipmentId);
-    if (equipmentItem?.current_status === 'in_use') {
-      alert('⚠️ Impossible de supprimer un équipement actuellement en utilisation. Effectuez d\'abord son retour.');
-      return;
-    }
-
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet équipement?')) {
-      const updatedEquipment = equipment.filter(e => e.id !== equipmentId);
-      setEquipment(updatedEquipment);
-      updateParentData('equipment', updatedEquipment);
+  const handleTestFailure = (levelIndex: number, failedReading: AtmosphereReading) => {
+    const levelName = `Niveau ${levelIndex + 1}`;
+    
+    // Vérifier s'il y a du personnel dans l'espace clos
+    const hasPersonnelInside = safetyManager?.hasPersonnelInside();
+    
+    if (hasPersonnelInside) {
+      // ÉVACUATION IMMÉDIATE
+      playAlarmSound('evacuation');
+      showNotification(`🚨 ÉVACUATION IMMÉDIATE - Test atmosphérique échoué au ${levelName}`, 'error');
       
-      // Recalculer la conformité du permis
-      checkPermitCompliance();
+      // Informer le SafetyManager pour déclencher l'évacuation
+      if (safetyManager) {
+        safetyManager.triggerEvacuation(`Test atmosphérique échoué - ${levelName}`, failedReading.failures || []);
+      }
+    } else {
+      // Pas de personnel - juste une alerte de reprise
+      playAlarmSound('warning');
+      showNotification(`⚠️ Test échoué au ${levelName} - Reprise automatique dans 15 minutes`, 'warning');
+      
+      // Programmer un retest automatique dans 15 minutes
+      setTimeout(() => {
+        showNotification(`🔄 Reprise automatique - Test requis pour le ${levelName}`, 'warning');
+        setSelectedLevel(levelIndex);
+        setShowTestModal(true);
+      }, 15 * 60 * 1000); // 15 minutes
     }
   };
 
-  const getConditionColor = (condition: string) => {
-    switch (condition) {
-      case 'good': return '#10b981';
-      case 'fair': return '#f59e0b';
-      case 'poor': return '#ef4444';
-      default: return '#6b7280';
+  const retestLevel = (levelIndex: number) => {
+    // Arrêter le timer actuel s'il existe
+    const lastTestIndex = data.levels[levelIndex].readings.length - 1;
+    if (lastTestIndex >= 0) {
+      stopTestTimer(levelIndex, lastTestIndex);
+    }
+    
+    setSelectedLevel(levelIndex);
+    setShowTestModal(true);
+  };
+
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pass':
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
+      case 'fail':
+        return <XCircle className="w-4 h-4 text-red-600" />;
+      default:
+        return <Clock className="w-4 h-4 text-gray-400" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'available': return '#10b981';
-      case 'in_use': return '#f59e0b';
-      case 'maintenance': return '#ef4444';
-      default: return '#6b7280';
+      case 'pass':
+        return 'bg-green-50 border-green-200';
+      case 'fail':
+        return 'bg-red-50 border-red-200';
+      default:
+        return 'bg-gray-50 border-gray-200';
     }
   };
 
-  // =================== VALIDATION DE CONFORMITÉ DU PERMIS ===================
-  const toggleComplianceCheck = (checkKey: string) => {
-    if (!currentSurveillant) {
-      alert('⚠️ Un surveillant doit être en service pour effectuer les vérifications de conformité.');
-      return;
-    }
-
-    const updatedCompliance = {
-      ...permitValidation,
-      compliance_check: {
-        ...permitValidation.compliance_check,
-        [checkKey]: !(permitValidation.compliance_check as any)[checkKey],
-        checked_by: currentSurveillant.name,
-        check_time: new Date().toISOString()
-      }
-    };
-
-    // Recalculer si tous les requis sont cochés
-    const allChecked = [
-      'atmospheric_testing_complete',
-      'rescue_equipment_present', 
-      'communication_equipment_present',
-      'ventilation_equipment_present',
-      'emergency_procedures_reviewed',
-      'personnel_training_verified',
-      'equipment_calibration_current',
-      'rescue_plan_accessible'
-    ].every(key => (updatedCompliance.compliance_check as any)[key]);
-
-    updatedCompliance.compliance_check.all_requirements_met = allChecked;
-
-    setPermitValidation(updatedCompliance);
-    updateParentData('permit_validation', updatedCompliance);
-  };
-
-  const checkPermitCompliance = () => {
-    // Cette fonction ne fait plus de vérification automatique, 
-    // elle garde juste l'état actuel des cases cochées manuellement
-    const updatedCompliance = {
-      ...permitValidation,
-      compliance_check: {
-        ...permitValidation.compliance_check,
-        checked_by: currentSurveillant?.name,
-        check_time: new Date().toISOString()
-      }
-    };
-
-    setPermitValidation(updatedCompliance);
-    updateParentData('permit_validation', updatedCompliance);
-
-    return permitValidation.compliance_check.all_requirements_met;
-  };
-
-  // =================== GESTION ÉVACUATION D'URGENCE ===================
-  const executeEmergencyEvacuation = () => {
-    if (!currentSurveillant) return;
-
-    // Forcer la sortie de tous les entrants
-    const personnelInside = entrants.filter(e => e.current_status === 'inside');
-    
-    if (personnelInside.length > 0) {
-      const evacuationTime = new Date().toISOString();
-      
-      const updatedEntrants = entrants.map(entrant => {
-        if (entrant.current_status === 'inside') {
-          const activeSession = entrant.entry_sessions.find(s => s.status === 'inside');
-          if (activeSession) {
-            const entryTime = new Date(activeSession.entry_time);
-            const duration = Math.floor((Date.now() - entryTime.getTime()) / 1000);
-
-            const emergencyExitSession = {
-              ...activeSession,
-              exit_time: evacuationTime,
-              duration,
-              status: 'completed' as const,
-              forced_exit: {
-                timestamp: evacuationTime,
-                reason: 'ÉVACUATION D\'URGENCE - Atmosphère dangereuse',
-                new_surveillant: currentSurveillant.name
-              }
-            };
-
-            const updatedSessions = entrant.entry_sessions.map(s => 
-              s.id === activeSession.id ? emergencyExitSession : s
-            );
-
-            return {
-              ...entrant,
-              current_status: 'outside' as const,
-              total_entries: entrant.total_entries + 1,
-              total_duration: entrant.total_duration + duration,
-              entry_sessions: updatedSessions
-            };
-          }
-        }
-        return entrant;
-      });
-
-      setEntrants(updatedEntrants);
-      updateParentData('entrants', updatedEntrants);
-
-      // Enregistrer l'évacuation d'urgence
-      const updatedSurveillant = {
-        ...currentSurveillant,
-        forced_evacuations: [...currentSurveillant.forced_evacuations, {
-          timestamp: evacuationTime,
-          reason: 'ÉVACUATION D\'URGENCE - Atmosphère dangereuse détectée',
-          evacuated_personnel: personnelInside.map(p => p.name)
-        }]
-      };
-
-      const updatedHistory = surveillantHistory.map(s => 
-        s.id === currentSurveillant.id ? updatedSurveillant : s
-      );
-
-      setSurveillantHistory(updatedHistory);
-      setCurrentSurveillant(updatedSurveillant);
-      updateParentData('surveillant_history', updatedHistory);
-
-      // Notification critique
-      alert(`🚨 ÉVACUATION D'URGENCE EXÉCUTÉE: ${personnelInside.length} personne(s) évacuée(s) automatiquement en raison d'une atmosphère dangereuse!`);
-    }
-  };
-
-  // Exécuter évacuation si demandée par le système de sécurité
-  useEffect(() => {
-    if (personnelEvacuation) {
-      executeEmergencyEvacuation();
-    }
-  }, [personnelEvacuation]);
-  // =================== RENDU JSX - SECTION 2B ===================
+  // =================== RENDU COMPONENT ===================
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
-      {/* Modal de signature légale pour surveillant */}
-      {showSurveillantSignature && (
-        <LegalSignatureForm
-          role="surveillant"
-          personData={newSurveillant}
-          setPersonData={setNewSurveillant}
-          onConfirm={() => {
-            setShowSurveillantSignature(false);
-          }}
-          onCancel={() => {
-            setShowSurveillantSignature(false);
-            setNewSurveillant(prev => ({ 
-              ...prev, 
-              signature: '', 
-              training_confirmed: false 
-            }));
-          }}
-          selectedProvince={selectedProvince}
-          PROVINCIAL_REGULATIONS={PROVINCIAL_REGULATIONS}
-        />
-      )}
+    <div className="space-y-6">
+      {/* Header avec informations */}
+      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+        <h3 className="text-lg font-semibold text-blue-900 mb-2">
+          <Wind className="w-5 h-5 inline mr-2" />
+          Tests Atmosphériques Continus
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div>
+            <span className="font-medium">Intervalle de retest:</span>
+            <span className="ml-2">{Math.round(getRetestInterval() / 60)} minutes</span>
+          </div>
+          <div>
+            <span className="font-medium">Testeur:</span>
+            <span className="ml-2">{data.tester || 'Non spécifié'}</span>
+          </div>
+          <div>
+            <span className="font-medium">Niveaux testés:</span>
+            <span className="ml-2">{data.levels.length}</span>
+          </div>
+        </div>
+      </div>
 
-      {/* Modal de signature légale pour entrant */}
-      {showEntrantSignature && (
-        <LegalSignatureForm
-          role="entrant"
-          personData={newEntrant}
-          setPersonData={setNewEntrant}
-          onConfirm={() => {
-            setShowEntrantSignature(false);
-            setCurrentSigningEntrant(null);
-          }}
-          onCancel={() => {
-            setShowEntrantSignature(false);
-            setCurrentSigningEntrant(null);
-            setNewEntrant(prev => ({ 
-              ...prev, 
-              signature: '', 
-              training_confirmed: false 
-            }));
-          }}
-          selectedProvince={selectedProvince}
-          PROVINCIAL_REGULATIONS={PROVINCIAL_REGULATIONS}
-        />
-      )}
-
-      {/* Alertes de sécurité atmosphérique */}
-      {safetyAlerts && safetyAlerts.length > 0 && (
-        <div style={styles.emergencyCard}>
-          <h3 style={{
-            fontSize: isMobile ? '18px' : '20px',
-            fontWeight: '700',
-            color: '#fecaca',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
-            🚨 ALERTES DE SÉCURITÉ ATMOSPHÉRIQUE
-          </h3>
+      {/* Navigation des niveaux */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <span className="text-sm font-medium text-gray-700">Niveaux:</span>
+        {data.levels.map((level, index) => {
+          const lastReading = level.readings[level.readings.length - 1];
+          const timerKey = generateTimerKey(index, level.readings.length - 1);
+          const timer = testTimers[timerKey];
           
-          {safetyAlerts.map((alert) => (
-            <div key={alert.id} style={{
-              backgroundColor: 'rgba(0, 0, 0, 0.3)',
-              borderRadius: '12px',
-              padding: '16px',
-              marginBottom: '12px',
-              border: `2px solid ${alert.type === 'evacuation' ? '#ef4444' : '#f59e0b'}`
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '8px'
-              }}>
-                <span style={{
-                  color: alert.type === 'evacuation' ? '#fca5a5' : '#fde047',
-                  fontWeight: '700',
-                  fontSize: isMobile ? '15px' : '16px'
-                }}>
-                  {alert.type === 'evacuation' ? '🚨 ÉVACUATION' : '⚠️ ATTENTION'} - NIVEAU {alert.level.toUpperCase()}
-                </span>
-                <span style={{
-                  color: '#9ca3af',
-                  fontSize: '12px'
-                }}>
-                  {new Date(alert.timestamp).toLocaleTimeString('fr-CA')}
-                </span>
-              </div>
-              <p style={{
-                color: '#fecaca',
-                fontSize: '14px',
-                margin: '8px 0'
-              }}>
-                {alert.message}
-              </p>
-              {alert.personnelCount > 0 && (
-                <div style={{
-                  padding: '8px 12px',
-                  backgroundColor: 'rgba(220, 38, 38, 0.2)',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  color: '#fca5a5',
-                  fontWeight: '600'
-                }}>
-                  👥 {alert.personnelCount} personne(s) concernée(s)
-                  {alert.autoEvacuation && ' - ÉVACUATION AUTOMATIQUE ACTIVÉE'}
+          return (
+            <button
+              key={index}
+              onClick={() => setActiveLevel(index)}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all relative ${
+                activeLevel === index
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {level.depth}
+              {lastReading && (
+                <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${
+                  lastReading.status === 'pass' ? 'bg-green-500' : 'bg-red-500'
+                }`} />
+              )}
+              {timer && timer.isActive && (
+                <div className="absolute -bottom-1 left-0 right-0 h-1 bg-orange-200 rounded">
+                  <div 
+                    className="h-full bg-orange-500 rounded transition-all duration-1000"
+                    style={{ width: `${(timer.remaining / timer.interval) * 100}%` }}
+                  />
                 </div>
               )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Affichage des timers de retest actifs */}
-      {activeSafetyTimers && activeSafetyTimers.length > 0 && (
-        <div style={styles.card}>
-          <h3 style={styles.cardTitle}>
-            ⏰ Timers de Surveillance Atmosphérique Actifs
-          </h3>
-          
-          <div style={styles.grid3}>
-            {activeSafetyTimers.map((timer) => (
-              <div key={timer.id} style={{
-                backgroundColor: timer.type === 'retest' ? 'rgba(220, 38, 38, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-                borderRadius: '12px',
-                padding: '16px',
-                border: `2px solid ${timer.type === 'retest' ? '#ef4444' : '#3b82f6'}`,
-                textAlign: 'center'
-              }}>
-                <div style={{
-                  fontSize: '12px',
-                  color: timer.type === 'retest' ? '#fca5a5' : '#93c5fd',
-                  fontWeight: '600',
-                  marginBottom: '8px'
-                }}>
-                  {timer.type === 'retest' ? '🚨 RETEST' : '🔄 SURVEILLANCE'} - {timer.level?.toUpperCase()}
-                </div>
-                <div style={{
-                  fontSize: isMobile ? '20px' : '24px',
-                  fontWeight: 'bold',
-                  color: timer.timeRemaining <= 60 ? '#ef4444' : (timer.type === 'retest' ? '#fca5a5' : '#93c5fd'),
-                  fontFamily: 'JetBrains Mono, monospace',
-                  marginBottom: '4px',
-                  animation: timer.timeRemaining <= 60 ? 'pulse 1s infinite' : 'none'
-                }}>
-                  {Math.floor(timer.timeRemaining / 60)}:{(timer.timeRemaining % 60).toString().padStart(2, '0')}
-                </div>
-                <div style={{
-                  fontSize: '11px',
-                  color: '#9ca3af'
-                }}>
-                  {timer.type === 'retest' ? 'Retest obligatoire' : 'Prochain test'}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Affichage du timer de retest dans la section surveillant */}
-      {retestTimer > 0 && currentSurveillant && (
-        <div style={styles.emergencyCard}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: isMobile ? '16px' : '0'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <AlertTriangle style={{ width: '36px', height: '36px', color: '#f87171' }} />
-              <div>
-                <h3 style={{ color: '#fecaca', fontWeight: 'bold', fontSize: isMobile ? '18px' : '20px' }}>
-                  ⏰ RETEST ATMOSPHÉRIQUE OBLIGATOIRE
-                </h3>
-                <p style={{ color: '#fca5a5', fontSize: isMobile ? '14px' : '16px' }}>
-                  {retestLevel && `Niveau ${retestLevel.toUpperCase()}: `}Valeurs critiques détectées - Nouveau test requis avant expiration
-                </p>
-              </div>
-            </div>
-            <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
-              <div style={{ 
-                fontSize: isMobile ? '28px' : '36px', 
-                fontWeight: 'bold', 
-                color: '#f87171',
-                fontFamily: 'JetBrains Mono, monospace'
-              }}>
-                {formatTimeRemaining(retestTimer)}
-              </div>
-              <div style={{ color: '#fca5a5', fontSize: '16px' }}>Temps restant</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Statistiques en temps réel */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Timer style={{ width: '20px', height: '20px' }} />
-          📊 Statistiques en Temps Réel
-          {retestTimer > 0 && (
-            <span style={{
-              marginLeft: 'auto',
-              padding: '8px 12px',
-              backgroundColor: 'rgba(220, 38, 38, 0.2)',
-              border: '2px solid #ef4444',
-              borderRadius: '12px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              color: '#fca5a5',
-              fontFamily: 'JetBrains Mono, monospace'
-            }}>
-              ⏰ Retest: {formatTimeRemaining(retestTimer)}
-            </span>
-          )}
-        </h3>
-        
-        <div style={styles.grid4}>
-          <div style={{
-            padding: '20px',
-            backgroundColor: currentSurveillant ? 'rgba(34, 197, 94, 0.2)' : 'rgba(220, 38, 38, 0.2)',
-            borderRadius: '12px',
-            border: `2px solid ${currentSurveillant ? '#22c55e' : '#dc2626'}`,
-            textAlign: 'center'
-          }}>
-            <Eye style={{ 
-              width: isMobile ? '32px' : '40px', 
-              height: isMobile ? '32px' : '40px', 
-              color: currentSurveillant ? '#4ade80' : '#f87171',
-              margin: '0 auto 12px'
-            }} />
-            <div style={{ 
-              fontSize: isMobile ? '14px' : '16px', 
-              fontWeight: 'bold', 
-              color: currentSurveillant ? '#86efac' : '#fca5a5',
-              marginBottom: '8px'
-            }}>
-              {currentSurveillant ? 'ACTIF' : 'INACTIF'}
-            </div>
-            <div style={{ 
-              color: currentSurveillant ? '#86efac' : '#fca5a5', 
-              fontSize: '12px',
-              fontWeight: '600'
-            }}>
-              Surveillant
-            </div>
-          </div>
-          
-          <div style={{
-            padding: '20px',
-            backgroundColor: 'rgba(59, 130, 246, 0.2)',
-            borderRadius: '12px',
-            border: '2px solid #3b82f6',
-            textAlign: 'center'
-          }}>
-            <Users style={{ 
-              width: isMobile ? '32px' : '40px', 
-              height: isMobile ? '32px' : '40px', 
-              color: '#60a5fa',
-              margin: '0 auto 12px'
-            }} />
-            <div style={{ 
-              fontSize: isMobile ? '24px' : '32px', 
-              fontWeight: 'bold', 
-              color: '#93c5fd',
-              marginBottom: '8px'
-            }}>
-              {entrants.length}
-            </div>
-            <div style={{ 
-              color: '#93c5fd', 
-              fontSize: '12px',
-              fontWeight: '600'
-            }}>
-              Entrants
-            </div>
-          </div>
-          
-          <div style={{
-            padding: '20px',
-            backgroundColor: entrants.filter(e => e.current_status === 'inside').length > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(107, 114, 128, 0.2)',
-            borderRadius: '12px',
-            border: `2px solid ${entrants.filter(e => e.current_status === 'inside').length > 0 ? '#f59e0b' : '#6b7280'}`,
-            textAlign: 'center'
-          }}>
-            <LogIn style={{ 
-              width: isMobile ? '32px' : '40px', 
-              height: isMobile ? '32px' : '40px', 
-              color: entrants.filter(e => e.current_status === 'inside').length > 0 ? '#fbbf24' : '#9ca3af',
-              margin: '0 auto 12px'
-            }} />
-            <div style={{ 
-              fontSize: isMobile ? '24px' : '32px', 
-              fontWeight: 'bold', 
-              color: entrants.filter(e => e.current_status === 'inside').length > 0 ? '#fde047' : '#9ca3af',
-              marginBottom: '8px'
-            }}>
-              {entrants.filter(e => e.current_status === 'inside').length}
-            </div>
-            <div style={{ 
-              color: entrants.filter(e => e.current_status === 'inside').length > 0 ? '#fde047' : '#9ca3af', 
-              fontSize: '12px',
-              fontWeight: '600'
-            }}>
-              À l'intérieur
-            </div>
-          </div>
-          
-          <div style={{
-            padding: '20px',
-            backgroundColor: 'rgba(16, 185, 129, 0.2)',
-            borderRadius: '12px',
-            border: '2px solid #10b981',
-            textAlign: 'center'
-          }}>
-            <Wrench style={{ 
-              width: isMobile ? '32px' : '40px', 
-              height: isMobile ? '32px' : '40px', 
-              color: '#34d399',
-              margin: '0 auto 12px'
-            }} />
-            <div style={{ 
-              fontSize: isMobile ? '24px' : '32px', 
-              fontWeight: 'bold', 
-              color: '#86efac',
-              marginBottom: '8px'
-            }}>
-              {equipment.length}
-            </div>
-            <div style={{ 
-              color: '#86efac', 
-              fontSize: '12px',
-              fontWeight: '600'
-            }}>
-              Équipements
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Section Validation du Permis avec Conformité */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <FileText style={{ width: '20px', height: '20px' }} />
-          📋 Validation et Conformité du Permis
-        </h3>
-        
-        {/* Vérification de conformité */}
-        <div style={{
-          backgroundColor: permitValidation.compliance_check.all_requirements_met ? 'rgba(16, 185, 129, 0.1)' : 'rgba(220, 38, 38, 0.1)',
-          borderRadius: '12px',
-          padding: '20px',
-          border: `2px solid ${permitValidation.compliance_check.all_requirements_met ? '#10b981' : '#dc2626'}`,
-          marginBottom: '20px'
-        }}>
-          <h4 style={{ 
-            color: permitValidation.compliance_check.all_requirements_met ? '#86efac' : '#fca5a5',
-            fontWeight: '600',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            {permitValidation.compliance_check.all_requirements_met ? '✅' : '⚠️'} 
-            Vérification de Conformité Réglementaire
-          </h4>
-          
-          <div style={styles.grid2}>
-            {[
-              { key: 'atmospheric_testing_complete', label: 'Tests atmosphériques effectués', icon: '🌬️' },
-              { key: 'rescue_equipment_present', label: 'Équipement de sauvetage présent', icon: '🆘' },
-              { key: 'communication_equipment_present', label: 'Équipement de communication présent', icon: '📻' },
-              { key: 'ventilation_equipment_present', label: 'Équipement de ventilation présent', icon: '💨' },
-              { key: 'emergency_procedures_reviewed', label: 'Procédures d\'urgence révisées', icon: '📋' },
-              { key: 'personnel_training_verified', label: 'Formation du personnel vérifiée', icon: '👨‍🎓' },
-              { key: 'equipment_calibration_current', label: 'Calibration des équipements à jour', icon: '⚙️' },
-              { key: 'rescue_plan_accessible', label: 'Plan de sauvetage accessible', icon: '🗺️' }
-            ].map((item) => (
-              <button
-                key={item.key}
-                onClick={() => toggleComplianceCheck(item.key)}
-                disabled={!currentSurveillant}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '16px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                  borderRadius: '8px',
-                  border: `2px solid ${(permitValidation.compliance_check as any)[item.key] ? '#10b981' : '#6b7280'}`,
-                  cursor: currentSurveillant ? 'pointer' : 'not-allowed',
-                  opacity: currentSurveillant ? 1 : 0.5,
-                  transition: 'all 0.2s ease',
-                  width: '100%',
-                  textAlign: 'left'
-                }}
-              >
-                <span style={{ fontSize: '20px' }}>{item.icon}</span>
-                <span style={{ 
-                  color: (permitValidation.compliance_check as any)[item.key] ? '#86efac' : '#fca5a5',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  flex: 1
-                }}>
-                  {item.label}
-                </span>
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                  fontWeight: '600',
-                  backgroundColor: (permitValidation.compliance_check as any)[item.key] ? '#10b981' : '#ef4444',
-                  color: 'white'
-                }}>
-                  {(permitValidation.compliance_check as any)[item.key] ? '✓' : '✗'}
-                </div>
-              </button>
-            ))}
-          </div>
-          
-          {permitValidation.compliance_check.checked_by && (
-            <div style={{
-              marginTop: '16px',
-              padding: '12px',
-              backgroundColor: 'rgba(0, 0, 0, 0.3)',
-              borderRadius: '8px',
-              fontSize: '13px',
-              color: '#9ca3af'
-            }}>
-              Vérifié par: {permitValidation.compliance_check.checked_by} le {formatTime(permitValidation.compliance_check.check_time!)}
-            </div>
-          )}
-        </div>
-        
-        <div style={styles.grid2}>
-          <div style={{
-            padding: '20px',
-            backgroundColor: permitValidation.team_validation.validated ? 'rgba(16, 185, 129, 0.1)' : 'rgba(107, 114, 128, 0.1)',
-            borderRadius: '12px',
-            border: `2px solid ${permitValidation.team_validation.validated ? '#10b981' : '#6b7280'}`
-          }}>
-            <h4 style={{ 
-              color: permitValidation.team_validation.validated ? '#86efac' : '#9ca3af',
-              fontWeight: '600',
-              marginBottom: '12px'
-            }}>
-              👥 Validation Équipe
-            </h4>
-            {permitValidation.team_validation.validated ? (
-              <div>
-                <div style={{ color: '#86efac', fontSize: '14px', marginBottom: '8px' }}>
-                  ✅ Validé par: {permitValidation.team_validation.validated_by}
-                </div>
-                <div style={{ color: '#9ca3af', fontSize: '12px' }}>
-                  {permitValidation.team_validation.validation_time && formatTime(permitValidation.team_validation.validation_time)}
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  const validatorName = prompt('Nom du validateur de l\'équipe:');
-                  if (!validatorName) return;
-                  const validatorSignature = prompt('Signature électronique du validateur:');
-                  if (!validatorSignature) return;
-                  const updatedValidation = {
-                    ...permitValidation,
-                    team_validation: {
-                      validated: true,
-                      validated_by: validatorName,
-                      validation_time: new Date().toISOString(),
-                      validation_signature: validatorSignature
-                    }
-                  };
-                  setPermitValidation(updatedValidation);
-                  updateParentData('permit_validation', updatedValidation);
-                  alert('✅ Validation équipe confirmée');
-                }}
-                style={{
-                  ...styles.button,
-                  ...styles.buttonPrimary,
-                  fontSize: '14px'
-                }}
-              >
-                <CheckCircle style={{ width: '16px', height: '16px' }} />
-                Valider avec l'Équipe
-              </button>
-            )}
-          </div>
-          
-          <div style={{
-            padding: '20px',
-            backgroundColor: permitValidation.final_approval.approved ? 'rgba(16, 185, 129, 0.1)' : 'rgba(107, 114, 128, 0.1)',
-            borderRadius: '12px',
-            border: `2px solid ${permitValidation.final_approval.approved ? '#10b981' : '#6b7280'}`
-          }}>
-            <h4 style={{ 
-              color: permitValidation.final_approval.approved ? '#86efac' : '#9ca3af',
-              fontWeight: '600',
-              marginBottom: '12px'
-            }}>
-              ✅ Approbation Finale
-            </h4>
-            {permitValidation.final_approval.approved ? (
-              <div>
-                <div style={{ color: '#86efac', fontSize: '14px', marginBottom: '8px' }}>
-                  ✅ Approuvé par: {permitValidation.final_approval.approved_by}
-                </div>
-                <div style={{ color: '#9ca3af', fontSize: '12px' }}>
-                  {permitValidation.final_approval.approval_time && formatTime(permitValidation.final_approval.approval_time)}
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  if (!permitValidation.team_validation.validated) {
-                    alert('⚠️ La validation de l\'équipe doit être effectuée avant l\'approbation finale');
-                    return;
-                  }
-                  const approverName = prompt('Nom de l\'approbateur final:');
-                  if (!approverName) return;
-                  const approverSignature = prompt('Signature électronique de l\'approbateur:');
-                  if (!approverSignature) return;
-                  const updatedValidation = {
-                    ...permitValidation,
-                    final_approval: {
-                      approved: true,
-                      approved_by: approverName,
-                      approval_time: new Date().toISOString(),
-                      approval_signature: approverSignature
-                    }
-                  };
-                  setPermitValidation(updatedValidation);
-                  updateParentData('permit_validation', updatedValidation);
-                  alert('✅ Approbation finale confirmée - Permis validé');
-                }}
-                disabled={!permitValidation.team_validation.validated}
-                style={{
-                  ...styles.button,
-                  ...styles.buttonSuccess,
-                  fontSize: '14px',
-                  opacity: !permitValidation.team_validation.validated ? 0.5 : 1
-                }}
-              >
-                <Shield style={{ width: '16px', height: '16px' }} />
-                Approuver le Permis
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Section Surveillant avec signature légale */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Eye style={{ width: '20px', height: '20px' }} />
-          👁️ Surveillant d'Espace Clos (Signature Légale Obligatoire)
-          {retestTimer > 0 && (
-            <span style={{
-              marginLeft: 'auto',
-              padding: '6px 10px',
-              backgroundColor: 'rgba(220, 38, 38, 0.2)',
-              border: '2px solid #ef4444',
-              borderRadius: '12px',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              color: '#fca5a5',
-              fontFamily: 'JetBrains Mono, monospace'
-            }}>
-              ⏰ Retest: {formatTimeRemaining(retestTimer)}
-            </span>
-          )}
-        </h3>
-        
-        {/* Surveillant actuel */}
-        {currentSurveillant ? (
-          <div style={{
-            backgroundColor: 'rgba(34, 197, 94, 0.1)',
-            borderRadius: '12px',
-            padding: isMobile ? '16px' : '20px',
-            border: '2px solid #22c55e',
-            marginBottom: '20px'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              marginBottom: '16px',
-              flexDirection: isMobile ? 'column' : 'row',
-              gap: isMobile ? '16px' : '0'
-            }}>
-              <div>
-                <div style={{ 
-                  fontSize: isMobile ? '18px' : '20px',
-                  fontWeight: '700',
-                  color: '#22c55e',
-                  marginBottom: '8px'
-                }}>
-                  🟢 SURVEILLANT ACTIF
-                </div>
-                <div style={{ 
-                  fontSize: isMobile ? '16px' : '18px',
-                  fontWeight: '600',
-                  color: 'white',
-                  marginBottom: '4px'
-                }}>
-                  👤 {currentSurveillant.name}
-                </div>
-                <div style={{ 
-                  color: '#9ca3af',
-                  fontSize: '14px',
-                  marginBottom: '8px'
-                }}>
-                  🏢 {currentSurveillant.company}
-                </div>
-                <div style={{ 
-                  color: '#86efac',
-                  fontSize: '14px',
-                  fontWeight: '600'
-                }}>
-                  🕐 Début surveillance: {formatTime(currentSurveillant.start_time)}
-                </div>
-                <div style={{ 
-                  color: '#86efac',
-                  fontSize: '13px',
-                  marginTop: '4px'
-                }}>
-                  ✍️ Signé le: {formatTime(currentSurveillant.legal_signature.timestamp)}
-                </div>
-                <div style={{ 
-                  color: '#86efac',
-                  fontSize: '13px',
-                  marginTop: '4px'
-                }}>
-                  🛡️ Personnel surveillé: {entrants.filter(e => e.current_status === 'inside').length} à l'intérieur
-                </div>
-              </div>
-              
-              <button
-                onClick={endSurveillance}
-                style={{
-                  ...styles.button,
-                  ...styles.buttonDanger,
-                  width: 'auto',
-                  padding: '12px 20px'
-                }}
-              >
-                <LogOut style={{ width: '18px', height: '18px' }} />
-                Terminer Surveillance
-              </button>
-            </div>
-            
-            {/* Affichage des détails de formation du surveillant */}
-            <div style={{
-              backgroundColor: 'rgba(0, 0, 0, 0.2)',
-              borderRadius: '8px',
-              padding: '12px',
-              marginTop: '12px'
-            }}>
-              <h5 style={{ color: '#86efac', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                📚 Formation Certifiée ({selectedProvince}):
-              </h5>
-              <div style={{ fontSize: '12px', color: '#d1d5db' }}>
-                Formation expire: {currentSurveillant.legal_signature.formation_details.formation_expiry || 'Non renseigné'}
-              </div>
-              <div style={{ 
-                display: 'flex', 
-                gap: '8px', 
-                marginTop: '8px',
-                flexWrap: 'wrap'
-              }}>
-                {Object.entries(currentSurveillant.legal_signature.formation_details).map(([key, value]) => {
-                  if (key === 'formation_expiry' || !value) return null;
-                  return (
-                    <span key={key} style={{
-                      padding: '2px 6px',
-                      backgroundColor: '#22c55e',
-                      color: 'white',
-                      borderRadius: '4px',
-                      fontSize: '10px',
-                      fontWeight: '600'
-                    }}>
-                      ✓ {key.replace(/_/g, ' ')}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Affichage des évacuations forcées */}
-            {currentSurveillant.forced_evacuations.length > 0 && (
-              <div style={{
-                backgroundColor: 'rgba(220, 38, 38, 0.2)',
-                borderRadius: '8px',
-                padding: '12px',
-                marginTop: '12px',
-                border: '1px solid rgba(220, 38, 38, 0.3)'
-              }}>
-                <h5 style={{ color: '#fca5a5', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                  🚨 Évacuations Forcées:
-                </h5>
-                {currentSurveillant.forced_evacuations.map((evacuation, index) => (
-                  <div key={index} style={{ fontSize: '12px', color: '#fecaca', marginBottom: '4px' }}>
-                    {formatTime(evacuation.timestamp)} - {evacuation.reason} - {evacuation.evacuated_personnel.length} personne(s)
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div style={{
-            backgroundColor: 'rgba(220, 38, 38, 0.1)',
-            borderRadius: '12px',
-            padding: isMobile ? '16px' : '20px',
-            border: '2px solid #dc2626',
-            marginBottom: '20px',
-            textAlign: 'center'
-          }}>
-            <div style={{ 
-              fontSize: isMobile ? '18px' : '20px',
-              fontWeight: '700',
-              color: '#ef4444',
-              marginBottom: '8px'
-            }}>
-              ⚠️ AUCUN SURVEILLANT ACTIF
-            </div>
-            <div style={{ 
-              color: '#fca5a5',
-              fontSize: '14px'
-            }}>
-              Un surveillant doit signer légalement et être en service avant que des entrants puissent accéder à l'espace clos.
-            </div>
-          </div>
-        )}
-        
-        {/* Formulaire nouveau surveillant avec signature légale */}
-        <div style={styles.grid3}>
-          <div>
-            <label style={styles.label}>Nom du surveillant *</label>
-            <input
-              type="text"
-              placeholder="Ex: Marie Dubois"
-              value={newSurveillant.name}
-              onChange={(e) => setNewSurveillant(prev => ({ ...prev, name: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>Compagnie *</label>
-            <input
-              type="text"
-              placeholder="Ex: Sécurité ABC Inc."
-              value={newSurveillant.company}
-              onChange={(e) => setNewSurveillant(prev => ({ ...prev, company: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'end' }}>
-            <button
-              onClick={() => setShowSurveillantSignature(true)}
-              disabled={!newSurveillant.name || !newSurveillant.company}
-              style={{
-                ...styles.button,
-                ...styles.buttonPrimary,
-                opacity: (!newSurveillant.name || !newSurveillant.company) ? 0.5 : 1
-              }}
-            >
-              <Signature style={{ width: '18px', height: '18px' }} />
-              Signer et Certifier
             </button>
-          </div>
-        </div>
-        
-        {/* Affichage signature confirmée */}
-        {newSurveillant.signature && newSurveillant.training_confirmed && (
-          <div style={{
-            ...styles.signatureSection,
-            ...styles.signatureConfirmed,
-            marginTop: '16px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-              <CheckCircle style={{ width: '20px', height: '20px', color: '#10b981' }} />
-              <span style={{ color: '#86efac', fontWeight: '600' }}>
-                Signature légale confirmée
-              </span>
-            </div>
-            <div style={{ color: '#d1d5db', fontSize: '14px' }}>
-              Signé par: {newSurveillant.signature}
-            </div>
-            
-            <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-              {currentSurveillant ? (
-                <button
-                  onClick={replaceSurveillant}
-                  style={{
-                    ...styles.button,
-                    ...styles.buttonWarning
-                  }}
-                >
-                  <UserCheck style={{ width: '18px', height: '18px' }} />
-                  Remplacer Surveillant
-                </button>
-              ) : (
-                <button
-                  onClick={startSurveillance}
-                  style={{
-                    ...styles.button,
-                    ...styles.buttonSuccess
-                  }}
-                >
-                  <Eye style={{ width: '18px', height: '18px' }} />
-                  Débuter Surveillance
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-        
-        {/* Historique des surveillants */}
-        {surveillantHistory.length > 0 && (
-          <div style={{ marginTop: '24px' }}>
-            <h4 style={{
-              fontSize: isMobile ? '16px' : '18px',
-              fontWeight: '600',
-              color: '#d1d5db',
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <History style={{ width: '18px', height: '18px' }} />
-              📋 Historique des Surveillances
-            </h4>
-            
-            <div style={{ 
-              maxHeight: '300px',
-              overflowY: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px'
-            }}>
-              {surveillantHistory.slice().reverse().map((shift) => (
-                <div
-                  key={shift.id}
-                  style={{
-                    backgroundColor: 'rgba(17, 24, 39, 0.6)',
-                    borderRadius: '8px',
-                    padding: '16px',
-                    border: `1px solid ${shift.status === 'active' ? '#22c55e' : '#6b7280'}`
-                  }}
-                >
-                  <div style={styles.grid3}>
-                    <div>
-                      <div style={{ 
-                        color: 'white',
-                        fontWeight: '600',
-                        marginBottom: '4px'
-                      }}>
-                        👤 {shift.name}
-                      </div>
-                      <div style={{ 
-                        color: '#9ca3af',
-                        fontSize: '13px'
-                      }}>
-                        🏢 {shift.company}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ 
-                        color: '#d1d5db',
-                        fontSize: '14px',
-                        marginBottom: '2px'
-                      }}>
-                        🕐 {formatTime(shift.start_time)}
-                      </div>
-                      {shift.end_time && (
-                        <div style={{ 
-                          color: '#d1d5db',
-                          fontSize: '14px'
-                        }}>
-                          🕓 {formatTime(shift.end_time)}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        backgroundColor: shift.status === 'active' ? '#22c55e' : '#6b7280',
-                        color: 'white'
-                      }}>
-                        {shift.status === 'active' ? '🟢 ACTIF' : '⚫ TERMINÉ'}
-                      </span>
-                      {shift.duration && (
-                        <div style={{ 
-                          color: '#9ca3af',
-                          fontSize: '13px',
-                          marginTop: '4px'
-                        }}>
-                          ⏱️ {formatDuration(shift.duration)}
-                        </div>
-                      )}
-                      {shift.forced_evacuations.length > 0 && (
-                        <div style={{ 
-                          color: '#fca5a5',
-                          fontSize: '12px',
-                          marginTop: '4px'
-                        }}>
-                          🚨 {shift.forced_evacuations.length} évacuation(s)
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Section Entrants avec signatures légales et alertes */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Users style={{ width: '20px', height: '20px' }} />
-          👷 Personnel Entrant avec Surveillance Multiple ({entrants.length})
-        </h3>
-        
-        {/* Formulaire ajout entrant */}
-        <div style={styles.grid3}>
-          <div>
-            <label style={styles.label}>Nom de l'entrant *</label>
-            <input
-              type="text"
-              placeholder="Ex: Pierre Martin"
-              value={newEntrant.name}
-              onChange={(e) => setNewEntrant(prev => ({ ...prev, name: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>Compagnie *</label>
-            <input
-              type="text"
-              placeholder="Ex: Construction XYZ"
-              value={newEntrant.company}
-              onChange={(e) => setNewEntrant(prev => ({ ...prev, company: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'end' }}>
-            <button
-              onClick={() => setShowEntrantSignature(true)}
-              disabled={!newEntrant.name || !newEntrant.company}
-              style={{
-                ...styles.button,
-                ...styles.buttonPrimary,
-                opacity: (!newEntrant.name || !newEntrant.company) ? 0.5 : 1
-              }}
-            >
-              <Signature style={{ width: '18px', height: '18px' }} />
-              Signer et Certifier
-            </button>
-          </div>
-        </div>
-
-        {/* Affichage signature confirmée entrant */}
-        {newEntrant.signature && newEntrant.training_confirmed && (
-          <div style={{
-            ...styles.signatureSection,
-            ...styles.signatureConfirmed,
-            marginTop: '16px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-              <CheckCircle style={{ width: '20px', height: '20px', color: '#10b981' }} />
-              <span style={{ color: '#86efac', fontWeight: '600' }}>
-                Signature légale confirmée - Entrant
-              </span>
-            </div>
-            <div style={{ color: '#d1d5db', fontSize: '14px' }}>
-              Signé par: {newEntrant.signature}
-            </div>
-            
-            <button
-              onClick={addEntrant}
-              style={{
-                ...styles.button,
-                ...styles.buttonSuccess,
-                marginTop: '16px'
-              }}
-            >
-              <UserPlus style={{ width: '18px', height: '18px' }} />
-              Ajouter Entrant au Registre
-            </button>
-          </div>
-        )}
-        
-        {/* Liste des entrants avec surveillance multiple */}
-        {entrants.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: isMobile ? '32px 20px' : '48px 32px', 
-            color: '#9ca3af',
-            backgroundColor: 'rgba(17, 24, 39, 0.5)',
-            borderRadius: '12px',
-            border: '1px solid #374151',
-            marginTop: '20px'
-          }}>
-            <Users style={{ 
-              width: isMobile ? '56px' : '72px', 
-              height: isMobile ? '56px' : '72px', 
-              margin: '0 auto 20px', 
-              color: '#4b5563'
-            }} />
-            <p style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: '12px', fontWeight: '600' }}>
-              Aucun entrant enregistré
-            </p>
-            <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
-              Ajoutez des entrants ci-dessus pour commencer le registre d'entrée avec surveillance.
-            </p>
-          </div>
-        ) : (
-          <div style={{ 
-            marginTop: '20px',
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '16px',
-            maxHeight: '600px',
-            overflowY: 'auto'
-          }}>
-            {entrants.map((entrant) => (
-              <div
-                key={entrant.id}
-                style={{
-                  backgroundColor: 'rgba(17, 24, 39, 0.6)',
-                  borderRadius: '12px',
-                  padding: isMobile ? '16px' : '20px',
-                  border: `2px solid ${entrant.current_status === 'inside' ? '#f59e0b' : '#4b5563'}`,
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between', 
-                  marginBottom: '16px',
-                  flexDirection: isMobile ? 'column' : 'row',
-                  gap: isMobile ? '12px' : '0'
-                }}>
-                  <div>
-                    <div style={{ 
-                      fontWeight: '700', 
-                      color: 'white', 
-                      fontSize: isMobile ? '16px' : '18px',
-                      marginBottom: '4px'
-                    }}>
-                      👷 {entrant.name}
-                    </div>
-                    <div style={{ 
-                      color: '#9ca3af', 
-                      fontSize: '14px',
-                      marginBottom: '8px'
-                    }}>
-                      🏢 {entrant.company}
-                    </div>
-                    <div style={{
-                      display: 'flex',
-                      gap: '12px',
-                      flexWrap: 'wrap'
-                    }}>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        backgroundColor: entrant.current_status === 'inside' ? '#f59e0b' : '#6b7280',
-                        color: 'white'
-                      }}>
-                        {entrant.current_status === 'inside' ? '🟡 À L\'INTÉRIEUR' : '⚫ À L\'EXTÉRIEUR'}
-                      </span>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        backgroundColor: '#3b82f6',
-                        color: 'white'
-                      }}>
-                        📊 {entrant.total_entries} entrées
-                      </span>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        backgroundColor: '#10b981',
-                        color: 'white'
-                      }}>
-                        ⏱️ {formatDuration(entrant.total_duration)}
-                      </span>
-                    </div>
-                    
-                    {/* Affichage de la formation de l'entrant */}
-                    <div style={{
-                      marginTop: '8px',
-                      fontSize: '11px',
-                      color: '#86efac'
-                    }}>
-                      ✍️ Signé: {formatTime(entrant.legal_signature.timestamp)} | 
-                      📚 Formation: {entrant.legal_signature.formation_details.formation_expiry || 'N/A'}
-                    </div>
-                  </div>
-                  
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px',
-                    flexDirection: isMobile ? 'column' : 'row'
-                  }}>
-                    <button
-                      onClick={() => toggleEntrantEntry(entrant.id)}
-                      disabled={!currentSurveillant}
-                      style={{
-                        ...styles.button,
-                        ...(entrant.current_status === 'outside' ? styles.buttonSuccess : styles.buttonDanger),
-                        width: 'auto',
-                        padding: '8px 12px',
-                        fontSize: '14px',
-                        minHeight: 'auto',
-                        opacity: !currentSurveillant ? 0.5 : 1,
-                        cursor: !currentSurveillant ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                      {entrant.current_status === 'outside' ? (
-                        <>
-                          <LogIn style={{ width: '16px', height: '16px' }} />
-                          Marquer Entrée
-                        </>
-                      ) : (
-                        <>
-                          <LogOut style={{ width: '16px', height: '16px' }} />
-                          Marquer Sortie
-                        </>
-                      )}
-                    </button>
-                    
-                    <button
-                      onClick={() => deleteEntrant(entrant.id)}
-                      disabled={entrant.current_status === 'inside'}
-                      style={{
-                        ...styles.button,
-                        ...styles.buttonSecondary,
-                        width: 'auto',
-                        padding: '8px 12px',
-                        fontSize: '14px',
-                        minHeight: 'auto',
-                        opacity: entrant.current_status === 'inside' ? 0.5 : 1
-                      }}
-                    >
-                      <Trash2 style={{ width: '16px', height: '16px' }} />
-                      Supprimer
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Historique des sessions d'entrée avec alertes */}
-                {entrant.entry_sessions.length > 0 && (
-                  <div style={{
-                    marginTop: '16px',
-                    padding: '16px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                    borderRadius: '8px'
-                  }}>
-                    <h5 style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: '#d1d5db',
-                      marginBottom: '12px'
-                    }}>
-                      📋 Historique des entrées ({entrant.entry_sessions.length}):
-                    </h5>
-                    
-                    <div style={{
-                      maxHeight: '200px',
-                      overflowY: 'auto',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px'
-                    }}>
-                      {entrant.entry_sessions.slice().reverse().map((session, index) => (
-                        <div
-                          key={session.id}
-                          style={{
-                            padding: '12px',
-                            backgroundColor: 'rgba(17, 24, 39, 0.8)',
-                            borderRadius: '6px',
-                            border: `1px solid ${session.status === 'inside' ? '#f59e0b' : '#6b7280'}`
-                          }}
-                        >
-                          <div style={styles.grid3}>
-                            <div>
-                              <div style={{ color: '#d1d5db', fontSize: '13px' }}>
-                                🕐 Entrée: {formatTime(session.entry_time)}
-                              </div>
-                            </div>
-                            <div>
-                              <div style={{ color: '#d1d5db', fontSize: '13px' }}>
-                                {session.exit_time ? 
-                                  `🕓 Sortie: ${formatTime(session.exit_time)}` : 
-                                  '🟡 En cours...'
-                                }
-                              </div>
-                            </div>
-                            <div>
-                              <div style={{ color: '#d1d5db', fontSize: '13px' }}>
-                                {session.duration ? 
-                                  `⏱️ ${formatDuration(session.duration)}` : 
-                                  '⏱️ En cours...'
-                                }
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Affichage des sorties forcées */}
-                          {session.forced_exit && (
-                            <div style={{
-                              marginTop: '8px',
-                              padding: '8px',
-                              backgroundColor: 'rgba(220, 38, 38, 0.2)',
-                              borderRadius: '4px',
-                              border: '1px solid #ef4444'
-                            }}>
-                              <div style={{ color: '#fca5a5', fontSize: '12px', fontWeight: '600' }}>
-                                🚨 SORTIE FORCÉE: {session.forced_exit.reason}
-                              </div>
-                              <div style={{ color: '#fecaca', fontSize: '11px' }}>
-                                {formatTime(session.forced_exit.timestamp)}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Section Équipements - Ajouter avec sélection prédéfinie */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Plus style={{ width: '20px', height: '20px' }} />
-          🔧 Ajouter Équipement de Sécurité
-        </h3>
-        
-        {/* Sélection par catégorie */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={styles.label}>Catégorie d'équipement</label>
-          <select
-            value={selectedCategory}
-            onChange={(e) => {
-              setSelectedCategory(e.target.value);
-              setSelectedPresetEquipment('');
-              setNewEquipment(prev => ({ 
-                ...prev, 
-                name: '',
-                rescue_plan_required: false,
-                atmospheric_testing_required: false,
-                calibration_required: false
-              }));
-            }}
-            style={styles.input}
-          >
-            {Object.entries(EQUIPMENT_CATEGORIES).map(([key, category]) => (
-              <option key={key} value={key}>{category.name}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Sélection équipement prédéfini */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={styles.label}>Équipement prédéfini (optionnel)</label>
-          <select
-            value={selectedPresetEquipment}
-            onChange={(e) => {
-              setSelectedPresetEquipment(e.target.value);
-              if (e.target.value) {
-                selectPresetEquipment(selectedCategory, e.target.value);
-              }
-            }}
-            style={styles.input}
-          >
-            <option value="">-- Sélectionner un équipement ou saisir manuellement --</option>
-            {(EQUIPMENT_CATEGORIES as any)[selectedCategory].items.map((item: any, index: number) => (
-              <option key={index} value={item.name}>
-                {item.name}
-                {item.calibration_required && ' 📅'}
-                {item.rescue_required && ' 🆘'}
-                {item.atmospheric_required && ' 🌬️'}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div style={styles.grid2}>
-          <div>
-            <label style={styles.label}>Nom de l'équipement *</label>
-            <input
-              type="text"
-              placeholder="Ex: Détecteur 4 gaz portable"
-              value={newEquipment.name}
-              onChange={(e) => setNewEquipment(prev => ({ ...prev, name: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>N° série / Identification *</label>
-            <input
-              type="text"
-              placeholder="Ex: MSA-001234"
-              value={newEquipment.serial_number}
-              onChange={(e) => setNewEquipment(prev => ({ ...prev, serial_number: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-        </div>
-        
-        <div style={styles.grid3}>
-          <div>
-            <label style={styles.label}>État *</label>
-            <select
-              value={newEquipment.condition}
-              onChange={(e) => setNewEquipment(prev => ({ ...prev, condition: e.target.value as any }))}
-              style={styles.input}
-              required
-            >
-              <option value="good">✅ Bon état</option>
-              <option value="fair">⚠️ État acceptable</option>
-              <option value="poor">❌ À remplacer</option>
-            </select>
-          </div>
-          <div>
-            <label style={styles.label}>Localisation</label>
-            <input
-              type="text"
-              placeholder="Ex: Poste de contrôle principal"
-              value={newEquipment.location}
-              onChange={(e) => setNewEquipment(prev => ({ ...prev, location: e.target.value }))}
-              style={styles.input}
-            />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input
-                type="checkbox"
-                id="calibration_required"
-                checked={newEquipment.calibration_required}
-                onChange={(e) => setNewEquipment(prev => ({ ...prev, calibration_required: e.target.checked }))}
-                style={{ width: '16px', height: '16px', accentColor: '#3b82f6' }}
-              />
-              <label htmlFor="calibration_required" style={{ color: '#d1d5db', fontSize: '14px' }}>
-                📅 Calibration requise
-              </label>
-            </div>
-          </div>
-        </div>
-        
-        {/* Champs de calibration conditionnels */}
-        {newEquipment.calibration_required && (
-          <div style={styles.grid2}>
-            <div>
-              <label style={styles.label}>Date de calibration</label>
-              <input
-                type="date"
-                value={newEquipment.calibration_date}
-                onChange={(e) => setNewEquipment(prev => ({ ...prev, calibration_date: e.target.value }))}
-                style={styles.input}
-              />
-            </div>
-            <div>
-              <label style={styles.label}>Prochaine calibration *</label>
-              <input
-                type="date"
-                value={newEquipment.next_calibration}
-                onChange={(e) => setNewEquipment(prev => ({ ...prev, next_calibration: e.target.value }))}
-                style={styles.input}
-                required
-              />
-            </div>
-          </div>
-        )}
-        
-        <div style={styles.grid2}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              type="checkbox"
-              id="rescue_required"
-              checked={newEquipment.rescue_plan_required}
-              onChange={(e) => setNewEquipment(prev => ({ ...prev, rescue_plan_required: e.target.checked }))}
-              style={{ width: '16px', height: '16px', accentColor: '#3b82f6' }}
-            />
-            <label htmlFor="rescue_required" style={{ color: '#d1d5db', fontSize: '14px' }}>
-              🆘 Requis pour plan de sauvetage
-            </label>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              type="checkbox"
-              id="atmospheric_required"
-              checked={newEquipment.atmospheric_testing_required}
-              onChange={(e) => setNewEquipment(prev => ({ ...prev, atmospheric_testing_required: e.target.checked }))}
-              style={{ width: '16px', height: '16px', accentColor: '#3b82f6' }}
-            />
-            <label htmlFor="atmospheric_required" style={{ color: '#d1d5db', fontSize: '14px' }}>
-              🌬️ Requis pour tests atmosphériques
-            </label>
-          </div>
-        </div>
+          );
+        })}
         
         <button
-          onClick={addEquipmentItem}
-          style={{
-            ...styles.button,
-            ...styles.buttonSuccess,
-            marginTop: '16px',
-            justifyContent: 'center'
-          }}
+          onClick={() => setShowAddLevelModal(true)}
+          className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
         >
-          <Plus style={{ width: '18px', height: '18px' }} />
-          Ajouter Équipement au Registre
+          <Plus className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Section Registre Équipements avec Sessions */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Wrench style={{ width: '20px', height: '20px' }} />
-          🔧 Registre d'Utilisation des Équipements ({equipment.length})
-        </h3>
-        
-        {equipment.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: isMobile ? '32px 20px' : '48px 32px', 
-            color: '#9ca3af',
-            backgroundColor: 'rgba(17, 24, 39, 0.5)',
-            borderRadius: '12px',
-            border: '1px solid #374151'
-          }}>
-            <Wrench style={{ 
-              width: isMobile ? '56px' : '72px', 
-              height: isMobile ? '56px' : '72px', 
-              margin: '0 auto 20px', 
-              color: '#4b5563'
-            }} />
-            <p style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: '12px', fontWeight: '600' }}>
-              Aucun équipement enregistré
-            </p>
-            <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
-              Ajoutez les équipements de sécurité obligatoires pour assurer la conformité réglementaire.
-            </p>
-          </div>
-        ) : (
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '16px',
-            maxHeight: isMobile ? '500px' : '600px',
-            overflowY: 'auto'
-          }}>
-            {equipment.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  backgroundColor: 'rgba(17, 24, 39, 0.6)',
-                  borderRadius: '12px',
-                  padding: isMobile ? '16px' : '20px',
-                  border: `2px solid ${getStatusColor(item.current_status)}`,
-                  transition: 'all 0.2s ease'
-                }}
+      {/* Contenu du niveau actif */}
+      {data.levels[activeLevel] && (
+        <div className="space-y-4">
+          {/* Header du niveau */}
+          <div className="flex items-center justify-between">
+            <h4 className="text-lg font-semibold">
+              Niveau {activeLevel + 1}: {data.levels[activeLevel].depth}
+            </h4>
+            <div className="flex gap-2">
+              <button
+                onClick={() => retestLevel(activeLevel)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between', 
-                  marginBottom: '16px',
-                  flexDirection: isMobile ? 'column' : 'row',
-                  gap: isMobile ? '12px' : '0'
-                }}>
-                  <div>
-                    <div style={{ 
-                      fontWeight: '700', 
-                      color: 'white', 
-                      fontSize: isMobile ? '16px' : '18px',
-                      marginBottom: '4px'
-                    }}>
-                      🔧 {item.name}
-                    </div>
-                    <div style={{ 
-                      color: '#9ca3af', 
-                      fontSize: '14px',
-                      marginBottom: '8px'
-                    }}>
-                      📟 {item.serial_number} {item.location && `• 📍 ${item.location}`}
-                    </div>
-                    <div style={{
-                      display: 'flex',
-                      gap: '8px',
-                      flexWrap: 'wrap',
-                      marginBottom: '8px'
-                    }}>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        backgroundColor: getConditionColor(item.condition),
-                        color: 'white'
-                      }}>
-                        {item.condition === 'good' ? '✅ Bon état' :
-                         item.condition === 'fair' ? '⚠️ État acceptable' :
-                         '❌ À remplacer'}
-                      </span>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        backgroundColor: getStatusColor(item.current_status),
-                        color: 'white'
-                      }}>
-                        {item.current_status === 'available' ? '🟢 DISPONIBLE' :
-                         item.current_status === 'in_use' ? '🟡 EN UTILISATION' :
-                         '🔴 MAINTENANCE'}
-                      </span>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        backgroundColor: '#3b82f6',
-                        color: 'white'
-                      }}>
-                        📊 {item.total_uses} utilisations
-                      </span>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        backgroundColor: '#10b981',
-                        color: 'white'
-                      }}>
-                        ⏱️ {formatDuration(item.total_duration)}
-                      </span>
-                    </div>
-                    
-                    {/* Badges spéciaux */}
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                      {item.rescue_plan_required && (
-                        <span style={{
-                          padding: '2px 6px',
-                          borderRadius: '8px',
-                          fontSize: '10px',
-                          fontWeight: '600',
-                          backgroundColor: '#dc2626',
-                          color: 'white'
-                        }}>
-                          🆘 SAUVETAGE
-                        </span>
-                      )}
-                      {item.atmospheric_testing_required && (
-                        <span style={{
-                          padding: '2px 6px',
-                          borderRadius: '8px',
-                          fontSize: '10px',
-                          fontWeight: '600',
-                          backgroundColor: '#7c3aed',
-                          color: 'white'
-                        }}>
-                          🌬️ ATMOSPHÉRIQUE
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* Calibration */}
-                    {item.next_calibration && (
-                      <div style={{
-                        fontSize: '11px',
-                        color: new Date(item.next_calibration) < new Date() ? '#fca5a5' : '#86efac'
-                      }}>
-                        📅 Calibration: {new Date(item.next_calibration).toLocaleDateString('fr-CA')}
-                        {new Date(item.next_calibration) < new Date() && ' ⚠️ EXPIRÉE'}
-                      </div>
-                    )}
-                    
-                    {/* Utilisateur actuel */}
-                    {item.assigned_to && (
-                      <div style={{
-                        fontSize: '11px',
-                        color: '#fbbf24',
-                        marginTop: '4px'
-                      }}>
-                        👤 Assigné à: {item.assigned_to}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px',
-                    flexDirection: isMobile ? 'column' : 'row'
-                  }}>
-                    <button
-                      onClick={() => {
-                        if (item.current_status === 'available') {
-                          const assignedTo = prompt('Assigné à (nom de la personne):');
-                          if (assignedTo) {
-                            toggleEquipmentUsage(item.id, assignedTo);
-                          }
-                        } else {
-                          toggleEquipmentUsage(item.id);
-                        }
-                      }}
-                      disabled={!currentSurveillant || item.condition === 'poor'}
-                      style={{
-                        ...styles.button,
-                        ...(item.current_status === 'available' ? styles.buttonSuccess : styles.buttonDanger),
-                        width: 'auto',
-                        padding: '8px 12px',
-                        fontSize: '14px',
-                        minHeight: 'auto',
-                        opacity: (!currentSurveillant || item.condition === 'poor') ? 0.5 : 1,
-                        cursor: (!currentSurveillant || item.condition === 'poor') ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                      {item.current_status === 'available' ? (
-                        <>
-                          <LogIn style={{ width: '16px', height: '16px' }} />
-                          Sortir Équipement
-                        </>
-                      ) : (
-                        <>
-                          <LogOut style={{ width: '16px', height: '16px' }} />
-                          Retourner Équipement
-                        </>
-                      )}
-                    </button>
-                    
-                    <button
-                      onClick={() => deleteEquipment(item.id)}
-                      disabled={item.current_status === 'in_use'}
-                      style={{
-                        ...styles.button,
-                        ...styles.buttonSecondary,
-                        width: 'auto',
-                        padding: '8px 12px',
-                        fontSize: '14px',
-                        minHeight: 'auto',
-                        opacity: item.current_status === 'in_use' ? 0.5 : 1
-                      }}
-                    >
-                      <Trash2 style={{ width: '16px', height: '16px' }} />
-                      Supprimer
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Historique des utilisations */}
-                {item.usage_sessions.length > 0 && (
-                  <div style={{
-                    marginTop: '16px',
-                    padding: '16px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                    borderRadius: '8px'
-                  }}>
-                    <h5 style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: '#d1d5db',
-                      marginBottom: '12px'
-                    }}>
-                      📋 Historique d'utilisation ({item.usage_sessions.length}):
-                    </h5>
-                    
-                    <div style={{
-                      maxHeight: '200px',
-                      overflowY: 'auto',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px'
-                    }}>
-                      {item.usage_sessions.slice().reverse().map((session, index) => (
-                        <div
-                          key={session.id}
-                          style={{
-                            padding: '12px',
-                            backgroundColor: 'rgba(17, 24, 39, 0.8)',
-                            borderRadius: '6px',
-                            border: `1px solid ${session.status === 'in_use' ? '#f59e0b' : '#6b7280'}`
-                          }}
-                        >
-                          <div style={styles.grid3}>
-                            <div>
-                              <div style={{ color: '#d1d5db', fontSize: '13px' }}>
-                                🕐 Sorti: {formatTime(session.entry_time)}
-                              </div>
-                              <div style={{ color: '#9ca3af', fontSize: '12px' }}>
-                                👤 {session.used_by}
-                              </div>
-                            </div>
-                            <div>
-                              <div style={{ color: '#d1d5db', fontSize: '13px' }}>
-                                {session.exit_time ? 
-                                  `🕓 Retour: ${formatTime(session.exit_time)}` : 
-                                  '🟡 En cours...'
-                                }
-                              </div>
-                              {session.location && (
-                                <div style={{ color: '#9ca3af', fontSize: '12px' }}>
-                                  📍 {session.location}
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <div style={{ color: '#d1d5db', fontSize: '13px' }}>
-                                {session.duration ? 
-                                  `⏱️ ${formatDuration(session.duration)}` : 
-                                  '⏱️ En cours...'
-                                }
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Affichage des retours forcés */}
-                          {session.forced_return && (
-                            <div style={{
-                              marginTop: '8px',
-                              padding: '8px',
-                              backgroundColor: 'rgba(220, 38, 38, 0.2)',
-                              borderRadius: '4px',
-                              border: '1px solid #ef4444'
-                            }}>
-                              <div style={{ color: '#fca5a5', fontSize: '12px', fontWeight: '600' }}>
-                                🚨 RETOUR FORCÉ: {session.forced_return.reason}
-                              </div>
-                              <div style={{ color: '#fecaca', fontSize: '11px' }}>
-                                Par: {session.forced_return.returned_by} - {formatTime(session.forced_return.timestamp)}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                <Plus className="w-4 h-4 inline mr-2" />
+                Nouveau Test
+              </button>
+              {data.levels.length > 1 && (
+                <button
+                  onClick={() => removeLevel(activeLevel)}
+                  className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Historique des tests avec timers intégrés */}
+          <div className="space-y-3">
+            {data.levels[activeLevel].readings.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Wind className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>Aucun test effectué pour ce niveau</p>
+                <button
+                  onClick={() => retestLevel(activeLevel)}
+                  className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Effectuer le premier test
+                </button>
+              </div>
+            ) : (
+              data.levels[activeLevel].readings.map((reading, testIndex) => {
+                const timerKey = generateTimerKey(activeLevel, testIndex);
+                const timer = testTimers[timerKey];
+                const isLatestTest = testIndex === data.levels[activeLevel].readings.length - 1;
+                
+                return (
+                  <div
+                    key={testIndex}
+                    className={`p-4 rounded-lg border-2 transition-all ${getStatusColor(reading.status || 'pending')} ${
+                      isLatestTest ? 'ring-2 ring-blue-200' : ''
+                    }`}
+                  >
+                    {/* Header du test avec timer */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(reading.status || 'pending')}
+                        <span className="font-medium">
+                          Test #{testIndex + 1}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {reading.timestamp ? new Date(reading.timestamp).toLocaleString() : 'En cours...'}
+                        </span>
+                      </div>
+                      
+                      {/* Timer intégré */}
+                      {timer && timer.isActive && (
+                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          timer.remaining <= 60 ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-orange-100 text-orange-700'
+                        }`}>
+                          <Clock className="w-4 h-4 inline mr-1" />
+                          Retest dans {formatTime(timer.remaining)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Données du test */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">O₂:</span>
+                        <span className={`ml-2 ${
+                          reading.oxygen && (parseFloat(reading.oxygen) < 19.5 || parseFloat(reading.oxygen) > 23.5) 
+                            ? 'text-red-600 font-semibold' : 'text-green-600'
+                        }`}>
+                          {reading.oxygen || '--'}%
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium">LEL:</span>
+                        <span className={`ml-2 ${
+                          reading.combustible && parseFloat(reading.combustible) > 10 
+                            ? 'text-red-600 font-semibold' : 'text-green-600'
+                        }`}>
+                          {reading.combustible || '--'}%
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium">H₂S:</span>
+                        <span className={`ml-2 ${
+                          reading.hydrogen_sulfide && parseFloat(reading.hydrogen_sulfide) > 10 
+                            ? 'text-red-600 font-semibold' : 'text-green-600'
+                        }`}>
+                          {reading.hydrogen_sulfide || '--'} ppm
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium">CO:</span>
+                        <span className={`ml-2 ${
+                          reading.carbon_monoxide && parseFloat(reading.carbon_monoxide) > 35 
+                            ? 'text-red-600 font-semibold' : 'text-green-600'
+                        }`}>
+                          {reading.carbon_monoxide || '--'} ppm
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Échecs si présents */}
+                    {reading.failures && reading.failures.length > 0 && (
+                      <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertTriangle className="w-4 h-4 text-red-600" />
+                          <span className="font-medium text-red-800">Paramètres en échec:</span>
+                        </div>
+                        <ul className="text-sm text-red-700 space-y-1">
+                          {reading.failures.map((failure, idx) => (
+                            <li key={idx}>• {failure}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Notes */}
+                    {reading.notes && (
+                      <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
+                        <strong>Notes:</strong> {reading.notes}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal d'ajout de niveau */}
+      {showAddLevelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Ajouter un niveau de test</h3>
+            <input
+              type="text"
+              value={newLevelDepth}
+              onChange={(e) => setNewLevelDepth(e.target.value)}
+              placeholder="Ex: Surface, -3m, -6m, Fond"
+              className="w-full p-3 border rounded-lg mb-4"
+              onKeyPress={(e) => e.key === 'Enter' && addLevel()}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={addLevel}
+                disabled={!newLevelDepth.trim()}
+                className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors"
+              >
+                Ajouter
+              </button>
+              <button
+                onClick={() => {
+                  setShowAddLevelModal(false);
+                  setNewLevelDepth('');
+                }}
+                className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de test */}
+      {showTestModal && selectedLevel !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-4">
+              Nouveau test - {data.levels[selectedLevel]?.depth}
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Oxygène (%) *
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={currentReading.oxygen}
+                  onChange={(e) => setCurrentReading(prev => ({...prev, oxygen: e.target.value}))}
+                  className="w-full p-3 border rounded-lg"
+                  placeholder="19.5 - 23.5"
+                />
+                <span className="text-xs text-gray-500">Normal: 19.5-23.5%</span>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Combustible (% LIE) *
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={currentReading.combustible}
+                  onChange={(e) => setCurrentReading(prev => ({...prev, combustible: e.target.value}))}
+                  className="w-full p-3 border rounded-lg"
+                  placeholder="< 10"
+                />
+                <span className="text-xs text-gray-500">Maximum: 10% LIE</span>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  H₂S (ppm) *
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={currentReading.hydrogen_sulfide}
+                  onChange={(e) => setCurrentReading(prev => ({...prev, hydrogen_sulfide: e.target.value}))}
+                  className="w-full p-3 border rounded-lg"
+                  placeholder="< 10"
+                />
+                <span className="text-xs text-gray-500">Maximum: 10 ppm</span>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  CO (ppm) *
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={currentReading.carbon_monoxide}
+                  onChange={(e) => setCurrentReading(prev => ({...prev, carbon_monoxide: e.target.value}))}
+                  className="w-full p-3 border rounded-lg"
+                  placeholder="< 35"
+                />
+                <span className="text-xs text-gray-500">Maximum: 35 ppm</span>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Température (°C)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={currentReading.temperature}
+                  onChange={(e) => setCurrentReading(prev => ({...prev, temperature: e.target.value}))}
+                  className="w-full p-3 border rounded-lg"
+                  placeholder="Optionnel"
+                />
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Notes
+              </label>
+              <textarea
+                value={currentReading.notes}
+                onChange={(e) => setCurrentReading(prev => ({...prev, notes: e.target.value}))}
+                className="w-full p-3 border rounded-lg"
+                rows={3}
+                placeholder="Observations, conditions particulières..."
+              />
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={saveTest}
+                disabled={!currentReading.oxygen || !currentReading.combustible || !currentReading.hydrogen_sulfide || !currentReading.carbon_monoxide}
+                className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors"
+              >
+                Enregistrer le test
+              </button>
+              <button
+                onClick={() => {
+                  setShowTestModal(false);
+                  setSelectedLevel(null);
+                  setCurrentReading({
+                    oxygen: '',
+                    combustible: '',
+                    hydrogen_sulfide: '',
+                    carbon_monoxide: '',
+                    temperature: '',
+                    notes: ''
+                  });
+                }}
+                className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default EntryRegistry;
+export default AtmosphericTesting;
