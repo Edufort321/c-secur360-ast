@@ -131,7 +131,8 @@ interface ConfinedSpaceProps {
   initialData?: any;
 }
 
-interface AtmosphericReading {
+// 🔧 INTERFACE UNIFIÉE - Compatible avec tous les sous-composants
+interface CSAtmosphericReading {
   id: string;
   timestamp: string;
   oxygen: number;
@@ -414,7 +415,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   const [permitData, setPermitData] = useState<PermitData>(initialData);
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [atmosphericReadings, setAtmosphericReadings] = useState<AtmosphericReading[]>([]);
+  const [atmosphericReadings, setAtmosphericReadings] = useState<CSAtmosphericReading[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   
   const texts = getTexts(language);
@@ -513,6 +514,17 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     if (percentage === 100) return 'completed';
     return 'inProgress';
   };
+  // =================== WRAPPER FUNCTION POUR ATMOSPHERIC READINGS ===================
+  const handleAtmosphericReadingsUpdate = useCallback((
+    readings: CSAtmosphericReading[] | ((prev: CSAtmosphericReading[]) => CSAtmosphericReading[])
+  ) => {
+    if (typeof readings === 'function') {
+      setAtmosphericReadings(prev => readings(prev));
+    } else {
+      setAtmosphericReadings(readings);
+    }
+  }, []);
+
   // =================== RENDU DES SECTIONS ===================
   const renderSectionContent = () => {
     const commonProps = {
@@ -554,7 +566,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               <AtmosphericTesting 
                 {...commonProps} 
                 atmosphericReadings={atmosphericReadings}
-                setAtmosphericReadings={setAtmosphericReadings}
+                setAtmosphericReadings={handleAtmosphericReadingsUpdate}
               />
             </div>
           );
