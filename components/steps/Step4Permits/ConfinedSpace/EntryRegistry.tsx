@@ -298,6 +298,10 @@ interface EntryRegistryProps {
   atmosphericReadings?: any[];
   setAtmosphericReadings?: (readings: any[] | ((prev: any[]) => any[])) => void;
   retestTimer?: number;
+  retestLevel?: string;
+  personnelEvacuation?: () => void;
+  safetyAlerts?: any[];
+  activeSafetyTimers?: any[];
 }
 
 // =================== EXIGENCES DE FORMATION PAR PROVINCE ===================
@@ -749,7 +753,11 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   updateParentData,
   atmosphericReadings = [],
   setAtmosphericReadings,
-  retestTimer = 0
+  retestTimer = 0,
+  retestLevel,
+  personnelEvacuation,
+  safetyAlerts = [],
+  activeSafetyTimers = []
 }) => {
 
   // =================== ÉTATS LOCAUX ===================
@@ -1520,10 +1528,83 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     return permitValidation.compliance_check.all_requirements_met;
   };
 
-  // Vérifier la conformité seulement au changement des données, pas automatiquement
+  // =================== GESTION ÉVACUATION D'URGENCE ===================
+  const executeEmergencyEvacuation = () => {
+    if (!currentSurveillant) return;
+
+    // Forcer la sortie de tous les entrants
+    const personnelInside = entrants.filter(e => e.current_status === 'inside');
+    
+    if (personnelInside.length > 0) {
+      const evacuationTime = new Date().toISOString();
+      
+      const updatedEntrants = entrants.map(entrant => {
+        if (entrant.current_status === 'inside') {
+          const activeSession = entrant.entry_sessions.find(s => s.status === 'inside');
+          if (activeSession) {
+            const entryTime = new Date(activeSession.entry_time);
+            const duration = Math.floor((Date.now() - entryTime.getTime()) / 1000);
+
+            const emergencyExitSession = {
+              ...activeSession,
+              exit_time: evacuationTime,
+              duration,
+              status: 'completed' as const,
+              forced_exit: {
+                timestamp: evacuationTime,
+                reason: 'ÉVACUATION D\'URGENCE - Atmosphère dangereuse',
+                new_surveillant: currentSurveillant.name
+              }
+            };
+
+            const updatedSessions = entrant.entry_sessions.map(s => 
+              s.id === activeSession.id ? emergencyExitSession : s
+            );
+
+            return {
+              ...entrant,
+              current_status: 'outside' as const,
+              total_entries: entrant.total_entries + 1,
+              total_duration: entrant.total_duration + duration,
+              entry_sessions: updatedSessions
+            };
+          }
+        }
+        return entrant;
+      });
+
+      setEntrants(updatedEntrants);
+      updateParentData('entrants', updatedEntrants);
+
+      // Enregistrer l'évacuation d'urgence
+      const updatedSurveillant = {
+        ...currentSurveillant,
+        forced_evacuations: [...currentSurveillant.forced_evacuations, {
+          timestamp: evacuationTime,
+          reason: 'ÉVACUATION D\'URGENCE - Atmosphère dangereuse détectée',
+          evacuated_personnel: personnelInside.map(p => p.name)
+        }]
+      };
+
+      const updatedHistory = surveillantHistory.map(s => 
+        s.id === currentSurveillant.id ? updatedSurveillant : s
+      );
+
+      setSurveillantHistory(updatedHistory);
+      setCurrentSurveillant(updatedSurveillant);
+      updateParentData('surveillant_history', updatedHistory);
+
+      // Notification critique
+      alert(`🚨 ÉVACUATION D'URGENCE EXÉCUTÉE: ${personnelInside.length} personne(s) évacuée(s) automatiquement en raison d'une atmosphère dangereuse!`);
+    }
+  };
+
+  // Exécuter évacuation si demandée par le système de sécurité
   useEffect(() => {
-    // Ne pas recalculer automatiquement, garder les cases telles qu'elles sont
-  }, [equipment, entrants, currentSurveillant, atmosphericReadings]);
+    if (personnelEvacuation) {
+      executeEmergencyEvacuation();
+    }
+  }, [personnelEvacuation]);
   // =================== RENDU JSX - SECTION 2B ===================
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
@@ -1573,6 +1654,120 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
         />
       )}
 
+      {/* Alertes de sécurité atmosphérique */}
+      {safetyAlerts && safetyAlerts.length > 0 && (
+        <div style={styles.emergencyCard}>
+          <h3 style={{
+            fontSize: isMobile ? '18px' : '20px',
+            fontWeight: '700',
+            color: '#fecaca',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            🚨 ALERTES DE SÉCURITÉ ATMOSPHÉRIQUE
+          </h3>
+          
+          {safetyAlerts.map((alert) => (
+            <div key={alert.id} style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '12px',
+              border: `2px solid ${alert.type === 'evacuation' ? '#ef4444' : '#f59e0b'}`
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '8px'
+              }}>
+                <span style={{
+                  color: alert.type === 'evacuation' ? '#fca5a5' : '#fde047',
+                  fontWeight: '700',
+                  fontSize: isMobile ? '15px' : '16px'
+                }}>
+                  {alert.type === 'evacuation' ? '🚨 ÉVACUATION' : '⚠️ ATTENTION'} - NIVEAU {alert.level.toUpperCase()}
+                </span>
+                <span style={{
+                  color: '#9ca3af',
+                  fontSize: '12px'
+                }}>
+                  {new Date(alert.timestamp).toLocaleTimeString('fr-CA')}
+                </span>
+              </div>
+              <p style={{
+                color: '#fecaca',
+                fontSize: '14px',
+                margin: '8px 0'
+              }}>
+                {alert.message}
+              </p>
+              {alert.personnelCount > 0 && (
+                <div style={{
+                  padding: '8px 12px',
+                  backgroundColor: 'rgba(220, 38, 38, 0.2)',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  color: '#fca5a5',
+                  fontWeight: '600'
+                }}>
+                  👥 {alert.personnelCount} personne(s) concernée(s)
+                  {alert.autoEvacuation && ' - ÉVACUATION AUTOMATIQUE ACTIVÉE'}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Affichage des timers de retest actifs */}
+      {activeSafetyTimers && activeSafetyTimers.length > 0 && (
+        <div style={styles.card}>
+          <h3 style={styles.cardTitle}>
+            ⏰ Timers de Surveillance Atmosphérique Actifs
+          </h3>
+          
+          <div style={styles.grid3}>
+            {activeSafetyTimers.map((timer) => (
+              <div key={timer.id} style={{
+                backgroundColor: timer.type === 'retest' ? 'rgba(220, 38, 38, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                borderRadius: '12px',
+                padding: '16px',
+                border: `2px solid ${timer.type === 'retest' ? '#ef4444' : '#3b82f6'}`,
+                textAlign: 'center'
+              }}>
+                <div style={{
+                  fontSize: '12px',
+                  color: timer.type === 'retest' ? '#fca5a5' : '#93c5fd',
+                  fontWeight: '600',
+                  marginBottom: '8px'
+                }}>
+                  {timer.type === 'retest' ? '🚨 RETEST' : '🔄 SURVEILLANCE'} - {timer.level?.toUpperCase()}
+                </div>
+                <div style={{
+                  fontSize: isMobile ? '20px' : '24px',
+                  fontWeight: 'bold',
+                  color: timer.timeRemaining <= 60 ? '#ef4444' : (timer.type === 'retest' ? '#fca5a5' : '#93c5fd'),
+                  fontFamily: 'JetBrains Mono, monospace',
+                  marginBottom: '4px',
+                  animation: timer.timeRemaining <= 60 ? 'pulse 1s infinite' : 'none'
+                }}>
+                  {Math.floor(timer.timeRemaining / 60)}:{(timer.timeRemaining % 60).toString().padStart(2, '0')}
+                </div>
+                <div style={{
+                  fontSize: '11px',
+                  color: '#9ca3af'
+                }}>
+                  {timer.type === 'retest' ? 'Retest obligatoire' : 'Prochain test'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Affichage du timer de retest dans la section surveillant */}
       {retestTimer > 0 && currentSurveillant && (
         <div style={styles.emergencyCard}>
@@ -1590,7 +1785,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
                   ⏰ RETEST ATMOSPHÉRIQUE OBLIGATOIRE
                 </h3>
                 <p style={{ color: '#fca5a5', fontSize: isMobile ? '14px' : '16px' }}>
-                  Valeurs critiques détectées - Nouveau test requis avant expiration
+                  {retestLevel && `Niveau ${retestLevel.toUpperCase()}: `}Valeurs critiques détectées - Nouveau test requis avant expiration
                 </p>
               </div>
             </div>
