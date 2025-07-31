@@ -40,13 +40,7 @@ interface Person {
   name: string;
   role: 'surveillant' | 'entrant';
   company: string;
-  training: {
-    confined_space: boolean;
-    h2s_alive: boolean;
-    first_aid: boolean;
-    rescue: boolean;
-    [key: string]: boolean;
-  };
+  training: Record<string, boolean>;
   equipment_assigned: string[];
   entry_sessions: EntrySession[];
   is_active: boolean;
@@ -1200,7 +1194,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
 
     onChange(registryData);
   }, [personnel, equipment, compliance_check]);
- // EntryRegistry.tsx - Section 4 (Rendu JSX - Dashboard et Personnel)
+  // EntryRegistry.tsx - Section 4 (Rendu JSX - Dashboard et Personnel)
 
   // =================== RENDU PRINCIPAL ===================
   return (
