@@ -711,6 +711,19 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             gap: '12px'
           }}>
             <button
+              onClick={() => savePermitData(true)}
+              style={{
+                ...styles.button,
+                ...styles.buttonSuccess,
+                width: 'auto',
+                padding: '12px 16px'
+              }}
+            >
+              <Save style={{ width: '16px', height: '16px' }} />
+              {texts.navigation.save}
+            </button>
+            
+            <button
               onClick={onCancel}
               style={{
                 ...styles.button,
