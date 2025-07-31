@@ -518,7 +518,7 @@ const PermitManager: React.FC<PermitManagerProps> = ({
       totalSections: 4,
       completedSections: getSectionValidation().filter(s => s.isComplete).length,
       totalPersonnel: permit.entryRegistry?.personnel?.length || 0,
-      activeEntrants: safetyManager.activeEntrants?.length || 0,
+      activeEntrants: permit.entryRegistry?.activeEntrants?.length || 0,
       atmosphericReadings: permit.atmosphericTesting?.readings?.length || 0,
       lastSaved: safetyManager.lastSaved ? new Date(safetyManager.lastSaved).toLocaleString() : 'Jamais',
       permitAge: permit.created_at ? Math.floor((Date.now() - new Date(permit.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0,
