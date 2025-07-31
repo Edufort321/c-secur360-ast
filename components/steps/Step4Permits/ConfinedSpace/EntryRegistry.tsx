@@ -811,6 +811,99 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     }
   });
   
+  // =================== ÉQUIPEMENTS PRÉDÉFINIS PAR CATÉGORIE ===================
+  const EQUIPMENT_CATEGORIES = {
+    detection: {
+      name: "Détection et Monitoring",
+      items: [
+        { name: "Détecteur 4 gaz portable", calibration_required: true, rescue_required: false, atmospheric_required: true },
+        { name: "Détecteur d'oxygène", calibration_required: true, rescue_required: false, atmospheric_required: true },
+        { name: "Détecteur de gaz combustibles", calibration_required: true, rescue_required: false, atmospheric_required: true },
+        { name: "Manomètre de pression", calibration_required: true, rescue_required: false, atmospheric_required: false },
+        { name: "Thermomètre infrarouge", calibration_required: true, rescue_required: false, atmospheric_required: false }
+      ]
+    },
+    safety: {
+      name: "Équipement de Sécurité",
+      items: [
+        { name: "Harnais de sécurité", calibration_required: false, rescue_required: true, atmospheric_required: false },
+        { name: "Longe d'assurance", calibration_required: false, rescue_required: true, atmospheric_required: false },
+        { name: "Casque de protection", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Gants de protection", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Chaussures de sécurité", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Lunettes de protection", calibration_required: false, rescue_required: false, atmospheric_required: false }
+      ]
+    },
+    breathing: {
+      name: "Protection Respiratoire",
+      items: [
+        { name: "Appareil respiratoire autonome (ARA)", calibration_required: true, rescue_required: true, atmospheric_required: false },
+        { name: "Masque à cartouche", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Ligne d'air comprimé", calibration_required: true, rescue_required: true, atmospheric_required: false },
+        { name: "Masque complet", calibration_required: false, rescue_required: false, atmospheric_required: false }
+      ]
+    },
+    rescue: {
+      name: "Équipement de Sauvetage",
+      items: [
+        { name: "Treuil de sauvetage", calibration_required: true, rescue_required: true, atmospheric_required: false },
+        { name: "Civière d'évacuation", calibration_required: false, rescue_required: true, atmospheric_required: false },
+        { name: "Corde de sauvetage", calibration_required: false, rescue_required: true, atmospheric_required: false },
+        { name: "Poulie de renvoi", calibration_required: false, rescue_required: true, atmospheric_required: false },
+        { name: "Mousquetons de sécurité", calibration_required: false, rescue_required: true, atmospheric_required: false }
+      ]
+    },
+    communication: {
+      name: "Communication",
+      items: [
+        { name: "Radio bidirectionnelle", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Téléphone d'urgence", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Système d'alarme", calibration_required: true, rescue_required: false, atmospheric_required: false },
+        { name: "Sifflet d'urgence", calibration_required: false, rescue_required: false, atmospheric_required: false }
+      ]
+    },
+    ventilation: {
+      name: "Ventilation",
+      items: [
+        { name: "Ventilateur portable", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Gaine de ventilation", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Extracteur d'air", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Soufflante industrielle", calibration_required: false, rescue_required: false, atmospheric_required: false }
+      ]
+    },
+    lighting: {
+      name: "Éclairage",
+      items: [
+        { name: "Lampe frontale LED", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Projecteur portable", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Éclairage de secours", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Lampe torche antidéflagrante", calibration_required: false, rescue_required: false, atmospheric_required: false }
+      ]
+    },
+    tools: {
+      name: "Outils",
+      items: [
+        { name: "Clés à molette", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Tournevis isolés", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Pince multiprise", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Marteau antidéflagrant", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Niveau à bulle", calibration_required: false, rescue_required: false, atmospheric_required: false }
+      ]
+    },
+    electrical: {
+      name: "Équipement Électrique",
+      items: [
+        { name: "Multimètre", calibration_required: true, rescue_required: false, atmospheric_required: false },
+        { name: "Testeur de tension", calibration_required: true, rescue_required: false, atmospheric_required: false },
+        { name: "Rallonge étanche", calibration_required: false, rescue_required: false, atmospheric_required: false },
+        { name: "Disjoncteur portable", calibration_required: false, rescue_required: false, atmospheric_required: false }
+      ]
+    }
+  };
+
+  const [selectedCategory, setSelectedCategory] = useState<string>('detection');
+  const [selectedPresetEquipment, setSelectedPresetEquipment] = useState<string>('');
+
   const [newEquipment, setNewEquipment] = useState({
     name: '',
     serial_number: '',
@@ -819,6 +912,7 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     next_calibration: '',
     rescue_plan_required: false,
     atmospheric_testing_required: false,
+    calibration_required: false,
     location: ''
   });
 
@@ -1181,9 +1275,35 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
   };
 
   // =================== FONCTIONS ÉQUIPEMENT AMÉLIORÉES ===================
+  const selectPresetEquipment = (categoryKey: string, itemName: string) => {
+    const category = EQUIPMENT_CATEGORIES[categoryKey];
+    const item = category.items.find(i => i.name === itemName);
+    
+    if (item) {
+      setNewEquipment(prev => ({
+        ...prev,
+        name: item.name,
+        rescue_plan_required: item.rescue_required,
+        atmospheric_testing_required: item.atmospheric_required,
+        calibration_required: item.calibration_required,
+        // Réinitialiser les autres champs
+        serial_number: '',
+        calibration_date: '',
+        next_calibration: '',
+        location: ''
+      }));
+    }
+  };
+
   const addEquipmentItem = () => {
     if (!newEquipment.name || !newEquipment.serial_number) {
       alert('⚠️ Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    // Vérifier la calibration si requise
+    if (newEquipment.calibration_required && !newEquipment.next_calibration) {
+      alert('⚠️ Ce type d\'équipement nécessite une date de calibration');
       return;
     }
 
@@ -1197,8 +1317,8 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
       total_duration: 0,
       usage_sessions: [],
       added_time: new Date().toISOString(),
-      calibration_date: newEquipment.calibration_date || undefined,
-      next_calibration: newEquipment.next_calibration || undefined,
+      calibration_date: newEquipment.calibration_required ? newEquipment.calibration_date || undefined : undefined,
+      next_calibration: newEquipment.calibration_required ? newEquipment.next_calibration || undefined : undefined,
       rescue_plan_required: newEquipment.rescue_plan_required,
       atmospheric_testing_required: newEquipment.atmospheric_testing_required,
       location: newEquipment.location || undefined
@@ -1216,8 +1336,10 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
       next_calibration: '',
       rescue_plan_required: false,
       atmospheric_testing_required: false,
+      calibration_required: false,
       location: ''
     });
+    setSelectedPresetEquipment('');
 
     // Recalculer la conformité du permis
     checkPermitCompliance();
@@ -1357,11 +1479,17 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     );
     
     const communicationEquipmentPresent = equipment.some(e => 
-      e.name.toLowerCase().includes('communication') || e.name.toLowerCase().includes('radio')
+      e.name.toLowerCase().includes('radio') || 
+      e.name.toLowerCase().includes('téléphone') || 
+      e.name.toLowerCase().includes('communication') ||
+      e.name.toLowerCase().includes('alarme')
     );
     
     const ventilationEquipmentPresent = equipment.some(e => 
-      e.name.toLowerCase().includes('ventilation') || e.name.toLowerCase().includes('ventilateur')
+      e.name.toLowerCase().includes('ventilateur') || 
+      e.name.toLowerCase().includes('ventilation') ||
+      e.name.toLowerCase().includes('extracteur') ||
+      e.name.toLowerCase().includes('soufflante')
     );
     
     const atmosphericTestingEquipmentPresent = equipment.some(e => 
@@ -1378,28 +1506,28 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
     
     const emergencyProceduresReviewed = permitValidation.team_validation.validated;
     
-    const rescuePlanAccessible = rescueEquipmentPresent;
+    const rescuePlanAccessible = rescueEquipmentPresent && emergencyProceduresReviewed;
     
     const allRequirementsMet = atmosphericTestingComplete && 
-                              rescueEquipmentPresent && 
-                              communicationEquipmentPresent && 
-                              ventilationEquipmentPresent && 
+                              (rescueEquipmentPresent || equipment.length === 0) && // Permettre si pas d'équipement encore
+                              (communicationEquipmentPresent || equipment.length === 0) && 
+                              (ventilationEquipmentPresent || equipment.length === 0) && 
                               equipmentCalibrationCurrent && 
-                              personnelTrainingVerified && 
+                              (personnelTrainingVerified || entrants.length === 0) && // Permettre si pas d'entrants encore
                               emergencyProceduresReviewed && 
-                              rescuePlanAccessible;
+                              (rescuePlanAccessible || equipment.length === 0);
 
     const updatedCompliance = {
       ...permitValidation,
       compliance_check: {
         atmospheric_testing_complete: atmosphericTestingComplete,
-        rescue_equipment_present: rescueEquipmentPresent,
-        communication_equipment_present: communicationEquipmentPresent,
-        ventilation_equipment_present: ventilationEquipmentPresent,
+        rescue_equipment_present: rescueEquipmentPresent || equipment.length === 0,
+        communication_equipment_present: communicationEquipmentPresent || equipment.length === 0,
+        ventilation_equipment_present: ventilationEquipmentPresent || equipment.length === 0,
         emergency_procedures_reviewed: emergencyProceduresReviewed,
-        personnel_training_verified: personnelTrainingVerified,
+        personnel_training_verified: personnelTrainingVerified || entrants.length === 0,
         equipment_calibration_current: equipmentCalibrationCurrent,
-        rescue_plan_accessible: rescuePlanAccessible,
+        rescue_plan_accessible: rescuePlanAccessible || equipment.length === 0,
         all_requirements_met: allRequirementsMet,
         checked_by: currentSurveillant?.name,
         check_time: new Date().toISOString()
@@ -2551,12 +2679,61 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
         )}
       </div>
 
-      {/* Section Équipements - Ajouter avec validation */}
+      {/* Section Équipements - Ajouter avec sélection prédéfinie */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
           <Plus style={{ width: '20px', height: '20px' }} />
           🔧 Ajouter Équipement de Sécurité
         </h3>
+        
+        {/* Sélection par catégorie */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={styles.label}>Catégorie d'équipement</label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => {
+              setSelectedCategory(e.target.value);
+              setSelectedPresetEquipment('');
+              setNewEquipment(prev => ({ 
+                ...prev, 
+                name: '',
+                rescue_plan_required: false,
+                atmospheric_testing_required: false,
+                calibration_required: false
+              }));
+            }}
+            style={styles.input}
+          >
+            {Object.entries(EQUIPMENT_CATEGORIES).map(([key, category]) => (
+              <option key={key} value={key}>{category.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Sélection équipement prédéfini */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={styles.label}>Équipement prédéfini (optionnel)</label>
+          <select
+            value={selectedPresetEquipment}
+            onChange={(e) => {
+              setSelectedPresetEquipment(e.target.value);
+              if (e.target.value) {
+                selectPresetEquipment(selectedCategory, e.target.value);
+              }
+            }}
+            style={styles.input}
+          >
+            <option value="">-- Sélectionner un équipement ou saisir manuellement --</option>
+            {EQUIPMENT_CATEGORIES[selectedCategory].items.map((item, index) => (
+              <option key={index} value={item.name}>
+                {item.name}
+                {item.calibration_required && ' 📅'}
+                {item.rescue_required && ' 🆘'}
+                {item.atmospheric_required && ' 🌬️'}
+              </option>
+            ))}
+          </select>
+        </div>
         
         <div style={styles.grid2}>
           <div>
@@ -2598,27 +2775,6 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
             </select>
           </div>
           <div>
-            <label style={styles.label}>Date de calibration</label>
-            <input
-              type="date"
-              value={newEquipment.calibration_date}
-              onChange={(e) => setNewEquipment(prev => ({ ...prev, calibration_date: e.target.value }))}
-              style={styles.input}
-            />
-          </div>
-          <div>
-            <label style={styles.label}>Prochaine calibration</label>
-            <input
-              type="date"
-              value={newEquipment.next_calibration}
-              onChange={(e) => setNewEquipment(prev => ({ ...prev, next_calibration: e.target.value }))}
-              style={styles.input}
-            />
-          </div>
-        </div>
-        
-        <div style={styles.grid2}>
-          <div>
             <label style={styles.label}>Localisation</label>
             <input
               type="text"
@@ -2628,31 +2784,71 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
               style={styles.input}
             />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input
                 type="checkbox"
-                id="rescue_required"
-                checked={newEquipment.rescue_plan_required}
-                onChange={(e) => setNewEquipment(prev => ({ ...prev, rescue_plan_required: e.target.checked }))}
+                id="calibration_required"
+                checked={newEquipment.calibration_required}
+                onChange={(e) => setNewEquipment(prev => ({ ...prev, calibration_required: e.target.checked }))}
                 style={{ width: '16px', height: '16px', accentColor: '#3b82f6' }}
               />
-              <label htmlFor="rescue_required" style={{ color: '#d1d5db', fontSize: '14px' }}>
-                🆘 Requis pour plan de sauvetage
+              <label htmlFor="calibration_required" style={{ color: '#d1d5db', fontSize: '14px' }}>
+                📅 Calibration requise
               </label>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          </div>
+        </div>
+        
+        {/* Champs de calibration conditionnels */}
+        {newEquipment.calibration_required && (
+          <div style={styles.grid2}>
+            <div>
+              <label style={styles.label}>Date de calibration</label>
               <input
-                type="checkbox"
-                id="atmospheric_required"
-                checked={newEquipment.atmospheric_testing_required}
-                onChange={(e) => setNewEquipment(prev => ({ ...prev, atmospheric_testing_required: e.target.checked }))}
-                style={{ width: '16px', height: '16px', accentColor: '#3b82f6' }}
+                type="date"
+                value={newEquipment.calibration_date}
+                onChange={(e) => setNewEquipment(prev => ({ ...prev, calibration_date: e.target.value }))}
+                style={styles.input}
               />
-              <label htmlFor="atmospheric_required" style={{ color: '#d1d5db', fontSize: '14px' }}>
-                🌬️ Requis pour tests atmosphériques
-              </label>
             </div>
+            <div>
+              <label style={styles.label}>Prochaine calibration *</label>
+              <input
+                type="date"
+                value={newEquipment.next_calibration}
+                onChange={(e) => setNewEquipment(prev => ({ ...prev, next_calibration: e.target.value }))}
+                style={styles.input}
+                required
+              />
+            </div>
+          </div>
+        )}
+        
+        <div style={styles.grid2}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="checkbox"
+              id="rescue_required"
+              checked={newEquipment.rescue_plan_required}
+              onChange={(e) => setNewEquipment(prev => ({ ...prev, rescue_plan_required: e.target.checked }))}
+              style={{ width: '16px', height: '16px', accentColor: '#3b82f6' }}
+            />
+            <label htmlFor="rescue_required" style={{ color: '#d1d5db', fontSize: '14px' }}>
+              🆘 Requis pour plan de sauvetage
+            </label>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="checkbox"
+              id="atmospheric_required"
+              checked={newEquipment.atmospheric_testing_required}
+              onChange={(e) => setNewEquipment(prev => ({ ...prev, atmospheric_testing_required: e.target.checked }))}
+              style={{ width: '16px', height: '16px', accentColor: '#3b82f6' }}
+            />
+            <label htmlFor="atmospheric_required" style={{ color: '#d1d5db', fontSize: '14px' }}>
+              🌬️ Requis pour tests atmosphériques
+            </label>
           </div>
         </div>
         
