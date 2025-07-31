@@ -505,7 +505,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     if (percentage === 100) return 'completed';
     return 'inProgress';
   };
-  // =================== RENDU DES SECTIONS ===================
+ // =================== RENDU DES SECTIONS ===================
   const renderSectionContent = () => {
     const commonProps = {
       permitData,
@@ -528,21 +528,21 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       switch (currentSection) {
         case 'site':
           return (
-            <div ref={el => sectionRefs.current.site = el}>
+            <div ref={el => { sectionRefs.current.site = el; }}>
               <SiteInformation {...commonProps} />
             </div>
           );
         
         case 'rescue':
           return (
-            <div ref={el => sectionRefs.current.rescue = el}>
+            <div ref={el => { sectionRefs.current.rescue = el; }}>
               <RescuePlan {...commonProps} />
             </div>
           );
         
         case 'atmospheric':
           return (
-            <div ref={el => sectionRefs.current.atmospheric = el}>
+            <div ref={el => { sectionRefs.current.atmospheric = el; }}>
               <AtmosphericTesting 
                 {...commonProps} 
                 atmosphericReadings={atmosphericReadings}
@@ -553,7 +553,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         
         case 'registry':
           return (
-            <div ref={el => sectionRefs.current.registry = el}>
+            <div ref={el => { sectionRefs.current.registry = el; }}>
               <EntryRegistry 
                 {...commonProps} 
                 atmosphericReadings={atmosphericReadings}
@@ -563,7 +563,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         
         default:
           return (
-            <div ref={el => sectionRefs.current.site = el}>
+            <div ref={el => { sectionRefs.current.site = el; }}>
               <SiteInformation {...commonProps} />
             </div>
           );
@@ -1209,4 +1209,4 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   );
 };
 
-export default ConfinedSpace;
+export default ConfinedSpace; 
