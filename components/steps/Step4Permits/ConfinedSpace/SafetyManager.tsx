@@ -10,7 +10,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// =================== TYPES COMPLETS ===================
+// =================== TYPES COMPLETS BASÉS SUR SITEINFORMATION RÉEL ===================
 export interface ConfinedSpacePermit {
   // Métadonnées
   id?: string;
@@ -21,8 +21,8 @@ export interface ConfinedSpacePermit {
   updated_at: string;
   last_modified: string;
   
-  // Données des sections
-  siteInformation: SiteInformationData;
+  // Données des sections (basées sur le code réel)
+  siteInformation: ConfinedSpaceDetails;
   atmosphericTesting: AtmosphericTestingData;
   entryRegistry: EntryRegistryData;
   rescuePlan: RescuePlanData;
@@ -40,41 +40,99 @@ export interface ConfinedSpacePermit {
   attachments: AttachmentData[];
 }
 
-export interface SiteInformationData {
-  // Projet et localisation
+// Types directement du SiteInformation.tsx
+export interface ConfinedSpaceDetails {
+  // Informations principales
   projectNumber: string;
   workLocation: string;
   contractor: string;
   supervisor: string;
-  emergencyNumber: string;
-  
+  entryDate: string;
+  duration: string;
+  workerCount: number;
+  workDescription: string;
+
   // Identification de l'espace
-  spaceIdentification: {
-    spaceType: string;
-    dimensions: {
-      length: number;
-      width: number;
-      height: number;
-      volume: number;
-    };
-    accessPoints: AccessPoint[];
-    ventilationSystem: VentilationData;
+  spaceType: string;
+  csaClass: string;
+  entryMethod: string;
+  accessType: string;
+  spaceLocation: string;
+  spaceDescription: string;
+
+  // Dimensions avec forme
+  dimensions: Dimensions;
+  unitSystem: 'metric' | 'imperial';
+
+  // Points d'entrée
+  entryPoints: Array<{
+    id: string;
+    type: string;
+    dimensions: string;
+    location: string;
+    condition: string;
+    accessibility: string;
+    photos: string[];
+  }>;
+
+  // Dangers
+  atmosphericHazards: string[];
+  physicalHazards: string[];
+
+  // Conditions environnementales
+  environmentalConditions: {
+    ventilationRequired: boolean;
+    ventilationType: string;
+    lightingConditions: string;
+    temperatureRange: string;
+    moistureLevel: string;
+    noiseLevel: string;
+    weatherConditions: string;
   };
-  
-  // Évaluation des dangers
-  hazardAssessment: {
-    atmosphericHazards: HazardItem[];
-    physicalHazards: HazardItem[];
-    biologicalHazards: HazardItem[];
-    chemicalHazards: HazardItem[];
-    riskLevel: 'low' | 'medium' | 'high' | 'extreme';
+
+  // Contenu de l'espace
+  spaceContent: {
+    contents: string;
+    residues: string;
+    previousUse: string;
+    lastEntry: string;
+    cleaningStatus: string;
   };
-  
-  // Documentation
-  photos: PhotoData[];
-  documents: DocumentData[];
-  lastUpdated: string;
+
+  // Mesures de sécurité
+  safetyMeasures: {
+    emergencyEgress: string;
+    communicationMethod: string;
+    monitoringEquipment: string[];
+    ventilationEquipment: string[];
+    emergencyEquipment: string[];
+  };
+
+  // Photos de l'espace
+  spacePhotos: SpacePhoto[];
 }
+
+export interface Dimensions {
+  length: number;
+  width: number;
+  height: number;
+  diameter: number;
+  volume: number;
+  spaceShape: 'rectangular' | 'cylindrical' | 'spherical' | 'irregular';
+}
+
+export interface SpacePhoto {
+  id: string;
+  url: string;
+  category: string;
+  caption: string;
+  timestamp: string;
+  location: string;
+  measurements?: string;
+  gpsCoords?: { lat: number; lng: number };
+}
+
+// Types héritant de SiteInformation.tsx (pas de changement)
 
 export interface AtmosphericTestingData {
   equipment: {
@@ -250,7 +308,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
       activeAlerts: [],
       notifications: [],
 
-      // =================== ACTIONS DE MISE À JOUR ===================
+      // =================== ACTIONS DE MISE À JOUR BASÉES SUR LA STRUCTURE RÉELLE ===================
       updateSiteInformation: (data) => {
         set((state) => {
           const updatedPermit = {
@@ -258,6 +316,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
             siteInformation: {
               ...state.currentPermit.siteInformation,
               ...data,
+              // Dernière modification
               lastUpdated: new Date().toISOString()
             },
             last_modified: new Date().toISOString()
@@ -269,7 +328,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
             timestamp: new Date().toISOString(),
             action: 'update_site_information',
             section: 'siteInformation',
-            userId: 'current_user', // À remplacer par l'utilisateur réel
+            userId: 'current_user',
             changes: data
           });
           
@@ -501,36 +560,72 @@ export const useSafetyManager = create<SafetyManagerState>()(
         }
       },
 
-      // =================== VALIDATION ===================
+      // =================== VALIDATION BASÉE SUR LA STRUCTURE RÉELLE ===================
       validatePermitCompleteness: () => {
         const permit = get().currentPermit;
         const errors: string[] = [];
         let completedSections = 0;
         const totalSections = 4;
 
-        // Validation Site Information
-        if (permit.siteInformation.projectNumber && permit.siteInformation.workLocation) {
-          completedSections++;
-        } else {
-          errors.push('Informations du site incomplètes');
+        // Validation Site Information (basée sur SiteInformation.tsx)
+        const siteInfo = permit.siteInformation;
+        let siteComplete = true;
+        
+        if (!siteInfo.projectNumber?.trim()) {
+          errors.push('Numéro de projet manquant');
+          siteComplete = false;
         }
+        if (!siteInfo.workLocation?.trim()) {
+          errors.push('Lieu des travaux manquant');
+          siteComplete = false;
+        }
+        if (!siteInfo.contractor?.trim()) {
+          errors.push('Entrepreneur manquant');
+          siteComplete = false;
+        }
+        if (!siteInfo.supervisor?.trim()) {
+          errors.push('Superviseur manquant');
+          siteComplete = false;
+        }
+        if (!siteInfo.entryDate) {
+          errors.push('Date d\'entrée manquante');
+          siteComplete = false;
+        }
+        if (!siteInfo.spaceType) {
+          errors.push('Type d\'espace manquant');
+          siteComplete = false;
+        }
+        if (!siteInfo.csaClass) {
+          errors.push('Classification CSA manquante');
+          siteComplete = false;
+        }
+        if (siteInfo.dimensions?.volume === 0) {
+          errors.push('Volume doit être calculé');
+          siteComplete = false;
+        }
+        if (!siteInfo.entryPoints?.length) {
+          errors.push('Au moins un point d\'entrée requis');
+          siteComplete = false;
+        }
+        
+        if (siteComplete) completedSections++;
 
         // Validation Atmospheric Testing
-        if (permit.atmosphericTesting.readings?.length > 0) {
+        if (permit.atmosphericTesting?.readings?.length > 0) {
           completedSections++;
         } else {
           errors.push('Tests atmosphériques manquants');
         }
 
         // Validation Entry Registry
-        if (permit.entryRegistry.personnel?.length > 0) {
+        if (permit.entryRegistry?.personnel?.length > 0) {
           completedSections++;
         } else {
           errors.push('Personnel non défini');
         }
 
         // Validation Rescue Plan
-        if (permit.rescuePlan.emergencyContacts?.length > 0) {
+        if (permit.rescuePlan?.emergencyContacts?.length > 0) {
           completedSections++;
         } else {
           errors.push('Plan de sauvetage incomplet');
@@ -603,32 +698,93 @@ function createEmptyPermit(): ConfinedSpacePermit {
     updated_at: now,
     last_modified: now,
     
+function createEmptyPermit(): ConfinedSpacePermit {
+  const now = new Date().toISOString();
+  
+  return {
+    permit_number: '',
+    status: 'draft',
+    province: 'QC',
+    created_at: now,
+    updated_at: now,
+    last_modified: now,
+    
     siteInformation: {
+      // Informations principales
       projectNumber: '',
       workLocation: '',
       contractor: '',
       supervisor: '',
-      emergencyNumber: '',
-      spaceIdentification: {
-        spaceType: '',
-        dimensions: { length: 0, width: 0, height: 0, volume: 0 },
-        accessPoints: [],
-        ventilationSystem: {
-          type: 'none',
-          direction: 'intake',
-          isOperational: false
-        }
+      entryDate: '',
+      duration: '',
+      workerCount: 1,
+      workDescription: '',
+
+      // Identification de l'espace
+      spaceType: '',
+      csaClass: '',
+      entryMethod: '',
+      accessType: '',
+      spaceLocation: '',
+      spaceDescription: '',
+
+      // Dimensions avec forme
+      dimensions: {
+        length: 0,
+        width: 0,
+        height: 0,
+        diameter: 0,
+        volume: 0,
+        spaceShape: 'rectangular'
       },
-      hazardAssessment: {
-        atmosphericHazards: [],
-        physicalHazards: [],
-        biologicalHazards: [],
-        chemicalHazards: [],
-        riskLevel: 'low'
+      unitSystem: 'metric',
+
+      // Points d'entrée
+      entryPoints: [{
+        id: 'entry-1',
+        type: 'circular',
+        dimensions: '',
+        location: '',
+        condition: 'good',
+        accessibility: 'normal',
+        photos: []
+      }],
+
+      // Dangers
+      atmosphericHazards: [],
+      physicalHazards: [],
+
+      // Conditions environnementales
+      environmentalConditions: {
+        ventilationRequired: false,
+        ventilationType: '',
+        lightingConditions: '',
+        temperatureRange: '',
+        moistureLevel: '',
+        noiseLevel: '',
+        weatherConditions: '',
       },
-      photos: [],
-      documents: [],
-      lastUpdated: now
+
+      // Contenu de l'espace
+      spaceContent: {
+        contents: '',
+        residues: '',
+        previousUse: '',
+        lastEntry: '',
+        cleaningStatus: '',
+      },
+
+      // Mesures de sécurité
+      safetyMeasures: {
+        emergencyEgress: '',
+        communicationMethod: '',
+        monitoringEquipment: [],
+        ventilationEquipment: [],
+        emergencyEquipment: [],
+      },
+
+      // Photos de l'espace
+      spacePhotos: []
     },
     
     atmosphericTesting: {
