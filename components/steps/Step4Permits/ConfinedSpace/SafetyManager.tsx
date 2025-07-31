@@ -132,8 +132,6 @@ export interface SpacePhoto {
   gpsCoords?: { lat: number; lng: number };
 }
 
-// Types héritant de SiteInformation.tsx (pas de changement)
-
 export interface AtmosphericTestingData {
   equipment: {
     deviceModel: string;
@@ -167,32 +165,6 @@ export interface RescuePlanData {
 }
 
 // =================== INTERFACES DÉTAILLÉES ===================
-export interface AccessPoint {
-  id: string;
-  type: 'main_entry' | 'emergency_exit' | 'access_hatch';
-  location: string;
-  dimensions: { width: number; height: number };
-  isLocked: boolean;
-  keyLocation?: string;
-}
-
-export interface VentilationData {
-  type: 'natural' | 'mechanical' | 'none';
-  capacity?: number; // CFM
-  direction: 'intake' | 'exhaust' | 'bidirectional';
-  isOperational: boolean;
-}
-
-export interface HazardItem {
-  id: string;
-  type: string;
-  description: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  likelihood: 'rare' | 'unlikely' | 'possible' | 'likely' | 'certain';
-  controlMeasures: string[];
-  residualRisk: 'low' | 'medium' | 'high';
-}
-
 export interface AtmosphericReading {
   id: string;
   timestamp: string;
@@ -250,6 +222,92 @@ export interface AuditEntry {
   changes: Record<string, any>;
   oldValues?: Record<string, any>;
 }
+
+// =================== TYPES ADDITIONNELS ===================
+interface ValidationResult {
+  isValid: boolean;
+  percentage: number;
+  errors: string[];
+  completedSections: number;
+  totalSections: number;
+}
+
+interface Alert {
+  id: string;
+  type: 'info' | 'warning' | 'critical';
+  message: string;
+  location?: string;
+  timestamp: string;
+}
+
+interface Notification {
+  id: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+}
+
+interface AlarmSettings {
+  oxygen: { min: number; max: number };
+  combustibleGas: { max: number };
+  hydrogenSulfide: { max: number };
+  carbonMonoxide: { max: number };
+}
+
+interface CommunicationProtocol {
+  type: 'radio' | 'cellular' | 'hardline';
+  frequency?: string;
+  checkInterval: number; // minutes
+}
+
+interface EmergencyContact {
+  id: string;
+  name: string;
+  role: string;
+  phone: string;
+  email?: string;
+  isPrimary: boolean;
+}
+
+interface RescueTeamMember {
+  id: string;
+  name: string;
+  role: string;
+  certification: string[];
+  phone: string;
+  isOnCall: boolean;
+}
+
+interface EquipmentItem {
+  id: string;
+  name: string;
+  type: string;
+  serialNumber?: string;
+  lastInspection: string;
+  nextInspection: string;
+  isAvailable: boolean;
+}
+
+interface HospitalInfo {
+  name: string;
+  address: string;
+  phone: string;
+  distance: number; // km
+}
+
+interface AttachmentData {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  url: string;
+  uploadedAt: string;
+  description?: string;
+}
+
+// Fix du type manquant
+interface SiteInformationData extends ConfinedSpaceDetails {}
 
 // =================== STORE ZUSTAND CENTRALISÉ ===================
 interface SafetyManagerState {
@@ -315,9 +373,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
             ...state.currentPermit,
             siteInformation: {
               ...state.currentPermit.siteInformation,
-              ...data,
-              // Dernière modification
-              lastUpdated: new Date().toISOString()
+              ...data
             },
             last_modified: new Date().toISOString()
           };
@@ -698,17 +754,6 @@ function createEmptyPermit(): ConfinedSpacePermit {
     updated_at: now,
     last_modified: now,
     
-function createEmptyPermit(): ConfinedSpacePermit {
-  const now = new Date().toISOString();
-  
-  return {
-    permit_number: '',
-    status: 'draft',
-    province: 'QC',
-    created_at: now,
-    updated_at: now,
-    last_modified: now,
-    
     siteInformation: {
       // Informations principales
       projectNumber: '',
@@ -890,97 +935,6 @@ function checkAtmosphericAlerts(readings: AtmosphericReading[]): Alert[] {
 function generatePDFContent(permit: ConfinedSpacePermit): string {
   // Implémentation de génération PDF
   return `PDF Content for permit ${permit.permit_number}`;
-}
-
-// =================== TYPES ADDITIONNELS ===================
-interface ValidationResult {
-  isValid: boolean;
-  percentage: number;
-  errors: string[];
-  completedSections: number;
-  totalSections: number;
-}
-
-interface Alert {
-  id: string;
-  type: 'info' | 'warning' | 'critical';
-  message: string;
-  location?: string;
-  timestamp: string;
-}
-
-interface AlarmSettings {
-  oxygen: { min: number; max: number };
-  combustibleGas: { max: number };
-  hydrogenSulfide: { max: number };
-  carbonMonoxide: { max: number };
-}
-
-interface CommunicationProtocol {
-  type: 'radio' | 'cellular' | 'hardline';
-  frequency?: string;
-  checkInterval: number; // minutes
-}
-
-interface EmergencyContact {
-  id: string;
-  name: string;
-  role: string;
-  phone: string;
-  email?: string;
-  isPrimary: boolean;
-}
-
-interface RescueTeamMember {
-  id: string;
-  name: string;
-  role: string;
-  certification: string[];
-  phone: string;
-  isOnCall: boolean;
-}
-
-interface EquipmentItem {
-  id: string;
-  name: string;
-  type: string;
-  serialNumber?: string;
-  lastInspection: string;
-  nextInspection: string;
-  isAvailable: boolean;
-}
-
-interface HospitalInfo {
-  name: string;
-  address: string;
-  phone: string;
-  distance: number; // km
-}
-
-interface PhotoData {
-  id: string;
-  url: string;
-  caption: string;
-  timestamp: string;
-  location?: string;
-}
-
-interface DocumentData {
-  id: string;
-  name: string;
-  type: string;
-  url: string;
-  uploadedAt: string;
-}
-
-interface AttachmentData {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  url: string;
-  uploadedAt: string;
-  description?: string;
 }
 
 export default useSafetyManager;
