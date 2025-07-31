@@ -201,7 +201,7 @@ const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
         'Photos géolocalisées',
         'Plan de sauvetage intégré'
       ],
-      component: undefined
+      component: ConfinedSpace
     },
     {
       id: 'electrical-work',
