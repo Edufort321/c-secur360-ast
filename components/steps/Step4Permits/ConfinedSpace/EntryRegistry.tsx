@@ -292,19 +292,45 @@ interface SafetyManager {
 
 // =================== PROPS PRINCIPALES ===================
 interface EntryRegistryProps {
-  data: any;
-  onChange: (data: any) => void;
-  regulations: RegulationData;
+  // Props principales héritées de commonProps
+  permitData: any;
+  updatePermitData: (updates: any) => void;
   selectedProvince: ProvinceCode;
+  PROVINCIAL_REGULATIONS: Record<ProvinceCode, RegulationData>;
+  isMobile: boolean;
+  language: 'fr' | 'en';
+  styles: any;
+  updateParentData: (section: string, data: any) => void;
+  
+  // Props spécifiques à EntryRegistry
+  atmosphericReadings: any[];
+  
+  // Props optionnelles pour compatibilité
+  data?: any;
+  onChange?: (data: any) => void;
+  regulations?: RegulationData;
 }
 // EntryRegistry.tsx - Section 2 (Composant Principal et États)
 
 const EntryRegistry: React.FC<EntryRegistryProps> = ({
+  permitData,
+  updatePermitData,
+  selectedProvince,
+  PROVINCIAL_REGULATIONS,
+  isMobile,
+  language,
+  styles,
+  updateParentData,
+  atmosphericReadings,
+  // Props optionnelles pour compatibilité
   data,
   onChange,
-  regulations,
-  selectedProvince
+  regulations
 }) => {
+  // Utiliser les props correctes selon ce qui est disponible
+  const actualData = data || permitData;
+  const actualOnChange = onChange || ((newData: any) => updatePermitData(newData));
+  const actualRegulations = regulations || PROVINCIAL_REGULATIONS[selectedProvince];
   // =================== ÉTATS PRINCIPAUX ===================
   const [personnel, setPersonnel] = useState<Person[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
@@ -1192,8 +1218,13 @@ const EntryRegistry: React.FC<EntryRegistryProps> = ({
       }
     };
 
-    onChange(registryData);
-  }, [personnel, equipment, compliance_check]);
+    if (actualOnChange) {
+      actualOnChange(registryData);
+    }
+    if (updateParentData) {
+      updateParentData('registry', registryData);
+    }
+  }, [personnel, equipment, compliance_check, actualOnChange, updateParentData]);
   // EntryRegistry.tsx - Section 4 (Rendu JSX - Dashboard et Personnel)
 
   // =================== RENDU PRINCIPAL ===================
