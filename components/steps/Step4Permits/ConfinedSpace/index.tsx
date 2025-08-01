@@ -1,36 +1,21 @@
-// ConfinedSpace/index.tsx - VERSION FINALE AVEC SIGNATURES PROPS CORRIGÉES
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-  FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, 
-  Briefcase, Copy, Check, AlertTriangle, Camera, Upload, Download,
-  Shield, Activity, Wind, Wrench, Eye, Save, Printer, Mail, Share,
-  Database, QrCode, Home, ChevronRight, ArrowLeft, ArrowRight,
-  Settings, Bell, Search, Filter, RefreshCw, Plus, Edit3,
-  Thermometer, Volume2, Gauge, Star, Target, ChevronDown,
-  Construction, Flame, Zap, BarChart3, XCircle, Play, Pause,
-  RotateCcw, PenTool, Bluetooth, Battery, Signal, CheckCircle
+  Home, Clock, AlertTriangle, Users, Wind, Camera, MapPin, Bluetooth, Battery, Signal, 
+  CheckCircle, XCircle, Play, Pause, RotateCcw, Save, Upload, Download, PenTool, Shield, 
+  Eye, Thermometer, Volume2, Gauge, Plus, FileText, Activity, Settings, Search, Star,
+  Wrench, Target, ChevronDown, ChevronRight, Building, Construction, Flame, Zap, BarChart3
 } from 'lucide-react';
 
-// Import des composants des sections
-import SiteInformation from './SiteInformation';
-import AtmosphericTesting from './AtmosphericTesting';
-import EntryRegistry from './EntryRegistry';
-import RescuePlan from './RescuePlan';
-import PermitManager from './PermitManager';
-
-// Import du gestionnaire de sécurité - UTILISÉ INTELLIGEMMENT POUR LA SÉCURITÉ
-import { useSafetyManager } from './SafetyManager';
-
 // =================== DÉTECTION MOBILE ET STYLES COMPLETS ===================
-const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
+const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
 const styles = {
   container: {
     maxWidth: '100%',
     margin: '0 auto',
-    padding: isMobileDevice ? '4px' : '24px',
+    padding: isMobile ? '4px' : '24px',
     backgroundColor: '#111827',
     minHeight: '100vh',
     color: 'white',
@@ -39,10 +24,10 @@ const styles = {
   },
   card: {
     backgroundColor: '#1f2937',
-    borderRadius: isMobileDevice ? '8px' : '16px',
-    padding: isMobileDevice ? '12px' : '24px',
+    borderRadius: isMobile ? '8px' : '16px',
+    padding: isMobile ? '12px' : '24px',
     border: '1px solid #374151',
-    marginBottom: isMobileDevice ? '12px' : '24px',
+    marginBottom: isMobile ? '12px' : '24px',
     boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
     width: '100%',
     boxSizing: 'border-box' as const
@@ -51,20 +36,20 @@ const styles = {
     background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.9))',
     backdropFilter: 'blur(20px)',
     WebkitBackdropFilter: 'blur(20px)',
-    borderRadius: isMobileDevice ? '12px' : '20px',
-    padding: isMobileDevice ? '20px' : '32px',
+    borderRadius: isMobile ? '12px' : '20px',
+    padding: isMobile ? '20px' : '32px',
     border: '1px solid rgba(255, 255, 255, 0.1)',
     boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
     position: 'relative' as const,
     overflow: 'hidden' as const
   },
   button: {
-    padding: isMobileDevice ? '8px 12px' : '14px 24px',
-    borderRadius: isMobileDevice ? '6px' : '8px',
+    padding: isMobile ? '8px 12px' : '14px 24px',
+    borderRadius: isMobile ? '6px' : '8px',
     fontWeight: '600',
     display: 'flex',
     alignItems: 'center',
-    gap: isMobileDevice ? '4px' : '8px',
+    gap: isMobile ? '4px' : '8px',
     transition: 'all 0.2s ease',
     border: 'none',
     cursor: 'pointer',
@@ -94,8 +79,8 @@ const styles = {
     backgroundColor: 'rgba(31, 41, 55, 0.6)',
     backdropFilter: 'blur(20px)',
     WebkitBackdropFilter: 'blur(20px)',
-    borderRadius: isMobileDevice ? '12px' : '16px',
-    padding: isMobileDevice ? '16px' : '24px',
+    borderRadius: isMobile ? '12px' : '16px',
+    padding: isMobile ? '16px' : '24px',
     border: '1px solid rgba(255, 255, 255, 0.1)',
     boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
     transition: 'all 0.3s ease',
@@ -108,37 +93,12 @@ const styles = {
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 
 interface ConfinedSpaceProps {
-  // Props de base
-  language?: 'fr' | 'en';
-  onDataChange: (field: string, value: any) => void;
-  onSave: (data: any) => void;
-  onCancel?: () => void; // Optionnel
-  
-  // Props ASTForm (ajoutées pour compatibilité complète)
-  permitData?: any;
-  updatePermitData?: (data: any) => void;
-  selectedProvince?: ProvinceCode;
-  PROVINCIAL_REGULATIONS?: any;
-  atmosphericReadings?: any[];
-  isMobile?: boolean;
-  styles?: any;
-  updateParentData?: (data: any) => void;
-  
-  // Props SafetyManager
-  externalSafetyManager?: any;
-  
-  // Props supplémentaires de la version précédente
   province?: ProvinceCode;
+  language?: 'fr' | 'en';
+  onSave?: (data: any) => void;
   onSubmit?: (data: any) => void;
+  onCancel: () => void;
   initialData?: any;
-  formData?: any;
-  tenant?: string;
-  errors?: any;
-  userRole?: string;
-  touchOptimized?: boolean;
-  compactMode?: boolean;
-  onPermitChange?: (permits: any) => void;
-  initialPermits?: any[];
 }
 
 interface PermitData {
@@ -156,36 +116,9 @@ interface PermitData {
   supervisor_name?: string;
   permit_valid_from?: string;
   permit_valid_to?: string;
-  // Données des sections
-  siteData?: any;
-  rescueData?: any;
-  atmosphericData?: any;
-  registryData?: any;
-  finalizationData?: any;
 }
 
-interface NavigationStep {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  isComplete: boolean;
-  isActive: boolean;
-  hasErrors: boolean;
-}
-
-interface ConfinedSpaceState {
-  currentStep: string;
-  completedSteps: Set<string>;
-  validationErrors: Record<string, string[]>;
-  isLoading: boolean;
-  isSaving: boolean;
-  lastSaved: string | null;
-  showManager: boolean;
-  sectionProgress: Record<string, number>;
-  saveStatus: 'idle' | 'saving' | 'saved' | 'error';
-}
-
-// =================== DONNÉES RÉGLEMENTAIRES PROVINCIALES COMPLÈTES ===================
+// =================== DONNÉES RÉGLEMENTAIRES PROVINCIALES ===================
 const PROVINCIAL_REGULATIONS: Record<ProvinceCode, any> = {
   QC: {
     name: "Règlement sur la santé et la sécurité du travail (RSST)",
@@ -331,50 +264,11 @@ const PROVINCIAL_REGULATIONS: Record<ProvinceCode, any> = {
       continuous_monitoring_required: true,
       limits: {
         oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
-        lef: { max: 10, critical: 25 },
+        lel: { max: 10, critical: 25 },
         h2s: { max: 10, critical: 15 },
         co: { max: 35, critical: 100 }
       }
     }
-  }
-};
-
-// =================== CONFIGURATION ÉTAPES ===================
-const STEPS_CONFIG = {
-  site: {
-    id: 'site',
-    labelFr: 'Informations du Site',
-    labelEn: 'Site Information',
-    icon: Building,
-    component: SiteInformation
-  },
-  atmospheric: {
-    id: 'atmospheric',
-    labelFr: 'Tests Atmosphériques',
-    labelEn: 'Atmospheric Testing',
-    icon: Wind,
-    component: AtmosphericTesting
-  },
-  registry: {
-    id: 'registry',
-    labelFr: 'Registre d\'Entrée',
-    labelEn: 'Entry Registry',
-    icon: Users,
-    component: EntryRegistry
-  },
-  rescue: {
-    id: 'rescue',
-    labelFr: 'Plan de Sauvetage',
-    labelEn: 'Rescue Plan',
-    icon: Shield,
-    component: RescuePlan
-  },
-  finalization: {
-    id: 'finalization',
-    labelFr: 'Finalisation',
-    labelEn: 'Finalization',
-    icon: CheckCircle,
-    component: PermitManager
   }
 };
 
@@ -395,26 +289,18 @@ const getTexts = (language: 'fr' | 'en') => ({
       next: "Suivant",
       save: "Enregistrer",
       cancel: "Annuler",
-      submit: "Soumettre le Permis",
-      finish: "Terminer",
-      manager: "Gestionnaire",
-      export: "Exporter",
-      print: "Imprimer"
+      submit: "Soumettre le Permis"
     },
     status: {
       draft: "Brouillon",
-      active: "Actif",
-      completed: "Complété",
-      cancelled: "Annulé",
       inProgress: "En cours",
+      completed: "Complété",
       saving: "Sauvegarde...",
       saved: "Sauvegardé",
       error: "Erreur"
     },
     validation: {
-      required: "Ce champ est obligatoire",
-      invalid: "Données invalides",
-      incomplete: "Section incomplète"
+      required: "Ce champ est obligatoire"
     },
     loading: "Chargement...",
     permitNumber: "Numéro de permis",
@@ -423,8 +309,7 @@ const getTexts = (language: 'fr' | 'en') => ({
     emergencyContact: "Contact d'urgence",
     complianceNote: "Conforme aux réglementations de",
     autoSaveEnabled: "Sauvegarde automatique activée",
-    progressTracker: "Progression du permis",
-    moduleIntegrated: "Module intégré avec succès"
+    progressTracker: "Progression du permis"
   },
   en: {
     title: "Confined Space Entry Permit",
@@ -433,7 +318,7 @@ const getTexts = (language: 'fr' | 'en') => ({
       site: "Site Information",
       rescue: "Rescue Plan",
       atmospheric: "Atmospheric Testing",
-      registry: "Entry Registry", 
+      registry: "Entry Registry",
       finalization: "Finalization"
     },
     navigation: {
@@ -441,26 +326,18 @@ const getTexts = (language: 'fr' | 'en') => ({
       next: "Next",
       save: "Save",
       cancel: "Cancel",
-      submit: "Submit Permit",
-      finish: "Finish",
-      manager: "Manager",
-      export: "Export",
-      print: "Print"
+      submit: "Submit Permit"
     },
     status: {
       draft: "Draft",
-      active: "Active",
-      completed: "Completed",
-      cancelled: "Cancelled",
       inProgress: "In Progress",
+      completed: "Completed",
       saving: "Saving...",
       saved: "Saved",
       error: "Error"
     },
     validation: {
-      required: "This field is required",
-      invalid: "Invalid data",
-      incomplete: "Incomplete section"
+      required: "This field is required"
     },
     loading: "Loading...",
     permitNumber: "Permit Number",
@@ -469,330 +346,84 @@ const getTexts = (language: 'fr' | 'en') => ({
     emergencyContact: "Emergency Contact",
     complianceNote: "Compliant with regulations of",
     autoSaveEnabled: "Auto-save enabled",
-    progressTracker: "Permit Progress",
-    moduleIntegrated: "Module integrated successfully"
+    progressTracker: "Permit Progress"
   }
-});
+})[language];
 
 // =================== COMPOSANT PRINCIPAL ===================
 const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
-  language = 'fr',
-  onDataChange,
-  onSave,
-  onCancel,
-  
-  // Props ASTForm
-  permitData: externalPermitData,
-  updatePermitData: externalUpdatePermitData,
-  selectedProvince: externalSelectedProvince,
-  PROVINCIAL_REGULATIONS: externalRegulations,
-  atmosphericReadings: externalAtmosphericReadings = [],
-  isMobile = isMobileDevice,
-  styles: externalStyles,
-  updateParentData,
-  
-  // Props SafetyManager
-  externalSafetyManager,
-  
-  // Props version précédente
   province = 'QC',
+  language = 'fr',
+  onSave,
   onSubmit,
-  initialData = {},
-  formData,
-  tenant,
-  errors,
-  userRole,
-  touchOptimized,
-  compactMode,
-  onPermitChange,
-  initialPermits
+  onCancel,
+  initialData = {}
 }) => {
-  // =================== HOOKS ET ÉTAT - VERSION PROPRE ===================
-  const safetyManager = useSafetyManager();
-  
-  // État consolidé de tous les éléments
-  const [state, setState] = useState<ConfinedSpaceState>({
-    currentStep: 'site',
-    completedSteps: new Set(),
-    validationErrors: {},
-    isLoading: false,
-    isSaving: false,
-    lastSaved: null,
-    showManager: false,
-    sectionProgress: {
-      site: 0,
-      rescue: 0,
-      atmospheric: 0,
-      registry: 0,
-      finalization: 0
-    },
-    saveStatus: 'idle'
-  });
 
-  // États de la version précédente pour compatibilité complète
+  // =================== ÉTATS LOCAUX - AVEC FINALISATION ===================
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization'>('site');
-  const [activeSelectedProvince, setActiveSelectedProvince] = useState<ProvinceCode>(externalSelectedProvince || province);
-  const [permitData, setPermitData] = useState<PermitData>(() => ({
-    ...initialData,
-    ...(formData?.permitData || {}),
-    ...(externalPermitData || {}),
-    selected_province: externalSelectedProvince || province
-  }));
-  const [atmosphericReadings, setAtmosphericReadings] = useState<any[]>(externalAtmosphericReadings);
-  const [entryRecords, setEntryRecords] = useState<any[]>([]);
-
+  const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province);
+  const [permitData, setPermitData] = useState<PermitData>(initialData);
+  const [isLoading, setIsLoading] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  
   const texts = getTexts(language);
-  const activeRegulations = externalRegulations || PROVINCIAL_REGULATIONS;
-  const activeStyles = externalStyles || styles;
 
-  // =================== GÉNÉRATION AUTOMATIQUE DU NUMÉRO DE PERMIS ===================
+  // =================== FONCTIONS UTILITAIRES SIMPLIFIÉES ===================
   useEffect(() => {
     if (!permitData.permit_number) {
       const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const random = Math.random().toString(36).substring(2, 8).toUpperCase();
       
-      const newPermitData = { 
-        ...permitData,
-        permit_number: `CS-${activeSelectedProvince}-${timestamp}-${random}`,
+      setPermitData(prev => ({ 
+        ...prev,
+        permit_number: `CS-${selectedProvince}-${timestamp}-${random}`,
         issue_date: new Date().toISOString().slice(0, 16),
-        selected_province: activeSelectedProvince
-      };
-      
-      setPermitData(newPermitData);
-      
-      // Notifier les parents
-      if (onDataChange) {
-        onDataChange('permitData', newPermitData);
-      }
-      if (externalUpdatePermitData) {
-        externalUpdatePermitData(newPermitData);
-      }
+        selected_province: selectedProvince
+      }));
     }
-  }, [activeSelectedProvince, permitData.permit_number, onDataChange, externalUpdatePermitData]);
+  }, []); // Dependency array vide pour éviter les boucles
 
-  // =================== FONCTIONS UTILITAIRES SIMPLIFIÉES ===================
-  const validateStep = useCallback((stepId: string): string[] => {
-    const errors: string[] = [];
-    
-    switch (stepId) {
-      case 'site':
-        if (!permitData.projectNumber?.trim()) errors.push('Numéro de projet requis');
-        if (!permitData.workLocation?.trim()) errors.push('Lieu de travail requis');
-        break;
-      case 'atmospheric':
-        if (!atmosphericReadings?.length) errors.push('Tests atmosphériques requis');
-        // Vérification SafetyManager pour les tests atmosphériques
-        const readings = safetyManager.currentPermit.atmosphericTesting?.readings || [];
-        if (readings.length === 0) errors.push('Tests atmosphériques manquants dans SafetyManager');
-        break;
-      case 'registry':
-        if (!entryRecords?.length) errors.push('Personnel requis');
-        // Vérification SafetyManager pour la sécurité d'entrée
-        const personnel = safetyManager.currentPermit.entryRegistry?.personnel || [];
-        if (personnel.length === 0) errors.push('Personnel non défini dans SafetyManager');
-        break;
-      case 'rescue':
-        // Validation du plan de sauvetage
-        const rescuePlan = safetyManager.currentPermit.rescuePlan;
-        if (!rescuePlan?.emergencyContacts?.length) errors.push('Contacts d\'urgence requis');
-        break;
-    }
-    
-    return errors;
-  }, [permitData, atmosphericReadings, entryRecords, safetyManager]);
+  const updatePermitData = (updates: Partial<PermitData>) => {
+    setPermitData(prev => ({ ...prev, ...updates }));
+  };
 
-  const updateValidationErrors = useCallback(() => {
-    const newErrors: Record<string, string[]> = {};
-    
-    Object.keys(STEPS_CONFIG).forEach(stepId => {
-      const stepErrors = validateStep(stepId);
-      if (stepErrors.length > 0) {
-        newErrors[stepId] = stepErrors;
-      }
-    });
-    
-    setState(prev => ({ ...prev, validationErrors: newErrors }));
-  }, [validateStep]);
-
-  // =================== GESTION DES DONNÉES AVEC SAFETYMANAGER ===================
-  const updatePermitDataConsolidated = useCallback((updates: Partial<PermitData>) => {
-    setPermitData(prev => {
-      const newData = { ...prev, ...updates };
-      
-      // Notifier tous les parents possibles
-      if (onDataChange) {
-        onDataChange('permitData', newData);
-      }
-      if (externalUpdatePermitData) {
-        externalUpdatePermitData(newData);
-      }
-      if (updateParentData) {
-        updateParentData(newData);
-      }
-      
-      return newData;
-    });
-  }, [onDataChange, externalUpdatePermitData, updateParentData]);
-
-  const updateSectionData = useCallback((section: string, data: any) => {
-    const sectionKey = `${section}Data` as keyof PermitData;
-    
-    updatePermitDataConsolidated({
-      [sectionKey]: data
-    });
-    
-    // 🔒 SÉCURITÉ : Mise à jour SafetyManager pour maintenir la synchronisation de sécurité
-    switch (section) {
-      case 'site':
-        safetyManager.updateSiteInformation(data);
-        break;
-      case 'atmospheric':
-        safetyManager.updateAtmosphericTesting(data);
-        break;
-      case 'registry':
-        safetyManager.updateEntryRegistry(data);
-        break;
-      case 'rescue':
-        safetyManager.updateRescuePlan(data);
-        break;
-    }
-    
-    // Calculer le progrès de la section
-    const completionPercentage = data && Object.keys(data).length > 0 ? 75 : 0;
-    setState(prev => ({
-      ...prev,
-      sectionProgress: {
-        ...prev.sectionProgress,
-        [section]: completionPercentage
-      }
-    }));
-  }, [updatePermitDataConsolidated, safetyManager]);
-
-  const handleSectionDataChange = useCallback((field: string, value: any) => {
-    // Mise à jour simple des données
-    const currentData = permitData[`${state.currentStep}Data` as keyof PermitData] || {};
-    const newData = { ...currentData, [field]: value };
-    
-    updateSectionData(state.currentStep, newData);
-    
-    // Callbacks externes
-    onDataChange?.(field, value);
-    externalUpdatePermitData?.({ [field]: value });
-    updateParentData?.({ [field]: value });
-    
-    // Validation mise à jour
-    setTimeout(() => updateValidationErrors(), 100);
-  }, [state.currentStep, permitData, updateSectionData, onDataChange, externalUpdatePermitData, updateParentData, updateValidationErrors]);
-
-  const savePermitData = useCallback(async (showNotification = true) => {
+  const savePermitData = async (showNotification = true) => {
     if (showNotification) {
-      setState(prev => ({ ...prev, isLoading: true, saveStatus: 'saving' }));
+      setIsLoading(true);
+      setSaveStatus('saving');
     }
     
     try {
-      // 🔒 SÉCURITÉ : Sauvegarde via SafetyManager pour maintenir l'intégrité
-      await safetyManager.saveToDatabase();
-      
-      const dataToSave = {
-        ...permitData,
-        currentSection,
-        selectedProvince: activeSelectedProvince,
-        sectionProgress: state.sectionProgress
-      };
-      
       if (onSave) {
-        await onSave(dataToSave);
-      }
-      
-      if (onDataChange) {
-        onDataChange('confinedSpacePermit', dataToSave);
+        await onSave({
+          ...permitData,
+          currentSection,
+          selectedProvince
+        });
       }
       
       if (showNotification) {
-        setState(prev => ({ 
-          ...prev, 
-          saveStatus: 'saved',
-          lastSaved: new Date().toISOString()
-        }));
-        setTimeout(() => setState(prev => ({ ...prev, saveStatus: 'idle' })), 3000);
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 3000);
       }
     } catch (error) {
       console.error('Erreur sauvegarde:', error);
       if (showNotification) {
-        setState(prev => ({ ...prev, saveStatus: 'error' }));
-        setTimeout(() => setState(prev => ({ ...prev, saveStatus: 'idle' })), 3000);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
       }
     } finally {
       if (showNotification) {
-        setState(prev => ({ ...prev, isLoading: false }));
+        setIsLoading(false);
       }
     }
-  }, [permitData, currentSection, activeSelectedProvince, state.sectionProgress, safetyManager, onSave, onDataChange]);
+  };
 
-  // =================== NAVIGATION ===================
-  const navigationSteps: NavigationStep[] = useMemo(() => {
-    return Object.values(STEPS_CONFIG).map(step => ({
-      id: step.id,
-      label: language === 'fr' ? step.labelFr : step.labelEn,
-      icon: React.createElement(step.icon, { size: 20 }),
-      isComplete: state.completedSteps.has(step.id) && !state.validationErrors[step.id]?.length,
-      isActive: state.currentStep === step.id,
-      hasErrors: (state.validationErrors[step.id]?.length || 0) > 0
-    }));
-  }, [language, state.currentStep, state.completedSteps, state.validationErrors]);
-
-  const navigateToSection = useCallback((section: 'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization') => {
-    // Sauvegarder automatiquement lors du changement de section (sans notification)
-    savePermitData(false);
+  const navigateToSection = (section: 'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization') => {
     setCurrentSection(section);
-    setState(prev => ({ ...prev, currentStep: section }));
-  }, [savePermitData]);
+  };
 
-  const handleStepChange = useCallback((stepId: string) => {
-    // Valider l'étape actuelle avant de changer
-    const currentErrors = validateStep(state.currentStep);
-    
-    if (currentErrors.length === 0) {
-      setState(prev => ({
-        ...prev,
-        currentStep: stepId,
-        completedSteps: new Set([...prev.completedSteps, prev.currentStep])
-      }));
-      setCurrentSection(stepId as any);
-    }
-    
-    updateValidationErrors();
-  }, [state.currentStep, validateStep, updateValidationErrors]);
-
-  const canNavigateNext = useMemo(() => {
-    const currentIndex = Object.keys(STEPS_CONFIG).indexOf(state.currentStep);
-    return currentIndex < Object.keys(STEPS_CONFIG).length - 1;
-  }, [state.currentStep]);
-
-  const canNavigatePrevious = useMemo(() => {
-    const currentIndex = Object.keys(STEPS_CONFIG).indexOf(state.currentStep);
-    return currentIndex > 0;
-  }, [state.currentStep]);
-
-  const handleNext = useCallback(() => {
-    if (canNavigateNext) {
-      const steps = Object.keys(STEPS_CONFIG);
-      const currentIndex = steps.indexOf(state.currentStep);
-      const nextStep = steps[currentIndex + 1];
-      handleStepChange(nextStep);
-    }
-  }, [canNavigateNext, state.currentStep, handleStepChange]);
-
-  const handlePrevious = useCallback(() => {
-    if (canNavigatePrevious) {
-      const steps = Object.keys(STEPS_CONFIG);
-      const currentIndex = steps.indexOf(state.currentStep);
-      const prevStep = steps[currentIndex - 1];
-      handleStepChange(prevStep);
-    }
-  }, [canNavigatePrevious, state.currentStep, handleStepChange]);
-
-  // =================== UTILITAIRES POUR COMPATIBILITÉ ===================
   const getSectionIcon = (section: string) => {
     const iconMap = {
       site: Building,
@@ -804,209 +435,164 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     return iconMap[section as keyof typeof iconMap] || FileText;
   };
 
-  const calculateOverallProgress = () => {
-    const sections = Object.values(state.sectionProgress);
-    const totalProgress = sections.reduce((sum, progress) => sum + progress, 0);
-    return Math.round(totalProgress / sections.length);
-  };
+  // =================== RENDU DES SECTIONS AMÉLIORÉ ===================
+  const renderSectionContent = () => {
+    const sectionData = {
+      site: {
+        emoji: '🏢',
+        title: texts.sections.site,
+        description: language === 'fr' 
+          ? 'Configuration des informations du site de travail, description de l\'espace clos et détails du projet.'
+          : 'Configure work site information, confined space description and project details.',
+        features: language === 'fr' 
+          ? ['Localisation GPS', 'Description détaillée', 'Responsable d\'entrée', 'Photos du site']
+          : ['GPS Location', 'Detailed Description', 'Entry Supervisor', 'Site Photos']
+      },
+      rescue: {
+        emoji: '🛡️',
+        title: texts.sections.rescue,
+        description: language === 'fr' 
+          ? 'Plan de sauvetage d\'urgence avec contacts, équipements et procédures de secours.'
+          : 'Emergency rescue plan with contacts, equipment and rescue procedures.',
+        features: language === 'fr' 
+          ? ['Plan d\'évacuation', 'Équipe de secours', 'Équipements d\'urgence', 'Contacts d\'urgence']
+          : ['Evacuation Plan', 'Rescue Team', 'Emergency Equipment', 'Emergency Contacts']
+      },
+      atmospheric: {
+        emoji: '🌬️',
+        title: texts.sections.atmospheric,
+        description: language === 'fr' 
+          ? 'Tests atmosphériques continus avec surveillance en temps réel des gaz dangereux.'
+          : 'Continuous atmospheric testing with real-time monitoring of hazardous gases.',
+        features: language === 'fr' 
+          ? ['Tests 4-gaz', 'Surveillance Bluetooth', 'Alarmes automatiques', 'Calibration équipements']
+          : ['4-Gas Testing', 'Bluetooth Monitoring', 'Automatic Alarms', 'Equipment Calibration']
+      },
+      registry: {
+        emoji: '👥',
+        title: texts.sections.registry,
+        description: language === 'fr' 
+          ? 'Registre d\'entrée et de sortie avec horodatage et signatures électroniques.'
+          : 'Entry and exit registry with timestamps and electronic signatures.',
+        features: language === 'fr' 
+          ? ['Horodatage précis', 'Signatures électroniques', 'Durée d\'exposition', 'Validation finale']
+          : ['Precise Timestamps', 'Electronic Signatures', 'Exposure Duration', 'Final Validation']
+      },
+      finalization: {
+        emoji: '✅',
+        title: texts.sections.finalization,
+        description: language === 'fr' 
+          ? 'Finalisation du permis avec validation, impression, génération QR et partage.'
+          : 'Permit finalization with validation, printing, QR generation and sharing.',
+        features: language === 'fr' 
+          ? ['Validation complète', 'Impression PDF', 'Code QR mobile', 'Partage sécurisé']
+          : ['Complete Validation', 'PDF Printing', 'Mobile QR Code', 'Secure Sharing']
+      }
+    };
 
-  // =================== EFFETS ===================
-  useEffect(() => {
-    updateValidationErrors();
-  }, [updateValidationErrors]);
+    const current = sectionData[currentSection];
 
-  // Synchronisation avec currentSection et state.currentStep
-  useEffect(() => {
-    if (currentSection !== state.currentStep) {
-      setState(prev => ({ ...prev, currentStep: currentSection }));
-    }
-  }, [currentSection, state.currentStep]);
-
-  // =================== ADAPTATEURS DE SIGNATURES PROPS - CORRECTION CLÉ ===================
-  
-  // 🔧 FONCTIONS ADAPTÉES POUR DIFFÉRENTES SIGNATURES DE PROPS
-  
-  // Adaptateur pour updateParentData - Version 1 paramètre (pour PermitManager)
-  const updateParentDataAdapter = useCallback((data: any) => {
-    if (updateParentData) {
-      updateParentData(data);
-    }
-  }, [updateParentData]);
-  
-  // Adaptateur pour updateParentData - Version 2 paramètres (pour autres composants)
-  const updateParentDataFieldAdapter = useCallback((field: string, value: any) => {
-    if (updateParentData) {
-      updateParentData({ [field]: value });
-    }
-  }, [updateParentData]);
-
-  // =================== RENDU CONDITIONNEL DES SECTIONS AVEC SÉCURITÉ ===================
-  const renderCurrentStep = () => {
-    switch (state.currentStep) {
-      case 'site':
-        return (
-          <SiteInformation 
-            language={language}
-            onDataChange={handleSectionDataChange}
-            onSave={(data: any) => updateSectionData('site', data)}
-            onCancel={onCancel || (() => {})}
-            permitData={permitData}
-            updatePermitData={updatePermitDataConsolidated}
-            selectedProvince={activeSelectedProvince}
-            PROVINCIAL_REGULATIONS={activeRegulations}
-            atmosphericReadings={atmosphericReadings}
-            isMobile={isMobile}
-            styles={activeStyles}
-            updateParentData={updateParentDataFieldAdapter}
-          />
-        );
-        
-      case 'atmospheric':
-        return (
-          <AtmosphericTesting 
-            language={language}
-            onDataChange={handleSectionDataChange}
-            onSave={(data: any) => updateSectionData('atmospheric', data)}
-            onCancel={onCancel || (() => {})}
-            permitData={permitData}
-            updatePermitData={updatePermitDataConsolidated}
-            selectedProvince={activeSelectedProvince}
-            PROVINCIAL_REGULATIONS={activeRegulations}
-            atmosphericReadings={atmosphericReadings}
-            isMobile={isMobile}
-            styles={activeStyles}
-            updateParentData={updateParentDataFieldAdapter}
-            setAtmosphericReadings={setAtmosphericReadings}
-          />
-        );
-        
-      case 'registry':
-        return (
-          <EntryRegistry 
-            language={language}
-            onDataChange={handleSectionDataChange}
-            onSave={(data: any) => updateSectionData('registry', data)}
-            onCancel={onCancel || (() => {})}
-            permitData={permitData}
-            updatePermitData={updatePermitDataConsolidated}
-            selectedProvince={activeSelectedProvince}
-            PROVINCIAL_REGULATIONS={activeRegulations}
-            atmosphericReadings={atmosphericReadings}
-            isMobile={isMobile}
-            styles={activeStyles}
-            updateParentData={updateParentDataFieldAdapter}
-          />
-        );
-        
-      case 'rescue':
-        return (
-          <RescuePlan 
-            language={language}
-            onDataChange={handleSectionDataChange}
-            onSave={(data: any) => updateSectionData('rescue', data)}
-            onCancel={onCancel || (() => {})}
-            permitData={permitData}
-            updatePermitData={updatePermitDataConsolidated}
-            selectedProvince={activeSelectedProvince}
-            PROVINCIAL_REGULATIONS={activeRegulations}
-            atmosphericReadings={atmosphericReadings}
-            isMobile={isMobile}
-            styles={activeStyles}
-            updateParentData={updateParentDataFieldAdapter}
-          />
-        );
-        
-      case 'finalization':
-        return (
-          <PermitManager
-            language={language}
-            onDataChange={handleSectionDataChange}
-            onSave={(data: any) => updateSectionData('finalization', data)}
-            onCancel={onCancel || (() => {})}
-            permitData={permitData}
-            updatePermitData={updatePermitDataConsolidated}
-            selectedProvince={activeSelectedProvince}
-            PROVINCIAL_REGULATIONS={activeRegulations}
-            atmosphericReadings={atmosphericReadings}
-            isMobile={isMobile}
-            styles={activeStyles}
-            updateParentData={updateParentDataAdapter}
-            onSubmit={(finalData: any) => {
-              if (onSubmit) {
-                onSubmit(finalData);
-              }
-            }}
-          />
-        );
-        
-      default:
-        return (
-          <SiteInformation 
-            language={language}
-            onDataChange={handleSectionDataChange}
-            onSave={(data: any) => updateSectionData('site', data)}
-            onCancel={onCancel || (() => {})}
-            permitData={permitData}
-            updatePermitData={updatePermitDataConsolidated}
-            selectedProvince={activeSelectedProvince}
-            PROVINCIAL_REGULATIONS={activeRegulations}
-            atmosphericReadings={atmosphericReadings}
-            isMobile={isMobile}
-            styles={activeStyles}
-            updateParentData={updateParentDataFieldAdapter}
-          />
-        );
-    }
-  };
-
-  // =================== LOADING FALLBACK ===================
-  const LoadingFallback = () => (
-    <div style={{
-      padding: '40px',
-      textAlign: 'center',
-      color: '#9ca3af'
-    }}>
+    return (
       <div style={{
-        width: '40px',
-        height: '40px',
-        border: '3px solid rgba(59, 130, 246, 0.3)',
-        borderTop: '3px solid #3b82f6',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite',
-        margin: '0 auto 16px'
-      }}></div>
-      <p>{language === 'fr' ? 'Chargement...' : 'Loading...'}</p>
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
-  );
+        padding: '40px',
+        textAlign: 'center',
+        border: '2px dashed #374151',
+        borderRadius: '12px',
+        backgroundColor: 'rgba(17, 24, 39, 0.5)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{
+            fontSize: '64px',
+            marginBottom: '24px',
+            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
+          }}>
+            {current.emoji}
+          </div>
+          
+          <h3 style={{ 
+            color: 'white', 
+            marginBottom: '16px',
+            fontSize: '24px',
+            fontWeight: '700'
+          }}>
+            {current.title}
+          </h3>
+          
+          <p style={{ 
+            color: '#d1d5db', 
+            lineHeight: 1.6,
+            marginBottom: '32px',
+            fontSize: '16px',
+            maxWidth: '500px',
+            margin: '0 auto 32px auto'
+          }}>
+            {current.description}
+          </p>
+
+          {/* Liste des fonctionnalités */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+            gap: '12px',
+            maxWidth: '400px',
+            margin: '0 auto'
+          }}>
+            {current.features.map((feature, index) => (
+              <div
+                key={index}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(59, 130, 246, 0.2)',
+                  fontSize: '14px',
+                  color: '#93c5fd'
+                }}
+              >
+                <CheckCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                <span>{feature}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Indicateur de progression */}
+          <div style={{
+            marginTop: '32px',
+            padding: '16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <div style={{
+              fontSize: '14px',
+              color: '#9ca3af',
+              marginBottom: '8px'
+            }}>
+              {language === 'fr' ? 'Version de test - Pas d\'éjection !' : 'Test version - No ejection!'}
+            </div>
+            <div style={{
+              fontSize: '12px',
+              color: '#6b7280'
+            }}>
+              {language === 'fr' 
+                ? 'Navigation libre sans auto-save'
+                : 'Free navigation without auto-save'
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // =================== RENDU PRINCIPAL ===================
-  if (state.showManager) {
-    return (
-      <PermitManager
-        language={language}
-        onDataChange={onDataChange}
-        onSave={onSave}
-        onCancel={() => setState(prev => ({ ...prev, showManager: false }))}
-        onSubmit={onSubmit || (() => {})}
-        permitData={permitData}
-        updatePermitData={updatePermitDataConsolidated}
-        selectedProvince={activeSelectedProvince}
-        PROVINCIAL_REGULATIONS={activeRegulations}
-        isMobile={isMobile}
-        styles={activeStyles}
-        updateParentData={updateParentDataAdapter}
-      />
-    );
-  }
-
   return (
-    <div style={activeStyles.container}>
+    <div style={styles.container}>
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column', 
@@ -1015,8 +601,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         margin: '0 auto'
       }}>
         
-        {/* En-tête principal avec informations de statut - Style version précédente */}
-        <div style={activeStyles.headerCard}>
+        {/* En-tête principal */}
+        <div style={styles.headerCard}>
           <div style={{
             position: 'absolute',
             top: 0,
@@ -1077,108 +663,19 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                 
                 <div style={{
                   marginTop: '16px',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '12px'
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  background: 'rgba(16, 185, 129, 0.2)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: '20px',
+                  fontSize: '14px',
+                  color: '#86efac'
                 }}>
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 16px',
-                    background: 'rgba(16, 185, 129, 0.2)',
-                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    color: '#86efac'
-                  }}>
-                    <CheckCircle style={{ width: '16px', height: '16px' }} />
-                    {texts.complianceNote} {activeRegulations[activeSelectedProvince].authority}
-                  </div>
-                  
-                  {state.saveStatus === 'saved' && (
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 16px',
-                      background: 'rgba(59, 130, 246, 0.2)',
-                      border: '1px solid rgba(59, 130, 246, 0.3)',
-                      borderRadius: '20px',
-                      fontSize: '14px',
-                      color: '#93c5fd'
-                    }}>
-                      <Save style={{ width: '16px', height: '16px' }} />
-                      {texts.status.saved}
-                    </div>
-                  )}
-                  
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 16px',
-                    background: 'rgba(168, 85, 247, 0.2)',
-                    border: '1px solid rgba(168, 85, 247, 0.3)',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    color: '#c4b5fd'
-                  }}>
-                    <Activity style={{ width: '16px', height: '16px' }} />
-                    {texts.moduleIntegrated} ({calculateOverallProgress()}%)
-                  </div>
+                  <CheckCircle style={{ width: '16px', height: '16px' }} />
+                  {texts.complianceNote} {PROVINCIAL_REGULATIONS[selectedProvince].authority}
                 </div>
-              </div>
-              
-              {/* Actions rapides */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                {state.lastSaved && (
-                  <div style={{
-                    display: isMobile ? 'none' : 'flex',
-                    alignItems: 'center',
-                    fontSize: '14px',
-                    color: '#9ca3af'
-                  }}>
-                    <Check style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-                    Sauvegardé {new Date(state.lastSaved).toLocaleTimeString()}
-                  </div>
-                )}
-                
-                <button
-                  onClick={() => setState(prev => ({ ...prev, showManager: true }))}
-                  style={{
-                    ...activeStyles.button,
-                    ...activeStyles.buttonSecondary,
-                    width: 'auto',
-                    padding: isMobile ? '10px 16px' : '12px 20px'
-                  }}
-                >
-                  <Database style={{ width: '16px', height: '16px' }} />
-                  {!isMobile && texts.navigation.manager}
-                </button>
-                
-                <button
-                  onClick={() => savePermitData(true)}
-                  disabled={state.isLoading}
-                  style={{
-                    ...activeStyles.button,
-                    ...activeStyles.buttonSuccess,
-                    width: 'auto',
-                    padding: isMobile ? '10px 16px' : '12px 20px',
-                    opacity: state.isLoading ? 0.7 : 1
-                  }}
-                >
-                  {state.isLoading ? (
-                    <RefreshCw style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
-                  ) : (
-                    <Save style={{ width: '16px', height: '16px' }} />
-                  )}
-                  {!isMobile && texts.navigation.save}
-                </button>
               </div>
             </div>
             
@@ -1210,7 +707,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                       {texts.province}
                     </span>
                     <span style={{ color: 'white', fontWeight: '700', fontSize: '16px' }}>
-                      {activeRegulations[activeSelectedProvince].authority} ({activeSelectedProvince})
+                      {PROVINCIAL_REGULATIONS[selectedProvince].authority} ({selectedProvince})
                     </span>
                   </div>
                   <div>
@@ -1226,7 +723,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                       {texts.emergencyContact}
                     </span>
                     <span style={{ color: '#60a5fa', fontWeight: '700', fontSize: '16px' }}>
-                      {activeRegulations[activeSelectedProvince].authority_phone}
+                      {PROVINCIAL_REGULATIONS[selectedProvince].authority_phone}
                     </span>
                   </div>
                 </div>
@@ -1235,8 +732,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           </div>
         </div>
 
-        {/* Navigation des sections avec indicateurs de progrès */}
-        <div style={activeStyles.sectionCard}>
+        {/* Navigation des sections */}
+        <div style={styles.sectionCard}>
           <h3 style={{
             color: 'white',
             fontSize: isMobile ? '18px' : '20px',
@@ -1247,7 +744,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             gap: '8px'
           }}>
             <Target style={{ width: '20px', height: '20px', color: '#3b82f6' }} />
-            {texts.progressTracker} ({calculateOverallProgress()}%)
+            {texts.progressTracker}
           </h3>
           
           <div style={{
@@ -1258,8 +755,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           }}>
             {(['site', 'rescue', 'atmospheric', 'registry', 'finalization'] as const).map((section, index) => {
               const Icon = getSectionIcon(section);
-              const isActive = state.currentStep === section;
-              const progress = state.sectionProgress[section];
+              const isActive = currentSection === section;
               
               return (
                 <button
@@ -1280,9 +776,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                     alignItems: 'center',
                     gap: '12px',
                     transform: isActive ? 'translateY(-2px)' : 'translateY(0)',
-                    boxShadow: isActive ? '0 8px 25px rgba(59, 130, 246, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                    position: 'relative',
-                    overflow: 'hidden'
+                    boxShadow: isActive ? '0 8px 25px rgba(59, 130, 246, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)'
                   }}
                 >
                   <Icon style={{ 
@@ -1292,39 +786,124 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                   <span style={{ textAlign: 'center', lineHeight: 1.3 }}>
                     {texts.sections[section]}
                   </span>
-                  
-                  {/* Barre de progression */}
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: '4px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                  }}>
-                    <div style={{
-                      height: '100%',
-                      width: `${progress}%`,
-                      backgroundColor: isActive ? '#ffffff' : '#10b981',
-                      transition: 'width 0.3s ease'
-                    }} />
-                  </div>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Contenu de la section active avec Suspense */}
-        <div style={activeStyles.sectionCard}>
+        {/* Contenu de la section active */}
+        <div style={styles.sectionCard}>
           <div style={{ padding: isMobile ? '20px' : '28px' }}>
-            <Suspense fallback={<LoadingFallback />}>
-              {renderCurrentStep()}
-            </Suspense>
+            {currentSection === 'finalization' ? (
+              // Import dynamique du PermitManager pour la finalisation
+              <div style={{
+                padding: '40px',
+                textAlign: 'center',
+                border: '2px dashed #10b981',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{
+                    fontSize: '64px',
+                    marginBottom: '24px',
+                    filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
+                  }}>
+                    ✅
+                  </div>
+                  
+                  <h3 style={{ 
+                    color: 'white', 
+                    marginBottom: '16px',
+                    fontSize: '24px',
+                    fontWeight: '700'
+                  }}>
+                    {texts.sections.finalization}
+                  </h3>
+                  
+                  <p style={{ 
+                    color: '#d1d5db', 
+                    lineHeight: 1.6,
+                    marginBottom: '32px',
+                    fontSize: '16px',
+                    maxWidth: '500px',
+                    margin: '0 auto 32px auto'
+                  }}>
+                    {language === 'fr' 
+                      ? 'Finalisation du permis avec validation, impression, génération QR et partage.'
+                      : 'Permit finalization with validation, printing, QR generation and sharing.'
+                    }
+                  </p>
+
+                  {/* Liste des fonctionnalités */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                    gap: '12px',
+                    maxWidth: '400px',
+                    margin: '0 auto 32px auto'
+                  }}>
+                    {(language === 'fr' 
+                      ? ['Validation complète', 'Impression PDF', 'Code QR mobile', 'Partage sécurisé']
+                      : ['Complete Validation', 'PDF Printing', 'Mobile QR Code', 'Secure Sharing']
+                    ).map((feature, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 12px',
+                          backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          fontSize: '14px',
+                          color: '#86efac'
+                        }}
+                      >
+                        <CheckCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Note pour intégration */}
+                  <div style={{
+                    marginTop: '32px',
+                    padding: '16px',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(16, 185, 129, 0.2)'
+                  }}>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#86efac',
+                      marginBottom: '8px'
+                    }}>
+                      {language === 'fr' ? '🔧 Module PermitManager' : '🔧 PermitManager Module'}
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#6ee7b7'
+                    }}>
+                      {language === 'fr' 
+                        ? 'Le module PermitManager sera intégré ici pour la finalisation complète'
+                        : 'The PermitManager module will be integrated here for complete finalization'
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              renderSectionContent()
+            )}
           </div>
         </div>
 
-        {/* Navigation bas de page avec sauvegarde automatique */}
+        {/* Navigation bas de page SIMPLIFIÉE */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -1335,13 +914,19 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           border: '2px solid #374151'
         }}>
           <button
-            onClick={handlePrevious}
-            disabled={!canNavigatePrevious}
+            onClick={() => {
+              const sections = ['site', 'rescue', 'atmospheric', 'registry', 'finalization'] as const;
+              const currentIndex = sections.indexOf(currentSection);
+              if (currentIndex > 0) {
+                navigateToSection(sections[currentIndex - 1]);
+              }
+            }}
+            disabled={currentSection === 'site'}
             style={{
-              ...activeStyles.button,
-              ...activeStyles.buttonSecondary,
-              opacity: !canNavigatePrevious ? 0.5 : 1,
-              cursor: !canNavigatePrevious ? 'not-allowed' : 'pointer',
+              ...styles.button,
+              ...styles.buttonSecondary,
+              opacity: currentSection === 'site' ? 0.5 : 1,
+              cursor: currentSection === 'site' ? 'not-allowed' : 'pointer',
               width: 'auto',
               padding: '12px 20px'
             }}
@@ -1352,93 +937,57 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           
           <div style={{
             display: 'flex',
-            gap: '12px',
-            alignItems: 'center'
+            gap: '12px'
           }}>
-            {/* Indicateur de sauvegarde */}
-            {state.saveStatus === 'saving' && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                color: '#fbbf24',
-                fontSize: '14px'
-              }}>
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid transparent',
-                  borderTop: '2px solid #fbbf24',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
-                {texts.status.saving}
-              </div>
-            )}
-            
             <button
               onClick={() => savePermitData(true)}
-              disabled={state.isLoading}
+              disabled={isLoading}
               style={{
-                ...activeStyles.button,
-                ...activeStyles.buttonSuccess,
+                ...styles.button,
+                ...styles.buttonSuccess,
                 width: 'auto',
                 padding: '12px 16px',
-                opacity: state.isLoading ? 0.7 : 1
+                opacity: isLoading ? 0.7 : 1
               }}
             >
               <Save style={{ width: '16px', height: '16px' }} />
               {texts.navigation.save}
             </button>
             
-            {onCancel && (
-              <button
-                onClick={onCancel}
-                style={{
-                  ...activeStyles.button,
-                  ...activeStyles.buttonSecondary,
-                  width: 'auto',
-                  padding: '12px 16px'
-                }}
-              >
-                <XCircle style={{ width: '16px', height: '16px' }} />
-                {texts.navigation.cancel}
-              </button>
-            )}
+            <button
+              onClick={onCancel}
+              style={{
+                ...styles.button,
+                ...styles.buttonSecondary,
+                width: 'auto',
+                padding: '12px 16px'
+              }}
+            >
+              <XCircle style={{ width: '16px', height: '16px' }} />
+              {texts.navigation.cancel}
+            </button>
             
-            {canNavigateNext ? (
-              <button
-                onClick={handleNext}
-                style={{
-                  ...activeStyles.button,
-                  ...activeStyles.buttonPrimary,
-                  width: 'auto',
-                  padding: '12px 20px'
-                }}
-              >
-                {texts.navigation.next}
-                <ChevronRight style={{ width: '18px', height: '18px' }} />
-              </button>
-            ) : (
-              <button
-                onClick={() => savePermitData(true)}
-                disabled={state.isLoading}
-                style={{
-                  ...activeStyles.button,
-                  ...activeStyles.buttonSuccess,
-                  width: 'auto',
-                  padding: '12px 20px',
-                  opacity: state.isLoading ? 0.7 : 1
-                }}
-              >
-                {state.isLoading ? (
-                  <RefreshCw style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
-                ) : (
-                  <Check style={{ width: '16px', height: '16px' }} />
-                )}
-                {texts.navigation.finish}
-              </button>
-            )}
+            <button
+              onClick={() => {
+                const sections = ['site', 'rescue', 'atmospheric', 'registry', 'finalization'] as const;
+                const currentIndex = sections.indexOf(currentSection);
+                if (currentIndex < sections.length - 1) {
+                  navigateToSection(sections[currentIndex + 1]);
+                }
+              }}
+              disabled={currentSection === 'finalization'}
+              style={{
+                ...styles.button,
+                ...styles.buttonPrimary,
+                opacity: currentSection === 'finalization' ? 0.5 : 1,
+                cursor: currentSection === 'finalization' ? 'not-allowed' : 'pointer',
+                width: 'auto',
+                padding: '12px 20px'
+              }}
+            >
+              {texts.navigation.next}
+              <ChevronRight style={{ width: '18px', height: '18px' }} />
+            </button>
           </div>
         </div>
       </div>
