@@ -569,40 +569,24 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   // =================== FONCTIONS UTILITAIRES ===================
   const validateStep = useCallback((stepId: string): string[] => {
     const errors: string[] = [];
-    const permit = activeSafetyManager.currentPermit;
-    
+    // Validation simplifiée sans SafetyManager
     switch (stepId) {
       case 'site':
-        const site = permit.siteInformation;
-        if (!site.projectNumber?.trim()) errors.push('Numéro de projet requis');
-        if (!site.workLocation?.trim()) errors.push('Lieu de travail requis');
-        if (!site.contractor?.trim()) errors.push('Entrepreneur requis');
-        if (!site.supervisor?.trim()) errors.push('Superviseur requis');
-        if (!site.entryDate) errors.push('Date d\'entrée requise');
-        if (!site.spaceType) errors.push('Type d\'espace requis');
+        if (!permitData.projectNumber?.trim()) errors.push('Numéro de projet requis');
+        if (!permitData.workLocation?.trim()) errors.push('Lieu de travail requis');
         break;
-        
       case 'atmospheric':
-        const atmo = permit.atmosphericTesting;
-        if (!atmo.readings?.length) errors.push('Tests atmosphériques requis');
-        if (!atmo.equipment?.deviceModel) errors.push('Équipement de test requis');
+        if (!atmosphericReadings?.length) errors.push('Tests atmosphériques requis');
         break;
-        
       case 'registry':
-        const registry = permit.entryRegistry;
-        if (!registry.personnel?.length) errors.push('Personnel requis');
-        if (!registry.maxOccupancy || registry.maxOccupancy < 1) errors.push('Occupation maximale requise');
+        if (!entryRecords?.length) errors.push('Personnel requis');
         break;
-        
       case 'rescue':
-        const rescue = permit.rescuePlan;
-        if (!rescue.emergencyContacts?.length) errors.push('Contacts d\'urgence requis');
-        if (!rescue.evacuationProcedure?.trim()) errors.push('Procédure d\'évacuation requise');
+        errors.push('Plan de sauvetage à compléter');
         break;
     }
-    
     return errors;
-  }, [activeSafetyManager]);
+  }, [permitData, atmosphericReadings, entryRecords]);
 
   const updateValidationErrors = useCallback(() => {
     const newErrors: Record<string, string[]> = {};
@@ -644,22 +628,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       [sectionKey]: data
     });
     
-    // Mise à jour SafetyManager
-    switch (section) {
-      case 'site':
-        activeSafetyManager.updateSiteInformation(data);
-        break;
-      case 'atmospheric':
-        activeSafetyManager.updateAtmosphericTesting(data);
-        break;
-      case 'registry':
-        activeSafetyManager.updateEntryRegistry(data);
-        break;
-      case 'rescue':
-        activeSafetyManager.updateRescuePlan(data);
-        break;
-    }
-    
     // Calculer le progrès de la section
     const completionPercentage = data && Object.keys(data).length > 0 ? 75 : 0;
     setState(prev => ({
@@ -669,26 +637,14 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         [section]: completionPercentage
       }
     }));
-  }, [updatePermitDataConsolidated, activeSafetyManager]);
+  }, [updatePermitDataConsolidated]);
 
   const handleSectionDataChange = useCallback((field: string, value: any) => {
-    // Mise à jour via SafetyManager selon la section
-    const currentStep = state.currentStep;
+    // Mise à jour simple des données
+    const currentData = permitData[`${state.currentStep}Data` as keyof PermitData] || {};
+    const newData = { ...currentData, [field]: value };
     
-    switch (currentStep) {
-      case 'site':
-        activeSafetyManager.updateSiteInformation({ [field]: value });
-        break;
-      case 'atmospheric':
-        activeSafetyManager.updateAtmosphericTesting({ [field]: value });
-        break;
-      case 'registry':
-        activeSafetyManager.updateEntryRegistry({ [field]: value });
-        break;
-      case 'rescue':
-        activeSafetyManager.updateRescuePlan({ [field]: value });
-        break;
-    }
+    updateSectionData(state.currentStep, newData);
     
     // Callbacks externes
     onDataChange?.(field, value);
@@ -697,7 +653,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     
     // Validation mise à jour
     setTimeout(() => updateValidationErrors(), 100);
-  }, [state.currentStep, activeSafetyManager, onDataChange, externalUpdatePermitData, updateParentData, updateValidationErrors]);
+  }, [state.currentStep, permitData, updateSectionData, onDataChange, externalUpdatePermitData, updateParentData, updateValidationErrors]);
 
   const savePermitData = useCallback(async (showNotification = true) => {
     if (showNotification) {
