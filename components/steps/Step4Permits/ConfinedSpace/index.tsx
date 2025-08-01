@@ -20,8 +20,8 @@ import EntryRegistry from './EntryRegistry';
 import RescuePlan from './RescuePlan';
 import PermitManager from './PermitManager';
 
-// Import du gestionnaire de sécurité - SUPPRIMÉ POUR ÉVITER LES CONFLITS
-// import { useSafetyManager } from './SafetyManager';
+// Import du gestionnaire de sécurité
+import { useSafetyManager } from './SafetyManager';
 
 // =================== DÉTECTION MOBILE ET STYLES COMPLETS ===================
 const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -507,7 +507,11 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   onPermitChange,
   initialPermits
 }) => {
-  // =================== ÉTATS LOCAUX STABILISÉS ===================
+  // =================== HOOKS ET ÉTAT ===================
+  const safetyManager = useSafetyManager();
+  const activeSafetyManager = externalSafetyManager || safetyManager;
+  
+  // État consolidé de tous les éléments de la version précédente
   const [state, setState] = useState<ConfinedSpaceState>({
     currentStep: 'site',
     completedSteps: new Set(),
@@ -526,6 +530,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     saveStatus: 'idle'
   });
 
+  // États de la version précédente pour compatibilité complète
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization'>('site');
   const [activeSelectedProvince, setActiveSelectedProvince] = useState<ProvinceCode>(externalSelectedProvince || province);
   const [permitData, setPermitData] = useState<PermitData>(() => ({
@@ -569,24 +574,40 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   // =================== FONCTIONS UTILITAIRES ===================
   const validateStep = useCallback((stepId: string): string[] => {
     const errors: string[] = [];
-    // Validation simplifiée sans SafetyManager
+    const permit = activeSafetyManager.currentPermit;
+    
     switch (stepId) {
       case 'site':
-        if (!permitData.projectNumber?.trim()) errors.push('Numéro de projet requis');
-        if (!permitData.workLocation?.trim()) errors.push('Lieu de travail requis');
+        const site = permit.siteInformation;
+        if (!site.projectNumber?.trim()) errors.push('Numéro de projet requis');
+        if (!site.workLocation?.trim()) errors.push('Lieu de travail requis');
+        if (!site.contractor?.trim()) errors.push('Entrepreneur requis');
+        if (!site.supervisor?.trim()) errors.push('Superviseur requis');
+        if (!site.entryDate) errors.push('Date d\'entrée requise');
+        if (!site.spaceType) errors.push('Type d\'espace requis');
         break;
+        
       case 'atmospheric':
-        if (!atmosphericReadings?.length) errors.push('Tests atmosphériques requis');
+        const atmo = permit.atmosphericTesting;
+        if (!atmo.readings?.length) errors.push('Tests atmosphériques requis');
+        if (!atmo.equipment?.deviceModel) errors.push('Équipement de test requis');
         break;
+        
       case 'registry':
-        if (!entryRecords?.length) errors.push('Personnel requis');
+        const registry = permit.entryRegistry;
+        if (!registry.personnel?.length) errors.push('Personnel requis');
+        if (!registry.maxOccupancy || registry.maxOccupancy < 1) errors.push('Occupation maximale requise');
         break;
+        
       case 'rescue':
-        errors.push('Plan de sauvetage à compléter');
+        const rescue = permit.rescuePlan;
+        if (!rescue.emergencyContacts?.length) errors.push('Contacts d\'urgence requis');
+        if (!rescue.evacuationProcedure?.trim()) errors.push('Procédure d\'évacuation requise');
         break;
     }
+    
     return errors;
-  }, [permitData, atmosphericReadings, entryRecords]);
+  }, [activeSafetyManager]);
 
   const updateValidationErrors = useCallback(() => {
     const newErrors: Record<string, string[]> = {};
@@ -628,6 +649,22 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       [sectionKey]: data
     });
     
+    // Mise à jour SafetyManager
+    switch (section) {
+      case 'site':
+        activeSafetyManager.updateSiteInformation(data);
+        break;
+      case 'atmospheric':
+        activeSafetyManager.updateAtmosphericTesting(data);
+        break;
+      case 'registry':
+        activeSafetyManager.updateEntryRegistry(data);
+        break;
+      case 'rescue':
+        activeSafetyManager.updateRescuePlan(data);
+        break;
+    }
+    
     // Calculer le progrès de la section
     const completionPercentage = data && Object.keys(data).length > 0 ? 75 : 0;
     setState(prev => ({
@@ -637,14 +674,26 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         [section]: completionPercentage
       }
     }));
-  }, [updatePermitDataConsolidated]);
+  }, [updatePermitDataConsolidated, activeSafetyManager]);
 
   const handleSectionDataChange = useCallback((field: string, value: any) => {
-    // Mise à jour simple des données
-    const currentData = permitData[`${state.currentStep}Data` as keyof PermitData] || {};
-    const newData = { ...currentData, [field]: value };
+    // Mise à jour via SafetyManager selon la section
+    const currentStep = state.currentStep;
     
-    updateSectionData(state.currentStep, newData);
+    switch (currentStep) {
+      case 'site':
+        activeSafetyManager.updateSiteInformation({ [field]: value });
+        break;
+      case 'atmospheric':
+        activeSafetyManager.updateAtmosphericTesting({ [field]: value });
+        break;
+      case 'registry':
+        activeSafetyManager.updateEntryRegistry({ [field]: value });
+        break;
+      case 'rescue':
+        activeSafetyManager.updateRescuePlan({ [field]: value });
+        break;
+    }
     
     // Callbacks externes
     onDataChange?.(field, value);
@@ -653,7 +702,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     
     // Validation mise à jour
     setTimeout(() => updateValidationErrors(), 100);
-  }, [state.currentStep, permitData, updateSectionData, onDataChange, externalUpdatePermitData, updateParentData, updateValidationErrors]);
+  }, [state.currentStep, activeSafetyManager, onDataChange, externalUpdatePermitData, updateParentData, updateValidationErrors]);
 
   const savePermitData = useCallback(async (showNotification = true) => {
     if (showNotification) {
@@ -833,12 +882,27 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         onSubmit={onSubmit || (() => {
           console.log('Submit action - no handler provided');
         })}
-        permitData={permitData}
+        permitData={permitData || activeSafetyManager.currentPermit}
         updatePermitData={updatePermitDataConsolidated}
         selectedProvince={activeSelectedProvince}
         PROVINCIAL_REGULATIONS={activeRegulations}
         isMobile={isMobile}
         styles={activeStyles}
+        safetyManager={activeSafetyManager}
+        externalSafetyManager={activeSafetyManager}
+        formData={formData}
+        tenant={tenant}
+        errors={errors}
+        userRole={userRole}
+        touchOptimized={touchOptimized}
+        compactMode={compactMode}
+        updateParentData={updateParentData}
+        atmosphericReadings={atmosphericReadings}
+        setAtmosphericReadings={setAtmosphericReadings}
+        initialData={initialData}
+        onPermitChange={onPermitChange}
+        initialPermits={initialPermits}
+        province={activeSelectedProvince}
       />
     );
   }
