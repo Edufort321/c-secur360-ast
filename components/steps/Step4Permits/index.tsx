@@ -1345,9 +1345,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Target size={12} />
-                      {typeof t[permit.complexity as keyof typeof t] === 'string' 
-                        ? t[permit.complexity as keyof typeof t] 
-                        : permit.complexity}
+                      {permit.complexity}
                     </div>
                     {permit.csaStandards && permit.csaStandards.length > 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
