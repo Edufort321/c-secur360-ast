@@ -20,8 +20,8 @@ import EntryRegistry from './EntryRegistry';
 import RescuePlan from './RescuePlan';
 import PermitManager from './PermitManager';
 
-// Import du gestionnaire de sécurité
-import { useSafetyManager } from './SafetyManager';
+// Import du gestionnaire de sécurité - SUPPRIMÉ POUR ÉVITER LES CONFLITS
+// import { useSafetyManager } from './SafetyManager';
 
 // =================== DÉTECTION MOBILE ET STYLES COMPLETS ===================
 const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -507,11 +507,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   onPermitChange,
   initialPermits
 }) => {
-  // =================== HOOKS ET ÉTAT ===================
-  const safetyManager = useSafetyManager();
-  const activeSafetyManager = externalSafetyManager || safetyManager;
-  
-  // État consolidé de tous les éléments de la version précédente
+  // =================== ÉTATS LOCAUX STABILISÉS ===================
   const [state, setState] = useState<ConfinedSpaceState>({
     currentStep: 'site',
     completedSteps: new Set(),
@@ -530,7 +526,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     saveStatus: 'idle'
   });
 
-  // États de la version précédente pour compatibilité complète
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization'>('site');
   const [activeSelectedProvince, setActiveSelectedProvince] = useState<ProvinceCode>(externalSelectedProvince || province);
   const [permitData, setPermitData] = useState<PermitData>(() => ({
@@ -882,7 +877,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         onSubmit={onSubmit || (() => {
           console.log('Submit action - no handler provided');
         })}
-        permitData={permitData || activeSafetyManager.currentPermit}
+        permitData={permitData}
         updatePermitData={updatePermitDataConsolidated}
         selectedProvince={activeSelectedProvince}
         PROVINCIAL_REGULATIONS={activeRegulations}
