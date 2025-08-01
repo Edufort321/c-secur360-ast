@@ -1,3 +1,4 @@
+// ConfinedSpace/index.tsx - VERSION PROGRESSIVE AVEC INTÉGRATION SAFETYMANAGER
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -7,6 +8,16 @@ import {
   Eye, Thermometer, Volume2, Gauge, Plus, FileText, Activity, Settings, Search, Star,
   Wrench, Target, ChevronDown, ChevronRight, Building, Construction, Flame, Zap, BarChart3
 } from 'lucide-react';
+
+// Import des composants des sections (progressif)
+import SiteInformation from './SiteInformation';
+import AtmosphericTesting from './AtmosphericTesting';
+import EntryRegistry from './EntryRegistry';
+import RescuePlan from './RescuePlan';
+import PermitManager from './PermitManager';
+
+// Import SafetyManager - INTÉGRATION PROGRESSIVE
+import { useSafetyManager } from './SafetyManager';
 
 // =================== DÉTECTION MOBILE ET STYLES COMPLETS ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -93,12 +104,37 @@ const styles = {
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 
 interface ConfinedSpaceProps {
-  province?: ProvinceCode;
+  // Props de base - MÊME SIGNATURE QUE VERSION FONCTIONNELLE
   language?: 'fr' | 'en';
-  onSave?: (data: any) => void;
+  onDataChange: (field: string, value: any) => void;
+  onSave: (data: any) => void;
+  onCancel?: () => void;
+  
+  // Props ASTForm (optionnelles pour compatibilité)
+  permitData?: any;
+  updatePermitData?: (data: any) => void;
+  selectedProvince?: ProvinceCode;
+  PROVINCIAL_REGULATIONS?: any;
+  atmosphericReadings?: any[];
+  isMobile?: boolean;
+  styles?: any;
+  updateParentData?: (data: any) => void;
+  
+  // Props SafetyManager (optionnelles)
+  externalSafetyManager?: any;
+  
+  // Props version précédente (optionnelles)
+  province?: ProvinceCode;
   onSubmit?: (data: any) => void;
-  onCancel: () => void;
   initialData?: any;
+  formData?: any;
+  tenant?: string;
+  errors?: any;
+  userRole?: string;
+  touchOptimized?: boolean;
+  compactMode?: boolean;
+  onPermitChange?: (permits: any) => void;
+  initialPermits?: any[];
 }
 
 interface PermitData {
@@ -289,7 +325,8 @@ const getTexts = (language: 'fr' | 'en') => ({
       next: "Suivant",
       save: "Enregistrer",
       cancel: "Annuler",
-      submit: "Soumettre le Permis"
+      submit: "Soumettre le Permis",
+      manager: "Gestionnaire"
     },
     status: {
       draft: "Brouillon",
@@ -309,7 +346,9 @@ const getTexts = (language: 'fr' | 'en') => ({
     emergencyContact: "Contact d'urgence",
     complianceNote: "Conforme aux réglementations de",
     autoSaveEnabled: "Sauvegarde automatique activée",
-    progressTracker: "Progression du permis"
+    progressTracker: "Progression du permis",
+    safetyManager: "SafetyManager Intégré",
+    validation: "Validation en temps réel"
   },
   en: {
     title: "Confined Space Entry Permit",
@@ -326,7 +365,8 @@ const getTexts = (language: 'fr' | 'en') => ({
       next: "Next",
       save: "Save",
       cancel: "Cancel",
-      submit: "Submit Permit"
+      submit: "Submit Permit",
+      manager: "Manager"
     },
     status: {
       draft: "Draft",
@@ -346,46 +386,165 @@ const getTexts = (language: 'fr' | 'en') => ({
     emergencyContact: "Emergency Contact",
     complianceNote: "Compliant with regulations of",
     autoSaveEnabled: "Auto-save enabled",
-    progressTracker: "Permit Progress"
+    progressTracker: "Permit Progress",
+    safetyManager: "SafetyManager Integrated",
+    validation: "Real-time Validation"
   }
 })[language];
 
 // =================== COMPOSANT PRINCIPAL ===================
 const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
-  province = 'QC',
+  // Props de base - signature compatible
   language = 'fr',
+  onDataChange,
   onSave,
-  onSubmit,
   onCancel,
-  initialData = {}
+  
+  // Props ASTForm (optionnelles)
+  permitData: externalPermitData,
+  updatePermitData: externalUpdatePermitData,
+  selectedProvince: externalSelectedProvince,
+  PROVINCIAL_REGULATIONS: externalRegulations,
+  atmosphericReadings: externalAtmosphericReadings = [],
+  isMobile: externalIsMobile,
+  styles: externalStyles,
+  updateParentData,
+  
+  // Props SafetyManager (optionnelles)
+  externalSafetyManager,
+  
+  // Props version précédente (optionnelles)
+  province = 'QC',
+  onSubmit,
+  initialData = {},
+  formData,
+  tenant,
+  errors,
+  userRole,
+  touchOptimized,
+  compactMode,
+  onPermitChange,
+  initialPermits
 }) => {
 
-  // =================== ÉTATS LOCAUX - AVEC FINALISATION ===================
+  // =================== INTÉGRATION PROGRESSIVE SAFETYMANAGER ===================
+  
+  // 🔧 ÉTAPE 1 : Intégration SafetyManager (optionnelle et sécurisée)
+  let safetyManager = null;
+  let isSafetyManagerEnabled = false;
+  
+  try {
+    // Essayer d'utiliser SafetyManager s'il est disponible
+    safetyManager = useSafetyManager();
+    isSafetyManagerEnabled = true;
+  } catch (error) {
+    // Si SafetyManager n'est pas disponible, continuer sans lui
+    console.log('SafetyManager non disponible, mode basique activé');
+    isSafetyManagerEnabled = false;
+  }
+
+  // =================== ÉTATS LOCAUX - BASÉS SUR VERSION FONCTIONNELLE ===================
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization'>('site');
-  const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province);
-  const [permitData, setPermitData] = useState<PermitData>(initialData);
+  const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(externalSelectedProvince || province);
+  const [permitData, setPermitData] = useState<PermitData>({
+    ...initialData,
+    ...(formData?.permitData || {}),
+    ...(externalPermitData || {})
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [showManager, setShowManager] = useState(false);
+  
+  // États SafetyManager (si disponible)
+  const [atmosphericReadings, setAtmosphericReadings] = useState<any[]>(externalAtmosphericReadings);
+  const [validationData, setValidationData] = useState<any>(null);
   
   const texts = getTexts(language);
+  const actualIsMobile = externalIsMobile !== undefined ? externalIsMobile : isMobile;
+  const actualStyles = externalStyles || styles;
+  const actualRegulations = externalRegulations || PROVINCIAL_REGULATIONS;
 
-  // =================== FONCTIONS UTILITAIRES SIMPLIFIÉES ===================
+  // =================== GÉNÉRATION NUMÉRO DE PERMIS - MÊME LOGIQUE ===================
   useEffect(() => {
     if (!permitData.permit_number) {
       const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const random = Math.random().toString(36).substring(2, 8).toUpperCase();
       
-      setPermitData(prev => ({ 
-        ...prev,
+      const newPermitData = { 
+        ...permitData,
         permit_number: `CS-${selectedProvince}-${timestamp}-${random}`,
         issue_date: new Date().toISOString().slice(0, 16),
         selected_province: selectedProvince
-      }));
+      };
+      
+      setPermitData(newPermitData);
+      
+      // Notifier les parents
+      if (onDataChange) {
+        onDataChange('permitData', newPermitData);
+      }
+      if (externalUpdatePermitData) {
+        externalUpdatePermitData(newPermitData);
+      }
     }
-  }, []); // Dependency array vide pour éviter les boucles
+  }, [selectedProvince, permitData.permit_number, onDataChange, externalUpdatePermitData]);
 
+  // =================== INTÉGRATION PROGRESSIVE DES DONNÉES SAFETYMANAGER ===================
+  
+  // 🔧 ÉTAPE 2 : Synchronisation avec SafetyManager (si disponible)
+  useEffect(() => {
+    if (isSafetyManagerEnabled && safetyManager && permitData.permit_number) {
+      try {
+        // Validation temps réel avec SafetyManager
+        const validation = safetyManager.validatePermitCompleteness();
+        setValidationData(validation);
+        
+        // Mise à jour des lectures atmosphériques depuis SafetyManager
+        const currentPermit = safetyManager.currentPermit;
+        if (currentPermit?.atmosphericTesting?.readings) {
+          setAtmosphericReadings(currentPermit.atmosphericTesting.readings);
+        }
+      } catch (error) {
+        console.log('Erreur SafetyManager:', error);
+      }
+    }
+  }, [permitData, currentSection, isSafetyManagerEnabled, safetyManager]);
+
+  // =================== FONCTIONS UTILITAIRES AMÉLIORÉES ===================
   const updatePermitData = (updates: Partial<PermitData>) => {
-    setPermitData(prev => ({ ...prev, ...updates }));
+    const newData = { ...permitData, ...updates };
+    setPermitData(newData);
+    
+    // 🔧 ÉTAPE 3 : Mise à jour SafetyManager (si disponible)
+    if (isSafetyManagerEnabled && safetyManager) {
+      try {
+        // Synchroniser avec SafetyManager selon la section
+        switch (currentSection) {
+          case 'site':
+            safetyManager.updateSiteInformation(updates);
+            break;
+          case 'atmospheric':
+            safetyManager.updateAtmosphericTesting(updates);
+            break;
+          case 'registry':
+            safetyManager.updateEntryRegistry(updates);
+            break;
+          case 'rescue':
+            safetyManager.updateRescuePlan(updates);
+            break;
+        }
+      } catch (error) {
+        console.log('Erreur mise à jour SafetyManager:', error);
+      }
+    }
+    
+    // Notifier les parents
+    if (onDataChange) {
+      onDataChange('permitData', newData);
+    }
+    if (externalUpdatePermitData) {
+      externalUpdatePermitData(newData);
+    }
   };
 
   const savePermitData = async (showNotification = true) => {
@@ -395,12 +554,26 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
     
     try {
+      let dataToSave = {
+        ...permitData,
+        currentSection,
+        selectedProvince
+      };
+      
+      // 🔧 ÉTAPE 4 : Sauvegarde via SafetyManager (si disponible)
+      if (isSafetyManagerEnabled && safetyManager) {
+        try {
+          const permitNumber = await safetyManager.saveToDatabase();
+          if (permitNumber) {
+            dataToSave = { ...dataToSave, permit_number: permitNumber };
+          }
+        } catch (error) {
+          console.log('Erreur sauvegarde SafetyManager:', error);
+        }
+      }
+      
       if (onSave) {
-        await onSave({
-          ...permitData,
-          currentSection,
-          selectedProvince
-        });
+        await onSave(dataToSave);
       }
       
       if (showNotification) {
@@ -435,8 +608,110 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     return iconMap[section as keyof typeof iconMap] || FileText;
   };
 
-  // =================== RENDU DES SECTIONS AMÉLIORÉ ===================
+  // =================== FONCTIONS POUR GESTION DES COMPOSANTS ===================
+  
+  const handleSectionDataChange = useCallback((field: string, value: any) => {
+    updatePermitData({ [field]: value });
+    
+    // Callbacks externes
+    if (updateParentData) {
+      updateParentData({ [field]: value });
+    }
+  }, [updateParentData]);
+
+  // =================== RENDU DES SECTIONS AVEC INTÉGRATION PROGRESSIVE ===================
   const renderSectionContent = () => {
+    // Props de base pour tous les composants
+    const baseProps = {
+      language,
+      onDataChange: handleSectionDataChange,
+      onSave: (data: any) => updatePermitData(data),
+      onCancel: onCancel || (() => {}),
+      permitData,
+      updatePermitData,
+      selectedProvince,
+      PROVINCIAL_REGULATIONS: actualRegulations,
+      atmosphericReadings,
+      isMobile: actualIsMobile,
+      styles: actualStyles
+    };
+
+    // Props SafetyManager (si disponible)
+    const safetyProps = isSafetyManagerEnabled && safetyManager ? {
+      safetyManager,
+      externalSafetyManager: safetyManager,
+      atmosphericSafetyData: safetyManager.currentPermit?.atmosphericTesting,
+      isAtmosphericSafe: safetyManager.currentPermit?.atmosphericTesting?.readings?.every(r => r.status === 'safe') || false
+    } : {};
+
+    switch (currentSection) {
+      case 'site':
+        return (
+          <SiteInformation 
+            {...baseProps}
+            {...safetyProps}
+            updateParentData={(data: any) => updateParentData?.(data)}
+          />
+        );
+        
+      case 'atmospheric':
+        return (
+          <AtmosphericTesting 
+            {...baseProps}
+            {...safetyProps}
+            setAtmosphericReadings={setAtmosphericReadings}
+            updateParentData={(data: any) => updateParentData?.(data)}
+          />
+        );
+        
+      case 'registry':
+        return (
+          <EntryRegistry 
+            {...baseProps}
+            {...safetyProps}
+            updateParentData={(data: any) => updateParentData?.(data)}
+          />
+        );
+        
+      case 'rescue':
+        return (
+          <RescuePlan 
+            {...baseProps}
+            {...safetyProps}
+            updateParentData={(data: any) => updateParentData?.(data)}
+          />
+        );
+        
+      case 'finalization':
+        return (
+          <PermitManager
+            {...baseProps}
+            {...safetyProps}
+            updateParentData={(data: any) => updateParentData?.(data)}
+            onSubmit={(finalData: any) => {
+              if (onSubmit) {
+                onSubmit(finalData);
+              }
+            }}
+            // Props spécifiques PermitManager
+            formData={formData}
+            tenant={tenant}
+            errors={errors}
+            userRole={userRole}
+            touchOptimized={touchOptimized}
+            compactMode={compactMode}
+            onPermitChange={onPermitChange}
+            initialPermits={initialPermits}
+          />
+        );
+        
+      default:
+        return renderTestContent();
+    }
+  };
+
+  // =================== CONTENU DE TEST POUR DÉVELOPPEMENT ===================
+  const renderTestContent = () => {
     const sectionData = {
       site: {
         emoji: '🏢',
@@ -496,9 +771,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       <div style={{
         padding: '40px',
         textAlign: 'center',
-        border: '2px dashed #374151',
+        border: `2px dashed ${isSafetyManagerEnabled ? '#10b981' : '#374151'}`,
         borderRadius: '12px',
-        backgroundColor: 'rgba(17, 24, 39, 0.5)',
+        backgroundColor: `rgba(${isSafetyManagerEnabled ? '16, 185, 129' : '17, 24, 39'}, 0.1)`,
         position: 'relative',
         overflow: 'hidden'
       }}>
@@ -531,10 +806,36 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             {current.description}
           </p>
 
+          {/* État SafetyManager */}
+          <div style={{
+            marginBottom: '32px',
+            padding: '16px',
+            backgroundColor: `rgba(${isSafetyManagerEnabled ? '16, 185, 129' : '156, 163, 175'}, 0.2)`,
+            borderRadius: '8px',
+            border: `1px solid rgba(${isSafetyManagerEnabled ? '16, 185, 129' : '156, 163, 175'}, 0.3)`
+          }}>
+            <div style={{
+              fontSize: '14px',
+              color: isSafetyManagerEnabled ? '#86efac' : '#9ca3af',
+              marginBottom: '8px'
+            }}>
+              {isSafetyManagerEnabled ? '✅ ' + texts.safetyManager : '⚠️ Mode basique'}
+            </div>
+            <div style={{
+              fontSize: '12px',
+              color: isSafetyManagerEnabled ? '#6ee7b7' : '#6b7280'
+            }}>
+              {isSafetyManagerEnabled 
+                ? texts.validation + (validationData ? ` (${validationData.percentage}%)` : '')
+                : (language === 'fr' ? 'SafetyManager non disponible' : 'SafetyManager not available')
+              }
+            </div>
+          </div>
+
           {/* Liste des fonctionnalités */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+            gridTemplateColumns: actualIsMobile ? '1fr' : 'repeat(2, 1fr)',
             gap: '12px',
             maxWidth: '400px',
             margin: '0 auto'
@@ -559,50 +860,53 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               </div>
             ))}
           </div>
-
-          {/* Indicateur de progression */}
-          <div style={{
-            marginTop: '32px',
-            padding: '16px',
-            backgroundColor: 'rgba(0, 0, 0, 0.3)',
-            borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
-          }}>
-            <div style={{
-              fontSize: '14px',
-              color: '#9ca3af',
-              marginBottom: '8px'
-            }}>
-              {language === 'fr' ? 'Version de test - Pas d\'éjection !' : 'Test version - No ejection!'}
-            </div>
-            <div style={{
-              fontSize: '12px',
-              color: '#6b7280'
-            }}>
-              {language === 'fr' 
-                ? 'Navigation libre sans auto-save'
-                : 'Free navigation without auto-save'
-              }
-            </div>
-          </div>
         </div>
       </div>
     );
   };
 
   // =================== RENDU PRINCIPAL ===================
+  
+  // Gestion du PermitManager en mode plein écran
+  if (showManager) {
+    return (
+      <PermitManager
+        language={language}
+        onDataChange={onDataChange}
+        onSave={onSave}
+        onCancel={() => setShowManager(false)}
+        onSubmit={onSubmit}
+        permitData={permitData}
+        updatePermitData={updatePermitData}
+        selectedProvince={selectedProvince}
+        PROVINCIAL_REGULATIONS={actualRegulations}
+        isMobile={actualIsMobile}
+        styles={actualStyles}
+        safetyManager={isSafetyManagerEnabled ? safetyManager : undefined}
+        formData={formData}
+        tenant={tenant}
+        errors={errors}
+        userRole={userRole}
+        touchOptimized={touchOptimized}
+        compactMode={compactMode}
+        onPermitChange={onPermitChange}
+        initialPermits={initialPermits}
+      />
+    );
+  }
+
   return (
-    <div style={styles.container}>
+    <div style={actualStyles.container}>
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        gap: isMobile ? '20px' : '24px',
+        gap: actualIsMobile ? '20px' : '24px',
         maxWidth: '1400px',
         margin: '0 auto'
       }}>
         
-        {/* En-tête principal */}
-        <div style={styles.headerCard}>
+        {/* En-tête principal avec indicateur SafetyManager */}
+        <div style={actualStyles.headerCard}>
           <div style={{
             position: 'absolute',
             top: 0,
@@ -618,13 +922,13 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'space-between',
-              flexDirection: isMobile ? 'column' : 'row',
-              gap: isMobile ? '24px' : '0',
+              flexDirection: actualIsMobile ? 'column' : 'row',
+              gap: actualIsMobile ? '24px' : '0',
               marginBottom: '24px'
             }}>
               <div style={{ flex: 1 }}>
                 <h1 style={{
-                  fontSize: isMobile ? '28px' : '36px',
+                  fontSize: actualIsMobile ? '28px' : '36px',
                   fontWeight: '900',
                   color: 'white',
                   marginBottom: '12px',
@@ -634,8 +938,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                   lineHeight: 1.2
                 }}>
                   <div style={{
-                    width: isMobile ? '48px' : '60px',
-                    height: isMobile ? '48px' : '60px',
+                    width: actualIsMobile ? '48px' : '60px',
+                    height: actualIsMobile ? '48px' : '60px',
                     background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
                     borderRadius: '16px',
                     display: 'flex',
@@ -644,8 +948,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                     boxShadow: '0 8px 32px rgba(220, 38, 38, 0.3)'
                   }}>
                     <Shield style={{ 
-                      width: isMobile ? '28px' : '36px', 
-                      height: isMobile ? '28px' : '36px', 
+                      width: actualIsMobile ? '28px' : '36px', 
+                      height: actualIsMobile ? '28px' : '36px', 
                       color: 'white' 
                     }} />
                   </div>
@@ -653,7 +957,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                 </h1>
                 <p style={{
                   color: '#d1d5db',
-                  fontSize: isMobile ? '16px' : '18px',
+                  fontSize: actualIsMobile ? '16px' : '18px',
                   margin: 0,
                   maxWidth: '700px',
                   lineHeight: 1.5
@@ -663,23 +967,101 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                 
                 <div style={{
                   marginTop: '16px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 16px',
-                  background: 'rgba(16, 185, 129, 0.2)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  borderRadius: '20px',
-                  fontSize: '14px',
-                  color: '#86efac'
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '12px'
                 }}>
-                  <CheckCircle style={{ width: '16px', height: '16px' }} />
-                  {texts.complianceNote} {PROVINCIAL_REGULATIONS[selectedProvince].authority}
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    borderRadius: '20px',
+                    fontSize: '14px',
+                    color: '#86efac'
+                  }}>
+                    <CheckCircle style={{ width: '16px', height: '16px' }} />
+                    {texts.complianceNote} {actualRegulations[selectedProvince].authority}
+                  </div>
+                  
+                  {/* Indicateur SafetyManager */}
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    background: `rgba(${isSafetyManagerEnabled ? '59, 130, 246' : '156, 163, 175'}, 0.2)`,
+                    border: `1px solid rgba(${isSafetyManagerEnabled ? '59, 130, 246' : '156, 163, 175'}, 0.3)`,
+                    borderRadius: '20px',
+                    fontSize: '14px',
+                    color: isSafetyManagerEnabled ? '#93c5fd' : '#9ca3af'
+                  }}>
+                    <Activity style={{ width: '16px', height: '16px' }} />
+                    {isSafetyManagerEnabled ? texts.safetyManager : 'Mode basique'}
+                  </div>
+                  
+                  {saveStatus === 'saved' && (
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 16px',
+                      background: 'rgba(16, 185, 129, 0.2)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      borderRadius: '20px',
+                      fontSize: '14px',
+                      color: '#86efac'
+                    }}>
+                      <Save style={{ width: '16px', height: '16px' }} />
+                      {texts.status.saved}
+                    </div>
+                  )}
                 </div>
+              </div>
+              
+              {/* Actions rapides */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <button
+                  onClick={() => setShowManager(true)}
+                  style={{
+                    ...actualStyles.button,
+                    ...actualStyles.buttonSecondary,
+                    width: 'auto',
+                    padding: actualIsMobile ? '10px 16px' : '12px 20px'
+                  }}
+                >
+                  <Wrench style={{ width: '16px', height: '16px' }} />
+                  {!actualIsMobile && texts.navigation.manager}
+                </button>
+                
+                <button
+                  onClick={() => savePermitData(true)}
+                  disabled={isLoading}
+                  style={{
+                    ...actualStyles.button,
+                    ...actualStyles.buttonSuccess,
+                    width: 'auto',
+                    padding: actualIsMobile ? '10px 16px' : '12px 20px',
+                    opacity: isLoading ? 0.7 : 1
+                  }}
+                >
+                  {isLoading ? (
+                    <div style={{ width: '16px', height: '16px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                  ) : (
+                    <Save style={{ width: '16px', height: '16px' }} />
+                  )}
+                  {!actualIsMobile && texts.navigation.save}
+                </button>
               </div>
             </div>
             
-            {/* Informations du permis */}
+            {/* Informations du permis avec validation SafetyManager */}
             {permitData.permit_number && (
               <div style={{
                 padding: '20px',
@@ -690,7 +1072,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               }}>
                 <div style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', 
+                  gridTemplateColumns: actualIsMobile ? '1fr' : 'repeat(4, 1fr)', 
                   gap: '20px',
                   alignItems: 'center'
                 }}>
@@ -707,7 +1089,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                       {texts.province}
                     </span>
                     <span style={{ color: 'white', fontWeight: '700', fontSize: '16px' }}>
-                      {PROVINCIAL_REGULATIONS[selectedProvince].authority} ({selectedProvince})
+                      {actualRegulations[selectedProvince].authority} ({selectedProvince})
                     </span>
                   </div>
                   <div>
@@ -720,10 +1102,14 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                   </div>
                   <div>
                     <span style={{ color: '#9ca3af', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
-                      {texts.emergencyContact}
+                      {language === 'fr' ? 'Validation' : 'Validation'}
                     </span>
-                    <span style={{ color: '#60a5fa', fontWeight: '700', fontSize: '16px' }}>
-                      {PROVINCIAL_REGULATIONS[selectedProvince].authority_phone}
+                    <span style={{ 
+                      color: validationData?.isValid ? '#10b981' : '#f59e0b', 
+                      fontWeight: '700', 
+                      fontSize: '16px' 
+                    }}>
+                      {validationData ? `${validationData.percentage}%` : 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -733,10 +1119,10 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         </div>
 
         {/* Navigation des sections */}
-        <div style={styles.sectionCard}>
+        <div style={actualStyles.sectionCard}>
           <h3 style={{
             color: 'white',
-            fontSize: isMobile ? '18px' : '20px',
+            fontSize: actualIsMobile ? '18px' : '20px',
             fontWeight: '700',
             margin: '0 0 20px 0',
             display: 'flex',
@@ -745,12 +1131,21 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           }}>
             <Target style={{ width: '20px', height: '20px', color: '#3b82f6' }} />
             {texts.progressTracker}
+            {isSafetyManagerEnabled && validationData && (
+              <span style={{ 
+                fontSize: '14px', 
+                color: validationData.isValid ? '#10b981' : '#f59e0b',
+                fontWeight: '600' 
+              }}>
+                ({validationData.percentage}%)
+              </span>
+            )}
           </h3>
           
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(5, 1fr)',
-            gap: isMobile ? '12px' : '16px',
+            gridTemplateColumns: actualIsMobile ? '1fr' : 'repeat(5, 1fr)',
+            gap: actualIsMobile ? '12px' : '16px',
             marginBottom: '20px'
           }}>
             {(['site', 'rescue', 'atmospheric', 'registry', 'finalization'] as const).map((section, index) => {
@@ -762,26 +1157,28 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                   key={section}
                   onClick={() => navigateToSection(section)}
                   style={{
-                    padding: isMobile ? '20px 16px' : '24px 20px',
+                    padding: actualIsMobile ? '20px 16px' : '24px 20px',
                     backgroundColor: isActive ? '#3b82f6' : 'rgba(75, 85, 99, 0.3)',
                     border: `2px solid ${isActive ? '#60a5fa' : '#6b7280'}`,
                     borderRadius: '16px',
                     color: isActive ? 'white' : '#9ca3af',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
-                    fontSize: isMobile ? '14px' : '15px',
+                    fontSize: actualIsMobile ? '14px' : '15px',
                     fontWeight: '600',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '12px',
                     transform: isActive ? 'translateY(-2px)' : 'translateY(0)',
-                    boxShadow: isActive ? '0 8px 25px rgba(59, 130, 246, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)'
+                    boxShadow: isActive ? '0 8px 25px rgba(59, 130, 246, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                    position: 'relative',
+                    overflow: 'hidden'
                   }}
                 >
                   <Icon style={{ 
-                    width: isMobile ? '28px' : '32px', 
-                    height: isMobile ? '28px' : '32px'
+                    width: actualIsMobile ? '28px' : '32px', 
+                    height: actualIsMobile ? '28px' : '32px'
                   }} />
                   <span style={{ textAlign: 'center', lineHeight: 1.3 }}>
                     {texts.sections[section]}
@@ -793,122 +1190,18 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         </div>
 
         {/* Contenu de la section active */}
-        <div style={styles.sectionCard}>
-          <div style={{ padding: isMobile ? '20px' : '28px' }}>
-            {currentSection === 'finalization' ? (
-              // Import dynamique du PermitManager pour la finalisation
-              <div style={{
-                padding: '40px',
-                textAlign: 'center',
-                border: '2px dashed #10b981',
-                borderRadius: '12px',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                position: 'relative',
-                overflow: 'hidden'
-              }}>
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                  <div style={{
-                    fontSize: '64px',
-                    marginBottom: '24px',
-                    filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
-                  }}>
-                    ✅
-                  </div>
-                  
-                  <h3 style={{ 
-                    color: 'white', 
-                    marginBottom: '16px',
-                    fontSize: '24px',
-                    fontWeight: '700'
-                  }}>
-                    {texts.sections.finalization}
-                  </h3>
-                  
-                  <p style={{ 
-                    color: '#d1d5db', 
-                    lineHeight: 1.6,
-                    marginBottom: '32px',
-                    fontSize: '16px',
-                    maxWidth: '500px',
-                    margin: '0 auto 32px auto'
-                  }}>
-                    {language === 'fr' 
-                      ? 'Finalisation du permis avec validation, impression, génération QR et partage.'
-                      : 'Permit finalization with validation, printing, QR generation and sharing.'
-                    }
-                  </p>
-
-                  {/* Liste des fonctionnalités */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-                    gap: '12px',
-                    maxWidth: '400px',
-                    margin: '0 auto 32px auto'
-                  }}>
-                    {(language === 'fr' 
-                      ? ['Validation complète', 'Impression PDF', 'Code QR mobile', 'Partage sécurisé']
-                      : ['Complete Validation', 'PDF Printing', 'Mobile QR Code', 'Secure Sharing']
-                    ).map((feature, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '8px 12px',
-                          backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                          borderRadius: '8px',
-                          border: '1px solid rgba(16, 185, 129, 0.3)',
-                          fontSize: '14px',
-                          color: '#86efac'
-                        }}
-                      >
-                        <CheckCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
-                        <span>{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Note pour intégration */}
-                  <div style={{
-                    marginTop: '32px',
-                    padding: '16px',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(16, 185, 129, 0.2)'
-                  }}>
-                    <div style={{
-                      fontSize: '14px',
-                      color: '#86efac',
-                      marginBottom: '8px'
-                    }}>
-                      {language === 'fr' ? '🔧 Module PermitManager' : '🔧 PermitManager Module'}
-                    </div>
-                    <div style={{
-                      fontSize: '12px',
-                      color: '#6ee7b7'
-                    }}>
-                      {language === 'fr' 
-                        ? 'Le module PermitManager sera intégré ici pour la finalisation complète'
-                        : 'The PermitManager module will be integrated here for complete finalization'
-                      }
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              renderSectionContent()
-            )}
+        <div style={actualStyles.sectionCard}>
+          <div style={{ padding: actualIsMobile ? '20px' : '28px' }}>
+            {renderSectionContent()}
           </div>
         </div>
 
-        {/* Navigation bas de page SIMPLIFIÉE */}
+        {/* Navigation bas de page */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: isMobile ? '16px' : '20px',
+          padding: actualIsMobile ? '16px' : '20px',
           backgroundColor: '#1f2937',
           borderRadius: '16px',
           border: '2px solid #374151'
@@ -923,8 +1216,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             }}
             disabled={currentSection === 'site'}
             style={{
-              ...styles.button,
-              ...styles.buttonSecondary,
+              ...actualStyles.button,
+              ...actualStyles.buttonSecondary,
               opacity: currentSection === 'site' ? 0.5 : 1,
               cursor: currentSection === 'site' ? 'not-allowed' : 'pointer',
               width: 'auto',
@@ -937,14 +1230,36 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           
           <div style={{
             display: 'flex',
-            gap: '12px'
+            gap: '12px',
+            alignItems: 'center'
           }}>
+            {/* Indicateur de sauvegarde */}
+            {saveStatus === 'saving' && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#fbbf24',
+                fontSize: '14px'
+              }}>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid transparent',
+                  borderTop: '2px solid #fbbf24',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                {texts.status.saving}
+              </div>
+            )}
+            
             <button
               onClick={() => savePermitData(true)}
               disabled={isLoading}
               style={{
-                ...styles.button,
-                ...styles.buttonSuccess,
+                ...actualStyles.button,
+                ...actualStyles.buttonSuccess,
                 width: 'auto',
                 padding: '12px 16px',
                 opacity: isLoading ? 0.7 : 1
@@ -954,18 +1269,20 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               {texts.navigation.save}
             </button>
             
-            <button
-              onClick={onCancel}
-              style={{
-                ...styles.button,
-                ...styles.buttonSecondary,
-                width: 'auto',
-                padding: '12px 16px'
-              }}
-            >
-              <XCircle style={{ width: '16px', height: '16px' }} />
-              {texts.navigation.cancel}
-            </button>
+            {onCancel && (
+              <button
+                onClick={onCancel}
+                style={{
+                  ...actualStyles.button,
+                  ...actualStyles.buttonSecondary,
+                  width: 'auto',
+                  padding: '12px 16px'
+                }}
+              >
+                <XCircle style={{ width: '16px', height: '16px' }} />
+                {texts.navigation.cancel}
+              </button>
+            )}
             
             <button
               onClick={() => {
@@ -977,8 +1294,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               }}
               disabled={currentSection === 'finalization'}
               style={{
-                ...styles.button,
-                ...styles.buttonPrimary,
+                ...actualStyles.button,
+                ...actualStyles.buttonPrimary,
                 opacity: currentSection === 'finalization' ? 0.5 : 1,
                 cursor: currentSection === 'finalization' ? 'not-allowed' : 'pointer',
                 width: 'auto',
@@ -991,6 +1308,13 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           </div>
         </div>
       </div>
+      
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
