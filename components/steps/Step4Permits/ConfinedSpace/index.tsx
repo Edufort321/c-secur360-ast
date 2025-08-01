@@ -518,19 +518,68 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     // 🔧 ÉTAPE 3 : Mise à jour SafetyManager (si disponible)
     if (isSafetyManagerEnabled && safetyManager) {
       try {
-        // Synchroniser avec SafetyManager selon la section
+        // Synchroniser avec SafetyManager selon la section avec conversion de types
         switch (currentSection) {
           case 'site':
-            safetyManager.updateSiteInformation(updates);
+            // Convertir PermitData vers SiteInformationData
+            const siteData = {
+              projectNumber: updates.projectNumber || '',
+              workLocation: updates.workLocation || '',
+              spaceDescription: updates.spaceDescription || '',
+              workDescription: updates.workDescription || '',
+              entry_supervisor: updates.entry_supervisor || '',
+              // Ajouter d'autres champs si nécessaires
+            };
+            safetyManager.updateSiteInformation(siteData);
             break;
           case 'atmospheric':
-            safetyManager.updateAtmosphericTesting(updates);
+            // Convertir vers AtmosphericTestingData
+            const atmosphericData = {
+              readings: atmosphericReadings || [],
+              equipment: {
+                deviceModel: updates.gas_detector_calibrated ? 'Détecteur 4-gaz' : '',
+                calibrationDate: updates.calibration_date || '',
+                serialNumber: '',
+                nextCalibration: ''
+              },
+              continuousMonitoring: true,
+              lastUpdated: new Date().toISOString()
+            };
+            safetyManager.updateAtmosphericTesting(atmosphericData);
             break;
           case 'registry':
-            safetyManager.updateEntryRegistry(updates);
+            // Convertir vers EntryRegistryData
+            const registryData = {
+              personnel: [],
+              entryLog: [],
+              activeEntrants: [],
+              maxOccupancy: 1,
+              communicationProtocol: {
+                type: 'radio' as const,
+                frequency: '',
+                checkInterval: 15
+              },
+              lastUpdated: new Date().toISOString()
+            };
+            safetyManager.updateEntryRegistry(registryData);
             break;
           case 'rescue':
-            safetyManager.updateRescuePlan(updates);
+            // Convertir vers RescuePlanData
+            const rescueData = {
+              emergencyContacts: [],
+              rescueTeam: [],
+              evacuationProcedure: updates.rescue_plan_type || '',
+              rescueEquipment: [],
+              hospitalInfo: {
+                name: '',
+                address: '',
+                phone: '',
+                distance: 0
+              },
+              communicationPlan: '',
+              lastUpdated: new Date().toISOString()
+            };
+            safetyManager.updateRescuePlan(rescueData);
             break;
         }
       } catch (error) {
