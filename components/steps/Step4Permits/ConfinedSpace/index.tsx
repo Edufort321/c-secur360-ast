@@ -10,6 +10,7 @@ import {
 
 // 🔧 IMPORT DU PREMIER MODULE
 // import SiteInformation from './SiteInformation';  // ← On l'ajoutera si pas de problème
+// import { useSafetyManager } from './SafetyManager'; // ← Temporairement commenté - module manquant
 
 // =================== DÉTECTION MOBILE ET STYLES COMPLETS ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
