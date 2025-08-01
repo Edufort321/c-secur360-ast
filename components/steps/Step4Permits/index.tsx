@@ -109,10 +109,10 @@ interface ConfinedSpaceProps {
   onPermitChange?: (permits: any) => void;
   initialPermits?: any[];
   
-  // Props spécifiques à ConfinedSpace
+  // Props spécifiques à ConfinedSpace (toutes optionnelles)
   onSave?: (data: any) => void;
   onSubmit?: (data: any) => void;
-  onCancel: () => void;
+  onCancel?: () => void; // ← Rendu optionnel
   initialData?: any;
 }
 
@@ -383,7 +383,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   // Props spécifiques (peuvent être undefined si appelé depuis ASTForm)
   onSave,
   onSubmit,
-  onCancel = () => {}, // Fonction par défaut si pas fournie
+  onCancel, // ← Maintenant optionnel
   initialData = {}
 }) => {
 
@@ -994,18 +994,20 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               {texts.navigation.save}
             </button>
             
-            <button
-              onClick={onCancel}
-              style={{
-                ...styles.button,
-                ...styles.buttonSecondary,
-                width: 'auto',
-                padding: '12px 16px'
-              }}
-            >
-              <XCircle style={{ width: '16px', height: '16px' }} />
-              {texts.navigation.cancel}
-            </button>
+            {onCancel && (
+              <button
+                onClick={onCancel}
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSecondary,
+                  width: 'auto',
+                  padding: '12px 16px'
+                }}
+              >
+                <XCircle style={{ width: '16px', height: '16px' }} />
+                {texts.navigation.cancel}
+              </button>
+            )}
             
             <button
               onClick={() => {
