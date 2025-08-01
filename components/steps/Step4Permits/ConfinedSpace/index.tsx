@@ -8,6 +8,9 @@ import {
   Wrench, Target, ChevronDown, ChevronRight, Building, Construction, Flame, Zap, BarChart3
 } from 'lucide-react';
 
+// 🔧 IMPORT DU PREMIER MODULE
+// import SiteInformation from './SiteInformation';  // ← On l'ajoutera si pas de problème
+
 // =================== DÉTECTION MOBILE ET STYLES COMPLETS ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -93,11 +96,23 @@ const styles = {
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 
 interface ConfinedSpaceProps {
-  province?: ProvinceCode;
+  // Props reçues depuis ASTForm
+  formData?: any;
+  onDataChange?: (section: string, data: any) => void;
   language?: 'fr' | 'en';
+  tenant?: string;
+  errors?: any;
+  province?: ProvinceCode;
+  userRole?: string;
+  touchOptimized?: boolean;
+  compactMode?: boolean;
+  onPermitChange?: (permits: any) => void;
+  initialPermits?: any[];
+  
+  // Props spécifiques à ConfinedSpace (toutes optionnelles)
   onSave?: (data: any) => void;
   onSubmit?: (data: any) => void;
-  onCancel: () => void;
+  onCancel?: () => void; // ← Rendu optionnel
   initialData?: any;
 }
 
@@ -352,24 +367,36 @@ const getTexts = (language: 'fr' | 'en') => ({
 
 // =================== COMPOSANT PRINCIPAL ===================
 const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
-  province = 'QC',
+  // Props depuis ASTForm
+  formData,
+  onDataChange,
   language = 'fr',
+  tenant,
+  errors,
+  province = 'QC',
+  userRole,
+  touchOptimized,
+  compactMode,
+  onPermitChange,
+  initialPermits,
+  
+  // Props spécifiques (peuvent être undefined si appelé depuis ASTForm)
   onSave,
   onSubmit,
-  onCancel,
+  onCancel, // ← Maintenant optionnel
   initialData = {}
 }) => {
 
-  // =================== ÉTATS LOCAUX - AVEC FINALISATION ===================
+  // =================== GESTION DES DONNÉES COMPATIBLE ASTFORM ===================
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization'>('site');
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province);
-  const [permitData, setPermitData] = useState<PermitData>(initialData);
+  const [permitData, setPermitData] = useState<PermitData>(initialData || formData?.permitData || {});
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   
   const texts = getTexts(language);
 
-  // =================== FONCTIONS UTILITAIRES SIMPLIFIÉES ===================
+  // =================== FONCTIONS UTILITAIRES COMPATIBLES ===================
   useEffect(() => {
     if (!permitData.permit_number) {
       const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -385,7 +412,13 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   }, []); // Dependency array vide pour éviter les boucles
 
   const updatePermitData = (updates: Partial<PermitData>) => {
-    setPermitData(prev => ({ ...prev, ...updates }));
+    const newData = { ...permitData, ...updates };
+    setPermitData(newData);
+    
+    // Informer le parent (ASTForm) si la fonction existe
+    if (onDataChange) {
+      onDataChange('permitData', newData);
+    }
   };
 
   const savePermitData = async (showNotification = true) => {
@@ -395,8 +428,15 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
     
     try {
+      // Utiliser onSave si fourni, sinon onDataChange pour ASTForm
       if (onSave) {
         await onSave({
+          ...permitData,
+          currentSection,
+          selectedProvince
+        });
+      } else if (onDataChange) {
+        onDataChange('confined-space', {
           ...permitData,
           currentSection,
           selectedProvince
@@ -573,7 +613,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               color: '#9ca3af',
               marginBottom: '8px'
             }}>
-              {language === 'fr' ? 'Version de test - Pas d\'éjection !' : 'Test version - No ejection!'}
+                                  {language === 'fr' ? 'Version de test - Pas d\'éjection !' : 'Test version - No ejection!'}
             </div>
             <div style={{
               fontSize: '12px',
@@ -954,18 +994,20 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               {texts.navigation.save}
             </button>
             
-            <button
-              onClick={onCancel}
-              style={{
-                ...styles.button,
-                ...styles.buttonSecondary,
-                width: 'auto',
-                padding: '12px 16px'
-              }}
-            >
-              <XCircle style={{ width: '16px', height: '16px' }} />
-              {texts.navigation.cancel}
-            </button>
+            {onCancel && (
+              <button
+                onClick={onCancel}
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSecondary,
+                  width: 'auto',
+                  padding: '12px 16px'
+                }}
+              >
+                <XCircle style={{ width: '16px', height: '16px' }} />
+                {texts.navigation.cancel}
+              </button>
+            )}
             
             <button
               onClick={() => {
