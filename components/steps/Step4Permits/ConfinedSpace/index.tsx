@@ -112,7 +112,7 @@ interface ConfinedSpaceProps {
   language?: 'fr' | 'en';
   onDataChange: (field: string, value: any) => void;
   onSave: (data: any) => void;
-  onCancel?: () => void;
+  onCancel?: () => void; // Optionnel - c'est déjà correct
   
   // Props ASTForm (ajoutées pour compatibilité complète)
   permitData?: any;
@@ -843,96 +843,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   }, [currentSection, state.currentStep]);
 
   // =================== RENDU CONDITIONNEL DES SECTIONS ===================
-  const renderSectionContent = () => {
-    try {
-      const commonProps = {
-        language,
-        onDataChange: handleSectionDataChange,
-        onSave: (data: any) => updateSectionData(state.currentStep, data),
-        onCancel: onCancel || (() => {}),
-        
-        // Props ASTForm pour compatibilité
-        permitData: permitData || activeSafetyManager.currentPermit,
-        updatePermitData: updatePermitDataConsolidated,
-        selectedProvince: activeSelectedProvince,
-        PROVINCIAL_REGULATIONS: activeRegulations,
-        atmosphericReadings: atmosphericReadings.length > 0 ? atmosphericReadings : activeSafetyManager.currentPermit.atmosphericTesting?.readings || [],
-        isMobile,
-        styles: activeStyles,
-        updateParentData: updateParentData || handleSectionDataChange,
-        
-        // Props SafetyManager
-        safetyManager: activeSafetyManager,
-        externalSafetyManager: activeSafetyManager,
-        
-        // Props supplémentaires de la version précédente
-        setAtmosphericReadings,
-        formData,
-        tenant,
-        errors,
-        userRole,
-        touchOptimized,
-        compactMode
-      };
-
-      switch (state.currentStep) {
-        case 'site':
-          return <SiteInformation {...commonProps} />;
-          
-        case 'atmospheric':
-          return <AtmosphericTesting {...commonProps} />;
-          
-        case 'registry':
-          return <EntryRegistry {...commonProps} />;
-          
-        case 'rescue':
-          return <RescuePlan {...commonProps} />;
-          
-        case 'finalization':
-          return (
-            <PermitManager
-              {...commonProps}
-              onSubmit={(finalData: any) => {
-                if (onSubmit) {
-                  onSubmit(finalData);
-                }
-              }}
-            />
-          );
-          
-        default:
-          return <SiteInformation {...commonProps} />;
-      }
-    } catch (error) {
-      console.error('Erreur rendu section:', error);
-      return (
-        <div style={{
-          padding: '40px',
-          textAlign: 'center',
-          border: '2px dashed #dc2626',
-          borderRadius: '12px',
-          backgroundColor: 'rgba(220, 38, 38, 0.1)'
-        }}>
-          <AlertTriangle style={{ width: '64px', height: '64px', color: '#ef4444', margin: '0 auto 16px' }} />
-          <h3 style={{ color: '#ef4444', marginBottom: '8px' }}>Erreur de chargement</h3>
-          <p style={{ color: '#9ca3af', marginBottom: '16px' }}>
-            Impossible de charger le module {state.currentStep}
-          </p>
-          <button
-            onClick={() => navigateToSection('site')}
-            style={{
-              ...activeStyles.button,
-              ...activeStyles.buttonSecondary,
-              width: 'auto',
-              padding: '8px 16px'
-            }}
-          >
-            Retourner au début
-          </button>
-        </div>
-      );
-    }
-  };
+  // Utilisation de renderCurrentStep() seulement pour éviter les conflits
 
   // =================== LOADING FALLBACK ===================
   const LoadingFallback = () => (
@@ -950,7 +861,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         animation: 'spin 1s linear infinite',
         margin: '0 auto 16px'
       }}></div>
-      <p>{texts.loading}</p>
+      <p>{language === 'fr' ? 'Chargement...' : 'Loading...'}</p>
       <style jsx>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -968,13 +879,15 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         onDataChange={onDataChange}
         onSave={onSave}
         onCancel={() => setState(prev => ({ ...prev, showManager: false }))}
+        onSubmit={onSubmit || (() => {
+          console.log('Submit action - no handler provided');
+        })}
         permitData={permitData || activeSafetyManager.currentPermit}
         updatePermitData={updatePermitDataConsolidated}
         selectedProvince={activeSelectedProvince}
         PROVINCIAL_REGULATIONS={activeRegulations}
         isMobile={isMobile}
-        safetyManager={activeSafetyManager}
-        externalSafetyManager={activeSafetyManager}
+        styles={activeStyles}
       />
     );
   }
@@ -1293,7 +1206,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         <div style={activeStyles.sectionCard}>
           <div style={{ padding: isMobile ? '20px' : '28px' }}>
             <Suspense fallback={<LoadingFallback />}>
-              {renderSectionContent()}
+              {renderCurrentStep()}
             </Suspense>
           </div>
         </div>
