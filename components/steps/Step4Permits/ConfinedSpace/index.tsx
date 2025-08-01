@@ -1,4 +1,4 @@
-// ConfinedSpace/index.tsx - VERSION FINALE AVEC SAFETYMANAGER INTÉGRÉ PROPREMENT
+// ConfinedSpace/index.tsx - VERSION FINALE AVEC SIGNATURES PROPS CORRIGÉES
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
@@ -331,7 +331,7 @@ const PROVINCIAL_REGULATIONS: Record<ProvinceCode, any> = {
       continuous_monitoring_required: true,
       limits: {
         oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
-        lel: { max: 10, critical: 25 },
+        lef: { max: 10, critical: 25 },
         h2s: { max: 10, critical: 15 },
         co: { max: 35, critical: 100 }
       }
@@ -822,18 +822,34 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
   }, [currentSection, state.currentStep]);
 
+  // =================== ADAPTATEURS DE SIGNATURES PROPS - CORRECTION CLÉ ===================
+  
+  // 🔧 FONCTIONS ADAPTÉES POUR DIFFÉRENTES SIGNATURES DE PROPS
+  
+  // Adaptateur pour updateParentData - Version 1 paramètre (pour PermitManager)
+  const updateParentDataAdapter = useCallback((data: any) => {
+    if (updateParentData) {
+      updateParentData(data);
+    }
+  }, [updateParentData]);
+  
+  // Adaptateur pour updateParentData - Version 2 paramètres (pour autres composants)
+  const updateParentDataFieldAdapter = useCallback((field: string, value: any) => {
+    if (updateParentData) {
+      updateParentData({ [field]: value });
+    }
+  }, [updateParentData]);
+
   // =================== RENDU CONDITIONNEL DES SECTIONS AVEC SÉCURITÉ ===================
   const renderCurrentStep = () => {
-    // 🔒 SÉCURITÉ : Props enrichies avec SafetyManager pour la sécurité
-    const safetyEnhancedProps = {
+    // 🔒 SÉCURITÉ : Props de base pour tous les composants
+    const baseProps = {
       language,
       onDataChange: handleSectionDataChange,
       onSave: (data: any) => updateSectionData(state.currentStep, data),
       onCancel: onCancel || (() => {
         console.log('Cancel action - no handler provided');
       }),
-      
-      // Props ASTForm pour compatibilité
       permitData: permitData,
       updatePermitData: updatePermitDataConsolidated,
       selectedProvince: activeSelectedProvince,
@@ -841,16 +857,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       atmosphericReadings,
       isMobile,
       styles: activeStyles,
-      updateParentData: updateParentData || handleSectionDataChange,
-      
-      // Props SafetyManager UNIQUEMENT pour EntryRegistry (sécurité d'entrée)
-      ...(state.currentStep === 'registry' && {
-        safetyManager,
-        atmosphericSafetyData: safetyManager.currentPermit.atmosphericTesting,
-        isAtmosphericSafe: safetyManager.currentPermit.atmosphericTesting?.readings?.every(r => r.status === 'safe') || false
-      }),
-      
-      // Props supplémentaires
       setAtmosphericReadings,
       formData,
       tenant,
@@ -862,21 +868,47 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
     switch (state.currentStep) {
       case 'site':
-        return <SiteInformation {...safetyEnhancedProps} />;
+        return (
+          <SiteInformation 
+            {...baseProps}
+            updateParentData={updateParentDataFieldAdapter}
+          />
+        );
         
       case 'atmospheric':
-        return <AtmosphericTesting {...safetyEnhancedProps} />;
+        return (
+          <AtmosphericTesting 
+            {...baseProps}
+            updateParentData={updateParentDataFieldAdapter}
+          />
+        );
         
       case 'registry':
-        return <EntryRegistry {...safetyEnhancedProps} />;
+        return (
+          <EntryRegistry 
+            {...baseProps}
+            updateParentData={updateParentDataFieldAdapter}
+            // 🔒 SÉCURITÉ : Props spécifiques pour la sécurité d'entrée
+            safetyManager={safetyManager}
+            atmosphericSafetyData={safetyManager.currentPermit.atmosphericTesting}
+            isAtmosphericSafe={safetyManager.currentPermit.atmosphericTesting?.readings?.every(r => r.status === 'safe') || false}
+          />
+        );
         
       case 'rescue':
-        return <RescuePlan {...safetyEnhancedProps} />;
+        return (
+          <RescuePlan 
+            {...baseProps}
+            updateParentData={updateParentDataFieldAdapter}
+          />
+        );
         
       case 'finalization':
         return (
           <PermitManager
-            {...safetyEnhancedProps}
+            {...baseProps}
+            // 🎯 CORRECTION CRITIQUE : Signature adaptée pour PermitManager
+            updateParentData={updateParentDataAdapter}
             onSubmit={(finalData: any) => {
               if (onSubmit) {
                 onSubmit(finalData);
@@ -886,7 +918,12 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         );
         
       default:
-        return <SiteInformation {...safetyEnhancedProps} />;
+        return (
+          <SiteInformation 
+            {...baseProps}
+            updateParentData={updateParentDataFieldAdapter}
+          />
+        );
     }
   };
 
@@ -933,6 +970,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         PROVINCIAL_REGULATIONS={activeRegulations}
         isMobile={isMobile}
         styles={activeStyles}
+        // 🎯 CORRECTION : Signature correcte pour showManager
+        updateParentData={updateParentDataAdapter}
       />
     );
   }
