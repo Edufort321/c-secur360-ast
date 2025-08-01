@@ -368,7 +368,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   const texts = getTexts(language);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // =================== FONCTIONS UTILITAIRES ===================
+  // =================== FONCTIONS UTILITAIRES SÉCURISÉES ===================
   useEffect(() => {
     if (!permitData.permit_number) {
       const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -380,15 +380,16 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         selected_province: selectedProvince
       });
     }
-  }, [selectedProvince]);
+  }, [selectedProvince]); // Removed updatePermitData dependency to prevent loops
 
   const updatePermitData = useCallback((updates: Partial<PermitData>) => {
     setPermitData((prev) => ({ ...prev, ...updates }));
     
-    clearTimeout(autoSaveTimeoutRef.current);
-    autoSaveTimeoutRef.current = setTimeout(() => {
-      savePermitData(false);
-    }, 2000);
+    // Désactiver l'auto-save pour éviter les boucles
+    // clearTimeout(autoSaveTimeoutRef.current);
+    // autoSaveTimeoutRef.current = setTimeout(() => {
+    //   savePermitData(false);
+    // }, 2000);
   }, []);
 
   const savePermitData = async (showNotification = true) => {
@@ -411,6 +412,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         setTimeout(() => setSaveStatus('idle'), 3000);
       }
     } catch (error) {
+      console.error('Erreur sauvegarde:', error);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 3000);
     } finally {
@@ -468,12 +470,13 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       
       setSaveStatus('saved');
       
-      // Notification de succès
+      // PAS de redirection automatique - juste notification
       setTimeout(() => {
         setSaveStatus('idle');
       }, 2000);
       
     } catch (error) {
+      console.error('Erreur soumission:', error);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 3000);
     } finally {
@@ -481,7 +484,13 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
   };
 
-  const handleQuickExit = () => {
+  const handleQuickExit = (e?: React.MouseEvent) => {
+    // Empêcher la propagation d'événements
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     // Fonction spéciale pour quitter avec confirmation
     const confirmExit = window.confirm(
       language === 'fr' 
@@ -912,7 +921,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           </div>
         </div>
 
-        {/* Menu d'actions rapides optimisé */}
+        {/* Menu d'actions rapides - SÉCURISÉ */}
         <div style={{
           position: 'fixed',
           bottom: '20px',
@@ -920,10 +929,13 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           zIndex: 1000,
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px'
+          gap: '8px',
+          pointerEvents: 'auto'
         }}>
           <button
             onClick={handleQuickExit}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             style={{
               width: '56px',
               height: '56px',
@@ -938,23 +950,20 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               boxShadow: '0 6px 20px rgba(239, 68, 68, 0.4)',
               transition: 'all 0.3s ease',
               fontSize: '12px',
-              fontWeight: '600'
+              fontWeight: '600',
+              pointerEvents: 'auto'
             }}
             title={language === 'fr' ? 'Quitter le permis (avec confirmation)' : 'Exit permit (with confirmation)'}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.1)';
-              e.currentTarget.style.boxShadow = '0 8px 25px rgba(239, 68, 68, 0.6)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(239, 68, 68, 0.4)';
-            }}
           >
             <XCircle style={{ width: '24px', height: '24px' }} />
           </button>
           
           <button
-            onClick={() => setCurrentSection('site')}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setCurrentSection('site');
+            }}
             style={{
               width: '48px',
               height: '48px',
@@ -967,22 +976,19 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               justifyContent: 'center',
               cursor: 'pointer',
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              pointerEvents: 'auto'
             }}
             title={language === 'fr' ? 'Retour au début' : 'Back to start'}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#4b5563';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#374151';
-            }}
           >
             <Home style={{ width: '20px', height: '20px' }} />
           </button>
 
-          {/* Bouton d'aide rapide */}
+          {/* Bouton d'aide rapide - SÉCURISÉ */}
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               const helpText = language === 'fr' 
                 ? `Section actuelle: ${texts.sections[currentSection]}\n\nNavigation:\n• Cliquez sur les 4 sections en haut\n• Utilisez Précédent/Suivant en bas\n• Enregistrer sauvegarde vos données\n• Réinitialiser vide la section actuelle`
                 : `Current section: ${texts.sections[currentSection]}\n\nNavigation:\n• Click on the 4 sections above\n• Use Previous/Next at bottom\n• Save preserves your data\n• Reset clears current section`;
@@ -1000,7 +1006,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               justifyContent: 'center',
               cursor: 'pointer',
               boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              pointerEvents: 'auto'
             }}
             title={language === 'fr' ? 'Aide rapide' : 'Quick help'}
           >
@@ -1008,7 +1015,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           </button>
         </div>
 
-        {/* Navigation bas de page */}
+        {/* Navigation bas de page - SÉCURISÉE */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -1040,12 +1047,53 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             {texts.navigation.previous}
           </button>
           
+        {/* Navigation bas de page - SÉCURISÉE */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: isMobile ? '16px' : '20px',
+          backgroundColor: '#1f2937',
+          borderRadius: '16px',
+          border: '2px solid #374151',
+          pointerEvents: 'auto'
+        }}>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const sections = ['site', 'rescue', 'atmospheric', 'registry'] as const;
+              const currentIndex = sections.indexOf(currentSection);
+              if (currentIndex > 0) {
+                navigateToSection(sections[currentIndex - 1]);
+              }
+            }}
+            disabled={currentSection === 'site' || isLoading}
+            style={{
+              ...styles.button,
+              ...styles.buttonSecondary,
+              opacity: (currentSection === 'site' || isLoading) ? 0.5 : 1,
+              cursor: (currentSection === 'site' || isLoading) ? 'not-allowed' : 'pointer',
+              width: 'auto',
+              padding: '12px 20px',
+              pointerEvents: 'auto'
+            }}
+          >
+            <ChevronRight style={{ width: '18px', height: '18px', transform: 'rotate(180deg)' }} />
+            {texts.navigation.previous}
+          </button>
+          
           <div style={{
             display: 'flex',
-            gap: '12px'
+            gap: '12px',
+            pointerEvents: 'auto'
           }}>
             <button
-              onClick={() => savePermitData(true)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                savePermitData(true);
+              }}
               disabled={isLoading}
               style={{
                 ...styles.button,
@@ -1053,7 +1101,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                 width: 'auto',
                 padding: '12px 16px',
                 opacity: isLoading ? 0.7 : 1,
-                cursor: isLoading ? 'not-allowed' : 'pointer'
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                pointerEvents: 'auto'
               }}
             >
               {isLoading ? (
@@ -1070,7 +1119,11 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             </button>
             
             <button
-              onClick={handleResetSection}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleResetSection();
+              }}
               disabled={isLoading}
               style={{
                 ...styles.button,
@@ -1078,7 +1131,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                 width: 'auto',
                 padding: '12px 16px',
                 opacity: isLoading ? 0.5 : 1,
-                cursor: isLoading ? 'not-allowed' : 'pointer'
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                pointerEvents: 'auto'
               }}
             >
               <RotateCcw style={{ width: '16px', height: '16px' }} />
@@ -1086,7 +1140,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             </button>
             
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 const sections = ['site', 'rescue', 'atmospheric', 'registry'] as const;
                 const currentIndex = sections.indexOf(currentSection);
                 if (currentIndex < sections.length - 1) {
@@ -1103,7 +1159,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                 width: 'auto',
                 padding: '12px 20px',
                 opacity: isLoading ? 0.7 : 1,
-                cursor: isLoading ? 'not-allowed' : 'pointer'
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                pointerEvents: 'auto'
               }}
             >
               {currentSection === 'registry' ? (
