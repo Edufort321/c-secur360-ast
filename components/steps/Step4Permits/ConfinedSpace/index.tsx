@@ -8,9 +8,13 @@ import {
   Wrench, Target, ChevronDown, ChevronRight, Building, Construction, Flame, Zap, BarChart3
 } from 'lucide-react';
 
-// 🔧 IMPORT DU PREMIER MODULE
-// import SiteInformation from './SiteInformation';  // ← On l'ajoutera si pas de problème
-// import { useSafetyManager } from './SafetyManager'; // ← Temporairement commenté - module manquant
+// 🔧 IMPORTS DES MODULES EXISTANTS
+import SiteInformation from './SiteInformation';
+import RescuePlan from './RescuePlan';
+import AtmosphericTesting from './AtmosphericTesting';
+import EntryRegistry from './EntryRegistry';
+import PermitManager from './PermitManager';
+import { useSafetyManager } from './SafetyManager';
 
 // =================== DÉTECTION MOBILE ET STYLES COMPLETS ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -113,7 +117,7 @@ interface ConfinedSpaceProps {
   // Props spécifiques à ConfinedSpace (toutes optionnelles)
   onSave?: (data: any) => void;
   onSubmit?: (data: any) => void;
-  onCancel?: () => void; // ← Rendu optionnel
+  onCancel?: () => void;
   initialData?: any;
 }
 
@@ -132,6 +136,12 @@ interface PermitData {
   supervisor_name?: string;
   permit_valid_from?: string;
   permit_valid_to?: string;
+  
+  // Données des sous-modules
+  siteInformation?: any;
+  rescuePlan?: any;
+  atmosphericTesting?: any;
+  entryRegistry?: any;
 }
 
 // =================== DONNÉES RÉGLEMENTAIRES PROVINCIALES ===================
@@ -384,7 +394,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   // Props spécifiques (peuvent être undefined si appelé depuis ASTForm)
   onSave,
   onSubmit,
-  onCancel, // ← Maintenant optionnel
+  onCancel,
   initialData = {}
 }) => {
 
@@ -396,9 +406,11 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   
   const texts = getTexts(language);
+  const safetyManager = useSafetyManager();
 
   // =================== FONCTIONS UTILITAIRES COMPATIBLES ===================
   useEffect(() => {
+    // Génération du numéro de permis SEULEMENT si pas présent
     if (!permitData.permit_number) {
       const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const random = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -410,7 +422,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         selected_province: selectedProvince
       }));
     }
-  }, []); // Dependency array vide pour éviter les boucles
+  }, []); // ✅ Dependency array vide pour éviter les boucles qui causaient l'éjection
 
   const updatePermitData = (updates: Partial<PermitData>) => {
     const newData = { ...permitData, ...updates };
@@ -422,7 +434,20 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
   };
 
-  const savePermitData = async (showNotification = true) => {
+  const updateSectionData = (section: string, data: any) => {
+    const newPermitData = {
+      ...permitData,
+      [section]: data
+    };
+    setPermitData(newPermitData);
+    
+    // Informer le parent (ASTForm) si la fonction existe
+    if (onDataChange) {
+      onDataChange('permitData', newPermitData);
+    }
+  };
+
+  const handleSaveData = useCallback(async (showNotification = true) => {
     if (showNotification) {
       setIsLoading(true);
       setSaveStatus('saving');
@@ -459,7 +484,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         setIsLoading(false);
       }
     }
-  };
+  }, [permitData, currentSection, selectedProvince, onSave, onDataChange]);
 
   const navigateToSection = (section: 'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization') => {
     setCurrentSection(section);
@@ -469,166 +494,77 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     const iconMap = {
       site: Building,
       rescue: Shield,
-      atmospheric: Gauge,
+      atmospheric: Wind,
       registry: Users,
       finalization: CheckCircle
     };
     return iconMap[section as keyof typeof iconMap] || FileText;
   };
 
-  // =================== RENDU DES SECTIONS AMÉLIORÉ ===================
+  // =================== RENDU DES VRAIS MODULES ===================
   const renderSectionContent = () => {
-    const sectionData = {
-      site: {
-        emoji: '🏢',
-        title: texts.sections.site,
-        description: language === 'fr' 
-          ? 'Configuration des informations du site de travail, description de l\'espace clos et détails du projet.'
-          : 'Configure work site information, confined space description and project details.',
-        features: language === 'fr' 
-          ? ['Localisation GPS', 'Description détaillée', 'Responsable d\'entrée', 'Photos du site']
-          : ['GPS Location', 'Detailed Description', 'Entry Supervisor', 'Site Photos']
-      },
-      rescue: {
-        emoji: '🛡️',
-        title: texts.sections.rescue,
-        description: language === 'fr' 
-          ? 'Plan de sauvetage d\'urgence avec contacts, équipements et procédures de secours.'
-          : 'Emergency rescue plan with contacts, equipment and rescue procedures.',
-        features: language === 'fr' 
-          ? ['Plan d\'évacuation', 'Équipe de secours', 'Équipements d\'urgence', 'Contacts d\'urgence']
-          : ['Evacuation Plan', 'Rescue Team', 'Emergency Equipment', 'Emergency Contacts']
-      },
-      atmospheric: {
-        emoji: '🌬️',
-        title: texts.sections.atmospheric,
-        description: language === 'fr' 
-          ? 'Tests atmosphériques continus avec surveillance en temps réel des gaz dangereux.'
-          : 'Continuous atmospheric testing with real-time monitoring of hazardous gases.',
-        features: language === 'fr' 
-          ? ['Tests 4-gaz', 'Surveillance Bluetooth', 'Alarmes automatiques', 'Calibration équipements']
-          : ['4-Gas Testing', 'Bluetooth Monitoring', 'Automatic Alarms', 'Equipment Calibration']
-      },
-      registry: {
-        emoji: '👥',
-        title: texts.sections.registry,
-        description: language === 'fr' 
-          ? 'Registre d\'entrée et de sortie avec horodatage et signatures électroniques.'
-          : 'Entry and exit registry with timestamps and electronic signatures.',
-        features: language === 'fr' 
-          ? ['Horodatage précis', 'Signatures électroniques', 'Durée d\'exposition', 'Validation finale']
-          : ['Precise Timestamps', 'Electronic Signatures', 'Exposure Duration', 'Final Validation']
-      },
-      finalization: {
-        emoji: '✅',
-        title: texts.sections.finalization,
-        description: language === 'fr' 
-          ? 'Finalisation du permis avec validation, impression, génération QR et partage.'
-          : 'Permit finalization with validation, printing, QR generation and sharing.',
-        features: language === 'fr' 
-          ? ['Validation complète', 'Impression PDF', 'Code QR mobile', 'Partage sécurisé']
-          : ['Complete Validation', 'PDF Printing', 'Mobile QR Code', 'Secure Sharing']
-      }
+    const commonProps = {
+      language,
+      tenant,
+      touchOptimized,
+      compactMode,
+      permitData,
+      onDataChange: updateSectionData,
+      province: selectedProvince,
+      regulations: PROVINCIAL_REGULATIONS[selectedProvince]
     };
 
-    const current = sectionData[currentSection];
-
-    return (
-      <div style={{
-        padding: '40px',
-        textAlign: 'center',
-        border: '2px dashed #374151',
-        borderRadius: '12px',
-        backgroundColor: 'rgba(17, 24, 39, 0.5)',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{
-            fontSize: '64px',
-            marginBottom: '24px',
-            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
-          }}>
-            {current.emoji}
-          </div>
-          
-          <h3 style={{ 
-            color: 'white', 
-            marginBottom: '16px',
-            fontSize: '24px',
-            fontWeight: '700'
-          }}>
-            {current.title}
-          </h3>
-          
-          <p style={{ 
-            color: '#d1d5db', 
-            lineHeight: 1.6,
-            marginBottom: '32px',
-            fontSize: '16px',
-            maxWidth: '500px',
-            margin: '0 auto 32px auto'
-          }}>
-            {current.description}
-          </p>
-
-          {/* Liste des fonctionnalités */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-            gap: '12px',
-            maxWidth: '400px',
-            margin: '0 auto'
-          }}>
-            {current.features.map((feature, index) => (
-              <div
-                key={index}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 12px',
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(59, 130, 246, 0.2)',
-                  fontSize: '14px',
-                  color: '#93c5fd'
-                }}
-              >
-                <CheckCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
-                <span>{feature}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Indicateur de progression */}
-          <div style={{
-            marginTop: '32px',
-            padding: '16px',
-            backgroundColor: 'rgba(0, 0, 0, 0.3)',
-            borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
-          }}>
-            <div style={{
-              fontSize: '14px',
-              color: '#9ca3af',
-              marginBottom: '8px'
-            }}>
-                                  {language === 'fr' ? 'Version de test - Pas d\'éjection !' : 'Test version - No ejection!'}
-            </div>
-            <div style={{
-              fontSize: '12px',
-              color: '#6b7280'
-            }}>
-              {language === 'fr' 
-                ? 'Navigation libre sans auto-save'
-                : 'Free navigation without auto-save'
-              }
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    switch (currentSection) {
+      case 'site':
+        return (
+          <SiteInformation
+            {...commonProps}
+            data={permitData.siteInformation || {}}
+            onDataChange={(data) => updateSectionData('siteInformation', data)}
+          />
+        );
+      
+      case 'rescue':
+        return (
+          <RescuePlan
+            {...commonProps}
+            data={permitData.rescuePlan || {}}
+            onDataChange={(data) => updateSectionData('rescuePlan', data)}
+          />
+        );
+      
+      case 'atmospheric':
+        return (
+          <AtmosphericTesting
+            {...commonProps}
+            data={permitData.atmosphericTesting || {}}
+            onDataChange={(data) => updateSectionData('atmosphericTesting', data)}
+          />
+        );
+      
+      case 'registry':
+        return (
+          <EntryRegistry
+            {...commonProps}
+            data={permitData.entryRegistry || {}}
+            onDataChange={(data) => updateSectionData('entryRegistry', data)}
+          />
+        );
+      
+      case 'finalization':
+        return (
+          <PermitManager
+            {...commonProps}
+            permitData={permitData}
+            safetyManager={safetyManager}
+            onSave={handleSaveData}
+            onSubmit={onSubmit}
+          />
+        );
+      
+      default:
+        return <div>Section non trouvée</div>;
+    }
   };
 
   // =================== RENDU PRINCIPAL ===================
@@ -718,6 +654,33 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                   {texts.complianceNote} {PROVINCIAL_REGULATIONS[selectedProvince].authority}
                 </div>
               </div>
+
+              {/* Indicateur de statut */}
+              {saveStatus !== 'idle' && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  backgroundColor: saveStatus === 'saving' ? 'rgba(59, 130, 246, 0.2)' : 
+                                   saveStatus === 'saved' ? 'rgba(16, 185, 129, 0.2)' : 
+                                   'rgba(239, 68, 68, 0.2)',
+                  border: `1px solid ${saveStatus === 'saving' ? 'rgba(59, 130, 246, 0.3)' : 
+                                      saveStatus === 'saved' ? 'rgba(16, 185, 129, 0.3)' : 
+                                      'rgba(239, 68, 68, 0.3)'}`,
+                  color: saveStatus === 'saving' ? '#93c5fd' : 
+                         saveStatus === 'saved' ? '#86efac' : 
+                         '#fca5a5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}>
+                  {saveStatus === 'saving' && <Clock style={{ width: '16px', height: '16px' }} />}
+                  {saveStatus === 'saved' && <CheckCircle style={{ width: '16px', height: '16px' }} />}
+                  {saveStatus === 'error' && <XCircle style={{ width: '16px', height: '16px' }} />}
+                  {texts.status[saveStatus]}
+                </div>
+              )}
             </div>
             
             {/* Informations du permis */}
@@ -801,7 +764,11 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               return (
                 <button
                   key={section}
-                  onClick={() => navigateToSection(section)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    navigateToSection(section);
+                  }}
                   style={{
                     padding: isMobile ? '20px 16px' : '24px 20px',
                     backgroundColor: isActive ? '#3b82f6' : 'rgba(75, 85, 99, 0.3)',
@@ -817,7 +784,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                     alignItems: 'center',
                     gap: '12px',
                     transform: isActive ? 'translateY(-2px)' : 'translateY(0)',
-                    boxShadow: isActive ? '0 8px 25px rgba(59, 130, 246, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)'
+                    boxShadow: isActive ? '0 8px 25px rgba(59, 130, 246, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                    pointerEvents: 'auto'
                   }}
                 >
                   <Icon style={{ 
@@ -833,118 +801,14 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           </div>
         </div>
 
-        {/* Contenu de la section active */}
+        {/* Contenu de la section active - VRAIS MODULES */}
         <div style={styles.sectionCard}>
           <div style={{ padding: isMobile ? '20px' : '28px' }}>
-            {currentSection === 'finalization' ? (
-              // Import dynamique du PermitManager pour la finalisation
-              <div style={{
-                padding: '40px',
-                textAlign: 'center',
-                border: '2px dashed #10b981',
-                borderRadius: '12px',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                position: 'relative',
-                overflow: 'hidden'
-              }}>
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                  <div style={{
-                    fontSize: '64px',
-                    marginBottom: '24px',
-                    filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
-                  }}>
-                    ✅
-                  </div>
-                  
-                  <h3 style={{ 
-                    color: 'white', 
-                    marginBottom: '16px',
-                    fontSize: '24px',
-                    fontWeight: '700'
-                  }}>
-                    {texts.sections.finalization}
-                  </h3>
-                  
-                  <p style={{ 
-                    color: '#d1d5db', 
-                    lineHeight: 1.6,
-                    marginBottom: '32px',
-                    fontSize: '16px',
-                    maxWidth: '500px',
-                    margin: '0 auto 32px auto'
-                  }}>
-                    {language === 'fr' 
-                      ? 'Finalisation du permis avec validation, impression, génération QR et partage.'
-                      : 'Permit finalization with validation, printing, QR generation and sharing.'
-                    }
-                  </p>
-
-                  {/* Liste des fonctionnalités */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-                    gap: '12px',
-                    maxWidth: '400px',
-                    margin: '0 auto 32px auto'
-                  }}>
-                    {(language === 'fr' 
-                      ? ['Validation complète', 'Impression PDF', 'Code QR mobile', 'Partage sécurisé']
-                      : ['Complete Validation', 'PDF Printing', 'Mobile QR Code', 'Secure Sharing']
-                    ).map((feature, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '8px 12px',
-                          backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                          borderRadius: '8px',
-                          border: '1px solid rgba(16, 185, 129, 0.3)',
-                          fontSize: '14px',
-                          color: '#86efac'
-                        }}
-                      >
-                        <CheckCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
-                        <span>{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Note pour intégration */}
-                  <div style={{
-                    marginTop: '32px',
-                    padding: '16px',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(16, 185, 129, 0.2)'
-                  }}>
-                    <div style={{
-                      fontSize: '14px',
-                      color: '#86efac',
-                      marginBottom: '8px'
-                    }}>
-                      {language === 'fr' ? '🔧 Module PermitManager' : '🔧 PermitManager Module'}
-                    </div>
-                    <div style={{
-                      fontSize: '12px',
-                      color: '#6ee7b7'
-                    }}>
-                      {language === 'fr' 
-                        ? 'Le module PermitManager sera intégré ici pour la finalisation complète'
-                        : 'The PermitManager module will be integrated here for complete finalization'
-                      }
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              renderSectionContent()
-            )}
+            {renderSectionContent()}
           </div>
         </div>
 
-        {/* Navigation bas de page SIMPLIFIÉE */}
+        {/* Navigation bas de page */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -955,7 +819,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           border: '2px solid #374151'
         }}>
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               const sections = ['site', 'rescue', 'atmospheric', 'registry', 'finalization'] as const;
               const currentIndex = sections.indexOf(currentSection);
               if (currentIndex > 0) {
@@ -969,7 +835,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               opacity: currentSection === 'site' ? 0.5 : 1,
               cursor: currentSection === 'site' ? 'not-allowed' : 'pointer',
               width: 'auto',
-              padding: '12px 20px'
+              padding: '12px 20px',
+              pointerEvents: 'auto'
             }}
           >
             <ChevronRight style={{ width: '18px', height: '18px', transform: 'rotate(180deg)' }} />
@@ -981,14 +848,19 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             gap: '12px'
           }}>
             <button
-              onClick={() => savePermitData(true)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSaveData(true);
+              }}
               disabled={isLoading}
               style={{
                 ...styles.button,
                 ...styles.buttonSuccess,
                 width: 'auto',
                 padding: '12px 16px',
-                opacity: isLoading ? 0.7 : 1
+                opacity: isLoading ? 0.7 : 1,
+                pointerEvents: 'auto'
               }}
             >
               <Save style={{ width: '16px', height: '16px' }} />
@@ -997,12 +869,17 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             
             {onCancel && (
               <button
-                onClick={onCancel}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCancel();
+                }}
                 style={{
                   ...styles.button,
                   ...styles.buttonSecondary,
                   width: 'auto',
-                  padding: '12px 16px'
+                  padding: '12px 16px',
+                  pointerEvents: 'auto'
                 }}
               >
                 <XCircle style={{ width: '16px', height: '16px' }} />
@@ -1011,25 +888,28 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             )}
             
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 const sections = ['site', 'rescue', 'atmospheric', 'registry', 'finalization'] as const;
                 const currentIndex = sections.indexOf(currentSection);
                 if (currentIndex < sections.length - 1) {
                   navigateToSection(sections[currentIndex + 1]);
+                } else if (onSubmit) {
+                  onSubmit(permitData);
                 }
               }}
-              disabled={currentSection === 'finalization'}
               style={{
                 ...styles.button,
-                ...styles.buttonPrimary,
-                opacity: currentSection === 'finalization' ? 0.5 : 1,
-                cursor: currentSection === 'finalization' ? 'not-allowed' : 'pointer',
+                ...(currentSection === 'finalization' ? styles.buttonSuccess : styles.buttonPrimary),
                 width: 'auto',
-                padding: '12px 20px'
+                padding: '12px 20px',
+                pointerEvents: 'auto'
               }}
             >
-              {texts.navigation.next}
-              <ChevronRight style={{ width: '18px', height: '18px' }} />
+              {currentSection === 'finalization' ? texts.navigation.submit : texts.navigation.next}
+              {currentSection !== 'finalization' && <ChevronRight style={{ width: '18px', height: '18px' }} />}
+              {currentSection === 'finalization' && <CheckCircle style={{ width: '18px', height: '18px' }} />}
             </button>
           </div>
         </div>
