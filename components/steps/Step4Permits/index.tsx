@@ -10,7 +10,7 @@ import {
   Search, X, Plus, Edit3, Trash2, RefreshCw, Upload,
   ArrowRight, ArrowLeft, Star, Target, Zap, Wind, History
 } from 'lucide-react';
-import { useSafetyManager } from './SafetyManager';
+import { useSafetyManager } from './ConfinedSpace/SafetyManager';
 
 // =================== TYPES BASÉS SUR LA STRUCTURE RÉELLE ===================
 interface PermitManagerProps {
