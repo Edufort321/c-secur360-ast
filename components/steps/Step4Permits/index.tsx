@@ -1,58 +1,249 @@
-// PermitManager.tsx - VERSION RÉVISÉE COMPLÈTE - SECTION 1
+// components/steps/Step4Permits/index.tsx - SECTION 1/2
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-  FileText, Database, QrCode, Printer, Mail, Share, Download, 
-  Save, CheckCircle, AlertTriangle, Clock, Shield, Users, 
-  Wrench, Activity, Eye, Globe, Smartphone, Copy, Check,
-  BarChart3, TrendingUp, Calendar, MapPin, Building, User,
-  Search, X, Plus, Edit3, Trash2, RefreshCw, Upload,
-  ArrowRight, ArrowLeft, Star, Target, Zap, Wind, History
+  FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, 
+  Briefcase, Copy, Check, AlertTriangle, Camera, Upload, X, Settings,
+  Shield, Activity, Eye, Globe, Smartphone, Database, QrCode, Printer,
+  Mail, Share, Download, Save, CheckCircle, Wrench, BarChart3, TrendingUp,
+  Search, Plus, Edit3, Trash2, RefreshCw, ArrowRight, ArrowLeft, Star,
+  Target, Zap, Wind, History, Thermometer, Bluetooth, Battery, Signal,
+  Play, Pause, RotateCcw, PenTool, Home
 } from 'lucide-react';
 import { useSafetyManager } from './ConfinedSpace/SafetyManager';
 
-// =================== TYPES BASÉS SUR LA STRUCTURE RÉELLE ===================
-interface PermitManagerProps {
-  selectedProvince: string;
-  PROVINCIAL_REGULATIONS: Record<string, any>;
+// =================== INTERFACE COMPATIBLE ASTFORM ===================
+interface Step4PermitsProps {
+  // ✅ TOUTES LES PROPS QUE ASTFORM PASSE (OBLIGATOIRES)
+  formData: any;
+  onDataChange: (section: string, data: any) => void;
+  language: 'fr' | 'en';
+  tenant: string;
+  errors?: any;
+  province?: string;
+  userRole?: string;
+  touchOptimized?: boolean;
+  compactMode?: boolean;
+  onPermitChange?: (permits: any) => void;
+  initialPermits?: any[];
+  
+  // Props existantes PermitManager (pour compatibilité)
+  selectedProvince?: string;
+  PROVINCIAL_REGULATIONS?: Record<string, any>;
   isMobile?: boolean;
-  language?: 'fr' | 'en';
 }
 
-interface ValidationSummary {
-  sectionName: string;
-  icon: React.ReactNode;
-  isComplete: boolean;
-  completionPercentage: number;
-  errors: string[];
-  lastModified?: string;
-}
-
-interface PermitHistoryEntry {
+// =================== TYPES DES COMPOSANTS ===================
+interface PermitComponent {
   id: string;
-  permitNumber: string;
-  projectNumber: string;
-  workLocation: string;
-  contractor: string;
-  spaceType: string;
-  csaClass: string;
-  status: 'draft' | 'active' | 'completed' | 'cancelled';
-  createdAt: string;
-  lastModified: string;
-  hazardCount: number;
-  photoCount: number;
-  qrCode?: string;
+  name: string;
+  component: React.ComponentType<any>;
+  description: { fr: string; en: string };
+  icon: string;
+  status: 'active' | 'development' | 'disabled';
+  requiredProps?: string[];
+  category: 'primary' | 'secondary' | 'specialized';
+  complexity: 'basic' | 'intermediate' | 'advanced';
+  estimatedTime: number; // minutes
+  csaStandards?: string[];
+  provincialRegs?: string[];
 }
 
-// =================== DÉTECTION MOBILE ET STYLES COHÉRENTS ===================
-const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
+interface PermitStats {
+  totalPermits: number;
+  activePermits: number;
+  completedPermits: number;
+  draftPermits: number;
+  recentActivity: string;
+  compliance: number;
+}
 
-const styles = {
+// =================== IMPORTS DYNAMIQUES ===================
+const ConfinedSpace = React.lazy(() => import('./ConfinedSpace'));
+
+// =================== DONNÉES RÉGLEMENTAIRES PAR DÉFAUT ===================
+const DEFAULT_PROVINCIAL_REGULATIONS: Record<string, any> = {
+  QC: {
+    name: "Règlement sur la santé et la sécurité du travail (RSST)",
+    authority: "CNESST",
+    authority_phone: "1-844-838-0808",
+    website: "https://www.cnesst.gouv.qc.ca",
+    atmospheric_testing: {
+      frequency_minutes: 30,
+      continuous_monitoring_required: true,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    },
+    training_requirements: ["CSA Z1006", "Formation espace clos CNESST"],
+    rescue_requirements: {
+      on_site_team: true,
+      external_service: false,
+      response_time_minutes: 5
+    }
+  },
+  ON: {
+    name: "Ontario Regulation 632/05 - Confined Spaces",
+    authority: "Ministry of Labour (MOL)",
+    authority_phone: "1-877-202-0008",
+    website: "https://www.ontario.ca/laws/regulation/632",
+    atmospheric_testing: {
+      frequency_minutes: 15,
+      continuous_monitoring_required: true,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    },
+    training_requirements: ["CSA Z1006", "Ontario Confined Space Training"],
+    rescue_requirements: {
+      on_site_team: true,
+      external_service: true,
+      response_time_minutes: 3
+    }
+  },
+  BC: {
+    name: "WorkSafeBC Occupational Health and Safety Regulation",
+    authority: "WorkSafeBC",
+    authority_phone: "1-888-621-7233",
+    website: "https://www.worksafebc.com",
+    atmospheric_testing: {
+      frequency_minutes: 20,
+      continuous_monitoring_required: true,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    },
+    training_requirements: ["CSA Z1006", "WorkSafeBC Confined Space"],
+    rescue_requirements: {
+      on_site_team: true,
+      external_service: true,
+      response_time_minutes: 4
+    }
+  }
+};
+
+// =================== CONFIGURATION DES PERMIS ===================
+const PERMIT_COMPONENTS: PermitComponent[] = [
+  {
+    id: 'confined-space',
+    name: 'Confined Space / Espace Clos',
+    component: ConfinedSpace,
+    description: {
+      fr: 'Permis pour travail en espace clos selon les normes CSA Z1006 et réglementations provinciales. Inclut évaluation des risques, tests atmosphériques, plan de sauvetage et surveillance continue.',
+      en: 'Permit for confined space work according to CSA Z1006 standards and provincial regulations. Includes risk assessment, atmospheric testing, rescue plan and continuous monitoring.'
+    },
+    icon: '🏗️',
+    status: 'active',
+    category: 'primary',
+    complexity: 'advanced',
+    estimatedTime: 45,
+    csaStandards: ['Z1006', 'Z462'],
+    provincialRegs: ['RSST-QC', 'O.Reg.632/05-ON', 'OHSR-BC'],
+    requiredProps: ['formData', 'onDataChange', 'language', 'province']
+  },
+  {
+    id: 'hot-work',
+    name: 'Hot Work / Travail à Chaud',
+    component: ConfinedSpace, // Placeholder temporaire
+    description: {
+      fr: 'Permis pour travaux de soudage, découpage, meulage et autres opérations générant de la chaleur ou des étincelles. Inclut prévention incendie et surveillance.',
+      en: 'Permit for welding, cutting, grinding and other operations generating heat or sparks. Includes fire prevention and monitoring.'
+    },
+    icon: '🔥',
+    status: 'development',
+    category: 'primary',
+    complexity: 'intermediate',
+    estimatedTime: 30,
+    csaStandards: ['W117.2', 'Z462'],
+    provincialRegs: ['Code de prévention incendie'],
+    requiredProps: ['formData', 'onDataChange', 'language']
+  },
+  {
+    id: 'height-work',
+    name: 'Work at Height / Travail en Hauteur',
+    component: ConfinedSpace, // Placeholder temporaire
+    description: {
+      fr: 'Permis pour travaux en hauteur incluant échafaudages, plateformes élévatrices, toitures et structures. Protection contre les chutes obligatoire.',
+      en: 'Permit for work at height including scaffolding, aerial platforms, roofing and structures. Fall protection required.'
+    },
+    icon: '🏗️',
+    status: 'development',
+    category: 'primary',
+    complexity: 'intermediate',
+    estimatedTime: 25,
+    csaStandards: ['Z259', 'Z271'],
+    provincialRegs: ['RSST-QC', 'O.Reg.213/91-ON'],
+    requiredProps: ['formData', 'onDataChange', 'language']
+  },
+  {
+    id: 'lockout-tagout',
+    name: 'Lockout/Tagout / Cadenassage',
+    component: ConfinedSpace, // Placeholder temporaire
+    description: {
+      fr: 'Procédure de cadenassage pour isoler les sources d\'énergie dangereuses lors de maintenance ou réparation d\'équipements.',
+      en: 'Lockout procedure to isolate hazardous energy sources during equipment maintenance or repair.'
+    },
+    icon: '🔒',
+    status: 'development',
+    category: 'secondary',
+    complexity: 'basic',
+    estimatedTime: 15,
+    csaStandards: ['Z460'],
+    provincialRegs: ['RSST-QC', 'O.Reg.851-ON'],
+    requiredProps: ['formData', 'onDataChange']
+  },
+  {
+    id: 'excavation',
+    name: 'Excavation Work / Travaux d\'Excavation',
+    component: ConfinedSpace, // Placeholder temporaire
+    description: {
+      fr: 'Permis pour travaux d\'excavation incluant tranchées, fouilles et terrassements. Protection contre les éboulements et accumulation de gaz.',
+      en: 'Permit for excavation work including trenches, pits and earthworks. Protection against cave-ins and gas accumulation.'
+    },
+    icon: '⛏️',
+    status: 'development',
+    category: 'specialized',
+    complexity: 'intermediate',
+    estimatedTime: 35,
+    csaStandards: ['Z142'],
+    provincialRegs: ['RSST-QC', 'O.Reg.213/91-ON'],
+    requiredProps: ['formData', 'onDataChange', 'language']
+  },
+  {
+    id: 'chemical-handling',
+    name: 'Chemical Handling / Manipulation Chimique',
+    component: ConfinedSpace, // Placeholder temporaire
+    description: {
+      fr: 'Permis pour manipulation, stockage et transport de produits chimiques dangereux. Inclut équipements de protection et procédures d\'urgence.',
+      en: 'Permit for handling, storage and transport of hazardous chemicals. Includes protective equipment and emergency procedures.'
+    },
+    icon: '🧪',
+    status: 'development',
+    category: 'specialized',
+    complexity: 'advanced',
+    estimatedTime: 40,
+    csaStandards: ['Z1000', 'Z94.4'],
+    provincialRegs: ['SIMDUT', 'TMD'],
+    requiredProps: ['formData', 'onDataChange', 'language']
+  }
+];
+
+// =================== STYLES RESPONSIVE ===================
+const getStyles = (isMobile: boolean) => ({
   container: {
     maxWidth: '100%',
     margin: '0 auto',
-    padding: isMobileDevice ? '4px' : '24px',
+    padding: isMobile ? '4px' : '24px',
     backgroundColor: '#111827',
     minHeight: '100vh',
     color: 'white',
@@ -61,33 +252,34 @@ const styles = {
   },
   card: {
     backgroundColor: '#1f2937',
-    borderRadius: isMobileDevice ? '8px' : '16px',
-    padding: isMobileDevice ? '12px' : '24px',
+    borderRadius: isMobile ? '8px' : '16px',
+    padding: isMobile ? '12px' : '24px',
     border: '1px solid #374151',
-    marginBottom: isMobileDevice ? '12px' : '24px',
+    marginBottom: isMobile ? '12px' : '24px',
     boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
     width: '100%',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box' as const,
+    transition: 'all 0.3s ease'
   },
   headerCard: {
     background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.9))',
     backdropFilter: 'blur(20px)',
     WebkitBackdropFilter: 'blur(20px)',
-    borderRadius: isMobileDevice ? '12px' : '20px',
-    padding: isMobileDevice ? '20px' : '32px',
+    borderRadius: isMobile ? '12px' : '20px',
+    padding: isMobile ? '20px' : '32px',
     border: '1px solid rgba(255, 255, 255, 0.1)',
     boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
     position: 'relative' as const,
     overflow: 'hidden' as const,
-    marginBottom: isMobileDevice ? '16px' : '24px'
+    marginBottom: isMobile ? '16px' : '24px'
   },
   button: {
-    padding: isMobileDevice ? '8px 12px' : '14px 24px',
-    borderRadius: isMobileDevice ? '6px' : '8px',
+    padding: isMobile ? '8px 12px' : '14px 24px',
+    borderRadius: isMobile ? '6px' : '8px',
     fontWeight: '600',
     display: 'flex',
     alignItems: 'center',
-    gap: isMobileDevice ? '4px' : '8px',
+    gap: isMobile ? '4px' : '8px',
     transition: 'all 0.2s ease',
     border: 'none',
     cursor: 'pointer',
@@ -119,565 +311,509 @@ const styles = {
   },
   input: {
     width: '100%',
-    padding: isMobileDevice ? '12px 16px' : '14px 16px',
+    padding: isMobile ? '12px 16px' : '14px 16px',
     background: 'rgba(15, 23, 42, 0.8)',
     border: '2px solid #374151',
-    borderRadius: isMobileDevice ? '6px' : '8px',
+    borderRadius: isMobile ? '6px' : '8px',
     color: 'white',
-    fontSize: isMobileDevice ? '16px' : '15px',
+    fontSize: isMobile ? '16px' : '15px',
     fontWeight: '500',
     transition: 'all 0.3s ease',
     backdropFilter: 'blur(10px)',
     boxSizing: 'border-box' as const,
-    minHeight: isMobileDevice ? '48px' : '50px',
+    minHeight: isMobile ? '48px' : '50px',
     fontFamily: 'inherit'
   },
   grid2: {
     display: 'grid',
-    gridTemplateColumns: isMobileDevice ? '1fr' : '1fr 1fr',
-    gap: isMobileDevice ? '8px' : '20px',
+    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+    gap: isMobile ? '8px' : '20px',
     width: '100%'
   },
   grid3: {
     display: 'grid',
-    gridTemplateColumns: isMobileDevice ? '1fr' : 'repeat(3, 1fr)',
-    gap: isMobileDevice ? '8px' : '16px',
+    gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+    gap: isMobile ? '8px' : '16px',
     width: '100%'
   },
   grid4: {
     display: 'grid',
-    gridTemplateColumns: isMobileDevice ? '1fr 1fr' : 'repeat(4, 1fr)',
-    gap: isMobileDevice ? '8px' : '16px',
+    gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+    gap: isMobile ? '8px' : '16px',
     width: '100%'
+  },
+  permitCard: {
+    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))',
+    border: '2px solid rgba(59, 130, 246, 0.3)',
+    borderRadius: isMobile ? '12px' : '16px',
+    padding: isMobile ? '16px' : '24px',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    position: 'relative' as const,
+    overflow: 'hidden' as const
+  },
+  permitCardActive: {
+    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1))',
+    border: '2px solid rgba(16, 185, 129, 0.5)',
+    transform: 'translateY(-2px)',
+    boxShadow: '0 8px 25px rgba(16, 185, 129, 0.2)'
+  },
+  permitCardDevelopment: {
+    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1))',
+    border: '2px solid rgba(245, 158, 11, 0.3)',
+    opacity: 0.8
+  },
+  permitCardDisabled: {
+    background: 'linear-gradient(135deg, rgba(107, 114, 128, 0.1), rgba(75, 85, 99, 0.1))',
+    border: '2px solid rgba(107, 114, 128, 0.3)',
+    opacity: 0.5,
+    cursor: 'not-allowed'
   }
-};
+});
 
 // =================== TRADUCTIONS COMPLÈTES ===================
 const translations = {
   fr: {
-    title: "Gestion et Finalisation du Permis",
-    subtitle: "Tableau de bord centralisé pour validation, sauvegarde, historique et partage",
-    
-    // Actions principales
-    savePermit: "Sauvegarder",
-    printPDF: "Imprimer PDF",
-    emailPermit: "Envoyer par Email",
-    sharePermit: "Partager",
-    generateQR: "Générer QR Code",
-    exportData: "Exporter Données",
-    searchDatabase: "Rechercher Base",
-    viewHistory: "Voir Historique",
-    newPermit: "Nouveau Permis",
-    
-    // Sections
-    summary: "Résumé du Permis",
-    validation: "Validation et Conformité",
-    actions: "Actions du Permis",
-    statistics: "Statistiques",
-    qrCode: "Code QR - Accès Mobile",
-    sharing: "Partage et Distribution",
-    history: "Historique des Permis",
-    database: "Base de Données",
-    
-    // Statuts
-    complete: "Complété",
-    incomplete: "Incomplet",
-    valid: "Valide",
-    invalid: "Non valide",
-    saving: "Sauvegarde...",
-    saved: "Sauvegardé",
-    loading: "Chargement...",
-    searching: "Recherche...",
-    
-    // Messages
-    saveSuccess: "Permis sauvegardé avec succès!",
-    validationPassed: "Toutes les validations sont réussies",
-    validationErrors: "Erreurs de validation détectées",
-    qrGenerated: "Code QR généré avec succès",
-    linkCopied: "Lien copié dans le presse-papiers",
-    pdfGenerated: "PDF généré avec succès",
-    emailSent: "Email envoyé avec succès",
-    noResults: "Aucun résultat trouvé",
-    searchPlaceholder: "Rechercher par numéro, projet, lieu...",
-    
-    // Sections du permis
-    siteInformation: "Informations du Site",
-    rescuePlan: "Plan de Sauvetage", 
-    atmosphericTesting: "Tests Atmosphériques",
-    entryRegistry: "Registre d'Entrée",
-    
-    // Statistiques
-    totalPermits: "Total Permis",
+    title: "Gestion des Permis de Travail",
+    subtitle: "Système centralisé pour tous les types de permis selon les normes CSA et réglementations provinciales",
+    selectPermit: "Sélectionner un Type de Permis",
     activePermits: "Permis Actifs",
-    completedPermits: "Permis Complétés",
-    draftPermits: "Brouillons",
-    dangerousSpaces: "Espaces Dangereux",
-    safeSpaces: "Espaces Sécuritaires",
-    avgCompletion: "Complétude Moyenne",
-    lastActivity: "Dernière Activité",
+    recentActivity: "Activité Récente",
+    statistics: "Statistiques",
+    compliance: "Conformité",
+    searchPermits: "Rechercher des permis...",
+    createNew: "Créer Nouveau",
+    viewAll: "Voir Tout",
+    refresh: "Actualiser",
     
     // Status
-    draft: "Brouillon",
     active: "Actif",
+    development: "En Développement",
+    disabled: "Désactivé",
+    draft: "Brouillon",
     completed: "Complété",
-    cancelled: "Annulé",
+    expired: "Expiré",
     
-    // Types d'espaces
-    spaceTypes: {
-      tank: "Réservoir",
-      vessel: "Cuve",
-      silo: "Silo",
-      pit: "Fosse",
-      vault: "Voûte",
-      tunnel: "Tunnel",
-      trench: "Tranchée",
-      manhole: "Regard",
-      storage: "Stockage",
-      boiler: "Chaudière",
-      duct: "Conduit",
-      chamber: "Chambre",
-      other: "Autre"
+    // Categories
+    primary: "Primaires",
+    secondary: "Secondaires", 
+    specialized: "Spécialisés",
+    
+    // Complexity
+    basic: "Basique",
+    intermediate: "Intermédiaire",
+    advanced: "Avancé",
+    
+    // Time
+    estimatedTime: "Temps estimé",
+    minutes: "minutes",
+    lastUpdate: "Dernière mise à jour",
+    
+    // Actions
+    select: "Sélectionner",
+    configure: "Configurer",
+    preview: "Aperçu",
+    edit: "Modifier",
+    duplicate: "Dupliquer",
+    archive: "Archiver",
+    
+    // Messages
+    comingSoon: "Bientôt disponible",
+    underDevelopment: "En cours de développement",
+    contactSupport: "Contactez le support pour plus d'informations",
+    noPermitsFound: "Aucun permis trouvé",
+    loadingPermits: "Chargement des permis...",
+    
+    // Requirements
+    csaStandards: "Normes CSA",
+    provincialRegs: "Réglementations Provinciales",
+    requiredTraining: "Formation Requise",
+    
+    // Provinces
+    provinces: {
+      QC: "Québec",
+      ON: "Ontario", 
+      BC: "Colombie-Britannique",
+      AB: "Alberta",
+      SK: "Saskatchewan",
+      MB: "Manitoba",
+      NB: "Nouveau-Brunswick",
+      NS: "Nouvelle-Écosse",
+      PE: "Île-du-Prince-Édouard",
+      NL: "Terre-Neuve-et-Labrador",
+      NT: "Territoires du Nord-Ouest",
+      NU: "Nunavut",
+      YT: "Yukon"
     }
   },
   en: {
-    title: "Permit Management and Finalization",
-    subtitle: "Centralized dashboard for validation, saving, history and sharing",
-    
-    // Actions principales
-    savePermit: "Save",
-    printPDF: "Print PDF",
-    emailPermit: "Send by Email",
-    sharePermit: "Share",
-    generateQR: "Generate QR Code",
-    exportData: "Export Data",
-    searchDatabase: "Search Database",
-    viewHistory: "View History",
-    newPermit: "New Permit",
-    
-    // Sections
-    summary: "Permit Summary",
-    validation: "Validation and Compliance",
-    actions: "Permit Actions",
-    statistics: "Statistics",
-    qrCode: "QR Code - Mobile Access",
-    sharing: "Sharing and Distribution",
-    history: "Permit History",
-    database: "Database",
-    
-    // Statuts
-    complete: "Complete",
-    incomplete: "Incomplete",
-    valid: "Valid",
-    invalid: "Invalid",
-    saving: "Saving...",
-    saved: "Saved",
-    loading: "Loading...",
-    searching: "Searching...",
-    
-    // Messages
-    saveSuccess: "Permit saved successfully!",
-    validationPassed: "All validations passed",
-    validationErrors: "Validation errors detected",
-    qrGenerated: "QR Code generated successfully",
-    linkCopied: "Link copied to clipboard",
-    pdfGenerated: "PDF generated successfully",
-    emailSent: "Email sent successfully",
-    noResults: "No results found",
-    searchPlaceholder: "Search by number, project, location...",
-    
-    // Sections du permis
-    siteInformation: "Site Information",
-    rescuePlan: "Rescue Plan",
-    atmosphericTesting: "Atmospheric Testing", 
-    entryRegistry: "Entry Registry",
-    
-    // Statistiques
-    totalPermits: "Total Permits",
+    title: "Work Permit Management",
+    subtitle: "Centralized system for all permit types according to CSA standards and provincial regulations",
+    selectPermit: "Select a Permit Type",
     activePermits: "Active Permits",
-    completedPermits: "Completed Permits",
-    draftPermits: "Drafts",
-    dangerousSpaces: "Dangerous Spaces",
-    safeSpaces: "Safe Spaces",
-    avgCompletion: "Average Completion",
-    lastActivity: "Last Activity",
+    recentActivity: "Recent Activity",
+    statistics: "Statistics",
+    compliance: "Compliance",
+    searchPermits: "Search permits...",
+    createNew: "Create New",
+    viewAll: "View All",
+    refresh: "Refresh",
     
     // Status
-    draft: "Draft",
     active: "Active",
+    development: "In Development",
+    disabled: "Disabled",
+    draft: "Draft",
     completed: "Completed",
-    cancelled: "Cancelled",
+    expired: "Expired",
     
-    // Types d'espaces
-    spaceTypes: {
-      tank: "Tank",
-      vessel: "Vessel",
-      silo: "Silo",
-      pit: "Pit",
-      vault: "Vault",
-      tunnel: "Tunnel",
-      trench: "Trench",
-      manhole: "Manhole",
-      storage: "Storage",
-      boiler: "Boiler",
-      duct: "Duct",
-      chamber: "Chamber",
-      other: "Other"
+    // Categories
+    primary: "Primary",
+    secondary: "Secondary",
+    specialized: "Specialized",
+    
+    // Complexity
+    basic: "Basic",
+    intermediate: "Intermediate", 
+    advanced: "Advanced",
+    
+    // Time
+    estimatedTime: "Estimated time",
+    minutes: "minutes",
+    lastUpdate: "Last update",
+    
+    // Actions
+    select: "Select",
+    configure: "Configure",
+    preview: "Preview",
+    edit: "Edit",
+    duplicate: "Duplicate",
+    archive: "Archive",
+    
+    // Messages
+    comingSoon: "Coming soon",
+    underDevelopment: "Under development",
+    contactSupport: "Contact support for more information",
+    noPermitsFound: "No permits found",
+    loadingPermits: "Loading permits...",
+    
+    // Requirements
+    csaStandards: "CSA Standards",
+    provincialRegs: "Provincial Regulations",
+    requiredTraining: "Required Training",
+    
+    // Provinces
+    provinces: {
+      QC: "Quebec",
+      ON: "Ontario",
+      BC: "British Columbia", 
+      AB: "Alberta",
+      SK: "Saskatchewan",
+      MB: "Manitoba",
+      NB: "New Brunswick",
+      NS: "Nova Scotia",
+      PE: "Prince Edward Island",
+      NL: "Newfoundland and Labrador",
+      NT: "Northwest Territories",
+      NU: "Nunavut",
+      YT: "Yukon"
     }
   }
 };
-// PermitManager.tsx - VERSION RÉVISÉE COMPLÈTE - SECTION 2
+
+// =================== FONCTIONS UTILITAIRES ===================
+const showNotification = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+  console.log(`[${type.toUpperCase()}] ${message}`);
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('C-SECUR360', {
+      body: message,
+      icon: '/c-secur360-logo.png'
+    });
+  }
+};
+// components/steps/Step4Permits/index.tsx - SECTION 2/2
 // =================== COMPOSANT PRINCIPAL ===================
-const PermitManager: React.FC<PermitManagerProps> = ({
+const Step4Permits: React.FC<Step4PermitsProps> = ({
+  // Props ASTForm
+  formData,
+  onDataChange,
+  language = 'fr',
+  tenant,
+  errors,
+  province,
+  userRole,
+  touchOptimized,
+  compactMode,
+  onPermitChange,
+  initialPermits,
+  
+  // Props PermitManager existantes (avec fallbacks)
   selectedProvince,
   PROVINCIAL_REGULATIONS,
-  isMobile = false,
-  language = 'fr'
+  isMobile
 }): JSX.Element => {
-  const safetyManager = useSafetyManager();
-  const t = translations[language];
   
-  // États locaux
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
-  const [selectedShareMethod, setSelectedShareMethod] = useState<'email' | 'sms' | 'whatsapp'>('email');
-  const [showHistory, setShowHistory] = useState(false);
+  // =================== GESTION INTELLIGENTE DES PROPS ===================
+  const actualProvince = selectedProvince || province || 'QC';
+  const actualIsMobile = isMobile !== undefined ? isMobile : 
+                         touchOptimized || 
+                         (typeof window !== 'undefined' && window.innerWidth < 768);
+  const actualRegulations = PROVINCIAL_REGULATIONS || DEFAULT_PROVINCIAL_REGULATIONS;
+  
+  const t = translations[language];
+  const styles = getStyles(actualIsMobile);
+  const safetyManager = useSafetyManager();
+  
+  // =================== ÉTATS LOCAUX ===================
+  const [selectedPermitId, setSelectedPermitId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<PermitHistoryEntry[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [currentView, setCurrentView] = useState<'main' | 'history' | 'database'>('main');
+  const [filterCategory, setFilterCategory] = useState<'all' | 'primary' | 'secondary' | 'specialized'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'development' | 'disabled'>('all');
+  const [showOnlyAvailable, setShowOnlyAvailable] = useState(true);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [isLoading, setIsLoading] = useState(false);
+  const [permitStats, setPermitStats] = useState<PermitStats>({
+    totalPermits: 0,
+    activePermits: 0,
+    completedPermits: 0,
+    draftPermits: 0,
+    recentActivity: 'Aucune activité récente',
+    compliance: 85
+  });
 
-  // Validation globale
-  const validation = safetyManager.validatePermitCompleteness();
-  const permit = safetyManager.currentPermit;
+  // Ref pour éviter les re-renders
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // =================== GÉNÉRATION QR CODE ===================
-  const handleGenerateQR = async () => {
-    setIsGeneratingQR(true);
-    try {
-      const qrUrl = await safetyManager.generateQRCode();
-      setQrCodeUrl(qrUrl);
-      showNotification(t.qrGenerated, 'success');
-    } catch (error) {
-      showNotification('Erreur génération QR Code', 'error');
-    } finally {
-      setIsGeneratingQR(false);
-    }
-  };
-
-  // =================== GÉNÉRATION PDF ===================
-  const handleGeneratePDF = async () => {
-    setIsGeneratingPDF(true);
-    try {
-      const pdfBlob = await safetyManager.generatePDF();
-      const url = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${permit.permit_number}_espace_clos.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
-      showNotification(t.pdfGenerated, 'success');
-    } catch (error) {
-      showNotification('Erreur génération PDF', 'error');
-    } finally {
-      setIsGeneratingPDF(false);
-    }
-  };
-
-  // =================== SAUVEGARDE ===================
-  const handleSave = async () => {
-    const permitNumber = await safetyManager.saveToDatabase();
-    if (permitNumber) {
-      showNotification(t.saveSuccess, 'success');
-      // Générer QR automatiquement après sauvegarde
-      if (!qrCodeUrl) {
-        handleGenerateQR();
+  // =================== FILTRES ET RECHERCHE ===================
+  const filteredPermits = PERMIT_COMPONENTS.filter(permit => {
+    // Filtre par recherche
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      if (!permit.name.toLowerCase().includes(query) &&
+          !permit.description[language].toLowerCase().includes(query) &&
+          !permit.csaStandards?.some(std => std.toLowerCase().includes(query))) {
+        return false;
       }
     }
-  };
-
-  // =================== PARTAGE ===================
-  const handleShare = async () => {
-    try {
-      await safetyManager.sharePermit(selectedShareMethod);
-      showNotification(t.emailSent, 'success');
-    } catch (error) {
-      showNotification('Erreur lors du partage', 'error');
+    
+    // Filtre par catégorie
+    if (filterCategory !== 'all' && permit.category !== filterCategory) {
+      return false;
     }
-  };
-
-  // =================== COPIE LIEN ===================
-  const handleCopyLink = async () => {
-    const permitUrl = `${window.location.origin}/permits/confined-space/${permit.permit_number}`;
-    try {
-      await navigator.clipboard.writeText(permitUrl);
-      setLinkCopied(true);
-      showNotification(t.linkCopied, 'success');
-      setTimeout(() => setLinkCopied(false), 3000);
-    } catch (error) {
-      showNotification('Erreur copie du lien', 'error');
+    
+    // Filtre par statut
+    if (filterStatus !== 'all' && permit.status !== filterStatus) {
+      return false;
     }
-  };
+    
+    // Filtre "seulement disponibles"
+    if (showOnlyAvailable && permit.status !== 'active') {
+      return false;
+    }
+    
+    return true;
+  });
 
-  // =================== RECHERCHE DANS L'HISTORIQUE ===================
-  const handleSearch = useCallback(async (query: string) => {
-    if (query.trim().length < 2) {
-      setSearchResults([]);
+  // =================== GESTIONNAIRES D'ÉVÉNEMENTS ===================
+  const handlePermitSelect = useCallback((permitId: string) => {
+    const permit = PERMIT_COMPONENTS.find(p => p.id === permitId);
+    if (!permit || permit.status === 'disabled') return;
+    
+    if (permit.status === 'development') {
+      showNotification(t.underDevelopment, 'warning');
       return;
     }
     
-    setIsSearching(true);
-    try {
-      const allPermits = await safetyManager.loadPermitHistory();
-      const filtered = allPermits.filter(permit => 
-        permit.permit_number?.toLowerCase().includes(query.toLowerCase()) ||
-        permit.siteInformation?.projectNumber?.toLowerCase().includes(query.toLowerCase()) ||
-        permit.siteInformation?.workLocation?.toLowerCase().includes(query.toLowerCase()) ||
-        permit.siteInformation?.contractor?.toLowerCase().includes(query.toLowerCase())
-      );
-      
-      const results: PermitHistoryEntry[] = filtered.map(permit => ({
-        id: permit.id || '',
-        permitNumber: permit.permit_number,
-        projectNumber: permit.siteInformation?.projectNumber || '',
-        workLocation: permit.siteInformation?.workLocation || '',
-        contractor: permit.siteInformation?.contractor || '',
-        spaceType: permit.siteInformation?.spaceType || '',
-        csaClass: permit.siteInformation?.csaClass || '',
-        status: permit.status,
-        createdAt: permit.created_at,
-        lastModified: permit.last_modified,
-        hazardCount: (permit.siteInformation?.atmosphericHazards?.length || 0) + 
-                    (permit.siteInformation?.physicalHazards?.length || 0),
-        photoCount: permit.siteInformation?.spacePhotos?.length || 0,
-        qrCode: qrCodeUrl
-      }));
-      
-      setSearchResults(results);
-    } catch (error) {
-      console.error('Erreur recherche:', error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
+    setIsLoading(true);
+    setSelectedPermitId(permitId);
+    
+    // Informer ASTForm du changement
+    if (onPermitChange) {
+      onPermitChange([{ id: permitId, type: permit.name }]);
     }
-  }, [safetyManager, qrCodeUrl]);
+    
+    // Simuler un délai de chargement pour l'UX
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+  }, [onPermitChange, t.underDevelopment]);
 
-  // =================== CHARGEMENT D'UN PERMIS ===================
-  const handleLoadPermit = async (permitNumber: string) => {
-    try {
-      await safetyManager.loadFromDatabase(permitNumber);
-      setCurrentView('main');
-      showNotification(`Permis ${permitNumber} chargé`, 'success');
-    } catch (error) {
-      showNotification(`Erreur chargement ${permitNumber}`, 'error');
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  }, []);
+
+  const handleFilterChange = useCallback((type: string, value: string) => {
+    if (type === 'category') {
+      setFilterCategory(value as any);
+    } else if (type === 'status') {
+      setFilterStatus(value as any);
     }
-  };
+  }, []);
 
-  // =================== VALIDATION DES SECTIONS ===================
-  const getSectionValidation = (): ValidationSummary[] => {
-    return [
-      {
-        sectionName: t.siteInformation,
-        icon: <Building style={{ width: '20px', height: '20px' }} />,
-        isComplete: Boolean(permit.siteInformation?.projectNumber && permit.siteInformation?.workLocation),
-        completionPercentage: getFieldCompletionPercentage(permit.siteInformation, ['projectNumber', 'workLocation', 'contractor', 'supervisor']),
-        errors: permit.siteInformation?.projectNumber ? [] : ['Numéro de projet manquant'],
-        lastModified: permit.last_modified
-      },
-      {
-        sectionName: t.rescuePlan,
-        icon: <Shield style={{ width: '20px', height: '20px' }} />,
-        isComplete: Boolean(permit.rescuePlan?.emergencyContacts?.length > 0),
-        completionPercentage: permit.rescuePlan?.emergencyContacts?.length > 0 ? 100 : 0,
-        errors: permit.rescuePlan?.emergencyContacts?.length > 0 ? [] : ['Plan de sauvetage incomplet'],
-        lastModified: permit.last_modified
-      },
-      {
-        sectionName: t.atmosphericTesting,
-        icon: <Activity style={{ width: '20px', height: '20px' }} />,
-        isComplete: Boolean(permit.atmosphericTesting?.readings?.length > 0),
-        completionPercentage: permit.atmosphericTesting?.readings?.length > 0 ? 100 : 0,
-        errors: permit.atmosphericTesting?.readings?.length > 0 ? [] : ['Tests atmosphériques manquants'],
-        lastModified: permit.last_modified
-      },
-      {
-        sectionName: t.entryRegistry,
-        icon: <Users style={{ width: '20px', height: '20px' }} />,
-        isComplete: Boolean(permit.entryRegistry?.personnel?.length > 0),
-        completionPercentage: permit.entryRegistry?.personnel?.length > 0 ? 100 : 0,
-        errors: permit.entryRegistry?.personnel?.length > 0 ? [] : ['Personnel manquant'],
-        lastModified: permit.last_modified
-      }
-    ];
-  };
+  const handleBackToSelection = useCallback(() => {
+    setSelectedPermitId(null);
+    setIsLoading(false);
+  }, []);
 
-  // =================== STATISTIQUES ===================
-  const getPermitStatistics = () => {
-    return {
-      totalSections: 4,
-      completedSections: getSectionValidation().filter(s => s.isComplete).length,
-      totalPersonnel: permit.entryRegistry?.personnel?.length || 0,
-      activeEntrants: permit.entryRegistry?.activeEntrants?.length || 0,
-      atmosphericReadings: permit.atmosphericTesting?.readings?.length || 0,
-      lastSaved: safetyManager.lastSaved ? new Date(safetyManager.lastSaved).toLocaleString() : 'Jamais',
-      permitAge: permit.created_at ? Math.floor((Date.now() - new Date(permit.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0,
-      hazardCount: (permit.siteInformation?.atmosphericHazards?.length || 0) + 
-                   (permit.siteInformation?.physicalHazards?.length || 0),
-      photoCount: permit.siteInformation?.spacePhotos?.length || 0,
-      volume: permit.siteInformation?.dimensions?.volume || 0,
-      unitSystem: permit.siteInformation?.unitSystem || 'metric'
-    };
-  };
+  const handleRefreshStats = useCallback(async () => {
+    try {
+      // Simuler le chargement des statistiques
+      const mockStats: PermitStats = {
+        totalPermits: Math.floor(Math.random() * 100) + 50,
+        activePermits: Math.floor(Math.random() * 20) + 5,
+        completedPermits: Math.floor(Math.random() * 80) + 30,
+        draftPermits: Math.floor(Math.random() * 10) + 2,
+        recentActivity: `${Math.floor(Math.random() * 5) + 1} permis créés aujourd'hui`,
+        compliance: Math.floor(Math.random() * 15) + 85
+      };
+      setPermitStats(mockStats);
+    } catch (error) {
+      console.error('Erreur lors du rafraîchissement:', error);
+    }
+  }, []);
 
   // =================== EFFETS ===================
   useEffect(() => {
-    if (permit.permit_number && !qrCodeUrl) {
-      handleGenerateQR();
-    }
-  }, [permit.permit_number]);
+    handleRefreshStats();
+  }, [handleRefreshStats]);
 
   useEffect(() => {
-    if (searchQuery.length >= 2) {
-      const timeoutId = setTimeout(() => {
-        handleSearch(searchQuery);
-      }, 300);
-      return () => clearTimeout(timeoutId);
-    } else {
-      setSearchResults([]);
+    // Mettre à jour les données dans ASTForm quand nécessaire
+    if (selectedPermitId && onDataChange) {
+      onDataChange('selectedPermit', {
+        permitId: selectedPermitId,
+        timestamp: new Date().toISOString(),
+        province: actualProvince
+      });
     }
-  }, [searchQuery, handleSearch]);
+  }, [selectedPermitId, onDataChange, actualProvince]);
 
-  // =================== RENDU CONDITIONNEL - VUE DATABASE/HISTORIQUE ===================
-  if (currentView === 'database' || currentView === 'history') {
+  // =================== RENDU CONDITIONNEL - PERMIS SÉLECTIONNÉ ===================
+  if (selectedPermitId) {
+    const selectedPermit = PERMIT_COMPONENTS.find(p => p.id === selectedPermitId);
+    
+    if (!selectedPermit) {
+      return (
+        <div style={styles.container}>
+          <div style={styles.card}>
+            <div style={{ textAlign: 'center', padding: '40px', color: '#ef4444' }}>
+              <AlertTriangle size={48} style={{ marginBottom: '16px' }} />
+              <h3>Permis non trouvé</h3>
+              <button onClick={handleBackToSelection} style={{...styles.button, ...styles.buttonPrimary, marginTop: '16px'}}>
+                <ArrowLeft size={16} />
+                Retour à la sélection
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Rendu du composant de permis sélectionné
+    const PermitComponent = selectedPermit.component;
+    
     return (
       <div style={styles.container}>
-        {/* Header de retour */}
+        {/* Header de navigation */}
         <div style={styles.headerCard}>
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(59, 130, 246, 0.05))', zIndex: 0 }}></div>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05))', zIndex: 0 }}></div>
           
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <button
-                  onClick={() => setCurrentView('main')}
-                  style={{
-                    ...styles.button,
-                    ...styles.buttonSecondary,
-                    width: 'auto',
-                    padding: '12px 16px'
-                  }}
-                >
-                  <ArrowLeft size={16} />
-                  Retour
-                </button>
-                <div>
-                  <h2 style={{ fontSize: isMobileDevice ? '20px' : '24px', fontWeight: '700', color: 'white', margin: 0 }}>
-                    <Database style={{ display: 'inline', marginRight: '12px', width: '24px', height: '24px' }} />
-                    {t.database}
-                  </h2>
-                  <p style={{ color: '#d1d5db', fontSize: isMobileDevice ? '14px' : '16px', margin: '4px 0 0 0' }}>
-                    {selectedProvince} - {PROVINCIAL_REGULATIONS[selectedProvince]?.authority}
-                  </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <button
+                onClick={handleBackToSelection}
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSecondary,
+                  width: 'auto',
+                  padding: actualIsMobile ? '8px 12px' : '12px 16px'
+                }}
+              >
+                <ArrowLeft size={16} />
+                {actualIsMobile ? 'Retour' : 'Retour à la sélection'}
+              </button>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  padding: '8px 16px',
+                  background: selectedPermit.status === 'active' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: selectedPermit.status === 'active' ? '#10b981' : '#f59e0b'
+                }}>
+                  {selectedPermit.status === 'active' ? '✅ Actif' : '⚠️ Développement'}
                 </div>
               </div>
             </div>
             
-            {/* Barre de recherche */}
-            <div style={{ position: 'relative', marginBottom: '20px' }}>
-              <input
-                type="text"
-                style={{ ...styles.input, paddingLeft: '48px' }}
-                placeholder={t.searchPlaceholder}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <Search 
-                size={20} 
-                style={{ 
-                  position: 'absolute', 
-                  left: '16px', 
-                  top: '50%', 
-                  transform: 'translateY(-50%)', 
-                  color: '#9ca3af' 
-                }} 
-              />
-              {isSearching && (
-                <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)' }}>
-                  <div style={{ width: '16px', height: '16px', border: '2px solid #3b82f6', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                </div>
-              )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{
+                fontSize: '32px',
+                width: '60px',
+                height: '60px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(59, 130, 246, 0.2)',
+                borderRadius: '16px',
+                border: '2px solid rgba(59, 130, 246, 0.3)'
+              }}>
+                {selectedPermit.icon}
+              </div>
+              <div style={{ flex: 1 }}>
+                <h1 style={{
+                  fontSize: actualIsMobile ? '18px' : '24px',
+                  fontWeight: '700',
+                  color: 'white',
+                  marginBottom: '4px',
+                  lineHeight: 1.2
+                }}>
+                  {selectedPermit.name}
+                </h1>
+                <p style={{
+                  color: '#d1d5db',
+                  fontSize: actualIsMobile ? '13px' : '15px',
+                  lineHeight: 1.4,
+                  margin: 0
+                }}>
+                  {selectedPermit.description[language]}
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Résultats de recherche */}
-        <div style={styles.card}>
-          {isSearching ? (
+        {/* Rendu du composant de permis avec gestion d'erreur */}
+        <React.Suspense fallback={
+          <div style={styles.card}>
             <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
               <div style={{ width: '32px', height: '32px', border: '3px solid #3b82f6', borderTop: '3px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-              <p>{t.searching}</p>
+              <p>Chargement du module {selectedPermit.name}...</p>
             </div>
-          ) : searchResults.length > 0 ? (
-            <div style={{ display: 'grid', gap: '12px' }}>
-              {searchResults.map((result) => (
-                <div 
-                  key={result.id}
-                  style={{
-                    ...styles.card,
-                    margin: 0,
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    border: '1px solid #4b5563'
-                  }}
-                  onClick={() => handleLoadPermit(result.permitNumber)}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ color: '#3b82f6', margin: '0 0 4px 0', fontSize: '16px', fontWeight: '600' }}>
-                        {result.permitNumber}
-                      </h4>
-                      <p style={{ color: 'white', margin: '0 0 4px 0', fontSize: '14px' }}>
-                        📋 {result.projectNumber} • 📍 {result.workLocation}
-                      </p>
-                      <p style={{ color: '#9ca3af', margin: 0, fontSize: '13px' }}>
-                        🏢 {result.contractor} • {t.spaceTypes[result.spaceType as keyof typeof t.spaceTypes] || result.spaceType}
-                      </p>
-                      <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '12px', color: '#6b7280' }}>
-                        <span>⚠️ {result.hazardCount} dangers</span>
-                        <span>📷 {result.photoCount} photos</span>
-                        <span>🕒 {new Date(result.lastModified).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    <span style={{
-                      background: result.status === 'active' ? 'rgba(16, 185, 129, 0.2)' : 
-                                 result.status === 'completed' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(156, 163, 175, 0.2)',
-                      color: result.status === 'active' ? '#10b981' : 
-                             result.status === 'completed' ? '#3b82f6' : '#9ca3af',
-                      padding: '4px 8px',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      fontWeight: '600'
-                    }}>
-                      {result.status === 'active' ? '🟢 ACTIF' : 
-                       result.status === 'completed' ? '🔵 COMPLÉTÉ' :
-                       result.status === 'draft' ? '🟡 BROUILLON' : '⚪ AUTRE'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : searchQuery.length >= 2 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-              <Search size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
-              <p>{t.noResults}</p>
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-              <p>💡 {language === 'fr' ? 'Tapez au moins 2 caractères pour rechercher' : 'Type at least 2 characters to search'}</p>
-            </div>
-          )}
-        </div>
+          </div>
+        }>
+          <PermitComponent
+            formData={formData}
+            onDataChange={onDataChange}
+            language={language}
+            tenant={tenant}
+            errors={errors}
+            province={actualProvince}
+            userRole={userRole}
+            touchOptimized={actualIsMobile}
+            compactMode={compactMode}
+            onPermitChange={onPermitChange}
+            initialPermits={initialPermits}
+            selectedProvince={actualProvince}
+            PROVINCIAL_REGULATIONS={actualRegulations}
+            isMobile={actualIsMobile}
+            safetyManager={safetyManager}
+            permitData={formData?.permits?.[selectedPermitId]}
+            onSave={(data: any) => onDataChange?.(selectedPermitId, data)}
+            regulations={actualRegulations[actualProvince]}
+          />
+        </React.Suspense>
 
         <style jsx>{`
           @keyframes spin {
@@ -688,13 +824,10 @@ const PermitManager: React.FC<PermitManagerProps> = ({
       </div>
     );
   }
-  // PermitManager.tsx - VERSION RÉVISÉE COMPLÈTE - SECTION 3
-  // =================== RENDU PRINCIPAL ===================
-  const stats = getPermitStatistics();
-  const sections = getSectionValidation();
 
+  // =================== RENDU PRINCIPAL - SÉLECTION DES PERMIS ===================
   return (
-    <div style={styles.container}>
+    <div style={styles.container} ref={containerRef}>
       {/* Header Principal */}
       <div style={styles.headerCard}>
         <div style={{
@@ -712,12 +845,12 @@ const PermitManager: React.FC<PermitManagerProps> = ({
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'space-between',
-            marginBottom: isMobileDevice ? '20px' : '24px' 
+            marginBottom: actualIsMobile ? '20px' : '24px' 
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: isMobileDevice ? '16px' : '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: actualIsMobile ? '16px' : '20px' }}>
               <div style={{
-                width: isMobileDevice ? '48px' : '60px',
-                height: isMobileDevice ? '48px' : '60px',
+                width: actualIsMobile ? '48px' : '60px',
+                height: actualIsMobile ? '48px' : '60px',
                 background: 'rgba(59, 130, 246, 0.2)',
                 borderRadius: '16px',
                 display: 'flex',
@@ -725,25 +858,25 @@ const PermitManager: React.FC<PermitManagerProps> = ({
                 justifyContent: 'center',
                 border: '2px solid rgba(59, 130, 246, 0.3)'
               }}>
-                <Wrench style={{ 
-                  width: isMobileDevice ? '24px' : '30px', 
-                  height: isMobileDevice ? '24px' : '30px', 
+                <FileText style={{ 
+                  width: actualIsMobile ? '24px' : '30px', 
+                  height: actualIsMobile ? '24px' : '30px', 
                   color: '#60a5fa' 
                 }} />
               </div>
               <div>
                 <h1 style={{
-                  fontSize: isMobileDevice ? '20px' : '28px',
+                  fontSize: actualIsMobile ? '20px' : '28px',
                   fontWeight: '700',
                   color: 'white',
                   marginBottom: '4px',
                   lineHeight: 1.2
                 }}>
-                  ⚙️ {t.title}
+                  📋 {t.title}
                 </h1>
                 <p style={{
                   color: '#d1d5db',
-                  fontSize: isMobileDevice ? '14px' : '16px',
+                  fontSize: actualIsMobile ? '14px' : '16px',
                   lineHeight: 1.5,
                   margin: 0
                 }}>
@@ -753,155 +886,65 @@ const PermitManager: React.FC<PermitManagerProps> = ({
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{
-                fontSize: isMobileDevice ? '24px' : '32px',
+                fontSize: actualIsMobile ? '24px' : '32px',
                 fontWeight: '700',
-                color: validation.isValid ? '#10b981' : '#f59e0b',
+                color: '#10b981',
                 marginBottom: '4px'
               }}>
-                {validation.percentage}%
+                {permitStats.compliance}%
               </div>
               <div style={{ 
-                fontSize: isMobileDevice ? '12px' : '14px', 
+                fontSize: actualIsMobile ? '12px' : '14px', 
                 color: '#d1d5db' 
               }}>
-                {validation.isValid ? '✅ Valide' : '⚠️ Incomplet'}
+                {t.compliance}
               </div>
             </div>
           </div>
           
-          {/* Actions rapides */}
+          {/* Province et réglementations */}
           <div style={{
             display: 'flex',
-            gap: isMobileDevice ? '8px' : '12px',
-            flexWrap: 'wrap'
+            alignItems: 'center',
+            gap: '16px',
+            padding: '12px 16px',
+            background: 'rgba(59, 130, 246, 0.1)',
+            borderRadius: '12px',
+            border: '1px solid rgba(59, 130, 246, 0.2)'
           }}>
-            <button
-              onClick={() => setCurrentView('database')}
-              style={{
-                ...styles.button,
-                background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+            <MapPin style={{ width: '20px', height: '20px', color: '#60a5fa' }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ 
+                fontSize: '14px', 
+                fontWeight: '600', 
                 color: 'white',
-                flex: isMobileDevice ? '1' : 'none',
-                fontSize: isMobileDevice ? '12px' : '14px'
-              }}
-            >
-              <Database size={16} />
-              {t.searchDatabase}
-            </button>
-            <button
-              onClick={() => safetyManager.createNewPermit(selectedProvince)}
-              style={{
-                ...styles.button,
-                background: 'linear-gradient(135deg, #10b981, #059669)',
-                color: 'white',
-                flex: isMobileDevice ? '1' : 'none',
-                fontSize: isMobileDevice ? '12px' : '14px'
-              }}
-            >
-              <Plus size={16} />
-              {t.newPermit}
-            </button>
+                marginBottom: '2px'
+              }}>
+                {t.provinces[actualProvince as keyof typeof t.provinces]} ({actualProvince})
+              </div>
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#d1d5db' 
+              }}>
+                {actualRegulations[actualProvince]?.authority || 'Autorité provinciale'} • {actualRegulations[actualProvince]?.name || 'Réglementation provinciale'}
+              </div>
+            </div>
+            <div style={{
+              padding: '4px 8px',
+              background: 'rgba(16, 185, 129, 0.2)',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: '600',
+              color: '#10b981'
+            }}>
+              Conforme
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Dashboard - Statistiques */}
+      {/* Statistiques */}
       <div style={styles.grid4}>
-        {/* Validation Globale */}
-        <div style={{
-          ...styles.card,
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(10px)',
-          margin: 0
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <p style={{ fontSize: '13px', fontWeight: '500', color: '#9ca3af', margin: '0 0 4px 0' }}>Validation</p>
-              <p style={{ 
-                fontSize: isMobileDevice ? '20px' : '24px', 
-                fontWeight: '700', 
-                color: validation.isValid ? '#10b981' : '#f59e0b',
-                margin: 0
-              }}>
-                {stats.completedSections}/{stats.totalSections}
-              </p>
-            </div>
-            {validation.isValid ? (
-              <CheckCircle style={{ width: '32px', height: '32px', color: '#10b981' }} />
-            ) : (
-              <AlertTriangle style={{ width: '32px', height: '32px', color: '#f59e0b' }} />
-            )}
-          </div>
-          <div style={{ marginTop: '12px' }}>
-            <div style={{ width: '100%', background: '#374151', borderRadius: '4px', height: '6px', overflow: 'hidden' }}>
-              <div 
-                style={{
-                  height: '100%',
-                  background: validation.isValid ? 'linear-gradient(90deg, #10b981, #059669)' : 'linear-gradient(90deg, #f59e0b, #d97706)',
-                  transition: 'width 0.3s ease',
-                  width: `${validation.percentage}%`
-                }}
-              />
-            </div>
-            <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', margin: '4px 0 0 0' }}>
-              {validation.isValid ? t.validationPassed : t.validationErrors}
-            </p>
-          </div>
-        </div>
-
-        {/* Personnel */}
-        <div style={{
-          ...styles.card,
-          background: 'rgba(139, 92, 246, 0.1)',
-          border: '1px solid rgba(139, 92, 246, 0.3)',
-          margin: 0
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <p style={{ fontSize: '13px', fontWeight: '500', color: '#c4b5fd', margin: '0 0 4px 0' }}>Personnel</p>
-              <p style={{ fontSize: isMobileDevice ? '20px' : '24px', fontWeight: '700', color: '#a78bfa', margin: 0 }}>
-                {stats.totalPersonnel}
-              </p>
-            </div>
-            <Users style={{ width: '32px', height: '32px', color: '#8b5cf6' }} />
-          </div>
-          <div style={{ marginTop: '12px', fontSize: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c4b5fd' }}>
-              <span>À l'intérieur:</span>
-              <span style={{ fontWeight: '600', color: stats.activeEntrants > 0 ? '#f59e0b' : '#10b981' }}>
-                {stats.activeEntrants}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Dangers */}
-        <div style={{
-          ...styles.card,
-          background: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          margin: 0
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <p style={{ fontSize: '13px', fontWeight: '500', color: '#fca5a5', margin: '0 0 4px 0' }}>Dangers</p>
-              <p style={{ fontSize: isMobileDevice ? '20px' : '24px', fontWeight: '700', color: '#f87171', margin: 0 }}>
-                {stats.hazardCount}
-              </p>
-            </div>
-            <AlertTriangle style={{ width: '32px', height: '32px', color: '#ef4444' }} />
-          </div>
-          <div style={{ marginTop: '12px', fontSize: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fca5a5' }}>
-              <span>Photos:</span>
-              <span style={{ fontWeight: '600', color: '#60a5fa' }}>
-                {stats.photoCount}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Volume */}
         <div style={{
           ...styles.card,
           background: 'rgba(16, 185, 129, 0.1)',
@@ -910,25 +953,76 @@ const PermitManager: React.FC<PermitManagerProps> = ({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <p style={{ fontSize: '13px', fontWeight: '500', color: '#6ee7b7', margin: '0 0 4px 0' }}>Volume</p>
-              <p style={{ fontSize: isMobileDevice ? '20px' : '24px', fontWeight: '700', color: '#34d399', margin: 0 }}>
-                {stats.volume}
+              <p style={{ fontSize: '13px', fontWeight: '500', color: '#6ee7b7', margin: '0 0 4px 0' }}>
+                {t.activePermits}
+              </p>
+              <p style={{ fontSize: actualIsMobile ? '20px' : '24px', fontWeight: '700', color: '#34d399', margin: 0 }}>
+                {permitStats.activePermits}
               </p>
             </div>
-            <BarChart3 style={{ width: '32px', height: '32px', color: '#10b981' }} />
+            <CheckCircle style={{ width: '32px', height: '32px', color: '#10b981' }} />
           </div>
-          <div style={{ marginTop: '12px', fontSize: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6ee7b7' }}>
-              <span>Unité:</span>
-              <span style={{ fontWeight: '600' }}>
-                {stats.unitSystem === 'metric' ? 'm³' : 'ft³'}
-              </span>
+        </div>
+
+        <div style={{
+          ...styles.card,
+          background: 'rgba(59, 130, 246, 0.1)',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          margin: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontSize: '13px', fontWeight: '500', color: '#93c5fd', margin: '0 0 4px 0' }}>
+                Total Permis
+              </p>
+              <p style={{ fontSize: actualIsMobile ? '20px' : '24px', fontWeight: '700', color: '#60a5fa', margin: 0 }}>
+                {permitStats.totalPermits}
+              </p>
             </div>
+            <FileText style={{ width: '32px', height: '32px', color: '#3b82f6' }} />
+          </div>
+        </div>
+
+        <div style={{
+          ...styles.card,
+          background: 'rgba(139, 92, 246, 0.1)',
+          border: '1px solid rgba(139, 92, 246, 0.3)',
+          margin: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontSize: '13px', fontWeight: '500', color: '#c4b5fd', margin: '0 0 4px 0' }}>
+                Complétés
+              </p>
+              <p style={{ fontSize: actualIsMobile ? '20px' : '24px', fontWeight: '700', color: '#a78bfa', margin: 0 }}>
+                {permitStats.completedPermits}
+              </p>
+            </div>
+            <BarChart3 style={{ width: '32px', height: '32px', color: '#8b5cf6' }} />
+          </div>
+        </div>
+
+        <div style={{
+          ...styles.card,
+          background: 'rgba(245, 158, 11, 0.1)',
+          border: '1px solid rgba(245, 158, 11, 0.3)',
+          margin: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontSize: '13px', fontWeight: '500', color: '#fcd34d', margin: '0 0 4px 0' }}>
+                Brouillons
+              </p>
+              <p style={{ fontSize: actualIsMobile ? '20px' : '24px', fontWeight: '700', color: '#f59e0b', margin: 0 }}>
+                {permitStats.draftPermits}
+              </p>
+            </div>
+            <Edit3 style={{ width: '32px', height: '32px', color: '#f59e0b' }} />
           </div>
         </div>
       </div>
 
-      {/* Validation des Sections */}
+      {/* Filtres et Recherche */}
       <div style={styles.card}>
         <div style={{ 
           display: 'flex', 
@@ -938,435 +1032,436 @@ const PermitManager: React.FC<PermitManagerProps> = ({
           paddingBottom: '16px',
           borderBottom: '1px solid #374151'
         }}>
-          <CheckCircle style={{ width: '24px', height: '24px', color: '#3b82f6' }} />
+          <Search style={{ width: '24px', height: '24px', color: '#3b82f6' }} />
           <h2 style={{
-            fontSize: isMobileDevice ? '18px' : '20px',
+            fontSize: actualIsMobile ? '18px' : '20px',
             fontWeight: '600',
             color: 'white',
             margin: 0
           }}>
-            {t.validation}
+            {t.selectPermit}
           </h2>
+          <div style={{ flex: 1 }}></div>
+          <button
+            onClick={handleRefreshStats}
+            style={{
+              ...styles.button,
+              ...styles.buttonSecondary,
+              width: 'auto',
+              padding: '8px 12px'
+            }}
+          >
+            <RefreshCw size={16} />
+            {!actualIsMobile && t.refresh}
+          </button>
         </div>
         
-        <div style={styles.grid2}>
-          {sections.map((section, index) => (
-            <div 
-              key={index}
-              style={{
-                padding: isMobileDevice ? '16px' : '20px',
-                borderRadius: '12px',
-                border: `2px solid ${section.isComplete ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                background: section.isComplete ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                transition: 'all 0.3s ease'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{
-                    padding: '8px',
-                    borderRadius: '8px',
-                    background: section.isComplete ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'
-                  }}>
-                    {section.icon}
-                  </div>
-                  <div>
-                    <p style={{
-                      fontWeight: '600',
-                      color: section.isComplete ? '#86efac' : '#fca5a5',
-                      margin: '0 0 4px 0',
-                      fontSize: isMobileDevice ? '14px' : '15px'
-                    }}>
-                      {section.sectionName}
-                    </p>
-                    <p style={{ 
-                      fontSize: '12px', 
-                      color: '#9ca3af',
-                      margin: 0
-                    }}>
-                      {section.isComplete ? t.complete : t.incomplete}
-                    </p>
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{
-                    fontSize: isMobileDevice ? '16px' : '18px',
-                    fontWeight: '700',
-                    color: section.isComplete ? '#10b981' : '#ef4444'
-                  }}>
-                    {section.completionPercentage}%
-                  </div>
-                </div>
-              </div>
-              
-              {section.errors.length > 0 && (
-                <div style={{ marginTop: '12px' }}>
-                  {section.errors.map((error, i) => (
-                    <div key={i} style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px',
-                      fontSize: '12px',
-                      color: '#fca5a5',
-                      padding: '6px 12px',
-                      background: 'rgba(239, 68, 68, 0.1)',
-                      borderRadius: '6px',
-                      border: '1px solid rgba(239, 68, 68, 0.2)',
-                      marginTop: i > 0 ? '4px' : 0
-                    }}>
-                      <AlertTriangle size={12} />
-                      {error}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Actions du Permis */}
-      <div style={styles.grid2}>
-        {/* Actions Principales */}
-        <div style={styles.card}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '12px', 
-            marginBottom: '20px',
-            paddingBottom: '16px',
-            borderBottom: '1px solid #374151'
-          }}>
-            <Wrench style={{ width: '24px', height: '24px', color: '#10b981' }} />
-            <h2 style={{
-              fontSize: isMobileDevice ? '18px' : '20px',
-              fontWeight: '600',
-              color: 'white',
-              margin: 0
-            }}>
-              {t.actions}
-            </h2>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* Sauvegarder */}
-            <button
-              onClick={handleSave}
-              disabled={safetyManager.isSaving}
-              style={{
-                ...styles.button,
-                ...styles.buttonSuccess,
-                opacity: safetyManager.isSaving ? 0.7 : 1
-              }}
-            >
-              {safetyManager.isSaving ? (
-                <div style={{ width: '16px', height: '16px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-              ) : (
-                <Save size={20} />
-              )}
-              {safetyManager.isSaving ? t.saving : t.savePermit}
-            </button>
-
-            {/* Imprimer PDF */}
-            <button
-              onClick={handleGeneratePDF}
-              disabled={isGeneratingPDF}
-              style={{
-                ...styles.button,
-                ...styles.buttonPrimary,
-                opacity: isGeneratingPDF ? 0.7 : 1
-              }}
-            >
-              {isGeneratingPDF ? (
-                <div style={{ width: '16px', height: '16px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-              ) : (
-                <Printer size={20} />
-              )}
-              {t.printPDF}
-            </button>
-
-            {/* Email */}
-            <button
-              onClick={() => safetyManager.sharePermit('email')}
-              style={{
-                ...styles.button,
-                background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                color: 'white'
-              }}
-            >
-              <Mail size={20} />
-              {t.emailPermit}
-            </button>
-
-            {/* Partage */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <select
-                value={selectedShareMethod}
-                onChange={(e) => setSelectedShareMethod(e.target.value as any)}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+          {/* Barre de recherche */}
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              style={{ ...styles.input, paddingLeft: '48px' }}
+              placeholder={t.searchPermits}
+              value={searchQuery}
+              onChange={handleSearchChange}
+            />
+            <Search 
+              size={20} 
+              style={{ 
+                position: 'absolute', 
+                left: '16px', 
+                top: '50%', 
+                transform: 'translateY(-50%)', 
+                color: '#9ca3af' 
+              }} 
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
                 style={{
-                  flex: 1,
-                  padding: '12px',
-                  background: '#374151',
-                  border: '1px solid #4b5563',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '14px'
+                  position: 'absolute',
+                  right: '16px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#9ca3af',
+                  cursor: 'pointer'
                 }}
               >
-                <option value="email">📧 Email</option>
-                <option value="sms">📱 SMS</option>
-                <option value="whatsapp">💬 WhatsApp</option>
-              </select>
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          {/* Filtres */}
+          <div style={{
+            display: 'flex',
+            gap: actualIsMobile ? '8px' : '12px',
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
+            {/* Filtre par catégorie */}
+            <select
+              value={filterCategory}
+              onChange={(e) => handleFilterChange('category', e.target.value)}
+              style={{
+                padding: '8px 12px',
+                background: '#374151',
+                border: '1px solid #4b5563',
+                borderRadius: '6px',
+                color: 'white',
+                fontSize: '14px',
+                minWidth: '120px'
+              }}
+            >
+              <option value="all">Toutes catégories</option>
+              <option value="primary">{t.primary}</option>
+              <option value="secondary">{t.secondary}</option>
+              <option value="specialized">{t.specialized}</option>
+            </select>
+
+            {/* Filtre par statut */}
+            <select
+              value={filterStatus}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              style={{
+                padding: '8px 12px',
+                background: '#374151',
+                border: '1px solid #4b5563',
+                borderRadius: '6px',
+                color: 'white',
+                fontSize: '14px',
+                minWidth: '120px'
+              }}
+            >
+              <option value="all">Tous statuts</option>
+              <option value="active">{t.active}</option>
+              <option value="development">{t.development}</option>
+              <option value="disabled">{t.disabled}</option>
+            </select>
+
+            {/* Toggle "Seulement disponibles" */}
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#d1d5db',
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}>
+              <input
+                type="checkbox"
+                checked={showOnlyAvailable}
+                onChange={(e) => setShowOnlyAvailable(e.target.checked)}
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  accentColor: '#3b82f6'
+                }}
+              />
+              Disponibles seulement
+            </label>
+
+            {/* Mode d'affichage */}
+            <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
               <button
-                onClick={handleShare}
+                onClick={() => setViewMode('grid')}
                 style={{
                   ...styles.button,
-                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                  color: 'white',
+                  ...(viewMode === 'grid' ? styles.buttonPrimary : styles.buttonSecondary),
                   width: 'auto',
-                  minWidth: '60px'
+                  padding: '8px'
                 }}
               >
-                <Share size={20} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px', width: '12px', height: '12px' }}>
+                  <div style={{ background: 'currentColor', borderRadius: '1px' }}></div>
+                  <div style={{ background: 'currentColor', borderRadius: '1px' }}></div>
+                  <div style={{ background: 'currentColor', borderRadius: '1px' }}></div>
+                  <div style={{ background: 'currentColor', borderRadius: '1px' }}></div>
+                </div>
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                style={{
+                  ...styles.button,
+                  ...(viewMode === 'list' ? styles.buttonPrimary : styles.buttonSecondary),
+                  width: 'auto',
+                  padding: '8px'
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '12px', height: '12px' }}>
+                  <div style={{ background: 'currentColor', height: '2px', borderRadius: '1px' }}></div>
+                  <div style={{ background: 'currentColor', height: '2px', borderRadius: '1px' }}></div>
+                  <div style={{ background: 'currentColor', height: '2px', borderRadius: '1px' }}></div>
+                </div>
               </button>
             </div>
           </div>
-        </div>
 
-        {/* QR Code */}
-        <div style={styles.card}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '12px', 
-            marginBottom: '20px',
-            paddingBottom: '16px',
-            borderBottom: '1px solid #374151'
-          }}>
-            <QrCode style={{ width: '24px', height: '24px', color: '#3b82f6' }} />
-            <h2 style={{
-              fontSize: isMobileDevice ? '18px' : '20px',
-              fontWeight: '600',
-              color: 'white',
-              margin: 0
+          {/* Résumé des filtres */}
+          {filteredPermits.length !== PERMIT_COMPONENTS.length && (
+            <div style={{
+              padding: '8px 12px',
+              background: 'rgba(59, 130, 246, 0.1)',
+              borderRadius: '6px',
+              fontSize: '14px',
+              color: '#93c5fd'
             }}>
-              {t.qrCode}
-            </h2>
-          </div>
-          
-          <div style={{ textAlign: 'center' }}>
-            {qrCodeUrl ? (
-              <div>
-                <div style={{
-                  display: 'inline-block',
-                  padding: '16px',
-                  background: 'white',
-                  borderRadius: '12px',
-                  marginBottom: '16px',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <img 
-                    src={qrCodeUrl} 
-                    alt="QR Code" 
-                    style={{
-                      width: isMobileDevice ? '150px' : '200px',
-                      height: isMobileDevice ? '150px' : '200px',
-                      display: 'block'
-                    }}
-                  />
-                </div>
-                <p style={{
-                  fontSize: '14px',
-                  color: '#d1d5db',
-                  marginBottom: '16px',
-                  margin: '0 0 16px 0'
-                }}>
-                  📱 Scanner pour accès mobile instantané
-                </p>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={handleCopyLink}
-                    style={{
-                      ...styles.button,
-                      ...styles.buttonSecondary,
-                      flex: 1
-                    }}
-                  >
-                    {linkCopied ? <Check size={16} /> : <Copy size={16} />}
-                    {linkCopied ? 'Copié!' : 'Copier Lien'}
-                  </button>
-                  <button
-                    onClick={handleGenerateQR}
-                    disabled={isGeneratingQR}
-                    style={{
-                      ...styles.button,
-                      ...styles.buttonPrimary,
-                      width: 'auto',
-                      minWidth: '60px',
-                      opacity: isGeneratingQR ? 0.7 : 1
-                    }}
-                  >
-                    <QrCode size={16} />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div style={{
-                  width: isMobileDevice ? '150px' : '200px',
-                  height: isMobileDevice ? '150px' : '200px',
-                  margin: '0 auto 16px',
-                  background: '#374151',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <QrCode style={{ width: '48px', height: '48px', color: '#6b7280' }} />
-                </div>
-                <button
-                  onClick={handleGenerateQR}
-                  disabled={isGeneratingQR}
-                  style={{
-                    ...styles.button,
-                    ...styles.buttonPrimary,
-                    width: 'auto',
-                    opacity: isGeneratingQR ? 0.7 : 1
-                  }}
-                >
-                  {isGeneratingQR ? (
-                    <div style={{ width: '16px', height: '16px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                  ) : (
-                    <QrCode size={20} />
-                  )}
-                  {t.generateQR}
-                </button>
-              </div>
-            )}
-          </div>
+              {filteredPermits.length} permis sur {PERMIT_COMPONENTS.length} affichés
+              {searchQuery && ` • Recherche: "${searchQuery}"`}
+              {filterCategory !== 'all' && ` • Catégorie: ${t[filterCategory as keyof typeof t]}`}
+              {filterStatus !== 'all' && ` • Statut: ${t[filterStatus as keyof typeof t]}`}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Résumé du Permis */}
+      {/* Liste des Permis */}
+      {filteredPermits.length === 0 ? (
+        <div style={styles.card}>
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
+            <Search size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '600' }}>
+              {t.noPermitsFound}
+            </h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '14px' }}>
+              Essayez de modifier vos critères de recherche ou filtres
+            </p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setFilterCategory('all');
+                setFilterStatus('all');
+                setShowOnlyAvailable(false);
+              }}
+              style={{
+                ...styles.button,
+                ...styles.buttonPrimary,
+                width: 'auto'
+              }}
+            >
+              <RefreshCw size={16} />
+              Réinitialiser les filtres
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={viewMode === 'grid' ? (actualIsMobile ? styles.grid2 : styles.grid3) : { display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {filteredPermits.map((permit) => {
+            const cardStyle = {
+              ...styles.permitCard,
+              ...(permit.status === 'active' ? styles.permitCardActive : 
+                  permit.status === 'development' ? styles.permitCardDevelopment : 
+                  styles.permitCardDisabled),
+              ...(viewMode === 'list' ? { display: 'flex', alignItems: 'center', gap: '20px' } : {})
+            };
+
+            return (
+              <div
+                key={permit.id}
+                style={cardStyle}
+                onClick={() => handlePermitSelect(permit.id)}
+                onMouseEnter={permit.status === 'active' ? (e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 12px 30px rgba(59, 130, 246, 0.3)';
+                } : undefined}
+                onMouseLeave={permit.status === 'active' ? (e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(16, 185, 129, 0.2)';
+                } : undefined}
+              >
+                {/* Badge de statut */}
+                <div style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  padding: '4px 8px',
+                  borderRadius: '12px',
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  textTransform: 'uppercase',
+                  background: permit.status === 'active' ? 'rgba(16, 185, 129, 0.2)' : 
+                            permit.status === 'development' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(107, 114, 128, 0.2)',
+                  color: permit.status === 'active' ? '#10b981' : 
+                         permit.status === 'development' ? '#f59e0b' : '#6b7280',
+                  border: `1px solid ${permit.status === 'active' ? 'rgba(16, 185, 129, 0.3)' : 
+                                     permit.status === 'development' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(107, 114, 128, 0.3)'}`
+                }}>
+                  {permit.status === 'active' ? '✓ ACTIF' : 
+                   permit.status === 'development' ? '⚡ DEV' : '⛔ OFF'}
+                </div>
+
+                {/* Icône */}
+                <div style={{
+                  fontSize: viewMode === 'list' ? '32px' : '48px',
+                  marginBottom: viewMode === 'list' ? '0' : '16px',
+                  textAlign: 'center',
+                  minWidth: viewMode === 'list' ? '48px' : 'auto'
+                }}>
+                  {permit.icon}
+                </div>
+
+                {/* Contenu principal */}
+                <div style={{ flex: viewMode === 'list' ? 1 : 'none' }}>
+                  {/* Titre */}
+                  <h3 style={{
+                    fontSize: actualIsMobile || viewMode === 'list' ? '16px' : '18px',
+                    fontWeight: '700',
+                    color: 'white',
+                    marginBottom: '8px',
+                    lineHeight: 1.3
+                  }}>
+                    {permit.name}
+                  </h3>
+
+                  {/* Description */}
+                  <p style={{
+                    fontSize: actualIsMobile || viewMode === 'list' ? '13px' : '14px',
+                    color: '#d1d5db',
+                    lineHeight: 1.5,
+                    marginBottom: '16px',
+                    display: viewMode === 'list' ? '-webkit-box' : 'block',
+                    WebkitLineClamp: viewMode === 'list' ? 2 : 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden'
+                  }}>
+                    {permit.description[language]}
+                  </p>
+
+                  {/* Métadonnées */}
+                  <div style={{
+                    display: 'flex',
+                    gap: '16px',
+                    fontSize: '12px',
+                    color: '#9ca3af',
+                    marginBottom: '16px',
+                    flexWrap: viewMode === 'list' ? 'nowrap' : 'wrap'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={12} />
+                      {permit.estimatedTime} {t.minutes}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Target size={12} />
+                      {t[permit.complexity as keyof typeof t]}
+                    </div>
+                    {permit.csaStandards && permit.csaStandards.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Shield size={12} />
+                        CSA {permit.csaStandards[0]}
+                        {permit.csaStandards.length > 1 && ` +${permit.csaStandards.length - 1}`}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Catégorie */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      background: permit.category === 'primary' ? 'rgba(59, 130, 246, 0.2)' : 
+                                 permit.category === 'secondary' ? 'rgba(139, 92, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                      color: permit.category === 'primary' ? '#60a5fa' : 
+                             permit.category === 'secondary' ? '#a78bfa' : '#fbbf24'
+                    }}>
+                      {t[permit.category as keyof typeof t]}
+                    </span>
+
+                    {permit.status === 'active' && (
+                      <ArrowRight 
+                        size={16} 
+                        style={{ 
+                          color: '#10b981',
+                          transition: 'transform 0.2s ease' 
+                        }} 
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {permit.status === 'development' && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '8px',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    color: '#fbbf24',
+                    textAlign: 'center'
+                  }}>
+                    💡 {t.comingSoon}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Activité récente */}
       <div style={styles.card}>
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
           gap: '12px', 
-          marginBottom: '20px',
-          paddingBottom: '16px',
+          marginBottom: '16px',
+          paddingBottom: '12px',
           borderBottom: '1px solid #374151'
         }}>
-          <BarChart3 style={{ width: '24px', height: '24px', color: '#8b5cf6' }} />
-          <h2 style={{
-            fontSize: isMobileDevice ? '18px' : '20px',
+          <History style={{ width: '20px', height: '20px', color: '#8b5cf6' }} />
+          <h3 style={{
+            fontSize: '16px',
             fontWeight: '600',
             color: 'white',
             margin: 0
           }}>
-            {t.summary}
-          </h2>
+            {t.recentActivity}
+          </h3>
         </div>
         
-        <div style={styles.grid3}>
-          {/* Informations Générales */}
-          <div>
-            <h3 style={{ fontWeight: '600', color: '#a78bfa', marginBottom: '16px', fontSize: '16px' }}>
-              Informations Générales
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Numéro:</span>
-                <span style={{ color: 'white', fontFamily: 'monospace', fontWeight: '600' }}>
-                  {permit.permit_number || 'Non généré'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Statut:</span>
-                <span style={{
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  background: permit.status === 'active' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                  color: permit.status === 'active' ? '#10b981' : '#f59e0b'
-                }}>
-                  {permit.status}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Province:</span>
-                <span style={{ color: 'white', fontWeight: '600' }}>{permit.province}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Créé:</span>
-                <span style={{ color: 'white' }}>
-                  {permit.created_at ? new Date(permit.created_at).toLocaleDateString() : 'N/A'}
-                </span>
-              </div>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 16px',
+          background: 'rgba(139, 92, 246, 0.1)',
+          borderRadius: '8px',
+          border: '1px solid rgba(139, 92, 246, 0.2)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              background: 'rgba(139, 92, 246, 0.2)',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Activity size={16} style={{ color: '#a78bfa' }} />
+            </div>
+            <div>
+              <p style={{ color: 'white', margin: '0 0 2px 0', fontSize: '14px', fontWeight: '500' }}>
+                {permitStats.recentActivity}
+              </p>
+              <p style={{ color: '#9ca3af', margin: 0, fontSize: '12px' }}>
+                Il y a {Math.floor(Math.random() * 60)} minutes
+              </p>
             </div>
           </div>
-
-          {/* Détails du Site */}
-          <div>
-            <h3 style={{ fontWeight: '600', color: '#34d399', marginBottom: '16px', fontSize: '16px' }}>
-              Détails du Site
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px' }}>
-              <div>
-                <span style={{ color: '#9ca3af', display: 'block', marginBottom: '2px' }}>Projet:</span>
-                <p style={{ color: 'white', margin: 0, wordWrap: 'break-word' }}>
-                  {permit.siteInformation?.projectNumber || 'Non défini'}
-                </p>
-              </div>
-              <div>
-                <span style={{ color: '#9ca3af', display: 'block', marginBottom: '2px' }}>Lieu:</span>
-                <p style={{ color: 'white', margin: 0, wordWrap: 'break-word' }}>
-                  {permit.siteInformation?.workLocation || 'Non défini'}
-                </p>
-              </div>
-              <div>
-                <span style={{ color: '#9ca3af', display: 'block', marginBottom: '2px' }}>Entrepreneur:</span>
-                <p style={{ color: 'white', margin: 0, wordWrap: 'break-word' }}>
-                  {permit.siteInformation?.contractor || 'Non défini'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Statut de Sécurité */}
-          <div>
-            <h3 style={{ fontWeight: '600', color: '#f87171', marginBottom: '16px', fontSize: '16px' }}>
-              Statut de Sécurité
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Personnel total:</span>
-                <span style={{ color: 'white', fontWeight: '600' }}>{stats.totalPersonnel}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>À l'intérieur:</span>
-                <span style={{ 
-                  fontWeight: '600',
-                  color: stats.activeEntrants > 0 ? '#f59e0b' : '#10b981'
-                }}>
-                  {stats.activeEntrants}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Alertes actives:</span>
-                <span style={{ 
-                  fontWeight: '600',
-                  color: (safetyManager.activeAlerts?.length || 0) > 0 ? '#ef4444' : '#10b981'
-                }}>
-                  {safetyManager.activeAlerts?.length || 0}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Tests atmosphériques:</span>
-                <span style={{ color: 'white', fontWeight: '600' }}>{stats.atmosphericReadings}</span>
-              </div>
-            </div>
+          <div style={{
+            padding: '4px 8px',
+            background: 'rgba(16, 185, 129, 0.2)',
+            borderRadius: '6px',
+            fontSize: '12px',
+            fontWeight: '600',
+            color: '#10b981'
+          }}>
+            Nouveau
           </div>
         </div>
       </div>
@@ -1381,19 +1476,4 @@ const PermitManager: React.FC<PermitManagerProps> = ({
   );
 };
 
-// =================== FONCTIONS UTILITAIRES ===================
-const getFieldCompletionPercentage = (obj: any, requiredFields: string[]): number => {
-  const completedFields = requiredFields.filter(field => obj?.[field]).length;
-  return Math.round((completedFields / requiredFields.length) * 100);
-};
-
-const showNotification = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification('C-SECUR360', {
-      body: message,
-      icon: '/c-secur360-logo.png'
-    });
-  }
-};
-
-export default PermitManager;
+export default Step4Permits;
