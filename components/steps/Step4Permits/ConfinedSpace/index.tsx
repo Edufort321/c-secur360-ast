@@ -348,7 +348,7 @@ const getTexts = (language: 'fr' | 'en') => ({
     autoSaveEnabled: "Sauvegarde automatique activée",
     progressTracker: "Progression du permis",
     safetyManager: "SafetyManager Intégré",
-    validation: "Validation en temps réel"
+    realTimeValidation: "Validation en temps réel"
   },
   en: {
     title: "Confined Space Entry Permit",
@@ -388,7 +388,7 @@ const getTexts = (language: 'fr' | 'en') => ({
     autoSaveEnabled: "Auto-save enabled",
     progressTracker: "Permit Progress",
     safetyManager: "SafetyManager Integrated",
-    validation: "Real-time Validation"
+    realTimeValidation: "Real-time Validation"
   }
 })[language];
 
@@ -826,7 +826,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               color: isSafetyManagerEnabled ? '#6ee7b7' : '#6b7280'
             }}>
               {isSafetyManagerEnabled 
-                ? texts.validation + (validationData ? ` (${validationData.percentage}%)` : '')
+                ? texts.realTimeValidation + (validationData ? ` (${validationData.percentage}%)` : '')
                 : (language === 'fr' ? 'SafetyManager non disponible' : 'SafetyManager not available')
               }
             </div>
