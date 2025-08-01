@@ -358,7 +358,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   initialData = {}
 }) => {
 
-  // =================== ÉTATS LOCAUX ===================
+  // =================== ÉTATS LOCAUX - SANS AUTO-SAVE ===================
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry'>('site');
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province);
   const [permitData, setPermitData] = useState<PermitData>(initialData);
@@ -366,31 +366,25 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   
   const texts = getTexts(language);
-  const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // =================== FONCTIONS UTILITAIRES SÉCURISÉES ===================
+  // =================== FONCTIONS UTILITAIRES SIMPLIFIÉES ===================
   useEffect(() => {
     if (!permitData.permit_number) {
       const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const random = Math.random().toString(36).substring(2, 8).toUpperCase();
       
-      updatePermitData({ 
+      setPermitData(prev => ({ 
+        ...prev,
         permit_number: `CS-${selectedProvince}-${timestamp}-${random}`,
         issue_date: new Date().toISOString().slice(0, 16),
         selected_province: selectedProvince
-      });
+      }));
     }
-  }, [selectedProvince]); // Removed updatePermitData dependency to prevent loops
+  }, []); // Dependency array vide pour éviter les boucles
 
-  const updatePermitData = useCallback((updates: Partial<PermitData>) => {
-    setPermitData((prev) => ({ ...prev, ...updates }));
-    
-    // Désactiver l'auto-save pour éviter les boucles
-    // clearTimeout(autoSaveTimeoutRef.current);
-    // autoSaveTimeoutRef.current = setTimeout(() => {
-    //   savePermitData(false);
-    // }, 2000);
-  }, []);
+  const updatePermitData = (updates: Partial<PermitData>) => {
+    setPermitData(prev => ({ ...prev, ...updates }));
+  };
 
   const savePermitData = async (showNotification = true) => {
     if (showNotification) {
@@ -413,93 +407,14 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       }
     } catch (error) {
       console.error('Erreur sauvegarde:', error);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      if (showNotification) {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
     } finally {
       if (showNotification) {
         setIsLoading(false);
       }
-    }
-  };
-
-  const handleResetSection = () => {
-    // Réinitialise les données de la section actuelle avec types corrects
-    const sectionDefaults: Record<string, Partial<PermitData>> = {
-      site: {
-        projectNumber: '',
-        workLocation: '',
-        spaceDescription: '',
-        workDescription: '',
-        entry_supervisor: ''
-      },
-      rescue: {
-        rescue_plan_type: 'internal' as const,
-        supervisor_name: ''
-      },
-      atmospheric: {
-        gas_detector_calibrated: false,
-        calibration_date: ''
-      },
-      registry: {
-        permit_valid_from: '',
-        permit_valid_to: ''
-      }
-    };
-
-    const resetData = sectionDefaults[currentSection];
-    if (resetData) {
-      updatePermitData(resetData);
-    }
-    setSaveStatus('idle');
-  };
-
-  const handleSubmitPermit = async () => {
-    setIsLoading(true);
-    setSaveStatus('saving');
-    
-    try {
-      if (onSubmit) {
-        await onSubmit({
-          ...permitData,
-          currentSection,
-          selectedProvince,
-          submitted_at: new Date().toISOString(),
-          status: 'submitted'
-        });
-      }
-      
-      setSaveStatus('saved');
-      
-      // PAS de redirection automatique - juste notification
-      setTimeout(() => {
-        setSaveStatus('idle');
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Erreur soumission:', error);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleQuickExit = (e?: React.MouseEvent) => {
-    // Empêcher la propagation d'événements
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
-    // Fonction spéciale pour quitter avec confirmation
-    const confirmExit = window.confirm(
-      language === 'fr' 
-        ? 'Êtes-vous sûr de vouloir quitter ? Les modifications non sauvegardées seront perdues.'
-        : 'Are you sure you want to exit? Unsaved changes will be lost.'
-    );
-    
-    if (confirmExit) {
-      onCancel();
     }
   };
 
@@ -574,18 +489,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         position: 'relative',
         overflow: 'hidden'
       }}>
-        {/* Arrière-plan décoratif */}
-        <div style={{
-          position: 'absolute',
-          top: '-50%',
-          left: '-50%',
-          width: '200%',
-          height: '200%',
-          background: `radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 50%)`,
-          pointerEvents: 'none',
-          animation: 'pulse 4s ease-in-out infinite'
-        }} />
-        
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{
             fontSize: '64px',
@@ -657,15 +560,15 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               color: '#9ca3af',
               marginBottom: '8px'
             }}>
-              {language === 'fr' ? 'Contenu à venir...' : 'Content coming soon...'}
+              {language === 'fr' ? 'Version de test - Pas d\'éjection !' : 'Test version - No ejection!'}
             </div>
             <div style={{
               fontSize: '12px',
               color: '#6b7280'
             }}>
               {language === 'fr' 
-                ? 'Les vrais modules seront intégrés progressivement'
-                : 'Real modules will be integrated progressively'
+                ? 'Navigation libre sans auto-save'
+                : 'Free navigation without auto-save'
               }
             </div>
           </div>
@@ -685,44 +588,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         margin: '0 auto'
       }}>
         
-        {/* Indicateur de statut de sauvegarde */}
-        {saveStatus !== 'idle' && (
-          <div style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            zIndex: 1000,
-            padding: '12px 20px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '14px',
-            fontWeight: '600',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-            ...(saveStatus === 'saving' && {
-              backgroundColor: '#1f2937',
-              color: '#60a5fa',
-              border: '1px solid #3b82f6'
-            }),
-            ...(saveStatus === 'saved' && {
-              backgroundColor: '#065f46',
-              color: '#86efac',
-              border: '1px solid #10b981'
-            }),
-            ...(saveStatus === 'error' && {
-              backgroundColor: '#7f1d1d',
-              color: '#fca5a5',
-              border: '1px solid #ef4444'
-            })
-          }}>
-            {saveStatus === 'saving' && <Clock style={{ width: '16px', height: '16px' }} />}
-            {saveStatus === 'saved' && <CheckCircle style={{ width: '16px', height: '16px' }} />}
-            {saveStatus === 'error' && <AlertTriangle style={{ width: '16px', height: '16px' }} />}
-            {texts.status[saveStatus]}
-          </div>
-        )}
-
         {/* En-tête principal */}
         <div style={styles.headerCard}>
           <div style={{
@@ -921,101 +786,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           </div>
         </div>
 
-        {/* Menu d'actions rapides - SÉCURISÉ */}
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          left: '20px',
-          zIndex: 1000,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-          pointerEvents: 'auto'
-        }}>
-          <button
-            onClick={handleQuickExit}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              backgroundColor: '#dc2626',
-              border: '3px solid #ef4444',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              boxShadow: '0 6px 20px rgba(239, 68, 68, 0.4)',
-              transition: 'all 0.3s ease',
-              fontSize: '12px',
-              fontWeight: '600',
-              pointerEvents: 'auto'
-            }}
-            title={language === 'fr' ? 'Quitter le permis (avec confirmation)' : 'Exit permit (with confirmation)'}
-          >
-            <XCircle style={{ width: '24px', height: '24px' }} />
-          </button>
-          
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setCurrentSection('site');
-            }}
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '50%',
-              backgroundColor: '#374151',
-              border: '2px solid #6b7280',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-              transition: 'all 0.2s ease',
-              pointerEvents: 'auto'
-            }}
-            title={language === 'fr' ? 'Retour au début' : 'Back to start'}
-          >
-            <Home style={{ width: '20px', height: '20px' }} />
-          </button>
-
-          {/* Bouton d'aide rapide - SÉCURISÉ */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const helpText = language === 'fr' 
-                ? `Section actuelle: ${texts.sections[currentSection]}\n\nNavigation:\n• Cliquez sur les 4 sections en haut\n• Utilisez Précédent/Suivant en bas\n• Enregistrer sauvegarde vos données\n• Réinitialiser vide la section actuelle`
-                : `Current section: ${texts.sections[currentSection]}\n\nNavigation:\n• Click on the 4 sections above\n• Use Previous/Next at bottom\n• Save preserves your data\n• Reset clears current section`;
-              alert(helpText);
-            }}
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              backgroundColor: '#059669',
-              border: '2px solid #10b981',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-              transition: 'all 0.2s ease',
-              pointerEvents: 'auto'
-            }}
-            title={language === 'fr' ? 'Aide rapide' : 'Quick help'}
-          >
-            <AlertTriangle style={{ width: '18px', height: '18px' }} />
-          </button>
-        </div>
-
-        {/* Navigation bas de page - SÉCURISÉE */}
+        {/* Navigation bas de page SIMPLIFIÉE */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -1047,133 +818,58 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             {texts.navigation.previous}
           </button>
           
-        {/* Navigation bas de page - SÉCURISÉE */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: isMobile ? '16px' : '20px',
-          backgroundColor: '#1f2937',
-          borderRadius: '16px',
-          border: '2px solid #374151',
-          pointerEvents: 'auto'
-        }}>
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const sections = ['site', 'rescue', 'atmospheric', 'registry'] as const;
-              const currentIndex = sections.indexOf(currentSection);
-              if (currentIndex > 0) {
-                navigateToSection(sections[currentIndex - 1]);
-              }
-            }}
-            disabled={currentSection === 'site' || isLoading}
-            style={{
-              ...styles.button,
-              ...styles.buttonSecondary,
-              opacity: (currentSection === 'site' || isLoading) ? 0.5 : 1,
-              cursor: (currentSection === 'site' || isLoading) ? 'not-allowed' : 'pointer',
-              width: 'auto',
-              padding: '12px 20px',
-              pointerEvents: 'auto'
-            }}
-          >
-            <ChevronRight style={{ width: '18px', height: '18px', transform: 'rotate(180deg)' }} />
-            {texts.navigation.previous}
-          </button>
-          
           <div style={{
             display: 'flex',
-            gap: '12px',
-            pointerEvents: 'auto'
+            gap: '12px'
           }}>
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                savePermitData(true);
-              }}
+              onClick={() => savePermitData(true)}
               disabled={isLoading}
               style={{
                 ...styles.button,
                 ...styles.buttonSuccess,
                 width: 'auto',
                 padding: '12px 16px',
-                opacity: isLoading ? 0.7 : 1,
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                pointerEvents: 'auto'
+                opacity: isLoading ? 0.7 : 1
               }}
             >
-              {isLoading ? (
-                <>
-                  <Clock style={{ width: '16px', height: '16px' }} />
-                  {language === 'fr' ? 'Sauvegarde...' : 'Saving...'}
-                </>
-              ) : (
-                <>
-                  <Save style={{ width: '16px', height: '16px' }} />
-                  {texts.navigation.save}
-                </>
-              )}
+              <Save style={{ width: '16px', height: '16px' }} />
+              {texts.navigation.save}
             </button>
             
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleResetSection();
-              }}
-              disabled={isLoading}
+              onClick={onCancel}
               style={{
                 ...styles.button,
                 ...styles.buttonSecondary,
                 width: 'auto',
-                padding: '12px 16px',
-                opacity: isLoading ? 0.5 : 1,
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                pointerEvents: 'auto'
+                padding: '12px 16px'
               }}
             >
-              <RotateCcw style={{ width: '16px', height: '16px' }} />
-              {language === 'fr' ? 'Réinitialiser' : 'Reset'}
+              <XCircle style={{ width: '16px', height: '16px' }} />
+              {texts.navigation.cancel}
             </button>
             
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
+              onClick={() => {
                 const sections = ['site', 'rescue', 'atmospheric', 'registry'] as const;
                 const currentIndex = sections.indexOf(currentSection);
                 if (currentIndex < sections.length - 1) {
                   navigateToSection(sections[currentIndex + 1]);
-                } else {
-                  // Dernière section - proposer de soumettre
-                  handleSubmitPermit();
                 }
               }}
-              disabled={isLoading}
+              disabled={currentSection === 'registry'}
               style={{
                 ...styles.button,
-                ...(currentSection === 'registry' ? styles.buttonSuccess : styles.buttonPrimary),
+                ...styles.buttonPrimary,
+                opacity: currentSection === 'registry' ? 0.5 : 1,
+                cursor: currentSection === 'registry' ? 'not-allowed' : 'pointer',
                 width: 'auto',
-                padding: '12px 20px',
-                opacity: isLoading ? 0.7 : 1,
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                pointerEvents: 'auto'
+                padding: '12px 20px'
               }}
             >
-              {currentSection === 'registry' ? (
-                <>
-                  <CheckCircle style={{ width: '18px', height: '18px' }} />
-                  {texts.navigation.submit}
-                </>
-              ) : (
-                <>
-                  {texts.navigation.next}
-                  <ChevronRight style={{ width: '18px', height: '18px' }} />
-                </>
-              )}
+              {texts.navigation.next}
+              <ChevronRight style={{ width: '18px', height: '18px' }} />
             </button>
           </div>
         </div>
