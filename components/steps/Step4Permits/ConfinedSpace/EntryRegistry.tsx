@@ -861,7 +861,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         animation: 'spin 1s linear infinite',
         margin: '0 auto 16px'
       }}></div>
-      <p>{texts.loading}</p>
+      <p>{language === 'fr' ? 'Chargement...' : 'Loading...'}</p>
       <style jsx>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
