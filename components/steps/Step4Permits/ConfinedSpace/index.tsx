@@ -670,7 +670,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
   // =================== RENDU DES SECTIONS AVEC INTÉGRATION PROGRESSIVE ===================
   const renderSectionContent = () => {
-    // Props de base pour tous les composants
+    // Props de base pour tous les composants - SEULEMENT LES PROPS SUPPORTÉES
     const baseProps = {
       language,
       onDataChange: handleSectionDataChange,
@@ -685,21 +685,11 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       styles: actualStyles
     };
 
-    // Props SafetyManager (si disponible)
-    const safetyProps = isSafetyManagerEnabled && safetyManager ? {
-      safetyManager,
-      externalSafetyManager: safetyManager,
-      atmosphericSafetyData: safetyManager.currentPermit?.atmosphericTesting,
-      isAtmosphericSafe: safetyManager.currentPermit?.atmosphericTesting?.readings?.every(r => r.status === 'safe') || false
-    } : {};
-
     switch (currentSection) {
       case 'site':
         return (
           <SiteInformation 
             {...baseProps}
-            {...safetyProps}
-            updateParentData={(data: any) => updateParentData?.(data)}
           />
         );
         
@@ -707,9 +697,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         return (
           <AtmosphericTesting 
             {...baseProps}
-            {...safetyProps}
             setAtmosphericReadings={setAtmosphericReadings}
-            updateParentData={(data: any) => updateParentData?.(data)}
           />
         );
         
@@ -717,8 +705,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         return (
           <EntryRegistry 
             {...baseProps}
-            {...safetyProps}
-            updateParentData={(data: any) => updateParentData?.(data)}
           />
         );
         
@@ -726,24 +712,28 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         return (
           <RescuePlan 
             {...baseProps}
-            {...safetyProps}
-            updateParentData={(data: any) => updateParentData?.(data)}
           />
         );
         
       case 'finalization':
         return (
           <PermitManager
-            {...baseProps}
-            {...safetyProps}
-            updateParentData={(data: any) => updateParentData?.(data)}
+            language={language}
+            onDataChange={handleSectionDataChange}
+            onSave={onSave}
+            onCancel={onCancel || (() => {})}
             onSubmit={(finalData: any) => {
               if (onSubmit) {
                 onSubmit(finalData);
               }
             }}
-            // Props spécifiques PermitManager
+            // Props PermitManager spécifiques
             formData={formData}
+            selectedProvince={selectedProvince}
+            PROVINCIAL_REGULATIONS={actualRegulations}
+            isMobile={actualIsMobile}
+            permitData={permitData}
+            safetyManager={isSafetyManagerEnabled ? safetyManager : undefined}
             tenant={tenant}
             errors={errors}
             userRole={userRole}
