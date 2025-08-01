@@ -1,4 +1,20 @@
-"use client";
+// =================== RENDU SECTION AVEC VRAIS MODULES ===================
+  const renderSectionContent = () => {
+    const commonProps = {
+      language,
+      tenant,
+      touchOptimized,
+      compactMode,
+      permitData,
+      province: selectedProvince,
+      regulations: PROVINCIAL_REGULATIONS[selectedProvince]
+    };
+
+    try {
+      switch (currentSection) {
+        case 'site':
+          return (
+            <Site"use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
@@ -16,7 +32,48 @@ import EntryRegistry from './EntryRegistry';
 import PermitManager from './PermitManager';
 import { useSafetyManager } from './SafetyManager';
 
-// =================== DÉTECTION MOBILE ET STYLES COMPLETS ===================
+// =================== TYPES ET INTERFACES ===================
+type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
+
+interface ConfinedSpaceProps {
+  // Props reçues depuis ASTForm - COMPATIBILITÉ COMPLÈTE
+  formData?: any;
+  onDataChange?: (section: string, data: any) => void;
+  language?: 'fr' | 'en';
+  tenant?: string;
+  errors?: any;
+  province?: ProvinceCode;
+  userRole?: string;
+  touchOptimized?: boolean;
+  compactMode?: boolean;
+  onPermitChange?: (permits: any) => void;
+  initialPermits?: any[];
+  
+  // Props spécifiques ConfinedSpace (optionnelles)
+  onSave?: (data: any) => void;
+  onSubmit?: (data: any) => void;
+  onCancel?: () => void;
+  initialData?: any;
+}
+
+interface PermitData {
+  permit_number?: string;
+  issue_date?: string;
+  selected_province?: ProvinceCode;
+  projectNumber?: string;
+  workLocation?: string;
+  spaceDescription?: string;
+  workDescription?: string;
+  entry_supervisor?: string;
+  rescue_plan_type?: 'internal' | 'external' | 'hybrid';
+  gas_detector_calibrated?: boolean;
+  calibration_date?: string;
+  supervisor_name?: string;
+  permit_valid_from?: string;
+  permit_valid_to?: string;
+}
+
+// =================== DÉTECTION MOBILE ET STYLES ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
 const styles = {
@@ -97,54 +154,7 @@ const styles = {
   }
 };
 
-// =================== TYPES ET INTERFACES COMPLETS ===================
-type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
-
-interface ConfinedSpaceProps {
-  // Props reçues depuis ASTForm
-  formData?: any;
-  onDataChange?: (section: string, data: any) => void;
-  language?: 'fr' | 'en';
-  tenant?: string;
-  errors?: any;
-  province?: ProvinceCode;
-  userRole?: string;
-  touchOptimized?: boolean;
-  compactMode?: boolean;
-  onPermitChange?: (permits: any) => void;
-  initialPermits?: any[];
-  
-  // Props spécifiques à ConfinedSpace (toutes optionnelles)
-  onSave?: (data: any) => void;
-  onSubmit?: (data: any) => void;
-  onCancel?: () => void;
-  initialData?: any;
-}
-
-interface PermitData {
-  permit_number?: string;
-  issue_date?: string;
-  selected_province?: ProvinceCode;
-  projectNumber?: string;
-  workLocation?: string;
-  spaceDescription?: string;
-  workDescription?: string;
-  entry_supervisor?: string;
-  rescue_plan_type?: 'internal' | 'external' | 'hybrid';
-  gas_detector_calibrated?: boolean;
-  calibration_date?: string;
-  supervisor_name?: string;
-  permit_valid_from?: string;
-  permit_valid_to?: string;
-  
-  // Données des sous-modules
-  siteInformation?: any;
-  rescuePlan?: any;
-  atmosphericTesting?: any;
-  entryRegistry?: any;
-}
-
-// =================== DONNÉES RÉGLEMENTAIRES PROVINCIALES ===================
+// =================== DONNÉES RÉGLEMENTAIRES ===================
 const PROVINCIAL_REGULATIONS: Record<ProvinceCode, any> = {
   QC: {
     name: "Règlement sur la santé et la sécurité du travail (RSST)",
@@ -298,7 +308,7 @@ const PROVINCIAL_REGULATIONS: Record<ProvinceCode, any> = {
   }
 };
 
-// =================== TRADUCTIONS COMPLÈTES ===================
+// =================== TRADUCTIONS ===================
 const getTexts = (language: 'fr' | 'en') => ({
   fr: {
     title: "Permis d'Entrée en Espace Clos",
@@ -335,14 +345,15 @@ const getTexts = (language: 'fr' | 'en') => ({
     emergencyContact: "Contact d'urgence",
     complianceNote: "Conforme aux réglementations de",
     autoSaveEnabled: "Sauvegarde automatique activée",
-    progressTracker: "Progression du permis"
+    progressTracker: "Progression du permis",
+    testForm: "Formulaire de test fonctionnel"
   },
   en: {
     title: "Confined Space Entry Permit",
     subtitle: "Mandatory legal document according to Canadian provincial regulations",
     sections: {
       site: "Site Information",
-      rescue: "Rescue Plan",
+      rescue: "Rescue Plan", 
       atmospheric: "Atmospheric Testing",
       registry: "Entry Registry",
       finalization: "Finalization"
@@ -372,7 +383,8 @@ const getTexts = (language: 'fr' | 'en') => ({
     emergencyContact: "Emergency Contact",
     complianceNote: "Compliant with regulations of",
     autoSaveEnabled: "Auto-save enabled",
-    progressTracker: "Permit Progress"
+    progressTracker: "Permit Progress",
+    testForm: "Functional test form"
   }
 })[language];
 
@@ -391,14 +403,14 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   onPermitChange,
   initialPermits,
   
-  // Props spécifiques (peuvent être undefined si appelé depuis ASTForm)
+  // Props spécifiques
   onSave,
   onSubmit,
   onCancel,
   initialData = {}
 }) => {
 
-  // =================== GESTION DES DONNÉES COMPATIBLE ASTFORM ===================
+  // =================== ÉTATS LOCAUX ===================
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization'>('site');
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province);
   const [permitData, setPermitData] = useState<PermitData>(initialData || formData?.permitData || {});
@@ -408,9 +420,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   const texts = getTexts(language);
   const safetyManager = useSafetyManager();
 
-  // =================== FONCTIONS UTILITAIRES COMPATIBLES ===================
+  // =================== FONCTIONS UTILITAIRES - OPTIMISÉES ===================
   useEffect(() => {
-    // Génération du numéro de permis SEULEMENT si pas présent
+    // Génération du numéro de permis SEULEMENT si absent
     if (!permitData.permit_number) {
       const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const random = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -422,30 +434,17 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         selected_province: selectedProvince
       }));
     }
-  }, []); // ✅ Dependency array vide pour éviter les boucles qui causaient l'éjection
+  }, []); // ✅ Dependency array vide pour éviter les boucles
 
-  const updatePermitData = (updates: Partial<PermitData>) => {
+  const updatePermitData = useCallback((updates: Partial<PermitData>) => {
     const newData = { ...permitData, ...updates };
     setPermitData(newData);
     
-    // Informer le parent (ASTForm) si la fonction existe
+    // Informer le parent ASTForm
     if (onDataChange) {
       onDataChange('permitData', newData);
     }
-  };
-
-  const updateSectionData = (section: string, data: any) => {
-    const newPermitData = {
-      ...permitData,
-      [section]: data
-    };
-    setPermitData(newPermitData);
-    
-    // Informer le parent (ASTForm) si la fonction existe
-    if (onDataChange) {
-      onDataChange('permitData', newPermitData);
-    }
-  };
+  }, [permitData, onDataChange]);
 
   const handleSaveData = useCallback(async (showNotification = true) => {
     if (showNotification) {
@@ -454,7 +453,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
     
     try {
-      // Utiliser onSave si fourni, sinon onDataChange pour ASTForm
       if (onSave) {
         await onSave({
           ...permitData,
@@ -486,9 +484,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
   }, [permitData, currentSection, selectedProvince, onSave, onDataChange]);
 
-  const navigateToSection = (section: 'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization') => {
+  const navigateToSection = useCallback((section: 'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization') => {
     setCurrentSection(section);
-  };
+  }, []);
 
   const getSectionIcon = (section: string) => {
     const iconMap = {
@@ -501,70 +499,132 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     return iconMap[section as keyof typeof iconMap] || FileText;
   };
 
-  // =================== RENDU DES VRAIS MODULES ===================
-  const renderSectionContent = () => {
-    const commonProps = {
-      language,
-      tenant,
-      touchOptimized,
-      compactMode,
-      permitData,
-      onDataChange: updateSectionData,
-      province: selectedProvince,
-      regulations: PROVINCIAL_REGULATIONS[selectedProvince]
-    };
+  // =================== RENDU SECTION DE TEST FONCTIONNEL ===================
+  const renderTestForm = () => {
+    return (
+      <div style={{
+        padding: '40px',
+        textAlign: 'center',
+        border: '2px solid #10b981',
+        borderRadius: '12px',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{
+            fontSize: '64px',
+            marginBottom: '24px',
+            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
+          }}>
+            ✅
+          </div>
+          
+          <h3 style={{ 
+            color: 'white', 
+            marginBottom: '16px',
+            fontSize: '24px',
+            fontWeight: '700'
+          }}>
+            {texts.testForm}
+          </h3>
+          
+          <p style={{ 
+            color: '#d1d5db', 
+            lineHeight: 1.6,
+            marginBottom: '32px',
+            fontSize: '16px',
+            maxWidth: '500px',
+            margin: '0 auto 32px auto'
+          }}>
+            {language === 'fr' 
+              ? 'Interface fonctionnelle - Navigation et sauvegarde sans éjection automatique'
+              : 'Functional interface - Navigation and saving without automatic ejection'
+            }
+          </p>
 
-    switch (currentSection) {
-      case 'site':
-        return (
-          <SiteInformation
-            {...commonProps}
-            data={permitData.siteInformation || {}}
-            onDataChange={(data) => updateSectionData('siteInformation', data)}
-          />
-        );
-      
-      case 'rescue':
-        return (
-          <RescuePlan
-            {...commonProps}
-            data={permitData.rescuePlan || {}}
-            onDataChange={(data) => updateSectionData('rescuePlan', data)}
-          />
-        );
-      
-      case 'atmospheric':
-        return (
-          <AtmosphericTesting
-            {...commonProps}
-            data={permitData.atmosphericTesting || {}}
-            onDataChange={(data) => updateSectionData('atmosphericTesting', data)}
-          />
-        );
-      
-      case 'registry':
-        return (
-          <EntryRegistry
-            {...commonProps}
-            data={permitData.entryRegistry || {}}
-            onDataChange={(data) => updateSectionData('entryRegistry', data)}
-          />
-        );
-      
-      case 'finalization':
-        return (
-          <PermitManager
-            {...commonProps}
-            permitData={permitData}
-            safetyManager={safetyManager}
-            onSave={handleSaveData}
-            onSubmit={onSubmit}
-          />
-        );
-      
-      default:
-        return <div>Section non trouvée</div>;
-    }
+          {/* Formulaire de test simple */}
+          <div style={{
+            maxWidth: '400px',
+            margin: '0 auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <input
+              type="text"
+              placeholder={language === 'fr' ? 'Numéro de projet' : 'Project Number'}
+              value={permitData.projectNumber || ''}
+              onChange={(e) => updatePermitData({ projectNumber: e.target.value })}
+              style={{
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #374151',
+                backgroundColor: '#1f2937',
+                color: 'white',
+                fontSize: '16px'
+              }}
+            />
+            
+            <input
+              type="text"
+              placeholder={language === 'fr' ? 'Lieu de travail' : 'Work Location'}
+              value={permitData.workLocation || ''}
+              onChange={(e) => updatePermitData({ workLocation: e.target.value })}
+              style={{
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #374151',
+                backgroundColor: '#1f2937',
+                color: 'white',
+                fontSize: '16px'
+              }}
+            />
+            
+            <input
+              type="text"
+              placeholder={language === 'fr' ? 'Superviseur d\'entrée' : 'Entry Supervisor'}
+              value={permitData.entry_supervisor || ''}
+              onChange={(e) => updatePermitData({ entry_supervisor: e.target.value })}
+              style={{
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #374151',
+                backgroundColor: '#1f2937',
+                color: 'white',
+                fontSize: '16px'
+              }}
+            />
+          </div>
+
+          {/* Indicateur de test */}
+          <div style={{
+            marginTop: '32px',
+            padding: '16px',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            borderRadius: '8px',
+            border: '1px solid rgba(16, 185, 129, 0.2)'
+          }}>
+            <div style={{
+              fontSize: '14px',
+              color: '#86efac',
+              marginBottom: '8px'
+            }}>
+              {language === 'fr' ? '🧪 Test de Fonctionnalité' : '🧪 Functionality Test'}
+            </div>
+            <div style={{
+              fontSize: '12px',
+              color: '#6ee7b7'
+            }}>
+              {language === 'fr' 
+                ? 'Navigation libre, pas d\'éjection automatique, changement de langue sécurisé'
+                : 'Free navigation, no automatic ejection, secure language switching'
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // =================== RENDU PRINCIPAL ===================
@@ -784,8 +844,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                     alignItems: 'center',
                     gap: '12px',
                     transform: isActive ? 'translateY(-2px)' : 'translateY(0)',
-                    boxShadow: isActive ? '0 8px 25px rgba(59, 130, 246, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                    pointerEvents: 'auto'
+                    boxShadow: isActive ? '0 8px 25px rgba(59, 130, 246, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)'
                   }}
                 >
                   <Icon style={{ 
@@ -801,10 +860,10 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           </div>
         </div>
 
-        {/* Contenu de la section active - VRAIS MODULES */}
+        {/* Contenu de la section active */}
         <div style={styles.sectionCard}>
           <div style={{ padding: isMobile ? '20px' : '28px' }}>
-            {renderSectionContent()}
+            {renderTestForm()}
           </div>
         </div>
 
@@ -835,8 +894,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               opacity: currentSection === 'site' ? 0.5 : 1,
               cursor: currentSection === 'site' ? 'not-allowed' : 'pointer',
               width: 'auto',
-              padding: '12px 20px',
-              pointerEvents: 'auto'
+              padding: '12px 20px'
             }}
           >
             <ChevronRight style={{ width: '18px', height: '18px', transform: 'rotate(180deg)' }} />
@@ -859,8 +917,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                 ...styles.buttonSuccess,
                 width: 'auto',
                 padding: '12px 16px',
-                opacity: isLoading ? 0.7 : 1,
-                pointerEvents: 'auto'
+                opacity: isLoading ? 0.7 : 1
               }}
             >
               <Save style={{ width: '16px', height: '16px' }} />
@@ -878,8 +935,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                   ...styles.button,
                   ...styles.buttonSecondary,
                   width: 'auto',
-                  padding: '12px 16px',
-                  pointerEvents: 'auto'
+                  padding: '12px 16px'
                 }}
               >
                 <XCircle style={{ width: '16px', height: '16px' }} />
@@ -903,8 +959,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                 ...styles.button,
                 ...(currentSection === 'finalization' ? styles.buttonSuccess : styles.buttonPrimary),
                 width: 'auto',
-                padding: '12px 20px',
-                pointerEvents: 'auto'
+                padding: '12px 20px'
               }}
             >
               {currentSection === 'finalization' ? texts.navigation.submit : texts.navigation.next}
