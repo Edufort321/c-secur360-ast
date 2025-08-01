@@ -421,8 +421,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   };
 
   const handleResetSection = () => {
-    // Réinitialise les données de la section actuelle
-    const sectionDefaults = {
+    // Réinitialise les données de la section actuelle avec types corrects
+    const sectionDefaults: Record<string, Partial<PermitData>> = {
       site: {
         projectNumber: '',
         workLocation: '',
@@ -431,7 +431,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         entry_supervisor: ''
       },
       rescue: {
-        rescue_plan_type: 'internal',
+        rescue_plan_type: 'internal' as const,
         supervisor_name: ''
       },
       atmospheric: {
@@ -444,7 +444,10 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       }
     };
 
-    updatePermitData(sectionDefaults[currentSection]);
+    const resetData = sectionDefaults[currentSection];
+    if (resetData) {
+      updatePermitData(resetData);
+    }
     setSaveStatus('idle');
   };
 
@@ -465,10 +468,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       
       setSaveStatus('saved');
       
-      // Afficher une notification de succès et optionnellement rediriger
+      // Notification de succès
       setTimeout(() => {
         setSaveStatus('idle');
-        // onCancel(); // Décommentez si vous voulez rediriger après soumission
       }, 2000);
       
     } catch (error) {
@@ -476,6 +478,19 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       setTimeout(() => setSaveStatus('idle'), 3000);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleQuickExit = () => {
+    // Fonction spéciale pour quitter avec confirmation
+    const confirmExit = window.confirm(
+      language === 'fr' 
+        ? 'Êtes-vous sûr de vouloir quitter ? Les modifications non sauvegardées seront perdues.'
+        : 'Are you sure you want to exit? Unsaved changes will be lost.'
+    );
+    
+    if (confirmExit) {
+      onCancel();
     }
   };
 
@@ -493,33 +508,159 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     return iconMap[section as keyof typeof iconMap] || FileText;
   };
 
-  // =================== RENDU DES SECTIONS (PLACEHOLDER POUR L'INSTANT) ===================
+  // =================== RENDU DES SECTIONS AMÉLIORÉ ===================
   const renderSectionContent = () => {
+    const sectionData = {
+      site: {
+        emoji: '🏢',
+        title: texts.sections.site,
+        description: language === 'fr' 
+          ? 'Configuration des informations du site de travail, description de l\'espace clos et détails du projet.'
+          : 'Configure work site information, confined space description and project details.',
+        features: language === 'fr' 
+          ? ['Localisation GPS', 'Description détaillée', 'Responsable d\'entrée', 'Photos du site']
+          : ['GPS Location', 'Detailed Description', 'Entry Supervisor', 'Site Photos']
+      },
+      rescue: {
+        emoji: '🛡️',
+        title: texts.sections.rescue,
+        description: language === 'fr' 
+          ? 'Plan de sauvetage d\'urgence avec contacts, équipements et procédures de secours.'
+          : 'Emergency rescue plan with contacts, equipment and rescue procedures.',
+        features: language === 'fr' 
+          ? ['Plan d\'évacuation', 'Équipe de secours', 'Équipements d\'urgence', 'Contacts d\'urgence']
+          : ['Evacuation Plan', 'Rescue Team', 'Emergency Equipment', 'Emergency Contacts']
+      },
+      atmospheric: {
+        emoji: '🌬️',
+        title: texts.sections.atmospheric,
+        description: language === 'fr' 
+          ? 'Tests atmosphériques continus avec surveillance en temps réel des gaz dangereux.'
+          : 'Continuous atmospheric testing with real-time monitoring of hazardous gases.',
+        features: language === 'fr' 
+          ? ['Tests 4-gaz', 'Surveillance Bluetooth', 'Alarmes automatiques', 'Calibration équipements']
+          : ['4-Gas Testing', 'Bluetooth Monitoring', 'Automatic Alarms', 'Equipment Calibration']
+      },
+      registry: {
+        emoji: '👥',
+        title: texts.sections.registry,
+        description: language === 'fr' 
+          ? 'Registre d\'entrée et de sortie avec horodatage et signatures électroniques.'
+          : 'Entry and exit registry with timestamps and electronic signatures.',
+        features: language === 'fr' 
+          ? ['Horodatage précis', 'Signatures électroniques', 'Durée d\'exposition', 'Validation finale']
+          : ['Precise Timestamps', 'Electronic Signatures', 'Exposure Duration', 'Final Validation']
+      }
+    };
+
+    const current = sectionData[currentSection];
+
     return (
       <div style={{
         padding: '40px',
         textAlign: 'center',
         border: '2px dashed #374151',
         borderRadius: '12px',
-        backgroundColor: 'rgba(17, 24, 39, 0.5)'
+        backgroundColor: 'rgba(17, 24, 39, 0.5)',
+        position: 'relative',
+        overflow: 'hidden'
       }}>
+        {/* Arrière-plan décoratif */}
         <div style={{
-          fontSize: '48px',
-          marginBottom: '16px'
-        }}>
-          {currentSection === 'site' ? '🏢' :
-           currentSection === 'rescue' ? '🛡️' :
-           currentSection === 'atmospheric' ? '🌬️' : '👥'}
+          position: 'absolute',
+          top: '-50%',
+          left: '-50%',
+          width: '200%',
+          height: '200%',
+          background: `radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 50%)`,
+          pointerEvents: 'none',
+          animation: 'pulse 4s ease-in-out infinite'
+        }} />
+        
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{
+            fontSize: '64px',
+            marginBottom: '24px',
+            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
+          }}>
+            {current.emoji}
+          </div>
+          
+          <h3 style={{ 
+            color: 'white', 
+            marginBottom: '16px',
+            fontSize: '24px',
+            fontWeight: '700'
+          }}>
+            {current.title}
+          </h3>
+          
+          <p style={{ 
+            color: '#d1d5db', 
+            lineHeight: 1.6,
+            marginBottom: '32px',
+            fontSize: '16px',
+            maxWidth: '500px',
+            margin: '0 auto 32px auto'
+          }}>
+            {current.description}
+          </p>
+
+          {/* Liste des fonctionnalités */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+            gap: '12px',
+            maxWidth: '400px',
+            margin: '0 auto'
+          }}>
+            {current.features.map((feature, index) => (
+              <div
+                key={index}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(59, 130, 246, 0.2)',
+                  fontSize: '14px',
+                  color: '#93c5fd'
+                }}
+              >
+                <CheckCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                <span>{feature}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Indicateur de progression */}
+          <div style={{
+            marginTop: '32px',
+            padding: '16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <div style={{
+              fontSize: '14px',
+              color: '#9ca3af',
+              marginBottom: '8px'
+            }}>
+              {language === 'fr' ? 'Contenu à venir...' : 'Content coming soon...'}
+            </div>
+            <div style={{
+              fontSize: '12px',
+              color: '#6b7280'
+            }}>
+              {language === 'fr' 
+                ? 'Les vrais modules seront intégrés progressivement'
+                : 'Real modules will be integrated progressively'
+              }
+            </div>
+          </div>
         </div>
-        <h3 style={{ color: 'white', marginBottom: '16px' }}>
-          Section: {texts.sections[currentSection]}
-        </h3>
-        <p style={{ color: '#9ca3af', lineHeight: 1.6 }}>
-          {language === 'fr' 
-            ? `Contenu de la section ${texts.sections[currentSection]} sera ajouté ici. Pour l'instant, on teste juste la structure et le style.`
-            : `Content for ${texts.sections[currentSection]} section will be added here. For now, we're just testing the structure and styling.`
-          }
-        </p>
       </div>
     );
   };
@@ -771,7 +912,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           </div>
         </div>
 
-        {/* Menu d'actions rapides */}
+        {/* Menu d'actions rapides optimisé */}
         <div style={{
           position: 'fixed',
           bottom: '20px',
@@ -782,24 +923,34 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           gap: '8px'
         }}>
           <button
-            onClick={onCancel}
+            onClick={handleQuickExit}
             style={{
-              width: '48px',
-              height: '48px',
+              width: '56px',
+              height: '56px',
               borderRadius: '50%',
-              backgroundColor: '#7f1d1d',
-              border: '2px solid #ef4444',
+              backgroundColor: '#dc2626',
+              border: '3px solid #ef4444',
               color: 'white',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
-              transition: 'all 0.2s ease'
+              boxShadow: '0 6px 20px rgba(239, 68, 68, 0.4)',
+              transition: 'all 0.3s ease',
+              fontSize: '12px',
+              fontWeight: '600'
             }}
-            title={language === 'fr' ? 'Quitter le permis' : 'Exit permit'}
+            title={language === 'fr' ? 'Quitter le permis (avec confirmation)' : 'Exit permit (with confirmation)'}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.1)';
+              e.currentTarget.style.boxShadow = '0 8px 25px rgba(239, 68, 68, 0.6)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(239, 68, 68, 0.4)';
+            }}
           >
-            <XCircle style={{ width: '20px', height: '20px' }} />
+            <XCircle style={{ width: '24px', height: '24px' }} />
           </button>
           
           <button
@@ -819,8 +970,41 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               transition: 'all 0.2s ease'
             }}
             title={language === 'fr' ? 'Retour au début' : 'Back to start'}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#4b5563';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#374151';
+            }}
           >
             <Home style={{ width: '20px', height: '20px' }} />
+          </button>
+
+          {/* Bouton d'aide rapide */}
+          <button
+            onClick={() => {
+              const helpText = language === 'fr' 
+                ? `Section actuelle: ${texts.sections[currentSection]}\n\nNavigation:\n• Cliquez sur les 4 sections en haut\n• Utilisez Précédent/Suivant en bas\n• Enregistrer sauvegarde vos données\n• Réinitialiser vide la section actuelle`
+                : `Current section: ${texts.sections[currentSection]}\n\nNavigation:\n• Click on the 4 sections above\n• Use Previous/Next at bottom\n• Save preserves your data\n• Reset clears current section`;
+              alert(helpText);
+            }}
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              backgroundColor: '#059669',
+              border: '2px solid #10b981',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+              transition: 'all 0.2s ease'
+            }}
+            title={language === 'fr' ? 'Aide rapide' : 'Quick help'}
+          >
+            <AlertTriangle style={{ width: '18px', height: '18px' }} />
           </button>
         </div>
 
@@ -862,24 +1046,39 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           }}>
             <button
               onClick={() => savePermitData(true)}
+              disabled={isLoading}
               style={{
                 ...styles.button,
                 ...styles.buttonSuccess,
                 width: 'auto',
-                padding: '12px 16px'
+                padding: '12px 16px',
+                opacity: isLoading ? 0.7 : 1,
+                cursor: isLoading ? 'not-allowed' : 'pointer'
               }}
             >
-              <Save style={{ width: '16px', height: '16px' }} />
-              {texts.navigation.save}
+              {isLoading ? (
+                <>
+                  <Clock style={{ width: '16px', height: '16px' }} />
+                  {language === 'fr' ? 'Sauvegarde...' : 'Saving...'}
+                </>
+              ) : (
+                <>
+                  <Save style={{ width: '16px', height: '16px' }} />
+                  {texts.navigation.save}
+                </>
+              )}
             </button>
             
             <button
               onClick={handleResetSection}
+              disabled={isLoading}
               style={{
                 ...styles.button,
                 ...styles.buttonSecondary,
                 width: 'auto',
-                padding: '12px 16px'
+                padding: '12px 16px',
+                opacity: isLoading ? 0.5 : 1,
+                cursor: isLoading ? 'not-allowed' : 'pointer'
               }}
             >
               <RotateCcw style={{ width: '16px', height: '16px' }} />
@@ -897,11 +1096,14 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                   handleSubmitPermit();
                 }
               }}
+              disabled={isLoading}
               style={{
                 ...styles.button,
                 ...(currentSection === 'registry' ? styles.buttonSuccess : styles.buttonPrimary),
                 width: 'auto',
-                padding: '12px 20px'
+                padding: '12px 20px',
+                opacity: isLoading ? 0.7 : 1,
+                cursor: isLoading ? 'not-allowed' : 'pointer'
               }}
             >
               {currentSection === 'registry' ? (
