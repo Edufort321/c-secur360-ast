@@ -96,8 +96,20 @@ const styles = {
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 
 interface ConfinedSpaceProps {
-  province?: ProvinceCode;
+  // Props reçues depuis ASTForm
+  formData?: any;
+  onDataChange?: (section: string, data: any) => void;
   language?: 'fr' | 'en';
+  tenant?: string;
+  errors?: any;
+  province?: ProvinceCode;
+  userRole?: string;
+  touchOptimized?: boolean;
+  compactMode?: boolean;
+  onPermitChange?: (permits: any) => void;
+  initialPermits?: any[];
+  
+  // Props spécifiques à ConfinedSpace
   onSave?: (data: any) => void;
   onSubmit?: (data: any) => void;
   onCancel: () => void;
@@ -355,24 +367,36 @@ const getTexts = (language: 'fr' | 'en') => ({
 
 // =================== COMPOSANT PRINCIPAL ===================
 const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
-  province = 'QC',
+  // Props depuis ASTForm
+  formData,
+  onDataChange,
   language = 'fr',
+  tenant,
+  errors,
+  province = 'QC',
+  userRole,
+  touchOptimized,
+  compactMode,
+  onPermitChange,
+  initialPermits,
+  
+  // Props spécifiques (peuvent être undefined si appelé depuis ASTForm)
   onSave,
   onSubmit,
-  onCancel,
+  onCancel = () => {}, // Fonction par défaut si pas fournie
   initialData = {}
 }) => {
 
-  // =================== ÉTATS LOCAUX - RETOUR À LA GESTION CENTRALISÉE ===================
+  // =================== GESTION DES DONNÉES COMPATIBLE ASTFORM ===================
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization'>('site');
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province);
-  const [permitData, setPermitData] = useState<PermitData>(initialData);
+  const [permitData, setPermitData] = useState<PermitData>(initialData || formData?.permitData || {});
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   
   const texts = getTexts(language);
 
-  // =================== FONCTIONS UTILITAIRES SIMPLIFIÉES ===================
+  // =================== FONCTIONS UTILITAIRES COMPATIBLES ===================
   useEffect(() => {
     if (!permitData.permit_number) {
       const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -388,7 +412,13 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   }, []); // Dependency array vide pour éviter les boucles
 
   const updatePermitData = (updates: Partial<PermitData>) => {
-    setPermitData(prev => ({ ...prev, ...updates }));
+    const newData = { ...permitData, ...updates };
+    setPermitData(newData);
+    
+    // Informer le parent (ASTForm) si la fonction existe
+    if (onDataChange) {
+      onDataChange('permitData', newData);
+    }
   };
 
   const savePermitData = async (showNotification = true) => {
@@ -398,8 +428,15 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
     
     try {
+      // Utiliser onSave si fourni, sinon onDataChange pour ASTForm
       if (onSave) {
         await onSave({
+          ...permitData,
+          currentSection,
+          selectedProvince
+        });
+      } else if (onDataChange) {
+        onDataChange('confined-space', {
           ...permitData,
           currentSection,
           selectedProvince
