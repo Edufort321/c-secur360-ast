@@ -1368,7 +1368,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                       color: permit.category === 'primary' ? '#60a5fa' : 
                              permit.category === 'secondary' ? '#a78bfa' : '#fbbf24'
                     }}>
-                      {t[permit.category as keyof typeof t]}
+                      {permit.category}
                     </span>
 
                     {permit.status === 'active' && (
