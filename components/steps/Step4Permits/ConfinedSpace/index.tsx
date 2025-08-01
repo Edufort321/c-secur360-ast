@@ -842,35 +842,21 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
   // =================== RENDU CONDITIONNEL DES SECTIONS AVEC SÉCURITÉ ===================
   const renderCurrentStep = () => {
-    // 🔒 SÉCURITÉ : Props de base pour tous les composants
-    const baseProps = {
-      language,
-      onDataChange: handleSectionDataChange,
-      onSave: (data: any) => updateSectionData(state.currentStep, data),
-      onCancel: onCancel || (() => {
-        console.log('Cancel action - no handler provided');
-      }),
-      permitData: permitData,
-      updatePermitData: updatePermitDataConsolidated,
-      selectedProvince: activeSelectedProvince,
-      PROVINCIAL_REGULATIONS: activeRegulations,
-      atmosphericReadings,
-      isMobile,
-      styles: activeStyles,
-      setAtmosphericReadings,
-      formData,
-      tenant,
-      errors,
-      userRole,
-      touchOptimized,
-      compactMode
-    };
-
     switch (state.currentStep) {
       case 'site':
         return (
           <SiteInformation 
-            {...baseProps}
+            language={language}
+            onDataChange={handleSectionDataChange}
+            onSave={(data: any) => updateSectionData('site', data)}
+            onCancel={onCancel || (() => {})}
+            permitData={permitData}
+            updatePermitData={updatePermitDataConsolidated}
+            selectedProvince={activeSelectedProvince}
+            PROVINCIAL_REGULATIONS={activeRegulations}
+            atmosphericReadings={atmosphericReadings}
+            isMobile={isMobile}
+            styles={activeStyles}
             updateParentData={updateParentDataFieldAdapter}
           />
         );
@@ -878,27 +864,54 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       case 'atmospheric':
         return (
           <AtmosphericTesting 
-            {...baseProps}
+            language={language}
+            onDataChange={handleSectionDataChange}
+            onSave={(data: any) => updateSectionData('atmospheric', data)}
+            onCancel={onCancel || (() => {})}
+            permitData={permitData}
+            updatePermitData={updatePermitDataConsolidated}
+            selectedProvince={activeSelectedProvince}
+            PROVINCIAL_REGULATIONS={activeRegulations}
+            atmosphericReadings={atmosphericReadings}
+            isMobile={isMobile}
+            styles={activeStyles}
             updateParentData={updateParentDataFieldAdapter}
+            setAtmosphericReadings={setAtmosphericReadings}
           />
         );
         
       case 'registry':
         return (
           <EntryRegistry 
-            {...baseProps}
+            language={language}
+            onDataChange={handleSectionDataChange}
+            onSave={(data: any) => updateSectionData('registry', data)}
+            onCancel={onCancel || (() => {})}
+            permitData={permitData}
+            updatePermitData={updatePermitDataConsolidated}
+            selectedProvince={activeSelectedProvince}
+            PROVINCIAL_REGULATIONS={activeRegulations}
+            atmosphericReadings={atmosphericReadings}
+            isMobile={isMobile}
+            styles={activeStyles}
             updateParentData={updateParentDataFieldAdapter}
-            // 🔒 SÉCURITÉ : Props spécifiques pour la sécurité d'entrée
-            safetyManager={safetyManager}
-            atmosphericSafetyData={safetyManager.currentPermit.atmosphericTesting}
-            isAtmosphericSafe={safetyManager.currentPermit.atmosphericTesting?.readings?.every(r => r.status === 'safe') || false}
           />
         );
         
       case 'rescue':
         return (
           <RescuePlan 
-            {...baseProps}
+            language={language}
+            onDataChange={handleSectionDataChange}
+            onSave={(data: any) => updateSectionData('rescue', data)}
+            onCancel={onCancel || (() => {})}
+            permitData={permitData}
+            updatePermitData={updatePermitDataConsolidated}
+            selectedProvince={activeSelectedProvince}
+            PROVINCIAL_REGULATIONS={activeRegulations}
+            atmosphericReadings={atmosphericReadings}
+            isMobile={isMobile}
+            styles={activeStyles}
             updateParentData={updateParentDataFieldAdapter}
           />
         );
@@ -906,8 +919,17 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       case 'finalization':
         return (
           <PermitManager
-            {...baseProps}
-            // 🎯 CORRECTION CRITIQUE : Signature adaptée pour PermitManager
+            language={language}
+            onDataChange={handleSectionDataChange}
+            onSave={(data: any) => updateSectionData('finalization', data)}
+            onCancel={onCancel || (() => {})}
+            permitData={permitData}
+            updatePermitData={updatePermitDataConsolidated}
+            selectedProvince={activeSelectedProvince}
+            PROVINCIAL_REGULATIONS={activeRegulations}
+            atmosphericReadings={atmosphericReadings}
+            isMobile={isMobile}
+            styles={activeStyles}
             updateParentData={updateParentDataAdapter}
             onSubmit={(finalData: any) => {
               if (onSubmit) {
@@ -920,7 +942,17 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       default:
         return (
           <SiteInformation 
-            {...baseProps}
+            language={language}
+            onDataChange={handleSectionDataChange}
+            onSave={(data: any) => updateSectionData('site', data)}
+            onCancel={onCancel || (() => {})}
+            permitData={permitData}
+            updatePermitData={updatePermitDataConsolidated}
+            selectedProvince={activeSelectedProvince}
+            PROVINCIAL_REGULATIONS={activeRegulations}
+            atmosphericReadings={atmosphericReadings}
+            isMobile={isMobile}
+            styles={activeStyles}
             updateParentData={updateParentDataFieldAdapter}
           />
         );
@@ -961,16 +993,13 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         onDataChange={onDataChange}
         onSave={onSave}
         onCancel={() => setState(prev => ({ ...prev, showManager: false }))}
-        onSubmit={onSubmit || (() => {
-          console.log('Submit action - no handler provided');
-        })}
+        onSubmit={onSubmit || (() => {})}
         permitData={permitData}
         updatePermitData={updatePermitDataConsolidated}
         selectedProvince={activeSelectedProvince}
         PROVINCIAL_REGULATIONS={activeRegulations}
         isMobile={isMobile}
         styles={activeStyles}
-        // 🎯 CORRECTION : Signature correcte pour showManager
         updateParentData={updateParentDataAdapter}
       />
     );
