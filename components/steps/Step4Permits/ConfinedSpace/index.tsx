@@ -525,7 +525,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     return iconMap[section as keyof typeof iconMap] || FileText;
   };
 
-  // =================== PROPS ADAPTÉES AUX INTERFACES EXISTANTES ===================
+  // =================== PROPS ADAPTÉES AUX INTERFACES RÉELLES ===================
   const handleSectionDataChange = (field: string, value: any) => {
     updateSectionData(currentSection, { 
       ...permitData[`${currentSection}Data` as keyof PermitData] || {},
@@ -533,26 +533,17 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     });
   };
 
-  // =================== RENDU DES SECTIONS AVEC PROPS CORRECTES ===================
+  // =================== RENDU DES SECTIONS AVEC PROPS EXACTES ===================
   const renderSectionContent = () => {
     try {
       switch (currentSection) {
         case 'site':
           return (
             <SiteInformation
+              selectedProvince={selectedProvince}
+              PROVINCIAL_REGULATIONS={PROVINCIAL_REGULATIONS}
+              isMobile={isMobile}
               language={language}
-              province={selectedProvince}
-              regulations={PROVINCIAL_REGULATIONS[selectedProvince]}
-              tenant={tenant || 'default'}
-              touchOptimized={touchOptimized || false}
-              compactMode={compactMode || false}
-              userRole={userRole || 'operator'}
-              errors={errors || {}}
-              data={permitData.siteData || {}}
-              permitData={permitData}
-              onDataChange={handleSectionDataChange}
-              onSave={(data: any) => updateSectionData('site', data)}
-              onUpdatePermitData={updatePermitData}
             />
           );
           
@@ -560,18 +551,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           return (
             <RescuePlan
               language={language}
-              province={selectedProvince}
-              regulations={PROVINCIAL_REGULATIONS[selectedProvince]}
-              tenant={tenant || 'default'}
-              touchOptimized={touchOptimized || false}
-              compactMode={compactMode || false}
-              userRole={userRole || 'operator'}
-              errors={errors || {}}
-              data={permitData.rescueData || {}}
-              permitData={permitData}
               onDataChange={handleSectionDataChange}
               onSave={(data: any) => updateSectionData('rescue', data)}
-              onUpdatePermitData={updatePermitData}
             />
           );
           
@@ -579,20 +560,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           return (
             <AtmosphericTesting
               language={language}
-              province={selectedProvince}
-              regulations={PROVINCIAL_REGULATIONS[selectedProvince]}
-              tenant={tenant || 'default'}
-              touchOptimized={touchOptimized || false}
-              compactMode={compactMode || false}
-              userRole={userRole || 'operator'}
-              errors={errors || {}}
-              data={permitData.atmosphericData || {}}
-              permitData={permitData}
               onDataChange={handleSectionDataChange}
               onSave={(data: any) => updateSectionData('atmospheric', data)}
-              onUpdatePermitData={updatePermitData}
-              testingLimits={PROVINCIAL_REGULATIONS[selectedProvince].atmospheric_testing.limits}
-              monitoringFrequency={PROVINCIAL_REGULATIONS[selectedProvince].atmospheric_testing.frequency_minutes}
             />
           );
           
@@ -600,18 +569,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           return (
             <EntryRegistry
               language={language}
-              province={selectedProvince}
-              regulations={PROVINCIAL_REGULATIONS[selectedProvince]}
-              tenant={tenant || 'default'}
-              touchOptimized={touchOptimized || false}
-              compactMode={compactMode || false}
-              userRole={userRole || 'operator'}
-              errors={errors || {}}
-              data={permitData.registryData || {}}
-              permitData={permitData}
               onDataChange={handleSectionDataChange}
               onSave={(data: any) => updateSectionData('registry', data)}
-              onUpdatePermitData={updatePermitData}
             />
           );
           
@@ -619,24 +578,14 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           return (
             <PermitManager
               language={language}
-              province={selectedProvince}
-              regulations={PROVINCIAL_REGULATIONS[selectedProvince]}
-              tenant={tenant || 'default'}
-              touchOptimized={touchOptimized || false}
-              compactMode={compactMode || false}
-              userRole={userRole || 'operator'}
-              errors={errors || {}}
-              data={permitData.finalizationData || {}}
               permitData={permitData}
               onDataChange={handleSectionDataChange}
               onSave={(data: any) => updateSectionData('finalization', data)}
-              onUpdatePermitData={updatePermitData}
               onSubmit={(finalData: any) => {
                 if (onSubmit) {
                   onSubmit(finalData);
                 }
               }}
-              sectionProgress={sectionProgress}
             />
           );
           
