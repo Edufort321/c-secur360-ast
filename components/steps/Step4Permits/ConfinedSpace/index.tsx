@@ -525,37 +525,33 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     return iconMap[section as keyof typeof iconMap] || FileText;
   };
 
-  // =================== GESTION DES PROPS COMMUNES POUR LES MODULES ===================
-  const getCommonModuleProps = () => ({
-    language,
-    province: selectedProvince,
-    regulations: PROVINCIAL_REGULATIONS[selectedProvince],
-    tenant: tenant || 'default',
-    touchOptimized: touchOptimized || false,
-    compactMode: compactMode || false,
-    userRole: userRole || 'operator',
-    errors: errors || {},
-    onSave: (data: any) => updateSectionData(currentSection, data),
-    onDataChange: (field: string, value: any) => {
-      updateSectionData(currentSection, { 
-        ...permitData[`${currentSection}Data` as keyof PermitData] || {},
-        [field]: value 
-      });
-    }
-  });
+  // =================== PROPS ADAPTÉES AUX INTERFACES EXISTANTES ===================
+  const handleSectionDataChange = (field: string, value: any) => {
+    updateSectionData(currentSection, { 
+      ...permitData[`${currentSection}Data` as keyof PermitData] || {},
+      [field]: value 
+    });
+  };
 
-  // =================== RENDU DES SECTIONS AVEC VRAIS MODULES ===================
+  // =================== RENDU DES SECTIONS AVEC PROPS CORRECTES ===================
   const renderSectionContent = () => {
-    const commonProps = getCommonModuleProps();
-    
     try {
       switch (currentSection) {
         case 'site':
           return (
             <SiteInformation
-              {...commonProps}
-              formData={permitData.siteData || {}}
+              language={language}
+              province={selectedProvince}
+              regulations={PROVINCIAL_REGULATIONS[selectedProvince]}
+              tenant={tenant || 'default'}
+              touchOptimized={touchOptimized || false}
+              compactMode={compactMode || false}
+              userRole={userRole || 'operator'}
+              errors={errors || {}}
+              data={permitData.siteData || {}}
               permitData={permitData}
+              onDataChange={handleSectionDataChange}
+              onSave={(data: any) => updateSectionData('site', data)}
               onUpdatePermitData={updatePermitData}
             />
           );
@@ -563,9 +559,18 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         case 'rescue':
           return (
             <RescuePlan
-              {...commonProps}
-              formData={permitData.rescueData || {}}
+              language={language}
+              province={selectedProvince}
+              regulations={PROVINCIAL_REGULATIONS[selectedProvince]}
+              tenant={tenant || 'default'}
+              touchOptimized={touchOptimized || false}
+              compactMode={compactMode || false}
+              userRole={userRole || 'operator'}
+              errors={errors || {}}
+              data={permitData.rescueData || {}}
               permitData={permitData}
+              onDataChange={handleSectionDataChange}
+              onSave={(data: any) => updateSectionData('rescue', data)}
               onUpdatePermitData={updatePermitData}
             />
           );
@@ -573,9 +578,18 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         case 'atmospheric':
           return (
             <AtmosphericTesting
-              {...commonProps}
-              formData={permitData.atmosphericData || {}}
+              language={language}
+              province={selectedProvince}
+              regulations={PROVINCIAL_REGULATIONS[selectedProvince]}
+              tenant={tenant || 'default'}
+              touchOptimized={touchOptimized || false}
+              compactMode={compactMode || false}
+              userRole={userRole || 'operator'}
+              errors={errors || {}}
+              data={permitData.atmosphericData || {}}
               permitData={permitData}
+              onDataChange={handleSectionDataChange}
+              onSave={(data: any) => updateSectionData('atmospheric', data)}
               onUpdatePermitData={updatePermitData}
               testingLimits={PROVINCIAL_REGULATIONS[selectedProvince].atmospheric_testing.limits}
               monitoringFrequency={PROVINCIAL_REGULATIONS[selectedProvince].atmospheric_testing.frequency_minutes}
@@ -585,9 +599,18 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         case 'registry':
           return (
             <EntryRegistry
-              {...commonProps}
-              formData={permitData.registryData || {}}
+              language={language}
+              province={selectedProvince}
+              regulations={PROVINCIAL_REGULATIONS[selectedProvince]}
+              tenant={tenant || 'default'}
+              touchOptimized={touchOptimized || false}
+              compactMode={compactMode || false}
+              userRole={userRole || 'operator'}
+              errors={errors || {}}
+              data={permitData.registryData || {}}
               permitData={permitData}
+              onDataChange={handleSectionDataChange}
+              onSave={(data: any) => updateSectionData('registry', data)}
               onUpdatePermitData={updatePermitData}
             />
           );
@@ -595,8 +618,18 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         case 'finalization':
           return (
             <PermitManager
-              {...commonProps}
+              language={language}
+              province={selectedProvince}
+              regulations={PROVINCIAL_REGULATIONS[selectedProvince]}
+              tenant={tenant || 'default'}
+              touchOptimized={touchOptimized || false}
+              compactMode={compactMode || false}
+              userRole={userRole || 'operator'}
+              errors={errors || {}}
+              data={permitData.finalizationData || {}}
               permitData={permitData}
+              onDataChange={handleSectionDataChange}
+              onSave={(data: any) => updateSectionData('finalization', data)}
               onUpdatePermitData={updatePermitData}
               onSubmit={(finalData: any) => {
                 if (onSubmit) {
