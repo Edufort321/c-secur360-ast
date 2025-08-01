@@ -281,7 +281,8 @@ const getTexts = (language: 'fr' | 'en') => ({
       site: "Information du Site",
       rescue: "Plan de Sauvetage",
       atmospheric: "Tests Atmosphériques",
-      registry: "Registre d'Entrée"
+      registry: "Registre d'Entrée",
+      finalization: "Finalisation"
     },
     navigation: {
       previous: "Précédent",
@@ -317,7 +318,8 @@ const getTexts = (language: 'fr' | 'en') => ({
       site: "Site Information",
       rescue: "Rescue Plan",
       atmospheric: "Atmospheric Testing",
-      registry: "Entry Registry"
+      registry: "Entry Registry",
+      finalization: "Finalization"
     },
     navigation: {
       previous: "Previous",
@@ -358,8 +360,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   initialData = {}
 }) => {
 
-  // =================== ÉTATS LOCAUX - SANS AUTO-SAVE ===================
-  const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry'>('site');
+  // =================== ÉTATS LOCAUX - AVEC FINALISATION ===================
+  const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization'>('site');
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(province);
   const [permitData, setPermitData] = useState<PermitData>(initialData);
   const [isLoading, setIsLoading] = useState(false);
@@ -418,7 +420,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
   };
 
-  const navigateToSection = (section: 'site' | 'rescue' | 'atmospheric' | 'registry') => {
+  const navigateToSection = (section: 'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization') => {
     setCurrentSection(section);
   };
 
@@ -427,7 +429,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       site: Building,
       rescue: Shield,
       atmospheric: Gauge,
-      registry: Users
+      registry: Users,
+      finalization: CheckCircle
     };
     return iconMap[section as keyof typeof iconMap] || FileText;
   };
@@ -474,6 +477,16 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         features: language === 'fr' 
           ? ['Horodatage précis', 'Signatures électroniques', 'Durée d\'exposition', 'Validation finale']
           : ['Precise Timestamps', 'Electronic Signatures', 'Exposure Duration', 'Final Validation']
+      },
+      finalization: {
+        emoji: '✅',
+        title: texts.sections.finalization,
+        description: language === 'fr' 
+          ? 'Finalisation du permis avec validation, impression, génération QR et partage.'
+          : 'Permit finalization with validation, printing, QR generation and sharing.',
+        features: language === 'fr' 
+          ? ['Validation complète', 'Impression PDF', 'Code QR mobile', 'Partage sécurisé']
+          : ['Complete Validation', 'PDF Printing', 'Mobile QR Code', 'Secure Sharing']
       }
     };
 
@@ -736,11 +749,11 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(5, 1fr)',
             gap: isMobile ? '12px' : '16px',
             marginBottom: '20px'
           }}>
-            {(['site', 'rescue', 'atmospheric', 'registry'] as const).map((section, index) => {
+            {(['site', 'rescue', 'atmospheric', 'registry', 'finalization'] as const).map((section, index) => {
               const Icon = getSectionIcon(section);
               const isActive = currentSection === section;
               
@@ -782,7 +795,111 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         {/* Contenu de la section active */}
         <div style={styles.sectionCard}>
           <div style={{ padding: isMobile ? '20px' : '28px' }}>
-            {renderSectionContent()}
+            {currentSection === 'finalization' ? (
+              // Import dynamique du PermitManager pour la finalisation
+              <div style={{
+                padding: '40px',
+                textAlign: 'center',
+                border: '2px dashed #10b981',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{
+                    fontSize: '64px',
+                    marginBottom: '24px',
+                    filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
+                  }}>
+                    ✅
+                  </div>
+                  
+                  <h3 style={{ 
+                    color: 'white', 
+                    marginBottom: '16px',
+                    fontSize: '24px',
+                    fontWeight: '700'
+                  }}>
+                    {texts.sections.finalization}
+                  </h3>
+                  
+                  <p style={{ 
+                    color: '#d1d5db', 
+                    lineHeight: 1.6,
+                    marginBottom: '32px',
+                    fontSize: '16px',
+                    maxWidth: '500px',
+                    margin: '0 auto 32px auto'
+                  }}>
+                    {language === 'fr' 
+                      ? 'Finalisation du permis avec validation, impression, génération QR et partage.'
+                      : 'Permit finalization with validation, printing, QR generation and sharing.'
+                    }
+                  </p>
+
+                  {/* Liste des fonctionnalités */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                    gap: '12px',
+                    maxWidth: '400px',
+                    margin: '0 auto 32px auto'
+                  }}>
+                    {(language === 'fr' 
+                      ? ['Validation complète', 'Impression PDF', 'Code QR mobile', 'Partage sécurisé']
+                      : ['Complete Validation', 'PDF Printing', 'Mobile QR Code', 'Secure Sharing']
+                    ).map((feature, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 12px',
+                          backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          fontSize: '14px',
+                          color: '#86efac'
+                        }}
+                      >
+                        <CheckCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Note pour intégration */}
+                  <div style={{
+                    marginTop: '32px',
+                    padding: '16px',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(16, 185, 129, 0.2)'
+                  }}>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#86efac',
+                      marginBottom: '8px'
+                    }}>
+                      {language === 'fr' ? '🔧 Module PermitManager' : '🔧 PermitManager Module'}
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#6ee7b7'
+                    }}>
+                      {language === 'fr' 
+                        ? 'Le module PermitManager sera intégré ici pour la finalisation complète'
+                        : 'The PermitManager module will be integrated here for complete finalization'
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              renderSectionContent()
+            )}
           </div>
         </div>
 
@@ -798,7 +915,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         }}>
           <button
             onClick={() => {
-              const sections = ['site', 'rescue', 'atmospheric', 'registry'] as const;
+              const sections = ['site', 'rescue', 'atmospheric', 'registry', 'finalization'] as const;
               const currentIndex = sections.indexOf(currentSection);
               if (currentIndex > 0) {
                 navigateToSection(sections[currentIndex - 1]);
@@ -852,18 +969,18 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             
             <button
               onClick={() => {
-                const sections = ['site', 'rescue', 'atmospheric', 'registry'] as const;
+                const sections = ['site', 'rescue', 'atmospheric', 'registry', 'finalization'] as const;
                 const currentIndex = sections.indexOf(currentSection);
                 if (currentIndex < sections.length - 1) {
                   navigateToSection(sections[currentIndex + 1]);
                 }
               }}
-              disabled={currentSection === 'registry'}
+              disabled={currentSection === 'finalization'}
               style={{
                 ...styles.button,
                 ...styles.buttonPrimary,
-                opacity: currentSection === 'registry' ? 0.5 : 1,
-                cursor: currentSection === 'registry' ? 'not-allowed' : 'pointer',
+                opacity: currentSection === 'finalization' ? 0.5 : 1,
+                cursor: currentSection === 'finalization' ? 'not-allowed' : 'pointer',
                 width: 'auto',
                 padding: '12px 20px'
               }}
