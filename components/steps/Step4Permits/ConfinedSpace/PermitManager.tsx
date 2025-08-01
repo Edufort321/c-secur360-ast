@@ -416,8 +416,9 @@ const PermitManager: React.FC<PermitManagerProps> = ({
                          touchOptimized || 
                          (typeof window !== 'undefined' && window.innerWidth < 768);
   
-  // SafetyManager : utiliser celui fourni ou créer une instance
-  const safetyManager = externalSafetyManager || useSafetyManager();
+  // SafetyManager : utiliser celui fourni ou créer une instance avec le hook
+  const internalSafetyManager = useSafetyManager();
+  const safetyManager = externalSafetyManager || internalSafetyManager;
   
   // Données réglementaires : utiliser celles fournies ou les par défaut
   const actualRegulations = PROVINCIAL_REGULATIONS || 
@@ -439,9 +440,9 @@ const PermitManager: React.FC<PermitManagerProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [currentView, setCurrentView] = useState<'main' | 'history' | 'database'>('main');
 
-  // Validation globale
-  const validation = safetyManager.validatePermitCompleteness();
+  // Récupérer les données du SafetyManager
   const permit = permitData || safetyManager.currentPermit;
+  const validation = safetyManager.validatePermitCompleteness();
 
   // =================== FONCTIONS UTILITAIRES ===================
   
@@ -451,7 +452,7 @@ const PermitManager: React.FC<PermitManagerProps> = ({
         // Utiliser la fonction onSave fournie par ConfinedSpace
         await onSave(permit);
       } else {
-        // Utiliser safetyManager par défaut
+        // Utiliser safetyManager
         const permitNumber = await safetyManager.saveToDatabase();
         if (permitNumber) {
           showNotification(t.saveSuccess, 'success');
@@ -882,19 +883,6 @@ const PermitManager: React.FC<PermitManagerProps> = ({
             flexWrap: 'wrap'
           }}>
             <button
-              onClick={() => setCurrentView('database')}
-              style={{
-                ...styles.button,
-                background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                color: 'white',
-                flex: actualIsMobile ? '1' : 'none',
-                fontSize: actualIsMobile ? '12px' : '14px'
-              }}
-            >
-              <Database size={16} />
-              {t.searchDatabase}
-            </button>
-            <button
               onClick={() => safetyManager.createNewPermit(actualProvince)}
               style={{
                 ...styles.button,
@@ -1037,16 +1025,22 @@ const PermitManager: React.FC<PermitManagerProps> = ({
           </button>
 
           <button
-            onClick={() => setCurrentView('database')}
+            onClick={handleGeneratePDF}
+            disabled={isGeneratingPDF}
             style={{
               ...styles.button,
               background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
               color: 'white',
-              width: 'auto'
+              width: 'auto',
+              opacity: isGeneratingPDF ? 0.7 : 1
             }}
           >
-            <Database size={20} />
-            {t.searchDatabase}
+            {isGeneratingPDF ? (
+              <div style={{ width: '16px', height: '16px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            ) : (
+              <Printer size={20} />
+            )}
+            {t.printPDF}
           </button>
         </div>
       </div>
