@@ -416,6 +416,10 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     finalization: 0
   });
   
+  // =================== ÉTATS SPÉCIFIQUES AUX MODULES ===================
+  const [atmosphericReadings, setAtmosphericReadings] = useState<any[]>([]);
+  const [entryRecords, setEntryRecords] = useState<any[]>([]);
+  
   const texts = getTexts(language);
 
   // =================== GÉNÉRATION AUTOMATIQUE DU NUMÉRO DE PERMIS ===================
@@ -550,27 +554,44 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         case 'rescue':
           return (
             <RescuePlan
+              permitData={permitData}
+              updatePermitData={updatePermitData}
+              selectedProvince={selectedProvince}
+              PROVINCIAL_REGULATIONS={PROVINCIAL_REGULATIONS}
+              isMobile={isMobile}
               language={language}
-              onDataChange={handleSectionDataChange}
-              onSave={(data: any) => updateSectionData('rescue', data)}
+              styles={styles}
             />
           );
           
         case 'atmospheric':
           return (
             <AtmosphericTesting
+              permitData={permitData}
+              updatePermitData={updatePermitData}
+              selectedProvince={selectedProvince}
+              PROVINCIAL_REGULATIONS={PROVINCIAL_REGULATIONS}
+              atmosphericReadings={atmosphericReadings}
+              setAtmosphericReadings={setAtmosphericReadings}
+              isMobile={isMobile}
               language={language}
-              onDataChange={handleSectionDataChange}
-              onSave={(data: any) => updateSectionData('atmospheric', data)}
+              styles={styles}
+              updateParentData={(section: string, data: any) => updateSectionData('atmospheric', data)}
             />
           );
           
         case 'registry':
           return (
             <EntryRegistry
+              permitData={permitData}
+              updatePermitData={updatePermitData}
+              selectedProvince={selectedProvince}
+              PROVINCIAL_REGULATIONS={PROVINCIAL_REGULATIONS}
+              atmosphericReadings={atmosphericReadings}
+              isMobile={isMobile}  
               language={language}
-              onDataChange={handleSectionDataChange}
-              onSave={(data: any) => updateSectionData('registry', data)}
+              styles={styles}
+              updateParentData={(section: string, data: any) => updateSectionData('registry', data)}
             />
           );
           
@@ -579,7 +600,16 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             <PermitManager
               language={language}
               permitData={permitData}
-              onDataChange={handleSectionDataChange}
+              selectedProvince={selectedProvince}
+              PROVINCIAL_REGULATIONS={PROVINCIAL_REGULATIONS}
+              isMobile={isMobile}
+              formData={formData}
+              onDataChange={onDataChange}
+              tenant={tenant}
+              errors={errors}
+              userRole={userRole}
+              touchOptimized={touchOptimized}
+              compactMode={compactMode}
               onSave={(data: any) => updateSectionData('finalization', data)}
               onSubmit={(finalData: any) => {
                 if (onSubmit) {
