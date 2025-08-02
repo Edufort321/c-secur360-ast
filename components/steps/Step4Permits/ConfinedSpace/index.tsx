@@ -670,8 +670,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
   // =================== RENDU DES SECTIONS AVEC INTÉGRATION PROGRESSIVE ===================
   const renderSectionContent = () => {
-    // Props de base pour tous les composants - SEULEMENT LES PROPS SUPPORTÉES
-    const baseProps = {
+    // Props de base communes
+    const commonProps = {
       language,
       onDataChange: handleSectionDataChange,
       onSave: (data: any) => updatePermitData(data),
@@ -696,15 +696,34 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       case 'site':
         return (
           <SiteInformation 
-            {...baseProps}
-            updateParentData={updateParentDataAdapter}
+            language={commonProps.language}
+            onDataChange={commonProps.onDataChange}
+            onSave={commonProps.onSave}
+            onCancel={commonProps.onCancel}
+            permitData={commonProps.permitData}
+            updatePermitData={commonProps.updatePermitData}
+            selectedProvince={commonProps.selectedProvince}
+            PROVINCIAL_REGULATIONS={commonProps.PROVINCIAL_REGULATIONS}
+            atmosphericReadings={commonProps.atmosphericReadings}
+            isMobile={commonProps.isMobile}
+            styles={commonProps.styles}
           />
         );
         
       case 'atmospheric':
         return (
           <AtmosphericTesting 
-            {...baseProps}
+            language={commonProps.language}
+            onDataChange={commonProps.onDataChange}
+            onSave={commonProps.onSave}
+            onCancel={commonProps.onCancel}
+            permitData={commonProps.permitData}
+            updatePermitData={commonProps.updatePermitData}
+            selectedProvince={commonProps.selectedProvince}
+            PROVINCIAL_REGULATIONS={commonProps.PROVINCIAL_REGULATIONS}
+            atmosphericReadings={commonProps.atmosphericReadings}
+            isMobile={commonProps.isMobile}
+            styles={commonProps.styles}
             setAtmosphericReadings={setAtmosphericReadings}
             updateParentData={updateParentDataAdapter}
           />
@@ -713,16 +732,34 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       case 'registry':
         return (
           <EntryRegistry 
-            {...baseProps}
-            updateParentData={updateParentDataAdapter}
+            language={commonProps.language}
+            onDataChange={commonProps.onDataChange}
+            onSave={commonProps.onSave}
+            onCancel={commonProps.onCancel}
+            permitData={commonProps.permitData}
+            updatePermitData={commonProps.updatePermitData}
+            selectedProvince={commonProps.selectedProvince}
+            PROVINCIAL_REGULATIONS={commonProps.PROVINCIAL_REGULATIONS}
+            atmosphericReadings={commonProps.atmosphericReadings}
+            isMobile={commonProps.isMobile}
+            styles={commonProps.styles}
           />
         );
         
       case 'rescue':
         return (
           <RescuePlan 
-            {...baseProps}
-            updateParentData={updateParentDataAdapter}
+            language={commonProps.language}
+            onDataChange={commonProps.onDataChange}
+            onSave={commonProps.onSave}
+            onCancel={commonProps.onCancel}
+            permitData={commonProps.permitData}
+            updatePermitData={commonProps.updatePermitData}
+            selectedProvince={commonProps.selectedProvince}
+            PROVINCIAL_REGULATIONS={commonProps.PROVINCIAL_REGULATIONS}
+            atmosphericReadings={commonProps.atmosphericReadings}
+            isMobile={commonProps.isMobile}
+            styles={commonProps.styles}
           />
         );
         
