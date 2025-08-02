@@ -642,95 +642,42 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
   // =================== RENDU DES SECTIONS AVEC PROPS SPÉCIFIQUES ===================
   const renderSectionContent = () => {
-    switch (currentSection) {
-      case 'site':
-        return (
-          <SiteInformation 
-            selectedProvince={selectedProvince}
-            PROVINCIAL_REGULATIONS={actualRegulations}
-            isMobile={actualIsMobile}
-            language={language}
-          />
-        );
-        
-      case 'atmospheric':
-        return (
-          <AtmosphericTesting 
-            language={language}
-            onDataChange={handleSectionDataChange}
-            onSave={(data: any) => updatePermitData(data)}
-            onCancel={onCancel || (() => {})}
-            permitData={permitData}
-            updatePermitData={updatePermitData}
-            selectedProvince={selectedProvince}
-            PROVINCIAL_REGULATIONS={actualRegulations}
-            atmosphericReadings={atmosphericReadings}
-            isMobile={actualIsMobile}
-            styles={actualStyles}
-            setAtmosphericReadings={setAtmosphericReadings}
-            updateParentData={(data: any) => {
-              if (updateParentData) {
-                updateParentData(data);
-              }
-            }}
-          />
-        );
-        
-      case 'registry':
-        return (
-          <EntryRegistry 
-            language={language}
-            onDataChange={handleSectionDataChange}
-            onSave={(data: any) => updatePermitData(data)}
-          />
-        );
-        
-      case 'rescue':
-        return (
-          <RescuePlan 
-            permitData={permitData}
-            updatePermitData={updatePermitData}
-            selectedProvince={selectedProvince}
-            PROVINCIAL_REGULATIONS={actualRegulations}
-            isMobile={actualIsMobile}
-            language={language}
-            styles={actualStyles}
-          />
-        );
-        
-      case 'finalization':
-        return (
-          <PermitManager
-            // Props ASTForm
-            formData={formData}
-            onDataChange={onDataChange}
-            language={language}
-            tenant={tenant}
-            errors={errors}
-            province={selectedProvince}
-            userRole={userRole}
-            touchOptimized={touchOptimized}
-            compactMode={compactMode}
-            onPermitChange={onPermitChange}
-            initialPermits={initialPermits}
-            
-            // Props spécifiques PermitManager
-            selectedProvince={selectedProvince}
-            PROVINCIAL_REGULATIONS={actualRegulations}
-            isMobile={actualIsMobile}
-            
-            // Props ConfinedSpace
-            permitData={permitData}
-            safetyManager={isSafetyManagerEnabled ? safetyManager : undefined}
-            onSave={onSave}
-            onSubmit={onSubmit}
-            regulations={actualRegulations}
-          />
-        );
-        
-      default:
-        return renderTestContent();
+    // Afficher le contenu de test pour toutes les sections sauf finalization
+    // car les autres composants ont des interfaces incompatibles
+    if (currentSection === 'finalization') {
+      return (
+        <PermitManager
+          // Props ASTForm
+          formData={formData}
+          onDataChange={onDataChange}
+          language={language}
+          tenant={tenant}
+          errors={errors}
+          province={selectedProvince}
+          userRole={userRole}
+          touchOptimized={touchOptimized}
+          compactMode={compactMode}
+          onPermitChange={onPermitChange}
+          initialPermits={initialPermits}
+          
+          // Props spécifiques PermitManager
+          selectedProvince={selectedProvince}
+          PROVINCIAL_REGULATIONS={actualRegulations}
+          isMobile={actualIsMobile}
+          
+          // Props ConfinedSpace
+          permitData={permitData}
+          safetyManager={isSafetyManagerEnabled ? safetyManager : undefined}
+          onSave={onSave}
+          onSubmit={onSubmit}
+          regulations={actualRegulations}
+        />
+      );
     }
+
+    // Pour les autres sections, afficher le contenu de test
+    // car les interfaces des composants ne sont pas compatibles avec nos props
+    return renderTestContent();
   };
 
   // =================== CONTENU DE TEST ===================
@@ -740,41 +687,45 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         emoji: '🏢',
         title: texts.sections.site,
         description: language === 'fr' 
-          ? 'Configuration des informations du site de travail, description de l\'espace clos et détails du projet.'
-          : 'Configure work site information, confined space description and project details.',
+          ? 'Section en cours de développement. Interface SiteInformation nécessite une adaptation spécifique.'
+          : 'Section under development. SiteInformation interface requires specific adaptation.',
         features: language === 'fr' 
           ? ['Localisation GPS', 'Description détaillée', 'Responsable d\'entrée', 'Photos du site']
-          : ['GPS Location', 'Detailed Description', 'Entry Supervisor', 'Site Photos']
+          : ['GPS Location', 'Detailed Description', 'Entry Supervisor', 'Site Photos'],
+        status: 'development'
       },
       rescue: {
         emoji: '🛡️',
         title: texts.sections.rescue,
         description: language === 'fr' 
-          ? 'Plan de sauvetage d\'urgence avec contacts, équipements et procédures de secours.'
-          : 'Emergency rescue plan with contacts, equipment and rescue procedures.',
+          ? 'Section en cours de développement. Interface RescuePlan nécessite une adaptation spécifique.'
+          : 'Section under development. RescuePlan interface requires specific adaptation.',
         features: language === 'fr' 
           ? ['Plan d\'évacuation', 'Équipe de secours', 'Équipements d\'urgence', 'Contacts d\'urgence']
-          : ['Evacuation Plan', 'Rescue Team', 'Emergency Equipment', 'Emergency Contacts']
+          : ['Evacuation Plan', 'Rescue Team', 'Emergency Equipment', 'Emergency Contacts'],
+        status: 'development'
       },
       atmospheric: {
         emoji: '🌬️',
         title: texts.sections.atmospheric,
         description: language === 'fr' 
-          ? 'Tests atmosphériques continus avec surveillance en temps réel des gaz dangereux.'
-          : 'Continuous atmospheric testing with real-time monitoring of hazardous gases.',
+          ? 'Section en cours de développement. Interface AtmosphericTesting nécessite une adaptation spécifique.'
+          : 'Section under development. AtmosphericTesting interface requires specific adaptation.',
         features: language === 'fr' 
           ? ['Tests 4-gaz', 'Surveillance Bluetooth', 'Alarmes automatiques', 'Calibration équipements']
-          : ['4-Gas Testing', 'Bluetooth Monitoring', 'Automatic Alarms', 'Equipment Calibration']
+          : ['4-Gas Testing', 'Bluetooth Monitoring', 'Automatic Alarms', 'Equipment Calibration'],
+        status: 'development'
       },
       registry: {
         emoji: '👥',
         title: texts.sections.registry,
         description: language === 'fr' 
-          ? 'Registre d\'entrée et de sortie avec horodatage et signatures électroniques.'
-          : 'Entry and exit registry with timestamps and electronic signatures.',
+          ? 'Section en cours de développement. Interface EntryRegistry nécessite une adaptation spécifique.'
+          : 'Section under development. EntryRegistry interface requires specific adaptation.',
         features: language === 'fr' 
           ? ['Horodatage précis', 'Signatures électroniques', 'Durée d\'exposition', 'Validation finale']
-          : ['Precise Timestamps', 'Electronic Signatures', 'Exposure Duration', 'Final Validation']
+          : ['Precise Timestamps', 'Electronic Signatures', 'Exposure Duration', 'Final Validation'],
+        status: 'development'
       },
       finalization: {
         emoji: '✅',
@@ -784,7 +735,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           : 'Permit finalization with validation, printing, QR generation and sharing.',
         features: language === 'fr' 
           ? ['Validation complète', 'Impression PDF', 'Code QR mobile', 'Partage sécurisé']
-          : ['Complete Validation', 'PDF Printing', 'Mobile QR Code', 'Secure Sharing']
+          : ['Complete Validation', 'PDF Printing', 'Mobile QR Code', 'Secure Sharing'],
+        status: 'ready'
       }
     };
 
@@ -794,13 +746,29 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       <div style={{
         padding: '40px',
         textAlign: 'center',
-        border: `2px dashed ${isSafetyManagerEnabled ? '#10b981' : '#374151'}`,
+        border: `2px dashed ${current.status === 'ready' ? '#10b981' : '#f59e0b'}`,
         borderRadius: '12px',
-        backgroundColor: `rgba(${isSafetyManagerEnabled ? '16, 185, 129' : '17, 24, 39'}, 0.1)`,
+        backgroundColor: `rgba(${current.status === 'ready' ? '16, 185, 129' : '245, 158, 11'}, 0.1)`,
         position: 'relative',
         overflow: 'hidden'
       }}>
         <div style={{ position: 'relative', zIndex: 1 }}>
+          {/* Badge de statut */}
+          <div style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            padding: '6px 12px',
+            background: current.status === 'ready' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+            border: `1px solid ${current.status === 'ready' ? '#10b981' : '#f59e0b'}`,
+            borderRadius: '16px',
+            fontSize: '12px',
+            fontWeight: '600',
+            color: current.status === 'ready' ? '#10b981' : '#f59e0b'
+          }}>
+            {current.status === 'ready' ? '✅ PRÊT' : '🔧 DEV'}
+          </div>
+
           <div style={{
             fontSize: '64px',
             marginBottom: '24px',
@@ -855,6 +823,35 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             </div>
           </div>
 
+          {/* Information sur le statut */}
+          {current.status === 'development' && (
+            <div style={{
+              marginBottom: '32px',
+              padding: '16px',
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              borderRadius: '12px'
+            }}>
+              <div style={{
+                fontSize: '14px',
+                color: '#fbbf24',
+                fontWeight: '600',
+                marginBottom: '8px'
+              }}>
+                🔧 {language === 'fr' ? 'Section en Développement' : 'Section Under Development'}
+              </div>
+              <div style={{
+                fontSize: '13px',
+                color: '#d97706'
+              }}>
+                {language === 'fr' 
+                  ? 'Cette section nécessite une adaptation des interfaces de composants. Seule la section Finalisation est actuellement fonctionnelle.'
+                  : 'This section requires component interface adaptation. Only the Finalization section is currently functional.'
+                }
+              </div>
+            </div>
+          )}
+
           {/* Liste des fonctionnalités */}
           <div style={{
             display: 'grid',
@@ -871,11 +868,11 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                   alignItems: 'center',
                   gap: '8px',
                   padding: '8px 12px',
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  backgroundColor: current.status === 'ready' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
                   borderRadius: '8px',
-                  border: '1px solid rgba(59, 130, 246, 0.2)',
+                  border: `1px solid ${current.status === 'ready' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)'}`,
                   fontSize: '14px',
-                  color: '#93c5fd'
+                  color: current.status === 'ready' ? '#86efac' : '#93c5fd'
                 }}
               >
                 <CheckCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
@@ -883,6 +880,32 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               </div>
             ))}
           </div>
+
+          {/* Bouton d'action pour section prête */}
+          {current.status === 'ready' && (
+            <div style={{ marginTop: '32px' }}>
+              <button
+                onClick={() => {
+                  if (currentSection === 'finalization') {
+                    // Action spécifique à la finalisation
+                    savePermitData(true);
+                  }
+                }}
+                style={{
+                  ...actualStyles.button,
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  color: 'white',
+                  width: 'auto',
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  fontWeight: '600'
+                }}
+              >
+                <CheckCircle style={{ width: '20px', height: '20px' }} />
+                {language === 'fr' ? 'Finaliser le Permis' : 'Finalize Permit'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
