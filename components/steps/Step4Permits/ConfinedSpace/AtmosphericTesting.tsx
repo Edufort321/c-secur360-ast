@@ -510,8 +510,20 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
               id="gas_detector_calibrated"
               checked={permitData.gas_detector_calibrated || false}
               onChange={(e) => {
-                const updatedPermit = { ...permitData, gas_detector_calibrated: e.target.checked };
-                safetyManager.updateSiteInformation(updatedPermit);
+                updateAtmosphericData({ 
+                  equipment: { 
+                    ...atmosphericData.equipment, 
+                    calibrationDate: atmosphericData.equipment?.calibrationDate || '',
+                    serialNumber: atmosphericData.equipment?.serialNumber || '',
+                    deviceModel: atmosphericData.equipment?.deviceModel || '',
+                    nextCalibration: atmosphericData.equipment?.nextCalibration || ''
+                  }
+                });
+                // Mettre à jour la propriété globale du permis
+                const currentPermit = safetyManager.currentPermit;
+                const updatedPermit = { ...currentPermit, gas_detector_calibrated: e.target.checked };
+                safetyManager.resetPermit();
+                Object.assign(safetyManager.currentPermit, updatedPermit);
               }}
               style={{
                 width: '24px',
@@ -551,8 +563,10 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             id="multi_level_testing_completed"
             checked={permitData.multi_level_testing_completed || false}
             onChange={(e) => {
-              const updatedPermit = { ...permitData, multi_level_testing_completed: e.target.checked };
-              safetyManager.updateSiteInformation(updatedPermit);
+              const currentPermit = safetyManager.currentPermit;
+              const updatedPermit = { ...currentPermit, multi_level_testing_completed: e.target.checked };
+              safetyManager.resetPermit();
+              Object.assign(safetyManager.currentPermit, updatedPermit);
             }}
             style={{
               width: '24px',
@@ -589,8 +603,10 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             id="atmospheric_stability_confirmed"
             checked={permitData.atmospheric_stability_confirmed || false}
             onChange={(e) => {
-              const updatedPermit = { ...permitData, atmospheric_stability_confirmed: e.target.checked };
-              safetyManager.updateSiteInformation(updatedPermit);
+              const currentPermit = safetyManager.currentPermit;
+              const updatedPermit = { ...currentPermit, atmospheric_stability_confirmed: e.target.checked };
+              safetyManager.resetPermit();
+              Object.assign(safetyManager.currentPermit, updatedPermit);
             }}
             style={{
               width: '24px',
