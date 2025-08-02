@@ -855,7 +855,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
                 .order('updated_at', { ascending: false });
                 
               if (!error && data) {
-                permits = data.map(item => item.data);
+                permits = data.map((item: any) => item.data);
               }
             } catch (supabaseError) {
               console.error('Erreur historique Supabase:', supabaseError);
