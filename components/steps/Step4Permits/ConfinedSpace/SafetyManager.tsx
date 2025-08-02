@@ -49,6 +49,7 @@ export interface ConfinedSpaceComponentProps {
 // Instance du SafetyManager
 export interface SafetyManagerInstance {
   currentPermit: ConfinedSpacePermit;
+  permits: ConfinedSpacePermit[];
   isSaving: boolean;
   isLoading: boolean;
   lastSaved: string | null;
@@ -386,7 +387,47 @@ export interface AttachmentData {
 }
 
 // =================== STORE ZUSTAND OPTIMISÉ ===================
-interface SafetyManagerState extends SafetyManagerInstance {}
+interface SafetyManagerState {
+  // État principal
+  currentPermit: ConfinedSpacePermit;
+  permits: ConfinedSpacePermit[];
+  
+  // États de l'interface
+  isSaving: boolean;
+  isLoading: boolean;
+  lastSaved: string | null;
+  autoSaveEnabled: boolean;
+  
+  // Alertes et notifications
+  activeAlerts: Alert[];
+  notifications: Notification[];
+  
+  // Actions principales
+  updateSiteInformation: (data: Partial<ConfinedSpaceDetails>) => void;
+  updateAtmosphericTesting: (data: Partial<AtmosphericTestingData>) => void;
+  updateEntryRegistry: (data: Partial<EntryRegistryData>) => void;
+  updateRescuePlan: (data: Partial<RescuePlanData>) => void;
+  
+  // Gestion de base de données
+  saveToDatabase: () => Promise<string | null>;
+  loadFromDatabase: (permitNumber: string) => Promise<ConfinedSpacePermit | null>;
+  loadPermitHistory: () => Promise<ConfinedSpacePermit[]>;
+  
+  // QR Code et partage
+  generateQRCode: () => Promise<string>;
+  generatePDF: () => Promise<Blob>;
+  sharePermit: (method: 'email' | 'sms' | 'whatsapp') => Promise<void>;
+  
+  // Validation
+  validatePermitCompleteness: () => ValidationResult;
+  validateSection: (section: keyof ConfinedSpacePermit) => ValidationResult;
+  
+  // Utilitaires
+  createNewPermit: (province: ProvinceCode) => void;
+  resetPermit: () => void;
+  exportData: () => string;
+  importData: (jsonData: string) => void;
+}
 
 // =================== FONCTIONS UTILITAIRES ===================
 function createEmptyPermit(): ConfinedSpacePermit {
