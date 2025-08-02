@@ -697,16 +697,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         return (
           <SiteInformation 
             language={commonProps.language}
-            onDataChange={commonProps.onDataChange}
             onSave={commonProps.onSave}
             onCancel={commonProps.onCancel}
-            permitData={commonProps.permitData}
-            updatePermitData={commonProps.updatePermitData}
-            selectedProvince={commonProps.selectedProvince}
-            PROVINCIAL_REGULATIONS={commonProps.PROVINCIAL_REGULATIONS}
-            atmosphericReadings={commonProps.atmosphericReadings}
-            isMobile={commonProps.isMobile}
-            styles={commonProps.styles}
           />
         );
         
@@ -735,14 +727,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             language={commonProps.language}
             onDataChange={commonProps.onDataChange}
             onSave={commonProps.onSave}
-            onCancel={commonProps.onCancel}
-            permitData={commonProps.permitData}
-            updatePermitData={commonProps.updatePermitData}
-            selectedProvince={commonProps.selectedProvince}
-            PROVINCIAL_REGULATIONS={commonProps.PROVINCIAL_REGULATIONS}
-            atmosphericReadings={commonProps.atmosphericReadings}
-            isMobile={commonProps.isMobile}
-            styles={commonProps.styles}
           />
         );
         
@@ -752,14 +736,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             language={commonProps.language}
             onDataChange={commonProps.onDataChange}
             onSave={commonProps.onSave}
-            onCancel={commonProps.onCancel}
-            permitData={commonProps.permitData}
-            updatePermitData={commonProps.updatePermitData}
-            selectedProvince={commonProps.selectedProvince}
-            PROVINCIAL_REGULATIONS={commonProps.PROVINCIAL_REGULATIONS}
-            atmosphericReadings={commonProps.atmosphericReadings}
-            isMobile={commonProps.isMobile}
-            styles={commonProps.styles}
           />
         );
         
