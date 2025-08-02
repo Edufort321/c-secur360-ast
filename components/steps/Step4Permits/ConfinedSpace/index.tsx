@@ -678,7 +678,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         );
         
       case 'registry':
-        // EntryRegistry avec toutes les props requises
+        // EntryRegistry avec toutes les props requises incluant updateParentData
         return (
           <EntryRegistry 
             language={language}
@@ -689,6 +689,13 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             isMobile={actualIsMobile}
             styles={actualStyles}
             atmosphericReadings={atmosphericReadings}
+            updateParentData={(data: any) => {
+              if (updateParentData) {
+                updateParentData(data);
+              }
+              // Fallback local si updateParentData n'est pas fourni
+              updatePermitData(data);
+            }}
           />
         );
         
