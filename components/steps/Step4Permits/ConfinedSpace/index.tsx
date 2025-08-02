@@ -1,4 +1,4 @@
-// ConfinedSpace/index.tsx - VERSION PROGRESSIVE AVEC INTÉGRATION SAFETYMANAGER
+// ConfinedSpace/index.tsx - VERSION FINALE FONCTIONNELLE
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -9,19 +9,71 @@ import {
   Wrench, Target, ChevronDown, ChevronRight, Building, Construction, Flame, Zap, BarChart3
 } from 'lucide-react';
 
-// Import des composants des sections (progressif)
+// Import des composants des sections - INTERFACES ANALYSÉES
 import SiteInformation from './SiteInformation';
 import AtmosphericTesting from './AtmosphericTesting';
 import EntryRegistry from './EntryRegistry';
 import RescuePlan from './RescuePlan';
 import PermitManager from './PermitManager';
 
-// Import SafetyManager - INTÉGRATION PROGRESSIVE
+// Import SafetyManager - INTÉGRATION OPTIONNELLE
 import { useSafetyManager } from './SafetyManager';
 
-// =================== DÉTECTION MOBILE ET STYLES COMPLETS ===================
+// =================== TYPES ET INTERFACES COMPATIBLES ===================
+type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
+
+interface ConfinedSpaceProps {
+  // Props de base - COMPATIBILITÉ UNIVERSELLE
+  language?: 'fr' | 'en';
+  onDataChange: (field: string, value: any) => void;
+  onSave: (data: any) => void;
+  onCancel?: () => void;
+  
+  // Props ASTForm (optionnelles)
+  permitData?: any;
+  updatePermitData?: (data: any) => void;
+  selectedProvince?: ProvinceCode;
+  PROVINCIAL_REGULATIONS?: any;
+  atmosphericReadings?: any[];
+  isMobile?: boolean;
+  styles?: any;
+  updateParentData?: (data: any) => void;
+  
+  // Props version précédente (compatibilité)
+  province?: ProvinceCode;
+  onSubmit?: (data: any) => void;
+  initialData?: any;
+  formData?: any;
+  tenant?: string;
+  errors?: any;
+  userRole?: string;
+  touchOptimized?: boolean;
+  compactMode?: boolean;
+  onPermitChange?: (permits: any) => void;
+  initialPermits?: any[];
+}
+
+interface PermitData {
+  permit_number?: string;
+  issue_date?: string;
+  selected_province?: ProvinceCode;
+  projectNumber?: string;
+  workLocation?: string;
+  spaceDescription?: string;
+  workDescription?: string;
+  entry_supervisor?: string;
+  rescue_plan_type?: 'internal' | 'external' | 'hybrid';
+  gas_detector_calibrated?: boolean;
+  calibration_date?: string;
+  supervisor_name?: string;
+  permit_valid_from?: string;
+  permit_valid_to?: string;
+}
+
+// =================== DÉTECTION MOBILE ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
+// =================== STYLES COMPLETS ===================
 const styles = {
   container: {
     maxWidth: '100%',
@@ -100,61 +152,7 @@ const styles = {
   }
 };
 
-// =================== TYPES ET INTERFACES COMPLETS ===================
-type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
-
-interface ConfinedSpaceProps {
-  // Props de base - MÊME SIGNATURE QUE VERSION FONCTIONNELLE
-  language?: 'fr' | 'en';
-  onDataChange: (field: string, value: any) => void;
-  onSave: (data: any) => void;
-  onCancel?: () => void;
-  
-  // Props ASTForm (optionnelles pour compatibilité)
-  permitData?: any;
-  updatePermitData?: (data: any) => void;
-  selectedProvince?: ProvinceCode;
-  PROVINCIAL_REGULATIONS?: any;
-  atmosphericReadings?: any[];
-  isMobile?: boolean;
-  styles?: any;
-  updateParentData?: (data: any) => void;
-  
-  // Props SafetyManager (optionnelles)
-  externalSafetyManager?: any;
-  
-  // Props version précédente (optionnelles)
-  province?: ProvinceCode;
-  onSubmit?: (data: any) => void;
-  initialData?: any;
-  formData?: any;
-  tenant?: string;
-  errors?: any;
-  userRole?: string;
-  touchOptimized?: boolean;
-  compactMode?: boolean;
-  onPermitChange?: (permits: any) => void;
-  initialPermits?: any[];
-}
-
-interface PermitData {
-  permit_number?: string;
-  issue_date?: string;
-  selected_province?: ProvinceCode;
-  projectNumber?: string;
-  workLocation?: string;
-  spaceDescription?: string;
-  workDescription?: string;
-  entry_supervisor?: string;
-  rescue_plan_type?: 'internal' | 'external' | 'hybrid';
-  gas_detector_calibrated?: boolean;
-  calibration_date?: string;
-  supervisor_name?: string;
-  permit_valid_from?: string;
-  permit_valid_to?: string;
-}
-
-// =================== DONNÉES RÉGLEMENTAIRES PROVINCIALES ===================
+// =================== DONNÉES RÉGLEMENTAIRES ===================
 const PROVINCIAL_REGULATIONS: Record<ProvinceCode, any> = {
   QC: {
     name: "Règlement sur la santé et la sécurité du travail (RSST)",
@@ -308,7 +306,7 @@ const PROVINCIAL_REGULATIONS: Record<ProvinceCode, any> = {
   }
 };
 
-// =================== TRADUCTIONS COMPLÈTES ===================
+// =================== TRADUCTIONS ===================
 const getTexts = (language: 'fr' | 'en') => ({
   fr: {
     title: "Permis d'Entrée en Espace Clos",
@@ -394,7 +392,7 @@ const getTexts = (language: 'fr' | 'en') => ({
 
 // =================== COMPOSANT PRINCIPAL ===================
 const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
-  // Props de base - signature compatible
+  // Props de base
   language = 'fr',
   onDataChange,
   onSave,
@@ -410,9 +408,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   styles: externalStyles,
   updateParentData,
   
-  // Props SafetyManager (optionnelles)
-  externalSafetyManager,
-  
   // Props version précédente (optionnelles)
   province = 'QC',
   onSubmit,
@@ -427,23 +422,19 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   initialPermits
 }) => {
 
-  // =================== INTÉGRATION PROGRESSIVE SAFETYMANAGER ===================
-  
-  // 🔧 ÉTAPE 1 : Intégration SafetyManager (optionnelle et sécurisée)
+  // =================== INTÉGRATION SAFETYMANAGER (OPTIONNELLE) ===================
   let safetyManager = null;
   let isSafetyManagerEnabled = false;
   
   try {
-    // Essayer d'utiliser SafetyManager s'il est disponible
     safetyManager = useSafetyManager();
     isSafetyManagerEnabled = true;
   } catch (error) {
-    // Si SafetyManager n'est pas disponible, continuer sans lui
     console.log('SafetyManager non disponible, mode basique activé');
     isSafetyManagerEnabled = false;
   }
 
-  // =================== ÉTATS LOCAUX - BASÉS SUR VERSION FONCTIONNELLE ===================
+  // =================== ÉTATS LOCAUX ===================
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization'>('site');
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(externalSelectedProvince || province);
   const [permitData, setPermitData] = useState<PermitData>({
@@ -454,8 +445,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [showManager, setShowManager] = useState(false);
-  
-  // États SafetyManager (si disponible)
   const [atmosphericReadings, setAtmosphericReadings] = useState<any[]>(externalAtmosphericReadings);
   const [validationData, setValidationData] = useState<any>(null);
   
@@ -464,7 +453,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   const actualStyles = externalStyles || styles;
   const actualRegulations = externalRegulations || PROVINCIAL_REGULATIONS;
 
-  // =================== GÉNÉRATION NUMÉRO DE PERMIS - MÊME LOGIQUE ===================
+  // =================== GÉNÉRATION NUMÉRO DE PERMIS ===================
   useEffect(() => {
     if (!permitData.permit_number) {
       const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -479,7 +468,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       
       setPermitData(newPermitData);
       
-      // Notifier les parents
       if (onDataChange) {
         onDataChange('permitData', newPermitData);
       }
@@ -489,17 +477,13 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
   }, [selectedProvince, permitData.permit_number, onDataChange, externalUpdatePermitData]);
 
-  // =================== INTÉGRATION PROGRESSIVE DES DONNÉES SAFETYMANAGER ===================
-  
-  // 🔧 ÉTAPE 2 : Synchronisation avec SafetyManager (si disponible)
+  // =================== SYNCHRONISATION SAFETYMANAGER ===================
   useEffect(() => {
     if (isSafetyManagerEnabled && safetyManager && permitData.permit_number) {
       try {
-        // Validation temps réel avec SafetyManager
         const validation = safetyManager.validatePermitCompleteness();
         setValidationData(validation);
         
-        // Mise à jour des lectures atmosphériques depuis SafetyManager
         const currentPermit = safetyManager.currentPermit;
         if (currentPermit?.atmosphericTesting?.readings) {
           setAtmosphericReadings(currentPermit.atmosphericTesting.readings);
@@ -510,30 +494,25 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
   }, [permitData, currentSection, isSafetyManagerEnabled, safetyManager]);
 
-  // =================== FONCTIONS UTILITAIRES AMÉLIORÉES ===================
+  // =================== FONCTIONS UTILITAIRES ===================
   const updatePermitData = (updates: Partial<PermitData>) => {
     const newData = { ...permitData, ...updates };
     setPermitData(newData);
     
-    // 🔧 ÉTAPE 3 : Mise à jour SafetyManager (si disponible)
     if (isSafetyManagerEnabled && safetyManager) {
       try {
-        // Synchroniser avec SafetyManager selon la section avec conversion de types
         switch (currentSection) {
           case 'site':
-            // Convertir PermitData vers SiteInformationData
             const siteData = {
               projectNumber: updates.projectNumber || '',
               workLocation: updates.workLocation || '',
               spaceDescription: updates.spaceDescription || '',
               workDescription: updates.workDescription || '',
               entry_supervisor: updates.entry_supervisor || '',
-              // Ajouter d'autres champs si nécessaires
             };
             safetyManager.updateSiteInformation(siteData);
             break;
           case 'atmospheric':
-            // Convertir vers AtmosphericTestingData
             const atmosphericData = {
               readings: atmosphericReadings || [],
               equipment: {
@@ -548,7 +527,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             safetyManager.updateAtmosphericTesting(atmosphericData);
             break;
           case 'registry':
-            // Convertir vers EntryRegistryData
             const registryData = {
               personnel: [],
               entryLog: [],
@@ -564,7 +542,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             safetyManager.updateEntryRegistry(registryData);
             break;
           case 'rescue':
-            // Convertir vers RescuePlanData
             const rescueData = {
               emergencyContacts: [],
               rescueTeam: [],
@@ -587,7 +564,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       }
     }
     
-    // Notifier les parents
     if (onDataChange) {
       onDataChange('permitData', newData);
     }
@@ -609,7 +585,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         selectedProvince
       };
       
-      // 🔧 ÉTAPE 4 : Sauvegarde via SafetyManager (si disponible)
       if (isSafetyManagerEnabled && safetyManager) {
         try {
           const permitNumber = await safetyManager.saveToDatabase();
@@ -657,114 +632,99 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     return iconMap[section as keyof typeof iconMap] || FileText;
   };
 
-  // =================== FONCTIONS POUR GESTION DES COMPOSANTS ===================
-  
   const handleSectionDataChange = useCallback((field: string, value: any) => {
     updatePermitData({ [field]: value });
     
-    // Callbacks externes
     if (updateParentData) {
       updateParentData({ [field]: value });
     }
   }, [updateParentData]);
 
-  // =================== RENDU DES SECTIONS AVEC INTÉGRATION PROGRESSIVE ===================
+  // =================== RENDU DES SECTIONS AVEC PROPS SPÉCIFIQUES ===================
   const renderSectionContent = () => {
-    // Props de base communes
-    const commonProps = {
-      language,
-      onDataChange: handleSectionDataChange,
-      onSave: (data: any) => updatePermitData(data),
-      onCancel: onCancel || (() => {}),
-      permitData,
-      updatePermitData,
-      selectedProvince,
-      PROVINCIAL_REGULATIONS: actualRegulations,
-      atmosphericReadings,
-      isMobile: actualIsMobile,
-      styles: actualStyles
-    };
-
-    // Adaptateur updateParentData pour compatibilité
-    const updateParentDataAdapter = (data: any) => {
-      if (updateParentData) {
-        updateParentData(data);
-      }
-    };
-
     switch (currentSection) {
       case 'site':
         return (
           <SiteInformation 
-            language={commonProps.language}
-            onSave={commonProps.onSave}
-            onCancel={commonProps.onCancel}
+            selectedProvince={selectedProvince}
+            PROVINCIAL_REGULATIONS={actualRegulations}
+            isMobile={actualIsMobile}
+            language={language}
           />
         );
         
       case 'atmospheric':
         return (
           <AtmosphericTesting 
-            language={commonProps.language}
-            onDataChange={commonProps.onDataChange}
-            onSave={commonProps.onSave}
-            onCancel={commonProps.onCancel}
-            permitData={commonProps.permitData}
-            updatePermitData={commonProps.updatePermitData}
-            selectedProvince={commonProps.selectedProvince}
-            PROVINCIAL_REGULATIONS={commonProps.PROVINCIAL_REGULATIONS}
-            atmosphericReadings={commonProps.atmosphericReadings}
-            isMobile={commonProps.isMobile}
-            styles={commonProps.styles}
+            language={language}
+            onDataChange={handleSectionDataChange}
+            onSave={(data: any) => updatePermitData(data)}
+            onCancel={onCancel || (() => {})}
+            permitData={permitData}
+            updatePermitData={updatePermitData}
+            selectedProvince={selectedProvince}
+            PROVINCIAL_REGULATIONS={actualRegulations}
+            atmosphericReadings={atmosphericReadings}
+            isMobile={actualIsMobile}
+            styles={actualStyles}
             setAtmosphericReadings={setAtmosphericReadings}
-            updateParentData={updateParentDataAdapter}
+            updateParentData={(data: any) => {
+              if (updateParentData) {
+                updateParentData(data);
+              }
+            }}
           />
         );
         
       case 'registry':
         return (
           <EntryRegistry 
-            language={commonProps.language}
-            onDataChange={commonProps.onDataChange}
-            onSave={commonProps.onSave}
+            language={language}
+            onDataChange={handleSectionDataChange}
+            onSave={(data: any) => updatePermitData(data)}
           />
         );
         
       case 'rescue':
         return (
           <RescuePlan 
-            language={commonProps.language}
-            onDataChange={commonProps.onDataChange}
-            onSave={commonProps.onSave}
+            permitData={permitData}
+            updatePermitData={updatePermitData}
+            selectedProvince={selectedProvince}
+            PROVINCIAL_REGULATIONS={actualRegulations}
+            isMobile={actualIsMobile}
+            language={language}
+            styles={actualStyles}
           />
         );
         
       case 'finalization':
         return (
           <PermitManager
-            language={language}
-            onDataChange={handleSectionDataChange}
-            onSave={onSave}
-            onCancel={onCancel || (() => {})}
-            onSubmit={(finalData: any) => {
-              if (onSubmit) {
-                onSubmit(finalData);
-              }
-            }}
-            // Props PermitManager spécifiques
+            // Props ASTForm
             formData={formData}
-            selectedProvince={selectedProvince}
-            PROVINCIAL_REGULATIONS={actualRegulations}
-            isMobile={actualIsMobile}
-            permitData={permitData}
-            safetyManager={isSafetyManagerEnabled ? safetyManager : undefined}
+            onDataChange={onDataChange}
+            language={language}
             tenant={tenant}
             errors={errors}
+            province={selectedProvince}
             userRole={userRole}
             touchOptimized={touchOptimized}
             compactMode={compactMode}
             onPermitChange={onPermitChange}
             initialPermits={initialPermits}
+            
+            // Props spécifiques PermitManager
+            selectedProvince={selectedProvince}
+            PROVINCIAL_REGULATIONS={actualRegulations}
+            isMobile={actualIsMobile}
+            
+            // Props ConfinedSpace
+            permitData={permitData}
+            safetyManager={isSafetyManagerEnabled ? safetyManager : undefined}
+            onSave={onSave}
+            onSubmit={onSubmit}
+            regulations={actualRegulations}
           />
         );
         
@@ -773,7 +733,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
   };
 
-  // =================== CONTENU DE TEST POUR DÉVELOPPEMENT ===================
+  // =================== CONTENU DE TEST ===================
   const renderTestContent = () => {
     const sectionData = {
       site: {
@@ -928,36 +888,39 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     );
   };
 
-  // =================== RENDU PRINCIPAL ===================
-  
-  // Gestion du PermitManager en mode plein écran
+  // =================== GESTION DU PERMITMANAGER EN MODE PLEIN ÉCRAN ===================
   if (showManager) {
     return (
       <PermitManager
-        language={language}
-        onDataChange={onDataChange}
-        onSave={onSave}
-        onCancel={() => setShowManager(false)}
-        onSubmit={onSubmit}
-        permitData={permitData}
-        updatePermitData={updatePermitData}
-        selectedProvince={selectedProvince}
-        PROVINCIAL_REGULATIONS={actualRegulations}
-        isMobile={actualIsMobile}
-        styles={actualStyles}
-        safetyManager={isSafetyManagerEnabled ? safetyManager : undefined}
+        // Props ASTForm
         formData={formData}
+        onDataChange={onDataChange}
+        language={language}
         tenant={tenant}
         errors={errors}
+        province={selectedProvince}
         userRole={userRole}
         touchOptimized={touchOptimized}
         compactMode={compactMode}
         onPermitChange={onPermitChange}
         initialPermits={initialPermits}
+        
+        // Props spécifiques PermitManager
+        selectedProvince={selectedProvince}
+        PROVINCIAL_REGULATIONS={actualRegulations}
+        isMobile={actualIsMobile}
+        
+        // Props ConfinedSpace
+        permitData={permitData}
+        safetyManager={isSafetyManagerEnabled ? safetyManager : undefined}
+        onSave={onSave}
+        onSubmit={() => setShowManager(false)}
+        regulations={actualRegulations}
       />
     );
   }
 
+  // =================== RENDU PRINCIPAL ===================
   return (
     <div style={actualStyles.container}>
       <div style={{ 
@@ -968,7 +931,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         margin: '0 auto'
       }}>
         
-        {/* En-tête principal avec indicateur SafetyManager */}
+        {/* En-tête principal */}
         <div style={actualStyles.headerCard}>
           <div style={{
             position: 'absolute',
@@ -1049,7 +1012,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                     {texts.complianceNote} {actualRegulations[selectedProvince].authority}
                   </div>
                   
-                  {/* Indicateur SafetyManager */}
                   <div style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1124,7 +1086,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               </div>
             </div>
             
-            {/* Informations du permis avec validation SafetyManager */}
+            {/* Informations du permis */}
             {permitData.permit_number && (
               <div style={{
                 padding: '20px',
@@ -1296,7 +1258,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             gap: '12px',
             alignItems: 'center'
           }}>
-            {/* Indicateur de sauvegarde */}
             {saveStatus === 'saving' && (
               <div style={{
                 display: 'flex',
