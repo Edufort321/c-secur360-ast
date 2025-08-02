@@ -655,7 +655,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         );
         
       case 'atmospheric':
-        // AtmosphericTesting avec interface exacte du code fourni
+        // AtmosphericTesting avec props minimales garanties
         return (
           <AtmosphericTesting 
             permitData={permitData}
@@ -667,26 +667,19 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             isMobile={actualIsMobile}
             language={language}
             styles={actualStyles}
-            updateParentData={(data: any) => {
-              if (updateParentData) {
-                updateParentData(data);
-              }
-            }}
           />
         );
         
       case 'registry':
-        // EntryRegistry avec interface minimale mais fonctionnelle
+        // EntryRegistry avec interface minimale - seulement language
         return (
           <EntryRegistry 
             language={language}
-            onDataChange={handleSectionDataChange}
-            onSave={(data: any) => updatePermitData(data)}
           />
         );
         
       case 'rescue':
-        // RescuePlan avec interface exacte du code fourni
+        // RescuePlan avec props essentielles seulement
         return (
           <RescuePlan 
             permitData={permitData}
