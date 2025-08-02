@@ -678,10 +678,17 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         );
         
       case 'registry':
-        // EntryRegistry avec interface minimale - seulement language
+        // EntryRegistry avec toutes les props requises
         return (
           <EntryRegistry 
             language={language}
+            permitData={permitData}
+            updatePermitData={updatePermitData}
+            selectedProvince={selectedProvince}
+            PROVINCIAL_REGULATIONS={actualRegulations}
+            isMobile={actualIsMobile}
+            styles={actualStyles}
+            atmosphericReadings={atmosphericReadings}
           />
         );
         
