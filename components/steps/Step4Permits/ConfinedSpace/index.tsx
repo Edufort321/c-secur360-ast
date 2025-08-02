@@ -685,11 +685,19 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       styles: actualStyles
     };
 
+    // Adaptateur updateParentData pour compatibilité
+    const updateParentDataAdapter = (data: any) => {
+      if (updateParentData) {
+        updateParentData(data);
+      }
+    };
+
     switch (currentSection) {
       case 'site':
         return (
           <SiteInformation 
             {...baseProps}
+            updateParentData={updateParentDataAdapter}
           />
         );
         
@@ -698,6 +706,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           <AtmosphericTesting 
             {...baseProps}
             setAtmosphericReadings={setAtmosphericReadings}
+            updateParentData={updateParentDataAdapter}
           />
         );
         
@@ -705,6 +714,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         return (
           <EntryRegistry 
             {...baseProps}
+            updateParentData={updateParentDataAdapter}
           />
         );
         
@@ -712,6 +722,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         return (
           <RescuePlan 
             {...baseProps}
+            updateParentData={updateParentDataAdapter}
           />
         );
         
