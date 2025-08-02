@@ -640,272 +640,159 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
   }, [updateParentData]);
 
-  // =================== RENDU DES SECTIONS AVEC PROPS SPÉCIFIQUES ===================
+  // =================== RENDU DES SECTIONS AVEC COMPOSANTS RÉELS ===================
   const renderSectionContent = () => {
-    // Afficher le contenu de test pour toutes les sections sauf finalization
-    // car les autres composants ont des interfaces incompatibles
-    if (currentSection === 'finalization') {
-      return (
-        <PermitManager
-          // Props ASTForm
-          formData={formData}
-          onDataChange={onDataChange}
-          language={language}
-          tenant={tenant}
-          errors={errors}
-          province={selectedProvince}
-          userRole={userRole}
-          touchOptimized={touchOptimized}
-          compactMode={compactMode}
-          onPermitChange={onPermitChange}
-          initialPermits={initialPermits}
-          
-          // Props spécifiques PermitManager
-          selectedProvince={selectedProvince}
-          PROVINCIAL_REGULATIONS={actualRegulations}
-          isMobile={actualIsMobile}
-          
-          // Props ConfinedSpace
-          permitData={permitData}
-          safetyManager={isSafetyManagerEnabled ? safetyManager : undefined}
-          onSave={onSave}
-          onSubmit={onSubmit}
-          regulations={actualRegulations}
-        />
-      );
+    switch (currentSection) {
+      case 'site':
+        // SiteInformation avec interface correcte
+        return (
+          <SiteInformation 
+            selectedProvince={selectedProvince}
+            PROVINCIAL_REGULATIONS={actualRegulations}
+            isMobile={actualIsMobile}
+            language={language}
+          />
+        );
+        
+      case 'atmospheric':
+        // AtmosphericTesting avec interface exacte du code fourni
+        return (
+          <AtmosphericTesting 
+            permitData={permitData}
+            updatePermitData={updatePermitData}
+            selectedProvince={selectedProvince}
+            PROVINCIAL_REGULATIONS={actualRegulations}
+            atmosphericReadings={atmosphericReadings}
+            setAtmosphericReadings={setAtmosphericReadings}
+            isMobile={actualIsMobile}
+            language={language}
+            styles={actualStyles}
+            updateParentData={(data: any) => {
+              if (updateParentData) {
+                updateParentData(data);
+              }
+            }}
+          />
+        );
+        
+      case 'registry':
+        // EntryRegistry avec interface minimale mais fonctionnelle
+        return (
+          <EntryRegistry 
+            language={language}
+            onDataChange={handleSectionDataChange}
+            onSave={(data: any) => updatePermitData(data)}
+          />
+        );
+        
+      case 'rescue':
+        // RescuePlan avec interface exacte du code fourni
+        return (
+          <RescuePlan 
+            permitData={permitData}
+            updatePermitData={updatePermitData}
+            selectedProvince={selectedProvince}
+            PROVINCIAL_REGULATIONS={actualRegulations}
+            isMobile={actualIsMobile}
+            language={language}
+            styles={actualStyles}
+          />
+        );
+        
+      case 'finalization':
+        // PermitManager complet
+        return (
+          <PermitManager
+            // Props ASTForm
+            formData={formData}
+            onDataChange={onDataChange}
+            language={language}
+            tenant={tenant}
+            errors={errors}
+            province={selectedProvince}
+            userRole={userRole}
+            touchOptimized={touchOptimized}
+            compactMode={compactMode}
+            onPermitChange={onPermitChange}
+            initialPermits={initialPermits}
+            
+            // Props spécifiques PermitManager
+            selectedProvince={selectedProvince}
+            PROVINCIAL_REGULATIONS={actualRegulations}
+            isMobile={actualIsMobile}
+            
+            // Props ConfinedSpace
+            permitData={permitData}
+            safetyManager={isSafetyManagerEnabled ? safetyManager : undefined}
+            onSave={onSave}
+            onSubmit={onSubmit}
+            regulations={actualRegulations}
+          />
+        );
+        
+      default:
+        return renderTestContent();
     }
-
-    // Pour les autres sections, afficher le contenu de test
-    // car les interfaces des composants ne sont pas compatibles avec nos props
-    return renderTestContent();
   };
 
-  // =================== CONTENU DE TEST ===================
+  // =================== CONTENU DE TEST (FALLBACK SEULEMENT) ===================
   const renderTestContent = () => {
-    const sectionData = {
-      site: {
-        emoji: '🏢',
-        title: texts.sections.site,
-        description: language === 'fr' 
-          ? 'Section en cours de développement. Interface SiteInformation nécessite une adaptation spécifique.'
-          : 'Section under development. SiteInformation interface requires specific adaptation.',
-        features: language === 'fr' 
-          ? ['Localisation GPS', 'Description détaillée', 'Responsable d\'entrée', 'Photos du site']
-          : ['GPS Location', 'Detailed Description', 'Entry Supervisor', 'Site Photos'],
-        status: 'development'
-      },
-      rescue: {
-        emoji: '🛡️',
-        title: texts.sections.rescue,
-        description: language === 'fr' 
-          ? 'Section en cours de développement. Interface RescuePlan nécessite une adaptation spécifique.'
-          : 'Section under development. RescuePlan interface requires specific adaptation.',
-        features: language === 'fr' 
-          ? ['Plan d\'évacuation', 'Équipe de secours', 'Équipements d\'urgence', 'Contacts d\'urgence']
-          : ['Evacuation Plan', 'Rescue Team', 'Emergency Equipment', 'Emergency Contacts'],
-        status: 'development'
-      },
-      atmospheric: {
-        emoji: '🌬️',
-        title: texts.sections.atmospheric,
-        description: language === 'fr' 
-          ? 'Section en cours de développement. Interface AtmosphericTesting nécessite une adaptation spécifique.'
-          : 'Section under development. AtmosphericTesting interface requires specific adaptation.',
-        features: language === 'fr' 
-          ? ['Tests 4-gaz', 'Surveillance Bluetooth', 'Alarmes automatiques', 'Calibration équipements']
-          : ['4-Gas Testing', 'Bluetooth Monitoring', 'Automatic Alarms', 'Equipment Calibration'],
-        status: 'development'
-      },
-      registry: {
-        emoji: '👥',
-        title: texts.sections.registry,
-        description: language === 'fr' 
-          ? 'Section en cours de développement. Interface EntryRegistry nécessite une adaptation spécifique.'
-          : 'Section under development. EntryRegistry interface requires specific adaptation.',
-        features: language === 'fr' 
-          ? ['Horodatage précis', 'Signatures électroniques', 'Durée d\'exposition', 'Validation finale']
-          : ['Precise Timestamps', 'Electronic Signatures', 'Exposure Duration', 'Final Validation'],
-        status: 'development'
-      },
-      finalization: {
-        emoji: '✅',
-        title: texts.sections.finalization,
-        description: language === 'fr' 
-          ? 'Finalisation du permis avec validation, impression, génération QR et partage.'
-          : 'Permit finalization with validation, printing, QR generation and sharing.',
-        features: language === 'fr' 
-          ? ['Validation complète', 'Impression PDF', 'Code QR mobile', 'Partage sécurisé']
-          : ['Complete Validation', 'PDF Printing', 'Mobile QR Code', 'Secure Sharing'],
-        status: 'ready'
-      }
-    };
-
-    const current = sectionData[currentSection];
-
     return (
       <div style={{
         padding: '40px',
         textAlign: 'center',
-        border: `2px dashed ${current.status === 'ready' ? '#10b981' : '#f59e0b'}`,
+        border: '2px dashed #ef4444',
         borderRadius: '12px',
-        backgroundColor: `rgba(${current.status === 'ready' ? '16, 185, 129' : '245, 158, 11'}, 0.1)`,
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
         position: 'relative',
         overflow: 'hidden'
       }}>
         <div style={{ position: 'relative', zIndex: 1 }}>
-          {/* Badge de statut */}
-          <div style={{
-            position: 'absolute',
-            top: '20px',
-            right: '20px',
-            padding: '6px 12px',
-            background: current.status === 'ready' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-            border: `1px solid ${current.status === 'ready' ? '#10b981' : '#f59e0b'}`,
-            borderRadius: '16px',
-            fontSize: '12px',
-            fontWeight: '600',
-            color: current.status === 'ready' ? '#10b981' : '#f59e0b'
-          }}>
-            {current.status === 'ready' ? '✅ PRÊT' : '🔧 DEV'}
-          </div>
-
           <div style={{
             fontSize: '64px',
             marginBottom: '24px',
             filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
           }}>
-            {current.emoji}
+            ⚠️
           </div>
           
           <h3 style={{ 
-            color: 'white', 
+            color: '#ef4444', 
             marginBottom: '16px',
             fontSize: '24px',
             fontWeight: '700'
           }}>
-            {current.title}
+            {language === 'fr' ? 'Erreur de Chargement' : 'Loading Error'}
           </h3>
           
           <p style={{ 
-            color: '#d1d5db', 
+            color: '#fca5a5', 
             lineHeight: 1.6,
             marginBottom: '32px',
             fontSize: '16px',
             maxWidth: '500px',
             margin: '0 auto 32px auto'
           }}>
-            {current.description}
+            {language === 'fr' 
+              ? 'Cette section devrait afficher le composant réel. Si vous voyez ce message, il y a un problème de chargement des composants.'
+              : 'This section should display the real component. If you see this message, there is a component loading issue.'
+            }
           </p>
 
-          {/* État SafetyManager */}
-          <div style={{
-            marginBottom: '32px',
-            padding: '16px',
-            backgroundColor: `rgba(${isSafetyManagerEnabled ? '16, 185, 129' : '156, 163, 175'}, 0.2)`,
-            borderRadius: '8px',
-            border: `1px solid rgba(${isSafetyManagerEnabled ? '16, 185, 129' : '156, 163, 175'}, 0.3)`
-          }}>
-            <div style={{
-              fontSize: '14px',
-              color: isSafetyManagerEnabled ? '#86efac' : '#9ca3af',
-              marginBottom: '8px'
-            }}>
-              {isSafetyManagerEnabled ? '✅ ' + texts.safetyManager : '⚠️ Mode basique'}
-            </div>
-            <div style={{
-              fontSize: '12px',
-              color: isSafetyManagerEnabled ? '#6ee7b7' : '#6b7280'
-            }}>
-              {isSafetyManagerEnabled 
-                ? texts.realTimeValidation + (validationData ? ` (${validationData.percentage}%)` : '')
-                : (language === 'fr' ? 'SafetyManager non disponible' : 'SafetyManager not available')
-              }
-            </div>
-          </div>
-
-          {/* Information sur le statut */}
-          {current.status === 'development' && (
-            <div style={{
-              marginBottom: '32px',
-              padding: '16px',
-              backgroundColor: 'rgba(245, 158, 11, 0.1)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
-              borderRadius: '12px'
-            }}>
-              <div style={{
-                fontSize: '14px',
-                color: '#fbbf24',
-                fontWeight: '600',
-                marginBottom: '8px'
-              }}>
-                🔧 {language === 'fr' ? 'Section en Développement' : 'Section Under Development'}
-              </div>
-              <div style={{
-                fontSize: '13px',
-                color: '#d97706'
-              }}>
-                {language === 'fr' 
-                  ? 'Cette section nécessite une adaptation des interfaces de composants. Seule la section Finalisation est actuellement fonctionnelle.'
-                  : 'This section requires component interface adaptation. Only the Finalization section is currently functional.'
-                }
-              </div>
-            </div>
-          )}
-
-          {/* Liste des fonctionnalités */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: actualIsMobile ? '1fr' : 'repeat(2, 1fr)',
-            gap: '12px',
-            maxWidth: '400px',
-            margin: '0 auto'
-          }}>
-            {current.features.map((feature, index) => (
-              <div
-                key={index}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 12px',
-                  backgroundColor: current.status === 'ready' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                  borderRadius: '8px',
-                  border: `1px solid ${current.status === 'ready' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)'}`,
-                  fontSize: '14px',
-                  color: current.status === 'ready' ? '#86efac' : '#93c5fd'
-                }}
-              >
-                <CheckCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
-                <span>{feature}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Bouton d'action pour section prête */}
-          {current.status === 'ready' && (
-            <div style={{ marginTop: '32px' }}>
-              <button
-                onClick={() => {
-                  if (currentSection === 'finalization') {
-                    // Action spécifique à la finalisation
-                    savePermitData(true);
-                  }
-                }}
-                style={{
-                  ...actualStyles.button,
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
-                  color: 'white',
-                  width: 'auto',
-                  padding: '12px 24px',
-                  fontSize: '16px',
-                  fontWeight: '600'
-                }}
-              >
-                <CheckCircle style={{ width: '20px', height: '20px' }} />
-                {language === 'fr' ? 'Finaliser le Permis' : 'Finalize Permit'}
-              </button>
-            </div>
-          )}
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              ...actualStyles.button,
+              background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+              color: 'white',
+              width: 'auto',
+              padding: '12px 24px',
+              fontSize: '16px',
+              fontWeight: '600'
+            }}
+          >
+            {language === 'fr' ? 'Recharger la Page' : 'Reload Page'}
+          </button>
         </div>
       </div>
     );
