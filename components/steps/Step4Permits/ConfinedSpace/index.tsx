@@ -655,7 +655,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         );
         
       case 'atmospheric':
-        // AtmosphericTesting avec props minimales garanties
+        // AtmosphericTesting avec updateParentData REQUIS
         return (
           <AtmosphericTesting 
             permitData={permitData}
@@ -667,6 +667,13 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             isMobile={actualIsMobile}
             language={language}
             styles={actualStyles}
+            updateParentData={(data: any) => {
+              if (updateParentData) {
+                updateParentData(data);
+              }
+              // Fallback local si updateParentData n'est pas fourni
+              updatePermitData(data);
+            }}
           />
         );
         
