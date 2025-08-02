@@ -101,6 +101,15 @@ export interface ConfinedSpacePermit {
   entryRegistry: EntryRegistryData;
   rescuePlan: RescuePlanData;
   
+  // Données de conformité légale
+  gas_detector_calibrated?: boolean;
+  calibration_date?: string;
+  calibration_certificate?: string;
+  multi_level_testing_completed?: boolean;
+  atmospheric_stability_confirmed?: boolean;
+  test_results_signed?: boolean;
+  qualified_tester_name?: string;
+  
   // Métadonnées de validation
   validation: {
     isComplete: boolean;
