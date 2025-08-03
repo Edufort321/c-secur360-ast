@@ -203,12 +203,14 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   const t = translations[language];
 
   // =================== HANDLERS SAFETYMANAGER ===================
-  const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingData>) => {
+const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingData>) => {
+  if (safetyManager) {
     safetyManager.updateAtmosphericTesting(updates);
-    
-    if (onUpdate) {
-      onUpdate('atmosphericTesting', updates);
-    }
+  }
+  
+  if (onUpdate) {
+    onUpdate('atmosphericTesting', updates);
+  }
     
     if (onValidationChange) {
       const validation = safetyManager.validateSection('atmosphericTesting');
