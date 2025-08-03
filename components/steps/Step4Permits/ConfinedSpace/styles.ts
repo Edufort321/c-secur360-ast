@@ -21,6 +21,17 @@ export interface ConfinedSpaceStyles {
   card: StyleObject;
   emergencyCard: StyleObject;
   
+  // NOUVEAUX STYLES POUR ENTRYREGISTRY
+  statCard: StyleObject;
+  personCard: StyleObject;
+  personCardSurveillant: StyleObject;
+  personCardEntrant: StyleObject;
+  personCardInside: StyleObject;
+  equipmentCard: StyleObject;
+  equipmentAvailable: StyleObject;
+  equipmentInUse: StyleObject;
+  equipmentDanger: StyleObject;
+  
   // Formulaires
   input: StyleObject;
   textarea: StyleObject;
@@ -34,6 +45,7 @@ export interface ConfinedSpaceStyles {
   buttonDanger: StyleObject;
   buttonSecondary: StyleObject;
   buttonWarning: StyleObject;
+  buttonSmall: StyleObject;
   
   // Navigation
   tab: StyleObject;
@@ -121,6 +133,68 @@ export const styles: ConfinedSpaceStyles = {
     animation: 'pulse 2s infinite',
     boxShadow: '0 8px 32px rgba(220, 38, 38, 0.4)',
     position: 'relative'
+  },
+
+  // ===== NOUVEAUX STYLES POUR ENTRYREGISTRY =====
+  statCard: {
+    backgroundColor: 'rgba(17, 24, 39, 0.6)',
+    borderRadius: '12px',
+    padding: isMobile ? '16px' : '20px',
+    border: '1px solid #4b5563',
+    transition: 'all 0.2s ease',
+    textAlign: 'center'
+  },
+
+  personCard: {
+    padding: isMobile ? '14px' : '18px',
+    borderRadius: '12px',
+    borderLeft: '4px solid',
+    transition: 'all 0.2s ease',
+    marginBottom: '16px'
+  },
+
+  personCardSurveillant: {
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    borderLeftColor: '#3b82f6',
+    border: '1px solid rgba(59, 130, 246, 0.3)'
+  },
+
+  personCardEntrant: {
+    backgroundColor: 'rgba(107, 114, 128, 0.15)',
+    borderLeftColor: '#6b7280',
+    border: '1px solid rgba(107, 114, 128, 0.3)'
+  },
+
+  personCardInside: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderLeftColor: '#10b981',
+    border: '1px solid rgba(16, 185, 129, 0.3)'
+  },
+
+  equipmentCard: {
+    padding: isMobile ? '14px' : '18px',
+    borderRadius: '12px',
+    borderLeft: '4px solid',
+    transition: 'all 0.2s ease',
+    marginBottom: '16px'
+  },
+
+  equipmentAvailable: {
+    backgroundColor: 'rgba(5, 150, 105, 0.15)',
+    borderLeftColor: '#10b981',
+    border: '1px solid rgba(16, 185, 129, 0.3)'
+  },
+
+  equipmentInUse: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderLeftColor: '#f59e0b',
+    border: '1px solid rgba(245, 158, 11, 0.3)'
+  },
+
+  equipmentDanger: {
+    backgroundColor: 'rgba(220, 38, 38, 0.15)',
+    borderLeftColor: '#ef4444',
+    border: '1px solid rgba(239, 68, 68, 0.3)'
   },
 
   // ===== FORMULAIRES =====
@@ -244,6 +318,13 @@ export const styles: ConfinedSpaceStyles = {
     background: 'linear-gradient(135deg, #f59e0b, #d97706)',
     color: 'white',
     boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
+  },
+
+  buttonSmall: {
+    padding: isMobile ? '6px 10px' : '8px 12px',
+    fontSize: isMobile ? '13px' : '14px',
+    minHeight: 'auto',
+    width: 'auto'
   },
 
   // ===== NAVIGATION =====
