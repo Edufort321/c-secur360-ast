@@ -362,6 +362,7 @@ export interface AlarmSettings {
 export interface EntryRegistryData {
   personnel: PersonnelEntry[];
   entryLog: EntryLogEntry[];
+  entryLogs?: EntryLogEntry[]; // Alias pour compatibilité avec EntryRegistry.tsx
   activeEntrants: string[];
   maxOccupancy: number;
   communicationProtocol: CommunicationProtocol;
@@ -637,6 +638,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
     entryRegistry: {
       personnel: [],
       entryLog: [],
+      entryLogs: [], // Alias pour compatibilité
       activeEntrants: [],
       maxOccupancy: 1,
       communicationProtocol: {
@@ -893,18 +895,26 @@ export const useSafetyManager = create<SafetyManagerState>()(
 
       updateEntryRegistry: (data) => {
         set((state) => {
+          // Synchroniser entryLog et entryLogs pour compatibilité
+          const updatedData = { ...data };
+          if (data.entryLog && !data.entryLogs) {
+            updatedData.entryLogs = data.entryLog;
+          } else if (data.entryLogs && !data.entryLog) {
+            updatedData.entryLog = data.entryLogs;
+          }
+          
           const updatedPermit = {
             ...state.currentPermit,
             entryRegistry: {
               ...state.currentPermit.entryRegistry,
-              ...data,
+              ...updatedData,
               lastUpdated: new Date().toISOString()
             },
             last_modified: new Date().toISOString()
           };
           
           updatedPermit.auditTrail.push(
-            createAuditEntry('update_entry_registry', 'entryRegistry', data, state.currentPermit.entryRegistry)
+            createAuditEntry('update_entry_registry', 'entryRegistry', updatedData, state.currentPermit.entryRegistry)
           );
           
           if (state.autoSaveEnabled) {
@@ -1056,11 +1066,14 @@ export const useSafetyManager = create<SafetyManagerState>()(
             activeEntrants = activeEntrants.filter(id => id !== personId);
           }
           
+          const updatedEntryLog = [...entryLog, newLogEntry];
+          
           const updatedPermit = {
             ...state.currentPermit,
             entryRegistry: {
               ...state.currentPermit.entryRegistry,
-              entryLog: [...entryLog, newLogEntry],
+              entryLog: updatedEntryLog,
+              entryLogs: updatedEntryLog, // Synchroniser avec l'alias
               activeEntrants,
               lastUpdated: new Date().toISOString()
             },
