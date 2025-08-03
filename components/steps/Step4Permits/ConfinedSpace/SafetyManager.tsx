@@ -30,15 +30,15 @@ export type Language = 'fr' | 'en';
 export interface ConfinedSpaceComponentProps {
   // Props de base communes
   language: Language;
-  permitData?: ConfinedSpacePermit;
+  permitData: ConfinedSpacePermit;
   
   // Configuration
   selectedProvince: ProvinceCode;
   regulations: Record<ProvinceCode, any>;
-  isMobile?: boolean;
+  isMobile: boolean;
   
   // SafetyManager integration
-  safetyManager?: SafetyManagerInstance;
+  safetyManager: SafetyManagerInstance;
   
   // Callbacks standardisés
   onUpdate?: (section: string, data: any) => void;
