@@ -31,11 +31,15 @@ function ensureBoolean(value: boolean | undefined, defaultValue: boolean = false
   return value ?? defaultValue;
 }
 
-// =================== TYPES LOCAUX ÉTENDUS ===================
+// =================== TYPES LOCAUX ÉTENDUS COMPATIBLES ===================
 interface EntryLog {
   id: string;
   timestamp: string;
   action: 'entry' | 'exit' | 'emergency_exit' | 'status_check';
+  // Propriétés requises par EntryLogEntry du SafetyManager
+  personnelId: string; // ✅ REQUIS pour compatibilité SafetyManager
+  authorizedBy: string; // ✅ REQUIS pour compatibilité SafetyManager
+  // Propriétés étendues locales
   person_id: string;
   person_name: string;
   role: SafetyRole;
@@ -49,7 +53,6 @@ interface EntryLog {
   communication_verified: boolean;
   equipment_verified: boolean;
   notes?: string;
-  authorized_by: string;
   emergency?: boolean;
 }
 
@@ -496,13 +499,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       id: generatePermitId(),
       timestamp: now,
       action: 'entry',
+      personnelId: personId, // ✅ REQUIS pour SafetyManager
+      authorizedBy: 'Surveillant', // ✅ REQUIS pour SafetyManager
       person_id: personId,
       person_name: person.name,
       role: person.role,
       location: 'Espace clos',
       communication_verified: true,
       equipment_verified: true,
-      authorized_by: 'Surveillant',
       notes: `Entrée autorisée - ${person.role}`
     };
 
@@ -553,13 +557,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       id: generatePermitId(),
       timestamp: now,
       action: 'exit',
+      personnelId: personId, // ✅ REQUIS pour SafetyManager
+      authorizedBy: 'Surveillant', // ✅ REQUIS pour SafetyManager
       person_id: personId,
       person_name: person.name,
       role: person.role,
       location: 'Espace clos',
       communication_verified: true,
       equipment_verified: true,
-      authorized_by: 'Surveillant',
       notes: `Sortie normale - Durée : ${formatDuration(sessionDuration)}`
     };
 
@@ -621,13 +626,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
           id: generatePermitId(),
           timestamp: now,
           action: 'emergency_exit',
+          personnelId: person.id, // ✅ REQUIS pour SafetyManager
+          authorizedBy: 'ÉVACUATION D\'URGENCE', // ✅ REQUIS pour SafetyManager
           person_id: person.id,
           person_name: person.name,
           role: person.role,
           location: 'Espace clos',
           communication_verified: false,
           equipment_verified: false,
-          authorized_by: 'ÉVACUATION D\'URGENCE',
           emergency: true,
           notes: `ÉVACUATION D'URGENCE - Durée : ${formatDuration(sessionDuration)}`
         });
@@ -716,13 +722,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       id: generatePermitId(),
       timestamp: now,
       action: 'status_check',
+      personnelId: communicationCheck.person_id, // ✅ REQUIS pour SafetyManager
+      authorizedBy: 'Surveillant', // ✅ REQUIS pour SafetyManager
       person_id: communicationCheck.person_id,
       person_name: person.name,
       role: person.role,
       location: 'Espace clos',
       communication_verified: communicationCheck.response_received,
       equipment_verified: true,
-      authorized_by: 'Surveillant',
       emergency: communicationCheck.emergency_indicated,
       notes: `Communication ${communicationCheck.communication_type} - Signal: ${communicationCheck.signal_strength}/5 ${communicationCheck.emergency_indicated ? ' - URGENCE SIGNALÉE' : ''}`
     };
@@ -1749,7 +1756,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                     }}>
                       📅 {new Date(log.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
                       <br />
-                      👤 {log.authorized_by}
+                      👤 {log.authorizedBy}
                     </div>
                   </div>
                   
