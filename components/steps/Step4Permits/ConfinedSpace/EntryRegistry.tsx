@@ -516,7 +516,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       const personnelEntry = {
         id: newPerson.id,
         name: newPerson.name,
-        role: newPerson.role,
+        role: newPerson.role === 'surveillant' ? 'attendant' as const : 'entrant' as const,
         certification: Object.entries(newPerson.training)
           .filter(([_, value]) => value)
           .map(([key, _]) => key),
