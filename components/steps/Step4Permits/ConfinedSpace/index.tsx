@@ -64,9 +64,77 @@ interface ConfinedSpaceProps {
 }
 
 interface PermitData {
+  // Propriétés de base
+  id?: string;
   permit_number?: string;
   issue_date?: string;
+  created_at?: string;
+  updated_at?: string;
+  last_modified?: string;
+  status?: 'draft' | 'active' | 'completed' | 'cancelled';
+  
+  // Province et réglementation
+  province?: ProvinceCode;
   selected_province?: ProvinceCode;
+  
+  // Données de site (compatibilité avec SafetyManager)
+  siteInformation?: {
+    projectNumber?: string;
+    workLocation?: string;
+    spaceDescription?: string;
+    workDescription?: string;
+    contractor?: string;
+    supervisor?: string;
+    entry_supervisor?: string;
+    permit_valid_from?: string;
+    permit_valid_to?: string;
+    spaceType?: string;
+    csaClass?: string;
+    dimensions?: any;
+    hazards?: any[];
+    atmosphericHazards?: any[];
+    physicalHazards?: any[];
+    spacePhotos?: any[];
+    unitSystem?: string;
+  };
+  
+  // Tests atmosphériques (compatibilité avec SafetyManager)
+  atmosphericTesting?: {
+    readings?: any[];
+    equipment?: any;
+    continuousMonitoring?: boolean;
+    lastUpdated?: string;
+    testingFrequency?: number;
+  };
+  
+  // Plan de sauvetage (compatibilité avec SafetyManager)
+  rescuePlan?: {
+    emergencyContacts?: any[];
+    rescueTeam?: any[];
+    evacuationProcedure?: string;
+    rescueEquipment?: any[];
+    hospitalInfo?: any;
+    communicationPlan?: string;
+    lastUpdated?: string;
+    responseTime?: number;
+    rescue_plan_type?: 'internal' | 'external' | 'hybrid';
+  };
+  
+  // Registre d'entrée (compatibilité avec SafetyManager)
+  entryRegistry?: {
+    personnel?: any[];
+    entryLog?: any[];
+    activeEntrants?: any[];
+    maxOccupancy?: number;
+    communicationProtocol?: any;
+    lastUpdated?: string;
+    supervisor?: any;
+  };
+  
+  // Conformité (compatibilité avec SafetyManager)
+  compliance?: Record<string, boolean>;
+  
+  // Propriétés héritées pour compatibilité
   projectNumber?: string;
   workLocation?: string;
   spaceDescription?: string;
@@ -78,9 +146,6 @@ interface PermitData {
   supervisor_name?: string;
   permit_valid_from?: string;
   permit_valid_to?: string;
-  status?: 'draft' | 'active' | 'completed' | 'cancelled';
-  created_at?: string;
-  last_modified?: string;
 }
 
 // =================== DÉTECTION MOBILE OPTIMISÉE ===================
