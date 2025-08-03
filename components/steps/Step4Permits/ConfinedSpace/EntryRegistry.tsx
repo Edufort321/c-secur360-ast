@@ -8,7 +8,7 @@ import {
   Volume2, Activity
 } from 'lucide-react';
 
-// Import SafetyManager et styles unifiés mis à jour
+// Import SafetyManager et styles unifiés
 import { useSafetyManager, ConfinedSpaceComponentProps } from './SafetyManager';
 import { styles } from './styles';
 
@@ -43,37 +43,6 @@ interface EntrySession {
   entry_time?: string;
   exit_time?: string;
   duration?: number;
-  surveillant_id: string;
-  notes?: string;
-  status: 'active' | 'completed';
-}
-
-// =================== INTERFACES ÉQUIPEMENTS ===================
-interface Equipment {
-  id: string;
-  name: string;
-  category: string;
-  type: string;
-  status: 'available' | 'in_use' | 'maintenance';
-  location: string;
-  requires_calibration: boolean;
-  calibration_date?: string;
-  next_calibration?: string;
-  assigned_to?: string;
-  usage_sessions: EquipmentSession[];
-  total_usage_time: number;
-  usage_count: number;
-  notes?: string;
-}
-
-interface EquipmentSession {
-  id: string;
-  timestamp: string;
-  type: 'checkout' | 'return';
-  checkout_time?: string;
-  return_time?: string;
-  duration?: number;
-  assigned_to: string;
   surveillant_id: string;
   notes?: string;
   status: 'active' | 'completed';
@@ -163,122 +132,22 @@ const getTrainingRequirements = (province: ProvinceCode): TrainingRequirement[] 
       { id: 'rescue', name: 'Rescue Procedures', authority: 'Newfoundland & Labrador OHS', required: true, description: 'Rescue training' }
     ]
   };
-
   return requirements[province] || requirements.QC;
 };
 
-// =================== ÉQUIPEMENTS PRÉDÉFINIS ===================
-interface EquipmentCategory {
-  name: string;
-  items: Array<{
-    name: string;
-    requires_calibration: boolean;
-    is_rescue: boolean;
-    is_atmospheric: boolean;
-  }>;
-}
-
-const EQUIPMENT_CATEGORIES: Record<string, EquipmentCategory> = {
-  detection: {
-    name: "📱 Détection et Monitoring",
-    items: [
-      { name: "Détecteur 4 gaz portable", requires_calibration: true, is_rescue: false, is_atmospheric: true },
-      { name: "Détecteur d'oxygène", requires_calibration: true, is_rescue: false, is_atmospheric: true },
-      { name: "Manomètre de pression", requires_calibration: true, is_rescue: false, is_atmospheric: false },
-      { name: "Détecteur de CO", requires_calibration: true, is_rescue: false, is_atmospheric: true },
-      { name: "Détecteur H2S", requires_calibration: true, is_rescue: false, is_atmospheric: true }
-    ]
-  },
-  safety: {
-    name: "🦺 Équipement de Sécurité",
-    items: [
-      { name: "Harnais de sécurité", requires_calibration: false, is_rescue: true, is_atmospheric: false },
-      { name: "Casque de protection", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Gants de protection", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Chaussures de sécurité", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Lunettes de protection", requires_calibration: false, is_rescue: false, is_atmospheric: false }
-    ]
-  },
-  respiratory: {
-    name: "😷 Protection Respiratoire",
-    items: [
-      { name: "Appareil respiratoire autonome (ARA)", requires_calibration: true, is_rescue: true, is_atmospheric: false },
-      { name: "Masque à cartouche", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Ligne d'air comprimé", requires_calibration: true, is_rescue: true, is_atmospheric: false },
-      { name: "Masque complet", requires_calibration: false, is_rescue: false, is_atmospheric: false }
-    ]
-  },
-  rescue: {
-    name: "🆘 Équipement de Sauvetage",
-    items: [
-      { name: "Treuil de sauvetage", requires_calibration: true, is_rescue: true, is_atmospheric: false },
-      { name: "Civière d'évacuation", requires_calibration: false, is_rescue: true, is_atmospheric: false },
-      { name: "Corde et mousquetons", requires_calibration: false, is_rescue: true, is_atmospheric: false },
-      { name: "Système de hissage", requires_calibration: true, is_rescue: true, is_atmospheric: false },
-      { name: "Bouée de sauvetage", requires_calibration: false, is_rescue: true, is_atmospheric: false }
-    ]
-  },
-  communication: {
-    name: "📻 Communication",
-    items: [
-      { name: "Radio bidirectionnelle", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Téléphone d'urgence", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Système d'alarme", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Sifflet d'urgence", requires_calibration: false, is_rescue: false, is_atmospheric: false }
-    ]
-  },
-  ventilation: {
-    name: "💨 Ventilation",
-    items: [
-      { name: "Ventilateur portable", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Extracteur d'air", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Soufflante industrielle", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Tuyau de ventilation", requires_calibration: false, is_rescue: false, is_atmospheric: false }
-    ]
-  },
-  lighting: {
-    name: "💡 Éclairage",
-    items: [
-      { name: "Lampe frontale LED", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Projecteur portable", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Éclairage de secours", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Lampe antidéflagrante", requires_calibration: false, is_rescue: false, is_atmospheric: false }
-    ]
-  },
-  tools: {
-    name: "🔧 Outils",
-    items: [
-      { name: "Clé ajustable", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Tournevis isolé", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Pince multiprise", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Marteau antidéflagrant", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Niveau à bulle", requires_calibration: false, is_rescue: false, is_atmospheric: false }
-    ]
-  },
-  electrical: {
-    name: "⚡ Équipement Électrique",
-    items: [
-      { name: "Multimètre", requires_calibration: true, is_rescue: false, is_atmospheric: false },
-      { name: "Testeur de tension", requires_calibration: true, is_rescue: false, is_atmospheric: false },
-      { name: "Rallonge étanche", requires_calibration: false, is_rescue: false, is_atmospheric: false },
-      { name: "Disjoncteur portable", requires_calibration: false, is_rescue: false, is_atmospheric: false }
-    ]
-  }
-};
-
-// =================== COMPOSANT PRINCIPAL - DÉBUT ===================
+// =================== COMPOSANT PRINCIPAL ===================
 const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   language = 'fr',
   selectedProvince = 'QC', 
-  regulations = { name: 'CNESST', authority: 'CNESST', authority_phone: '', code: '' },
-  safetyManager
+  regulations,
+  permitData,
+  safetyManager,
+  isMobile: propIsMobile = false
 }) => {
-  // =================== SAFETY MANAGER INTEGRATION ===================
-  const currentPermit = safetyManager?.currentPermit || {};
+  const currentIsMobile = propIsMobile || isMobile;
 
   // =================== ÉTATS PRINCIPAUX ===================
   const [personnel, setPersonnel] = useState<Person[]>([]);
-  const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [compliance_check, setComplianceCheck] = useState<ComplianceCheck>({
     atmospheric_tests_done: false,
     rescue_equipment_present: false,
@@ -292,10 +161,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
 
   // =================== ÉTATS MODALS ===================
   const [showPersonModal, setShowPersonModal] = useState(false);
-  const [showEquipmentModal, setShowEquipmentModal] = useState(false);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
-  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
 
   // =================== ÉTATS FORMULAIRES ===================
   const [personData, setPersonData] = useState({
@@ -308,21 +175,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     formation_confirmed: false
   });
 
-  const [equipmentData, setEquipmentData] = useState({
-    name: '',
-    category: '',
-    type: '',
-    location: '',
-    requires_calibration: false,
-    calibration_date: '',
-    next_calibration: '',
-    notes: ''
-  });
-
   // =================== ÉTATS UI ===================
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
-  const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null);
-  const [showPresetEquipment, setShowPresetEquipment] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [signatureData, setSignatureData] = useState<string>('');
 
@@ -334,64 +188,34 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     fr: {
       title: "Registre d'Entrée - Espace Clos",
       personnel: "Gestion du Personnel",
-      equipment: "Gestion des Équipements",
       compliance: "Validation et Conformité du Permis",
       addPerson: "Ajouter Personnel",
-      addEquipment: "Ajouter Équipement",
       surveillant: "Surveillant",
       entrant: "Entrant",
       active: "Actif",
       inside: "À l'intérieur",
-      available: "Disponible",
-      inUse: "En utilisation",
-      maintenance: "Maintenance",
-      calibrated: "Calibré",
-      expired: "Expiré",
       markEntry: "Marquer Entrée",
       markExit: "Marquer Sortie",
-      checkout: "Sortir Équipement",
-      return: "Retourner Équipement",
-      edit: "Modifier",
-      delete: "Supprimer",
-      activate: "Activer",
-      deactivate: "Désactiver",
       compliant: "CONFORME",
       nonCompliant: "NON CONFORME",
       noPersonnel: "Aucun personnel enregistré",
-      noEquipment: "Aucun équipement enregistré",
-      startWithSupervisor: "Commencez par ajouter un surveillant",
-      addEquipmentFirst: "Ajoutez des équipements pour commencer"
+      startWithSupervisor: "Commencez par ajouter un surveillant"
     },
     en: {
       title: "Entry Registry - Confined Space",
       personnel: "Personnel Management",
-      equipment: "Equipment Management", 
       compliance: "Permit Validation and Compliance",
       addPerson: "Add Personnel",
-      addEquipment: "Add Equipment",
       surveillant: "Attendant",
       entrant: "Entrant",
       active: "Active",
       inside: "Inside",
-      available: "Available",
-      inUse: "In Use",
-      maintenance: "Maintenance",
-      calibrated: "Calibrated",
-      expired: "Expired",
       markEntry: "Mark Entry",
       markExit: "Mark Exit",
-      checkout: "Checkout Equipment",
-      return: "Return Equipment",
-      edit: "Edit",
-      delete: "Delete",
-      activate: "Activate",
-      deactivate: "Deactivate",
       compliant: "COMPLIANT",
       nonCompliant: "NON-COMPLIANT",
       noPersonnel: "No personnel registered",
-      noEquipment: "No equipment registered",
-      startWithSupervisor: "Start by adding an attendant",
-      addEquipmentFirst: "Add equipment to get started"
+      startWithSupervisor: "Start by adding an attendant"
     }
   })[language];
 
@@ -408,37 +232,6 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
         body: message,
         icon: type === 'error' ? '🚨' : type === 'warning' ? '⚠️' : 'ℹ️'
       });
-    }
-  };
-
-  const playAlarmSound = (type: 'warning' | 'evacuation' = 'warning') => {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      if (type === 'evacuation') {
-        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(1500, audioContext.currentTime + 0.5);
-        gainNode.gain.setValueAtTime(0.7, audioContext.currentTime);
-      } else {
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.5);
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      }
-
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-
-      if (type === 'evacuation') {
-        setTimeout(() => playAlarmSound('evacuation'), 600);
-        setTimeout(() => playAlarmSound('evacuation'), 1200);
-      }
-    } catch (error) {
-      console.warn('Cannot play alarm sound:', error);
     }
   };
 
@@ -465,6 +258,27 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     return personnel.filter(person => 
       person.entry_sessions.some(session => session.status === 'active')
     );
+  };
+
+  const updatePerson = () => {
+    if (!editingPerson) return;
+    
+    const updatedPerson = {
+      ...editingPerson,
+      name: personData.name,
+      company: personData.company,
+      training: personData.training,
+      training_expiry: personData.training_expiry,
+      formation_confirmed: personData.formation_confirmed,
+      last_updated: new Date().toISOString()
+    };
+
+    setPersonnel(prev => prev.map(p => p.id === editingPerson.id ? updatedPerson : p));
+    resetPersonForm();
+    setShowPersonModal(false);
+    setEditingPerson(null);
+    
+    showNotification(`✅ Personnel mis à jour: ${personData.name}`, 'info');
   };
 
   const addPerson = () => {
@@ -510,9 +324,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     
     showNotification(`✅ ${personData.role === 'surveillant' ? 'Surveillant' : 'Entrant'} ajouté: ${personData.name}`, 'info');
 
-    // Mise à jour SafetyManager
+    // Mise à jour SafetyManager si disponible
     if (safetyManager) {
-      // Convertir Person vers PersonnelEntry pour compatibilité
       const personnelEntry = {
         id: newPerson.id,
         name: newPerson.name,
@@ -531,7 +344,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
           relationship: ''
         }
       };
-      safetyManager.updateEntryRegistry({ personnel: [...(safetyManager.currentPermit.entryRegistry.personnel || []), personnelEntry] });
+      
+      try {
+        safetyManager.updateEntryRegistry({ 
+          personnel: [...(permitData.entryRegistry?.personnel || []), personnelEntry] 
+        });
+      } catch (error) {
+        console.warn('SafetyManager update failed:', error);
+      }
     }
   };
 
@@ -568,11 +388,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     setPersonnel(prev => prev.map(p => p.id === personId ? updatedPerson : p));
     
     showNotification(`➡️ ENTRÉE: ${person.name} dans l'espace clos`, 'info');
-    playAlarmSound('warning');
 
     // Mise à jour SafetyManager
     if (safetyManager) {
-      safetyManager.recordEntryExit(personId, 'entry');
+      try {
+        safetyManager.recordEntryExit(personId, 'entry');
+      } catch (error) {
+        console.warn('SafetyManager entry record failed:', error);
+      }
     }
   };
 
@@ -616,11 +439,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     
     const durationText = formatDuration(duration);
     showNotification(`⬅️ SORTIE: ${person.name} (Durée: ${durationText})`, 'info');
-    playAlarmSound('warning');
 
     // Mise à jour SafetyManager
     if (safetyManager) {
-      safetyManager.recordEntryExit(personId, 'exit');
+      try {
+        safetyManager.recordEntryExit(personId, 'exit');
+      } catch (error) {
+        console.warn('SafetyManager exit record failed:', error);
+      }
     }
   };
 
@@ -633,59 +459,6 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       training_expiry: '',
       electronic_signature: '',
       formation_confirmed: false
-    });
-  };
-
-  // =================== GESTION ÉQUIPEMENTS ===================
-  const addEquipment = () => {
-    const newEquipment: Equipment = {
-      id: generateId(),
-      name: equipmentData.name,
-      category: equipmentData.category,
-      type: equipmentData.type,
-      status: 'available',
-      location: equipmentData.location,
-      requires_calibration: equipmentData.requires_calibration,
-      calibration_date: equipmentData.calibration_date || undefined,
-      next_calibration: equipmentData.next_calibration || undefined,
-      usage_sessions: [],
-      total_usage_time: 0,
-      usage_count: 0,
-      notes: equipmentData.notes
-    };
-
-    setEquipment(prev => [...prev, newEquipment]);
-    resetEquipmentForm();
-    setShowEquipmentModal(false);
-    
-    showNotification(`✅ Équipement ajouté: ${equipmentData.name}`, 'info');
-
-    // Mise à jour SafetyManager
-    if (safetyManager) {
-      // Conversion simple pour compatibilité
-      const equipmentEntry = {
-        id: newEquipment.id,
-        name: newEquipment.name,
-        type: newEquipment.type,
-        serialNumber: newEquipment.notes || '',
-        lastInspection: newEquipment.calibration_date || '',
-        nextInspection: newEquipment.next_calibration || '',
-        isAvailable: newEquipment.status === 'available'
-      };
-      safetyManager.updateEquipment(equipmentEntry);
-    }
-  };
-
-  const resetEquipmentForm = () => {
-    setEquipmentData({
-      name: '',
-      category: '',
-      type: '',
-      location: '',
-      requires_calibration: false,
-      calibration_date: '',
-      next_calibration: '',
-      notes: ''
     });
   };
 
@@ -709,7 +482,11 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
 
     // Mise à jour SafetyManager
     if (safetyManager) {
-      safetyManager.updateCompliance(key, value);
+      try {
+        safetyManager.updateCompliance(key, value);
+      } catch (error) {
+        console.warn('SafetyManager compliance update failed:', error);
+      }
     }
   };
 
@@ -752,40 +529,6 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     };
   };
 
-  const getEquipmentStats = () => {
-    const totalEquipment = equipment.length;
-    const inUse = equipment.filter(eq => eq.status === 'in_use').length;
-    const needsCalibration = equipment.filter(eq => 
-      eq.requires_calibration && eq.next_calibration && new Date(eq.next_calibration) < new Date()
-    ).length;
-    const totalUsageSessions = equipment.reduce((sum, eq) => sum + eq.usage_sessions.length, 0);
-
-    return {
-      totalEquipment,
-      inUse,
-      available: totalEquipment - inUse,
-      needsCalibration,
-      totalUsageSessions
-    };
-  };
-
-  // =================== EFFETS ===================
-  useEffect(() => {
-    // Demander permission pour notifications
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
-
-  // Mise à jour automatique du SafetyManager
-  useEffect(() => {
-    if (safetyManager) {
-      // Pas de mise à jour automatique massive pour éviter les conflits de types
-      // Les mises à jour se font individuellement via les actions spécifiques
-    }
-  }, [personnel, equipment, compliance_check, safetyManager]);
-
-// =================== SUITE DANS LA PARTIE 2 ===================
   // =================== SIGNATURE NUMÉRIQUE ===================
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -878,15 +621,24 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     showNotification(`✅ Signature enregistrée pour ${person.name}`, 'info');
   };
 
+  // =================== EFFETS ===================
+  useEffect(() => {
+    // Demander permission pour notifications
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+// =================== LA SUITE DANS LA PARTIE 2 ===================
   // =================== RENDU PRINCIPAL ===================
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: currentIsMobile ? '20px' : '28px' }}>
       
       {/* Header principal */}
       <div style={{
         background: 'linear-gradient(135deg, #1f2937, #374151)',
-        borderRadius: isMobile ? '12px' : '16px',
-        padding: isMobile ? '20px' : '24px',
+        borderRadius: currentIsMobile ? '12px' : '16px',
+        padding: currentIsMobile ? '20px' : '24px',
         border: '1px solid #4b5563',
         boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
       }}>
@@ -894,12 +646,12 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: isMobile ? '16px' : '0'
+          flexDirection: currentIsMobile ? 'column' : 'row',
+          gap: currentIsMobile ? '16px' : '0'
         }}>
           <div>
             <h1 style={{
-              fontSize: isMobile ? '20px' : '28px',
+              fontSize: currentIsMobile ? '20px' : '28px',
               fontWeight: 'bold',
               color: 'white',
               marginBottom: '8px',
@@ -907,20 +659,20 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
               alignItems: 'center',
               gap: '12px'
             }}>
-              <Shield style={{ width: isMobile ? '24px' : '32px', height: isMobile ? '24px' : '32px', color: '#60a5fa' }} />
+              <Shield style={{ width: currentIsMobile ? '24px' : '32px', height: currentIsMobile ? '24px' : '32px', color: '#60a5fa' }} />
               {texts.title}
             </h1>
             <p style={{ 
               color: '#9ca3af', 
-              fontSize: isMobile ? '14px' : '16px',
+              fontSize: currentIsMobile ? '14px' : '16px',
               margin: 0
             }}>
-              🌍 Province: {selectedProvince} | ⚖️ Réglementation: {regulations[selectedProvince]?.name || 'CNESST'}
+              🌍 Province: {selectedProvince} | ⚖️ Réglementation: {regulations?.name || 'CNESST'}
             </p>
           </div>
-          <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
+          <div style={{ textAlign: currentIsMobile ? 'center' : 'right' }}>
             <div style={{ 
-              fontSize: isMobile ? '32px' : '48px', 
+              fontSize: currentIsMobile ? '32px' : '48px', 
               fontWeight: 'bold',
               color: getPersonnelStats().activeEntrants > 0 ? '#10b981' : '#6b7280',
               fontFamily: 'JetBrains Mono, monospace'
@@ -929,7 +681,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             </div>
             <div style={{ 
               color: '#9ca3af', 
-              fontSize: isMobile ? '12px' : '14px',
+              fontSize: currentIsMobile ? '12px' : '14px',
               fontWeight: '600'
             }}>
               👥 Personnel à l'intérieur
@@ -951,14 +703,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             <div>
               <p style={{ 
                 color: '#9ca3af', 
-                fontSize: isMobile ? '12px' : '14px',
+                fontSize: currentIsMobile ? '12px' : '14px',
                 fontWeight: '500',
                 margin: '0 0 4px 0'
               }}>
                 👥 Personnel Total
               </p>
               <p style={{ 
-                fontSize: isMobile ? '24px' : '32px',
+                fontSize: currentIsMobile ? '24px' : '32px',
                 fontWeight: 'bold',
                 color: 'white',
                 margin: 0,
@@ -968,8 +720,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
               </p>
             </div>
             <Users style={{ 
-              width: isMobile ? '32px' : '40px', 
-              height: isMobile ? '32px' : '40px', 
+              width: currentIsMobile ? '32px' : '40px', 
+              height: currentIsMobile ? '32px' : '40px', 
               color: '#60a5fa'
             }} />
           </div>
@@ -988,68 +740,12 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
               color: getCurrentSurveillant() ? '#10b981' : '#ef4444'
             }} />
             <span style={{ 
-              fontSize: isMobile ? '11px' : '12px',
+              fontSize: currentIsMobile ? '11px' : '12px',
               fontWeight: '600',
               color: getCurrentSurveillant() ? '#86efac' : '#fca5a5'
             }}>
               {getCurrentSurveillant() ? '✅ Surveillant actif' : '❌ Aucun surveillant'}
             </span>
-          </div>
-        </div>
-
-        {/* Équipements Stats */}
-        <div style={styles.statCard}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            marginBottom: '12px'
-          }}>
-            <div>
-              <p style={{ 
-                color: '#9ca3af', 
-                fontSize: isMobile ? '12px' : '14px',
-                fontWeight: '500',
-                margin: '0 0 4px 0'
-              }}>
-                🔧 Équipements
-              </p>
-              <p style={{ 
-                fontSize: isMobile ? '24px' : '32px',
-                fontWeight: 'bold',
-                color: 'white',
-                margin: 0,
-                fontFamily: 'JetBrains Mono, monospace'
-              }}>
-                {getEquipmentStats().totalEquipment}
-              </p>
-            </div>
-            <Wrench style={{ 
-              width: isMobile ? '32px' : '40px', 
-              height: isMobile ? '32px' : '40px', 
-              color: '#10b981'
-            }} />
-          </div>
-          <div style={{ fontSize: isMobile ? '11px' : '12px' }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between',
-              marginBottom: '4px'
-            }}>
-              <span style={{ color: '#9ca3af' }}>📤 En cours:</span>
-              <span style={{ fontWeight: '600', color: '#f59e0b' }}>
-                {getEquipmentStats().inUse}
-              </span>
-            </div>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between'
-            }}>
-              <span style={{ color: '#9ca3af' }}>✅ Disponibles:</span>
-              <span style={{ fontWeight: '600', color: '#10b981' }}>
-                {getEquipmentStats().available}
-              </span>
-            </div>
           </div>
         </div>
 
@@ -1064,14 +760,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             <div>
               <p style={{ 
                 color: '#9ca3af', 
-                fontSize: isMobile ? '12px' : '14px',
+                fontSize: currentIsMobile ? '12px' : '14px',
                 fontWeight: '500',
                 margin: '0 0 4px 0'
               }}>
                 ✅ Conformité
               </p>
               <p style={{ 
-                fontSize: isMobile ? '24px' : '32px',
+                fontSize: currentIsMobile ? '24px' : '32px',
                 fontWeight: 'bold',
                 color: isFullyCompliant() ? '#10b981' : '#f59e0b',
                 margin: 0,
@@ -1081,8 +777,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
               </p>
             </div>
             <CheckCircle style={{ 
-              width: isMobile ? '32px' : '40px', 
-              height: isMobile ? '32px' : '40px', 
+              width: currentIsMobile ? '32px' : '40px', 
+              height: currentIsMobile ? '32px' : '40px', 
               color: isFullyCompliant() ? '#10b981' : '#f59e0b'
             }} />
           </div>
@@ -1104,7 +800,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
               }} />
             </div>
             <p style={{ 
-              fontSize: isMobile ? '10px' : '11px',
+              fontSize: currentIsMobile ? '10px' : '11px',
               color: isFullyCompliant() ? '#86efac' : '#fde047',
               margin: 0,
               fontWeight: '600',
@@ -1115,7 +811,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
           </div>
         </div>
 
-        {/* Alertes */}
+        {/* Sessions */}
         <div style={styles.statCard}>
           <div style={{ 
             display: 'flex', 
@@ -1126,37 +822,87 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             <div>
               <p style={{ 
                 color: '#9ca3af', 
-                fontSize: isMobile ? '12px' : '14px',
+                fontSize: currentIsMobile ? '12px' : '14px',
                 fontWeight: '500',
                 margin: '0 0 4px 0'
               }}>
-                🚨 Alertes
+                📊 Sessions
               </p>
               <p style={{ 
-                fontSize: isMobile ? '24px' : '32px',
+                fontSize: currentIsMobile ? '24px' : '32px',
                 fontWeight: 'bold',
-                color: getEquipmentStats().needsCalibration > 0 ? '#ef4444' : '#6b7280',
+                color: 'white',
                 margin: 0,
                 fontFamily: 'JetBrains Mono, monospace'
               }}>
-                {getEquipmentStats().needsCalibration}
+                {getPersonnelStats().totalSessions}
               </p>
             </div>
-            <AlertTriangle style={{ 
-              width: isMobile ? '32px' : '40px', 
-              height: isMobile ? '32px' : '40px', 
-              color: getEquipmentStats().needsCalibration > 0 ? '#ef4444' : '#6b7280'
+            <Activity style={{ 
+              width: currentIsMobile ? '32px' : '40px', 
+              height: currentIsMobile ? '32px' : '40px', 
+              color: '#10b981'
             }} />
           </div>
           <p style={{ 
-            fontSize: isMobile ? '10px' : '11px',
+            fontSize: currentIsMobile ? '10px' : '11px',
             color: '#9ca3af',
             margin: 0,
             textAlign: 'center'
           }}>
-            {getEquipmentStats().needsCalibration > 0 
-              ? '📅 Calibrations expirées' 
-              : '✅ Aucune alerte active'
+            Total entrées/sorties
+          </p>
+        </div>
+
+        {/* Statut Général */}
+        <div style={styles.statCard}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            marginBottom: '12px'
+          }}>
+            <div>
+              <p style={{ 
+                color: '#9ca3af', 
+                fontSize: currentIsMobile ? '12px' : '14px',
+                fontWeight: '500',
+                margin: '0 0 4px 0'
+              }}>
+                🎯 Statut
+              </p>
+              <p style={{ 
+                fontSize: currentIsMobile ? '16px' : '20px',
+                fontWeight: 'bold',
+                color: (getCurrentSurveillant() && isFullyCompliant()) ? '#10b981' : '#f59e0b',
+                margin: 0
+              }}>
+                {(getCurrentSurveillant() && isFullyCompliant()) ? 'PRÊT' : 'EN ATTENTE'}
+              </p>
+            </div>
+            {(getCurrentSurveillant() && isFullyCompliant()) ? (
+              <CheckCircle style={{ 
+                width: currentIsMobile ? '32px' : '40px', 
+                height: currentIsMobile ? '32px' : '40px', 
+                color: '#10b981'
+              }} />
+            ) : (
+              <AlertTriangle style={{ 
+                width: currentIsMobile ? '32px' : '40px', 
+                height: currentIsMobile ? '32px' : '40px', 
+                color: '#f59e0b'
+              }} />
+            )}
+          </div>
+          <p style={{ 
+            fontSize: currentIsMobile ? '10px' : '11px',
+            color: '#9ca3af',
+            margin: 0,
+            textAlign: 'center'
+          }}>
+            {(getCurrentSurveillant() && isFullyCompliant()) 
+              ? '✅ Autorisé pour entrées' 
+              : '⚠️ Vérifications requises'
             }
           </p>
         </div>
@@ -1175,7 +921,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
           </h2>
           <p style={{ 
             color: '#9ca3af', 
-            fontSize: isMobile ? '13px' : '15px',
+            fontSize: currentIsMobile ? '13px' : '15px',
             margin: 0,
             lineHeight: 1.5
           }}>
@@ -1188,7 +934,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             <div 
               key={key}
               style={{
-                padding: isMobile ? '16px' : '20px',
+                padding: currentIsMobile ? '16px' : '20px',
                 borderRadius: '12px',
                 border: `2px solid ${value ? '#10b981' : '#4b5563'}`,
                 backgroundColor: value ? 'rgba(16, 185, 129, 0.1)' : 'rgba(75, 85, 99, 0.1)',
@@ -1216,12 +962,12 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                     fontWeight: '600',
                     color: value ? '#86efac' : '#d1d5db',
                     margin: '0 0 4px 0',
-                    fontSize: isMobile ? '14px' : '15px'
+                    fontSize: currentIsMobile ? '14px' : '15px'
                   }}>
                     {getComplianceLabel(key as keyof ComplianceCheck)}
                   </p>
                   <p style={{ 
-                    fontSize: isMobile ? '11px' : '12px',
+                    fontSize: currentIsMobile ? '11px' : '12px',
                     color: '#9ca3af',
                     margin: 0
                   }}>
@@ -1235,7 +981,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
         
         <div style={{
           marginTop: '24px',
-          padding: isMobile ? '20px' : '24px',
+          padding: currentIsMobile ? '20px' : '24px',
           borderRadius: '12px',
           border: `2px solid ${isFullyCompliant() ? '#10b981' : '#f59e0b'}`,
           backgroundColor: isFullyCompliant() ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)'
@@ -1244,8 +990,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'space-between',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: isMobile ? '16px' : '0'
+            flexDirection: currentIsMobile ? 'column' : 'row',
+            gap: currentIsMobile ? '16px' : '0'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               {isFullyCompliant() ? (
@@ -1258,22 +1004,22 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                   fontWeight: 'bold',
                   color: isFullyCompliant() ? '#86efac' : '#fde047',
                   margin: '0 0 4px 0',
-                  fontSize: isMobile ? '16px' : '18px'
+                  fontSize: currentIsMobile ? '16px' : '18px'
                 }}>
                   🎯 Statut: {isFullyCompliant() ? texts.compliant + ' ✅' : texts.nonCompliant + ' ⚠️'}
                 </p>
                 <p style={{ 
                   color: '#9ca3af', 
-                  fontSize: isMobile ? '13px' : '14px',
+                  fontSize: currentIsMobile ? '13px' : '14px',
                   margin: 0
                 }}>
                   📊 {getCompliancePercentage()}% des vérifications complétées
                 </p>
               </div>
             </div>
-            <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
+            <div style={{ textAlign: currentIsMobile ? 'center' : 'right' }}>
               <div style={{
-                fontSize: isMobile ? '28px' : '36px',
+                fontSize: currentIsMobile ? '28px' : '36px',
                 fontWeight: 'bold',
                 color: isFullyCompliant() ? '#10b981' : '#f59e0b',
                 fontFamily: 'JetBrains Mono, monospace'
@@ -1296,8 +1042,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'space-between',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: isMobile ? '16px' : '0'
+            flexDirection: currentIsMobile ? 'column' : 'row',
+            gap: currentIsMobile ? '16px' : '0'
           }}>
             <h2 style={styles.cardTitle}>
               <UserCheck style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
@@ -1320,19 +1066,19 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
         {personnel.length === 0 ? (
           <div style={{ 
             textAlign: 'center', 
-            padding: isMobile ? '40px 20px' : '60px 40px',
+            padding: currentIsMobile ? '40px 20px' : '60px 40px',
             backgroundColor: 'rgba(17, 24, 39, 0.5)',
             borderRadius: '12px',
             border: '1px solid #374151'
           }}>
             <UserCheck style={{ 
-              width: isMobile ? '64px' : '80px', 
-              height: isMobile ? '64px' : '80px', 
+              width: currentIsMobile ? '64px' : '80px', 
+              height: currentIsMobile ? '64px' : '80px', 
               color: '#6b7280',
               margin: '0 auto 20px'
             }} />
             <h3 style={{ 
-              fontSize: isMobile ? '18px' : '20px',
+              fontSize: currentIsMobile ? '18px' : '20px',
               fontWeight: '600',
               color: '#d1d5db',
               marginBottom: '12px'
@@ -1341,7 +1087,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             </h3>
             <p style={{ 
               color: '#9ca3af', 
-              fontSize: isMobile ? '14px' : '15px',
+              fontSize: currentIsMobile ? '14px' : '15px',
               lineHeight: 1.5
             }}>
               👨‍💼 {texts.startWithSupervisor}
@@ -1364,8 +1110,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                     alignItems: 'center', 
                     justifyContent: 'space-between',
                     marginBottom: '16px',
-                    flexDirection: isMobile ? 'column' : 'row',
-                    gap: isMobile ? '16px' : '0'
+                    flexDirection: currentIsMobile ? 'column' : 'row',
+                    gap: currentIsMobile ? '16px' : '0'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                       <div style={{
@@ -1393,7 +1139,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                           flexWrap: 'wrap'
                         }}>
                           <h3 style={{ 
-                            fontSize: isMobile ? '16px' : '18px',
+                            fontSize: currentIsMobile ? '16px' : '18px',
                             fontWeight: 'bold',
                             color: 'white',
                             margin: 0
@@ -1448,7 +1194,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                           alignItems: 'center', 
                           gap: '16px', 
                           marginTop: '8px',
-                          fontSize: isMobile ? '12px' : '13px',
+                          fontSize: currentIsMobile ? '12px' : '13px',
                           color: '#9ca3af',
                           flexWrap: 'wrap'
                         }}>
@@ -1517,6 +1263,32 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                           {person.signature ? 'Nouvelle Signature' : 'Signer'}
                         </button>
                       )}
+
+                      {/* Bouton Modifier */}
+                      <button
+                        onClick={() => {
+                          setEditingPerson(person);
+                          setPersonData({
+                            name: person.name,
+                            role: person.role,
+                            company: person.company,
+                            training: person.training,
+                            training_expiry: person.training_expiry || '',
+                            electronic_signature: person.electronic_signature || '',
+                            formation_confirmed: person.formation_confirmed || false
+                          });
+                          setShowPersonModal(true);
+                        }}
+                        style={{
+                          ...styles.button,
+                          backgroundColor: '#6b7280',
+                          color: 'white',
+                          ...styles.buttonSmall
+                        }}
+                      >
+                        <Edit3 style={{ width: '16px', height: '16px' }} />
+                        Modifier
+                      </button>
                     </div>
                   </div>
 
@@ -1528,7 +1300,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                       borderTop: '1px solid #4b5563'
                     }}>
                       <h4 style={{ 
-                        fontSize: isMobile ? '13px' : '14px',
+                        fontSize: currentIsMobile ? '13px' : '14px',
                         fontWeight: '600',
                         color: '#d1d5db',
                         marginBottom: '12px',
@@ -1554,7 +1326,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                               backgroundColor: session.status === 'active' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(17, 24, 39, 0.5)',
                               borderRadius: '8px',
                               border: `1px solid ${session.status === 'active' ? '#10b981' : '#374151'}`,
-                              fontSize: isMobile ? '11px' : '12px'
+                              fontSize: currentIsMobile ? '11px' : '12px'
                             }}
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1617,7 +1389,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
         )}
       </div>
 
-      {/* Modal Ajout Personnel */}
+      {/* Modal Ajout/Modification Personnel */}
       {showPersonModal && (
         <div style={{
           position: 'fixed',
@@ -1627,7 +1399,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 50,
-          padding: isMobile ? '16px' : '20px'
+          padding: currentIsMobile ? '16px' : '20px'
         }}>
           <div style={{
             backgroundColor: '#1f2937',
@@ -1838,7 +1610,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 50,
-          padding: isMobile ? '16px' : '20px'
+          padding: currentIsMobile ? '16px' : '20px'
         }}>
           <div style={{
             backgroundColor: '#1f2937',
@@ -1900,13 +1672,13 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: isMobile ? '12px' : '0'
+                flexDirection: currentIsMobile ? 'column' : 'row',
+                gap: currentIsMobile ? '12px' : '0'
               }}>
                 <div style={{ 
                   fontSize: '14px', 
                   color: '#9ca3af',
-                  textAlign: isMobile ? 'center' : 'left'
+                  textAlign: currentIsMobile ? 'center' : 'left'
                 }}>
                   <div>👤 Personne: <span style={{ fontWeight: '600', color: 'white' }}>
                     {personnel.find(p => p.id === selectedPersonId)?.name}
