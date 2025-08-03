@@ -1,1385 +1,1475 @@
+// EntryRegistry.tsx - PARTIE 1/2 - Version Complète Corrigée Compatible SafetyManager
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   UserCheck, Eye, LogIn, LogOut, Shield, Plus, Trash2, Timer, Users, 
   PenTool, CheckCircle, X, Edit3, Copy, Wrench, Clock, History, 
-  UserPlus, UserMinus, AlertTriangle, FileText, PenTool as Signature,
-  Volume2, Activity
+  UserPlus, UserMinus, AlertTriangle, FileText, PenTool as Signature, 
+  Volume2, Camera, Bluetooth, Battery, Signal, MapPin, Calendar, User, 
+  Phone, Mail, Building, Briefcase, Award
 } from 'lucide-react';
 
-// Import SafetyManager et styles unifiés
-import { useSafetyManager, ConfinedSpaceComponentProps } from './SafetyManager';
-import { styles } from './styles';
+// Import des types et du hook centralisé
+import {
+  ConfinedSpaceComponentProps,
+  EntryRegistryData,
+  PersonnelEntry,
+  EmergencyContact,
+  SafetyRole,
+  generatePermitId
+} from './SafetyManager';
 
-// =================== DÉTECTION MOBILE ===================
-const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+import { styles, isMobile } from './styles';
 
-// =================== TYPES PROVINCIAUX ===================
-type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
-
-// =================== INTERFACES PERSONNEL ===================
-interface Person {
-  id: string;
-  name: string;
-  role: 'surveillant' | 'entrant';
-  company: string;
-  training: Record<string, boolean>;
-  equipment_assigned: string[];
-  entry_sessions: EntrySession[];
-  is_active: boolean;
-  last_updated: string;
-  signature?: string;
-  signature_timestamp?: string;
-  electronic_signature?: string;
-  training_expiry?: string;
-  formation_confirmed?: boolean;
-}
-
-interface EntrySession {
+// =================== TYPES LOCAUX ÉTENDUS ===================
+interface EntryLog {
   id: string;
   timestamp: string;
-  type: 'entry' | 'exit';
-  entry_time?: string;
-  exit_time?: string;
-  duration?: number;
-  surveillant_id: string;
-  notes?: string;
-  status: 'active' | 'completed';
-}
-
-// =================== INTERFACES CONFORMITÉ ===================
-interface ComplianceCheck {
-  atmospheric_tests_done: boolean;
-  rescue_equipment_present: boolean;
-  communication_equipment_present: boolean;
-  ventilation_equipment_present: boolean;
-  emergency_procedures_reviewed: boolean;
-  personnel_training_verified: boolean;
-  equipment_calibration_current: boolean;
-  rescue_plan_accessible: boolean;
-}
-
-// =================== FORMATIONS PAR PROVINCE ===================
-interface TrainingRequirement {
-  id: string;
-  name: string;
-  authority: string;
-  required: boolean;
-  description: string;
-}
-
-const getTrainingRequirements = (province: ProvinceCode): TrainingRequirement[] => {
-  const requirements: Record<ProvinceCode, TrainingRequirement[]> = {
-    QC: [
-      { id: 'confined_space', name: 'Formation espaces clos', authority: 'CNESST', required: true, description: 'Formation obligatoire sur la sécurité en espaces clos' },
-      { id: 'h2s_alive', name: 'H2S Alive', authority: 'CNESST', required: true, description: 'Formation sur les dangers du sulfure d\'hydrogène' },
-      { id: 'first_aid', name: 'Premiers soins', authority: 'Croix-Rouge', required: true, description: 'Formation en premiers soins et RCR' },
-      { id: 'rescue', name: 'Sauvetage espaces clos', authority: 'CNESST', required: true, description: 'Formation sur les techniques de sauvetage' }
-    ],
-    ON: [
-      { id: 'confined_space', name: 'Confined Space Training', authority: 'MOL', required: true, description: 'Mandatory confined space safety training' },
-      { id: 'h2s_alive', name: 'H2S Alive', authority: 'MOL', required: true, description: 'Hydrogen sulfide awareness training' },
-      { id: 'first_aid', name: 'First Aid/CPR', authority: 'Red Cross', required: true, description: 'First aid and CPR training' },
-      { id: 'rescue', name: 'Confined Space Rescue', authority: 'MOL', required: true, description: 'Rescue procedures training' }
-    ],
-    BC: [
-      { id: 'confined_space', name: 'Confined Space Entry', authority: 'WorkSafeBC', required: true, description: 'Confined space entry training' },
-      { id: 'h2s_alive', name: 'H2S Safety', authority: 'WorkSafeBC', required: true, description: 'Hydrogen sulfide safety training' },
-      { id: 'first_aid', name: 'Standard First Aid', authority: 'WorkSafeBC', required: true, description: 'Standard first aid training' },
-      { id: 'rescue', name: 'Emergency Response', authority: 'WorkSafeBC', required: true, description: 'Emergency response training' }
-    ],
-    AB: [
-      { id: 'confined_space', name: 'Confined Space Entry', authority: 'Alberta OHS', required: true, description: 'Confined space safety training' },
-      { id: 'h2s_alive', name: 'H2S Alive', authority: 'Alberta OHS', required: true, description: 'H2S awareness and safety' },
-      { id: 'first_aid', name: 'First Aid', authority: 'Alberta OHS', required: true, description: 'First aid and emergency care' },
-      { id: 'rescue', name: 'Rescue Training', authority: 'Alberta OHS', required: true, description: 'Confined space rescue training' }
-    ],
-    SK: [
-      { id: 'confined_space', name: 'Confined Space Training', authority: 'Saskatchewan OHS', required: true, description: 'Confined space safety training' },
-      { id: 'h2s_alive', name: 'H2S Training', authority: 'Saskatchewan OHS', required: true, description: 'Hydrogen sulfide training' },
-      { id: 'first_aid', name: 'First Aid/CPR', authority: 'Saskatchewan OHS', required: true, description: 'First aid training' },
-      { id: 'rescue', name: 'Emergency Response', authority: 'Saskatchewan OHS', required: true, description: 'Emergency response procedures' }
-    ],
-    MB: [
-      { id: 'confined_space', name: 'Confined Space Safety', authority: 'Manitoba Workplace Safety & Health', required: true, description: 'Confined space safety training' },
-      { id: 'h2s_alive', name: 'H2S Safety', authority: 'Manitoba Workplace Safety & Health', required: true, description: 'Hydrogen sulfide safety' },
-      { id: 'first_aid', name: 'First Aid', authority: 'Manitoba Workplace Safety & Health', required: true, description: 'First aid training' },
-      { id: 'rescue', name: 'Rescue Procedures', authority: 'Manitoba Workplace Safety & Health', required: true, description: 'Rescue training' }
-    ],
-    NB: [
-      { id: 'confined_space', name: 'Confined Space Training', authority: 'WorkSafeNB', required: true, description: 'Confined space safety training' },
-      { id: 'h2s_alive', name: 'H2S Training', authority: 'WorkSafeNB', required: true, description: 'Hydrogen sulfide training' },
-      { id: 'first_aid', name: 'First Aid/CPR', authority: 'WorkSafeNB', required: true, description: 'First aid and CPR' },
-      { id: 'rescue', name: 'Emergency Response', authority: 'WorkSafeNB', required: true, description: 'Emergency response training' }
-    ],
-    NS: [
-      { id: 'confined_space', name: 'Confined Space Entry', authority: 'Nova Scotia Labour Standards', required: true, description: 'Confined space entry training' },
-      { id: 'h2s_alive', name: 'H2S Safety', authority: 'Nova Scotia Labour Standards', required: true, description: 'H2S safety training' },
-      { id: 'first_aid', name: 'First Aid', authority: 'Nova Scotia Labour Standards', required: true, description: 'First aid training' },
-      { id: 'rescue', name: 'Rescue Training', authority: 'Nova Scotia Labour Standards', required: true, description: 'Rescue procedures' }
-    ],
-    PE: [
-      { id: 'confined_space', name: 'Confined Space Safety', authority: 'PEI Occupational Health & Safety', required: true, description: 'Confined space safety' },
-      { id: 'h2s_alive', name: 'H2S Training', authority: 'PEI Occupational Health & Safety', required: true, description: 'Hydrogen sulfide training' },
-      { id: 'first_aid', name: 'First Aid/CPR', authority: 'PEI Occupational Health & Safety', required: true, description: 'First aid and CPR' },
-      { id: 'rescue', name: 'Emergency Response', authority: 'PEI Occupational Health & Safety', required: true, description: 'Emergency response' }
-    ],
-    NL: [
-      { id: 'confined_space', name: 'Confined Space Training', authority: 'Newfoundland & Labrador OHS', required: true, description: 'Confined space training' },
-      { id: 'h2s_alive', name: 'H2S Safety', authority: 'Newfoundland & Labrador OHS', required: true, description: 'H2S safety training' },
-      { id: 'first_aid', name: 'First Aid', authority: 'Newfoundland & Labrador OHS', required: true, description: 'First aid training' },
-      { id: 'rescue', name: 'Rescue Procedures', authority: 'Newfoundland & Labrador OHS', required: true, description: 'Rescue training' }
-    ]
+  action: 'entry' | 'exit' | 'emergency_exit' | 'status_check';
+  person_id: string;
+  person_name: string;
+  role: SafetyRole;
+  location: string;
+  atmospheric_conditions?: {
+    oxygen: number;
+    lel: number;
+    h2s: number;
+    co: number;
   };
-  return requirements[province] || requirements.QC;
+  communication_verified: boolean;
+  equipment_verified: boolean;
+  notes?: string;
+  authorized_by: string;
+  emergency?: boolean;
+}
+
+interface PersonnelStatus {
+  person_id: string;
+  current_status: 'outside' | 'inside' | 'emergency' | 'unknown';
+  last_entry_time?: string;
+  last_exit_time?: string;
+  total_time_inside: number; // en minutes
+  max_allowed_time: number; // en minutes selon réglementation
+  communication_last_verified?: string;
+  equipment_status: 'verified' | 'needs_check' | 'expired';
+}
+
+interface CommunicationLog {
+  id: string;
+  timestamp: string;
+  person_id: string;
+  person_name: string;
+  communication_type: 'radio' | 'visual' | 'hand_signal' | 'emergency_signal';
+  signal_strength: number; // 1-5
+  message?: string;
+  response_received: boolean;
+  emergency_indicated: boolean;
+}
+
+interface LegalEntryData {
+  attendant_present: boolean;
+  attendant_name: string;
+  attendant_phone: string;
+  attendant_certified: boolean;
+  communication_system_tested: boolean;
+  communication_backup_available: boolean;
+  entry_authorization_documented: boolean;
+  max_occupancy_respected: boolean;
+  emergency_retrieval_ready: boolean;
+  shift_supervisor_notified: boolean;
+  regulatory_signage_posted: boolean;
+}
+
+// =================== TRADUCTIONS COMPLÈTES ===================
+const translations = {
+  fr: {
+    title: "Registre d'Entrée Obligatoire",
+    legalCompliance: "Conformité Réglementaire Entrée/Sortie",
+    currentOccupancy: "Occupation Actuelle",
+    entryLog: "Journal des Entrées/Sorties",
+    personnelManagement: "Gestion du Personnel",
+    communicationSystem: "Système de Communication",
+    emergencyProcedures: "Procédures d'Urgence",
+    addPerson: "Ajouter Personne",
+    recordEntry: "Enregistrer Entrée",
+    recordExit: "Enregistrer Sortie",
+    emergencyEvacuation: "Évacuation d'Urgence",
+    communicationCheck: "Vérification Communication",
+    personnelInside: "Personnel à l'intérieur",
+    personnelOutside: "Personnel à l'extérieur",
+    maxOccupancy: "Occupation maximale",
+    timeInside: "Temps à l'intérieur",
+    lastCommunication: "Dernière communication",
+    equipmentStatus: "État équipement",
+    entrant: "Entrant",
+    attendant: "Surveillant",
+    supervisor: "Superviseur",
+    rescuer: "Sauveteur",
+    emergency: "Urgence",
+    verified: "Vérifié",
+    needsCheck: "À vérifier",
+    expired: "Expiré",
+    inside: "À l'intérieur",
+    outside: "À l'extérieur",
+    unknown: "Inconnu",
+    signalStrength: "Force signal",
+    responseReceived: "Réponse reçue",
+    emergencySignal: "Signal d'urgence",
+    authorized: "Autorisé",
+    unauthorized: "Non autorisé",
+    attendantRequired: "Surveillant obligatoire",
+    communicationRequired: "Communication obligatoire",
+    maxTimeExceeded: "Temps maximum dépassé",
+    emergencyEvacuationInitiated: "Évacuation d'urgence déclenchée"
+  },
+  en: {
+    title: "Mandatory Entry Registry",
+    legalCompliance: "Entry/Exit Regulatory Compliance",
+    currentOccupancy: "Current Occupancy",
+    entryLog: "Entry/Exit Log",
+    personnelManagement: "Personnel Management",
+    communicationSystem: "Communication System",
+    emergencyProcedures: "Emergency Procedures",
+    addPerson: "Add Person",
+    recordEntry: "Record Entry",
+    recordExit: "Record Exit",
+    emergencyEvacuation: "Emergency Evacuation",
+    communicationCheck: "Communication Check",
+    personnelInside: "Personnel Inside",
+    personnelOutside: "Personnel Outside",
+    maxOccupancy: "Maximum occupancy",
+    timeInside: "Time inside",
+    lastCommunication: "Last communication",
+    equipmentStatus: "Equipment status",
+    entrant: "Entrant",
+    attendant: "Attendant",
+    supervisor: "Supervisor",
+    rescuer: "Rescuer",
+    emergency: "Emergency",
+    verified: "Verified",
+    needsCheck: "Needs check",
+    expired: "Expired",
+    inside: "Inside",
+    outside: "Outside",
+    unknown: "Unknown",
+    signalStrength: "Signal strength",
+    responseReceived: "Response received",
+    emergencySignal: "Emergency signal",
+    authorized: "Authorized",
+    unauthorized: "Unauthorized",
+    attendantRequired: "Attendant required",
+    communicationRequired: "Communication required",
+    maxTimeExceeded: "Maximum time exceeded",
+    emergencyEvacuationInitiated: "Emergency evacuation initiated"
+  }
 };
 
-// =================== COMPOSANT PRINCIPAL ===================
+// =================== COMPOSANT PRINCIPAL REFACTORISÉ ===================
 const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
-  language = 'fr',
-  selectedProvince = 'QC', 
-  regulations,
+  language,
   permitData,
+  selectedProvince,
+  regulations,
+  isMobile,
   safetyManager,
-  isMobile: propIsMobile = false
+  onUpdate,
+  onSectionComplete,
+  onValidationChange
 }) => {
-  const currentIsMobile = propIsMobile || isMobile;
+  // Accès direct aux données depuis permitData
+  const entryRegistryData = permitData.entryRegistry || {
+    personnel: [],
+    entryLogs: [],
+    currentOccupancy: 0,
+    maxOccupancy: 3,
+    attendantPresent: false,
+    communicationSystemActive: false,
+    emergencyContactsNotified: false,
+    lastUpdated: new Date().toISOString()
+  };
 
-  // =================== ÉTATS PRINCIPAUX ===================
-  const [personnel, setPersonnel] = useState<Person[]>([]);
-  const [compliance_check, setComplianceCheck] = useState<ComplianceCheck>({
-    atmospheric_tests_done: false,
-    rescue_equipment_present: false,
-    communication_equipment_present: false,
-    ventilation_equipment_present: false,
-    emergency_procedures_reviewed: false,
-    personnel_training_verified: false,
-    equipment_calibration_current: false,
-    rescue_plan_accessible: false
-  });
-
-  // =================== ÉTATS MODALS ===================
-  const [showPersonModal, setShowPersonModal] = useState(false);
-  const [showSignatureModal, setShowSignatureModal] = useState(false);
-  const [editingPerson, setEditingPerson] = useState<Person | null>(null);
-
-  // =================== ÉTATS FORMULAIRES ===================
-  const [personData, setPersonData] = useState({
+  const personnel = entryRegistryData.personnel || [];
+  const entryLogs = entryRegistryData.entryLogs || [];
+  
+  // États locaux pour l'interface
+  const [showAddPersonForm, setShowAddPersonForm] = useState(false);
+  const [selectedPersonId, setSelectedPersonId] = useState<string>('');
+  const [communicationTimer, setCommunicationTimer] = useState(0);
+  const [communicationActive, setCommunicationActive] = useState(false);
+  const [emergencyMode, setEmergencyMode] = useState(false);
+  
+  // États pour nouveau personnel
+  const [newPerson, setNewPerson] = useState({
     name: '',
-    role: 'entrant' as 'surveillant' | 'entrant',
+    role: 'entrant' as SafetyRole,
+    phone: '',
+    email: '',
     company: '',
-    training: {} as Record<string, boolean>,
-    training_expiry: '',
-    electronic_signature: '',
-    formation_confirmed: false
+    certification: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    notes: ''
   });
 
-  // =================== ÉTATS UI ===================
-  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [signatureData, setSignatureData] = useState<string>('');
+  // États pour communication
+  const [communicationCheck, setCommunicationCheck] = useState({
+    person_id: '',
+    communication_type: 'radio' as 'radio' | 'visual' | 'hand_signal' | 'emergency_signal',
+    signal_strength: 5,
+    message: '',
+    response_received: false,
+    emergency_indicated: false
+  });
 
-  // =================== REFS ===================
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // États monitoring personnel
+  const [personnelStatuses, setPersonnelStatuses] = useState<PersonnelStatus[]>([]);
+  const [communicationLogs, setCommunicationLogs] = useState<CommunicationLog[]>([]);
 
-  // =================== TRADUCTIONS ===================
-  const getTexts = (language: 'fr' | 'en') => ({
-    fr: {
-      title: "Registre d'Entrée - Espace Clos",
-      personnel: "Gestion du Personnel",
-      compliance: "Validation et Conformité du Permis",
-      addPerson: "Ajouter Personnel",
-      surveillant: "Surveillant",
-      entrant: "Entrant",
-      active: "Actif",
-      inside: "À l'intérieur",
-      markEntry: "Marquer Entrée",
-      markExit: "Marquer Sortie",
-      compliant: "CONFORME",
-      nonCompliant: "NON CONFORME",
-      noPersonnel: "Aucun personnel enregistré",
-      startWithSupervisor: "Commencez par ajouter un surveillant"
-    },
-    en: {
-      title: "Entry Registry - Confined Space",
-      personnel: "Personnel Management",
-      compliance: "Permit Validation and Compliance",
-      addPerson: "Add Personnel",
-      surveillant: "Attendant",
-      entrant: "Entrant",
-      active: "Active",
-      inside: "Inside",
-      markEntry: "Mark Entry",
-      markExit: "Mark Exit",
-      compliant: "COMPLIANT",
-      nonCompliant: "NON-COMPLIANT",
-      noPersonnel: "No personnel registered",
-      startWithSupervisor: "Start by adding an attendant"
+  const t = translations[language];
+
+  // =================== HANDLERS SAFETYMANAGER CORRIGÉS ===================
+  const updateEntryRegistryData = React.useCallback((updates: Partial<EntryRegistryData>) => {
+    // ✅ CORRECTION 1 : Vérification SafetyManager
+    if (safetyManager) {
+      try {
+        safetyManager.updateEntryRegistry(updates);
+      } catch (error) {
+        console.warn('SafetyManager updateEntryRegistry failed:', error);
+      }
     }
-  })[language];
+    
+    if (onUpdate) {
+      onUpdate('entryRegistry', updates);
+    }
+    
+    // ✅ CORRECTION 2 : Vérification SafetyManager pour validation
+    if (onValidationChange && safetyManager) {
+      try {
+        const validation = safetyManager.validateSection('entryRegistry');
+        onValidationChange(validation.isValid, validation.errors);
+      } catch (error) {
+        console.warn('SafetyManager validateSection failed:', error);
+        // Fallback validation basique
+        const hasAttendant = updates.attendantPresent || entryRegistryData.attendantPresent;
+        const hasPersonnel = (updates.personnel && updates.personnel.length > 0) || personnel.length > 0;
+        const isValid = hasAttendant && hasPersonnel;
+        onValidationChange(isValid, isValid ? [] : ['Surveillant et personnel requis']);
+      }
+    }
+  }, [safetyManager, onUpdate, onValidationChange, entryRegistryData.attendantPresent, personnel.length]);
 
-  const texts = getTexts(language);
+  const updatePersonnel = React.useCallback((newPersonnel: PersonnelEntry[]) => {
+    updateEntryRegistryData({ 
+      personnel: newPersonnel,
+      lastUpdated: new Date().toISOString()
+    });
+  }, [updateEntryRegistryData]);
+
+  const updateEntryLogs = React.useCallback((newLogs: EntryLog[]) => {
+    updateEntryRegistryData({ 
+      entryLogs: newLogs,
+      lastUpdated: new Date().toISOString()
+    });
+  }, [updateEntryRegistryData]);
 
   // =================== FONCTIONS UTILITAIRES ===================
-  const generateId = (): string => {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  const getCurrentPersonnelInside = () => {
+    return personnelStatuses.filter(status => status.current_status === 'inside');
   };
 
-  const showNotification = (message: string, type: 'info' | 'warning' | 'error' = 'info') => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(`Registre d'Entrée - ${type.toUpperCase()}`, {
-        body: message,
-        icon: type === 'error' ? '🚨' : type === 'warning' ? '⚠️' : 'ℹ️'
-      });
-    }
+  const getCurrentPersonnelOutside = () => {
+    return personnelStatuses.filter(status => status.current_status === 'outside');
   };
 
-  const formatDuration = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    
+  const getPersonnelStatus = (personId: string): PersonnelStatus | undefined => {
+    return personnelStatuses.find(status => status.person_id === personId);
+  };
+
+  const getPersonById = (personId: string): PersonnelEntry | undefined => {
+    return personnel.find(person => person.id === personId);
+  };
+
+  const getRoleColor = (role: SafetyRole): string => {
+    const colors = {
+      entrant: '#3b82f6',
+      attendant: '#10b981',
+      supervisor: '#f59e0b',
+      rescuer: '#ef4444',
+      emergency: '#dc2626'
+    };
+    return colors[role] || '#6b7280';
+  };
+
+  const getRoleEmoji = (role: SafetyRole): string => {
+    const emojis = {
+      entrant: '👷',
+      attendant: '👁️',
+      supervisor: '👨‍💼',
+      rescuer: '🚑',
+      emergency: '🚨'
+    };
+    return emojis[role] || '👤';
+  };
+
+  const getStatusColor = (status: string): string => {
+    const colors = {
+      inside: '#ef4444',
+      outside: '#10b981',
+      emergency: '#dc2626',
+      unknown: '#6b7280'
+    };
+    return colors[status as keyof typeof colors] || '#6b7280';
+  };
+
+  const formatDuration = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
     if (hours > 0) {
-      return `${hours}h ${minutes}m ${secs}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`;
-    } else {
-      return `${secs}s`;
+      return `${hours}h ${mins}min`;
     }
+    return `${mins}min`;
   };
 
-  // =================== GESTION PERSONNEL ===================
-  const getCurrentSurveillant = (): Person | null => {
-    return personnel.find(person => person.role === 'surveillant' && person.is_active) || null;
-  };
-
-  const getActiveEntrants = (): Person[] => {
-    return personnel.filter(person => 
-      person.entry_sessions.some(session => session.status === 'active')
-    );
-  };
-
-  const updatePerson = () => {
-    if (!editingPerson) return;
+  // =================== HANDLERS POUR CHECKBOX AVEC SAFETYMANAGER ===================
+  const handleAttendantPresent = React.useCallback((checked: boolean) => {
+    updateEntryRegistryData({ attendantPresent: checked });
     
-    const updatedPerson = {
-      ...editingPerson,
-      name: personData.name,
-      company: personData.company,
-      training: personData.training,
-      training_expiry: personData.training_expiry,
-      formation_confirmed: personData.formation_confirmed,
-      last_updated: new Date().toISOString()
-    };
-
-    setPersonnel(prev => prev.map(p => p.id === editingPerson.id ? updatedPerson : p));
-    resetPersonForm();
-    setShowPersonModal(false);
-    setEditingPerson(null);
-    
-    showNotification(`✅ Personnel mis à jour: ${personData.name}`, 'info');
-  };
-
-  const addPerson = () => {
-    const surveillant = getCurrentSurveillant();
-    
-    if (personData.role === 'surveillant') {
-      const existingSurveillant = personnel.find(p => p.role === 'surveillant' && p.is_active);
-      if (existingSurveillant) {
-        showNotification('⚠️ Un surveillant est déjà actif. Désactivez-le d\'abord.', 'warning');
-        return;
-      }
-    }
-
-    if (personData.role === 'entrant' && !surveillant) {
-      showNotification('⚠️ Un surveillant doit être présent avant d\'ajouter des entrants.', 'warning');
-      return;
-    }
-
-    const trainingRequirements = getTrainingRequirements(selectedProvince);
-    const training: Record<string, boolean> = {};
-    trainingRequirements.forEach(req => {
-      training[req.id] = personData.training[req.id] || false;
-    });
-
-    const newPerson: Person = {
-      id: generateId(),
-      name: personData.name,
-      role: personData.role,
-      company: personData.company,
-      training,
-      equipment_assigned: [],
-      entry_sessions: [],
-      is_active: personData.role === 'surveillant',
-      last_updated: new Date().toISOString(),
-      electronic_signature: personData.electronic_signature,
-      training_expiry: personData.training_expiry,
-      formation_confirmed: personData.formation_confirmed
-    };
-
-    setPersonnel(prev => [...prev, newPerson]);
-    resetPersonForm();
-    setShowPersonModal(false);
-    
-    showNotification(`✅ ${personData.role === 'surveillant' ? 'Surveillant' : 'Entrant'} ajouté: ${personData.name}`, 'info');
-
-    // Mise à jour SafetyManager si disponible
-    if (safetyManager) {
-      const personnelEntry = {
-        id: newPerson.id,
-        name: newPerson.name,
-        role: newPerson.role === 'surveillant' ? 'attendant' as const : 'entrant' as const,
-        certification: Object.entries(newPerson.training)
-          .filter(([_, value]) => value)
-          .map(([key, _]) => key),
-        medicalFitness: {
-          valid: true,
-          expiryDate: newPerson.training_expiry || '',
-          restrictions: []
-        },
-        emergencyContact: {
-          name: '',
-          phone: '',
-          relationship: ''
-        }
-      };
-      
-      try {
-        safetyManager.updateEntryRegistry({ 
-          personnel: [...(permitData.entryRegistry?.personnel || []), personnelEntry] 
-        });
-      } catch (error) {
-        console.warn('SafetyManager update failed:', error);
-      }
-    }
-  };
-
-  const markEntry = (personId: string) => {
-    const person = personnel.find(p => p.id === personId);
-    const surveillant = getCurrentSurveillant();
-
-    if (!person || !surveillant) {
-      showNotification('⚠️ Surveillant requis pour autoriser les entrées', 'warning');
-      return;
-    }
-
-    const hasActiveSession = person.entry_sessions.some(session => session.status === 'active');
-    if (hasActiveSession) {
-      showNotification('⚠️ Cette personne est déjà à l\'intérieur', 'warning');
-      return;
-    }
-
-    const newSession: EntrySession = {
-      id: generateId(),
-      timestamp: new Date().toISOString(),
-      type: 'entry',
-      entry_time: new Date().toISOString(),
-      surveillant_id: surveillant.id,
-      status: 'active'
-    };
-
-    const updatedPerson = {
-      ...person,
-      entry_sessions: [...person.entry_sessions, newSession],
-      last_updated: new Date().toISOString()
-    };
-
-    setPersonnel(prev => prev.map(p => p.id === personId ? updatedPerson : p));
-    
-    showNotification(`➡️ ENTRÉE: ${person.name} dans l'espace clos`, 'info');
-
-    // Mise à jour SafetyManager
+    // ✅ CORRECTION 3 : Vérification SafetyManager pour mise à jour permis
     if (safetyManager) {
       try {
-        safetyManager.recordEntryExit(personId, 'entry');
+        const currentPermit = safetyManager.currentPermit;
+        const updatedPermit = { ...currentPermit, attendant_present: checked };
+        safetyManager.resetPermit();
+        Object.assign(safetyManager.currentPermit, updatedPermit);
       } catch (error) {
-        console.warn('SafetyManager entry record failed:', error);
+        console.warn('SafetyManager attendant present update failed:', error);
       }
     }
-  };
+  }, [safetyManager, updateEntryRegistryData]);
 
-  const markExit = (personId: string) => {
-    const person = personnel.find(p => p.id === personId);
-    const surveillant = getCurrentSurveillant();
-
-    if (!person || !surveillant) {
-      showNotification('⚠️ Surveillant requis pour autoriser les sorties', 'warning');
-      return;
-    }
-
-    const activeSessionIndex = person.entry_sessions.findIndex(session => session.status === 'active');
-    if (activeSessionIndex === -1) {
-      showNotification('⚠️ Aucune session active trouvée pour cette personne', 'warning');
-      return;
-    }
-
-    const activeSession = person.entry_sessions[activeSessionIndex];
-    const entryTime = activeSession.entry_time ? new Date(activeSession.entry_time).getTime() : Date.now();
-    const duration = Math.floor((Date.now() - entryTime) / 1000);
-
-    const completedSession: EntrySession = {
-      ...activeSession,
-      type: 'exit',
-      exit_time: new Date().toISOString(),
-      duration,
-      status: 'completed'
-    };
-
-    const updatedSessions = [...person.entry_sessions];
-    updatedSessions[activeSessionIndex] = completedSession;
-
-    const updatedPerson = {
-      ...person,
-      entry_sessions: updatedSessions,
-      last_updated: new Date().toISOString()
-    };
-
-    setPersonnel(prev => prev.map(p => p.id === personId ? updatedPerson : p));
+  const handleCommunicationSystemTested = React.useCallback((checked: boolean) => {
+    updateEntryRegistryData({ communicationSystemActive: checked });
     
-    const durationText = formatDuration(duration);
-    showNotification(`⬅️ SORTIE: ${person.name} (Durée: ${durationText})`, 'info');
-
-    // Mise à jour SafetyManager
+    // ✅ CORRECTION 4 : Vérification SafetyManager pour communication system
     if (safetyManager) {
       try {
-        safetyManager.recordEntryExit(personId, 'exit');
+        const currentPermit = safetyManager.currentPermit;
+        const updatedPermit = { ...currentPermit, communication_system_tested: checked };
+        safetyManager.resetPermit();
+        Object.assign(safetyManager.currentPermit, updatedPermit);
       } catch (error) {
-        console.warn('SafetyManager exit record failed:', error);
+        console.warn('SafetyManager communication system update failed:', error);
       }
     }
-  };
+  }, [safetyManager, updateEntryRegistryData]);
 
-  const resetPersonForm = () => {
-    setPersonData({
+  const handleEmergencyRetrievalReady = React.useCallback((checked: boolean) => {
+    // ✅ CORRECTION 5 : Vérification SafetyManager pour emergency retrieval
+    if (safetyManager) {
+      try {
+        const currentPermit = safetyManager.currentPermit;
+        const updatedPermit = { ...currentPermit, emergency_retrieval_ready: checked };
+        safetyManager.resetPermit();
+        Object.assign(safetyManager.currentPermit, updatedPermit);
+      } catch (error) {
+        console.warn('SafetyManager emergency retrieval update failed:', error);
+      }
+    }
+  }, [safetyManager]);
+
+  // =================== PROTECTION CONTRE REGULATIONS UNDEFINED ===================
+  const safeRegulations = regulations[selectedProvince] || {
+    name: 'Réglementation provinciale',
+    code: 'N/A',
+    authority: 'Autorité compétente',
+    personnel_requirements: {
+      min_age: 18,
+      attendant_required: true,
+      max_work_period_hours: 8,
+      bidirectional_communication_required: true,
+      rescue_plan_required: true,
+      competent_person_required: true
+    }
+  };
+  // =================== GESTION DU PERSONNEL ===================
+  const addNewPerson = React.useCallback(() => {
+    if (!newPerson.name || !newPerson.role || !newPerson.phone) {
+      alert('⚠️ Veuillez remplir tous les champs obligatoires (nom, rôle, téléphone)');
+      return;
+    }
+
+    const newPersonnelEntry: PersonnelEntry = {
+      id: generatePermitId(),
+      name: newPerson.name,
+      role: newPerson.role,
+      phone: newPerson.phone,
+      email: newPerson.email || undefined,
+      company: newPerson.company || undefined,
+      certification: newPerson.certification || undefined,
+      emergencyContact: {
+        name: newPerson.emergency_contact_name,
+        phone: newPerson.emergency_contact_phone,
+        relationship: 'Contact d\'urgence'
+      },
+      entryTime: undefined,
+      exitTime: undefined,
+      status: 'outside',
+      notes: newPerson.notes || undefined
+    };
+
+    const newPersonnelStatus: PersonnelStatus = {
+      person_id: newPersonnelEntry.id,
+      current_status: 'outside',
+      total_time_inside: 0,
+      max_allowed_time: regulations[selectedProvince]?.personnel_requirements?.max_work_period_hours ? 
+        regulations[selectedProvince].personnel_requirements.max_work_period_hours * 60 : 480, // 8h par défaut
+      equipment_status: 'needs_check'
+    };
+
+    const updatedPersonnel = [...personnel, newPersonnelEntry];
+    const updatedStatuses = [...personnelStatuses, newPersonnelStatus];
+
+    updatePersonnel(updatedPersonnel);
+    setPersonnelStatuses(updatedStatuses);
+
+    // Reset form
+    setNewPerson({
       name: '',
       role: 'entrant',
+      phone: '',
+      email: '',
       company: '',
-      training: {},
-      training_expiry: '',
-      electronic_signature: '',
-      formation_confirmed: false
+      certification: '',
+      emergency_contact_name: '',
+      emergency_contact_phone: '',
+      notes: ''
     });
-  };
+    setShowAddPersonForm(false);
 
-  // =================== VALIDATION CONFORMITÉ ===================
-  const updateComplianceCheck = (key: keyof ComplianceCheck, value: boolean) => {
-    const surveillant = getCurrentSurveillant();
-    if (!surveillant) {
-      showNotification('⚠️ Un surveillant doit être présent pour effectuer les vérifications', 'warning');
+    alert(`✅ Personnel ajouté : ${newPersonnelEntry.name} (${newPersonnelEntry.role})`);
+  }, [newPerson, personnel, personnelStatuses, updatePersonnel, regulations, selectedProvince]);
+
+  const removePerson = React.useCallback((personId: string) => {
+    const person = getPersonById(personId);
+    const status = getPersonnelStatus(personId);
+    
+    if (status?.current_status === 'inside') {
+      alert('⚠️ Impossible de supprimer : cette personne est actuellement à l\'intérieur de l\'espace clos');
       return;
     }
 
-    setComplianceCheck(prev => ({
-      ...prev,
-      [key]: value
-    }));
+    if (person && confirm(`Supprimer ${person.name} du registre ?`)) {
+      const updatedPersonnel = personnel.filter(p => p.id !== personId);
+      const updatedStatuses = personnelStatuses.filter(s => s.person_id !== personId);
+      
+      updatePersonnel(updatedPersonnel);
+      setPersonnelStatuses(updatedStatuses);
+      
+      alert(`🗑️ ${person.name} supprimé du registre`);
+    }
+  }, [personnel, personnelStatuses, updatePersonnel, getPersonById, getPersonnelStatus]);
 
-    showNotification(
-      `${value ? '✅ Vérifié' : '❌ Non vérifié'}: ${getComplianceLabel(key)}`,
-      value ? 'info' : 'warning'
+  // =================== GESTION ENTRÉES/SORTIES ===================
+  const recordEntry = React.useCallback((personId: string) => {
+    const person = getPersonById(personId);
+    const status = getPersonnelStatus(personId);
+    
+    if (!person) {
+      alert('⚠️ Personne non trouvée dans le registre');
+      return;
+    }
+
+    if (status?.current_status === 'inside') {
+      alert('⚠️ Cette personne est déjà à l\'intérieur de l\'espace clos');
+      return;
+    }
+
+    // Vérification occupation maximale
+    const currentInside = getCurrentPersonnelInside();
+    if (currentInside.length >= entryRegistryData.maxOccupancy) {
+      alert(`⚠️ Occupation maximale atteinte (${entryRegistryData.maxOccupancy} personnes)`);
+      return;
+    }
+
+    // Vérification surveillant présent
+    if (!entryRegistryData.attendantPresent && person.role !== 'attendant') {
+      alert('⚠️ Un surveillant doit être présent avant toute entrée d\'entrant');
+      return;
+    }
+
+    const now = new Date().toISOString();
+    
+    const entryLog: EntryLog = {
+      id: generatePermitId(),
+      timestamp: now,
+      action: 'entry',
+      person_id: personId,
+      person_name: person.name,
+      role: person.role,
+      location: 'Espace clos',
+      communication_verified: true,
+      equipment_verified: true,
+      authorized_by: 'Surveillant',
+      notes: `Entrée autorisée - ${person.role}`
+    };
+
+    // Mise à jour statut personnel
+    const updatedStatuses = personnelStatuses.map(s => 
+      s.person_id === personId 
+        ? { ...s, current_status: 'inside' as const, last_entry_time: now }
+        : s
     );
 
-    // Mise à jour SafetyManager
-    if (safetyManager) {
-      try {
-        safetyManager.updateCompliance(key, value);
-      } catch (error) {
-        console.warn('SafetyManager compliance update failed:', error);
-      }
-    }
-  };
+    // Mise à jour personnel
+    const updatedPersonnel = personnel.map(p => 
+      p.id === personId 
+        ? { ...p, entryTime: now, status: 'inside' as const }
+        : p
+    );
 
-  const getComplianceLabel = (key: keyof ComplianceCheck): string => {
-    const labels: Record<keyof ComplianceCheck, string> = {
-      atmospheric_tests_done: 'Tests atmosphériques effectués',
-      rescue_equipment_present: 'Équipement de sauvetage présent',
-      communication_equipment_present: 'Équipement de communication présent',
-      ventilation_equipment_present: 'Équipement de ventilation présent',
-      emergency_procedures_reviewed: 'Procédures d\'urgence révisées',
-      personnel_training_verified: 'Formation du personnel vérifiée',
-      equipment_calibration_current: 'Calibration des équipements à jour',
-      rescue_plan_accessible: 'Plan de sauvetage accessible'
-    };
-    return labels[key] || key;
-  };
-
-  const isFullyCompliant = (): boolean => {
-    return Object.values(compliance_check).every(value => value === true);
-  };
-
-  const getCompliancePercentage = (): number => {
-    const total = Object.keys(compliance_check).length;
-    const completed = Object.values(compliance_check).filter(value => value === true).length;
-    return Math.round((completed / total) * 100);
-  };
-
-  // =================== STATISTIQUES ===================
-  const getPersonnelStats = () => {
-    const totalPersonnel = personnel.length;
-    const activeEntrants = getActiveEntrants().length;
-    const surveillantActive = getCurrentSurveillant() !== null;
-    const totalSessions = personnel.reduce((sum, person) => sum + person.entry_sessions.length, 0);
-
-    return {
-      totalPersonnel,
-      activeEntrants,
-      surveillantActive,
-      totalSessions
-    };
-  };
-
-  // =================== SIGNATURE NUMÉRIQUE ===================
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    setIsDrawing(true);
-    const rect = canvas.getBoundingClientRect();
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.beginPath();
-      ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-    }
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
+    const newOccupancy = currentInside.length + 1;
     
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    setPersonnelStatuses(updatedStatuses);
+    updatePersonnel(updatedPersonnel);
+    updateEntryLogs([...entryLogs, entryLog]);
+    updateEntryRegistryData({ currentOccupancy: newOccupancy });
 
-    const rect = canvas.getBoundingClientRect();
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-      ctx.stroke();
-    }
-  };
+    alert(`✅ Entrée enregistrée : ${person.name} - Occupation actuelle : ${newOccupancy}/${entryRegistryData.maxOccupancy}`);
+  }, [personnel, personnelStatuses, entryRegistryData, entryLogs, getCurrentPersonnelInside, getPersonById, getPersonnelStatus, updatePersonnel, updateEntryLogs, updateEntryRegistryData]);
 
-  const stopDrawing = () => {
-    if (!isDrawing) return;
-    setIsDrawing(false);
+  const recordExit = React.useCallback((personId: string) => {
+    const person = getPersonById(personId);
+    const status = getPersonnelStatus(personId);
     
-    const canvas = canvasRef.current;
-    if (canvas) {
-      setSignatureData(canvas.toDataURL());
-    }
-  };
-
-  const clearSignature = () => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawSignatureBackground(ctx, canvas.width, canvas.height);
-      }
-    }
-    setSignatureData('');
-  };
-
-  const drawSignatureBackground = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    ctx.fillStyle = '#374151';
-    ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = '#4b5563';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(0, 0, width, height);
-    ctx.fillStyle = '#6b7280';
-    ctx.font = 'bold 24px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('C-SECURE', width / 2, height / 2 - 10);
-    ctx.font = '12px Arial';
-    ctx.fillText('Signature numérique', width / 2, height / 2 + 10);
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-  };
-
-  const saveSignature = (personId: string) => {
-    if (!signatureData) {
-      showNotification('⚠️ Veuillez signer avant de sauvegarder', 'warning');
+    if (!person) {
+      alert('⚠️ Personne non trouvée dans le registre');
       return;
     }
 
-    const person = personnel.find(p => p.id === personId);
-    if (!person) return;
+    if (status?.current_status !== 'inside') {
+      alert('⚠️ Cette personne n\'est pas à l\'intérieur de l\'espace clos');
+      return;
+    }
 
-    const updatedPerson = {
-      ...person,
-      signature: signatureData,
-      signature_timestamp: new Date().toISOString(),
-      last_updated: new Date().toISOString()
+    const now = new Date().toISOString();
+    const entryTime = status.last_entry_time ? new Date(status.last_entry_time) : new Date();
+    const exitTime = new Date();
+    const sessionDuration = Math.floor((exitTime.getTime() - entryTime.getTime()) / (1000 * 60)); // en minutes
+    
+    const exitLog: EntryLog = {
+      id: generatePermitId(),
+      timestamp: now,
+      action: 'exit',
+      person_id: personId,
+      person_name: person.name,
+      role: person.role,
+      location: 'Espace clos',
+      communication_verified: true,
+      equipment_verified: true,
+      authorized_by: 'Surveillant',
+      notes: `Sortie normale - Durée : ${formatDuration(sessionDuration)}`
     };
 
-    setPersonnel(prev => prev.map(p => p.id === personId ? updatedPerson : p));
-    setShowSignatureModal(false);
-    setSelectedPersonId(null);
-    clearSignature();
+    // Mise à jour statut personnel
+    const updatedStatuses = personnelStatuses.map(s => 
+      s.person_id === personId 
+        ? { 
+            ...s, 
+            current_status: 'outside' as const, 
+            last_exit_time: now,
+            total_time_inside: s.total_time_inside + sessionDuration
+          }
+        : s
+    );
+
+    // Mise à jour personnel
+    const updatedPersonnel = personnel.map(p => 
+      p.id === personId 
+        ? { ...p, exitTime: now, status: 'outside' as const }
+        : p
+    );
+
+    const newOccupancy = Math.max(0, entryRegistryData.currentOccupancy - 1);
     
-    showNotification(`✅ Signature enregistrée pour ${person.name}`, 'info');
-  };
+    setPersonnelStatuses(updatedStatuses);
+    updatePersonnel(updatedPersonnel);
+    updateEntryLogs([...entryLogs, exitLog]);
+    updateEntryRegistryData({ currentOccupancy: newOccupancy });
 
-  // =================== EFFETS ===================
-  useEffect(() => {
-    // Demander permission pour notifications
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+    alert(`✅ Sortie enregistrée : ${person.name} - Durée session : ${formatDuration(sessionDuration)} - Occupation : ${newOccupancy}/${entryRegistryData.maxOccupancy}`);
+  }, [personnel, personnelStatuses, entryRegistryData, entryLogs, getPersonById, getPersonnelStatus, updatePersonnel, updateEntryLogs, updateEntryRegistryData]);
+
+  const initiateEmergencyEvacuation = React.useCallback(() => {
+    if (!confirm('⚠️ CONFIRMER L\'ÉVACUATION D\'URGENCE de tous les entrants ?')) {
+      return;
     }
-  }, []);
 
-// =================== LA SUITE DANS LA PARTIE 2 ===================
-  // =================== RENDU PRINCIPAL ===================
+    const now = new Date().toISOString();
+    const currentInside = getCurrentPersonnelInside();
+    
+    if (currentInside.length === 0) {
+      alert('ℹ️ Aucune personne à évacuer actuellement');
+      return;
+    }
+
+    const emergencyLogs: EntryLog[] = [];
+    const updatedStatuses = [...personnelStatuses];
+    const updatedPersonnel = [...personnel];
+
+    currentInside.forEach(status => {
+      const person = getPersonById(status.person_id);
+      if (person) {
+        const entryTime = status.last_entry_time ? new Date(status.last_entry_time) : new Date();
+        const exitTime = new Date();
+        const sessionDuration = Math.floor((exitTime.getTime() - entryTime.getTime()) / (1000 * 60));
+
+        // Log d'évacuation d'urgence
+        emergencyLogs.push({
+          id: generatePermitId(),
+          timestamp: now,
+          action: 'emergency_exit',
+          person_id: person.id,
+          person_name: person.name,
+          role: person.role,
+          location: 'Espace clos',
+          communication_verified: false,
+          equipment_verified: false,
+          authorized_by: 'ÉVACUATION D\'URGENCE',
+          emergency: true,
+          notes: `ÉVACUATION D'URGENCE - Durée : ${formatDuration(sessionDuration)}`
+        });
+
+        // Mise à jour statut
+        const statusIndex = updatedStatuses.findIndex(s => s.person_id === person.id);
+        if (statusIndex !== -1) {
+          updatedStatuses[statusIndex] = {
+            ...updatedStatuses[statusIndex],
+            current_status: 'emergency',
+            last_exit_time: now,
+            total_time_inside: updatedStatuses[statusIndex].total_time_inside + sessionDuration
+          };
+        }
+
+        // Mise à jour personnel
+        const personIndex = updatedPersonnel.findIndex(p => p.id === person.id);
+        if (personIndex !== -1) {
+          updatedPersonnel[personIndex] = {
+            ...updatedPersonnel[personIndex],
+            exitTime: now,
+            status: 'emergency'
+          };
+        }
+      }
+    });
+
+    setEmergencyMode(true);
+    setPersonnelStatuses(updatedStatuses);
+    updatePersonnel(updatedPersonnel);
+    updateEntryLogs([...entryLogs, ...emergencyLogs]);
+    updateEntryRegistryData({ 
+      currentOccupancy: 0,
+      emergencyContactsNotified: true 
+    });
+
+    alert(`🚨 ÉVACUATION D'URGENCE INITIÉE - ${currentInside.length} personnes évacuées - Contacts d'urgence notifiés`);
+  }, [personnelStatuses, personnel, entryLogs, getCurrentPersonnelInside, getPersonById, updatePersonnel, updateEntryLogs, updateEntryRegistryData]);
+
+  // =================== GESTION COMMUNICATION ===================
+  const performCommunicationCheck = React.useCallback(() => {
+    if (!communicationCheck.person_id) {
+      alert('⚠️ Veuillez sélectionner une personne pour la vérification');
+      return;
+    }
+
+    const person = getPersonById(communicationCheck.person_id);
+    if (!person) {
+      alert('⚠️ Personne non trouvée');
+      return;
+    }
+
+    const status = getPersonnelStatus(communicationCheck.person_id);
+    if (status?.current_status !== 'inside') {
+      alert('⚠️ Cette personne n\'est pas à l\'intérieur de l\'espace clos');
+      return;
+    }
+
+    const now = new Date().toISOString();
+
+    const commLog: CommunicationLog = {
+      id: generatePermitId(),
+      timestamp: now,
+      person_id: communicationCheck.person_id,
+      person_name: person.name,
+      communication_type: communicationCheck.communication_type,
+      signal_strength: communicationCheck.signal_strength,
+      message: communicationCheck.message || undefined,
+      response_received: communicationCheck.response_received,
+      emergency_indicated: communicationCheck.emergency_indicated
+    };
+
+    const updatedCommLogs = [...communicationLogs, commLog];
+    setCommunicationLogs(updatedCommLogs);
+
+    // Mise à jour statut personnel
+    const updatedStatuses = personnelStatuses.map(s => 
+      s.person_id === communicationCheck.person_id 
+        ? { ...s, communication_last_verified: now }
+        : s
+    );
+    setPersonnelStatuses(updatedStatuses);
+
+    // Log dans l'entrée registry
+    const statusLog: EntryLog = {
+      id: generatePermitId(),
+      timestamp: now,
+      action: 'status_check',
+      person_id: communicationCheck.person_id,
+      person_name: person.name,
+      role: person.role,
+      location: 'Espace clos',
+      communication_verified: communicationCheck.response_received,
+      equipment_verified: true,
+      authorized_by: 'Surveillant',
+      emergency: communicationCheck.emergency_indicated,
+      notes: `Communication ${communicationCheck.communication_type} - Signal: ${communicationCheck.signal_strength}/5 ${communicationCheck.emergency_indicated ? ' - URGENCE SIGNALÉE' : ''}`
+    };
+
+    updateEntryLogs([...entryLogs, statusLog]);
+
+    // Reset form
+    setCommunicationCheck({
+      person_id: '',
+      communication_type: 'radio',
+      signal_strength: 5,
+      message: '',
+      response_received: false,
+      emergency_indicated: false
+    });
+
+    if (communicationCheck.emergency_indicated) {
+      alert('🚨 URGENCE SIGNALÉE ! Procédures d\'urgence activées !');
+      setEmergencyMode(true);
+    } else {
+      alert(`✅ Communication vérifiée avec ${person.name}`);
+    }
+  }, [communicationCheck, communicationLogs, personnelStatuses, entryLogs, getPersonById, getPersonnelStatus, updateEntryLogs]);
+
+  // =================== RENDU JSX PRINCIPAL ===================
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: currentIsMobile ? '20px' : '28px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
       
-      {/* Header principal */}
+      {/* Section Conformité Réglementaire Entrée/Sortie */}
       <div style={{
-        background: 'linear-gradient(135deg, #1f2937, #374151)',
-        borderRadius: currentIsMobile ? '12px' : '16px',
-        padding: currentIsMobile ? '20px' : '24px',
-        border: '1px solid #4b5563',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
+        backgroundColor: '#dc2626',
+        borderRadius: '16px',
+        padding: isMobile ? '20px' : '24px',
+        border: '2px solid #ef4444',
+        boxShadow: '0 8px 32px rgba(220, 38, 38, 0.3)'
       }}>
+        <h3 style={{
+          fontSize: isMobile ? '18px' : '20px',
+          fontWeight: '700',
+          color: 'white',
+          marginBottom: isMobile ? '16px' : '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <UserCheck style={{ width: '24px', height: '24px', color: '#fecaca' }} />
+          ⚖️ {t.legalCompliance}
+        </h3>
+        
         <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          flexDirection: currentIsMobile ? 'column' : 'row',
-          gap: currentIsMobile ? '16px' : '0'
-        }}>
-          <div>
-            <h1 style={{
-              fontSize: currentIsMobile ? '20px' : '28px',
-              fontWeight: 'bold',
-              color: 'white',
-              marginBottom: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <Shield style={{ width: currentIsMobile ? '24px' : '32px', height: currentIsMobile ? '24px' : '32px', color: '#60a5fa' }} />
-              {texts.title}
-            </h1>
-            <p style={{ 
-              color: '#9ca3af', 
-              fontSize: currentIsMobile ? '14px' : '16px',
-              margin: 0
-            }}>
-              🌍 Province: {selectedProvince} | ⚖️ Réglementation: CNESST
-            </p>
-          </div>
-          <div style={{ textAlign: currentIsMobile ? 'center' : 'right' }}>
-            <div style={{ 
-              fontSize: currentIsMobile ? '32px' : '48px', 
-              fontWeight: 'bold',
-              color: getPersonnelStats().activeEntrants > 0 ? '#10b981' : '#6b7280',
-              fontFamily: 'JetBrains Mono, monospace'
-            }}>
-              {getPersonnelStats().activeEntrants}
-            </div>
-            <div style={{ 
-              color: '#9ca3af', 
-              fontSize: currentIsMobile ? '12px' : '14px',
-              fontWeight: '600'
-            }}>
-              👥 Personnel à l'intérieur
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Dashboard - Statistiques */}
-      <div style={styles.grid4}>
-        {/* Personnel Stats */}
-        <div style={styles.statCard}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            marginBottom: '12px'
-          }}>
-            <div>
-              <p style={{ 
-                color: '#9ca3af', 
-                fontSize: currentIsMobile ? '12px' : '14px',
-                fontWeight: '500',
-                margin: '0 0 4px 0'
-              }}>
-                👥 Personnel Total
-              </p>
-              <p style={{ 
-                fontSize: currentIsMobile ? '24px' : '32px',
-                fontWeight: 'bold',
-                color: 'white',
-                margin: 0,
-                fontFamily: 'JetBrains Mono, monospace'
-              }}>
-                {getPersonnelStats().totalPersonnel}
-              </p>
-            </div>
-            <Users style={{ 
-              width: currentIsMobile ? '32px' : '40px', 
-              height: currentIsMobile ? '32px' : '40px', 
-              color: '#60a5fa'
-            }} />
-          </div>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            padding: '8px 12px',
-            backgroundColor: getCurrentSurveillant() ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-            borderRadius: '8px',
-            border: `1px solid ${getCurrentSurveillant() ? '#10b981' : '#ef4444'}`
-          }}>
-            <Eye style={{ 
-              width: '16px', 
-              height: '16px', 
-              marginRight: '8px',
-              color: getCurrentSurveillant() ? '#10b981' : '#ef4444'
-            }} />
-            <span style={{ 
-              fontSize: currentIsMobile ? '11px' : '12px',
-              fontWeight: '600',
-              color: getCurrentSurveillant() ? '#86efac' : '#fca5a5'
-            }}>
-              {getCurrentSurveillant() ? '✅ Surveillant actif' : '❌ Aucun surveillant'}
-            </span>
-          </div>
-        </div>
-
-        {/* Conformité */}
-        <div style={styles.statCard}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            marginBottom: '12px'
-          }}>
-            <div>
-              <p style={{ 
-                color: '#9ca3af', 
-                fontSize: currentIsMobile ? '12px' : '14px',
-                fontWeight: '500',
-                margin: '0 0 4px 0'
-              }}>
-                ✅ Conformité
-              </p>
-              <p style={{ 
-                fontSize: currentIsMobile ? '24px' : '32px',
-                fontWeight: 'bold',
-                color: isFullyCompliant() ? '#10b981' : '#f59e0b',
-                margin: 0,
-                fontFamily: 'JetBrains Mono, monospace'
-              }}>
-                {getCompliancePercentage()}%
-              </p>
-            </div>
-            <CheckCircle style={{ 
-              width: currentIsMobile ? '32px' : '40px', 
-              height: currentIsMobile ? '32px' : '40px', 
-              color: isFullyCompliant() ? '#10b981' : '#f59e0b'
-            }} />
-          </div>
-          <div>
-            <div style={{
-              width: '100%',
-              backgroundColor: '#374151',
-              borderRadius: '8px',
-              height: '8px',
-              overflow: 'hidden',
-              marginBottom: '8px'
-            }}>
-              <div style={{
-                height: '100%',
-                backgroundColor: isFullyCompliant() ? '#10b981' : '#f59e0b',
-                width: `${getCompliancePercentage()}%`,
-                transition: 'width 0.3s ease',
-                borderRadius: '8px'
-              }} />
-            </div>
-            <p style={{ 
-              fontSize: currentIsMobile ? '10px' : '11px',
-              color: isFullyCompliant() ? '#86efac' : '#fde047',
-              margin: 0,
-              fontWeight: '600',
-              textAlign: 'center'
-            }}>
-              {isFullyCompliant() ? '🎉 Conforme' : '⚠️ Vérifications requises'}
-            </p>
-          </div>
-        </div>
-
-        {/* Sessions */}
-        <div style={styles.statCard}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            marginBottom: '12px'
-          }}>
-            <div>
-              <p style={{ 
-                color: '#9ca3af', 
-                fontSize: currentIsMobile ? '12px' : '14px',
-                fontWeight: '500',
-                margin: '0 0 4px 0'
-              }}>
-                📊 Sessions
-              </p>
-              <p style={{ 
-                fontSize: currentIsMobile ? '24px' : '32px',
-                fontWeight: 'bold',
-                color: 'white',
-                margin: 0,
-                fontFamily: 'JetBrains Mono, monospace'
-              }}>
-                {getPersonnelStats().totalSessions}
-              </p>
-            </div>
-            <Activity style={{ 
-              width: currentIsMobile ? '32px' : '40px', 
-              height: currentIsMobile ? '32px' : '40px', 
-              color: '#10b981'
-            }} />
-          </div>
-          <p style={{ 
-            fontSize: currentIsMobile ? '10px' : '11px',
-            color: '#9ca3af',
-            margin: 0,
-            textAlign: 'center'
-          }}>
-            Total entrées/sorties
-          </p>
-        </div>
-
-        {/* Statut Général */}
-        <div style={styles.statCard}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            marginBottom: '12px'
-          }}>
-            <div>
-              <p style={{ 
-                color: '#9ca3af', 
-                fontSize: currentIsMobile ? '12px' : '14px',
-                fontWeight: '500',
-                margin: '0 0 4px 0'
-              }}>
-                🎯 Statut
-              </p>
-              <p style={{ 
-                fontSize: currentIsMobile ? '16px' : '20px',
-                fontWeight: 'bold',
-                color: (getCurrentSurveillant() && isFullyCompliant()) ? '#10b981' : '#f59e0b',
-                margin: 0
-              }}>
-                {(getCurrentSurveillant() && isFullyCompliant()) ? 'PRÊT' : 'EN ATTENTE'}
-              </p>
-            </div>
-            {(getCurrentSurveillant() && isFullyCompliant()) ? (
-              <CheckCircle style={{ 
-                width: currentIsMobile ? '32px' : '40px', 
-                height: currentIsMobile ? '32px' : '40px', 
-                color: '#10b981'
-              }} />
-            ) : (
-              <AlertTriangle style={{ 
-                width: currentIsMobile ? '32px' : '40px', 
-                height: currentIsMobile ? '32px' : '40px', 
-                color: '#f59e0b'
-              }} />
-            )}
-          </div>
-          <p style={{ 
-            fontSize: currentIsMobile ? '10px' : '11px',
-            color: '#9ca3af',
-            margin: 0,
-            textAlign: 'center'
-          }}>
-            {(getCurrentSurveillant() && isFullyCompliant()) 
-              ? '✅ Autorisé pour entrées' 
-              : '⚠️ Vérifications requises'
-            }
-          </p>
-        </div>
-      </div>
-
-      {/* Section Conformité */}
-      <div style={styles.card}>
-        <div style={{
-          borderBottom: '1px solid #4b5563',
-          paddingBottom: '20px',
-          marginBottom: '24px'
-        }}>
-          <h2 style={styles.cardTitle}>
-            <CheckCircle style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
-            {texts.compliance}
-          </h2>
-          <p style={{ 
-            color: '#9ca3af', 
-            fontSize: currentIsMobile ? '13px' : '15px',
-            margin: 0,
-            lineHeight: 1.5
-          }}>
-            ⚖️ Vérifications requises avant autorisation d'entrée
-          </p>
-        </div>
-        
-        <div style={styles.grid2}>
-          {Object.entries(compliance_check).map(([key, value]) => (
-            <div 
-              key={key}
-              style={{
-                padding: currentIsMobile ? '16px' : '20px',
-                borderRadius: '12px',
-                border: `2px solid ${value ? '#10b981' : '#4b5563'}`,
-                backgroundColor: value ? 'rgba(16, 185, 129, 0.1)' : 'rgba(75, 85, 99, 0.1)',
-                transition: 'all 0.3s ease',
-                cursor: 'pointer'
-              }}
-              onClick={() => updateComplianceCheck(key as keyof ComplianceCheck, !value)}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '6px',
-                  border: `2px solid ${value ? '#10b981' : '#6b7280'}`,
-                  backgroundColor: value ? '#10b981' : 'transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  {value && <CheckCircle style={{ width: '16px', height: '16px', color: 'white' }} />}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{
-                    fontWeight: '600',
-                    color: value ? '#86efac' : '#d1d5db',
-                    margin: '0 0 4px 0',
-                    fontSize: currentIsMobile ? '14px' : '15px'
-                  }}>
-                    {getComplianceLabel(key as keyof ComplianceCheck)}
-                  </p>
-                  <p style={{ 
-                    fontSize: currentIsMobile ? '11px' : '12px',
-                    color: '#9ca3af',
-                    margin: 0
-                  }}>
-                    {value ? '✅ Vérifié' : '👆 Cliquez pour cocher'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        <div style={{
-          marginTop: '24px',
-          padding: currentIsMobile ? '20px' : '24px',
+          backgroundColor: 'rgba(0, 0, 0, 0.3)',
           borderRadius: '12px',
-          border: `2px solid ${isFullyCompliant() ? '#10b981' : '#f59e0b'}`,
-          backgroundColor: isFullyCompliant() ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)'
+          padding: isMobile ? '16px' : '20px',
+          marginBottom: '20px',
+          border: '1px solid rgba(254, 202, 202, 0.3)'
+        }}>
+          <p style={{ 
+            color: '#fecaca', 
+            fontSize: '15px',
+            lineHeight: 1.6,
+            margin: '0 0 12px 0',
+            fontWeight: '600'
+          }}>
+            👥 <strong>SURVEILLANCE OBLIGATOIRE</strong> : Surveillant qualifié requis en permanence + communication bidirectionnelle selon {safeRegulations.code}.
+          </p>
+          <p style={{ 
+            color: '#fca5a5', 
+            fontSize: '14px',
+            margin: 0,
+            fontStyle: 'italic'
+          }}>
+            ⏰ <strong>Durée maximale</strong> : {safeRegulations.personnel_requirements.max_work_period_hours}h consécutives maximum par personne dans l'espace clos.
+          </p>
+        </div>
+        
+        {/* Exigences surveillant obligatoire */}
+        <div style={{ marginBottom: '20px' }}>
+          <h4 style={{
+            fontSize: isMobile ? '16px' : '18px',
+            fontWeight: '700',
+            color: '#fecaca',
+            marginBottom: '16px'
+          }}>
+            👁️ {t.attendantRequired}
+          </h4>
+          
+          <div style={{ 
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '12px',
+            border: '1px solid rgba(254, 202, 202, 0.3)',
+            marginBottom: '16px'
+          }}>
+            <input
+              type="checkbox"
+              id="attendant_present"
+              checked={entryRegistryData.attendantPresent || false}
+              onChange={(e) => handleAttendantPresent(e.target.checked)}
+              style={{
+                width: '24px',
+                height: '24px',
+                accentColor: '#ef4444'
+              }}
+              required
+            />
+            <label 
+              htmlFor="attendant_present"
+              style={{
+                color: '#fecaca',
+                fontSize: isMobile ? '15px' : '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                flex: 1
+              }}
+            >
+              👁️ <strong>SURVEILLANT PRÉSENT</strong> : Je confirme qu'un surveillant qualifié est présent et maintient une surveillance constante *
+            </label>
+          </div>
+          
+          <div style={{ 
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '12px',
+            border: '1px solid rgba(254, 202, 202, 0.3)',
+            marginBottom: '16px'
+          }}>
+            <input
+              type="checkbox"
+              id="communication_system_tested"
+              checked={entryRegistryData.communicationSystemActive || false}
+              onChange={(e) => handleCommunicationSystemTested(e.target.checked)}
+              style={{
+                width: '24px',
+                height: '24px',
+                accentColor: '#ef4444'
+              }}
+              required
+            />
+            <label 
+              htmlFor="communication_system_tested"
+              style={{
+                color: '#fecaca',
+                fontSize: isMobile ? '15px' : '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                flex: 1
+              }}
+            >
+              📡 <strong>COMMUNICATION TESTÉE</strong> : Système de communication bidirectionnelle testé et fonctionnel entre surveillant et entrants *
+            </label>
+          </div>
+          
+          <div style={{ 
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '12px',
+            border: '1px solid rgba(254, 202, 202, 0.3)'
+          }}>
+            <input
+              type="checkbox"
+              id="emergency_retrieval_ready"
+              checked={permitData.emergency_retrieval_ready || false}
+              onChange={(e) => handleEmergencyRetrievalReady(e.target.checked)}
+              style={{
+                width: '24px',
+                height: '24px',
+                accentColor: '#ef4444'
+              }}
+              required
+            />
+            <label 
+              htmlFor="emergency_retrieval_ready"
+              style={{
+                color: '#fecaca',
+                fontSize: isMobile ? '15px' : '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                flex: 1
+              }}
+            >
+              🚑 <strong>SAUVETAGE PRÊT</strong> : Équipe et équipement de sauvetage d'urgence prêts à intervenir immédiatement *
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Mode urgence */}
+      {emergencyMode && (
+        <div style={{
+          backgroundColor: 'rgba(220, 38, 38, 0.2)',
+          border: '2px solid #ef4444',
+          borderRadius: '16px',
+          padding: isMobile ? '20px' : '28px',
+          animation: 'pulse 2s infinite',
+          boxShadow: '0 8px 32px rgba(220, 38, 38, 0.3)'
         }}>
           <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'space-between',
-            flexDirection: currentIsMobile ? 'column' : 'row',
-            gap: currentIsMobile ? '16px' : '0'
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? '16px' : '0'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              {isFullyCompliant() ? (
-                <CheckCircle style={{ width: '32px', height: '32px', color: '#10b981' }} />
-              ) : (
-                <AlertTriangle style={{ width: '32px', height: '32px', color: '#f59e0b' }} />
-              )}
+              <AlertTriangle style={{ width: '36px', height: '36px', color: '#f87171' }} />
               <div>
-                <p style={{
-                  fontWeight: 'bold',
-                  color: isFullyCompliant() ? '#86efac' : '#fde047',
-                  margin: '0 0 4px 0',
-                  fontSize: currentIsMobile ? '16px' : '18px'
-                }}>
-                  🎯 Statut: {isFullyCompliant() ? texts.compliant + ' ✅' : texts.nonCompliant + ' ⚠️'}
-                </p>
-                <p style={{ 
-                  color: '#9ca3af', 
-                  fontSize: currentIsMobile ? '13px' : '14px',
-                  margin: 0
-                }}>
-                  📊 {getCompliancePercentage()}% des vérifications complétées
+                <h3 style={{ color: '#fecaca', fontWeight: 'bold', fontSize: isMobile ? '18px' : '20px' }}>
+                  🚨 {t.emergencyEvacuationInitiated}
+                </h3>
+                <p style={{ color: '#fca5a5', fontSize: isMobile ? '14px' : '16px' }}>
+                  Procédures d'urgence activées - Contacts d'urgence notifiés
                 </p>
               </div>
             </div>
-            <div style={{ textAlign: currentIsMobile ? 'center' : 'right' }}>
-              <div style={{
-                fontSize: currentIsMobile ? '28px' : '36px',
-                fontWeight: 'bold',
-                color: isFullyCompliant() ? '#10b981' : '#f59e0b',
-                fontFamily: 'JetBrains Mono, monospace'
-              }}>
-                {getCompliancePercentage()}%
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Section Personnel */}
-      <div style={styles.card}>
-        <div style={{
-          borderBottom: '1px solid #4b5563',
-          paddingBottom: '20px',
-          marginBottom: '24px'
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            flexDirection: currentIsMobile ? 'column' : 'row',
-            gap: currentIsMobile ? '16px' : '0'
-          }}>
-            <h2 style={styles.cardTitle}>
-              <UserCheck style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
-              👥 {texts.personnel} ({personnel.length})
-            </h2>
             <button
-              onClick={() => setShowPersonModal(true)}
+              onClick={() => setEmergencyMode(false)}
               style={{
                 ...styles.button,
-                ...styles.buttonSuccess,
-                ...styles.buttonSmall
+                ...styles.buttonSecondary,
+                width: 'auto',
+                padding: '8px 12px',
+                fontSize: '14px'
               }}
             >
-              <UserPlus style={{ width: '18px', height: '18px' }} />
-              {texts.addPerson}
+              <X style={{ width: '16px', height: '16px' }} />
+              Fermer alerte
             </button>
           </div>
         </div>
+      )}
 
+      {/* Section Occupation Actuelle */}
+      <div style={styles.card}>
+        <h3 style={styles.cardTitle}>
+          <Users style={{ width: '20px', height: '20px' }} />
+          {t.currentOccupancy}
+          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+            <span style={{
+              fontSize: isMobile ? '12px' : '14px',
+              backgroundColor: entryRegistryData.currentOccupancy >= entryRegistryData.maxOccupancy ? '#ef4444' : '#10b981',
+              color: 'white',
+              padding: '6px 12px',
+              borderRadius: '16px',
+              fontWeight: '700'
+            }}>
+              👥 {entryRegistryData.currentOccupancy}/{entryRegistryData.maxOccupancy}
+            </span>
+            <button
+              onClick={initiateEmergencyEvacuation}
+              style={{
+                ...styles.button,
+                ...styles.buttonDanger,
+                width: 'auto',
+                padding: '8px 12px',
+                fontSize: '14px',
+                minHeight: 'auto'
+              }}
+              disabled={entryRegistryData.currentOccupancy === 0}
+            >
+              <AlertTriangle style={{ width: '16px', height: '16px' }} />
+              {t.emergencyEvacuation}
+            </button>
+          </div>
+        </h3>
+        
+        <div style={styles.grid3}>
+          <div style={{
+            padding: '20px',
+            backgroundColor: entryRegistryData.currentOccupancy > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(107, 114, 128, 0.2)',
+            borderRadius: '12px',
+            border: `2px solid ${entryRegistryData.currentOccupancy > 0 ? '#ef4444' : '#6b7280'}`,
+            textAlign: 'center'
+          }}>
+            <UserCheck style={{ 
+              width: isMobile ? '32px' : '40px', 
+              height: isMobile ? '32px' : '40px', 
+              color: entryRegistryData.currentOccupancy > 0 ? '#f87171' : '#6b7280',
+              margin: '0 auto 12px'
+            }} />
+            <div style={{ 
+              fontSize: isMobile ? '24px' : '32px', 
+              fontWeight: 'bold', 
+              color: entryRegistryData.currentOccupancy > 0 ? '#fca5a5' : '#9ca3af',
+              marginBottom: '8px'
+            }}>
+              {getCurrentPersonnelInside().length}
+            </div>
+            <div style={{ 
+              color: entryRegistryData.currentOccupancy > 0 ? '#fca5a5' : '#9ca3af', 
+              fontSize: '14px',
+              fontWeight: '600'
+            }}>
+              {t.personnelInside}
+            </div>
+          </div>
+          
+          <div style={{
+            padding: '20px',
+            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+            borderRadius: '12px',
+            border: '2px solid #10b981',
+            textAlign: 'center'
+          }}>
+            <Shield style={{ 
+              width: isMobile ? '32px' : '40px', 
+              height: isMobile ? '32px' : '40px', 
+              color: '#34d399',
+              margin: '0 auto 12px'
+            }} />
+            <div style={{ 
+              fontSize: isMobile ? '24px' : '32px', 
+              fontWeight: 'bold', 
+              color: '#86efac',
+              marginBottom: '8px'
+            }}>
+              {getCurrentPersonnelOutside().length}
+            </div>
+            <div style={{ 
+              color: '#86efac', 
+              fontSize: '14px',
+              fontWeight: '600'
+            }}>
+              {t.personnelOutside}
+            </div>
+          </div>
+          
+          <div style={{
+            padding: '20px',
+            backgroundColor: 'rgba(245, 158, 11, 0.2)',
+            borderRadius: '12px',
+            border: '2px solid #f59e0b',
+            textAlign: 'center'
+          }}>
+            <Wrench style={{ 
+              width: isMobile ? '32px' : '40px', 
+              height: isMobile ? '32px' : '40px', 
+              color: '#fbbf24',
+              margin: '0 auto 12px'
+            }} />
+            <div style={{ 
+              fontSize: isMobile ? '20px' : '24px', 
+              fontWeight: 'bold', 
+              color: '#fde047',
+              marginBottom: '8px'
+            }}>
+              {entryRegistryData.maxOccupancy}
+            </div>
+            <div style={{ 
+              color: '#fde047', 
+              fontSize: '14px',
+              fontWeight: '600'
+            }}>
+              {t.maxOccupancy}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section Gestion du Personnel */}
+      <div style={styles.card}>
+        <h3 style={styles.cardTitle}>
+          <Users style={{ width: '20px', height: '20px' }} />
+          {t.personnelManagement} ({personnel.length})
+          <button
+            onClick={() => setShowAddPersonForm(!showAddPersonForm)}
+            style={{
+              ...styles.button,
+              ...styles.buttonSuccess,
+              width: 'auto',
+              padding: '8px 12px',
+              fontSize: '14px',
+              minHeight: 'auto',
+              marginLeft: 'auto'
+            }}
+          >
+            <UserPlus style={{ width: '16px', height: '16px' }} />
+            {t.addPerson}
+          </button>
+        </h3>
+        
+        {/* Formulaire ajout personnel */}
+        {showAddPersonForm && (
+          <div style={{
+            backgroundColor: 'rgba(17, 24, 39, 0.6)',
+            borderRadius: '12px',
+            padding: isMobile ? '20px' : '24px',
+            border: '1px solid #4b5563',
+            marginBottom: '24px'
+          }}>
+            <h4 style={{ 
+              fontSize: isMobile ? '16px' : '18px', 
+              fontWeight: '700', 
+              color: 'white', 
+              marginBottom: '20px' 
+            }}>
+              👤 Nouveau Personnel
+            </h4>
+            
+            <div style={styles.grid2}>
+              <div>
+                <label style={styles.label}>Nom complet *</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Jean Dupont"
+                  value={newPerson.name}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, name: e.target.value }))}
+                  style={styles.input}
+                  required
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Rôle *</label>
+                <select
+                  value={newPerson.role}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, role: e.target.value as SafetyRole }))}
+                  style={styles.input}
+                  required
+                >
+                  <option value="entrant">👷 Entrant</option>
+                  <option value="attendant">👁️ Surveillant</option>
+                  <option value="supervisor">👨‍💼 Superviseur</option>
+                  <option value="rescuer">🚑 Sauveteur</option>
+                </select>
+              </div>
+              <div>
+                <label style={styles.label}>Téléphone *</label>
+                <input
+                  type="tel"
+                  placeholder="Ex: (514) 123-4567"
+                  value={newPerson.phone}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, phone: e.target.value }))}
+                  style={styles.input}
+                  required
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Email</label>
+                <input
+                  type="email"
+                  placeholder="Ex: jean.dupont@entreprise.ca"
+                  value={newPerson.email}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, email: e.target.value }))}
+                  style={styles.input}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Entreprise</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Construction ABC Inc."
+                  value={newPerson.company}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, company: e.target.value }))}
+                  style={styles.input}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Certification</label>
+                <input
+                  type="text"
+                  placeholder="Ex: CNESST-EC-2024-001"
+                  value={newPerson.certification}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, certification: e.target.value }))}
+                  style={styles.input}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Contact d'urgence - Nom</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Marie Dupont"
+                  value={newPerson.emergency_contact_name}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, emergency_contact_name: e.target.value }))}
+                  style={styles.input}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Contact d'urgence - Téléphone</label>
+                <input
+                  type="tel"
+                  placeholder="Ex: (514) 987-6543"
+                  value={newPerson.emergency_contact_phone}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, emergency_contact_phone: e.target.value }))}
+                  style={styles.input}
+                />
+              </div>
+            </div>
+            
+            <div style={{ marginTop: '20px' }}>
+              <label style={styles.label}>Notes</label>
+              <textarea
+                placeholder="Qualifications, restrictions médicales, notes particulières..."
+                value={newPerson.notes}
+                onChange={(e) => setNewPerson(prev => ({ ...prev, notes: e.target.value }))}
+                style={{ ...styles.input, height: '80px', resize: 'vertical' }}
+              />
+            </div>
+            
+            <div style={{ 
+              display: 'flex', 
+              gap: '12px', 
+              marginTop: '24px',
+              flexDirection: isMobile ? 'column' : 'row'
+            }}>
+              <button
+                onClick={addNewPerson}
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSuccess,
+                  flex: 1
+                }}
+              >
+                <UserPlus style={{ width: '18px', height: '18px' }} />
+                Ajouter Personnel
+              </button>
+              <button
+                onClick={() => setShowAddPersonForm(false)}
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSecondary,
+                  flex: isMobile ? 1 : 'none',
+                  width: isMobile ? '100%' : 'auto'
+                }}
+              >
+                <X style={{ width: '18px', height: '18px' }} />
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Liste du personnel */}
         {personnel.length === 0 ? (
           <div style={{ 
             textAlign: 'center', 
-            padding: currentIsMobile ? '40px 20px' : '60px 40px',
+            padding: isMobile ? '32px 20px' : '48px 32px', 
+            color: '#9ca3af',
             backgroundColor: 'rgba(17, 24, 39, 0.5)',
             borderRadius: '12px',
             border: '1px solid #374151'
           }}>
-            <UserCheck style={{ 
-              width: currentIsMobile ? '64px' : '80px', 
-              height: currentIsMobile ? '64px' : '80px', 
-              color: '#6b7280',
-              margin: '0 auto 20px'
+            <Users style={{ 
+              width: isMobile ? '56px' : '72px', 
+              height: isMobile ? '56px' : '72px', 
+              margin: '0 auto 20px', 
+              color: '#4b5563'
             }} />
-            <h3 style={{ 
-              fontSize: currentIsMobile ? '18px' : '20px',
-              fontWeight: '600',
-              color: '#d1d5db',
-              marginBottom: '12px'
-            }}>
-              {texts.noPersonnel}
-            </h3>
-            <p style={{ 
-              color: '#9ca3af', 
-              fontSize: currentIsMobile ? '14px' : '15px',
-              lineHeight: 1.5
-            }}>
-              👨‍💼 {texts.startWithSupervisor}
+            <p style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: '12px', fontWeight: '600' }}>
+              Aucun personnel enregistré
+            </p>
+            <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
+              Ajoutez du personnel ci-dessus pour commencer à gérer les entrées/sorties.
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '16px'
+          }}>
             {personnel.map((person) => {
-              const isInside = person.entry_sessions.some(session => session.status === 'active');
-              const isAttendant = person.role === 'surveillant';
+              const status = getPersonnelStatus(person.id);
+              const isInside = status?.current_status === 'inside';
+              const statusColor = getStatusColor(status?.current_status || 'unknown');
               
               return (
-                <div key={person.id} style={{
-                  ...styles.personCard,
-                  ...(isAttendant ? styles.personCardSurveillant : 
-                      isInside ? styles.personCardInside : styles.personCardEntrant)
-                }}>
+                <div
+                  key={person.id}
+                  style={{
+                    padding: isMobile ? '16px' : '20px',
+                    borderRadius: '12px',
+                    borderLeft: `4px solid ${getRoleColor(person.role)}`,
+                    backgroundColor: isInside ? 'rgba(239, 68, 68, 0.1)' : 'rgba(17, 24, 39, 0.6)',
+                    border: `1px solid ${isInside ? '#ef4444' : '#4b5563'}`,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    marginBottom: '16px',
-                    flexDirection: currentIsMobile ? 'column' : 'row',
-                    gap: currentIsMobile ? '16px' : '0'
+                    justifyContent: 'space-between', 
+                    marginBottom: '12px',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: isMobile ? '12px' : '0'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div style={{
-                        padding: '12px',
-                        borderRadius: '12px',
-                        backgroundColor: isAttendant ? 'rgba(59, 130, 246, 0.2)' : 
-                                        isInside ? 'rgba(16, 185, 129, 0.2)' : 'rgba(107, 114, 128, 0.2)'
+                        width: '14px',
+                        height: '14px',
+                        borderRadius: '50%',
+                        backgroundColor: statusColor,
+                        boxShadow: isInside ? '0 0 12px rgba(239, 68, 68, 0.6)' : '0 0 8px rgba(16, 185, 129, 0.4)',
+                        animation: isInside ? 'pulse 2s infinite' : 'none'
+                      }}></div>
+                      <span style={{
+                        fontWeight: '700',
+                        color: 'white',
+                        fontSize: isMobile ? '16px' : '18px'
                       }}>
-                        {isAttendant ? (
-                          <Eye style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
-                        ) : (
-                          <UserCheck style={{ 
-                            width: '24px', 
-                            height: '24px', 
-                            color: isInside ? '#10b981' : '#9ca3af'
-                          }} />
-                        )}
-                      </div>
-                      
-                      <div>
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '12px',
-                          flexWrap: 'wrap'
-                        }}>
-                          <h3 style={{ 
-                            fontSize: currentIsMobile ? '16px' : '18px',
-                            fontWeight: 'bold',
-                            color: 'white',
-                            margin: 0
-                          }}>
-                            {person.name}
-                          </h3>
-                          
-                          <span style={{
-                            padding: '4px 8px',
-                            borderRadius: '12px',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            backgroundColor: isAttendant ? 'rgba(59, 130, 246, 0.2)' : 'rgba(107, 114, 128, 0.2)',
-                            color: isAttendant ? '#93c5fd' : '#d1d5db',
-                            border: `1px solid ${isAttendant ? '#3b82f6' : '#6b7280'}`
-                          }}>
-                            {isAttendant ? '👁️ SURVEILLANT' : '👤 ENTRANT'}
-                          </span>
-                          
-                          {person.is_active && (
-                            <span style={{
-                              padding: '4px 8px',
-                              borderRadius: '12px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                              color: '#86efac',
-                              border: '1px solid #10b981'
-                            }}>
-                              ✅ ACTIF
-                            </span>
-                          )}
-                          
-                          {isInside && (
-                            <span style={{
-                              padding: '4px 8px',
-                              borderRadius: '12px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              backgroundColor: 'rgba(245, 158, 11, 0.2)',
-                              color: '#fde047',
-                              border: '1px solid #f59e0b',
-                              animation: 'pulse 2s infinite'
-                            }}>
-                              🚪 À L'INTÉRIEUR
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '16px', 
-                          marginTop: '8px',
-                          fontSize: currentIsMobile ? '12px' : '13px',
-                          color: '#9ca3af',
-                          flexWrap: 'wrap'
-                        }}>
-                          <span>🏢 {person.company}</span>
-                          <span>📊 Sessions: {person.entry_sessions.length}</span>
-                          {person.training_expiry && (
-                            <span>📅 Formation: {new Date(person.training_expiry).toLocaleDateString()}</span>
-                          )}
-                        </div>
-                      </div>
+                        {getRoleEmoji(person.role)} {person.name}
+                      </span>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        backgroundColor: getRoleColor(person.role),
+                        color: 'white'
+                      }}>
+                        {person.role}
+                      </span>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        backgroundColor: statusColor,
+                        color: 'white'
+                      }}>
+                        {status?.current_status === 'inside' ? t.inside :
+                         status?.current_status === 'outside' ? t.outside :
+                         status?.current_status === 'emergency' ? t.emergency :
+                         t.unknown}
+                      </span>
                     </div>
-
+                    
                     <div style={{ 
                       display: 'flex', 
-                      alignItems: 'center', 
                       gap: '8px',
-                      flexWrap: 'wrap'
+                      flexDirection: isMobile ? 'column' : 'row',
+                      width: isMobile ? '100%' : 'auto'
                     }}>
-                      {/* Boutons Entrée/Sortie pour entrants */}
-                      {!isAttendant && (
-                        !isInside ? (
-                          <button
-                            onClick={() => markEntry(person.id)}
-                            disabled={!getCurrentSurveillant()}
-                            style={{
-                              ...styles.button,
-                              ...styles.buttonSuccess,
-                              ...styles.buttonSmall,
-                              opacity: !getCurrentSurveillant() ? 0.5 : 1
-                            }}
-                          >
-                            <LogIn style={{ width: '16px', height: '16px' }} />
-                            {texts.markEntry}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => markExit(person.id)}
-                            style={{
-                              ...styles.button,
-                              backgroundColor: '#f59e0b',
-                              color: 'white',
-                              ...styles.buttonSmall
-                            }}
-                          >
-                            <LogOut style={{ width: '16px', height: '16px' }} />
-                            {texts.markExit}
-                          </button>
-                        )
-                      )}
-
-                      {/* Bouton Signature pour surveillants */}
-                      {isAttendant && (
-                        <button
-                          onClick={() => {
-                            setSelectedPersonId(person.id);
-                            setShowSignatureModal(true);
-                          }}
-                          style={{
-                            ...styles.button,
-                            backgroundColor: '#8b5cf6',
-                            color: 'white',
-                            ...styles.buttonSmall
-                          }}
-                        >
-                          <Signature style={{ width: '16px', height: '16px' }} />
-                          {person.signature ? 'Nouvelle Signature' : 'Signer'}
-                        </button>
-                      )}
-
-                      {/* Bouton Modifier */}
                       <button
-                        onClick={() => {
-                          setEditingPerson(person);
-                          setPersonData({
-                            name: person.name,
-                            role: person.role,
-                            company: person.company,
-                            training: person.training,
-                            training_expiry: person.training_expiry || '',
-                            electronic_signature: person.electronic_signature || '',
-                            formation_confirmed: person.formation_confirmed || false
-                          });
-                          setShowPersonModal(true);
-                        }}
+                        onClick={() => recordEntry(person.id)}
+                        disabled={isInside || !entryRegistryData.attendantPresent}
                         style={{
                           ...styles.button,
-                          backgroundColor: '#6b7280',
-                          color: 'white',
-                          ...styles.buttonSmall
+                          ...styles.buttonSuccess,
+                          width: 'auto',
+                          padding: '6px 10px',
+                          fontSize: '13px',
+                          minHeight: 'auto',
+                          opacity: (isInside || !entryRegistryData.attendantPresent) ? 0.5 : 1,
+                          cursor: (isInside || !entryRegistryData.attendantPresent) ? 'not-allowed' : 'pointer'
                         }}
                       >
-                        <Edit3 style={{ width: '16px', height: '16px' }} />
-                        Modifier
+                        <LogIn style={{ width: '14px', height: '14px' }} />
+                        {t.recordEntry}
+                      </button>
+                      <button
+                        onClick={() => recordExit(person.id)}
+                        disabled={!isInside}
+                        style={{
+                          ...styles.button,
+                          ...styles.buttonWarning,
+                          width: 'auto',
+                          padding: '6px 10px',
+                          fontSize: '13px',
+                          minHeight: 'auto',
+                          opacity: !isInside ? 0.5 : 1,
+                          cursor: !isInside ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        <LogOut style={{ width: '14px', height: '14px' }} />
+                        {t.recordExit}
+                      </button>
+                      <button
+                        onClick={() => removePerson(person.id)}
+                        disabled={isInside}
+                        style={{
+                          ...styles.button,
+                          ...styles.buttonDanger,
+                          width: 'auto',
+                          padding: '6px 10px',
+                          fontSize: '13px',
+                          minHeight: 'auto',
+                          opacity: isInside ? 0.5 : 1,
+                          cursor: isInside ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        <UserMinus style={{ width: '14px', height: '14px' }} />
+                        Supprimer
                       </button>
                     </div>
                   </div>
-
-                  {/* Historique des sessions */}
-                  {person.entry_sessions.length > 0 && (
-                    <div style={{
-                      marginTop: '16px',
-                      paddingTop: '16px',
-                      borderTop: '1px solid #4b5563'
-                    }}>
-                      <h4 style={{ 
-                        fontSize: currentIsMobile ? '13px' : '14px',
-                        fontWeight: '600',
-                        color: '#d1d5db',
-                        marginBottom: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}>
-                        <History style={{ width: '16px', height: '16px' }} />
-                        📋 Dernières sessions
-                      </h4>
-                      <div style={{ 
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px',
-                        maxHeight: '120px',
-                        overflowY: 'auto'
-                      }}>
-                        {person.entry_sessions.slice(-3).reverse().map((session) => (
-                          <div 
-                            key={session.id} 
-                            style={{ 
-                              padding: '8px 12px',
-                              backgroundColor: session.status === 'active' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(17, 24, 39, 0.5)',
-                              borderRadius: '8px',
-                              border: `1px solid ${session.status === 'active' ? '#10b981' : '#374151'}`,
-                              fontSize: currentIsMobile ? '11px' : '12px'
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                {session.status === 'active' ? (
-                                  <div style={{ display: 'flex', alignItems: 'center', color: '#86efac' }}>
-                                    <LogIn style={{ width: '14px', height: '14px', marginRight: '4px' }} />
-                                    <span style={{ fontWeight: '600' }}>🟢 EN COURS</span>
-                                  </div>
-                                ) : (
-                                  <div style={{ display: 'flex', alignItems: 'center', color: '#9ca3af' }}>
-                                    <LogOut style={{ width: '14px', height: '14px', marginRight: '4px' }} />
-                                    <span style={{ fontWeight: '600' }}>✅ TERMINÉE</span>
-                                  </div>
-                                )}
-                              </div>
-                              <span style={{ color: '#6b7280' }}>
-                                📅 {new Date(session.timestamp).toLocaleTimeString()}
-                              </span>
-                            </div>
-                            {session.duration && (
-                              <div style={{ marginTop: '4px', textAlign: 'right' }}>
-                                <span style={{ 
-                                  color: '#fde047', 
-                                  fontWeight: '600',
-                                  fontFamily: 'JetBrains Mono, monospace'
-                                }}>
-                                  ⏱️ {formatDuration(session.duration)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '12px', fontSize: '14px' }}>
+                    <div>
+                      <span style={{ color: '#9ca3af' }}>📞 Téléphone:</span>
+                      <span style={{ marginLeft: '8px', color: '#d1d5db', fontWeight: '600' }}>
+                        {person.phone}
+                      </span>
                     </div>
-                  )}
-
-                  {/* Signature status */}
-                  {person.signature && (
-                    <div style={{
-                      marginTop: '12px',
-                      padding: '12px',
-                      backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                      borderRadius: '8px',
-                      border: '1px solid #10b981'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />
-                        <span style={{ color: '#86efac', fontSize: '12px', fontWeight: '600' }}>
-                          ✍️ Signature enregistrée le {person.signature_timestamp ? 
-                            new Date(person.signature_timestamp).toLocaleString() : 'N/A'}
+                    {person.company && (
+                      <div>
+                        <span style={{ color: '#9ca3af' }}>🏢 Entreprise:</span>
+                        <span style={{ marginLeft: '8px', color: '#d1d5db', fontWeight: '600' }}>
+                          {person.company}
                         </span>
                       </div>
+                    )}
+                    {status && (
+                      <div>
+                        <span style={{ color: '#9ca3af' }}>⏱️ {t.timeInside}:</span>
+                        <span style={{ marginLeft: '8px', color: '#d1d5db', fontWeight: '600' }}>
+                          {formatDuration(status.total_time_inside)}
+                        </span>
+                      </div>
+                    )}
+                    {status?.communication_last_verified && (
+                      <div>
+                        <span style={{ color: '#9ca3af' }}>📡 {t.lastCommunication}:</span>
+                        <span style={{ marginLeft: '8px', color: '#d1d5db', fontWeight: '600' }}>
+                          {new Date(status.communication_last_verified).toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {(person.emergencyContact || person.notes) && (
+                    <div style={{
+                      marginTop: '12px',
+                      paddingTop: '12px',
+                      borderTop: '1px solid #4b5563',
+                      fontSize: '13px',
+                      color: '#d1d5db'
+                    }}>
+                      {person.emergencyContact && (
+                        <div>🚑 <strong>Contact d'urgence:</strong> {person.emergencyContact.name} - {person.emergencyContact.phone}</div>
+                      )}
+                      {person.notes && <div style={{ marginTop: '6px' }}>📝 {person.notes}</div>}
                     </div>
                   )}
                 </div>
@@ -1389,354 +1479,341 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
         )}
       </div>
 
-      {/* Modal Ajout/Modification Personnel */}
-      {showPersonModal && (
+      {/* Section Système de Communication */}
+      <div style={styles.card}>
+        <h3 style={styles.cardTitle}>
+          <Volume2 style={{ width: '20px', height: '20px' }} />
+          {t.communicationSystem}
+        </h3>
+        
         <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 50,
-          padding: currentIsMobile ? '16px' : '20px'
+          backgroundColor: 'rgba(17, 24, 39, 0.6)',
+          borderRadius: '12px',
+          padding: isMobile ? '20px' : '24px',
+          border: '1px solid #4b5563',
+          marginBottom: '24px'
         }}>
-          <div style={{
-            backgroundColor: '#1f2937',
-            borderRadius: '16px',
-            maxWidth: '600px',
-            width: '100%',
-            maxHeight: '90vh',
+          <h4 style={{ 
+            fontSize: isMobile ? '16px' : '18px', 
+            fontWeight: '700', 
+            color: 'white', 
+            marginBottom: '20px' 
+          }}>
+            📡 {t.communicationCheck}
+          </h4>
+          
+          <div style={styles.grid2}>
+            <div>
+              <label style={styles.label}>Personne à contacter *</label>
+              <select
+                value={communicationCheck.person_id}
+                onChange={(e) => setCommunicationCheck(prev => ({ ...prev, person_id: e.target.value }))}
+                style={styles.input}
+                required
+              >
+                <option value="">Sélectionner une personne</option>
+                {getCurrentPersonnelInside().map(status => {
+                  const person = getPersonById(status.person_id);
+                  return person ? (
+                    <option key={person.id} value={person.id}>
+                      {getRoleEmoji(person.role)} {person.name} ({person.role})
+                    </option>
+                  ) : null;
+                })}
+              </select>
+            </div>
+            <div>
+              <label style={styles.label}>Type de communication *</label>
+              <select
+                value={communicationCheck.communication_type}
+                onChange={(e) => setCommunicationCheck(prev => ({ ...prev, communication_type: e.target.value as any }))}
+                style={styles.input}
+                required
+              >
+                <option value="radio">📻 Radio</option>
+                <option value="visual">👁️ Visuel</option>
+                <option value="hand_signal">✋ Signal manuel</option>
+                <option value="emergency_signal">🚨 Signal d'urgence</option>
+              </select>
+            </div>
+            <div>
+              <label style={styles.label}>Force du signal (1-5) *</label>
+              <input
+                type="range"
+                min="1"
+                max="5"
+                value={communicationCheck.signal_strength}
+                onChange={(e) => setCommunicationCheck(prev => ({ ...prev, signal_strength: parseInt(e.target.value) }))}
+                style={styles.input}
+              />
+              <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>
+                {communicationCheck.signal_strength}/5 - {
+                  communicationCheck.signal_strength >= 4 ? '📶 Excellent' :
+                  communicationCheck.signal_strength >= 3 ? '📶 Bon' :
+                  communicationCheck.signal_strength >= 2 ? '📶 Moyen' : '📶 Faible'
+                }
+              </div>
+            </div>
+            <div>
+              <label style={styles.label}>Message (optionnel)</label>
+              <input
+                type="text"
+                placeholder="Ex: Vérification statut général"
+                value={communicationCheck.message}
+                onChange={(e) => setCommunicationCheck(prev => ({ ...prev, message: e.target.value }))}
+                style={styles.input}
+              />
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '16px', marginTop: '20px', flexDirection: isMobile ? 'column' : 'row' }}>
+            <div style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px',
+              backgroundColor: 'rgba(0, 0, 0, 0.2)',
+              borderRadius: '8px',
+              flex: 1
+            }}>
+              <input
+                type="checkbox"
+                id="response_received"
+                checked={communicationCheck.response_received}
+                onChange={(e) => setCommunicationCheck(prev => ({ ...prev, response_received: e.target.checked }))}
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  accentColor: '#10b981'
+                }}
+              />
+              <label 
+                htmlFor="response_received"
+                style={{
+                  color: '#d1d5db',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                ✅ {t.responseReceived}
+              </label>
+            </div>
+            
+            <div style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px',
+              backgroundColor: 'rgba(239, 68, 68, 0.2)',
+              borderRadius: '8px',
+              flex: 1
+            }}>
+              <input
+                type="checkbox"
+                id="emergency_indicated"
+                checked={communicationCheck.emergency_indicated}
+                onChange={(e) => setCommunicationCheck(prev => ({ ...prev, emergency_indicated: e.target.checked }))}
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  accentColor: '#ef4444'
+                }}
+              />
+              <label 
+                htmlFor="emergency_indicated"
+                style={{
+                  color: '#fca5a5',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                🚨 {t.emergencySignal}
+              </label>
+            </div>
+          </div>
+          
+          <button
+            onClick={performCommunicationCheck}
+            disabled={!communicationCheck.person_id}
+            style={{
+              ...styles.button,
+              ...styles.buttonPrimary,
+              width: '100%',
+              marginTop: '20px',
+              opacity: !communicationCheck.person_id ? 0.5 : 1,
+              cursor: !communicationCheck.person_id ? 'not-allowed' : 'pointer'
+            }}
+          >
+            <Volume2 style={{ width: '18px', height: '18px' }} />
+            Effectuer Vérification Communication
+          </button>
+        </div>
+      </div>
+
+      {/* Section Journal des Entrées/Sorties */}
+      <div style={styles.card}>
+        <h3 style={styles.cardTitle}>
+          <History style={{ width: '20px', height: '20px' }} />
+          {t.entryLog} ({entryLogs.length})
+        </h3>
+        
+        {entryLogs.length === 0 ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: isMobile ? '32px 20px' : '48px 32px', 
+            color: '#9ca3af',
+            backgroundColor: 'rgba(17, 24, 39, 0.5)',
+            borderRadius: '12px',
+            border: '1px solid #374151'
+          }}>
+            <FileText style={{ 
+              width: isMobile ? '56px' : '72px', 
+              height: isMobile ? '56px' : '72px', 
+              margin: '0 auto 20px', 
+              color: '#4b5563'
+            }} />
+            <p style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: '12px', fontWeight: '600' }}>
+              Aucune entrée enregistrée
+            </p>
+            <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
+              Les entrées/sorties et vérifications de communication apparaîtront ici.
+            </p>
+          </div>
+        ) : (
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '12px', 
+            maxHeight: isMobile ? '400px' : '500px', 
             overflowY: 'auto',
-            border: '1px solid #374151',
-            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)'
+            paddingRight: '8px'
           }}>
-            <div style={{
-              padding: '24px',
-              borderBottom: '1px solid #374151'
-            }}>
-              <h3 style={{
-                fontSize: '20px',
-                fontWeight: 'bold',
-                color: 'white',
-                margin: 0
-              }}>
-                {editingPerson ? '✏️ Modifier Personnel' : '➕ Ajouter Personnel'}
-              </h3>
-            </div>
-            
-            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={styles.grid2}>
-                <div>
-                  <label style={styles.label}>Nom complet *</label>
-                  <input
-                    type="text"
-                    value={personData.name}
-                    onChange={(e) => setPersonData(prev => ({...prev, name: e.target.value}))}
-                    style={styles.input}
-                    placeholder="Nom et prénom"
-                  />
-                </div>
-                
-                <div>
-                  <label style={styles.label}>Rôle *</label>
-                  <select
-                    value={personData.role}
-                    onChange={(e) => setPersonData(prev => ({...prev, role: e.target.value as 'surveillant' | 'entrant'}))}
-                    style={styles.input}
-                    disabled={!!editingPerson}
-                  >
-                    <option value="entrant">👤 Entrant</option>
-                    <option value="surveillant">👁️ Surveillant</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label style={styles.label}>Entreprise *</label>
-                  <input
-                    type="text"
-                    value={personData.company}
-                    onChange={(e) => setPersonData(prev => ({...prev, company: e.target.value}))}
-                    style={styles.input}
-                    placeholder="Nom de l'entreprise"
-                  />
-                </div>
-                
-                <div>
-                  <label style={styles.label}>Date d'expiration formation</label>
-                  <input
-                    type="date"
-                    value={personData.training_expiry}
-                    onChange={(e) => setPersonData(prev => ({...prev, training_expiry: e.target.value}))}
-                    style={styles.input}
-                  />
-                </div>
-              </div>
-
-              {/* Formations requises */}
-              <div>
-                <label style={{ ...styles.label, marginBottom: '12px' }}>
-                  📚 Formations requises pour {selectedProvince}
-                </label>
-                <div style={styles.grid2}>
-                  {getTrainingRequirements(selectedProvince).map((req) => (
-                    <div key={req.id} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px',
-                      backgroundColor: 'rgba(17, 24, 39, 0.5)',
-                      borderRadius: '8px',
-                      border: '1px solid #374151'
-                    }}>
-                      <input
-                        type="checkbox"
-                        id={req.id}
-                        checked={personData.training[req.id] || false}
-                        onChange={(e) => setPersonData(prev => ({
-                          ...prev,
-                          training: {
-                            ...prev.training,
-                            [req.id]: e.target.checked
-                          }
-                        }))}
-                        style={{
-                          width: '16px',
-                          height: '16px',
-                          accentColor: '#3b82f6'
-                        }}
-                      />
-                      <label htmlFor={req.id} style={{ flex: 1, cursor: 'pointer' }}>
-                        <div style={{ 
-                          fontWeight: '600', 
-                          color: 'white',
-                          fontSize: '14px',
-                          marginBottom: '2px'
-                        }}>
-                          {req.name}
-                        </div>
-                        <div style={{ 
-                          fontSize: '12px', 
-                          color: '#9ca3af'
-                        }}>
-                          {req.authority}
-                        </div>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Confirmation formation */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '16px',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                borderRadius: '12px',
-                border: '1px solid #3b82f6'
-              }}>
-                <input
-                  type="checkbox"
-                  id="formation_confirmed"
-                  checked={personData.formation_confirmed}
-                  onChange={(e) => setPersonData(prev => ({...prev, formation_confirmed: e.target.checked}))}
-                  style={{
-                    width: '20px',
-                    height: '20px',
-                    accentColor: '#3b82f6'
-                  }}
-                />
-                <label 
-                  htmlFor="formation_confirmed"
-                  style={{
-                    color: '#93c5fd',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    flex: 1
-                  }}
-                >
-                  ✅ Je confirme que toutes les formations sont valides et à jour *
-                </label>
-              </div>
-            </div>
-            
-            <div style={{
-              padding: '24px',
-              borderTop: '1px solid #374151',
-              display: 'flex',
-              gap: '12px'
-            }}>
-              <button
-                onClick={editingPerson ? updatePerson : addPerson}
-                disabled={!personData.name || !personData.company || !personData.formation_confirmed}
-                style={{
-                  ...styles.button,
-                  ...styles.buttonPrimary,
-                  flex: 1,
-                  opacity: (!personData.name || !personData.company || !personData.formation_confirmed) ? 0.5 : 1
-                }}
-              >
-                {editingPerson ? '💾 Mettre à jour' : '➕ Ajouter'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowPersonModal(false);
-                  setEditingPerson(null);
-                  resetPersonForm();
-                }}
-                style={{
-                  ...styles.button,
-                  ...styles.buttonSecondary,
-                  flex: 1
-                }}
-              >
-                ❌ Annuler
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Signature Numérique */}
-      {showSignatureModal && selectedPersonId && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 50,
-          padding: currentIsMobile ? '16px' : '20px'
-        }}>
-          <div style={{
-            backgroundColor: '#1f2937',
-            borderRadius: '16px',
-            maxWidth: '700px',
-            width: '100%',
-            border: '1px solid #374151',
-            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)'
-          }}>
-            <div style={{
-              padding: '24px',
-              borderBottom: '1px solid #374151'
-            }}>
-              <h3 style={{
-                fontSize: '20px',
-                fontWeight: 'bold',
-                color: 'white',
-                margin: '0 0 8px 0',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <Signature style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
-                ✍️ Signature Numérique C-Secure
-              </h3>
-              <p style={{
-                color: '#9ca3af',
-                fontSize: '14px',
-                margin: 0
-              }}>
-                🖱️ Signez directement sur l'écran pour authentifier votre identité
-              </p>
-            </div>
-            
-            <div style={{ padding: '24px' }}>
-              <div style={{ position: 'relative' }}>
-                <canvas
-                  ref={canvasRef}
-                  width={600}
-                  height={300}
-                  style={{
-                    border: '2px solid #4b5563',
-                    borderRadius: '12px',
-                    cursor: 'crosshair',
-                    width: '100%',
-                    maxWidth: '600px',
-                    height: 'auto',
-                    backgroundColor: '#374151'
-                  }}
-                  onMouseDown={startDrawing}
-                  onMouseMove={draw}
-                  onMouseUp={stopDrawing}
-                  onMouseLeave={stopDrawing}
-                />
-              </div>
+            {entryLogs.slice().reverse().map((log) => {
+              const actionColor = log.action === 'entry' ? '#10b981' :
+                                log.action === 'exit' ? '#f59e0b' :
+                                log.action === 'emergency_exit' ? '#ef4444' :
+                                '#6b7280';
               
-              <div style={{
-                marginTop: '20px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexDirection: currentIsMobile ? 'column' : 'row',
-                gap: currentIsMobile ? '12px' : '0'
-              }}>
-                <div style={{ 
-                  fontSize: '14px', 
-                  color: '#9ca3af',
-                  textAlign: currentIsMobile ? 'center' : 'left'
-                }}>
-                  <div>👤 Personne: <span style={{ fontWeight: '600', color: 'white' }}>
-                    {personnel.find(p => p.id === selectedPersonId)?.name}
-                  </span></div>
-                  <div>📅 Date: <span style={{ fontWeight: '600', color: 'white' }}>
-                    {new Date().toLocaleString()}
-                  </span></div>
-                </div>
-                
-                <button
-                  onClick={clearSignature}
+              const actionEmoji = log.action === 'entry' ? '📥' :
+                                log.action === 'exit' ? '📤' :
+                                log.action === 'emergency_exit' ? '🚨' :
+                                '📡';
+              
+              return (
+                <div
+                  key={log.id}
                   style={{
-                    ...styles.button,
-                    ...styles.buttonSecondary,
-                    ...styles.buttonSmall
+                    padding: isMobile ? '14px' : '16px',
+                    borderRadius: '12px',
+                    borderLeft: `4px solid ${actionColor}`,
+                    backgroundColor: log.emergency ? 'rgba(239, 68, 68, 0.1)' : 'rgba(17, 24, 39, 0.6)',
+                    border: `1px solid ${log.emergency ? '#ef4444' : '#4b5563'}`,
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  🗑️ Effacer
-                </button>
-              </div>
-            </div>
-            
-            <div style={{
-              padding: '24px',
-              borderTop: '1px solid #374151',
-              display: 'flex',
-              gap: '12px'
-            }}>
-              <button
-                onClick={() => saveSignature(selectedPersonId)}
-                disabled={!signatureData}
-                style={{
-                  ...styles.button,
-                  ...styles.buttonPrimary,
-                  flex: 1,
-                  opacity: !signatureData ? 0.5 : 1
-                }}
-              >
-                💾 Enregistrer Signature
-              </button>
-              <button
-                onClick={() => {
-                  setShowSignatureModal(false);
-                  setSelectedPersonId(null);
-                  clearSignature();
-                }}
-                style={{
-                  ...styles.button,
-                  ...styles.buttonSecondary,
-                  flex: 1
-                }}
-              >
-                ❌ Annuler
-              </button>
-            </div>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    marginBottom: '8px',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: isMobile ? '8px' : '0'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '18px' }}>{actionEmoji}</span>
+                      <span style={{
+                        fontWeight: '700',
+                        color: 'white',
+                        fontSize: isMobile ? '15px' : '16px'
+                      }}>
+                        {getRoleEmoji(log.role)} {log.person_name}
+                      </span>
+                      <span style={{
+                        padding: '2px 6px',
+                        borderRadius: '8px',
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        backgroundColor: actionColor,
+                        color: 'white'
+                      }}>
+                        {log.action === 'entry' ? 'ENTRÉE' :
+                         log.action === 'exit' ? 'SORTIE' :
+                         log.action === 'emergency_exit' ? 'ÉVACUATION' :
+                         'COMM'}
+                      </span>
+                      {log.emergency && (
+                        <span style={{
+                          padding: '2px 6px',
+                          borderRadius: '8px',
+                          fontSize: '10px',
+                          fontWeight: '600',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          animation: 'pulse 2s infinite'
+                        }}>
+                          🚨 URGENCE
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ 
+                      color: '#9ca3af', 
+                      fontSize: isMobile ? '12px' : '13px', 
+                      textAlign: isMobile ? 'center' : 'right'
+                    }}>
+                      📅 {new Date(log.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                      <br />
+                      👤 {log.authorized_by}
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '8px', fontSize: '13px' }}>
+                    <div>
+                      <span style={{ color: '#9ca3af' }}>📍 Lieu:</span>
+                      <span style={{ marginLeft: '6px', color: '#d1d5db', fontWeight: '600' }}>
+                        {log.location}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#9ca3af' }}>📡 Comm:</span>
+                      <span style={{ 
+                        marginLeft: '6px', 
+                        color: log.communication_verified ? '#86efac' : '#fca5a5', 
+                        fontWeight: '600' 
+                      }}>
+                        {log.communication_verified ? '✅ OK' : '❌ NON'}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#9ca3af' }}>🛡️ Équip:</span>
+                      <span style={{ 
+                        marginLeft: '6px', 
+                        color: log.equipment_verified ? '#86efac' : '#fca5a5', 
+                        fontWeight: '600' 
+                      }}>
+                        {log.equipment_verified ? '✅ OK' : '❌ NON'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {log.notes && (
+                    <div style={{
+                      marginTop: '8px',
+                      paddingTop: '8px',
+                      borderTop: '1px solid #4b5563',
+                      fontSize: '12px',
+                      color: '#d1d5db'
+                    }}>
+                      📝 {log.notes}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
