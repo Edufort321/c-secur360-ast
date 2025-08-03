@@ -1008,9 +1008,25 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
   // =================== RENDU DES SECTIONS ===================
   const renderSectionContent = () => {
+    // Cast de type pour compatibilité ConfinedSpaceComponentProps
+    const compatiblePermitData = {
+      ...permitData,
+      permit_number: permitData.permit_number || '',
+      province: permitData.province || permitData.selected_province || selectedProvince,
+      updated_at: permitData.updated_at || permitData.last_modified || new Date().toISOString(),
+      siteInformation: permitData.siteInformation || {},
+      atmosphericTesting: permitData.atmosphericTesting || { readings: atmosphericReadings },
+      rescuePlan: permitData.rescuePlan || {},
+      entryRegistry: permitData.entryRegistry || {},
+      compliance: permitData.compliance || {},
+      validation: permitData.validation || { isValid: false, percentage: 0 },
+      auditTrail: permitData.auditTrail || {},
+      attachments: permitData.attachments || []
+    };
+
     const commonProps: ConfinedSpaceComponentProps = {
       language,
-      permitData,
+      permitData: compatiblePermitData,
       selectedProvince,
       regulations: actualRegulations,
       isMobile: actualIsMobile,
