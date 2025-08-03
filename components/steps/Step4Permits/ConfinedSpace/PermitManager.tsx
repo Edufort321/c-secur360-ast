@@ -471,7 +471,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
                   {t.database}
                 </h2>
                 <p style={{ color: '#d1d5db', fontSize: currentIsMobile ? '14px' : '16px', margin: '4px 0 0 0' }}>
-                  {selectedProvince} - {regulations?.name || 'Réglementation provinciale'}
+                  {selectedProvince} - {'Réglementation provinciale'}
                 </p>
               </div>
             </div>
