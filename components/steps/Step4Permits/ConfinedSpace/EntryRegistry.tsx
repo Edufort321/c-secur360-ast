@@ -8,7 +8,7 @@ import {
   Volume2, Activity
 } from 'lucide-react';
 
-// Import SafetyManager et styles unifiés
+// Import SafetyManager et styles unifiés mis à jour
 import { useSafetyManager, ConfinedSpaceComponentProps } from './SafetyManager';
 import { styles } from './styles';
 
