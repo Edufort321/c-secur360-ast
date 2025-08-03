@@ -348,6 +348,7 @@ export interface RescuePlanData {
     cpr_certified?: boolean;
     rescue_training_hours?: number;
     response_time_verified?: boolean;
+    [key: string]: any; // Index signature pour permettre l'accès dynamique
   };
   equipment_certifications?: {
     harness_inspection_date?: string;
@@ -355,6 +356,7 @@ export interface RescuePlanData {
     mechanical_recovery_cert?: string;
     last_equipment_inspection?: string;
     equipment_serial_numbers?: string[];
+    [key: string]: any; // Index signature pour permettre l'accès dynamique
   };
   annual_drill_required?: boolean;
   last_effectiveness_test?: string;
