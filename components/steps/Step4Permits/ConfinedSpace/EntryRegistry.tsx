@@ -512,7 +512,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
 
     // Mise à jour SafetyManager
     if (safetyManager) {
-      safetyManager.updateRegistryData({ personnel: [...personnel, newPerson] });
+      safetyManager.updateEntryRegistry({ personnel: [...personnel, newPerson] });
     }
   };
 
@@ -643,7 +643,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
 
     // Mise à jour SafetyManager
     if (safetyManager) {
-      safetyManager.updateRegistryData({ equipment: [...equipment, newEquipment] });
+      safetyManager.updateEntryRegistry({ equipment: [...equipment, newEquipment] });
     }
   };
 
@@ -680,7 +680,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
 
     // Mise à jour SafetyManager
     if (safetyManager) {
-      safetyManager.updateRegistryData({ compliance_check: { ...compliance_check, [key]: value } });
+      safetyManager.updateEntryRegistry({ compliance_check: { ...compliance_check, [key]: value } });
     }
   };
 
@@ -765,7 +765,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
         }
       };
       
-      safetyManager.updateRegistryData(registryData);
+      safetyManager.updateEntryRegistry(registryData);
     }
   }, [personnel, equipment, compliance_check, safetyManager]);
 
@@ -899,7 +899,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
               fontSize: isMobile ? '14px' : '16px',
               margin: 0
             }}>
-              🌍 Province: {selectedProvince} | ⚖️ Réglementation: {regulations.name}
+              🌍 Province: {selectedProvince} | ⚖️ Réglementation: {regulations[selectedProvince]?.name || 'CNESST'}
             </p>
           </div>
           <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
