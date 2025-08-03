@@ -1,4 +1,4 @@
-// SafetyManager.tsx - Gestionnaire Centralisé Universel avec Compatibilité Maximale
+// SafetyManager.tsx - Gestionnaire Centralisé Universel avec Compatibilité Maximale Build-Ready
 "use client";
 
 import { create } from 'zustand';
@@ -27,6 +27,7 @@ export type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS'
 export type Language = 'fr' | 'en';
 export type PermitStatus = 'draft' | 'active' | 'completed' | 'cancelled';
 export type UserRole = 'entrant' | 'attendant' | 'supervisor' | 'rescue' | 'admin';
+export type SafetyRole = UserRole; // Alias pour compatibilité avec EntryRegistry
 export type AlertType = 'info' | 'warning' | 'critical' | 'success';
 
 // =================== INTERFACE UNIVERSELLE POUR TOUS LES COMPOSANTS ===================
@@ -82,6 +83,33 @@ export interface ConfinedSpaceComponentProps {
   onUpdate?: (section: string, data: any) => void;
   onSectionComplete?: (sectionData: any) => void;
   onValidationChange?: (isValid: boolean, errors: string[]) => void;
+}
+
+// =================== TYPES POUR ENTRYREGISTRY (COMPATIBILITÉ) ===================
+export interface PersonnelEntry {
+  id: string;
+  name: string;
+  role: UserRole;
+  certification: string[];
+  medicalFitness: {
+    valid: boolean;
+    expiryDate: string;
+    restrictions?: string[];
+  };
+  emergencyContact: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+}
+
+export interface EmergencyContact {
+  id: string;
+  name: string;
+  role: string;
+  phone: string;
+  email?: string;
+  isPrimary: boolean;
 }
 
 // =================== INSTANCE DU SAFETYMANAGER ===================
@@ -349,23 +377,6 @@ export interface EntryRegistryData {
   };
 }
 
-export interface PersonnelEntry {
-  id: string;
-  name: string;
-  role: UserRole;
-  certification: string[];
-  medicalFitness: {
-    valid: boolean;
-    expiryDate: string;
-    restrictions?: string[];
-  };
-  emergencyContact: {
-    name: string;
-    phone: string;
-    relationship: string;
-  };
-}
-
 export interface EntryLogEntry {
   id: string;
   personnelId: string;
@@ -434,15 +445,6 @@ export interface RescuePlanData {
   drill_results?: string;
   drill_notes?: string;
   rescue_plan_validated?: boolean;
-}
-
-export interface EmergencyContact {
-  id: string;
-  name: string;
-  role: string;
-  phone: string;
-  email?: string;
-  isPrimary: boolean;
 }
 
 export interface RescueTeamMember {
@@ -521,6 +523,7 @@ export interface AttachmentData {
   category?: 'photo' | 'document' | 'certificate' | 'plan' | 'other';
   description?: string;
 }
+
 // =================== FONCTIONS UTILITAIRES UNIVERSELLES ===================
 function createEmptyPermit(): ConfinedSpacePermit {
   const now = new Date().toISOString();
@@ -685,7 +688,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
   };
 }
 
-function generatePermitNumber(province: ProvinceCode): string {
+export function generatePermitNumber(province: ProvinceCode): string {
   const date = new Date();
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -695,7 +698,7 @@ function generatePermitNumber(province: ProvinceCode): string {
   return `CS-${province}-${year}${month}${day}-${time}`;
 }
 
-function generateId(): string {
+export function generateId(): string {
   return Math.random().toString(36).substr(2, 9);
 }
 
@@ -1690,7 +1693,7 @@ export const validatePermitSection = (permit: ConfinedSpacePermit, section: keyo
   };
 };
 
-// Utilitaires pour la compatibilité
+// Utilitaires pour la compatibilité (EXPORTS AJOUTÉS)
 export const generatePermitId = generateId;
 export const generateNewPermitNumber = generatePermitNumber;
 export const createAuditTrailEntry = createAuditEntry;
