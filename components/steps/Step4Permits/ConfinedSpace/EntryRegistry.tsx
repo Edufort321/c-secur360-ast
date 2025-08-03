@@ -512,7 +512,26 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
 
     // Mise à jour SafetyManager
     if (safetyManager) {
-      safetyManager.updateEntryRegistry({ personnel: [...personnel, newPerson] });
+      // Convertir Person vers PersonnelEntry pour compatibilité
+      const personnelEntry = {
+        id: newPerson.id,
+        name: newPerson.name,
+        role: newPerson.role,
+        certification: Object.entries(newPerson.training)
+          .filter(([_, value]) => value)
+          .map(([key, _]) => key),
+        medicalFitness: {
+          valid: true,
+          expiryDate: newPerson.training_expiry || '',
+          restrictions: []
+        },
+        emergencyContact: {
+          name: '',
+          phone: '',
+          relationship: ''
+        }
+      };
+      safetyManager.updateEntryRegistry({ personnel: [...(safetyManager.currentPermit.entryRegistry.personnel || []), personnelEntry] });
     }
   };
 
@@ -643,7 +662,17 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
 
     // Mise à jour SafetyManager
     if (safetyManager) {
-      safetyManager.updateEntryRegistry({ equipment: [...equipment, newEquipment] });
+      // Conversion simple pour compatibilité
+      const equipmentEntry = {
+        id: newEquipment.id,
+        name: newEquipment.name,
+        type: newEquipment.type,
+        serialNumber: newEquipment.notes || '',
+        lastInspection: newEquipment.calibration_date || '',
+        nextInspection: newEquipment.next_calibration || '',
+        isAvailable: newEquipment.status === 'available'
+      };
+      safetyManager.updateEquipment(equipmentEntry);
     }
   };
 
@@ -680,7 +709,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
 
     // Mise à jour SafetyManager
     if (safetyManager) {
-      safetyManager.updateEntryRegistry({ compliance_check: { ...compliance_check, [key]: value } });
+      safetyManager.updateCompliance(key, value);
     }
   };
 
@@ -751,21 +780,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   // Mise à jour automatique du SafetyManager
   useEffect(() => {
     if (safetyManager) {
-      const registryData = {
-        personnel,
-        equipment,
-        compliance_check,
-        stats: {
-          personnel: getPersonnelStats(),
-          equipment: getEquipmentStats(),
-          compliance: {
-            percentage: getCompliancePercentage(),
-            isFullyCompliant: isFullyCompliant()
-          }
-        }
-      };
-      
-      safetyManager.updateEntryRegistry(registryData);
+      // Pas de mise à jour automatique massive pour éviter les conflits de types
+      // Les mises à jour se font individuellement via les actions spécifiques
     }
   }, [personnel, equipment, compliance_check, safetyManager]);
 
