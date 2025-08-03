@@ -1,11 +1,11 @@
-// SafetyManager.tsx - Gestionnaire Centralisé Optimisé avec Supabase
+// SafetyManager.tsx - Gestionnaire Centralisé Universel avec Compatibilité Maximale
 "use client";
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createClient } from '@supabase/supabase-js';
 
-// =================== CONFIGURATION SUPABASE ===================
+// =================== CONFIGURATION SUPABASE ROBUSTE ===================
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
 
@@ -22,23 +22,61 @@ try {
   supabaseEnabled = false;
 }
 
-// =================== TYPES UNIFIÉS POUR L'INTERFACE COMMUNE ===================
+// =================== TYPES UNIVERSELS ===================
 export type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
 export type Language = 'fr' | 'en';
+export type PermitStatus = 'draft' | 'active' | 'completed' | 'cancelled';
+export type UserRole = 'entrant' | 'attendant' | 'supervisor' | 'rescue' | 'admin';
+export type AlertType = 'info' | 'warning' | 'critical' | 'success';
 
-// Interface commune pour tous les composants
+// =================== INTERFACE UNIVERSELLE POUR TOUS LES COMPOSANTS ===================
 export interface ConfinedSpaceComponentProps {
-  // Props de base communes
+  // Props de base communes (OBLIGATOIRES)
   language: Language;
   permitData: ConfinedSpacePermit;
-  
-  // Configuration
   selectedProvince: ProvinceCode;
   regulations: Record<ProvinceCode, any>;
   isMobile: boolean;
   
-  // SafetyManager integration
-  safetyManager: SafetyManagerInstance;
+  // SafetyManager integration (OPTIONNEL pour rétrocompatibilité)
+  safetyManager?: SafetyManagerInstance;
+  
+  // Props pour AtmosphericTesting
+  atmosphericReadings?: any[];
+  setAtmosphericReadings?: (readings: any[]) => void;
+  updateParentData?: (field: string, value: any) => void;
+  
+  // Props pour EntryRegistry
+  updatePermitData?: (data: any) => void;
+  
+  // Props pour tous les composants
+  styles?: any;
+  PROVINCIAL_REGULATIONS?: any;
+  
+  // Props ASTForm (compatibilité)
+  formData?: any;
+  onDataChange?: (field: string, value: any) => void;
+  onSave?: (data: any) => void;
+  onCancel?: () => void;
+  onSubmit?: (data: any) => void;
+  
+  // Props héritées (compatibilité version précédente)
+  province?: ProvinceCode;
+  initialData?: any;
+  tenant?: string;
+  errors?: any;
+  userRole?: UserRole;
+  touchOptimized?: boolean;
+  compactMode?: boolean;
+  onPermitChange?: (permits: any) => void;
+  initialPermits?: any[];
+  
+  // Props étendues (flexibilité maximale)
+  showAdvancedFeatures?: boolean;
+  enableAutoSave?: boolean;
+  readOnly?: boolean;
+  customValidators?: any[];
+  theme?: 'dark' | 'light';
   
   // Callbacks standardisés
   onUpdate?: (section: string, data: any) => void;
@@ -46,14 +84,19 @@ export interface ConfinedSpaceComponentProps {
   onValidationChange?: (isValid: boolean, errors: string[]) => void;
 }
 
-// Instance du SafetyManager
+// =================== INSTANCE DU SAFETYMANAGER ===================
 export interface SafetyManagerInstance {
+  // État principal
   currentPermit: ConfinedSpacePermit;
   permits: ConfinedSpacePermit[];
+  
+  // États de l'interface
   isSaving: boolean;
   isLoading: boolean;
   lastSaved: string | null;
   autoSaveEnabled: boolean;
+  
+  // Alertes et notifications
   activeAlerts: Alert[];
   notifications: Notification[];
   
@@ -63,7 +106,7 @@ export interface SafetyManagerInstance {
   updateEntryRegistry: (data: Partial<EntryRegistryData>) => void;
   updateRescuePlan: (data: Partial<RescuePlanData>) => void;
   
-  // Nouvelles méthodes pour EntryRegistry
+  // Méthodes pour EntryRegistry
   updateRegistryData: (data: any) => void;
   updatePersonnel: (person: any) => void;
   updateEquipment: (equipment: any) => void;
@@ -93,16 +136,17 @@ export interface SafetyManagerInstance {
 
 // =================== TYPES PRINCIPAUX ===================
 export interface ConfinedSpacePermit {
-  // Métadonnées
+  // Métadonnées essentielles
   id?: string;
   permit_number: string;
-  status: 'draft' | 'active' | 'completed' | 'cancelled';
+  status: PermitStatus;
   province: ProvinceCode;
   created_at: string;
   updated_at: string;
   last_modified: string;
+  issue_date?: string;
   
-  // Données des sections
+  // Données des sections principales
   siteInformation: ConfinedSpaceDetails;
   atmosphericTesting: AtmosphericTestingData;
   entryRegistry: EntryRegistryData;
@@ -117,20 +161,37 @@ export interface ConfinedSpacePermit {
   test_results_signed?: boolean;
   qualified_tester_name?: string;
   
-  // Conformité générale (ajouté pour EntryRegistry)
+  // Conformité générale
   compliance?: Record<string, boolean>;
   
   // Métadonnées de validation
-  validation: {
-    isComplete: boolean;
-    percentage: number;
-    errors: string[];
-    lastValidated: string;
-  };
+  validation: ValidationData;
   
-  // Données d'audit
+  // Données d'audit et attachements
   auditTrail: AuditEntry[];
   attachments: AttachmentData[];
+  
+  // Propriétés optionnelles pour compatibilité
+  selected_province?: ProvinceCode;
+  projectNumber?: string;
+  workLocation?: string;
+  spaceDescription?: string;
+  workDescription?: string;
+  entry_supervisor?: string;
+  rescue_plan_type?: 'internal' | 'external' | 'hybrid';
+  supervisor_name?: string;
+  permit_valid_from?: string;
+  permit_valid_to?: string;
+}
+
+export interface ValidationData {
+  isComplete: boolean;
+  isValid?: boolean;
+  percentage: number;
+  completedSections?: string[];
+  errors: string[];
+  warnings?: string[];
+  lastValidated: string;
 }
 
 export interface ConfinedSpaceDetails {
@@ -242,6 +303,7 @@ export interface AtmosphericTestingData {
   readings: AtmosphericReading[];
   continuousMonitoring: boolean;
   alarmSettings: AlarmSettings;
+  testingFrequency?: number;
   lastUpdated: string;
 }
 
@@ -278,14 +340,19 @@ export interface EntryRegistryData {
   lastUpdated: string;
   
   // Propriétés additionnelles pour EntryRegistry
-  equipment?: any;
+  equipment?: any[];
   compliance?: Record<string, boolean>;
+  supervisor?: {
+    name: string;
+    certification: string;
+    contact: string;
+  };
 }
 
 export interface PersonnelEntry {
   id: string;
   name: string;
-  role: 'entrant' | 'attendant' | 'supervisor' | 'rescue';
+  role: UserRole;
   certification: string[];
   medicalFitness: {
     valid: boolean;
@@ -327,8 +394,9 @@ export interface RescuePlanData {
   hospitalInfo: HospitalInfo;
   communicationPlan: string;
   lastUpdated: string;
+  responseTime?: number;
   
-  // Propriétés additionnelles pour RescuePlan
+  // Propriétés étendues pour RescuePlan
   rescue_plan_type?: string;
   rescue_plan_responsible?: string;
   rescue_team_phone?: string;
@@ -348,7 +416,7 @@ export interface RescuePlanData {
     cpr_certified?: boolean;
     rescue_training_hours?: number;
     response_time_verified?: boolean;
-    [key: string]: any; // Index signature pour permettre l'accès dynamique
+    [key: string]: any; // Index signature pour accès dynamique
   };
   equipment_certifications?: {
     harness_inspection_date?: string;
@@ -356,7 +424,7 @@ export interface RescuePlanData {
     mechanical_recovery_cert?: string;
     last_equipment_inspection?: string;
     equipment_serial_numbers?: string[];
-    [key: string]: any; // Index signature pour permettre l'accès dynamique
+    [key: string]: any; // Index signature pour accès dynamique
   };
   annual_drill_required?: boolean;
   last_effectiveness_test?: string;
@@ -408,24 +476,27 @@ export interface ValidationResult {
   isValid: boolean;
   percentage: number;
   errors: string[];
+  warnings?: string[];
   completedSections: number;
   totalSections: number;
 }
 
 export interface Alert {
   id: string;
-  type: 'info' | 'warning' | 'critical';
+  type: AlertType;
   message: string;
   location?: string;
   timestamp: string;
+  isRead?: boolean;
 }
 
 export interface Notification {
   id: string;
-  type: 'success' | 'error' | 'warning' | 'info';
+  type: AlertType;
   message: string;
   timestamp: string;
   isRead: boolean;
+  action?: string;
 }
 
 export interface AuditEntry {
@@ -434,6 +505,7 @@ export interface AuditEntry {
   action: string;
   section: string;
   userId: string;
+  userName?: string;
   changes: Record<string, any>;
   oldValues?: Record<string, any>;
 }
@@ -445,60 +517,11 @@ export interface AttachmentData {
   size: number;
   url: string;
   uploadedAt: string;
+  uploadedBy?: string;
+  category?: 'photo' | 'document' | 'certificate' | 'plan' | 'other';
   description?: string;
 }
-
-// =================== STORE ZUSTAND OPTIMISÉ ===================
-interface SafetyManagerState {
-  // État principal
-  currentPermit: ConfinedSpacePermit;
-  permits: ConfinedSpacePermit[];
-  
-  // États de l'interface
-  isSaving: boolean;
-  isLoading: boolean;
-  lastSaved: string | null;
-  autoSaveEnabled: boolean;
-  
-  // Alertes et notifications
-  activeAlerts: Alert[];
-  notifications: Notification[];
-  
-  // Actions principales
-  updateSiteInformation: (data: Partial<ConfinedSpaceDetails>) => void;
-  updateAtmosphericTesting: (data: Partial<AtmosphericTestingData>) => void;
-  updateEntryRegistry: (data: Partial<EntryRegistryData>) => void;
-  updateRescuePlan: (data: Partial<RescuePlanData>) => void;
-  
-  // Nouvelles méthodes pour EntryRegistry
-  updateRegistryData: (data: any) => void;
-  updatePersonnel: (person: any) => void;
-  updateEquipment: (equipment: any) => void;
-  updateCompliance: (key: string, value: boolean) => void;
-  recordEntryExit: (personId: string, action: 'entry' | 'exit') => void;
-  
-  // Gestion de base de données
-  saveToDatabase: () => Promise<string | null>;
-  loadFromDatabase: (permitNumber: string) => Promise<ConfinedSpacePermit | null>;
-  loadPermitHistory: () => Promise<ConfinedSpacePermit[]>;
-  
-  // QR Code et partage
-  generateQRCode: () => Promise<string>;
-  generatePDF: () => Promise<Blob>;
-  sharePermit: (method: 'email' | 'sms' | 'whatsapp') => Promise<void>;
-  
-  // Validation
-  validatePermitCompleteness: () => ValidationResult;
-  validateSection: (section: keyof ConfinedSpacePermit) => ValidationResult;
-  
-  // Utilitaires
-  createNewPermit: (province: ProvinceCode) => void;
-  resetPermit: () => void;
-  exportData: () => string;
-  importData: (jsonData: string) => void;
-}
-
-// =================== FONCTIONS UTILITAIRES ===================
+// =================== FONCTIONS UTILITAIRES UNIVERSELLES ===================
 function createEmptyPermit(): ConfinedSpacePermit {
   const now = new Date().toISOString();
   
@@ -509,6 +532,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
     created_at: now,
     updated_at: now,
     last_modified: now,
+    issue_date: now,
     
     siteInformation: {
       // Informations principales
@@ -603,6 +627,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
         hydrogenSulfide: { max: 10 },
         carbonMonoxide: { max: 35 }
       },
+      testingFrequency: 30,
       lastUpdated: now
     },
     
@@ -618,7 +643,12 @@ function createEmptyPermit(): ConfinedSpacePermit {
       },
       lastUpdated: now,
       equipment: [],
-      compliance: {}
+      compliance: {},
+      supervisor: {
+        name: '',
+        certification: '',
+        contact: ''
+      }
     },
     
     rescuePlan: {
@@ -633,7 +663,8 @@ function createEmptyPermit(): ConfinedSpacePermit {
         distance: 0
       },
       communicationPlan: '',
-      lastUpdated: now
+      lastUpdated: now,
+      responseTime: 5
     },
     
     // Conformité générale
@@ -641,8 +672,11 @@ function createEmptyPermit(): ConfinedSpacePermit {
     
     validation: {
       isComplete: false,
+      isValid: false,
       percentage: 0,
+      completedSections: [],
       errors: [],
+      warnings: [],
       lastValidated: now
     },
     
@@ -713,11 +747,79 @@ function checkAtmosphericAlerts(readings: AtmosphericReading[]): Alert[] {
   return alerts;
 }
 
-// =================== HOOK PRINCIPAL OPTIMISÉ ===================
+function createAuditEntry(action: string, section: string, changes: any, oldValues?: any): AuditEntry {
+  return {
+    id: generateId(),
+    timestamp: new Date().toISOString(),
+    action,
+    section,
+    userId: 'current_user',
+    userName: 'Utilisateur actuel',
+    changes,
+    oldValues
+  };
+}
+
+// =================== STORE ZUSTAND OPTIMISÉ UNIVERSELLEMENT ===================
+interface SafetyManagerState {
+  // État principal
+  currentPermit: ConfinedSpacePermit;
+  permits: ConfinedSpacePermit[];
+  
+  // États de l'interface
+  isSaving: boolean;
+  isLoading: boolean;
+  lastSaved: string | null;
+  autoSaveEnabled: boolean;
+  
+  // Alertes et notifications
+  activeAlerts: Alert[];
+  notifications: Notification[];
+  
+  // Actions principales
+  updateSiteInformation: (data: Partial<ConfinedSpaceDetails>) => void;
+  updateAtmosphericTesting: (data: Partial<AtmosphericTestingData>) => void;
+  updateEntryRegistry: (data: Partial<EntryRegistryData>) => void;
+  updateRescuePlan: (data: Partial<RescuePlanData>) => void;
+  
+  // Méthodes pour EntryRegistry
+  updateRegistryData: (data: any) => void;
+  updatePersonnel: (person: any) => void;
+  updateEquipment: (equipment: any) => void;
+  updateCompliance: (key: string, value: boolean) => void;
+  recordEntryExit: (personId: string, action: 'entry' | 'exit') => void;
+  
+  // Gestion de base de données
+  saveToDatabase: () => Promise<string | null>;
+  loadFromDatabase: (permitNumber: string) => Promise<ConfinedSpacePermit | null>;
+  loadPermitHistory: () => Promise<ConfinedSpacePermit[]>;
+  
+  // QR Code et partage
+  generateQRCode: () => Promise<string>;
+  generatePDF: () => Promise<Blob>;
+  sharePermit: (method: 'email' | 'sms' | 'whatsapp') => Promise<void>;
+  
+  // Validation
+  validatePermitCompleteness: () => ValidationResult;
+  validateSection: (section: keyof ConfinedSpacePermit) => ValidationResult;
+  
+  // Utilitaires
+  createNewPermit: (province: ProvinceCode) => void;
+  resetPermit: () => void;
+  exportData: () => string;
+  importData: (jsonData: string) => void;
+  
+  // Gestion des alertes et notifications
+  addAlert: (alert: Omit<Alert, 'id' | 'timestamp'>) => void;
+  removeAlert: (alertId: string) => void;
+  addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>) => void;
+  markNotificationAsRead: (notificationId: string) => void;
+}
+
 export const useSafetyManager = create<SafetyManagerState>()(
   persist(
     (set, get) => ({
-      // État initial
+      // =================== ÉTAT INITIAL ===================
       currentPermit: createEmptyPermit(),
       permits: [],
       isSaving: false,
@@ -740,14 +842,9 @@ export const useSafetyManager = create<SafetyManagerState>()(
           };
           
           // Audit trail
-          updatedPermit.auditTrail.push({
-            id: generateId(),
-            timestamp: new Date().toISOString(),
-            action: 'update_site_information',
-            section: 'siteInformation',
-            userId: 'current_user',
-            changes: data
-          });
+          updatedPermit.auditTrail.push(
+            createAuditEntry('update_site_information', 'siteInformation', data, state.currentPermit.siteInformation)
+          );
           
           // Auto-save si activé
           if (state.autoSaveEnabled) {
@@ -776,14 +873,9 @@ export const useSafetyManager = create<SafetyManagerState>()(
             newAlerts = checkAtmosphericAlerts(data.readings);
           }
           
-          updatedPermit.auditTrail.push({
-            id: generateId(),
-            timestamp: new Date().toISOString(),
-            action: 'update_atmospheric_testing',
-            section: 'atmosphericTesting',
-            userId: 'current_user',
-            changes: data
-          });
+          updatedPermit.auditTrail.push(
+            createAuditEntry('update_atmospheric_testing', 'atmosphericTesting', data, state.currentPermit.atmosphericTesting)
+          );
           
           if (state.autoSaveEnabled) {
             setTimeout(() => get().saveToDatabase(), 2000);
@@ -808,14 +900,9 @@ export const useSafetyManager = create<SafetyManagerState>()(
             last_modified: new Date().toISOString()
           };
           
-          updatedPermit.auditTrail.push({
-            id: generateId(),
-            timestamp: new Date().toISOString(),
-            action: 'update_entry_registry',
-            section: 'entryRegistry',
-            userId: 'current_user',
-            changes: data
-          });
+          updatedPermit.auditTrail.push(
+            createAuditEntry('update_entry_registry', 'entryRegistry', data, state.currentPermit.entryRegistry)
+          );
           
           if (state.autoSaveEnabled) {
             setTimeout(() => get().saveToDatabase(), 2000);
@@ -837,14 +924,9 @@ export const useSafetyManager = create<SafetyManagerState>()(
             last_modified: new Date().toISOString()
           };
           
-          updatedPermit.auditTrail.push({
-            id: generateId(),
-            timestamp: new Date().toISOString(),
-            action: 'update_rescue_plan',
-            section: 'rescuePlan',
-            userId: 'current_user',
-            changes: data
-          });
+          updatedPermit.auditTrail.push(
+            createAuditEntry('update_rescue_plan', 'rescuePlan', data, state.currentPermit.rescuePlan)
+          );
           
           if (state.autoSaveEnabled) {
             setTimeout(() => get().saveToDatabase(), 2000);
@@ -854,31 +936,23 @@ export const useSafetyManager = create<SafetyManagerState>()(
         });
       },
 
-      // =================== NOUVELLES MÉTHODES POUR ENTRYREGISTRY ===================
+      // =================== MÉTHODES POUR ENTRYREGISTRY ===================
       updateRegistryData: (data) => {
-        set((state) => {
-          const updatedPermit = {
-            ...state.currentPermit,
-            entryRegistry: {
-              ...state.currentPermit.entryRegistry,
-              ...data,
-              lastUpdated: new Date().toISOString()
-            },
-            last_modified: new Date().toISOString()
-          };
-          
-          if (state.autoSaveEnabled) {
-            setTimeout(() => get().saveToDatabase(), 2000);
-          }
-          
-          return { currentPermit: updatedPermit };
-        });
+        get().updateEntryRegistry(data);
       },
 
       updatePersonnel: (person) => {
         set((state) => {
           const currentPersonnel = state.currentPermit.entryRegistry.personnel || [];
-          const updatedPersonnel = [...currentPersonnel, person];
+          const existingIndex = currentPersonnel.findIndex(p => p.id === person.id);
+          
+          let updatedPersonnel;
+          if (existingIndex >= 0) {
+            updatedPersonnel = [...currentPersonnel];
+            updatedPersonnel[existingIndex] = person;
+          } else {
+            updatedPersonnel = [...currentPersonnel, { ...person, id: person.id || generateId() }];
+          }
           
           const updatedPermit = {
             ...state.currentPermit,
@@ -890,6 +964,10 @@ export const useSafetyManager = create<SafetyManagerState>()(
             last_modified: new Date().toISOString()
           };
           
+          updatedPermit.auditTrail.push(
+            createAuditEntry('update_personnel', 'entryRegistry', { person }, { existingPerson: currentPersonnel[existingIndex] || null })
+          );
+          
           if (state.autoSaveEnabled) {
             setTimeout(() => get().saveToDatabase(), 2000);
           }
@@ -899,17 +977,20 @@ export const useSafetyManager = create<SafetyManagerState>()(
       },
 
       updateEquipment: (equipment) => {
-        // Stocker les équipements dans la propriété equipment de entryRegistry
         set((state) => {
           const updatedPermit = {
             ...state.currentPermit,
             entryRegistry: {
               ...state.currentPermit.entryRegistry,
-              equipment: equipment,
+              equipment: Array.isArray(equipment) ? equipment : [equipment],
               lastUpdated: new Date().toISOString()
             },
             last_modified: new Date().toISOString()
           };
+          
+          updatedPermit.auditTrail.push(
+            createAuditEntry('update_equipment', 'entryRegistry', { equipment }, { oldEquipment: state.currentPermit.entryRegistry.equipment })
+          );
           
           if (state.autoSaveEnabled) {
             setTimeout(() => get().saveToDatabase(), 2000);
@@ -919,11 +1000,10 @@ export const useSafetyManager = create<SafetyManagerState>()(
         });
       },
 
-      // =================== CORRECTION UPDATECOMPLIANCE ===================
       updateCompliance: (key: string, value: boolean) => {
         set((state) => {
-          // Créer un nouvel objet compliance ou utiliser l'existant
           const currentCompliance = state.currentPermit.compliance || {};
+          const currentRegistryCompliance = state.currentPermit.entryRegistry.compliance || {};
           
           const updatedPermit = {
             ...state.currentPermit,
@@ -934,13 +1014,17 @@ export const useSafetyManager = create<SafetyManagerState>()(
             entryRegistry: {
               ...state.currentPermit.entryRegistry,
               compliance: {
-                ...state.currentPermit.entryRegistry.compliance,
+                ...currentRegistryCompliance,
                 [key]: value
               },
               lastUpdated: new Date().toISOString()
             },
             last_modified: new Date().toISOString()
           };
+          
+          updatedPermit.auditTrail.push(
+            createAuditEntry('update_compliance', 'compliance', { [key]: value }, { [key]: currentCompliance[key] })
+          );
           
           if (state.autoSaveEnabled) {
             setTimeout(() => get().saveToDatabase(), 2000);
@@ -961,15 +1045,28 @@ export const useSafetyManager = create<SafetyManagerState>()(
             authorizedBy: 'current_user'
           };
           
+          // Mise à jour des entrants actifs
+          let activeEntrants = [...state.currentPermit.entryRegistry.activeEntrants];
+          if (action === 'entry' && !activeEntrants.includes(personId)) {
+            activeEntrants.push(personId);
+          } else if (action === 'exit' || action === 'emergency_exit') {
+            activeEntrants = activeEntrants.filter(id => id !== personId);
+          }
+          
           const updatedPermit = {
             ...state.currentPermit,
             entryRegistry: {
               ...state.currentPermit.entryRegistry,
               entryLog: [...entryLog, newLogEntry],
+              activeEntrants,
               lastUpdated: new Date().toISOString()
             },
             last_modified: new Date().toISOString()
           };
+          
+          updatedPermit.auditTrail.push(
+            createAuditEntry('record_entry_exit', 'entryRegistry', { personId, action }, null)
+          );
           
           if (state.autoSaveEnabled) {
             setTimeout(() => get().saveToDatabase(), 2000);
@@ -979,7 +1076,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
         });
       },
 
-      // =================== BASE DE DONNÉES SUPABASE/LOCALSTORAGE ===================
+      // =================== GESTION BASE DE DONNÉES ROBUSTE ===================
       saveToDatabase: async () => {
         set({ isSaving: true });
         
@@ -990,8 +1087,11 @@ export const useSafetyManager = create<SafetyManagerState>()(
           // Mise à jour de la validation
           permit.validation = {
             isComplete: validation.isValid,
+            isValid: validation.isValid,
             percentage: validation.percentage,
+            completedSections: validation.errors.length === 0 ? ['siteInformation', 'atmosphericTesting', 'entryRegistry', 'rescuePlan'] : [],
             errors: validation.errors,
+            warnings: validation.warnings || [],
             lastValidated: new Date().toISOString()
           };
           
@@ -999,6 +1099,10 @@ export const useSafetyManager = create<SafetyManagerState>()(
           if (!permit.permit_number) {
             permit.permit_number = generatePermitNumber(permit.province);
           }
+          
+          // Mise à jour des timestamps
+          permit.updated_at = new Date().toISOString();
+          permit.last_modified = new Date().toISOString();
           
           // Sauvegarder dans Supabase si configuré, sinon localStorage
           if (supabaseEnabled && supabase) {
@@ -1029,10 +1133,22 @@ export const useSafetyManager = create<SafetyManagerState>()(
             isSaving: false 
           });
           
+          // Notification de succès
+          get().addNotification({
+            type: 'success',
+            message: `Permis ${permit.permit_number} sauvegardé avec succès`
+          });
+          
           return permit.permit_number;
         } catch (error) {
           console.error('Erreur sauvegarde:', error);
           set({ isSaving: false });
+          
+          get().addNotification({
+            type: 'critical',
+            message: `Erreur lors de la sauvegarde: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+          });
+          
           return null;
         }
       },
@@ -1055,6 +1171,12 @@ export const useSafetyManager = create<SafetyManagerState>()(
                   currentPermit: data.data,
                   isLoading: false 
                 });
+                
+                get().addNotification({
+                  type: 'success',
+                  message: `Permis ${permitNumber} chargé depuis Supabase`
+                });
+                
                 return data.data;
               }
             } catch (supabaseError) {
@@ -1070,14 +1192,32 @@ export const useSafetyManager = create<SafetyManagerState>()(
               currentPermit: permit,
               isLoading: false 
             });
+            
+            get().addNotification({
+              type: 'info',
+              message: `Permis ${permitNumber} chargé depuis le cache local`
+            });
+            
             return permit;
           }
           
           set({ isLoading: false });
+          
+          get().addNotification({
+            type: 'warning',
+            message: `Permis ${permitNumber} introuvable`
+          });
+          
           return null;
         } catch (error) {
           console.error('Erreur chargement:', error);
           set({ isLoading: false });
+          
+          get().addNotification({
+            type: 'critical',
+            message: `Erreur lors du chargement: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+          });
+          
           return null;
         }
       },
@@ -1092,7 +1232,8 @@ export const useSafetyManager = create<SafetyManagerState>()(
               const { data, error } = await supabase
                 .from('confined_space_permits')
                 .select('data')
-                .order('updated_at', { ascending: false });
+                .order('updated_at', { ascending: false })
+                .limit(50);
                 
               if (!error && data) {
                 permits = data.map((item: any) => item.data);
@@ -1107,6 +1248,21 @@ export const useSafetyManager = create<SafetyManagerState>()(
             const currentPermit = get().currentPermit;
             if (currentPermit.permit_number) {
               permits = [currentPermit];
+              
+              // Chercher d'autres permis dans localStorage
+              for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('permit_') && key !== `permit_${currentPermit.permit_number}`) {
+                  try {
+                    const permit = JSON.parse(localStorage.getItem(key) || '');
+                    if (permit && permit.permit_number) {
+                      permits.push(permit);
+                    }
+                  } catch (e) {
+                    console.warn('Erreur parsing permit:', key);
+                  }
+                }
+              }
             }
           }
           
@@ -1126,39 +1282,94 @@ export const useSafetyManager = create<SafetyManagerState>()(
         }
         
         const permitUrl = `${window.location.origin}/permits/confined-space/${permit.permit_number}`;
-        
-        // Utiliser une API QR Code
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(permitUrl)}`;
+        
+        get().addNotification({
+          type: 'success',
+          message: 'Code QR généré avec succès'
+        });
         
         return qrUrl;
       },
 
       generatePDF: async () => {
         const permit = get().currentPermit;
+        const validation = get().validatePermitCompleteness();
         
-        // Créer le contenu PDF
         const pdfContent = `
 Permis d'Entrée en Espace Clos
-Numéro: ${permit.permit_number}
+==============================
+
+Numéro de permis: ${permit.permit_number}
 Province: ${permit.province}
-Date: ${new Date(permit.created_at).toLocaleDateString()}
+Statut: ${permit.status}
+Date de création: ${new Date(permit.created_at).toLocaleDateString('fr-CA')}
+Dernière modification: ${new Date(permit.last_modified).toLocaleDateString('fr-CA')}
 
-Site Information:
-- Projet: ${permit.siteInformation.projectNumber}
-- Lieu: ${permit.siteInformation.workLocation}
-- Entrepreneur: ${permit.siteInformation.contractor}
+INFORMATIONS DU SITE
+====================
+Numéro de projet: ${permit.siteInformation.projectNumber}
+Lieu des travaux: ${permit.siteInformation.workLocation}
+Entrepreneur: ${permit.siteInformation.contractor}
+Superviseur: ${permit.siteInformation.supervisor}
+Date d'entrée: ${permit.siteInformation.entryDate}
+Description des travaux: ${permit.siteInformation.workDescription}
 
-Validation: ${permit.validation.percentage}% complété
+Type d'espace: ${permit.siteInformation.spaceType}
+Classification CSA: ${permit.siteInformation.csaClass}
+Volume: ${permit.siteInformation.dimensions.volume} ${permit.siteInformation.unitSystem === 'metric' ? 'm³' : 'ft³'}
+
+TESTS ATMOSPHÉRIQUES
+===================
+Lectures effectuées: ${permit.atmosphericTesting.readings.length}
+Surveillance continue: ${permit.atmosphericTesting.continuousMonitoring ? 'Oui' : 'Non'}
+Équipement: ${permit.atmosphericTesting.equipment.deviceModel}
+Dernière calibration: ${permit.atmosphericTesting.equipment.calibrationDate}
+
+REGISTRE D'ENTRÉE
+================
+Personnel autorisé: ${permit.entryRegistry.personnel.length}
+Entrants actifs: ${permit.entryRegistry.activeEntrants.length}
+Occupancy maximale: ${permit.entryRegistry.maxOccupancy}
+
+PLAN DE SAUVETAGE
+================
+Contacts d'urgence: ${permit.rescuePlan.emergencyContacts.length}
+Équipe de sauvetage: ${permit.rescuePlan.rescueTeam.length}
+Temps de réponse: ${permit.rescuePlan.responseTime} minutes
+
+VALIDATION
+==========
+Complétude: ${validation.percentage}%
+Statut: ${validation.isValid ? 'VALIDE' : 'INVALIDE'}
+Erreurs: ${validation.errors.length}
+
+${validation.errors.length > 0 ? `
+ERREURS DÉTECTÉES:
+${validation.errors.map(error => `- ${error}`).join('\n')}
+` : ''}
+
+Document généré le ${new Date().toLocaleString('fr-CA')}
         `;
         
-        return new Blob([pdfContent], { type: 'application/pdf' });
+        const blob = new Blob([pdfContent], { type: 'application/pdf' });
+        
+        get().addNotification({
+          type: 'success',
+          message: 'PDF généré avec succès'
+        });
+        
+        return blob;
       },
 
       sharePermit: async (method: 'email' | 'sms' | 'whatsapp') => {
         const permit = get().currentPermit;
         const permitUrl = `${window.location.origin}/permits/confined-space/${permit.permit_number}`;
         
-        const message = `Permis d'espace clos ${permit.permit_number}\nLieu: ${permit.siteInformation.workLocation}\nAccès: ${permitUrl}`;
+        const message = `Permis d'espace clos ${permit.permit_number}
+Lieu: ${permit.siteInformation.workLocation}
+Entrepreneur: ${permit.siteInformation.contractor}
+Accès: ${permitUrl}`;
         
         switch (method) {
           case 'email':
@@ -1171,12 +1382,18 @@ Validation: ${permit.validation.percentage}% complété
             window.open(`https://wa.me/?text=${encodeURIComponent(message)}`);
             break;
         }
+        
+        get().addNotification({
+          type: 'info',
+          message: `Permis partagé via ${method}`
+        });
       },
 
       // =================== VALIDATION COMPLÈTE ===================
       validatePermitCompleteness: () => {
         const permit = get().currentPermit;
         const errors: string[] = [];
+        const warnings: string[] = [];
         let completedSections = 0;
         const totalSections = 4;
 
@@ -1213,12 +1430,10 @@ Validation: ${permit.validation.percentage}% complété
           siteComplete = false;
         }
         if (siteInfo.dimensions?.volume === 0) {
-          errors.push('Volume doit être calculé');
-          siteComplete = false;
+          warnings.push('Volume doit être calculé');
         }
         if (!siteInfo.entryPoints?.length) {
-          errors.push('Au moins un point d\'entrée requis');
-          siteComplete = false;
+          warnings.push('Au moins un point d\'entrée recommandé');
         }
         
         if (siteComplete) completedSections++;
@@ -1226,6 +1441,13 @@ Validation: ${permit.validation.percentage}% complété
         // Validation Atmospheric Testing
         if (permit.atmosphericTesting?.readings?.length > 0) {
           completedSections++;
+          
+          // Vérifier la fraîcheur des lectures
+          const latestReading = permit.atmosphericTesting.readings[permit.atmosphericTesting.readings.length - 1];
+          const readingAge = Date.now() - new Date(latestReading.timestamp).getTime();
+          if (readingAge > 30 * 60 * 1000) { // 30 minutes
+            warnings.push('Lectures atmosphériques anciennes (> 30 min)');
+          }
         } else {
           errors.push('Tests atmosphériques manquants');
         }
@@ -1233,6 +1455,12 @@ Validation: ${permit.validation.percentage}% complété
         // Validation Entry Registry
         if (permit.entryRegistry?.personnel?.length > 0) {
           completedSections++;
+          
+          // Vérifier les certifications
+          const personnelWithoutCert = permit.entryRegistry.personnel.filter(p => !p.certification?.length);
+          if (personnelWithoutCert.length > 0) {
+            warnings.push(`${personnelWithoutCert.length} personne(s) sans certification`);
+          }
         } else {
           errors.push('Personnel non défini');
         }
@@ -1240,6 +1468,11 @@ Validation: ${permit.validation.percentage}% complété
         // Validation Rescue Plan
         if (permit.rescuePlan?.emergencyContacts?.length > 0) {
           completedSections++;
+          
+          // Vérifier le temps de réponse
+          if (!permit.rescuePlan.responseTime || permit.rescuePlan.responseTime > 10) {
+            warnings.push('Temps de réponse de sauvetage élevé (> 10 min)');
+          }
         } else {
           errors.push('Plan de sauvetage incomplet');
         }
@@ -1250,6 +1483,7 @@ Validation: ${permit.validation.percentage}% complété
           isValid: errors.length === 0,
           percentage,
           errors,
+          warnings,
           completedSections,
           totalSections
         };
@@ -1258,6 +1492,7 @@ Validation: ${permit.validation.percentage}% complété
       validateSection: (section) => {
         const permit = get().currentPermit;
         const errors: string[] = [];
+        const warnings: string[] = [];
         
         switch (section) {
           case 'siteInformation':
@@ -1265,22 +1500,29 @@ Validation: ${permit.validation.percentage}% complété
             if (!siteInfo.projectNumber) errors.push('Numéro de projet requis');
             if (!siteInfo.workLocation) errors.push('Lieu de travail requis');
             if (!siteInfo.contractor) errors.push('Entrepreneur requis');
+            if (!siteInfo.supervisor) errors.push('Superviseur requis');
+            if (!siteInfo.entryDate) errors.push('Date d\'entrée requise');
+            if (!siteInfo.spaceType) warnings.push('Type d\'espace recommandé');
             break;
           case 'atmosphericTesting':
             if (!permit.atmosphericTesting.readings.length) errors.push('Lectures atmosphériques requises');
+            if (!permit.atmosphericTesting.equipment.deviceModel) warnings.push('Modèle d\'équipement requis');
             break;
           case 'entryRegistry':
             if (!permit.entryRegistry.personnel.length) errors.push('Personnel requis');
+            if (!permit.entryRegistry.maxOccupancy) warnings.push('Occupancy maximale non définie');
             break;
           case 'rescuePlan':
             if (!permit.rescuePlan.emergencyContacts.length) errors.push('Contacts d\'urgence requis');
+            if (!permit.rescuePlan.evacuationProcedure) warnings.push('Procédure d\'évacuation recommandée');
             break;
         }
         
         return {
           isValid: errors.length === 0,
-          percentage: errors.length === 0 ? 100 : 0,
+          percentage: errors.length === 0 ? 100 : Math.max(0, 100 - (errors.length * 25)),
           errors,
+          warnings,
           completedSections: errors.length === 0 ? 1 : 0,
           totalSections: 1
         };
@@ -1292,25 +1534,105 @@ Validation: ${permit.validation.percentage}% complété
         newPermit.province = province;
         newPermit.permit_number = generatePermitNumber(province);
         newPermit.created_at = new Date().toISOString();
+        
         set({ currentPermit: newPermit });
+        
+        get().addNotification({
+          type: 'success',
+          message: `Nouveau permis créé: ${newPermit.permit_number}`
+        });
       },
 
       resetPermit: () => {
         set({ currentPermit: createEmptyPermit() });
+        
+        get().addNotification({
+          type: 'info',
+          message: 'Permis réinitialisé'
+        });
       },
 
       exportData: () => {
         const permit = get().currentPermit;
-        return JSON.stringify(permit, null, 2);
+        const exportData = {
+          permit,
+          exportedAt: new Date().toISOString(),
+          version: '1.0'
+        };
+        
+        get().addNotification({
+          type: 'success',
+          message: 'Données exportées'
+        });
+        
+        return JSON.stringify(exportData, null, 2);
       },
 
       importData: (jsonData: string) => {
         try {
-          const permit = JSON.parse(jsonData);
+          const data = JSON.parse(jsonData);
+          const permit = data.permit || data;
+          
+          // Validation de base
+          if (!permit.permit_number) {
+            throw new Error('Données invalides: numéro de permis manquant');
+          }
+          
           set({ currentPermit: permit });
+          
+          get().addNotification({
+            type: 'success',
+            message: `Permis ${permit.permit_number} importé avec succès`
+          });
         } catch (error) {
           console.error('Erreur import:', error);
+          
+          get().addNotification({
+            type: 'critical',
+            message: `Erreur d'importation: ${error instanceof Error ? error.message : 'Format invalide'}`
+          });
         }
+      },
+
+      // =================== GESTION ALERTES ET NOTIFICATIONS ===================
+      addAlert: (alert) => {
+        const newAlert: Alert = {
+          ...alert,
+          id: generateId(),
+          timestamp: new Date().toISOString(),
+          isRead: false
+        };
+        
+        set((state) => ({
+          activeAlerts: [...state.activeAlerts, newAlert]
+        }));
+      },
+
+      removeAlert: (alertId) => {
+        set((state) => ({
+          activeAlerts: state.activeAlerts.filter(alert => alert.id !== alertId)
+        }));
+      },
+
+      addNotification: (notification) => {
+        const newNotification: Notification = {
+          ...notification,
+          id: generateId(),
+          timestamp: new Date().toISOString(),
+          isRead: false
+        };
+        
+        set((state) => ({
+          notifications: [newNotification, ...state.notifications.slice(0, 49)] // Garder max 50 notifications
+        }));
+      },
+
+      markNotificationAsRead: (notificationId) => {
+        set((state) => ({
+          notifications: state.notifications.map(notif => 
+            notif.id === notificationId ? { ...notif, isRead: true } : notif
+          )
+        }));
       }
     }),
     {
@@ -1319,13 +1641,14 @@ Validation: ${permit.validation.percentage}% complété
         currentPermit: state.currentPermit,
         permits: state.permits,
         autoSaveEnabled: state.autoSaveEnabled,
-        lastSaved: state.lastSaved
+        lastSaved: state.lastSaved,
+        notifications: state.notifications.slice(0, 10) // Persister seulement les 10 dernières
       })
     }
   )
 );
 
-// =================== HELPER FUNCTIONS FOR COMPONENTS ===================
+// =================== HELPER FUNCTIONS POUR COMPATIBILITÉ UNIVERSELLE ===================
 export const createConfinedSpacePermit = (province: ProvinceCode = 'QC'): ConfinedSpacePermit => {
   const permit = createEmptyPermit();
   permit.province = province;
@@ -1335,6 +1658,7 @@ export const createConfinedSpacePermit = (province: ProvinceCode = 'QC'): Confin
 
 export const validatePermitSection = (permit: ConfinedSpacePermit, section: keyof ConfinedSpacePermit): ValidationResult => {
   const errors: string[] = [];
+  const warnings: string[] = [];
   
   switch (section) {
     case 'siteInformation':
@@ -1343,6 +1667,7 @@ export const validatePermitSection = (permit: ConfinedSpacePermit, section: keyo
       if (!siteInfo.workLocation) errors.push('Lieu de travail requis');
       if (!siteInfo.contractor) errors.push('Entrepreneur requis');
       if (!siteInfo.supervisor) errors.push('Superviseur requis');
+      if (!siteInfo.entryDate) errors.push('Date d\'entrée requise');
       break;
     case 'atmosphericTesting':
       if (!permit.atmosphericTesting.readings.length) errors.push('Lectures atmosphériques requises');
@@ -1359,10 +1684,22 @@ export const validatePermitSection = (permit: ConfinedSpacePermit, section: keyo
     isValid: errors.length === 0,
     percentage: errors.length === 0 ? 100 : 0,
     errors,
+    warnings,
     completedSections: errors.length === 0 ? 1 : 0,
     totalSections: 1
   };
 };
 
+// Utilitaires pour la compatibilité
 export const generatePermitId = generateId;
 export const generateNewPermitNumber = generatePermitNumber;
+export const createAuditTrailEntry = createAuditEntry;
+
+// Hook simplifié pour compatibilité
+export const usePermitValidation = (permit: ConfinedSpacePermit) => {
+  const manager = useSafetyManager();
+  return manager.validatePermitCompleteness();
+};
+
+// Export par défaut pour compatibilité maximale
+export default useSafetyManager;
