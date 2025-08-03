@@ -667,7 +667,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
               fontSize: currentIsMobile ? '14px' : '16px',
               margin: 0
             }}>
-              🌍 Province: {selectedProvince} | ⚖️ Réglementation: {regulations?.name || 'CNESST'}
+              🌍 Province: {selectedProvince} | ⚖️ Réglementation: CNESST
             </p>
           </div>
           <div style={{ textAlign: currentIsMobile ? 'center' : 'right' }}>
