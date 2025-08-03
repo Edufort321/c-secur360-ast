@@ -1010,10 +1010,15 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   const renderSectionContent = () => {
     // Cast de type pour compatibilité ConfinedSpaceComponentProps
     const compatiblePermitData = {
-      ...permitData,
+      // Propriétés requises avec fallbacks garantis
       permit_number: permitData.permit_number || '',
-      province: permitData.province || permitData.selected_province || selectedProvince,
+      province: (permitData.province || permitData.selected_province || selectedProvince) as ProvinceCode,
       updated_at: permitData.updated_at || permitData.last_modified || new Date().toISOString(),
+      status: (permitData.status || 'draft') as 'completed' | 'active' | 'draft' | 'cancelled',
+      created_at: permitData.created_at || new Date().toISOString(),
+      issue_date: permitData.issue_date || new Date().toISOString(),
+      
+      // Structures de données avec fallbacks
       siteInformation: permitData.siteInformation || {},
       atmosphericTesting: permitData.atmosphericTesting || { readings: atmosphericReadings },
       rescuePlan: permitData.rescuePlan || {},
@@ -1021,7 +1026,23 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       compliance: permitData.compliance || {},
       validation: permitData.validation || { isValid: false, percentage: 0 },
       auditTrail: permitData.auditTrail || {},
-      attachments: permitData.attachments || []
+      attachments: permitData.attachments || [],
+      
+      // Propriétés optionnelles préservées
+      id: permitData.id,
+      last_modified: permitData.last_modified,
+      selected_province: permitData.selected_province,
+      projectNumber: permitData.projectNumber,
+      workLocation: permitData.workLocation,
+      spaceDescription: permitData.spaceDescription,
+      workDescription: permitData.workDescription,
+      entry_supervisor: permitData.entry_supervisor,
+      rescue_plan_type: permitData.rescue_plan_type,
+      gas_detector_calibrated: permitData.gas_detector_calibrated,
+      calibration_date: permitData.calibration_date,
+      supervisor_name: permitData.supervisor_name,
+      permit_valid_from: permitData.permit_valid_from,
+      permit_valid_to: permitData.permit_valid_to
     };
 
     const commonProps: ConfinedSpaceComponentProps = {
