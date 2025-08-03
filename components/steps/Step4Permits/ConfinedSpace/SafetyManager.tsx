@@ -1,996 +1,1368 @@
-// PermitManager.tsx - Gestionnaire de Permis Compatible SafetyManager
+// SafetyManager.tsx - Gestionnaire Centralisé Optimisé avec Supabase
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  FileText, Database, QrCode, Printer, Mail, Share, Download, 
-  Save, CheckCircle, AlertTriangle, Clock, Shield, Users, 
-  Wrench, Activity, Eye, Globe, Smartphone, Copy, Check,
-  BarChart3, TrendingUp, Calendar, MapPin, Building, User,
-  Search, X, Plus, Edit3, Trash2, RefreshCw, Upload,
-  ArrowRight, ArrowLeft, Star, Target, Zap, Wind, History
-} from 'lucide-react';
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { createClient } from '@supabase/supabase-js';
 
-// Import SafetyManager et styles unifiés
-import { ConfinedSpaceComponentProps } from './SafetyManager';
-import { styles } from './styles';
+// =================== CONFIGURATION SUPABASE ===================
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
 
-// =================== INTERFACES ===================
-interface ValidationSummary {
-  sectionName: string;
-  icon: React.ReactNode;
-  isComplete: boolean;
-  completionPercentage: number;
-  errors: string[];
-  lastModified?: string;
+let supabase: any = null;
+let supabaseEnabled = false;
+
+try {
+  if (supabaseUrl && supabaseKey && supabaseUrl !== 'https://your-project.supabase.co') {
+    supabase = createClient(supabaseUrl, supabaseKey);
+    supabaseEnabled = true;
+  }
+} catch (error) {
+  console.log('Supabase non configuré, utilisation du localStorage');
+  supabaseEnabled = false;
 }
 
-interface PermitHistoryEntry {
-  id: string;
-  permitNumber: string;
+// =================== TYPES UNIFIÉS POUR L'INTERFACE COMMUNE ===================
+export type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
+export type Language = 'fr' | 'en';
+
+// Interface commune pour tous les composants
+export interface ConfinedSpaceComponentProps {
+  // Props de base communes
+  language: Language;
+  permitData: ConfinedSpacePermit;
+  
+  // Configuration
+  selectedProvince: ProvinceCode;
+  regulations: Record<ProvinceCode, any>;
+  isMobile: boolean;
+  
+  // SafetyManager integration
+  safetyManager: SafetyManagerInstance;
+  
+  // Callbacks standardisés
+  onUpdate?: (section: string, data: any) => void;
+  onSectionComplete?: (sectionData: any) => void;
+  onValidationChange?: (isValid: boolean, errors: string[]) => void;
+}
+
+// Instance du SafetyManager
+export interface SafetyManagerInstance {
+  currentPermit: ConfinedSpacePermit;
+  permits: ConfinedSpacePermit[];
+  isSaving: boolean;
+  isLoading: boolean;
+  lastSaved: string | null;
+  autoSaveEnabled: boolean;
+  activeAlerts: Alert[];
+  notifications: Notification[];
+  
+  // Actions principales
+  updateSiteInformation: (data: Partial<ConfinedSpaceDetails>) => void;
+  updateAtmosphericTesting: (data: Partial<AtmosphericTestingData>) => void;
+  updateEntryRegistry: (data: Partial<EntryRegistryData>) => void;
+  updateRescuePlan: (data: Partial<RescuePlanData>) => void;
+  
+  // Nouvelles méthodes pour EntryRegistry
+  updateRegistryData: (data: any) => void;
+  updatePersonnel: (person: any) => void;
+  updateEquipment: (equipment: any) => void;
+  updateCompliance: (key: string, value: boolean) => void;
+  recordEntryExit: (personId: string, action: 'entry' | 'exit') => void;
+  
+  // Gestion de base de données
+  saveToDatabase: () => Promise<string | null>;
+  loadFromDatabase: (permitNumber: string) => Promise<ConfinedSpacePermit | null>;
+  loadPermitHistory: () => Promise<ConfinedSpacePermit[]>;
+  
+  // QR Code et partage
+  generateQRCode: () => Promise<string>;
+  generatePDF: () => Promise<Blob>;
+  sharePermit: (method: 'email' | 'sms' | 'whatsapp') => Promise<void>;
+  
+  // Validation
+  validatePermitCompleteness: () => ValidationResult;
+  validateSection: (section: keyof ConfinedSpacePermit) => ValidationResult;
+  
+  // Utilitaires
+  createNewPermit: (province: ProvinceCode) => void;
+  resetPermit: () => void;
+  exportData: () => string;
+  importData: (jsonData: string) => void;
+}
+
+// =================== TYPES PRINCIPAUX ===================
+export interface ConfinedSpacePermit {
+  // Métadonnées
+  id?: string;
+  permit_number: string;
+  status: 'draft' | 'active' | 'completed' | 'cancelled';
+  province: ProvinceCode;
+  created_at: string;
+  updated_at: string;
+  last_modified: string;
+  
+  // Données des sections
+  siteInformation: ConfinedSpaceDetails;
+  atmosphericTesting: AtmosphericTestingData;
+  entryRegistry: EntryRegistryData;
+  rescuePlan: RescuePlanData;
+  
+  // Données de conformité légale
+  gas_detector_calibrated?: boolean;
+  calibration_date?: string;
+  calibration_certificate?: string;
+  multi_level_testing_completed?: boolean;
+  atmospheric_stability_confirmed?: boolean;
+  test_results_signed?: boolean;
+  qualified_tester_name?: string;
+  
+  // Conformité générale (ajouté pour EntryRegistry)
+  compliance?: Record<string, boolean>;
+  
+  // Métadonnées de validation
+  validation: {
+    isComplete: boolean;
+    percentage: number;
+    errors: string[];
+    lastValidated: string;
+  };
+  
+  // Données d'audit
+  auditTrail: AuditEntry[];
+  attachments: AttachmentData[];
+}
+
+export interface ConfinedSpaceDetails {
+  // Informations principales
   projectNumber: string;
   workLocation: string;
   contractor: string;
+  supervisor: string;
+  entryDate: string;
+  duration: string;
+  workerCount: number;
+  workDescription: string;
+
+  // Identification de l'espace
   spaceType: string;
   csaClass: string;
-  status: 'draft' | 'active' | 'completed' | 'cancelled';
-  createdAt: string;
-  lastModified: string;
-  hazardCount: number;
-  photoCount: number;
-  qrCode?: string;
+  entryMethod: string;
+  accessType: string;
+  spaceLocation: string;
+  spaceDescription: string;
+
+  // Dimensions avec forme
+  dimensions: Dimensions;
+  unitSystem: 'metric' | 'imperial';
+
+  // Points d'entrée
+  entryPoints: EntryPoint[];
+
+  // Dangers
+  atmosphericHazards: string[];
+  physicalHazards: string[];
+
+  // Conditions environnementales
+  environmentalConditions: EnvironmentalConditions;
+
+  // Contenu de l'espace
+  spaceContent: SpaceContent;
+
+  // Mesures de sécurité
+  safetyMeasures: SafetyMeasures;
+
+  // Photos de l'espace
+  spacePhotos: SpacePhoto[];
 }
 
-// =================== TRADUCTIONS ===================
-const translations = {
-  fr: {
-    title: "Gestion et Finalisation du Permis",
-    subtitle: "Tableau de bord centralisé pour validation, sauvegarde, historique et partage",
-    
-    // Actions principales
-    savePermit: "Sauvegarder",
-    printPDF: "Imprimer PDF",
-    emailPermit: "Envoyer par Email",
-    sharePermit: "Partager",
-    generateQR: "Générer QR Code",
-    exportData: "Exporter Données",
-    searchDatabase: "Rechercher Base",
-    viewHistory: "Voir Historique",
-    newPermit: "Nouveau Permis",
-    
-    // Sections
-    summary: "Résumé du Permis",
-    validation: "Validation et Conformité",
-    actions: "Actions du Permis",
-    statistics: "Statistiques",
-    qrCode: "Code QR - Accès Mobile",
-    sharing: "Partage et Distribution",
-    history: "Historique des Permis",
-    database: "Base de Données",
-    
-    // Statuts
-    complete: "Complété",
-    incomplete: "Incomplet",
-    valid: "Valide",
-    invalid: "Non valide",
-    saving: "Sauvegarde...",
-    saved: "Sauvegardé",
-    loading: "Chargement...",
-    searching: "Recherche...",
-    
-    // Messages
-    saveSuccess: "Permis sauvegardé avec succès!",
-    validationPassed: "Toutes les validations sont réussies",
-    validationErrors: "Erreurs de validation détectées",
-    qrGenerated: "Code QR généré avec succès",
-    linkCopied: "Lien copié dans le presse-papiers",
-    pdfGenerated: "PDF généré avec succès",
-    emailSent: "Email envoyé avec succès",
-    noResults: "Aucun résultat trouvé",
-    searchPlaceholder: "Rechercher par numéro, projet, lieu...",
-    
-    // Sections du permis
-    siteInformation: "Informations du Site",
-    rescuePlan: "Plan de Sauvetage", 
-    atmosphericTesting: "Tests Atmosphériques",
-    entryRegistry: "Registre d'Entrée",
-    
-    // Statistiques
-    totalPermits: "Total Permis",
-    activePermits: "Permis Actifs",
-    completedPermits: "Permis Complétés",
-    draftPermits: "Brouillons",
-    dangerousSpaces: "Espaces Dangereux",
-    safeSpaces: "Espaces Sécuritaires",
-    avgCompletion: "Complétude Moyenne",
-    lastActivity: "Dernière Activité",
-    
-    // Status
-    draft: "Brouillon",
-    active: "Actif",
-    completed: "Complété",
-    cancelled: "Annulé",
-    
-    // Types d'espaces
-    spaceTypes: {
-      tank: "Réservoir",
-      vessel: "Cuve",
-      silo: "Silo",
-      pit: "Fosse",
-      vault: "Voûte",
-      tunnel: "Tunnel",
-      trench: "Tranchée",
-      manhole: "Regard",
-      storage: "Stockage",
-      boiler: "Chaudière",
-      duct: "Conduit",
-      chamber: "Chambre",
-      other: "Autre"
-    }
-  },
-  en: {
-    title: "Permit Management and Finalization",
-    subtitle: "Centralized dashboard for validation, saving, history and sharing",
-    
-    savePermit: "Save",
-    printPDF: "Print PDF",
-    emailPermit: "Send by Email",
-    sharePermit: "Share",
-    generateQR: "Generate QR Code",
-    exportData: "Export Data",
-    searchDatabase: "Search Database",
-    viewHistory: "View History",
-    newPermit: "New Permit",
-    
-    summary: "Permit Summary",
-    validation: "Validation and Compliance",
-    actions: "Permit Actions",
-    statistics: "Statistics",
-    qrCode: "QR Code - Mobile Access",
-    sharing: "Sharing and Distribution",
-    history: "Permit History",
-    database: "Database",
-    
-    complete: "Complete",
-    incomplete: "Incomplete",
-    valid: "Valid",
-    invalid: "Invalid",
-    saving: "Saving...",
-    saved: "Saved",
-    loading: "Loading...",
-    searching: "Searching...",
-    
-    saveSuccess: "Permit saved successfully!",
-    validationPassed: "All validations passed",
-    validationErrors: "Validation errors detected",
-    qrGenerated: "QR Code generated successfully",
-    linkCopied: "Link copied to clipboard",
-    pdfGenerated: "PDF generated successfully",
-    emailSent: "Email sent successfully",
-    noResults: "No results found",
-    searchPlaceholder: "Search by number, project, location...",
-    
-    siteInformation: "Site Information",
-    rescuePlan: "Rescue Plan",
-    atmosphericTesting: "Atmospheric Testing", 
-    entryRegistry: "Entry Registry",
-    
-    totalPermits: "Total Permits",
-    activePermits: "Active Permits",
-    completedPermits: "Completed Permits",
-    draftPermits: "Drafts",
-    dangerousSpaces: "Dangerous Spaces",
-    safeSpaces: "Safe Spaces",
-    avgCompletion: "Average Completion",
-    lastActivity: "Last Activity",
-    
-    draft: "Draft",
-    active: "Active",
-    completed: "Completed",
-    cancelled: "Cancelled",
-    
-    spaceTypes: {
-      tank: "Tank",
-      vessel: "Vessel",
-      silo: "Silo",
-      pit: "Pit",
-      vault: "Vault",
-      tunnel: "Tunnel",
-      trench: "Trench",
-      manhole: "Manhole",
-      storage: "Storage",
-      boiler: "Boiler",
-      duct: "Duct",
-      chamber: "Chamber",
-      other: "Other"
-    }
-  }
-};
+export interface Dimensions {
+  length: number;
+  width: number;
+  height: number;
+  diameter: number;
+  volume: number;
+  spaceShape: 'rectangular' | 'cylindrical' | 'spherical' | 'irregular';
+}
 
-// =================== COMPOSANT PRINCIPAL ===================
-const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
-  language = 'fr',
-  permitData,
-  selectedProvince = 'QC',
-  regulations,
-  isMobile: propIsMobile = false,
-  safetyManager
-}) => {
-  const currentIsMobile = propIsMobile || (typeof window !== 'undefined' && window.innerWidth < 768);
-  const t = translations[language];
+export interface EntryPoint {
+  id: string;
+  type: string;
+  dimensions: string;
+  location: string;
+  condition: string;
+  accessibility: string;
+  photos: string[];
+}
+
+export interface EnvironmentalConditions {
+  ventilationRequired: boolean;
+  ventilationType: string;
+  lightingConditions: string;
+  temperatureRange: string;
+  moistureLevel: string;
+  noiseLevel: string;
+  weatherConditions: string;
+}
+
+export interface SpaceContent {
+  contents: string;
+  residues: string;
+  previousUse: string;
+  lastEntry: string;
+  cleaningStatus: string;
+}
+
+export interface SafetyMeasures {
+  emergencyEgress: string;
+  communicationMethod: string;
+  monitoringEquipment: string[];
+  ventilationEquipment: string[];
+  emergencyEquipment: string[];
+}
+
+export interface SpacePhoto {
+  id: string;
+  url: string;
+  category: string;
+  caption: string;
+  timestamp: string;
+  location: string;
+  measurements?: string;
+  gpsCoords?: { lat: number; lng: number };
+}
+
+export interface AtmosphericTestingData {
+  equipment: {
+    deviceModel: string;
+    serialNumber: string;
+    calibrationDate: string;
+    nextCalibration: string;
+  };
+  readings: AtmosphericReading[];
+  continuousMonitoring: boolean;
+  alarmSettings: AlarmSettings;
+  lastUpdated: string;
+}
+
+export interface AtmosphericReading {
+  id: string;
+  timestamp: string;
+  location: string;
+  readings: {
+    oxygen: number; // %
+    combustibleGas: number; // % LEL
+    hydrogenSulfide: number; // ppm
+    carbonMonoxide: number; // ppm
+    temperature: number; // °C
+    humidity: number; // %
+  };
+  status: 'safe' | 'caution' | 'danger';
+  testedBy: string;
+  notes?: string;
+}
+
+export interface AlarmSettings {
+  oxygen: { min: number; max: number };
+  combustibleGas: { max: number };
+  hydrogenSulfide: { max: number };
+  carbonMonoxide: { max: number };
+}
+
+export interface EntryRegistryData {
+  personnel: PersonnelEntry[];
+  entryLog: EntryLogEntry[];
+  activeEntrants: string[];
+  maxOccupancy: number;
+  communicationProtocol: CommunicationProtocol;
+  lastUpdated: string;
   
-  // =================== ÉTATS LOCAUX ===================
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
-  const [selectedShareMethod, setSelectedShareMethod] = useState<'email' | 'sms' | 'whatsapp'>('email');
-  const [showHistory, setShowHistory] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<PermitHistoryEntry[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [currentView, setCurrentView] = useState<'main' | 'history' | 'database'>('main');
+  // Propriétés additionnelles pour EntryRegistry
+  equipment?: any;
+  compliance?: Record<string, boolean>;
+}
 
-  // Validation globale
-  const validation = safetyManager.validatePermitCompleteness();
-  const permit = permitData || safetyManager.currentPermit;
+export interface PersonnelEntry {
+  id: string;
+  name: string;
+  role: 'entrant' | 'attendant' | 'supervisor' | 'rescue';
+  certification: string[];
+  medicalFitness: {
+    valid: boolean;
+    expiryDate: string;
+    restrictions?: string[];
+  };
+  emergencyContact: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+}
 
-  // =================== FONCTIONS UTILITAIRES ===================
+export interface EntryLogEntry {
+  id: string;
+  personnelId: string;
+  action: 'entry' | 'exit' | 'emergency_exit';
+  timestamp: string;
+  authorizedBy: string;
+  atmosphericReadings?: {
+    oxygen: number;
+    combustibleGas: number;
+    toxicGas: number;
+  };
+  notes?: string;
+}
+
+export interface CommunicationProtocol {
+  type: 'radio' | 'cellular' | 'hardline';
+  frequency?: string;
+  checkInterval: number; // minutes
+}
+
+export interface RescuePlanData {
+  emergencyContacts: EmergencyContact[];
+  rescueTeam: RescueTeamMember[];
+  evacuationProcedure: string;
+  rescueEquipment: EquipmentItem[];
+  hospitalInfo: HospitalInfo;
+  communicationPlan: string;
+  lastUpdated: string;
   
-  const showNotification = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
-    console.log(`[${type.toUpperCase()}] ${message}`);
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('C-SECUR360', {
-        body: message,
-        icon: '/favicon.ico'
+  // Propriétés additionnelles pour RescuePlan
+  rescue_plan_type?: string;
+  rescue_plan_responsible?: string;
+  rescue_team_phone?: string;
+  rescue_response_time?: string;
+  rescue_plan?: string;
+  rescue_equipment?: Record<string, boolean>;
+  rescue_equipment_validated?: boolean;
+  rescue_steps?: Array<{
+    id: number;
+    step: number;
+    description: string;
+  }>;
+  rescue_team_certifications?: {
+    csa_z1006_certified?: boolean;
+    certification_expiry?: string;
+    first_aid_level2?: boolean;
+    cpr_certified?: boolean;
+    rescue_training_hours?: number;
+    response_time_verified?: boolean;
+    [key: string]: any; // Index signature pour permettre l'accès dynamique
+  };
+  equipment_certifications?: {
+    harness_inspection_date?: string;
+    scba_certification?: string;
+    mechanical_recovery_cert?: string;
+    last_equipment_inspection?: string;
+    equipment_serial_numbers?: string[];
+    [key: string]: any; // Index signature pour permettre l'accès dynamique
+  };
+  annual_drill_required?: boolean;
+  last_effectiveness_test?: string;
+  regulatory_compliance_verified?: boolean;
+  rescue_training?: Record<string, boolean>;
+  last_drill_date?: string;
+  drill_results?: string;
+  drill_notes?: string;
+  rescue_plan_validated?: boolean;
+}
+
+export interface EmergencyContact {
+  id: string;
+  name: string;
+  role: string;
+  phone: string;
+  email?: string;
+  isPrimary: boolean;
+}
+
+export interface RescueTeamMember {
+  id: string;
+  name: string;
+  role: string;
+  certification: string[];
+  phone: string;
+  isOnCall: boolean;
+}
+
+export interface EquipmentItem {
+  id: string;
+  name: string;
+  type: string;
+  serialNumber?: string;
+  lastInspection: string;
+  nextInspection: string;
+  isAvailable: boolean;
+}
+
+export interface HospitalInfo {
+  name: string;
+  address: string;
+  phone: string;
+  distance: number; // km
+}
+
+// =================== TYPES ADDITIONNELS ===================
+export interface ValidationResult {
+  isValid: boolean;
+  percentage: number;
+  errors: string[];
+  completedSections: number;
+  totalSections: number;
+}
+
+export interface Alert {
+  id: string;
+  type: 'info' | 'warning' | 'critical';
+  message: string;
+  location?: string;
+  timestamp: string;
+}
+
+export interface Notification {
+  id: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+}
+
+export interface AuditEntry {
+  id: string;
+  timestamp: string;
+  action: string;
+  section: string;
+  userId: string;
+  changes: Record<string, any>;
+  oldValues?: Record<string, any>;
+}
+
+export interface AttachmentData {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  url: string;
+  uploadedAt: string;
+  description?: string;
+}
+
+// =================== STORE ZUSTAND OPTIMISÉ ===================
+interface SafetyManagerState {
+  // État principal
+  currentPermit: ConfinedSpacePermit;
+  permits: ConfinedSpacePermit[];
+  
+  // États de l'interface
+  isSaving: boolean;
+  isLoading: boolean;
+  lastSaved: string | null;
+  autoSaveEnabled: boolean;
+  
+  // Alertes et notifications
+  activeAlerts: Alert[];
+  notifications: Notification[];
+  
+  // Actions principales
+  updateSiteInformation: (data: Partial<ConfinedSpaceDetails>) => void;
+  updateAtmosphericTesting: (data: Partial<AtmosphericTestingData>) => void;
+  updateEntryRegistry: (data: Partial<EntryRegistryData>) => void;
+  updateRescuePlan: (data: Partial<RescuePlanData>) => void;
+  
+  // Nouvelles méthodes pour EntryRegistry
+  updateRegistryData: (data: any) => void;
+  updatePersonnel: (person: any) => void;
+  updateEquipment: (equipment: any) => void;
+  updateCompliance: (key: string, value: boolean) => void;
+  recordEntryExit: (personId: string, action: 'entry' | 'exit') => void;
+  
+  // Gestion de base de données
+  saveToDatabase: () => Promise<string | null>;
+  loadFromDatabase: (permitNumber: string) => Promise<ConfinedSpacePermit | null>;
+  loadPermitHistory: () => Promise<ConfinedSpacePermit[]>;
+  
+  // QR Code et partage
+  generateQRCode: () => Promise<string>;
+  generatePDF: () => Promise<Blob>;
+  sharePermit: (method: 'email' | 'sms' | 'whatsapp') => Promise<void>;
+  
+  // Validation
+  validatePermitCompleteness: () => ValidationResult;
+  validateSection: (section: keyof ConfinedSpacePermit) => ValidationResult;
+  
+  // Utilitaires
+  createNewPermit: (province: ProvinceCode) => void;
+  resetPermit: () => void;
+  exportData: () => string;
+  importData: (jsonData: string) => void;
+}
+
+// =================== FONCTIONS UTILITAIRES ===================
+function createEmptyPermit(): ConfinedSpacePermit {
+  const now = new Date().toISOString();
+  
+  return {
+    permit_number: '',
+    status: 'draft',
+    province: 'QC',
+    created_at: now,
+    updated_at: now,
+    last_modified: now,
+    
+    siteInformation: {
+      // Informations principales
+      projectNumber: '',
+      workLocation: '',
+      contractor: '',
+      supervisor: '',
+      entryDate: '',
+      duration: '',
+      workerCount: 1,
+      workDescription: '',
+
+      // Identification de l'espace
+      spaceType: '',
+      csaClass: '',
+      entryMethod: '',
+      accessType: '',
+      spaceLocation: '',
+      spaceDescription: '',
+
+      // Dimensions avec forme
+      dimensions: {
+        length: 0,
+        width: 0,
+        height: 0,
+        diameter: 0,
+        volume: 0,
+        spaceShape: 'rectangular'
+      },
+      unitSystem: 'metric',
+
+      // Points d'entrée
+      entryPoints: [{
+        id: 'entry-1',
+        type: 'circular',
+        dimensions: '',
+        location: '',
+        condition: 'good',
+        accessibility: 'normal',
+        photos: []
+      }],
+
+      // Dangers
+      atmosphericHazards: [],
+      physicalHazards: [],
+
+      // Conditions environnementales
+      environmentalConditions: {
+        ventilationRequired: false,
+        ventilationType: '',
+        lightingConditions: '',
+        temperatureRange: '',
+        moistureLevel: '',
+        noiseLevel: '',
+        weatherConditions: '',
+      },
+
+      // Contenu de l'espace
+      spaceContent: {
+        contents: '',
+        residues: '',
+        previousUse: '',
+        lastEntry: '',
+        cleaningStatus: '',
+      },
+
+      // Mesures de sécurité
+      safetyMeasures: {
+        emergencyEgress: '',
+        communicationMethod: '',
+        monitoringEquipment: [],
+        ventilationEquipment: [],
+        emergencyEquipment: [],
+      },
+
+      // Photos de l'espace
+      spacePhotos: []
+    },
+    
+    atmosphericTesting: {
+      equipment: {
+        deviceModel: '',
+        serialNumber: '',
+        calibrationDate: '',
+        nextCalibration: ''
+      },
+      readings: [],
+      continuousMonitoring: false,
+      alarmSettings: {
+        oxygen: { min: 19.5, max: 23.5 },
+        combustibleGas: { max: 10 },
+        hydrogenSulfide: { max: 10 },
+        carbonMonoxide: { max: 35 }
+      },
+      lastUpdated: now
+    },
+    
+    entryRegistry: {
+      personnel: [],
+      entryLog: [],
+      activeEntrants: [],
+      maxOccupancy: 1,
+      communicationProtocol: {
+        type: 'radio',
+        frequency: '',
+        checkInterval: 15
+      },
+      lastUpdated: now,
+      equipment: [],
+      compliance: {}
+    },
+    
+    rescuePlan: {
+      emergencyContacts: [],
+      rescueTeam: [],
+      evacuationProcedure: '',
+      rescueEquipment: [],
+      hospitalInfo: {
+        name: '',
+        address: '',
+        phone: '',
+        distance: 0
+      },
+      communicationPlan: '',
+      lastUpdated: now
+    },
+    
+    // Conformité générale
+    compliance: {},
+    
+    validation: {
+      isComplete: false,
+      percentage: 0,
+      errors: [],
+      lastValidated: now
+    },
+    
+    auditTrail: [],
+    attachments: []
+  };
+}
+
+function generatePermitNumber(province: ProvinceCode): string {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const time = String(date.getHours()).padStart(2, '0') + String(date.getMinutes()).padStart(2, '0');
+  
+  return `CS-${province}-${year}${month}${day}-${time}`;
+}
+
+function generateId(): string {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+function checkAtmosphericAlerts(readings: AtmosphericReading[]): Alert[] {
+  const alerts: Alert[] = [];
+  
+  readings.forEach(reading => {
+    if (reading.readings.oxygen < 19.5 || reading.readings.oxygen > 23.5) {
+      alerts.push({
+        id: generateId(),
+        type: 'critical',
+        message: `Niveau d'oxygène dangereux: ${reading.readings.oxygen}%`,
+        location: reading.location,
+        timestamp: reading.timestamp
       });
     }
-  };
-
-  const handleSave = async () => {
-    try {
-      const permitNumber = await safetyManager.saveToDatabase();
-      if (permitNumber) {
-        showNotification(t.saveSuccess, 'success');
-        
-        // Générer QR automatiquement après sauvegarde
-        if (!qrCodeUrl) {
-          handleGenerateQR();
-        }
-      }
-    } catch (error) {
-      console.error('Erreur sauvegarde:', error);
-      showNotification('Erreur lors de la sauvegarde', 'error');
-    }
-  };
-
-  const handleGenerateQR = async () => {
-    setIsGeneratingQR(true);
-    try {
-      const qrUrl = await safetyManager.generateQRCode();
-      setQrCodeUrl(qrUrl);
-      showNotification(t.qrGenerated, 'success');
-    } catch (error) {
-      console.error('Erreur QR:', error);
-      showNotification('Erreur génération QR Code', 'error');
-    } finally {
-      setIsGeneratingQR(false);
-    }
-  };
-
-  const handleGeneratePDF = async () => {
-    setIsGeneratingPDF(true);
-    try {
-      const pdfBlob = await safetyManager.generatePDF();
-      const url = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${permit.permit_number}_espace_clos.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
-      showNotification(t.pdfGenerated, 'success');
-    } catch (error) {
-      console.error('Erreur PDF:', error);
-      showNotification('Erreur génération PDF', 'error');
-    } finally {
-      setIsGeneratingPDF(false);
-    }
-  };
-
-  const handleShare = async () => {
-    try {
-      await safetyManager.sharePermit(selectedShareMethod);
-      showNotification(t.emailSent, 'success');
-    } catch (error) {
-      console.error('Erreur partage:', error);
-      showNotification('Erreur lors du partage', 'error');
-    }
-  };
-
-  const handleCopyLink = async () => {
-    const permitUrl = `${window.location.origin}/permits/confined-space/${permit.permit_number}`;
-    try {
-      await navigator.clipboard.writeText(permitUrl);
-      setLinkCopied(true);
-      showNotification(t.linkCopied, 'success');
-      setTimeout(() => setLinkCopied(false), 3000);
-    } catch (error) {
-      console.error('Erreur copie:', error);
-      showNotification('Erreur copie du lien', 'error');
-    }
-  };
-
-  const handleSearch = useCallback(async (query: string) => {
-    if (query.trim().length < 2) {
-      setSearchResults([]);
-      return;
+    
+    if (reading.readings.combustibleGas > 10) {
+      alerts.push({
+        id: generateId(),
+        type: 'critical',
+        message: `Gaz combustible détecté: ${reading.readings.combustibleGas}% LEL`,
+        location: reading.location,
+        timestamp: reading.timestamp
+      });
     }
     
-    setIsSearching(true);
-    try {
-      const allPermits = await safetyManager.loadPermitHistory();
-      const filtered = allPermits.filter((permit: any) => 
-        permit.permit_number?.toLowerCase().includes(query.toLowerCase()) ||
-        permit.siteInformation?.projectNumber?.toLowerCase().includes(query.toLowerCase()) ||
-        permit.siteInformation?.workLocation?.toLowerCase().includes(query.toLowerCase()) ||
-        permit.siteInformation?.contractor?.toLowerCase().includes(query.toLowerCase())
-      );
-      
-      const results: PermitHistoryEntry[] = filtered.map((permit: any) => ({
-        id: permit.id || '',
-        permitNumber: permit.permit_number || '',
-        projectNumber: permit.siteInformation?.projectNumber || '',
-        workLocation: permit.siteInformation?.workLocation || '',
-        contractor: permit.siteInformation?.contractor || '',
-        spaceType: permit.siteInformation?.spaceType || '',
-        csaClass: permit.siteInformation?.csaClass || '',
-        status: permit.status || 'draft',
-        createdAt: permit.created_at || '',
-        lastModified: permit.last_modified || '',
-        hazardCount: (permit.siteInformation?.atmosphericHazards?.length || 0) + 
-                    (permit.siteInformation?.physicalHazards?.length || 0),
-        photoCount: permit.siteInformation?.spacePhotos?.length || 0,
-        qrCode: qrCodeUrl
-      }));
-      
-      setSearchResults(results);
-    } catch (error) {
-      console.error('Erreur recherche:', error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
+    if (reading.readings.hydrogenSulfide > 10) {
+      alerts.push({
+        id: generateId(),
+        type: 'critical',
+        message: `H2S détecté: ${reading.readings.hydrogenSulfide} ppm`,
+        location: reading.location,
+        timestamp: reading.timestamp
+      });
     }
-  }, [safetyManager, qrCodeUrl]);
-
-  const handleLoadPermit = async (permitNumber: string) => {
-    try {
-      await safetyManager.loadFromDatabase(permitNumber);
-      setCurrentView('main');
-      showNotification(`Permis ${permitNumber} chargé`, 'success');
-    } catch (error) {
-      console.error('Erreur chargement:', error);
-      showNotification(`Erreur chargement ${permitNumber}`, 'error');
+    
+    if (reading.readings.carbonMonoxide > 35) {
+      alerts.push({
+        id: generateId(),
+        type: 'critical',
+        message: `CO détecté: ${reading.readings.carbonMonoxide} ppm`,
+        location: reading.location,
+        timestamp: reading.timestamp
+      });
     }
-  };
+  });
+  
+  return alerts;
+}
 
-  const getSectionValidation = (): ValidationSummary[] => {
-    return [
-      {
-        sectionName: t.siteInformation,
-        icon: <Building style={{ width: '20px', height: '20px' }} />,
-        isComplete: Boolean(permit.siteInformation?.projectNumber && permit.siteInformation?.workLocation),
-        completionPercentage: getFieldCompletionPercentage(permit.siteInformation, ['projectNumber', 'workLocation', 'contractor', 'supervisor']),
-        errors: permit.siteInformation?.projectNumber ? [] : ['Numéro de projet manquant'],
-        lastModified: permit.last_modified
-      },
-      {
-        sectionName: t.rescuePlan,
-        icon: <Shield style={{ width: '20px', height: '20px' }} />,
-        isComplete: Boolean(permit.rescuePlan?.emergencyContacts?.length > 0),
-        completionPercentage: permit.rescuePlan?.emergencyContacts?.length > 0 ? 100 : 0,
-        errors: permit.rescuePlan?.emergencyContacts?.length > 0 ? [] : ['Plan de sauvetage incomplet'],
-        lastModified: permit.last_modified
-      },
-      {
-        sectionName: t.atmosphericTesting,
-        icon: <Activity style={{ width: '20px', height: '20px' }} />,
-        isComplete: Boolean(permit.atmosphericTesting?.readings?.length > 0),
-        completionPercentage: permit.atmosphericTesting?.readings?.length > 0 ? 100 : 0,
-        errors: permit.atmosphericTesting?.readings?.length > 0 ? [] : ['Tests atmosphériques manquants'],
-        lastModified: permit.last_modified
-      },
-      {
-        sectionName: t.entryRegistry,
-        icon: <Users style={{ width: '20px', height: '20px' }} />,
-        isComplete: Boolean(permit.entryRegistry?.personnel?.length > 0),
-        completionPercentage: permit.entryRegistry?.personnel?.length > 0 ? 100 : 0,
-        errors: permit.entryRegistry?.personnel?.length > 0 ? [] : ['Personnel manquant'],
-        lastModified: permit.last_modified
-      }
-    ];
-  };
+// =================== HOOK PRINCIPAL OPTIMISÉ ===================
+export const useSafetyManager = create<SafetyManagerState>()(
+  persist(
+    (set, get) => ({
+      // État initial
+      currentPermit: createEmptyPermit(),
+      permits: [],
+      isSaving: false,
+      isLoading: false,
+      lastSaved: null,
+      autoSaveEnabled: true,
+      activeAlerts: [],
+      notifications: [],
 
-  const getPermitStatistics = () => {
-    return {
-      totalSections: 4,
-      completedSections: getSectionValidation().filter(s => s.isComplete).length,
-      totalPersonnel: permit.entryRegistry?.personnel?.length || 0,
-      activeEntrants: permit.entryRegistry?.activeEntrants?.length || 0,
-      atmosphericReadings: permit.atmosphericTesting?.readings?.length || 0,
-      lastSaved: safetyManager.lastSaved ? new Date(safetyManager.lastSaved).toLocaleString() : 'Jamais',
-      permitAge: permit.created_at ? Math.floor((Date.now() - new Date(permit.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0,
-      hazardCount: (permit.siteInformation?.atmosphericHazards?.length || 0) + 
-                   (permit.siteInformation?.physicalHazards?.length || 0),
-      photoCount: permit.siteInformation?.spacePhotos?.length || 0,
-      volume: permit.siteInformation?.dimensions?.volume || 0,
-      unitSystem: permit.siteInformation?.unitSystem || 'metric'
-    };
-  };
-
-  // =================== EFFETS ===================
-  useEffect(() => {
-    if (permit.permit_number && !qrCodeUrl) {
-      handleGenerateQR();
-    }
-  }, [permit.permit_number]);
-
-  useEffect(() => {
-    if (searchQuery.length >= 2) {
-      const timeoutId = setTimeout(() => {
-        handleSearch(searchQuery);
-      }, 300);
-      return () => clearTimeout(timeoutId);
-    } else {
-      setSearchResults([]);
-    }
-  }, [searchQuery, handleSearch]);
-
-  // =================== RENDU CONDITIONNEL - VUE DATABASE/HISTORIQUE ===================
-  if (currentView === 'database' || currentView === 'history') {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: currentIsMobile ? '20px' : '28px' }}>
-        {/* Header de retour */}
-        <div style={styles.card}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <button
-                onClick={() => setCurrentView('main')}
-                style={{
-                  ...styles.button,
-                  ...styles.buttonSecondary,
-                  width: 'auto',
-                  padding: '12px 16px'
-                }}
-              >
-                <ArrowLeft size={16} />
-                Retour
-              </button>
-              <div>
-                <h2 style={{ fontSize: currentIsMobile ? '20px' : '24px', fontWeight: '700', color: 'white', margin: 0 }}>
-                  <Database style={{ display: 'inline', marginRight: '12px', width: '24px', height: '24px' }} />
-                  {t.database}
-                </h2>
-                <p style={{ color: '#d1d5db', fontSize: currentIsMobile ? '14px' : '16px', margin: '4px 0 0 0' }}>
-                  {selectedProvince} - {regulations?.name || 'Réglementation provinciale'}
-                </p>
-              </div>
-            </div>
-          </div>
+      // =================== ACTIONS DE MISE À JOUR ===================
+      updateSiteInformation: (data) => {
+        set((state) => {
+          const updatedPermit = {
+            ...state.currentPermit,
+            siteInformation: {
+              ...state.currentPermit.siteInformation,
+              ...data
+            },
+            last_modified: new Date().toISOString()
+          };
           
-          {/* Barre de recherche */}
-          <div style={{ position: 'relative', marginBottom: '20px' }}>
-            <input
-              type="text"
-              style={{ ...styles.input, paddingLeft: '48px' }}
-              placeholder={t.searchPlaceholder}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <Search 
-              size={20} 
-              style={{ 
-                position: 'absolute', 
-                left: '16px', 
-                top: '50%', 
-                transform: 'translateY(-50%)', 
-                color: '#9ca3af' 
-              }} 
-            />
-            {isSearching && (
-              <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)' }}>
-                <div style={{ width: '16px', height: '16px', border: '2px solid #3b82f6', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Résultats de recherche */}
-        <div style={styles.card}>
-          {isSearching ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-              <div style={{ width: '32px', height: '32px', border: '3px solid #3b82f6', borderTop: '3px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-              <p>{t.searching}</p>
-            </div>
-          ) : searchResults.length > 0 ? (
-            <div style={{ display: 'grid', gap: '12px' }}>
-              {searchResults.map((result) => (
-                <div 
-                  key={result.id}
-                  style={{
-                    ...styles.card,
-                    margin: 0,
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    border: '1px solid #4b5563'
-                  }}
-                  onClick={() => handleLoadPermit(result.permitNumber)}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ color: '#3b82f6', margin: '0 0 4px 0', fontSize: '16px', fontWeight: '600' }}>
-                        {result.permitNumber}
-                      </h4>
-                      <p style={{ color: 'white', margin: '0 0 4px 0', fontSize: '14px' }}>
-                        📋 {result.projectNumber} • 📍 {result.workLocation}
-                      </p>
-                      <p style={{ color: '#9ca3af', margin: 0, fontSize: '13px' }}>
-                        🏢 {result.contractor} • {t.spaceTypes[result.spaceType as keyof typeof t.spaceTypes] || result.spaceType}
-                      </p>
-                      <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '12px', color: '#6b7280' }}>
-                        <span>⚠️ {result.hazardCount} dangers</span>
-                        <span>📷 {result.photoCount} photos</span>
-                        <span>🕒 {new Date(result.lastModified || Date.now()).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    <span style={{
-                      background: result.status === 'active' ? 'rgba(16, 185, 129, 0.2)' : 
-                                 result.status === 'completed' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(156, 163, 175, 0.2)',
-                      color: result.status === 'active' ? '#10b981' : 
-                             result.status === 'completed' ? '#3b82f6' : '#9ca3af',
-                      padding: '4px 8px',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      fontWeight: '600'
-                    }}>
-                      {result.status === 'active' ? '🟢 ACTIF' : 
-                       result.status === 'completed' ? '🔵 COMPLÉTÉ' :
-                       result.status === 'draft' ? '🟡 BROUILLON' : '⚪ AUTRE'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : searchQuery.length >= 2 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-              <Search size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
-              <p>{t.noResults}</p>
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-              <p>💡 {language === 'fr' ? 'Tapez au moins 2 caractères pour rechercher' : 'Type at least 2 characters to search'}</p>
-            </div>
-          )}
-        </div>
-
-        <style jsx>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+          // Audit trail
+          updatedPermit.auditTrail.push({
+            id: generateId(),
+            timestamp: new Date().toISOString(),
+            action: 'update_site_information',
+            section: 'siteInformation',
+            userId: 'current_user',
+            changes: data
+          });
+          
+          // Auto-save si activé
+          if (state.autoSaveEnabled) {
+            setTimeout(() => get().saveToDatabase(), 2000);
           }
-        `}</style>
-      </div>
-    );
-  }
-
-  // =================== RENDU PRINCIPAL ===================
-  const stats = getPermitStatistics();
-  const sections = getSectionValidation();
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: currentIsMobile ? '20px' : '28px' }}>
-      {/* Header Principal */}
-      <div style={styles.card}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          marginBottom: currentIsMobile ? '20px' : '24px' 
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: currentIsMobile ? '16px' : '20px' }}>
-            <div style={{
-              width: currentIsMobile ? '48px' : '60px',
-              height: currentIsMobile ? '48px' : '60px',
-              background: 'rgba(59, 130, 246, 0.2)',
-              borderRadius: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid rgba(59, 130, 246, 0.3)'
-            }}>
-              <Wrench style={{ 
-                width: currentIsMobile ? '24px' : '30px', 
-                height: currentIsMobile ? '24px' : '30px', 
-                color: '#60a5fa' 
-              }} />
-            </div>
-            <div>
-              <h1 style={{
-                fontSize: currentIsMobile ? '20px' : '28px',
-                fontWeight: '700',
-                color: 'white',
-                marginBottom: '4px',
-                lineHeight: 1.2
-              }}>
-                ⚙️ {t.title}
-              </h1>
-              <p style={{
-                color: '#d1d5db',
-                fontSize: currentIsMobile ? '14px' : '16px',
-                lineHeight: 1.5,
-                margin: 0
-              }}>
-                {t.subtitle}
-              </p>
-            </div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{
-              fontSize: currentIsMobile ? '24px' : '32px',
-              fontWeight: '700',
-              color: validation.isValid ? '#10b981' : '#f59e0b',
-              marginBottom: '4px'
-            }}>
-              {validation.percentage}%
-            </div>
-            <div style={{ 
-              fontSize: currentIsMobile ? '12px' : '14px', 
-              color: '#d1d5db' 
-            }}>
-              {validation.isValid ? '✅ Valide' : '⚠️ Incomplet'}
-            </div>
-          </div>
-        </div>
-        
-        {/* Actions rapides */}
-        <div style={{
-          display: 'flex',
-          gap: currentIsMobile ? '8px' : '12px',
-          flexWrap: 'wrap'
-        }}>
-          <button
-            onClick={() => setCurrentView('database')}
-            style={{
-              ...styles.button,
-              background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-              color: 'white',
-              flex: currentIsMobile ? '1' : 'none',
-              fontSize: currentIsMobile ? '12px' : '14px'
-            }}
-          >
-            <Database size={16} />
-            {t.searchDatabase}
-          </button>
-          <button
-            onClick={() => safetyManager.createNewPermit(selectedProvince)}
-            style={{
-              ...styles.button,
-              background: 'linear-gradient(135deg, #10b981, #059669)',
-              color: 'white',
-              flex: currentIsMobile ? '1' : 'none',
-              fontSize: currentIsMobile ? '12px' : '14px'
-            }}
-          >
-            <Plus size={16} />
-            {t.newPermit}
-          </button>
-        </div>
-      </div>
-
-      {/* Résumé du Permis */}
-      <div style={styles.card}>
-        <h2 style={{
-          fontSize: currentIsMobile ? '18px' : '20px',
-          fontWeight: '600',
-          color: 'white',
-          marginBottom: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          <FileText style={{ width: '24px', height: '24px', color: '#3b82f6' }} />
-          {t.summary}
-        </h2>
-        
-        <div style={styles.grid2}>
-          <div>
-            <h3 style={{ color: '#d1d5db', fontSize: '16px', marginBottom: '12px' }}>Informations Principales</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Numéro:</span>
-                <span style={{ color: 'white', fontWeight: '600' }}>{permit.permit_number || 'Non assigné'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Projet:</span>
-                <span style={{ color: 'white' }}>{permit.siteInformation?.projectNumber || 'N/A'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Lieu:</span>
-                <span style={{ color: 'white' }}>{permit.siteInformation?.workLocation || 'N/A'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Entrepreneur:</span>
-                <span style={{ color: 'white' }}>{permit.siteInformation?.contractor || 'N/A'}</span>
-              </div>
-            </div>
-          </div>
           
-          <div>
-            <h3 style={{ color: '#d1d5db', fontSize: '16px', marginBottom: '12px' }}>Statistiques</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Sections complètes:</span>
-                <span style={{ color: '#10b981', fontWeight: '600' }}>{stats.completedSections}/{stats.totalSections}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Personnel:</span>
-                <span style={{ color: 'white' }}>{stats.totalPersonnel}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Tests atmosphériques:</span>
-                <span style={{ color: 'white' }}>{stats.atmosphericReadings}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca3af' }}>Dernière sauvegarde:</span>
-                <span style={{ color: '#f59e0b', fontSize: '12px' }}>{stats.lastSaved}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+          return { currentPermit: updatedPermit };
+        });
+      },
 
-      {/* Validation des Sections */}
-      <div style={styles.card}>
-        <h2 style={{
-          fontSize: currentIsMobile ? '18px' : '20px',
-          fontWeight: '600',
-          color: 'white',
-          marginBottom: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          <CheckCircle style={{ width: '24px', height: '24px', color: '#10b981' }} />
-          {t.validation}
-        </h2>
+      updateAtmosphericTesting: (data) => {
+        set((state) => {
+          const updatedPermit = {
+            ...state.currentPermit,
+            atmosphericTesting: {
+              ...state.currentPermit.atmosphericTesting,
+              ...data,
+              lastUpdated: new Date().toISOString()
+            },
+            last_modified: new Date().toISOString()
+          };
+          
+          // Vérifier les alertes de sécurité
+          let newAlerts: Alert[] = [];
+          if (data.readings) {
+            newAlerts = checkAtmosphericAlerts(data.readings);
+          }
+          
+          updatedPermit.auditTrail.push({
+            id: generateId(),
+            timestamp: new Date().toISOString(),
+            action: 'update_atmospheric_testing',
+            section: 'atmosphericTesting',
+            userId: 'current_user',
+            changes: data
+          });
+          
+          if (state.autoSaveEnabled) {
+            setTimeout(() => get().saveToDatabase(), 2000);
+          }
+          
+          return { 
+            currentPermit: updatedPermit,
+            activeAlerts: [...state.activeAlerts, ...newAlerts]
+          };
+        });
+      },
+
+      updateEntryRegistry: (data) => {
+        set((state) => {
+          const updatedPermit = {
+            ...state.currentPermit,
+            entryRegistry: {
+              ...state.currentPermit.entryRegistry,
+              ...data,
+              lastUpdated: new Date().toISOString()
+            },
+            last_modified: new Date().toISOString()
+          };
+          
+          updatedPermit.auditTrail.push({
+            id: generateId(),
+            timestamp: new Date().toISOString(),
+            action: 'update_entry_registry',
+            section: 'entryRegistry',
+            userId: 'current_user',
+            changes: data
+          });
+          
+          if (state.autoSaveEnabled) {
+            setTimeout(() => get().saveToDatabase(), 2000);
+          }
+          
+          return { currentPermit: updatedPermit };
+        });
+      },
+
+      updateRescuePlan: (data) => {
+        set((state) => {
+          const updatedPermit = {
+            ...state.currentPermit,
+            rescuePlan: {
+              ...state.currentPermit.rescuePlan,
+              ...data,
+              lastUpdated: new Date().toISOString()
+            },
+            last_modified: new Date().toISOString()
+          };
+          
+          updatedPermit.auditTrail.push({
+            id: generateId(),
+            timestamp: new Date().toISOString(),
+            action: 'update_rescue_plan',
+            section: 'rescuePlan',
+            userId: 'current_user',
+            changes: data
+          });
+          
+          if (state.autoSaveEnabled) {
+            setTimeout(() => get().saveToDatabase(), 2000);
+          }
+          
+          return { currentPermit: updatedPermit };
+        });
+      },
+
+      // =================== NOUVELLES MÉTHODES POUR ENTRYREGISTRY ===================
+      updateRegistryData: (data) => {
+        set((state) => {
+          const updatedPermit = {
+            ...state.currentPermit,
+            entryRegistry: {
+              ...state.currentPermit.entryRegistry,
+              ...data,
+              lastUpdated: new Date().toISOString()
+            },
+            last_modified: new Date().toISOString()
+          };
+          
+          if (state.autoSaveEnabled) {
+            setTimeout(() => get().saveToDatabase(), 2000);
+          }
+          
+          return { currentPermit: updatedPermit };
+        });
+      },
+
+      updatePersonnel: (person) => {
+        set((state) => {
+          const currentPersonnel = state.currentPermit.entryRegistry.personnel || [];
+          const updatedPersonnel = [...currentPersonnel, person];
+          
+          const updatedPermit = {
+            ...state.currentPermit,
+            entryRegistry: {
+              ...state.currentPermit.entryRegistry,
+              personnel: updatedPersonnel,
+              lastUpdated: new Date().toISOString()
+            },
+            last_modified: new Date().toISOString()
+          };
+          
+          if (state.autoSaveEnabled) {
+            setTimeout(() => get().saveToDatabase(), 2000);
+          }
+          
+          return { currentPermit: updatedPermit };
+        });
+      },
+
+      updateEquipment: (equipment) => {
+        // Stocker les équipements dans la propriété equipment de entryRegistry
+        set((state) => {
+          const updatedPermit = {
+            ...state.currentPermit,
+            entryRegistry: {
+              ...state.currentPermit.entryRegistry,
+              equipment: equipment,
+              lastUpdated: new Date().toISOString()
+            },
+            last_modified: new Date().toISOString()
+          };
+          
+          if (state.autoSaveEnabled) {
+            setTimeout(() => get().saveToDatabase(), 2000);
+          }
+          
+          return { currentPermit: updatedPermit };
+        });
+      },
+
+      // =================== CORRECTION UPDATECOMPLIANCE ===================
+      updateCompliance: (key: string, value: boolean) => {
+        set((state) => {
+          // Créer un nouvel objet compliance ou utiliser l'existant
+          const currentCompliance = state.currentPermit.compliance || {};
+          
+          const updatedPermit = {
+            ...state.currentPermit,
+            compliance: {
+              ...currentCompliance,
+              [key]: value
+            },
+            entryRegistry: {
+              ...state.currentPermit.entryRegistry,
+              compliance: {
+                ...state.currentPermit.entryRegistry.compliance,
+                [key]: value
+              },
+              lastUpdated: new Date().toISOString()
+            },
+            last_modified: new Date().toISOString()
+          };
+          
+          if (state.autoSaveEnabled) {
+            setTimeout(() => get().saveToDatabase(), 2000);
+          }
+          
+          return { currentPermit: updatedPermit };
+        });
+      },
+
+      recordEntryExit: (personId, action) => {
+        set((state) => {
+          const entryLog = state.currentPermit.entryRegistry.entryLog || [];
+          const newLogEntry: EntryLogEntry = {
+            id: generateId(),
+            personnelId: personId,
+            action: action,
+            timestamp: new Date().toISOString(),
+            authorizedBy: 'current_user'
+          };
+          
+          const updatedPermit = {
+            ...state.currentPermit,
+            entryRegistry: {
+              ...state.currentPermit.entryRegistry,
+              entryLog: [...entryLog, newLogEntry],
+              lastUpdated: new Date().toISOString()
+            },
+            last_modified: new Date().toISOString()
+          };
+          
+          if (state.autoSaveEnabled) {
+            setTimeout(() => get().saveToDatabase(), 2000);
+          }
+          
+          return { currentPermit: updatedPermit };
+        });
+      },
+
+      // =================== BASE DE DONNÉES SUPABASE/LOCALSTORAGE ===================
+      saveToDatabase: async () => {
+        set({ isSaving: true });
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {sections.map((section, index) => (
-            <div 
-              key={index}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px',
-                backgroundColor: section.isComplete ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                borderRadius: '12px',
-                border: `2px solid ${section.isComplete ? '#10b981' : '#f59e0b'}`
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {section.icon}
-                <div>
-                  <h4 style={{ 
-                    color: section.isComplete ? '#86efac' : '#fde047', 
-                    margin: 0, 
-                    fontSize: '16px',
-                    fontWeight: '600'
-                  }}>
-                    {section.sectionName}
-                  </h4>
-                  {section.errors.length > 0 && (
-                    <p style={{ 
-                      color: '#fca5a5', 
-                      margin: '4px 0 0 0', 
-                      fontSize: '14px' 
-                    }}>
-                      {section.errors[0]}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{
-                  fontSize: '20px',
-                  fontWeight: '700',
-                  color: section.isComplete ? '#10b981' : '#f59e0b'
-                }}>
-                  {section.completionPercentage}%
-                </div>
-                <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                  {section.isComplete ? 'Complété' : 'Incomplet'}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Actions du Permis */}
-      <div style={styles.card}>
-        <h2 style={{
-          fontSize: currentIsMobile ? '18px' : '20px',
-          fontWeight: '600',
-          color: 'white',
-          marginBottom: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          <Wrench style={{ width: '24px', height: '24px', color: '#f59e0b' }} />
-          {t.actions}
-        </h2>
-
-        <div style={styles.grid2}>
-          <button
-            onClick={handleSave}
-            disabled={safetyManager.isSaving}
-            style={{
-              ...styles.button,
-              ...styles.buttonSuccess,
-              opacity: safetyManager.isSaving ? 0.7 : 1
-            }}
-          >
-            {safetyManager.isSaving ? (
-              <div style={{ width: '20px', height: '20px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-            ) : (
-              <Save size={20} />
-            )}
-            {safetyManager.isSaving ? t.saving : t.savePermit}
-          </button>
-
-          <button
-            onClick={handleGenerateQR}
-            disabled={isGeneratingQR}
-            style={{
-              ...styles.button,
-              ...styles.buttonPrimary,
-              opacity: isGeneratingQR ? 0.7 : 1
-            }}
-          >
-            {isGeneratingQR ? (
-              <div style={{ width: '20px', height: '20px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-            ) : (
-              <QrCode size={20} />
-            )}
-            {t.generateQR}
-          </button>
-
-          <button
-            onClick={handleGeneratePDF}
-            disabled={isGeneratingPDF}
-            style={{
-              ...styles.button,
-              ...styles.buttonSecondary,
-              opacity: isGeneratingPDF ? 0.7 : 1
-            }}
-          >
-            {isGeneratingPDF ? (
-              <div style={{ width: '20px', height: '20px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-            ) : (
-              <Printer size={20} />
-            )}
-            {t.printPDF}
-          </button>
-
-          <button
-            onClick={handleCopyLink}
-            style={{
-              ...styles.button,
-              backgroundColor: linkCopied ? '#10b981' : '#6b7280',
-              color: 'white'
-            }}
-          >
-            {linkCopied ? <Check size={20} /> : <Copy size={20} />}
-            {linkCopied ? 'Copié!' : 'Copier Lien'}
-          </button>
-        </div>
-
-        {/* Section Partage */}
-        <div style={{ marginTop: '20px' }}>
-          <h3 style={{ color: '#d1d5db', fontSize: '16px', marginBottom: '16px' }}>{t.sharing}</h3>
+        try {
+          const permit = get().currentPermit;
+          const validation = get().validatePermitCompleteness();
           
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            {(['email', 'sms', 'whatsapp'] as const).map((method) => (
-              <button
-                key={method}
-                onClick={() => setSelectedShareMethod(method)}
-                style={{
-                  ...styles.button,
-                  backgroundColor: selectedShareMethod === method ? '#3b82f6' : '#4b5563',
-                  color: 'white',
-                  flex: currentIsMobile ? '1' : 'none'
-                }}
-              >
-                {method === 'email' && <Mail size={16} />}
-                {method === 'sms' && <Smartphone size={16} />}
-                {method === 'whatsapp' && <Share size={16} />}
-                {method === 'email' ? 'Email' : method === 'sms' ? 'SMS' : 'WhatsApp'}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={handleShare}
-            style={{
-              ...styles.button,
-              background: 'linear-gradient(135deg, #059669, #047857)',
-              color: 'white',
-              width: '100%'
-            }}
-          >
-            <Share size={20} />
-            {t.sharePermit} par {selectedShareMethod === 'email' ? 'Email' : selectedShareMethod === 'sms' ? 'SMS' : 'WhatsApp'}
-          </button>
-        </div>
-      </div>
-
-      {/* QR Code */}
-      {qrCodeUrl && (
-        <div style={styles.card}>
-          <h2 style={{
-            fontSize: currentIsMobile ? '18px' : '20px',
-            fontWeight: '600',
-            color: 'white',
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
-            <QrCode style={{ width: '24px', height: '24px', color: '#8b5cf6' }} />
-            {t.qrCode}
-          </h2>
+          // Mise à jour de la validation
+          permit.validation = {
+            isComplete: validation.isValid,
+            percentage: validation.percentage,
+            errors: validation.errors,
+            lastValidated: new Date().toISOString()
+          };
           
-          <div style={{ textAlign: 'center' }}>
-            <div style={{
-              display: 'inline-block',
-              padding: '20px',
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              marginBottom: '16px'
-            }}>
-              <img 
-                src={qrCodeUrl} 
-                alt="QR Code du permis" 
-                style={{ 
-                  width: currentIsMobile ? '200px' : '250px', 
-                  height: currentIsMobile ? '200px' : '250px',
-                  display: 'block'
-                }} 
-              />
-            </div>
-            <p style={{ color: '#d1d5db', fontSize: '14px', lineHeight: 1.5 }}>
-              📱 Scannez ce code QR pour accéder au permis depuis un appareil mobile
-            </p>
-          </div>
-        </div>
-      )}
-
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+          // Générer un numéro de permis si nécessaire
+          if (!permit.permit_number) {
+            permit.permit_number = generatePermitNumber(permit.province);
+          }
+          
+          // Sauvegarder dans Supabase si configuré, sinon localStorage
+          if (supabaseEnabled && supabase) {
+            try {
+              const { data, error } = await supabase
+                .from('confined_space_permits')
+                .upsert({
+                  permit_number: permit.permit_number,
+                  data: permit,
+                  updated_at: new Date().toISOString()
+                });
+                
+              if (error) throw error;
+              console.log('Permit sauvegardé dans Supabase');
+            } catch (supabaseError) {
+              console.error('Erreur Supabase, fallback vers localStorage:', supabaseError);
+              localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
+            }
+          } else {
+            // Fallback localStorage
+            localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
+            localStorage.setItem('currentPermit', JSON.stringify(permit));
+          }
+          
+          set({ 
+            currentPermit: permit,
+            lastSaved: new Date().toISOString(),
+            isSaving: false 
+          });
+          
+          return permit.permit_number;
+        } catch (error) {
+          console.error('Erreur sauvegarde:', error);
+          set({ isSaving: false });
+          return null;
         }
-      `}</style>
-    </div>
-  );
+      },
+
+      loadFromDatabase: async (permitNumber: string) => {
+        set({ isLoading: true });
+        
+        try {
+          // Essayer Supabase d'abord
+          if (supabaseEnabled && supabase) {
+            try {
+              const { data, error } = await supabase
+                .from('confined_space_permits')
+                .select('data')
+                .eq('permit_number', permitNumber)
+                .single();
+                
+              if (!error && data) {
+                set({ 
+                  currentPermit: data.data,
+                  isLoading: false 
+                });
+                return data.data;
+              }
+            } catch (supabaseError) {
+              console.error('Erreur chargement Supabase:', supabaseError);
+            }
+          }
+          
+          // Fallback localStorage
+          const storedPermit = localStorage.getItem(`permit_${permitNumber}`);
+          if (storedPermit) {
+            const permit = JSON.parse(storedPermit);
+            set({ 
+              currentPermit: permit,
+              isLoading: false 
+            });
+            return permit;
+          }
+          
+          set({ isLoading: false });
+          return null;
+        } catch (error) {
+          console.error('Erreur chargement:', error);
+          set({ isLoading: false });
+          return null;
+        }
+      },
+
+      loadPermitHistory: async () => {
+        try {
+          let permits: ConfinedSpacePermit[] = [];
+          
+          // Essayer Supabase d'abord
+          if (supabaseEnabled && supabase) {
+            try {
+              const { data, error } = await supabase
+                .from('confined_space_permits')
+                .select('data')
+                .order('updated_at', { ascending: false });
+                
+              if (!error && data) {
+                permits = data.map((item: any) => item.data);
+              }
+            } catch (supabaseError) {
+              console.error('Erreur historique Supabase:', supabaseError);
+            }
+          }
+          
+          // Fallback localStorage si pas de résultats Supabase
+          if (permits.length === 0) {
+            const currentPermit = get().currentPermit;
+            if (currentPermit.permit_number) {
+              permits = [currentPermit];
+            }
+          }
+          
+          set({ permits });
+          return permits;
+        } catch (error) {
+          console.error('Erreur historique:', error);
+          return [];
+        }
+      },
+
+      // =================== QR CODE ET PARTAGE ===================
+      generateQRCode: async () => {
+        const permit = get().currentPermit;
+        if (!permit.permit_number) {
+          throw new Error('Permit number required for QR code');
+        }
+        
+        const permitUrl = `${window.location.origin}/permits/confined-space/${permit.permit_number}`;
+        
+        // Utiliser une API QR Code
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(permitUrl)}`;
+        
+        return qrUrl;
+      },
+
+      generatePDF: async () => {
+        const permit = get().currentPermit;
+        
+        // Créer le contenu PDF
+        const pdfContent = `
+Permis d'Entrée en Espace Clos
+Numéro: ${permit.permit_number}
+Province: ${permit.province}
+Date: ${new Date(permit.created_at).toLocaleDateString()}
+
+Site Information:
+- Projet: ${permit.siteInformation.projectNumber}
+- Lieu: ${permit.siteInformation.workLocation}
+- Entrepreneur: ${permit.siteInformation.contractor}
+
+Validation: ${permit.validation.percentage}% complété
+        `;
+        
+        return new Blob([pdfContent], { type: 'application/pdf' });
+      },
+
+      sharePermit: async (method: 'email' | 'sms' | 'whatsapp') => {
+        const permit = get().currentPermit;
+        const permitUrl = `${window.location.origin}/permits/confined-space/${permit.permit_number}`;
+        
+        const message = `Permis d'espace clos ${permit.permit_number}\nLieu: ${permit.siteInformation.workLocation}\nAccès: ${permitUrl}`;
+        
+        switch (method) {
+          case 'email':
+            window.location.href = `mailto:?subject=Permis d'espace clos ${permit.permit_number}&body=${encodeURIComponent(message)}`;
+            break;
+          case 'sms':
+            window.location.href = `sms:?body=${encodeURIComponent(message)}`;
+            break;
+          case 'whatsapp':
+            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`);
+            break;
+        }
+      },
+
+      // =================== VALIDATION COMPLÈTE ===================
+      validatePermitCompleteness: () => {
+        const permit = get().currentPermit;
+        const errors: string[] = [];
+        let completedSections = 0;
+        const totalSections = 4;
+
+        // Validation Site Information
+        const siteInfo = permit.siteInformation;
+        let siteComplete = true;
+        
+        if (!siteInfo.projectNumber?.trim()) {
+          errors.push('Numéro de projet manquant');
+          siteComplete = false;
+        }
+        if (!siteInfo.workLocation?.trim()) {
+          errors.push('Lieu des travaux manquant');
+          siteComplete = false;
+        }
+        if (!siteInfo.contractor?.trim()) {
+          errors.push('Entrepreneur manquant');
+          siteComplete = false;
+        }
+        if (!siteInfo.supervisor?.trim()) {
+          errors.push('Superviseur manquant');
+          siteComplete = false;
+        }
+        if (!siteInfo.entryDate) {
+          errors.push('Date d\'entrée manquante');
+          siteComplete = false;
+        }
+        if (!siteInfo.spaceType) {
+          errors.push('Type d\'espace manquant');
+          siteComplete = false;
+        }
+        if (!siteInfo.csaClass) {
+          errors.push('Classification CSA manquante');
+          siteComplete = false;
+        }
+        if (siteInfo.dimensions?.volume === 0) {
+          errors.push('Volume doit être calculé');
+          siteComplete = false;
+        }
+        if (!siteInfo.entryPoints?.length) {
+          errors.push('Au moins un point d\'entrée requis');
+          siteComplete = false;
+        }
+        
+        if (siteComplete) completedSections++;
+
+        // Validation Atmospheric Testing
+        if (permit.atmosphericTesting?.readings?.length > 0) {
+          completedSections++;
+        } else {
+          errors.push('Tests atmosphériques manquants');
+        }
+
+        // Validation Entry Registry
+        if (permit.entryRegistry?.personnel?.length > 0) {
+          completedSections++;
+        } else {
+          errors.push('Personnel non défini');
+        }
+
+        // Validation Rescue Plan
+        if (permit.rescuePlan?.emergencyContacts?.length > 0) {
+          completedSections++;
+        } else {
+          errors.push('Plan de sauvetage incomplet');
+        }
+
+        const percentage = Math.round((completedSections / totalSections) * 100);
+        
+        return {
+          isValid: errors.length === 0,
+          percentage,
+          errors,
+          completedSections,
+          totalSections
+        };
+      },
+
+      validateSection: (section) => {
+        const permit = get().currentPermit;
+        const errors: string[] = [];
+        
+        switch (section) {
+          case 'siteInformation':
+            const siteInfo = permit.siteInformation;
+            if (!siteInfo.projectNumber) errors.push('Numéro de projet requis');
+            if (!siteInfo.workLocation) errors.push('Lieu de travail requis');
+            if (!siteInfo.contractor) errors.push('Entrepreneur requis');
+            break;
+          case 'atmosphericTesting':
+            if (!permit.atmosphericTesting.readings.length) errors.push('Lectures atmosphériques requises');
+            break;
+          case 'entryRegistry':
+            if (!permit.entryRegistry.personnel.length) errors.push('Personnel requis');
+            break;
+          case 'rescuePlan':
+            if (!permit.rescuePlan.emergencyContacts.length) errors.push('Contacts d\'urgence requis');
+            break;
+        }
+        
+        return {
+          isValid: errors.length === 0,
+          percentage: errors.length === 0 ? 100 : 0,
+          errors,
+          completedSections: errors.length === 0 ? 1 : 0,
+          totalSections: 1
+        };
+      },
+
+      // =================== UTILITAIRES ===================
+      createNewPermit: (province: ProvinceCode) => {
+        const newPermit = createEmptyPermit();
+        newPermit.province = province;
+        newPermit.permit_number = generatePermitNumber(province);
+        newPermit.created_at = new Date().toISOString();
+        set({ currentPermit: newPermit });
+      },
+
+      resetPermit: () => {
+        set({ currentPermit: createEmptyPermit() });
+      },
+
+      exportData: () => {
+        const permit = get().currentPermit;
+        return JSON.stringify(permit, null, 2);
+      },
+
+      importData: (jsonData: string) => {
+        try {
+          const permit = JSON.parse(jsonData);
+          set({ currentPermit: permit });
+        } catch (error) {
+          console.error('Erreur import:', error);
+        }
+      }
+    }),
+    {
+      name: 'safety-manager-storage',
+      partialize: (state) => ({
+        currentPermit: state.currentPermit,
+        permits: state.permits,
+        autoSaveEnabled: state.autoSaveEnabled,
+        lastSaved: state.lastSaved
+      })
+    }
+  )
+);
+
+// =================== HELPER FUNCTIONS FOR COMPONENTS ===================
+export const createConfinedSpacePermit = (province: ProvinceCode = 'QC'): ConfinedSpacePermit => {
+  const permit = createEmptyPermit();
+  permit.province = province;
+  permit.permit_number = generatePermitNumber(province);
+  return permit;
 };
 
-// =================== FONCTION UTILITAIRE ===================
-const getFieldCompletionPercentage = (obj: any, requiredFields: string[]): number => {
-  if (!obj) return 0;
-  const completedFields = requiredFields.filter(field => obj[field]).length;
-  return Math.round((completedFields / requiredFields.length) * 100);
+export const validatePermitSection = (permit: ConfinedSpacePermit, section: keyof ConfinedSpacePermit): ValidationResult => {
+  const errors: string[] = [];
+  
+  switch (section) {
+    case 'siteInformation':
+      const siteInfo = permit.siteInformation;
+      if (!siteInfo.projectNumber) errors.push('Numéro de projet requis');
+      if (!siteInfo.workLocation) errors.push('Lieu de travail requis');
+      if (!siteInfo.contractor) errors.push('Entrepreneur requis');
+      if (!siteInfo.supervisor) errors.push('Superviseur requis');
+      break;
+    case 'atmosphericTesting':
+      if (!permit.atmosphericTesting.readings.length) errors.push('Lectures atmosphériques requises');
+      break;
+    case 'entryRegistry':
+      if (!permit.entryRegistry.personnel.length) errors.push('Personnel requis');
+      break;
+    case 'rescuePlan':
+      if (!permit.rescuePlan.emergencyContacts.length) errors.push('Contacts d\'urgence requis');
+      break;
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    percentage: errors.length === 0 ? 100 : 0,
+    errors,
+    completedSections: errors.length === 0 ? 1 : 0,
+    totalSections: 1
+  };
 };
 
-export default PermitManager;
+export const generatePermitId = generateId;
+export const generateNewPermitNumber = generatePermitNumber;
