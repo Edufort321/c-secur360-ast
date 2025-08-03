@@ -1,4 +1,4 @@
-// AtmosphericTesting.tsx - PARTIE 1/2 - Version Refactorisée Compatible SafetyManager
+// AtmosphericTesting.tsx - Version Complète Corrigée Compatible SafetyManager
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -173,7 +173,24 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   onValidationChange
 }) => {
   // Accès direct aux données depuis permitData
-  const atmosphericData = permitData.atmosphericTesting;
+  const atmosphericData = permitData.atmosphericTesting || {
+    equipment: {
+      deviceModel: '',
+      serialNumber: '',
+      calibrationDate: '',
+      nextCalibration: ''
+    },
+    readings: [],
+    continuousMonitoring: false,
+    alarmSettings: {
+      oxygen: { min: 19.5, max: 23.0 },
+      combustibleGas: { max: 10 },
+      hydrogenSulfide: { max: 10 },
+      carbonMonoxide: { max: 35 }
+    },
+    lastUpdated: new Date().toISOString()
+  };
+
   const atmosphericReadings = atmosphericData.readings || [];
   
   // États locaux pour l'interface
@@ -202,21 +219,34 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
 
   const t = translations[language];
 
-  // =================== HANDLERS SAFETYMANAGER ===================
-const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingData>) => {
-  if (safetyManager) {
-    safetyManager.updateAtmosphericTesting(updates);
-  }
-  
-  if (onUpdate) {
-    onUpdate('atmosphericTesting', updates);
-  }
-    
-    if (onValidationChange) {
-      const validation = safetyManager.validateSection('atmosphericTesting');
-      onValidationChange(validation.isValid, validation.errors);
+  // =================== HANDLERS SAFETYMANAGER CORRIGÉS ===================
+  const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingData>) => {
+    // ✅ CORRECTION 1 : Vérification SafetyManager
+    if (safetyManager) {
+      try {
+        safetyManager.updateAtmosphericTesting(updates);
+      } catch (error) {
+        console.warn('SafetyManager updateAtmosphericTesting failed:', error);
+      }
     }
-  }, [safetyManager, onUpdate, onValidationChange]);
+    
+    if (onUpdate) {
+      onUpdate('atmosphericTesting', updates);
+    }
+    
+    // ✅ CORRECTION 2 : Vérification SafetyManager pour validation
+    if (onValidationChange && safetyManager) {
+      try {
+        const validation = safetyManager.validateSection('atmosphericTesting');
+        onValidationChange(validation.isValid, validation.errors);
+      } catch (error) {
+        console.warn('SafetyManager validateSection failed:', error);
+        // Fallback validation basique
+        const isValid = (updates.readings && updates.readings.length > 0) || atmosphericReadings.length > 0;
+        onValidationChange(isValid, isValid ? [] : ['Tests atmosphériques requis']);
+      }
+    }
+  }, [safetyManager, onUpdate, onValidationChange, atmosphericReadings.length]);
 
   const updateReadings = useCallback((newReadings: AtmosphericReading[]) => {
     updateAtmosphericData({ 
@@ -228,6 +258,10 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
   // =================== FONCTIONS UTILITAIRES ===================
   const validateAtmosphericValue = (type: keyof AtmosphericLimits, value: number): 'safe' | 'warning' | 'danger' => {
     const currentRegulations = regulations[selectedProvince];
+    if (!currentRegulations?.atmospheric_testing?.limits?.[type]) {
+      return 'safe'; // Fallback si pas de réglementation
+    }
+    
     const limits = currentRegulations.atmospheric_testing.limits[type];
     
     if (type === 'oxygen') {
@@ -296,8 +330,9 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
       interval = setInterval(() => {
         setContinuousTimer(prev => {
           if (prev <= 1) {
-            alert(`⏰ SURVEILLANCE CONTINUE: ${regulations[selectedProvince].atmospheric_testing.frequency_minutes} minutes écoulées. Nouveau test atmosphérique requis selon ${regulations[selectedProvince].code}!`);
-            return regulations[selectedProvince].atmospheric_testing.frequency_minutes * 60;
+            const frequencyMinutes = regulations[selectedProvince]?.atmospheric_testing?.frequency_minutes || 30;
+            alert(`⏰ SURVEILLANCE CONTINUE: ${frequencyMinutes} minutes écoulées. Nouveau test atmosphérique requis selon ${regulations[selectedProvince]?.code || 'réglementation'}!`);
+            return frequencyMinutes * 60;
           }
           return prev - 1;
         });
@@ -320,7 +355,8 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
 
   useEffect(() => {
     if (atmosphericReadings.length > 0 && !continuousActive) {
-      setContinuousTimer(regulations[selectedProvince].atmospheric_testing.frequency_minutes * 60);
+      const frequencyMinutes = regulations[selectedProvince]?.atmospheric_testing?.frequency_minutes || 30;
+      setContinuousTimer(frequencyMinutes * 60);
       setContinuousActive(true);
     }
   }, [atmosphericReadings.length, selectedProvince, regulations, continuousActive]);
@@ -400,16 +436,90 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
     } else {
       setIsMonitoring(true);
       setContinuousActive(true);
-      setContinuousTimer(regulations[selectedProvince].atmospheric_testing.frequency_minutes * 60);
+      const frequencyMinutes = regulations[selectedProvince]?.atmospheric_testing?.frequency_minutes || 30;
+      setContinuousTimer(frequencyMinutes * 60);
     }
   }, [isMonitoring, regulations, selectedProvince]);
 
   const updateEquipmentData = useCallback((field: string, value: any) => {
-    const updatedEquipment = { ...atmosphericData.equipment, [field]: value };
+    const currentEquipment = atmosphericData.equipment || {
+      deviceModel: '',
+      serialNumber: '',
+      calibrationDate: '',
+      nextCalibration: ''
+    };
+    const updatedEquipment = { ...currentEquipment, [field]: value };
     updateAtmosphericData({ equipment: updatedEquipment });
   }, [atmosphericData.equipment, updateAtmosphericData]);
-  // =================== SUITE DE LA PARTIE 1 ===================
-  // Ajoutez cette partie APRÈS la fin de updateEquipmentData dans la partie 1
+
+  // =================== HANDLERS POUR CHECKBOX AVEC SAFETYMANAGER ===================
+  const handleGasDetectorCalibrated = useCallback((checked: boolean) => {
+    updateAtmosphericData({ 
+      equipment: { 
+        ...atmosphericData.equipment, 
+        calibrationDate: atmosphericData.equipment?.calibrationDate || '',
+        serialNumber: atmosphericData.equipment?.serialNumber || '',
+        deviceModel: atmosphericData.equipment?.deviceModel || '',
+        nextCalibration: atmosphericData.equipment?.nextCalibration || ''
+      }
+    });
+    
+    // ✅ CORRECTION 3 : Vérification SafetyManager pour mise à jour permis
+    if (safetyManager) {
+      try {
+        const currentPermit = safetyManager.currentPermit;
+        const updatedPermit = { ...currentPermit, gas_detector_calibrated: checked };
+        safetyManager.resetPermit();
+        Object.assign(safetyManager.currentPermit, updatedPermit);
+      } catch (error) {
+        console.warn('SafetyManager permit update failed:', error);
+      }
+    }
+  }, [safetyManager, atmosphericData.equipment, updateAtmosphericData]);
+
+  const handleMultiLevelTestingCompleted = useCallback((checked: boolean) => {
+    // ✅ CORRECTION 4 : Vérification SafetyManager pour multi-level testing
+    if (safetyManager) {
+      try {
+        const currentPermit = safetyManager.currentPermit;
+        const updatedPermit = { ...currentPermit, multi_level_testing_completed: checked };
+        safetyManager.resetPermit();
+        Object.assign(safetyManager.currentPermit, updatedPermit);
+      } catch (error) {
+        console.warn('SafetyManager multi-level testing update failed:', error);
+      }
+    }
+  }, [safetyManager]);
+
+  const handleAtmosphericStabilityConfirmed = useCallback((checked: boolean) => {
+    // ✅ CORRECTION 5 : Vérification SafetyManager pour atmospheric stability
+    if (safetyManager) {
+      try {
+        const currentPermit = safetyManager.currentPermit;
+        const updatedPermit = { ...currentPermit, atmospheric_stability_confirmed: checked };
+        safetyManager.resetPermit();
+        Object.assign(safetyManager.currentPermit, updatedPermit);
+      } catch (error) {
+        console.warn('SafetyManager atmospheric stability update failed:', error);
+      }
+    }
+  }, [safetyManager]);
+
+  // =================== PROTECTION CONTRE REGULATIONS UNDEFINED ===================
+  const safeRegulations = regulations[selectedProvince] || {
+    name: 'Réglementation provinciale',
+    code: 'N/A',
+    authority: 'Autorité compétente',
+    atmospheric_testing: {
+      frequency_minutes: 30,
+      limits: {
+        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+        lel: { max: 10, critical: 25 },
+        h2s: { max: 10, critical: 15 },
+        co: { max: 35, critical: 100 }
+      }
+    }
+  };
 
   // =================== RENDU JSX PRINCIPAL ===================
   return (
@@ -450,7 +560,7 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
             margin: '0 0 12px 0',
             fontWeight: '600'
           }}>
-            🌬️ <strong>TESTS OBLIGATOIRES</strong> : Tests atmosphériques multi-niveaux requis avant entrée + surveillance continue selon {regulations[selectedProvince].code}.
+            🌬️ <strong>TESTS OBLIGATOIRES</strong> : Tests atmosphériques multi-niveaux requis avant entrée + surveillance continue selon {safeRegulations.code}.
           </p>
           <p style={{ 
             color: '#fca5a5', 
@@ -458,7 +568,7 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
             margin: 0,
             fontStyle: 'italic'
           }}>
-            ⏰ <strong>Fréquence réglementaire</strong> : Nouveau test toutes les {regulations[selectedProvince].atmospheric_testing.frequency_minutes} minutes + retest immédiat si valeurs critiques.
+            ⏰ <strong>Fréquence réglementaire</strong> : Nouveau test toutes les {safeRegulations.atmospheric_testing.frequency_minutes} minutes + retest immédiat si valeurs critiques.
           </p>
         </div>
         
@@ -511,22 +621,7 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
               type="checkbox"
               id="gas_detector_calibrated"
               checked={permitData.gas_detector_calibrated || false}
-              onChange={(e) => {
-                updateAtmosphericData({ 
-                  equipment: { 
-                    ...atmosphericData.equipment, 
-                    calibrationDate: atmosphericData.equipment?.calibrationDate || '',
-                    serialNumber: atmosphericData.equipment?.serialNumber || '',
-                    deviceModel: atmosphericData.equipment?.deviceModel || '',
-                    nextCalibration: atmosphericData.equipment?.nextCalibration || ''
-                  }
-                });
-                // Mettre à jour la propriété globale du permis
-                const currentPermit = safetyManager.currentPermit;
-                const updatedPermit = { ...currentPermit, gas_detector_calibrated: e.target.checked };
-                safetyManager.resetPermit();
-                Object.assign(safetyManager.currentPermit, updatedPermit);
-              }}
+              onChange={(e) => handleGasDetectorCalibrated(e.target.checked)}
               style={{
                 width: '24px',
                 height: '24px',
@@ -564,12 +659,7 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
             type="checkbox"
             id="multi_level_testing_completed"
             checked={permitData.multi_level_testing_completed || false}
-            onChange={(e) => {
-              const currentPermit = safetyManager.currentPermit;
-              const updatedPermit = { ...currentPermit, multi_level_testing_completed: e.target.checked };
-              safetyManager.resetPermit();
-              Object.assign(safetyManager.currentPermit, updatedPermit);
-            }}
+            onChange={(e) => handleMultiLevelTestingCompleted(e.target.checked)}
             style={{
               width: '24px',
               height: '24px',
@@ -604,12 +694,7 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
             type="checkbox"
             id="atmospheric_stability_confirmed"
             checked={permitData.atmospheric_stability_confirmed || false}
-            onChange={(e) => {
-              const currentPermit = safetyManager.currentPermit;
-              const updatedPermit = { ...currentPermit, atmospheric_stability_confirmed: e.target.checked };
-              safetyManager.resetPermit();
-              Object.assign(safetyManager.currentPermit, updatedPermit);
-            }}
+            onChange={(e) => handleAtmosphericStabilityConfirmed(e.target.checked)}
             style={{
               width: '24px',
               height: '24px',
@@ -627,7 +712,7 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
               flex: 1
             }}
           >
-            ✅ <strong>STABILITÉ ATMOSPHÉRIQUE</strong> : Je confirme que l'atmosphère est stable et conforme aux limites de {regulations[selectedProvince].authority} *
+            ✅ <strong>STABILITÉ ATMOSPHÉRIQUE</strong> : Je confirme que l'atmosphère est stable et conforme aux limites de {safeRegulations.authority} *
           </label>
         </div>
       </div>
@@ -636,7 +721,7 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
           <Shield style={{ width: '20px', height: '20px' }} />
-          {t.limits} - {regulations[selectedProvince].name}
+          {t.limits} - {safeRegulations.name}
           <span style={{
             fontSize: isMobile ? '12px' : '14px',
             backgroundColor: '#3b82f6',
@@ -645,12 +730,12 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
             borderRadius: '16px',
             fontWeight: '700'
           }}>
-            ⏱️ {regulations[selectedProvince].atmospheric_testing.frequency_minutes} min
+            ⏱️ {safeRegulations.atmospheric_testing.frequency_minutes} min
           </span>
         </h3>
         
         <div style={styles.grid4}>
-          {Object.entries(regulations[selectedProvince].atmospheric_testing.limits).map(([gas, limits]) => (
+          {Object.entries(safeRegulations.atmospheric_testing.limits).map(([gas, limits]) => (
             <div key={gas} style={{
               backgroundColor: 'rgba(17, 24, 39, 0.6)',
               borderRadius: '12px',
@@ -720,7 +805,7 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
             </button>
             <button
               onClick={() => {
-                setContinuousTimer(regulations[selectedProvince].atmospheric_testing.frequency_minutes * 60);
+                setContinuousTimer(safeRegulations.atmospheric_testing.frequency_minutes * 60);
                 setContinuousActive(true);
               }}
               style={{
@@ -794,7 +879,7 @@ const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingDa
               color: '#93c5fd',
               marginBottom: '8px'
             }}>
-              {regulations[selectedProvince].atmospheric_testing.frequency_minutes} min
+              {safeRegulations.atmospheric_testing.frequency_minutes} min
             </div>
             <div style={{ 
               color: '#93c5fd', 
