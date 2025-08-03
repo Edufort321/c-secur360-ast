@@ -134,6 +134,56 @@ interface PermitData {
   // Conformité (compatibilité avec SafetyManager)
   compliance?: Record<string, boolean>;
   
+  // Validation (compatibilité avec SafetyManager)
+  validation?: {
+    isValid?: boolean;
+    percentage?: number;
+    completedSections?: string[];
+    errors?: string[];
+    warnings?: string[];
+    lastValidated?: string;
+  };
+  
+  // Audit Trail (compatibilité avec SafetyManager)
+  auditTrail?: {
+    created?: {
+      timestamp?: string;
+      user?: string;
+      action?: string;
+    };
+    modified?: Array<{
+      timestamp?: string;
+      user?: string;
+      action?: string;
+      field?: string;
+      oldValue?: any;
+      newValue?: any;
+    }>;
+    approved?: {
+      timestamp?: string;
+      user?: string;
+      signature?: string;
+    };
+    archived?: {
+      timestamp?: string;
+      user?: string;
+      reason?: string;
+    };
+  };
+  
+  // Attachments (compatibilité avec SafetyManager)
+  attachments?: Array<{
+    id?: string;
+    name?: string;
+    type?: string;
+    size?: number;
+    url?: string;
+    uploadedAt?: string;
+    uploadedBy?: string;
+    category?: 'photo' | 'document' | 'certificate' | 'plan' | 'other';
+    description?: string;
+  }>;
+  
   // Propriétés héritées pour compatibilité
   projectNumber?: string;
   workLocation?: string;
