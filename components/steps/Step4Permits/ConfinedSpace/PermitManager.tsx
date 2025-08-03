@@ -1,4 +1,4 @@
-// PermitManager.tsx - Gestionnaire de Permis Compatible SafetyManager
+// PermitManager.tsx - Version Complète Corrigée Compatible SafetyManager
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -231,9 +231,51 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [currentView, setCurrentView] = useState<'main' | 'history' | 'database'>('main');
 
-  // Validation globale
-  const validation = safetyManager.validatePermitCompleteness();
-  const permit = permitData || safetyManager.currentPermit;
+  // ✅ CORRECTION 1 & 2 : Validation globale avec vérifications SafetyManager
+  const validation = React.useMemo(() => {
+    if (safetyManager) {
+      try {
+        return safetyManager.validatePermitCompleteness();
+      } catch (error) {
+        console.warn('SafetyManager validatePermitCompleteness failed:', error);
+        return { isValid: false, percentage: 0, errors: ['Erreur de validation'] };
+      }
+    }
+    // Fallback validation basique
+    return { isValid: false, percentage: 0, errors: ['SafetyManager non disponible'] };
+  }, [safetyManager]);
+
+  const permit = React.useMemo(() => {
+    if (permitData) {
+      return permitData;
+    }
+    if (safetyManager) {
+      try {
+        return safetyManager.currentPermit;
+      } catch (error) {
+        console.warn('SafetyManager currentPermit access failed:', error);
+        return {
+          permit_number: 'N/A',
+          siteInformation: {},
+          rescuePlan: {},
+          atmosphericTesting: {},
+          entryRegistry: {},
+          created_at: new Date().toISOString(),
+          last_modified: new Date().toISOString()
+        };
+      }
+    }
+    // Fallback permit vide
+    return {
+      permit_number: 'N/A',
+      siteInformation: {},
+      rescuePlan: {},
+      atmosphericTesting: {},
+      entryRegistry: {},
+      created_at: new Date().toISOString(),
+      last_modified: new Date().toISOString()
+    };
+  }, [permitData, safetyManager]);
 
   // =================== FONCTIONS UTILITAIRES ===================
   
@@ -247,7 +289,13 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   };
 
+  // ✅ CORRECTION 3 : Handler sauvegarde avec vérifications SafetyManager
   const handleSave = async () => {
+    if (!safetyManager) {
+      showNotification('SafetyManager non disponible', 'error');
+      return;
+    }
+
     try {
       const permitNumber = await safetyManager.saveToDatabase();
       if (permitNumber) {
@@ -264,7 +312,13 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   };
 
+  // ✅ CORRECTION 3 : Handler QR avec vérifications SafetyManager
   const handleGenerateQR = async () => {
+    if (!safetyManager) {
+      showNotification('SafetyManager non disponible', 'error');
+      return;
+    }
+
     setIsGeneratingQR(true);
     try {
       const qrUrl = await safetyManager.generateQRCode();
@@ -278,7 +332,13 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   };
 
+  // ✅ CORRECTION 3 : Handler PDF avec vérifications SafetyManager
   const handleGeneratePDF = async () => {
+    if (!safetyManager) {
+      showNotification('SafetyManager non disponible', 'error');
+      return;
+    }
+
     setIsGeneratingPDF(true);
     try {
       const pdfBlob = await safetyManager.generatePDF();
@@ -297,7 +357,13 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   };
 
+  // ✅ CORRECTION 3 : Handler partage avec vérifications SafetyManager
   const handleShare = async () => {
+    if (!safetyManager) {
+      showNotification('SafetyManager non disponible', 'error');
+      return;
+    }
+
     try {
       await safetyManager.sharePermit(selectedShareMethod);
       showNotification(t.emailSent, 'success');
@@ -320,9 +386,16 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   };
 
+  // ✅ CORRECTION 3 : Handler recherche avec vérifications SafetyManager
   const handleSearch = useCallback(async (query: string) => {
     if (query.trim().length < 2) {
       setSearchResults([]);
+      return;
+    }
+    
+    if (!safetyManager) {
+      setSearchResults([]);
+      showNotification('SafetyManager non disponible pour la recherche', 'warning');
       return;
     }
     
@@ -362,7 +435,13 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   }, [safetyManager, qrCodeUrl]);
 
+  // ✅ CORRECTION 3 : Handler chargement avec vérifications SafetyManager
   const handleLoadPermit = async (permitNumber: string) => {
+    if (!safetyManager) {
+      showNotification('SafetyManager non disponible', 'error');
+      return;
+    }
+
     try {
       await safetyManager.loadFromDatabase(permitNumber);
       setCurrentView('main');
@@ -370,6 +449,22 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     } catch (error) {
       console.error('Erreur chargement:', error);
       showNotification(`Erreur chargement ${permitNumber}`, 'error');
+    }
+  };
+
+  // ✅ CORRECTION 3 : Handler nouveau permis avec vérifications SafetyManager
+  const handleCreateNewPermit = () => {
+    if (!safetyManager) {
+      showNotification('SafetyManager non disponible', 'error');
+      return;
+    }
+
+    try {
+      safetyManager.createNewPermit(selectedProvince);
+      showNotification('Nouveau permis créé', 'success');
+    } catch (error) {
+      console.error('Erreur création permis:', error);
+      showNotification('Erreur création nouveau permis', 'error');
     }
   };
 
@@ -411,13 +506,18 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
   };
 
   const getPermitStatistics = () => {
+    // ✅ CORRECTION 3 : Vérifications SafetyManager pour lastSaved
+    const lastSaved = safetyManager?.lastSaved ? 
+      new Date(safetyManager.lastSaved).toLocaleString() : 
+      'Jamais';
+
     return {
       totalSections: 4,
       completedSections: getSectionValidation().filter(s => s.isComplete).length,
       totalPersonnel: permit.entryRegistry?.personnel?.length || 0,
       activeEntrants: permit.entryRegistry?.activeEntrants?.length || 0,
       atmosphericReadings: permit.atmosphericTesting?.readings?.length || 0,
-      lastSaved: safetyManager.lastSaved ? new Date(safetyManager.lastSaved).toLocaleString() : 'Jamais',
+      lastSaved,
       permitAge: permit.created_at ? Math.floor((Date.now() - new Date(permit.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0,
       hazardCount: (permit.siteInformation?.atmosphericHazards?.length || 0) + 
                    (permit.siteInformation?.physicalHazards?.length || 0),
@@ -429,10 +529,10 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
 
   // =================== EFFETS ===================
   useEffect(() => {
-    if (permit.permit_number && !qrCodeUrl) {
+    if (permit.permit_number && !qrCodeUrl && safetyManager) {
       handleGenerateQR();
     }
-  }, [permit.permit_number]);
+  }, [permit.permit_number, qrCodeUrl, safetyManager]);
 
   useEffect(() => {
     if (searchQuery.length >= 2) {
@@ -671,7 +771,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
             {t.searchDatabase}
           </button>
           <button
-            onClick={() => safetyManager.createNewPermit(selectedProvince)}
+            onClick={handleCreateNewPermit}
             style={{
               ...styles.button,
               background: 'linear-gradient(135deg, #10b981, #059669)',
@@ -834,28 +934,28 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
         <div style={styles.grid2}>
           <button
             onClick={handleSave}
-            disabled={safetyManager.isSaving}
+            disabled={!safetyManager || (safetyManager && safetyManager.isSaving)}
             style={{
               ...styles.button,
               ...styles.buttonSuccess,
-              opacity: safetyManager.isSaving ? 0.7 : 1
+              opacity: (!safetyManager || (safetyManager && safetyManager.isSaving)) ? 0.7 : 1
             }}
           >
-            {safetyManager.isSaving ? (
+            {safetyManager && safetyManager.isSaving ? (
               <div style={{ width: '20px', height: '20px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
             ) : (
               <Save size={20} />
             )}
-            {safetyManager.isSaving ? t.saving : t.savePermit}
+            {safetyManager && safetyManager.isSaving ? t.saving : t.savePermit}
           </button>
 
           <button
             onClick={handleGenerateQR}
-            disabled={isGeneratingQR}
+            disabled={isGeneratingQR || !safetyManager}
             style={{
               ...styles.button,
               ...styles.buttonPrimary,
-              opacity: isGeneratingQR ? 0.7 : 1
+              opacity: (isGeneratingQR || !safetyManager) ? 0.7 : 1
             }}
           >
             {isGeneratingQR ? (
@@ -868,11 +968,11 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
 
           <button
             onClick={handleGeneratePDF}
-            disabled={isGeneratingPDF}
+            disabled={isGeneratingPDF || !safetyManager}
             style={{
               ...styles.button,
               ...styles.buttonSecondary,
-              opacity: isGeneratingPDF ? 0.7 : 1
+              opacity: (isGeneratingPDF || !safetyManager) ? 0.7 : 1
             }}
           >
             {isGeneratingPDF ? (
@@ -922,11 +1022,13 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
 
           <button
             onClick={handleShare}
+            disabled={!safetyManager}
             style={{
               ...styles.button,
               background: 'linear-gradient(135deg, #059669, #047857)',
               color: 'white',
-              width: '100%'
+              width: '100%',
+              opacity: !safetyManager ? 0.7 : 1
             }}
           >
             <Share size={20} />
