@@ -1,3 +1,4 @@
+// RescuePlan.tsx - Version Complète Corrigée Compatible SafetyManager
 "use client";
 
 import React from 'react';
@@ -47,19 +48,78 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
 }) => {
   const currentIsMobile = propIsMobile || (typeof window !== 'undefined' && window.innerWidth < 768);
 
-  // =================== FONCTIONS UTILITAIRES ===================
-  const updatePermitData = (updates: any) => {
+  // =================== FONCTIONS UTILITAIRES CORRIGÉES ===================
+  // ✅ CORRECTION 1 : Handler updatePermitData avec vérifications SafetyManager
+  const updatePermitData = React.useCallback((updates: any) => {
+    // Vérification SafetyManager disponible
     if (safetyManager) {
       try {
         safetyManager.updateRescuePlan(updates);
       } catch (error) {
-        console.warn('SafetyManager update failed:', error);
+        console.warn('SafetyManager updateRescuePlan failed:', error);
       }
     }
-  };
+    
+    // Fallback : si pas de SafetyManager, log les données
+    if (!safetyManager) {
+      console.warn('SafetyManager non disponible pour updateRescuePlan:', updates);
+    }
+  }, [safetyManager]);
 
-  // Accéder aux données du plan de sauvetage
-  const rescueData = permitData?.rescuePlan || {};
+  // ✅ CORRECTION 2 : Accès sécurisé aux données rescueData avec fallbacks
+  const rescueData = React.useMemo(() => {
+    // Essai avec permitData fourni en props
+    if (permitData?.rescuePlan) {
+      return permitData.rescuePlan;
+    }
+    
+    // Essai avec SafetyManager currentPermit
+    if (safetyManager) {
+      try {
+        const currentPermit = safetyManager.currentPermit;
+        if (currentPermit?.rescuePlan) {
+          return currentPermit.rescuePlan;
+        }
+      } catch (error) {
+        console.warn('SafetyManager currentPermit.rescuePlan access failed:', error);
+      }
+    }
+    
+    // Fallback : objet vide avec structure par défaut
+    return {
+      rescue_plan_type: '',
+      rescue_plan_responsible: '',
+      rescue_team_phone: '',
+      rescue_response_time: '',
+      rescue_plan: '',
+      rescue_equipment: {},
+      rescue_equipment_validated: false,
+      rescue_steps: [],
+      rescue_team_certifications: {
+        csa_z1006_certified: false,
+        certification_expiry: '',
+        first_aid_level2: false,
+        cpr_certified: false,
+        rescue_training_hours: 0
+      },
+      equipment_certifications: {
+        harness_inspection_date: '',
+        scba_certification: '',
+        mechanical_recovery_cert: '',
+        last_equipment_inspection: '',
+        equipment_serial_numbers: []
+      },
+      rescue_training: {},
+      annual_drill_required: false,
+      last_effectiveness_test: '',
+      regulatory_compliance_verified: false,
+      response_time_verified: false,
+      last_drill_date: '',
+      drill_results: '',
+      drill_notes: '',
+      rescue_plan_validated: false
+    };
+  }, [permitData, safetyManager]);
 
   // =================== TRADUCTIONS ===================
   const getTexts = (language: 'fr' | 'en') => ({
@@ -161,7 +221,6 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
 
   const texts = getTexts(language);
 
-// =================== LA SUITE DANS LA PARTIE 2 ===================
   // =================== RENDU PRINCIPAL ===================
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: currentIsMobile ? '20px' : '28px' }}>
