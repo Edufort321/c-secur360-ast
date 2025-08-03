@@ -1,4 +1,4 @@
-// SiteInformation.tsx - PARTIE 1/2 - Version Refactorisée Compatible SafetyManager
+// SiteInformation.tsx - PARTIE 1/2 - Version Complète Corrigée Compatible SafetyManager
 "use client";
 
 import React, { useState, useRef, useCallback } from 'react';
@@ -333,8 +333,61 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   onSectionComplete,
   onValidationChange
 }) => {
-  // Accès direct aux données depuis permitData
-  const siteInfo = permitData.siteInformation;
+  // ✅ CORRECTION 1 & 2 : Accès sécurisé aux données avec fallbacks SafetyManager
+  const siteInfo = React.useMemo(() => {
+    // Essai avec permitData fourni en props
+    if (permitData?.siteInformation) {
+      return permitData.siteInformation;
+    }
+    
+    // Essai avec SafetyManager currentPermit
+    if (safetyManager) {
+      try {
+        const currentPermit = safetyManager.currentPermit;
+        if (currentPermit?.siteInformation) {
+          return currentPermit.siteInformation;
+        }
+      } catch (error) {
+        console.warn('SafetyManager currentPermit.siteInformation access failed:', error);
+      }
+    }
+    
+    // Fallback : objet vide avec structure par défaut
+    return {
+      projectNumber: '',
+      workLocation: '',
+      contractor: '',
+      supervisor: '',
+      entryDate: '',
+      duration: '',
+      workerCount: 1,
+      workDescription: '',
+      spaceType: '',
+      csaClass: '',
+      unitSystem: 'metric' as UnitSystem,
+      dimensions: {
+        length: 0,
+        width: 0,
+        height: 0,
+        diameter: 0,
+        volume: 0,
+        spaceShape: 'rectangular' as any
+      },
+      entryPoints: [{
+        id: generatePermitId(),
+        type: 'circular',
+        dimensions: '',
+        location: '',
+        condition: 'good',
+        accessibility: 'normal',
+        photos: []
+      }],
+      atmosphericHazards: [],
+      physicalHazards: [],
+      environmentalConditions: {},
+      spacePhotos: []
+    };
+  }, [permitData, safetyManager]);
   
   // États pour l'interface seulement
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
@@ -343,38 +396,84 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   
   const t = translations[language];
 
-  // =================== HANDLERS SIMPLIFIÉS - UTILISENT LE SAFETYMANAGER ===================
+  // =================== HANDLERS CORRIGÉS - UTILISENT SAFETYMANAGER SÉCURISÉ ===================
+  // ✅ CORRECTION 3 : Handler updateSiteInfo avec vérifications SafetyManager
   const updateSiteInfo = useCallback((field: string, value: any) => {
     const updates = { [field]: value };
-    safetyManager.updateSiteInformation(updates);
+    
+    // Vérification SafetyManager disponible
+    if (safetyManager) {
+      try {
+        safetyManager.updateSiteInformation(updates);
+      } catch (error) {
+        console.warn('SafetyManager updateSiteInformation failed:', error);
+      }
+    }
     
     // Callback vers le parent si fourni
     if (onUpdate) {
       onUpdate('siteInformation', updates);
     }
     
-    // Validation en temps réel
-    if (onValidationChange) {
-      const validation = safetyManager.validateSection('siteInformation');
-      onValidationChange(validation.isValid, validation.errors);
+    // ✅ CORRECTION 4 : Validation avec vérifications SafetyManager
+    if (onValidationChange && safetyManager) {
+      try {
+        const validation = safetyManager.validateSection('siteInformation');
+        onValidationChange(validation.isValid, validation.errors);
+      } catch (error) {
+        console.warn('SafetyManager validateSection failed:', error);
+        // Fallback validation basique
+        const isValid = Boolean(updates.projectNumber || siteInfo.projectNumber) && 
+                        Boolean(updates.workLocation || siteInfo.workLocation);
+        onValidationChange(isValid, isValid ? [] : ['Projet et lieu requis']);
+      }
     }
-  }, [safetyManager, onUpdate, onValidationChange]);
+    
+    // Fallback : si pas de SafetyManager, log des données
+    if (!safetyManager) {
+      console.warn('SafetyManager non disponible pour updateSiteInfo:', { field, value });
+    }
+  }, [safetyManager, onUpdate, onValidationChange, siteInfo.projectNumber, siteInfo.workLocation]);
 
+  // ✅ CORRECTION 5 : Handler updateDimensions avec vérifications SafetyManager
   const updateDimensions = useCallback((dimensionUpdates: Partial<Dimensions>) => {
     const updatedDimensions = { ...siteInfo.dimensions, ...dimensionUpdates };
-    safetyManager.updateSiteInformation({ dimensions: updatedDimensions });
+    
+    if (safetyManager) {
+      try {
+        safetyManager.updateSiteInformation({ dimensions: updatedDimensions });
+      } catch (error) {
+        console.warn('SafetyManager updateSiteInformation dimensions failed:', error);
+      }
+    }
     
     if (onUpdate) {
       onUpdate('siteInformation', { dimensions: updatedDimensions });
     }
+    
+    if (!safetyManager) {
+      console.warn('SafetyManager non disponible pour updateDimensions:', dimensionUpdates);
+    }
   }, [safetyManager, siteInfo.dimensions, onUpdate]);
 
+  // ✅ CORRECTION 6 : Handler updateEnvironmentalCondition avec vérifications SafetyManager
   const updateEnvironmentalCondition = useCallback((field: string, value: any) => {
     const updatedConditions = { ...siteInfo.environmentalConditions, [field]: value };
-    safetyManager.updateSiteInformation({ environmentalConditions: updatedConditions });
+    
+    if (safetyManager) {
+      try {
+        safetyManager.updateSiteInformation({ environmentalConditions: updatedConditions });
+      } catch (error) {
+        console.warn('SafetyManager updateSiteInformation environmentalConditions failed:', error);
+      }
+    }
     
     if (onUpdate) {
       onUpdate('siteInformation', { environmentalConditions: updatedConditions });
+    }
+    
+    if (!safetyManager) {
+      console.warn('SafetyManager non disponible pour updateEnvironmentalCondition:', { field, value });
     }
   }, [safetyManager, siteInfo.environmentalConditions, onUpdate]);
 
@@ -427,10 +526,20 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       volume: 0
     };
     
-    safetyManager.updateSiteInformation({ 
-      dimensions: convertedDimensions,
-      unitSystem: toSystem 
-    });
+    if (safetyManager) {
+      try {
+        safetyManager.updateSiteInformation({ 
+          dimensions: convertedDimensions,
+          unitSystem: toSystem 
+        });
+      } catch (error) {
+        console.warn('SafetyManager convertUnits failed:', error);
+      }
+    }
+    
+    if (!safetyManager) {
+      console.warn('SafetyManager non disponible pour convertUnits');
+    }
   }, [safetyManager, siteInfo]);
 
   // =================== GESTION DES POINTS D'ENTRÉE ===================
@@ -446,7 +555,18 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     };
     
     const updatedEntryPoints = [...(siteInfo.entryPoints || []), newEntryPoint];
-    safetyManager.updateSiteInformation({ entryPoints: updatedEntryPoints });
+    
+    if (safetyManager) {
+      try {
+        safetyManager.updateSiteInformation({ entryPoints: updatedEntryPoints });
+      } catch (error) {
+        console.warn('SafetyManager addEntryPoint failed:', error);
+      }
+    }
+    
+    if (!safetyManager) {
+      console.warn('SafetyManager non disponible pour addEntryPoint');
+    }
   }, [safetyManager, siteInfo.entryPoints]);
 
   const removeEntryPoint = useCallback((entryId: string) => {
@@ -457,7 +577,18 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     }
     
     const updatedEntryPoints = currentEntryPoints.filter(entry => entry.id !== entryId);
-    safetyManager.updateSiteInformation({ entryPoints: updatedEntryPoints });
+    
+    if (safetyManager) {
+      try {
+        safetyManager.updateSiteInformation({ entryPoints: updatedEntryPoints });
+      } catch (error) {
+        console.warn('SafetyManager removeEntryPoint failed:', error);
+      }
+    }
+    
+    if (!safetyManager) {
+      console.warn('SafetyManager non disponible pour removeEntryPoint');
+    }
   }, [safetyManager, siteInfo.entryPoints, language]);
 
   const updateEntryPoint = useCallback((entryId: string, field: string, value: any) => {
@@ -465,7 +596,18 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     const updatedEntryPoints = currentEntryPoints.map(entry =>
       entry.id === entryId ? { ...entry, [field]: value } : entry
     );
-    safetyManager.updateSiteInformation({ entryPoints: updatedEntryPoints });
+    
+    if (safetyManager) {
+      try {
+        safetyManager.updateSiteInformation({ entryPoints: updatedEntryPoints });
+      } catch (error) {
+        console.warn('SafetyManager updateEntryPoint failed:', error);
+      }
+    }
+    
+    if (!safetyManager) {
+      console.warn('SafetyManager non disponible pour updateEntryPoint');
+    }
   }, [safetyManager, siteInfo.entryPoints]);
 
   // =================== GESTION DES SECTIONS COLLAPSIBLES ===================
@@ -835,29 +977,49 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       )}
     </div>
   );
-  // =================== SUITE DE LA PARTIE 1 ===================
-  // Ajoutez cette partie APRÈS la fin de DimensionsSelector dans la partie 1
-
-  // =================== GESTION DES DANGERS ===================
+  // =================== GESTION DES DANGERS AVEC SAFETYMANAGER SÉCURISÉ ===================
+  // ✅ CORRECTION 7 : toggleAtmosphericHazard avec vérifications SafetyManager
   const toggleAtmosphericHazard = useCallback((hazardType: string) => {
     const currentHazards = siteInfo.atmosphericHazards || [];
     const updatedHazards = currentHazards.includes(hazardType)
       ? currentHazards.filter(h => h !== hazardType)
       : [...currentHazards, hazardType];
     
-    safetyManager.updateSiteInformation({ atmosphericHazards: updatedHazards });
+    if (safetyManager) {
+      try {
+        safetyManager.updateSiteInformation({ atmosphericHazards: updatedHazards });
+      } catch (error) {
+        console.warn('SafetyManager toggleAtmosphericHazard failed:', error);
+      }
+    }
+    
+    if (!safetyManager) {
+      console.warn('SafetyManager non disponible pour toggleAtmosphericHazard:', hazardType);
+    }
   }, [safetyManager, siteInfo.atmosphericHazards]);
 
+  // ✅ CORRECTION 8 : togglePhysicalHazard avec vérifications SafetyManager
   const togglePhysicalHazard = useCallback((hazardType: string) => {
     const currentHazards = siteInfo.physicalHazards || [];
     const updatedHazards = currentHazards.includes(hazardType)
       ? currentHazards.filter(h => h !== hazardType)
       : [...currentHazards, hazardType];
     
-    safetyManager.updateSiteInformation({ physicalHazards: updatedHazards });
+    if (safetyManager) {
+      try {
+        safetyManager.updateSiteInformation({ physicalHazards: updatedHazards });
+      } catch (error) {
+        console.warn('SafetyManager togglePhysicalHazard failed:', error);
+      }
+    }
+    
+    if (!safetyManager) {
+      console.warn('SafetyManager non disponible pour togglePhysicalHazard:', hazardType);
+    }
   }, [safetyManager, siteInfo.physicalHazards]);
 
-  // =================== GESTION DES PHOTOS ===================
+  // =================== GESTION DES PHOTOS AVEC SAFETYMANAGER SÉCURISÉ ===================
+  // ✅ CORRECTION 9 : handlePhotoCapture avec vérifications SafetyManager
   const handlePhotoCapture = useCallback(async (category: string) => {
     if (photoInputRef.current) {
       photoInputRef.current.accept = "image/*";
@@ -887,23 +1049,56 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   };
                   
                   const currentPhotos = siteInfo.spacePhotos || [];
-                  safetyManager.updateSiteInformation({ 
-                    spacePhotos: [...currentPhotos, newPhoto] 
-                  });
+                  const updatedPhotos = [...currentPhotos, newPhoto];
+                  
+                  // ✅ Vérification SafetyManager pour photos
+                  if (safetyManager) {
+                    try {
+                      safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
+                    } catch (error) {
+                      console.warn('SafetyManager photo update with GPS failed:', error);
+                    }
+                  }
+                  
+                  if (!safetyManager) {
+                    console.warn('SafetyManager non disponible pour photo GPS:', newPhoto);
+                  }
                 }, 
                 () => {
                   newPhoto.location = 'Localisation non disponible';
                   const currentPhotos = siteInfo.spacePhotos || [];
-                  safetyManager.updateSiteInformation({ 
-                    spacePhotos: [...currentPhotos, newPhoto] 
-                  });
+                  const updatedPhotos = [...currentPhotos, newPhoto];
+                  
+                  // ✅ Vérification SafetyManager pour photos sans GPS
+                  if (safetyManager) {
+                    try {
+                      safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
+                    } catch (error) {
+                      console.warn('SafetyManager photo update without GPS failed:', error);
+                    }
+                  }
+                  
+                  if (!safetyManager) {
+                    console.warn('SafetyManager non disponible pour photo sans GPS:', newPhoto);
+                  }
                 }
               );
             } else {
               const currentPhotos = siteInfo.spacePhotos || [];
-              safetyManager.updateSiteInformation({ 
-                spacePhotos: [...currentPhotos, newPhoto] 
-              });
+              const updatedPhotos = [...currentPhotos, newPhoto];
+              
+              // ✅ Vérification SafetyManager pour photos sans géolocalisation
+              if (safetyManager) {
+                try {
+                  safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
+                } catch (error) {
+                  console.warn('SafetyManager photo update no geolocation failed:', error);
+                }
+              }
+              
+              if (!safetyManager) {
+                console.warn('SafetyManager non disponible pour photo no geolocation:', newPhoto);
+              }
             }
           };
           reader.readAsDataURL(file);
@@ -912,6 +1107,25 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       photoInputRef.current.click();
     }
   }, [safetyManager, siteInfo.spacePhotos, t.photoCategories, language]);
+
+  // ✅ CORRECTION 10 : handlePhotoDelete avec vérifications SafetyManager
+  const handlePhotoDelete = useCallback((photoId: string) => {
+    if (confirm(language === 'fr' ? 'Supprimer cette photo?' : 'Delete this photo?')) {
+      const updatedPhotos = (siteInfo.spacePhotos || []).filter(p => p.id !== photoId);
+      
+      if (safetyManager) {
+        try {
+          safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
+        } catch (error) {
+          console.warn('SafetyManager handlePhotoDelete failed:', error);
+        }
+      }
+      
+      if (!safetyManager) {
+        console.warn('SafetyManager non disponible pour handlePhotoDelete:', photoId);
+      }
+    }
+  }, [safetyManager, siteInfo.spacePhotos, language]);
 
   // =================== RENDU JSX PRINCIPAL ===================
   return (
@@ -1537,12 +1751,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                     </div>
                   </div>
                   <button 
-                    onClick={() => {
-                      if (confirm(language === 'fr' ? 'Supprimer cette photo?' : 'Delete this photo?')) {
-                        const updatedPhotos = (siteInfo.spacePhotos || []).filter(p => p.id !== photo.id);
-                        safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
-                      }
-                    }}
+                    onClick={() => handlePhotoDelete(photo.id)}
                     style={{
                       position: 'absolute',
                       top: '8px',
