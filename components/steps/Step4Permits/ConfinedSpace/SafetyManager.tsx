@@ -117,6 +117,9 @@ export interface ConfinedSpacePermit {
   test_results_signed?: boolean;
   qualified_tester_name?: string;
   
+  // Conformité générale (ajouté pour EntryRegistry)
+  compliance?: Record<string, boolean>;
+  
   // Métadonnées de validation
   validation: {
     isComplete: boolean;
@@ -273,6 +276,10 @@ export interface EntryRegistryData {
   maxOccupancy: number;
   communicationProtocol: CommunicationProtocol;
   lastUpdated: string;
+  
+  // Propriétés additionnelles pour EntryRegistry
+  equipment?: any;
+  compliance?: Record<string, boolean>;
 }
 
 export interface PersonnelEntry {
@@ -570,7 +577,9 @@ function createEmptyPermit(): ConfinedSpacePermit {
         frequency: '',
         checkInterval: 15
       },
-      lastUpdated: now
+      lastUpdated: now,
+      equipment: [],
+      compliance: {}
     },
     
     rescuePlan: {
@@ -587,6 +596,9 @@ function createEmptyPermit(): ConfinedSpacePermit {
       communicationPlan: '',
       lastUpdated: now
     },
+    
+    // Conformité générale
+    compliance: {},
     
     validation: {
       isComplete: false,
@@ -848,13 +860,13 @@ export const useSafetyManager = create<SafetyManagerState>()(
       },
 
       updateEquipment: (equipment) => {
-        // Stocker les équipements dans une propriété personnalisée
+        // Stocker les équipements dans la propriété equipment de entryRegistry
         set((state) => {
           const updatedPermit = {
             ...state.currentPermit,
             entryRegistry: {
               ...state.currentPermit.entryRegistry,
-              equipment: equipment, // Nouvelle propriété
+              equipment: equipment,
               lastUpdated: new Date().toISOString()
             },
             last_modified: new Date().toISOString()
@@ -868,10 +880,18 @@ export const useSafetyManager = create<SafetyManagerState>()(
         });
       },
 
-      updateCompliance: (key, value) => {
+      // =================== CORRECTION UPDATECOMPLIANCE ===================
+      updateCompliance: (key: string, value: boolean) => {
         set((state) => {
+          // Créer un nouvel objet compliance ou utiliser l'existant
+          const currentCompliance = state.currentPermit.compliance || {};
+          
           const updatedPermit = {
             ...state.currentPermit,
+            compliance: {
+              ...currentCompliance,
+              [key]: value
+            },
             entryRegistry: {
               ...state.currentPermit.entryRegistry,
               compliance: {
