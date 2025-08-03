@@ -1030,7 +1030,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       
       // Propriétés optionnelles préservées
       id: permitData.id,
-      last_modified: permitData.last_modified,
+      last_modified: permitData.last_modified || new Date().toISOString(),
       selected_province: permitData.selected_province,
       projectNumber: permitData.projectNumber,
       workLocation: permitData.workLocation,
