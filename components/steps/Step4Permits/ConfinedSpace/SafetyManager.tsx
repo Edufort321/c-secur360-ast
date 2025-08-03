@@ -327,6 +327,43 @@ export interface RescuePlanData {
   hospitalInfo: HospitalInfo;
   communicationPlan: string;
   lastUpdated: string;
+  
+  // Propriétés additionnelles pour RescuePlan
+  rescue_plan_type?: string;
+  rescue_plan_responsible?: string;
+  rescue_team_phone?: string;
+  rescue_response_time?: string;
+  rescue_plan?: string;
+  rescue_equipment?: Record<string, boolean>;
+  rescue_equipment_validated?: boolean;
+  rescue_steps?: Array<{
+    id: number;
+    step: number;
+    description: string;
+  }>;
+  rescue_team_certifications?: {
+    csa_z1006_certified?: boolean;
+    certification_expiry?: string;
+    first_aid_level2?: boolean;
+    cpr_certified?: boolean;
+    rescue_training_hours?: number;
+    response_time_verified?: boolean;
+  };
+  equipment_certifications?: {
+    harness_inspection_date?: string;
+    scba_certification?: string;
+    mechanical_recovery_cert?: string;
+    last_equipment_inspection?: string;
+    equipment_serial_numbers?: string[];
+  };
+  annual_drill_required?: boolean;
+  last_effectiveness_test?: string;
+  regulatory_compliance_verified?: boolean;
+  rescue_training?: Record<string, boolean>;
+  last_drill_date?: string;
+  drill_results?: string;
+  drill_notes?: string;
+  rescue_plan_validated?: boolean;
 }
 
 export interface EmergencyContact {
