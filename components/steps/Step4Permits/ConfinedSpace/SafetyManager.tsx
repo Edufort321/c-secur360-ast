@@ -368,7 +368,7 @@ export interface EntryRegistryData {
   communicationProtocol: CommunicationProtocol;
   lastUpdated: string;
   
-  // Propriétés additionnelles pour EntryRegistry
+  // Propriétés additionnelles pour EntryRegistry (COMPATIBILITÉ BUILD)
   equipment?: any[];
   compliance?: Record<string, boolean>;
   supervisor?: {
@@ -376,6 +376,27 @@ export interface EntryRegistryData {
     certification: string;
     contact: string;
   };
+  
+  // Propriétés manquantes utilisées dans EntryRegistry.tsx
+  attendantPresent?: boolean;
+  entryAuthorized?: boolean;
+  emergencyProcedures?: boolean;
+  communicationEstablished?: boolean;
+  rescueTeamNotified?: boolean;
+  atmosphericTestingCurrent?: boolean;
+  equipmentInspected?: boolean;
+  safetyBriefingCompleted?: boolean;
+  permitReviewed?: boolean;
+  hazardsIdentified?: boolean;
+  controlMeasuresImplemented?: boolean;
+  emergencyEquipmentAvailable?: boolean;
+  
+  // Autres propriétés potentielles
+  entryDateTime?: string;
+  exitDateTime?: string;
+  workDescription?: string;
+  notes?: string;
+  emergencyContacts?: EmergencyContact[];
 }
 
 export interface EntryLogEntry {
@@ -653,7 +674,20 @@ function createEmptyPermit(): ConfinedSpacePermit {
         name: '',
         certification: '',
         contact: ''
-      }
+      },
+      // Valeurs par défaut pour les propriétés manquantes
+      attendantPresent: false,
+      entryAuthorized: false,
+      emergencyProcedures: false,
+      communicationEstablished: false,
+      rescueTeamNotified: false,
+      atmosphericTestingCurrent: false,
+      equipmentInspected: false,
+      safetyBriefingCompleted: false,
+      permitReviewed: false,
+      hazardsIdentified: false,
+      controlMeasuresImplemented: false,
+      emergencyEquipmentAvailable: false
     },
     
     rescuePlan: {
