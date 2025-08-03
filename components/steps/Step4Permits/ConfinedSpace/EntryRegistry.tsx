@@ -35,7 +35,7 @@ function ensureBoolean(value: boolean | undefined, defaultValue: boolean = false
 interface EntryLog {
   id: string;
   timestamp: string;
-  action: 'entry' | 'exit' | 'emergency_exit' | 'status_check';
+  action: 'entry' | 'exit' | 'emergency_exit'; // ✅ CORRECTION: Aligné avec EntryLogEntry du SafetyManager
   // Propriétés requises par EntryLogEntry du SafetyManager
   personnelId: string; // ✅ REQUIS pour compatibilité SafetyManager
   authorizedBy: string; // ✅ REQUIS pour compatibilité SafetyManager
@@ -50,6 +50,23 @@ interface EntryLog {
     h2s: number;
     co: number;
   };
+  communication_verified: boolean;
+  equipment_verified: boolean;
+  notes?: string;
+  emergency?: boolean;
+}
+
+// Type séparé pour les vérifications de communication (non sauvegardé dans SafetyManager)
+interface CommunicationCheckLog {
+  id: string;
+  timestamp: string;
+  action: 'status_check'; // Type spécifique pour communication
+  personnelId: string;
+  authorizedBy: string;
+  person_id: string;
+  person_name: string;
+  role: SafetyRole;
+  location: string;
   communication_verified: boolean;
   equipment_verified: boolean;
   notes?: string;
@@ -223,6 +240,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   // États monitoring personnel
   const [personnelStatuses, setPersonnelStatuses] = useState<PersonnelStatus[]>([]);
   const [communicationLogs, setCommunicationLogs] = useState<CommunicationLog[]>([]);
+  const [localCommunicationChecks, setLocalCommunicationChecks] = useState<CommunicationCheckLog[]>([]); // ✅ Logs locaux pour communication
 
   const t = translations[language];
 
@@ -717,13 +735,13 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     );
     setPersonnelStatuses(updatedStatuses);
 
-    // Log dans l'entrée registry
-    const statusLog: EntryLog = {
+    // Log dans l'entrée registry (communication check séparé)
+    const statusLog: CommunicationCheckLog = {
       id: generatePermitId(),
       timestamp: now,
       action: 'status_check',
-      personnelId: communicationCheck.person_id, // ✅ REQUIS pour SafetyManager
-      authorizedBy: 'Surveillant', // ✅ REQUIS pour SafetyManager
+      personnelId: communicationCheck.person_id,
+      authorizedBy: 'Surveillant',
       person_id: communicationCheck.person_id,
       person_name: person.name,
       role: person.role,
@@ -734,7 +752,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       notes: `Communication ${communicationCheck.communication_type} - Signal: ${communicationCheck.signal_strength}/5 ${communicationCheck.emergency_indicated ? ' - URGENCE SIGNALÉE' : ''}`
     };
 
-    updateEntryLogs([...entryLogs, statusLog]);
+    // Ajouter aux logs locaux de communication (pas dans SafetyManager)
+    setLocalCommunicationChecks(prev => [...prev, statusLog]);
 
     // Reset form
     setCommunicationCheck({
@@ -1648,10 +1667,10 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
           <History style={{ width: '20px', height: '20px' }} />
-          {t.entryLog} ({entryLogs.length})
+          {t.entryLog} ({entryLogs.length + localCommunicationChecks.length})
         </h3>
         
-        {entryLogs.length === 0 ? (
+        {(entryLogs.length + localCommunicationChecks.length) === 0 ? (
           <div style={{ 
             textAlign: 'center', 
             padding: isMobile ? '32px 20px' : '48px 32px', 
@@ -1682,7 +1701,10 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             overflowY: 'auto',
             paddingRight: '8px'
           }}>
-            {entryLogs.slice().reverse().map((log) => {
+            {/* Combiner et trier tous les logs par timestamp */}
+            {[...entryLogs, ...localCommunicationChecks]
+              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+              .map((log) => {
               const actionColor = log.action === 'entry' ? '#10b981' :
                                 log.action === 'exit' ? '#f59e0b' :
                                 log.action === 'emergency_exit' ? '#ef4444' :
