@@ -1047,7 +1047,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
     const commonProps: ConfinedSpaceComponentProps = {
       language,
-      permitData: compatiblePermitData,
+      permitData: compatiblePermitData as any, // Cast agressif pour compatibilité
       selectedProvince,
       regulations: actualRegulations,
       isMobile: actualIsMobile,
