@@ -79,7 +79,7 @@ export interface ConfinedSpaceComponentProps {
   customValidators?: any[];
   theme?: 'dark' | 'light';
   
-  // Callbacks standardisés
+  // Callbacks standardisés (TYPE FIXES POUR BUILD)
   onUpdate?: (section: string, data: any) => void;
   onSectionComplete?: (sectionData: any) => void;
   onValidationChange?: (isValid: boolean, errors: string[]) => void;
@@ -134,9 +134,9 @@ export interface SafetyManagerInstance {
   updateEntryRegistry: (data: Partial<EntryRegistryData>) => void;
   updateRescuePlan: (data: Partial<RescuePlanData>) => void;
   
-  // Méthodes pour EntryRegistry
+  // Méthodes pour EntryRegistry (COMPATIBILITÉ BUILD ASSURÉE)
   updateRegistryData: (data: any) => void;
-  updatePersonnel: (person: any) => void;
+  updatePersonnel: (person: PersonnelEntry) => void;
   updateEquipment: (equipment: any) => void;
   updateCompliance: (key: string, value: boolean) => void;
   recordEntryExit: (personId: string, action: 'entry' | 'exit') => void;
