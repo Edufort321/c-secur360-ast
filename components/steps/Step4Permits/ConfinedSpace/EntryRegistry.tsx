@@ -241,6 +241,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   const [personnelStatuses, setPersonnelStatuses] = useState<PersonnelStatus[]>([]);
   const [communicationLogs, setCommunicationLogs] = useState<CommunicationLog[]>([]);
   const [localCommunicationChecks, setLocalCommunicationChecks] = useState<CommunicationCheckLog[]>([]); // ✅ Logs locaux pour communication
+  const [localEntryLogs, setLocalEntryLogs] = useState<EntryLog[]>([]); // ✅ Logs locaux pour affichage
 
   const t = translations[language];
 
@@ -282,12 +283,38 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     });
   }, [updateEntryRegistryData]);
 
+  // =================== FONCTIONS DE CONVERSION POUR SAFETYMANAGER ===================
+  const convertToSafetyManagerLog = (log: EntryLog) => ({
+    id: log.id,
+    personnelId: log.personnelId,
+    action: log.action,
+    timestamp: log.timestamp,
+    authorizedBy: log.authorizedBy,
+    atmosphericReadings: log.atmospheric_conditions ? {
+      oxygen: log.atmospheric_conditions.oxygen,
+      combustibleGas: log.atmospheric_conditions.lel,
+      toxicGas: log.atmospheric_conditions.h2s + log.atmospheric_conditions.co
+    } : undefined,
+    notes: log.notes
+  });
+
   const updateEntryLogs = React.useCallback((newLogs: EntryLog[]) => {
-    updateEntryRegistryData({ 
-      entryLogs: newLogs,
-      lastUpdated: new Date().toISOString()
-    });
-  }, [updateEntryRegistryData]);
+    // Mettre à jour les logs locaux pour l'affichage
+    setLocalEntryLogs(newLogs);
+    
+    // ✅ Convertir et envoyer au SafetyManager
+    const currentSafetyManagerLogs = entryRegistryData.entryLogs || [];
+    const convertedNewLogs = newLogs.filter(log => 
+      !currentSafetyManagerLogs.some(existing => existing.id === log.id)
+    ).map(convertToSafetyManagerLog);
+
+    if (convertedNewLogs.length > 0) {
+      updateEntryRegistryData({ 
+        entryLogs: [...currentSafetyManagerLogs, ...convertedNewLogs],
+        lastUpdated: new Date().toISOString()
+      });
+    }
+  }, [updateEntryRegistryData, entryRegistryData.entryLogs]);
 
   // =================== FONCTIONS UTILITAIRES ===================
   const getCurrentPersonnelInside = () => {
@@ -546,7 +573,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     
     setPersonnelStatuses(updatedStatuses);
     updatePersonnel(updatedPersonnel);
-    updateEntryLogs([...entryLogs, entryLog]);
+    updateEntryLogs([...localEntryLogs, entryLog]); // ✅ Utiliser logs locaux
     updateEntryRegistryData({ currentOccupancy: newOccupancy });
 
     alert(`✅ Entrée enregistrée : ${person.name} - Occupation actuelle : ${newOccupancy}/${entryRegistryData.maxOccupancy}`);
@@ -609,7 +636,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     
     setPersonnelStatuses(updatedStatuses);
     updatePersonnel(updatedPersonnel);
-    updateEntryLogs([...entryLogs, exitLog]);
+    updateEntryLogs([...localEntryLogs, exitLog]); // ✅ Utiliser logs locaux
     updateEntryRegistryData({ currentOccupancy: newOccupancy });
 
     alert(`✅ Sortie enregistrée : ${person.name} - Durée session : ${formatDuration(sessionDuration)} - Occupation : ${newOccupancy}/${entryRegistryData.maxOccupancy}`);
@@ -682,7 +709,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     setEmergencyMode(true);
     setPersonnelStatuses(updatedStatuses);
     updatePersonnel(updatedPersonnel);
-    updateEntryLogs([...entryLogs, ...emergencyLogs]);
+    updateEntryLogs([...localEntryLogs, ...emergencyLogs]); // ✅ Utiliser logs locaux
     updateEntryRegistryData({ 
       currentOccupancy: 0,
       emergencyContactsNotified: true 
@@ -1667,10 +1694,10 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
           <History style={{ width: '20px', height: '20px' }} />
-          {t.entryLog} ({entryLogs.length + localCommunicationChecks.length})
+          {t.entryLog} ({localEntryLogs.length + localCommunicationChecks.length})
         </h3>
         
-        {(entryLogs.length + localCommunicationChecks.length) === 0 ? (
+        {(localEntryLogs.length + localCommunicationChecks.length) === 0 ? (
           <div style={{ 
             textAlign: 'center', 
             padding: isMobile ? '32px 20px' : '48px 32px', 
@@ -1702,7 +1729,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             paddingRight: '8px'
           }}>
             {/* Combiner et trier tous les logs par timestamp */}
-            {[...entryLogs, ...localCommunicationChecks]
+            {[...localEntryLogs, ...localCommunicationChecks]
               .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
               .map((log) => {
               const actionColor = log.action === 'entry' ? '#10b981' :
